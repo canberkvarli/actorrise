@@ -49,100 +49,189 @@
 }
 
 :root {
-  --radius: 0;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.65 0.2 45);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.95 0.05 45);
-  --accent-foreground: oklch(0.25 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.65 0.2 45);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.145 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.145 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Retro-modern design: minimal radius for cleaner, boxier look */
+  --radius: 2px;
+
+  /* Cream/off-white background - retro paper aesthetic */
+  --background: oklch(0.97 0.01 85);
+  --foreground: oklch(0.2 0 0);
+
+  /* Cards with slight contrast */
+  --card: oklch(0.99 0.005 85);
+  --card-foreground: oklch(0.2 0 0);
+
+  /* Popovers */
+  --popover: oklch(0.99 0.005 85);
+  --popover-foreground: oklch(0.2 0 0);
+
+  /* Primary: Retro blue accent */
+  --primary: oklch(0.5 0.18 260);
+  --primary-foreground: oklch(0.99 0 0);
+
+  /* Secondary: Subtle gray */
+  --secondary: oklch(0.92 0.005 85);
+  --secondary-foreground: oklch(0.25 0 0);
+
+  /* Muted elements */
+  --muted: oklch(0.92 0.005 85);
+  --muted-foreground: oklch(0.45 0 0);
+
+  /* Accent: Retro red */
+  --accent: oklch(0.6 0.2 25);
+  --accent-foreground: oklch(0.99 0 0);
+
+  /* Destructive */
+  --destructive: oklch(0.55 0.22 25);
+
+  /* Borders: Strong, visible borders for retro look */
+  --border: oklch(0.3 0 0);
+  --input: oklch(0.3 0 0);
+  --ring: oklch(0.5 0.18 260);
+
+  /* Chart colors: Simple, distinct retro palette */
+  --chart-1: oklch(0.5 0.18 260);
+  --chart-2: oklch(0.6 0.2 25);
+  --chart-3: oklch(0.55 0.15 150);
+  --chart-4: oklch(0.65 0.18 60);
+  --chart-5: oklch(0.5 0.15 300);
+
+  /* Sidebar */
+  --sidebar: oklch(0.97 0.01 85);
+  --sidebar-foreground: oklch(0.2 0 0);
+  --sidebar-primary: oklch(0.2 0 0);
+  --sidebar-primary-foreground: oklch(0.97 0.01 85);
+  --sidebar-accent: oklch(0.92 0.005 85);
+  --sidebar-accent-foreground: oklch(0.2 0 0);
+  --sidebar-border: oklch(0.3 0 0);
+  --sidebar-ring: oklch(0.45 0 0);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.7 0.15 45);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.7 0.15 45);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.985 0 0);
-  --sidebar-primary-foreground: oklch(0.145 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  /* Dark mode: Charcoal background with cream text */
+  --background: oklch(0.18 0.01 260);
+  --foreground: oklch(0.95 0.01 85);
+
+  /* Cards */
+  --card: oklch(0.22 0.01 260);
+  --card-foreground: oklch(0.95 0.01 85);
+
+  /* Popovers */
+  --popover: oklch(0.22 0.01 260);
+  --popover-foreground: oklch(0.95 0.01 85);
+
+  /* Primary: Brighter blue for dark mode */
+  --primary: oklch(0.65 0.2 260);
+  --primary-foreground: oklch(0.99 0 0);
+
+  /* Secondary */
+  --secondary: oklch(0.28 0.01 260);
+  --secondary-foreground: oklch(0.95 0.01 85);
+
+  /* Muted */
+  --muted: oklch(0.28 0.01 260);
+  --muted-foreground: oklch(0.65 0.01 85);
+
+  /* Accent: Brighter red */
+  --accent: oklch(0.7 0.22 25);
+  --accent-foreground: oklch(0.99 0 0);
+
+  /* Destructive */
+  --destructive: oklch(0.65 0.24 25);
+
+  /* Borders: Visible in dark mode */
+  --border: oklch(0.75 0.01 85);
+  --input: oklch(0.75 0.01 85);
+  --ring: oklch(0.65 0.2 260);
+
+  /* Chart colors */
+  --chart-1: oklch(0.65 0.2 260);
+  --chart-2: oklch(0.7 0.22 25);
+  --chart-3: oklch(0.65 0.18 150);
+  --chart-4: oklch(0.75 0.2 60);
+  --chart-5: oklch(0.65 0.18 300);
+
+  /* Sidebar */
+  --sidebar: oklch(0.22 0.01 260);
+  --sidebar-foreground: oklch(0.95 0.01 85);
+  --sidebar-primary: oklch(0.95 0.01 85);
+  --sidebar-primary-foreground: oklch(0.18 0.01 260);
+  --sidebar-accent: oklch(0.28 0.01 260);
+  --sidebar-accent-foreground: oklch(0.95 0.01 85);
+  --sidebar-border: oklch(0.75 0.01 85);
+  --sidebar-ring: oklch(0.65 0.01 85);
 }
 
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
+
   html {
     scroll-behavior: smooth;
   }
+
   body {
     @apply bg-background text-foreground;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    line-height: 1.6;
+    font-size: 16px;
   }
+
+  /* Retro typography: simple, bold headings */
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-serif);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
   }
-  /* Enhanced focus states */
+
+  h1 {
+    font-size: 2.5rem;
+  }
+
+  h2 {
+    font-size: 2rem;
+  }
+
+  h3 {
+    font-size: 1.5rem;
+  }
+
+  /* Strong, visible borders */
+  button,
+  input,
+  select,
+  textarea,
+  [role="button"] {
+    border-width: 2px;
+  }
+
+  /* Retro focus states: thick borders instead of rings */
   button:focus-visible,
   a:focus-visible,
   input:focus-visible,
   select:focus-visible,
   textarea:focus-visible {
-    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+    @apply outline-none;
+    box-shadow: 0 0 0 3px var(--ring);
   }
-  /* Smooth transitions for interactive elements */
+
+  /* Snappier transitions for retro feel */
   button,
   a,
   input,
   select {
-    @apply transition-colors duration-200;
+    @apply transition-all duration-150;
+  }
+
+  /* Retro button hover effects */
+  button:not(:disabled):hover,
+  [role="button"]:not(:disabled):hover {
+    transform: translateY(-1px);
+  }
+
+  button:not(:disabled):active,
+  [role="button"]:not(:disabled):active {
+    transform: translateY(0);
   }
 }

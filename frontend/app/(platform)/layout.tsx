@@ -48,15 +48,15 @@ export default function PlatformLayout({
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="border-b bg-card">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <Link href="/dashboard" className="text-2xl font-bold" style={{ fontFamily: "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif" }}>
-              ActorRise
+      <nav className="border-b-4 border-border bg-background">
+        <div className="container mx-auto px-6">
+          <div className="flex items-center justify-between h-20">
+            <Link href="/dashboard" className="text-3xl font-bold tracking-tight hover:opacity-80 transition-opacity">
+              ACTORRISE
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-1">
+            <div className="hidden md:flex items-center gap-2">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
@@ -64,6 +64,7 @@ export default function PlatformLayout({
                   <Link key={item.href} href={item.href}>
                     <Button
                       variant={isActive ? "default" : "ghost"}
+                      size="sm"
                       className="gap-2"
                     >
                       <Icon className="h-4 w-4" />
@@ -72,7 +73,7 @@ export default function PlatformLayout({
                   </Link>
                 );
               })}
-              <Button variant="ghost" onClick={logout} className="gap-2">
+              <Button variant="ghost" size="sm" onClick={logout} className="gap-2">
                 <IconLogout className="h-4 w-4" />
                 Logout
               </Button>
@@ -81,6 +82,7 @@ export default function PlatformLayout({
             {/* Mobile Menu Button */}
             <Button
               variant="ghost"
+              size="icon"
               className="md:hidden"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
@@ -89,52 +91,64 @@ export default function PlatformLayout({
           </div>
 
           {/* Mobile Navigation */}
-          {mobileMenuOpen && (
-            <div className="md:hidden border-t py-2 space-y-1">
-              {navItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = pathname === item.href;
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                  >
-                    <Button
-                      variant={isActive ? "default" : "ghost"}
-                      className="w-full justify-start gap-2"
-                    >
-                      <Icon className="h-4 w-4" />
-                      {item.label}
-                    </Button>
-                  </Link>
-                );
-              })}
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  logout();
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full justify-start gap-2"
+          <AnimatePresence>
+            {mobileMenuOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="md:hidden border-t-2 border-border overflow-hidden"
               >
-                <IconLogout className="h-4 w-4" />
-                Logout
-              </Button>
-            </div>
-          )}
+                <div className="py-3 space-y-1">
+                  {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = pathname === item.href;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                      >
+                        <Button
+                          variant={isActive ? "default" : "ghost"}
+                          size="sm"
+                          className="w-full justify-start gap-2"
+                        >
+                          <Icon className="h-4 w-4" />
+                          {item.label}
+                        </Button>
+                      </Link>
+                    );
+                  })}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      logout();
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full justify-start gap-2"
+                  >
+                    <IconLogout className="h-4 w-4" />
+                    Logout
+                  </Button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </nav>
 
-      {/* Main Content */}
+      {/* Main Content with subtle fade-in */}
       <main>
         <AnimatePresence mode="wait">
           <motion.div
             key={pathname}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.3, ease: "easeInOut" }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
           >
             {children}
           </motion.div>
