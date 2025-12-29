@@ -15,3 +15,4 @@ class User(Base):
     # Relationship to actor profile
     actor_profile = relationship("ActorProfile", back_populates="user", uselist=False)
 
+

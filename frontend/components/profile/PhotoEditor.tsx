@@ -226,3 +226,4 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
   );
 }
 
+

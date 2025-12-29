@@ -156,3 +156,4 @@ Make sure you're using PostgreSQL 11+ and pgvector is installed.
 
 The code automatically detects which database you're using and adapts!
 
+

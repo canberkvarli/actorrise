@@ -176,3 +176,4 @@ Supabase scales easily:
 
 Want me to help you add the headshot upload functionality to use Supabase Storage?
 
+
