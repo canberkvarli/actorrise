@@ -1,0 +1,16 @@
+{
+  "include": [
+    "backend"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    "**/node_modules",
+    "backend/venv"
+  ],
+  "venvPath": "backend",
+  "venv": "venv",
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Darwin",
+  "typeCheckingMode": "basic"
+}
+

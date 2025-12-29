@@ -13,11 +13,12 @@ Make sure to set DATABASE_URL environment variable to your PostgreSQL connection
 Example: postgresql://user:password@localhost:5432/actorrise
 """
 
-import os
 import json
+import os
+
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -44,7 +45,10 @@ def migrate_users():
     postgres_db = PostgresSession()
     
     try:
-        users = sqlite_db.execute(text("SELECT * FROM users")).fetchall()
+        # Use explicit column names to avoid order issues
+        users = sqlite_db.execute(text("""
+            SELECT id, email, hashed_password, created_at FROM users
+        """)).fetchall()
         print(f"Found {len(users)} users")
         
         for user in users:
@@ -61,9 +65,14 @@ def migrate_users():
         
         postgres_db.commit()
         print(f"✓ Migrated {len(users)} users")
-    except Exception as e:
+    except (ValueError, TypeError, KeyError) as e:
         postgres_db.rollback()
         print(f"Error migrating users: {e}")
+        raise
+    except Exception as e:
+        postgres_db.rollback()
+        print(f"Unexpected error migrating users: {e}")
+        raise
     finally:
         sqlite_db.close()
         postgres_db.close()
@@ -76,16 +85,23 @@ def migrate_actor_profiles():
     postgres_db = PostgresSession()
     
     try:
-        profiles = sqlite_db.execute(text("SELECT * FROM actor_profiles")).fetchall()
+        # Use explicit column names to avoid order issues
+        profiles = sqlite_db.execute(text("""
+            SELECT id, user_id, name, age_range, gender, ethnicity, height, build,
+                   location, experience_level, type, training_background, union_status,
+                   preferred_genres, comfort_with_difficult_material, overdone_alert_sensitivity,
+                   profile_bias_enabled, headshot_url, created_at, updated_at
+            FROM actor_profiles
+        """)).fetchall()
         print(f"Found {len(profiles)} actor profiles")
         
         for profile in profiles:
-            # Handle JSON fields
-            preferred_genres = profile[12] if len(profile) > 12 else None
+            # Handle JSON fields - preferred_genres is at index 13
+            preferred_genres = profile[13] if len(profile) > 13 else None
             if isinstance(preferred_genres, str):
                 try:
                     preferred_genres = json.loads(preferred_genres)
-                except:
+                except (json.JSONDecodeError, TypeError):
                     preferred_genres = []
             
             postgres_db.execute(text("""
@@ -127,11 +143,18 @@ def migrate_actor_profiles():
         
         postgres_db.commit()
         print(f"✓ Migrated {len(profiles)} actor profiles")
-    except Exception as e:
+    except (ValueError, TypeError, KeyError) as e:
         postgres_db.rollback()
         print(f"Error migrating actor profiles: {e}")
         import traceback
         traceback.print_exc()
+        raise
+    except Exception as e:
+        postgres_db.rollback()
+        print(f"Unexpected error migrating actor profiles: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
     finally:
         sqlite_db.close()
         postgres_db.close()
@@ -144,57 +167,97 @@ def migrate_monologues():
     postgres_db = PostgresSession()
     
     try:
-        monologues = sqlite_db.execute(text("SELECT * FROM monologues")).fetchall()
+        # Use explicit column names to avoid order issues
+        monologues = sqlite_db.execute(text("""
+            SELECT id, title, author, age_range, gender, genre, difficulty,
+                   excerpt, full_text_url, source_url, embedding, created_at
+            FROM monologues
+        """)).fetchall()
         print(f"Found {len(monologues)} monologues")
         
         migrated = 0
         for monologue in monologues:
-            # Parse embedding from JSON string
-            embedding_json = monologue[7] if len(monologue) > 7 else None
+            # Parse embedding from JSON string - embedding is at index 10
+            embedding_json = monologue[10] if len(monologue) > 10 else None
             embedding_vector = None
             
             if embedding_json:
                 try:
                     embedding_list = json.loads(embedding_json)
-                    if isinstance(embedding_list, list):
-                        # Convert to PostgreSQL array format
+                    if isinstance(embedding_list, list) and len(embedding_list) > 0:
+                        # Convert to PostgreSQL array format for pgvector
                         embedding_vector = "[" + ",".join(str(x) for x in embedding_list) + "]"
-                except:
-                    print(f"Warning: Could not parse embedding for monologue {monologue[0]}")
+                except (json.JSONDecodeError, TypeError) as e:
+                    print(f"Warning: Could not parse embedding for monologue {monologue[0]}: {e}")
             
-            postgres_db.execute(text("""
-                INSERT INTO monologues (
-                    id, title, author, age_range, gender, genre, difficulty,
-                    excerpt, full_text_url, source_url, embedding, created_at
-                )
-                VALUES (
-                    :id, :title, :author, :age_range, :gender, :genre, :difficulty,
-                    :excerpt, :full_text_url, :source_url, :embedding, :created_at
-                )
-                ON CONFLICT (id) DO NOTHING
-            """), {
-                "id": monologue[0],
-                "title": monologue[1],
-                "author": monologue[2],
-                "age_range": monologue[3],
-                "gender": monologue[4],
-                "genre": monologue[5],
-                "difficulty": monologue[6],
-                "excerpt": monologue[7] if len(monologue) > 7 and not embedding_json else (monologue[8] if len(monologue) > 8 else None),
-                "full_text_url": monologue[8] if len(monologue) > 8 and not embedding_json else (monologue[9] if len(monologue) > 9 else None),
-                "source_url": monologue[9] if len(monologue) > 9 and not embedding_json else (monologue[10] if len(monologue) > 10 else None),
-                "embedding": embedding_vector,
-                "created_at": monologue[10] if len(monologue) > 10 and not embedding_json else (monologue[11] if len(monologue) > 11 else None),
-            })
+            # Use CAST to ensure proper vector type for pgvector
+            if embedding_vector:
+                postgres_db.execute(text("""
+                    INSERT INTO monologues (
+                        id, title, author, age_range, gender, genre, difficulty,
+                        excerpt, full_text_url, source_url, embedding, created_at
+                    )
+                    VALUES (
+                        :id, :title, :author, :age_range, :gender, :genre, :difficulty,
+                        :excerpt, :full_text_url, :source_url, CAST(:embedding AS vector), :created_at
+                    )
+                    ON CONFLICT (id) DO NOTHING
+                """), {
+                    "id": monologue[0],
+                    "title": monologue[1],
+                    "author": monologue[2],
+                    "age_range": monologue[3],
+                    "gender": monologue[4],
+                    "genre": monologue[5],
+                    "difficulty": monologue[6],
+                    "excerpt": monologue[7] if len(monologue) > 7 else None,
+                    "full_text_url": monologue[8] if len(monologue) > 8 else None,
+                    "source_url": monologue[9] if len(monologue) > 9 else None,
+                    "embedding": embedding_vector,
+                    "created_at": monologue[11] if len(monologue) > 11 else None,
+                })
+            else:
+                # No embedding, insert without casting
+                postgres_db.execute(text("""
+                    INSERT INTO monologues (
+                        id, title, author, age_range, gender, genre, difficulty,
+                        excerpt, full_text_url, source_url, embedding, created_at
+                    )
+                    VALUES (
+                        :id, :title, :author, :age_range, :gender, :genre, :difficulty,
+                        :excerpt, :full_text_url, :source_url, :embedding, :created_at
+                    )
+                    ON CONFLICT (id) DO NOTHING
+                """), {
+                    "id": monologue[0],
+                    "title": monologue[1],
+                    "author": monologue[2],
+                    "age_range": monologue[3],
+                    "gender": monologue[4],
+                    "genre": monologue[5],
+                    "difficulty": monologue[6],
+                    "excerpt": monologue[7] if len(monologue) > 7 else None,
+                    "full_text_url": monologue[8] if len(monologue) > 8 else None,
+                    "source_url": monologue[9] if len(monologue) > 9 else None,
+                    "embedding": None,
+                    "created_at": monologue[11] if len(monologue) > 11 else None,
+                })
             migrated += 1
         
         postgres_db.commit()
         print(f"✓ Migrated {migrated} monologues")
-    except Exception as e:
+    except (ValueError, TypeError, KeyError) as e:
         postgres_db.rollback()
         print(f"Error migrating monologues: {e}")
         import traceback
         traceback.print_exc()
+        raise
+    except Exception as e:
+        postgres_db.rollback()
+        print(f"Unexpected error migrating monologues: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
     finally:
         sqlite_db.close()
         postgres_db.close()
@@ -212,13 +275,14 @@ def setup_postgres():
         print("✓ Enabled pgvector extension")
         
         # Create tables (using SQLAlchemy models)
-        from app.core.database import Base, init_db
+        from app.core.database import Base
         Base.metadata.create_all(bind=postgres_engine)
         print("✓ Created tables")
     except Exception as e:
         print(f"Error setting up PostgreSQL: {e}")
         import traceback
         traceback.print_exc()
+        raise
     finally:
         postgres_db.close()
 
@@ -257,5 +321,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
 

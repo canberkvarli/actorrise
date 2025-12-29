@@ -99,7 +99,7 @@ def seed_monologues():
             print(f"Database already has {existing_count} monologues. Skipping seed.")
             # Check if embeddings need to be generated for existing monologues
             from app.core.config import settings
-            if settings.openai_api_key:
+            if settings.openai_api_key and settings.openai_api_key != "optional-for-mvp":
                 monologues_without_embeddings = db.query(Monologue).filter(
                     Monologue.embedding.is_(None)
                 ).all()
@@ -123,7 +123,7 @@ def seed_monologues():
         
         # Generate embeddings for all monologues (if OpenAI is configured)
         from app.core.config import settings
-        if settings.openai_api_key:
+        if settings.openai_api_key and settings.openai_api_key != "optional-for-mvp":
             print("Generating embeddings for monologues...")
             all_monologues = db.query(Monologue).all()
             for monologue in all_monologues:

@@ -10,8 +10,12 @@ from app.models.actor import ActorProfile, Monologue
 
 # Initialize OpenAI client
 client = None
-if settings.openai_api_key:
-    client = OpenAI(api_key=settings.openai_api_key)
+if settings.openai_api_key and settings.openai_api_key != "optional-for-mvp":
+    try:
+        client = OpenAI(api_key=settings.openai_api_key)
+    except Exception as e:
+        print(f"Warning: Failed to initialize OpenAI client: {e}")
+        client = None
 
 
 def get_embedding(text: str) -> Optional[List[float]]:

@@ -36,7 +36,6 @@ A complete acting platform featuring MonologueMatch, ScenePartner, CraftCoach, a
 ### Frontend Setup
 
 ```bash
-cd frontend
 npm install
 cp .env.example .env.local
 # Edit .env.local with your API URL
@@ -67,11 +66,11 @@ The database is automatically initialized and seeded with sample monologues on f
 
 ```
 actorrise/
-├── frontend/          # Next.js application
-│   ├── app/          # App router pages
-│   ├── components/   # React components
-│   ├── lib/          # Utilities and API client
-│   └── types/        # TypeScript types
+├── app/              # Next.js app router pages
+├── components/       # React components
+├── lib/              # Utilities and API client
+├── types/            # TypeScript types
+├── public/           # Static assets
 ├── backend/          # FastAPI application
 │   ├── app/
 │   │   ├── api/      # API endpoints
@@ -110,7 +109,6 @@ OPENAI_API_KEY=optional-for-mvp
 ### Running Tests
 ```bash
 # Frontend
-cd frontend
 npm run lint
 
 # Backend
@@ -134,5 +132,3 @@ Currently using SQLite. For production, migrate to PostgreSQL and use Alembic fo
 ## License
 
 MIT
-
-
