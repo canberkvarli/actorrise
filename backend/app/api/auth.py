@@ -6,6 +6,7 @@ from app.models.user import User
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel, EmailStr
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -84,7 +85,13 @@ def get_current_user(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid user ID in token",
         ) from exc
-    user = db.query(User).filter(User.id == user_id).first()
+    try:
+        user = db.query(User).filter(User.id == user_id).first()
+    except OperationalError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection unavailable. Please try again later.",
+        ) from e
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -105,24 +112,30 @@ def signup(user_data: UserSignup, db: Session = Depends(get_db)):
         UserResponse: The newly created user data
 
     Raises:
-        HTTPException: If email is already registered
+        HTTPException: If email is already registered or database is unavailable
     """
-    # Check if user already exists
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
-    if existing_user:
+    try:
+        # Check if user already exists
+        existing_user = db.query(User).filter(User.email == user_data.email).first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered",
+            )
+
+        # Create new user
+        hashed_password = get_password_hash(user_data.password)
+        new_user = User(email=user_data.email, hashed_password=hashed_password)
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+
+        return new_user
+    except OperationalError as e:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Email already registered",
-        )
-
-    # Create new user
-    hashed_password = get_password_hash(user_data.password)
-    new_user = User(email=user_data.email, hashed_password=hashed_password)
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-
-    return new_user
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection unavailable. Please try again later.",
+        ) from e
 
 
 @router.post("/login", response_model=Token)
@@ -139,9 +152,16 @@ def login(
         Token: Access token and token type
 
     Raises:
-        HTTPException: If email or password is incorrect
+        HTTPException: If email or password is incorrect, or database is unavailable
     """
-    user = db.query(User).filter(User.email == form_data.username).first()
+    try:
+        user = db.query(User).filter(User.email == form_data.username).first()
+    except OperationalError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection unavailable. Please try again later.",
+        ) from e
+    
     if not user:
         print(f"Login attempt failed: User not found for email {form_data.username}")
         raise HTTPException(
