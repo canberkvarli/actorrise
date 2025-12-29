@@ -13,8 +13,17 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         # Truncate if longer than 72 bytes (bcrypt limit)
         if len(password_bytes) > 72:
             password_bytes = password_bytes[:72]
-        return bcrypt.checkpw(password_bytes, hashed_password.encode('utf-8'))
-    except Exception:
+        
+        # hashed_password is stored as a string, need to encode it back to bytes
+        # bcrypt.checkpw expects both arguments as bytes
+        if isinstance(hashed_password, str):
+            hashed_bytes = hashed_password.encode('utf-8')
+        else:
+            hashed_bytes = hashed_password
+        
+        return bcrypt.checkpw(password_bytes, hashed_bytes)
+    except Exception as e:
+        print(f"Password verification error: {e}")
         return False
 
 
