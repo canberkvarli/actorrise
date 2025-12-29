@@ -37,16 +37,27 @@ def get_db():
 
 def init_db():
     """Initialize database and enable pgvector extension if using PostgreSQL."""
-    Base.metadata.create_all(bind=engine)
-    
-    # Enable pgvector extension for PostgreSQL
-    if is_postgres:
-        try:
-            with engine.connect() as conn:
-                conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-                conn.commit()
-        except Exception as e:
-            # Extension might already exist or user might not have permission
-            print(f"Note: Could not enable pgvector extension: {e}")
-            print("If using PostgreSQL, ensure pgvector is installed: https://github.com/pgvector/pgvector")
+    try:
+        Base.metadata.create_all(bind=engine)
+        
+        # Enable pgvector extension for PostgreSQL
+        if is_postgres:
+            try:
+                with engine.connect() as conn:
+                    conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+                    conn.commit()
+            except Exception as e:
+                # Extension might already exist or user might not have permission
+                print(f"Note: Could not enable pgvector extension: {e}")
+                print("If using PostgreSQL, ensure pgvector is installed: https://github.com/pgvector/pgvector")
+    except Exception as e:
+        # Handle connection errors gracefully
+        print(f"Warning: Could not connect to database during startup: {e}")
+        print("The application will start, but database operations may fail until the connection is restored.")
+        print(f"Database URL: {settings.database_url.split('@')[1] if '@' in settings.database_url else 'hidden'}")
+        print("Please check:")
+        print("  1. Database hostname is correct and accessible")
+        print("  2. Network connectivity")
+        print("  3. Database credentials are correct")
+        print("  4. Database service is running (if using Supabase, check if project is paused)")
 

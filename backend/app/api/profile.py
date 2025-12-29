@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import OperationalError
 from pydantic import BaseModel
 from typing import Optional, List
 from app.core.database import get_db
@@ -58,7 +59,13 @@ class ActorProfileResponse(BaseModel):
 def get_profile(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
-    profile = db.query(ActorProfile).filter(ActorProfile.user_id == current_user.id).first()
+    try:
+        profile = db.query(ActorProfile).filter(ActorProfile.user_id == current_user.id).first()
+    except OperationalError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection unavailable. Please try again later.",
+        ) from e
     if not profile:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -74,25 +81,31 @@ def create_or_update_profile(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    existing_profile = db.query(ActorProfile).filter(ActorProfile.user_id == current_user.id).first()
+    try:
+        existing_profile = db.query(ActorProfile).filter(ActorProfile.user_id == current_user.id).first()
 
-    if existing_profile:
-        # Update existing profile
-        for key, value in profile_data.model_dump().items():
-            setattr(existing_profile, key, value)
-        db.commit()
-        db.refresh(existing_profile)
-        return existing_profile
-    else:
-        # Create new profile
-        new_profile = ActorProfile(
-            user_id=current_user.id,
-            **profile_data.model_dump()
-        )
-        db.add(new_profile)
-        db.commit()
-        db.refresh(new_profile)
-        return new_profile
+        if existing_profile:
+            # Update existing profile
+            for key, value in profile_data.model_dump().items():
+                setattr(existing_profile, key, value)
+            db.commit()
+            db.refresh(existing_profile)
+            return existing_profile
+        else:
+            # Create new profile
+            new_profile = ActorProfile(
+                user_id=current_user.id,
+                **profile_data.model_dump()
+            )
+            db.add(new_profile)
+            db.commit()
+            db.refresh(new_profile)
+            return new_profile
+    except OperationalError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection unavailable. Please try again later.",
+        ) from e
 
 
 class ProfileStatsResponse(BaseModel):
@@ -106,7 +119,13 @@ class ProfileStatsResponse(BaseModel):
 def get_profile_stats(
     current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
-    profile = db.query(ActorProfile).filter(ActorProfile.user_id == current_user.id).first()
+    try:
+        profile = db.query(ActorProfile).filter(ActorProfile.user_id == current_user.id).first()
+    except OperationalError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection unavailable. Please try again later.",
+        ) from e
     
     if not profile:
         return ProfileStatsResponse(
@@ -171,23 +190,31 @@ def upload_headshot_endpoint(
         headshot_url = upload_headshot(request.image, current_user.id)
         
         # Update profile with new headshot URL
-        profile = db.query(ActorProfile).filter(ActorProfile.user_id == current_user.id).first()
-        if profile:
-            # Delete old headshot if it exists and is from Supabase
-            if profile.headshot_url and "supabase.co" in profile.headshot_url:
-                delete_headshot(current_user.id)
-            profile.headshot_url = headshot_url
-            db.commit()
-        else:
-            # Create profile if it doesn't exist yet
-            profile = ActorProfile(
-                user_id=current_user.id,
-                headshot_url=headshot_url
-            )
-            db.add(profile)
-            db.commit()
+        try:
+            profile = db.query(ActorProfile).filter(ActorProfile.user_id == current_user.id).first()
+            if profile:
+                # Delete old headshot if it exists and is from Supabase
+                if profile.headshot_url and "supabase.co" in profile.headshot_url:
+                    delete_headshot(current_user.id)
+                profile.headshot_url = headshot_url
+                db.commit()
+            else:
+                # Create profile if it doesn't exist yet
+                profile = ActorProfile(
+                    user_id=current_user.id,
+                    headshot_url=headshot_url
+                )
+                db.add(profile)
+                db.commit()
+        except OperationalError as e:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Database connection unavailable. Please try again later.",
+            ) from e
         
         return HeadshotUploadResponse(headshot_url=headshot_url)
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

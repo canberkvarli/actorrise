@@ -8,8 +8,9 @@ from app.models.actor import ActorProfile, Monologue
 from app.models.user import User
 from app.services.ai import (cosine_similarity, get_embedding, parse_embedding,
                              recommend_monologues, vector_search_monologues)
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/search", tags=["search"])
@@ -73,20 +74,26 @@ def search_monologues(
     Returns:
         SearchResponse: List of matching monologues with relevance scores
     """
-    # Get user's profile if profile_bias is enabled
-    profile = None
-    if search_request.profile_bias:
-        profile = (
-            db.query(ActorProfile)
-            .filter(ActorProfile.user_id == current_user.id)
-            .first()
-        )
-        if not profile:
-            # If profile doesn't exist, fall back to regular search
-            search_request.profile_bias = False
+    try:
+        # Get user's profile if profile_bias is enabled
+        profile = None
+        if search_request.profile_bias:
+            profile = (
+                db.query(ActorProfile)
+                .filter(ActorProfile.user_id == current_user.id)
+                .first()
+            )
+            if not profile:
+                # If profile doesn't exist, fall back to regular search
+                search_request.profile_bias = False
 
-    # Get monologues with filters applied at database level (more efficient)
-    query = db.query(Monologue)
+        # Get monologues with filters applied at database level (more efficient)
+        query = db.query(Monologue)
+    except OperationalError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection unavailable. Please try again later.",
+        ) from e
 
     if search_request.filters:
         if search_request.filters.get("age_range"):
@@ -108,10 +115,16 @@ def search_monologues(
 
     # Only fetch all monologues if we need them for Python-based search
     # Vector search will handle filtering in SQL
-    needs_monologues = not (
-        search_request.profile_bias and profile and search_request.query
-    )
-    monologues = query.all() if needs_monologues else []
+    try:
+        needs_monologues = not (
+            search_request.profile_bias and profile and search_request.query
+        )
+        monologues = query.all() if needs_monologues else []
+    except OperationalError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection unavailable. Please try again later.",
+        ) from e
 
     # Apply AI recommendations if profile_bias is enabled
     if search_request.profile_bias and profile:
@@ -143,23 +156,35 @@ def search_monologues(
             if query_embedding:
                 # Use native vector search if PostgreSQL available
                 if is_postgres:
-                    vector_results = vector_search_monologues(
-                        db,
-                        query_embedding,
-                        limit=50,
-                        filters=search_request.filters,
-                    )
-                    results = [
-                        MonologueResponse(
-                            **monologue.__dict__,
-                            relevance_score=score,
+                    try:
+                        vector_results = vector_search_monologues(
+                            db,
+                            query_embedding,
+                            limit=50,
+                            filters=search_request.filters,
                         )
-                        for monologue, score in vector_results
-                    ]
+                        results = [
+                            MonologueResponse(
+                                **monologue.__dict__,
+                                relevance_score=score,
+                            )
+                            for monologue, score in vector_results
+                        ]
+                    except OperationalError as e:
+                        raise HTTPException(
+                            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Database connection unavailable. Please try again later.",
+                        ) from e
                 else:
                     # Fallback to Python-based semantic search for SQLite
                     if not monologues:
-                        monologues = query.all()
+                        try:
+                            monologues = query.all()
+                        except OperationalError as e:
+                            raise HTTPException(
+                                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                                detail="Database connection unavailable. Please try again later.",
+                            ) from e
 
                     scored_monologues = []
                     for monologue in monologues:
@@ -185,7 +210,13 @@ def search_monologues(
             else:
                 # Fallback to keyword search
                 if not monologues:
-                    monologues = query.all()
+                    try:
+                        monologues = query.all()
+                    except OperationalError as e:
+                        raise HTTPException(
+                            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Database connection unavailable. Please try again later.",
+                        ) from e
 
                 query_lower = search_request.query.lower()
                 monologues = [
@@ -202,7 +233,13 @@ def search_monologues(
         else:
             # No query, return all filtered monologues
             if not monologues:
-                monologues = query.all()
+                try:
+                    monologues = query.all()
+                except OperationalError as e:
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="Database connection unavailable. Please try again later.",
+                    ) from e
 
             results = [
                 MonologueResponse(**monologue.__dict__)
@@ -219,18 +256,24 @@ def get_recommended_monologues(
     db: Session = Depends(get_db),
 ):
     """Get recommended monologues based on user's profile."""
-    profile = (
-        db.query(ActorProfile)
-        .filter(ActorProfile.user_id == current_user.id)
-        .first()
-    )
+    try:
+        profile = (
+            db.query(ActorProfile)
+            .filter(ActorProfile.user_id == current_user.id)
+            .first()
+        )
 
-    if not profile:
-        # Return empty results if no profile
-        return SearchResponse(results=[], total=0)
+        if not profile:
+            # Return empty results if no profile
+            return SearchResponse(results=[], total=0)
 
-    # Get all monologues
-    monologues = db.query(Monologue).all()
+        # Get all monologues
+        monologues = db.query(Monologue).all()
+    except OperationalError as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database connection unavailable. Please try again later.",
+        ) from e
 
     # Get recommendations
     scored_results = recommend_monologues(
