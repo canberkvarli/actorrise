@@ -1,37 +1,17 @@
-"""Authentication API endpoints for user signup, login, and profile management."""
+"""Authentication API endpoints using Supabase Auth."""
 from app.core.database import get_db
-from app.core.security import (create_access_token, decode_access_token,
-                               get_password_hash, verify_password)
+from app.core.security import verify_supabase_token
 from app.models.user import User
 from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from pydantic import BaseModel, EmailStr
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from pydantic import BaseModel
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+security = HTTPBearer()
 
 
-class UserSignup(BaseModel):
-    """Pydantic model for user signup request."""
-
-    email: EmailStr
-    password: str
-
-
-class UserLogin(BaseModel):
-    """Pydantic model for user login request."""
-
-    email: EmailStr
-    password: str
-
-
-class Token(BaseModel):
-    """Pydantic model for authentication token response."""
-
-    access_token: str
-    token_type: str
 
 
 class UserResponse(BaseModel):
@@ -47,12 +27,13 @@ class UserResponse(BaseModel):
 
 
 def get_current_user(
-    token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
 ) -> User:
-    """Get the current authenticated user from the JWT token.
+    """Get the current authenticated user from Supabase JWT token.
 
     Args:
-        token: JWT access token from the Authorization header
+        credentials: HTTP Bearer token credentials
         db: Database session
 
     Returns:
@@ -61,133 +42,74 @@ def get_current_user(
     Raises:
         HTTPException: If token is invalid, expired, or user not found
     """
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-        )
-    payload = decode_access_token(token)
+    token = credentials.credentials
+    
+    # Verify Supabase token
+    payload = verify_supabase_token(token)
     if payload is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
         )
-    user_id_str = payload.get("sub")
-    if user_id_str is None:
+    
+    # Get Supabase user ID (UUID format)
+    supabase_user_id = payload.get("sub")
+    if not supabase_user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid authentication credentials",
         )
+    
+    # Get email from token
+    email = payload.get("email")
+    
     try:
-        user_id = int(user_id_str)
-    except (ValueError, TypeError) as exc:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid user ID in token",
-        ) from exc
-    try:
-        user = db.query(User).filter(User.id == user_id).first()
+        # Look up user by Supabase ID (stored in email field or we need to add supabase_id)
+        # For now, we'll use email to find the user
+        # TODO: Add supabase_id column to User model for better mapping
+        if email:
+            user = db.query(User).filter(User.email == email).first()
+        else:
+            # Fallback: try to find by any matching criteria
+            user = None
+        
+        # If user doesn't exist in our DB, create it (first time login after Supabase signup)
+        if user is None and email:
+            user = User(
+                email=email,
+                supabase_id=supabase_user_id,
+                hashed_password=None  # No password needed, auth handled by Supabase
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        elif user and not user.supabase_id:
+            # Update existing user with Supabase ID if missing
+            user.supabase_id = supabase_user_id
+            db.commit()
+            db.refresh(user)
+        
     except OperationalError as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Database connection unavailable. Please try again later.",
         ) from e
+    
     if user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="User not found",
         )
+    
     return user
-
-
-@router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def signup(user_data: UserSignup, db: Session = Depends(get_db)):
-    """Register a new user account.
-
-    Args:
-        user_data: User signup data containing email and password
-        db: Database session
-
-    Returns:
-        UserResponse: The newly created user data
-
-    Raises:
-        HTTPException: If email is already registered or database is unavailable
-    """
-    try:
-        # Check if user already exists
-        existing_user = db.query(User).filter(User.email == user_data.email).first()
-        if existing_user:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already registered",
-            )
-
-        # Create new user
-        hashed_password = get_password_hash(user_data.password)
-        new_user = User(email=user_data.email, hashed_password=hashed_password)
-        db.add(new_user)
-        db.commit()
-        db.refresh(new_user)
-
-        return new_user
-    except OperationalError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable. Please try again later.",
-        ) from e
-
-
-@router.post("/login", response_model=Token)
-def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
-):
-    """Authenticate a user and return an access token.
-
-    Args:
-        form_data: OAuth2 password request form containing username (email) and password
-        db: Database session
-
-    Returns:
-        Token: Access token and token type
-
-    Raises:
-        HTTPException: If email or password is incorrect, or database is unavailable
-    """
-    try:
-        user = db.query(User).filter(User.email == form_data.username).first()
-    except OperationalError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable. Please try again later.",
-        ) from e
-    
-    if not user:
-        print(f"Login attempt failed: User not found for email {form_data.username}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No account found with this email. Please sign up first.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    password_valid = verify_password(form_data.password, user.hashed_password)
-    if not password_valid:
-        print(f"Login attempt failed: Invalid password for user {user.email}")
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect password. Please try again.",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    
-    print(f"Login successful for user {user.email}")
-
-    access_token = create_access_token(data={"sub": str(user.id)})
-    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
     """Get the current authenticated user's profile.
+    
+    Authentication is handled by Supabase Auth on the frontend.
+    This endpoint verifies the Supabase JWT token and returns the user.
 
     Args:
         current_user: The authenticated user (from dependency)

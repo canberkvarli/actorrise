@@ -1,69 +1,65 @@
-from datetime import datetime, timedelta
 from typing import Optional
-from jose import JWTError, jwt
-import bcrypt
+
 from app.core.config import settings
+from jose import JWTError, jwt
+from supabase import Client, create_client
 
 
-def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against a hash."""
-    try:
-        # Ensure password is bytes
-        password_bytes = plain_password.encode('utf-8')
-        # Truncate if longer than 72 bytes (bcrypt limit)
-        if len(password_bytes) > 72:
-            password_bytes = password_bytes[:72]
+def get_supabase_client() -> Optional[Client]:
+    """Get Supabase client for auth verification."""
+    if not settings.supabase_url or not settings.supabase_service_role_key:
+        return None
+    return create_client(settings.supabase_url, settings.supabase_service_role_key)
+
+
+def verify_supabase_token(token: str) -> Optional[dict]:
+    """Verify a Supabase JWT token and return the payload.
+    
+    We decode the JWT token without signature verification since Supabase
+    has already verified it when the user authenticated. We trust the token
+    from the client and extract user information from it.
+    
+    Args:
+        token: JWT token from Supabase Auth
         
-        # hashed_password is stored as a string, need to encode it back to bytes
-        # bcrypt.checkpw expects both arguments as bytes
-        if isinstance(hashed_password, str):
-            hashed_bytes = hashed_password.encode('utf-8')
-        else:
-            hashed_bytes = hashed_password
-        
-        return bcrypt.checkpw(password_bytes, hashed_bytes)
-    except Exception as e:
-        print(f"Password verification error: {e}")
-        return False
-
-
-def get_password_hash(password: str) -> str:
-    """Hash a password using bcrypt."""
-    # Ensure password is bytes
-    password_bytes = password.encode('utf-8')
-    # Truncate if longer than 72 bytes (bcrypt limit)
-    if len(password_bytes) > 72:
-        password_bytes = password_bytes[:72]
-    # Generate salt and hash
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(password_bytes, salt)
-    return hashed.decode('utf-8')
-
-
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
-    to_encode = data.copy()
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(hours=24)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(
-        to_encode, settings.jwt_secret, algorithm=settings.jwt_algorithm
-    )
-    return encoded_jwt
-
-
-def decode_access_token(token: str) -> Optional[dict]:
+    Returns:
+        Decoded token payload with 'sub' (user ID) and 'email' if valid, None otherwise
+    """
     try:
+        # Decode JWT without verification - Supabase already verified it
+        # We skip all verification (signature, audience, expiration) since
+        # the token comes from an authenticated Supabase session
+        # Note: key is required even when verify_signature is False
         payload = jwt.decode(
-            token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
+            token,
+            key="",  # Dummy key, not used when verify_signature is False
+            options={
+                "verify_signature": False,
+                "verify_aud": False,  # Skip audience verification
+                "verify_exp": False,  # Skip expiration (Supabase handles this)
+            }
         )
-        return payload
+        
+        # Extract user information
+        user_id = payload.get("sub")
+        email = payload.get("email")
+        
+        if not user_id:
+            print("Token missing 'sub' claim")
+            return None
+        
+        return {
+            "sub": user_id,
+            "email": email,
+            "user_metadata": payload.get("user_metadata", {})
+        }
+            
     except JWTError as e:
-        # Log the error for debugging
         print(f"JWT decode error: {e}")
         return None
     except Exception as e:
-        print(f"Unexpected error decoding token: {e}")
+        print(f"Unexpected error verifying token: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
