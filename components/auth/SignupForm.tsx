@@ -41,7 +41,7 @@ export function SignupForm() {
     try {
       await signup(data.email, data.password);
     } catch (err: any) {
-      setError(err.response?.data?.detail || "Failed to sign up");
+      setError(err.message || err.response?.data?.detail || "Failed to sign up");
     } finally {
       setIsLoading(false);
     }
