@@ -1,0 +1,23 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+backend/venv/
+venv/
+env/
+ENV/
+
+# Python build artifacts
+*.egg-info/
+dist/
+build/
+
+# Node modules
+node_modules/
+
+# Next.js
+.next/
+out/
+
