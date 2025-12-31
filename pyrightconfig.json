@@ -5,10 +5,11 @@
   "exclude": [
     "**/__pycache__",
     "**/node_modules",
-    "backend/venv"
+    "backend/venv",
+    "backend/.venv"
   ],
   "venvPath": "backend",
-  "venv": "venv",
+  "venv": ".venv",
   "pythonVersion": "3.12",
   "pythonPlatform": "Darwin",
   "typeCheckingMode": "basic"
