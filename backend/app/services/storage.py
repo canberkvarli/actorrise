@@ -74,6 +74,13 @@ def upload_headshot(base64_image: str, user_id: int) -> str:
         
         # Get public URL
         public_url = supabase.storage.from_(settings.supabase_storage_bucket).get_public_url(file_path)
+        
+        # Construct full URL if needed
+        if not public_url.startswith("http"):
+            supabase_url = settings.supabase_url.rstrip("/")
+            bucket_name = settings.supabase_storage_bucket
+            public_url = f"{supabase_url}/storage/v1/object/public/{bucket_name}/{file_path}"
+        
         return public_url
     except Exception as e:
         raise ValueError(f"Failed to upload image to Supabase: {str(e)}")
