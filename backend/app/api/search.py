@@ -3,7 +3,7 @@ from typing import List, Optional
 
 from app.api.auth import get_current_user
 from app.core.config import settings
-from app.core.database import get_db, is_postgres
+from app.core.database import get_db
 from app.models.actor import ActorProfile, Monologue
 from app.models.user import User
 from app.services.ai import (cosine_similarity, get_embedding, parse_embedding,
@@ -159,30 +159,29 @@ def search_monologues(
                 query_embedding = get_embedding(search_request.query)
 
             if query_embedding:
-                # Use native vector search if PostgreSQL available
-                if is_postgres:
-                    try:
-                        vector_results = vector_search_monologues(
-                            db,
-                            query_embedding,
-                            limit=50,
-                            filters=search_request.filters,
+                # Use native PostgreSQL vector search
+                try:
+                    vector_results = vector_search_monologues(
+                        db,
+                        query_embedding,
+                        limit=50,
+                        filters=search_request.filters,
+                    )
+                    results = [
+                        MonologueResponse(
+                            **monologue.__dict__,
+                            relevance_score=score,
                         )
-                        results = [
-                            MonologueResponse(
-                                **monologue.__dict__,
-                                relevance_score=score,
-                            )
-                            for monologue, score in vector_results
-                        ]
-                    except OperationalError as e:
-                        raise HTTPException(
-                            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                            detail="Database connection unavailable. Please try again later.",
-                        ) from e
-                else:
-                    # Fallback to Python-based semantic search for SQLite
-                    if not monologues:
+                        for monologue, score in vector_results
+                    ]
+                except OperationalError as e:
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="Database connection unavailable. Please try again later.",
+                    ) from e
+            else:
+                # No query embedding available
+                if not monologues:
                         try:
                             monologues = query.all()
                         except OperationalError as e:

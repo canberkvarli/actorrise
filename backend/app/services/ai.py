@@ -4,7 +4,6 @@ from openai import OpenAI
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 from app.core.config import settings
-from app.core.database import is_postgres
 from app.models.actor import ActorProfile, Monologue
 
 
@@ -64,9 +63,8 @@ def vector_search_monologues(
     """
     Perform efficient vector similarity search using PostgreSQL pgvector.
     Returns list of (monologue, similarity_score) tuples.
-    Falls back to Python-based search for SQLite.
     """
-    if is_postgres and query_embedding:
+    if query_embedding:
         try:
             # Build query string with filters
             conditions = ["embedding IS NOT NULL"]
@@ -134,58 +132,38 @@ def vector_search_monologues(
             print(f"Error in vector search: {e}")
             import traceback
             traceback.print_exc()
-            # Fall back to Python-based search
             return []
     
-    # Fallback: return empty for SQLite (will use Python-based search)
     return []
 
 
 def parse_embedding(embedding_data):
     """
     Parse embedding from database.
-    Returns list for both PostgreSQL (already a list) and SQLite (JSON string).
+    PostgreSQL with pgvector returns list directly.
     """
     if not embedding_data:
         return None
     
-    if is_postgres:
-        # PostgreSQL with pgvector returns list directly
-        if isinstance(embedding_data, list):
-            return embedding_data
-        # Sometimes it might be returned as a numpy array or other format
-        try:
-            return list(embedding_data)
-        except:
-            return None
-    else:
-        # SQLite stores as JSON string
-        try:
-            import json
-            if isinstance(embedding_data, str):
-                return json.loads(embedding_data)
-            return embedding_data
-        except:
-            return None
+    # PostgreSQL with pgvector returns list directly
+    if isinstance(embedding_data, list):
+        return embedding_data
+    # Sometimes it might be returned as a numpy array or other format
+    try:
+        return list(embedding_data)
+    except:
+        return None
 
 
 def format_embedding(embedding: Optional[List[float]]):
     """
     Format embedding for database storage.
-    Returns list for PostgreSQL/pgvector, JSON string for SQLite.
+    PostgreSQL with pgvector expects a list/array.
     """
     if not embedding:
         return None
-    if is_postgres:
-        # PostgreSQL with pgvector expects a list/array
-        return embedding
-    else:
-        # SQLite stores as JSON string
-        try:
-            import json
-            return json.dumps(embedding)
-        except:
-            return None
+    # PostgreSQL with pgvector expects a list/array
+    return embedding
 
 
 def generate_monologue_embedding(monologue: Monologue) -> Optional[List[float]]:
@@ -282,12 +260,12 @@ def recommend_monologues(
 ) -> List[Dict]:
     """
     Recommend monologues using semantic search with embeddings or fallback to rule-based scoring.
-    Uses native PostgreSQL vector search when available for better performance.
+    Uses native PostgreSQL vector search for better performance.
     """
     scored_monologues = []
     
-    # Try efficient vector search if PostgreSQL and query provided
-    if use_semantic_search and query and client and db and is_postgres:
+    # Use efficient PostgreSQL vector search if query provided
+    if use_semantic_search and query and client and db:
         query_embedding = get_embedding(query)
         
         if query_embedding:
@@ -310,7 +288,7 @@ def recommend_monologues(
                 scored_monologues.sort(key=lambda x: x["relevance_score"], reverse=True)
                 return scored_monologues[:limit]
     
-    # Fallback: Python-based search (for SQLite or when vector search unavailable)
+    # Fallback: Python-based search (when vector search unavailable)
     if use_semantic_search and query and client:
         query_embedding = get_embedding(query)
         
