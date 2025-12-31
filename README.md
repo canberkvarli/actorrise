@@ -60,7 +60,7 @@ Backend will run on http://localhost:8000
 
 ### Database
 
-The database is automatically initialized and seeded with sample monologues on first startup.
+The database is automatically initialized on first startup. Monologues will be available through the AI-powered monologue search service.
 
 ## Project Structure
 
