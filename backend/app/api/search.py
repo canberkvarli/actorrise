@@ -6,8 +6,8 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.actor import ActorProfile, Monologue
 from app.models.user import User
-from app.services.ai import (cosine_similarity, get_embedding, parse_embedding,
-                             recommend_monologues, vector_search_monologues)
+from app.services.ai import (get_embedding, recommend_monologues,
+                             vector_search_monologues)
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.exc import OperationalError
@@ -180,39 +180,7 @@ def search_monologues(
                         detail="Database connection unavailable. Please try again later.",
                     ) from e
             else:
-                # No query embedding available
-                if not monologues:
-                        try:
-                            monologues = query.all()
-                        except OperationalError as e:
-                            raise HTTPException(
-                                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                                detail="Database connection unavailable. Please try again later.",
-                            ) from e
-
-                    scored_monologues = []
-                    for monologue in monologues:
-                        if hasattr(monologue, "embedding") and getattr(monologue, "embedding", None) is not None:
-                            monologue_embedding = parse_embedding(
-                                monologue.embedding
-                            )
-                            if monologue_embedding:
-                                score = cosine_similarity(
-                                    query_embedding, monologue_embedding
-                                )
-                                scored_monologues.append((monologue, score))
-
-                    # Sort by score and convert to response
-                    scored_monologues.sort(key=lambda x: x[1], reverse=True)
-                    results = [
-                        MonologueResponse(
-                            **monologue.__dict__,
-                            relevance_score=score,
-                        )
-                        for monologue, score in scored_monologues
-                    ]
-            else:
-                # Fallback to keyword search
+                # Fallback to keyword search when embeddings unavailable
                 if not monologues:
                     try:
                         monologues = query.all()
