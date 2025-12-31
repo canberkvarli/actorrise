@@ -3,12 +3,6 @@ from sqlalchemy import (JSON, Boolean, Column, DateTime, Float, ForeignKey,
                         Integer, String, text)
 from sqlalchemy.orm import relationship
 
-# Import pgvector for PostgreSQL vector support
-try:
-    from pgvector.sqlalchemy import Vector
-except ImportError as exc:
-    raise ImportError("pgvector is required. Install with: pip install pgvector") from exc
-
 
 class ActorProfile(Base):
     __tablename__ = "actor_profiles"
@@ -60,7 +54,5 @@ class Monologue(Base):
     excerpt = Column(String)
     full_text_url = Column(String, nullable=True)
     source_url = Column(String, nullable=True)
-    # Vector embedding for semantic search (pgvector)
-    embedding = Column(Vector(1536), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=text('now()'))
 
