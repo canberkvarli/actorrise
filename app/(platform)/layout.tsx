@@ -19,12 +19,8 @@ export default function PlatformLayout({
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push("/login");
-    }
-  }, [loading, isAuthenticated, router]);
-
+  // Note: Route protection is handled by middleware
+  // This check is just for UI state while loading
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -33,10 +29,6 @@ export default function PlatformLayout({
         </div>
       </div>
     );
-  }
-
-  if (!isAuthenticated) {
-    return null;
   }
 
   const navItems = [

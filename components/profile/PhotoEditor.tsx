@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Cropper from "react-easy-crop";
 import { Button } from "@/components/ui/button";
-import { IconZoomIn, IconZoomOut, IconRotateClockwise, IconX, IconCheck } from "@tabler/icons-react";
+import { IconZoomIn, IconZoomOut, IconRotateClockwise, IconX, IconCheck, IconLoader2 } from "@tabler/icons-react";
 
 interface PhotoEditorProps {
   image: string;
-  onSave: (croppedImage: string) => void;
+  onSave: (croppedImage: string) => Promise<void>;
   onCancel: () => void;
   aspectRatio?: number;
 }
@@ -24,6 +24,29 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Validate image when it changes
+  useEffect(() => {
+    if (!image) {
+      setImageError("No image provided");
+      return;
+    }
+    console.log("PhotoEditor received image:", image.substring(0, 50) + "...");
+    
+    // Test if image loads
+    const testImg = new Image();
+    testImg.onload = () => {
+      console.log("Image loaded successfully, dimensions:", testImg.width, "x", testImg.height);
+      setImageError(null);
+    };
+    testImg.onerror = () => {
+      console.error("Failed to load image");
+      setImageError("Failed to load image. Please try uploading again.");
+    };
+    testImg.src = image;
+  }, [image]);
 
   const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
     setCroppedAreaPixels(croppedAreaPixels);
@@ -92,13 +115,15 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
   };
 
   const handleSave = async () => {
-    if (!croppedAreaPixels) return;
+    if (!croppedAreaPixels || isSaving) return;
     
     try {
+      setIsSaving(true);
       const croppedImage = await getCroppedImg(image, croppedAreaPixels, rotation);
-      onSave(croppedImage);
+      await onSave(croppedImage);
     } catch (error) {
       console.error("Error cropping image:", error);
+      setIsSaving(false);
     }
   };
 
@@ -132,19 +157,32 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
 
         {/* Cropper */}
         <div className="relative w-full" style={{ height: "500px", background: "#000" }}>
-          <Cropper
-            image={image}
-            crop={crop}
-            zoom={zoom}
-            rotation={rotation}
-            aspect={aspectRatio}
-            onCropChange={setCrop}
-            onZoomChange={setZoom}
-            onRotationChange={setRotation}
-            onCropComplete={onCropComplete}
-            cropShape="rect"
-            showGrid={true}
-          />
+          {imageError ? (
+            <div className="flex items-center justify-center h-full text-destructive">
+              <div className="text-center">
+                <p className="text-lg font-semibold mb-2">Image Error</p>
+                <p className="text-sm">{imageError}</p>
+              </div>
+            </div>
+          ) : image ? (
+            <Cropper
+              image={image}
+              crop={crop}
+              zoom={zoom}
+              rotation={rotation}
+              aspect={aspectRatio}
+              onCropChange={setCrop}
+              onZoomChange={setZoom}
+              onRotationChange={setRotation}
+              onCropComplete={onCropComplete}
+              cropShape="rect"
+              showGrid={true}
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full text-muted-foreground">
+              <p>No image to display</p>
+            </div>
+          )}
         </div>
 
         {/* Controls */}
@@ -212,12 +250,21 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={onCancel}>
+            <Button variant="outline" onClick={onCancel} disabled={isSaving}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>
-              <IconCheck className="h-4 w-4 mr-2" />
-              Save
+            <Button onClick={handleSave} disabled={isSaving || !croppedAreaPixels}>
+              {isSaving ? (
+                <>
+                  <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <IconCheck className="h-4 w-4 mr-2" />
+                  Save
+                </>
+              )}
             </Button>
           </div>
         </div>
