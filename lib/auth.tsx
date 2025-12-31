@@ -14,7 +14,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, redirectTo?: string) => Promise<void>;
   signup: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const syncUserWithBackend = useCallback(async () => {
     try {
       // Sync user with backend to get our User model
-      const response = await api.get("/api/auth/me");
+      const response = await api.get<User>("/api/auth/me");
       setUser(response.data);
     } catch (error: unknown) {
       console.error("Failed to sync user with backend:", error);

@@ -6,8 +6,8 @@ import { cache } from 'react'
  * Get Supabase client for server-side operations
  * Uses React cache to ensure single instance per request
  */
-export const getSupabaseServerClient = cache(() => {
-  const cookieStore = cookies()
+export const getSupabaseServerClient = cache(async () => {
+  const cookieStore = await cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -38,7 +38,7 @@ export const getSupabaseServerClient = cache(() => {
  * Returns null if not authenticated
  */
 export async function getServerSession() {
-  const supabase = getSupabaseServerClient()
+  const supabase = await getSupabaseServerClient()
   const {
     data: { session },
   } = await supabase.auth.getSession()

@@ -16,7 +16,7 @@ const signupSchema = z.object({
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
+  message: "Passwords don&apos;t match",
   path: ["confirmPassword"],
 });
 
@@ -40,8 +40,15 @@ export function SignupForm() {
     setIsLoading(true);
     try {
       await signup(data.email, data.password, data.name);
-    } catch (err: any) {
-      setError(err.message || err.response?.data?.detail || "Failed to sign up");
+    } catch (err: unknown) {
+      let errorMessage = "Failed to sign up";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (err && typeof err === "object" && "response" in err) {
+        const axiosError = err as { response?: { data?: { detail?: string } } };
+        errorMessage = axiosError.response?.data?.detail || errorMessage;
+      }
+      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
