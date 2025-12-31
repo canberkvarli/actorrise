@@ -8,12 +8,12 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-background p-8">
       <div className="w-full max-w-md space-y-12">
         <div>
-          <Link href="/">
-            <Button variant="ghost" className="gap-2 -ml-4">
+          <Button asChild variant="ghost" className="gap-2 -ml-4">
+            <Link href="/">
               <IconArrowLeft className="h-4 w-4" />
               Back
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
         <div className="space-y-12">
           <div className="space-y-4">

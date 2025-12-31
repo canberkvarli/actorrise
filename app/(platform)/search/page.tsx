@@ -38,7 +38,7 @@ export default function SearchPage() {
               
               <div className="pt-6 text-sm text-muted-foreground max-w-md">
                 <p>
-                  We're working hard to bring you intelligent search capabilities that understand context, 
+                  We&apos;re working hard to bring you intelligent search capabilities that understand context, 
                   match your profile, and find the perfect monologues for your auditions.
                 </p>
               </div>

@@ -3,10 +3,10 @@ import { supabase } from "./supabase";
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 // Fetch wrapper that mimics axios API for easy migration
-async function request<T = any>(
+async function request<T = unknown>(
   method: string,
   url: string,
-  data?: any,
+  data?: unknown,
   options?: RequestInit
 ): Promise<{ data: T; status: number; statusText: string }> {
   // Get auth token
@@ -19,10 +19,10 @@ async function request<T = any>(
   // Build full URL
   const fullUrl = url.startsWith("http") ? url : `${API_URL}${url}`;
 
-  // Prepare headers
-  const headers: HeadersInit = {
+  // Prepare headers - use Record<string, string> to allow property assignment
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...options?.headers,
+    ...(options?.headers as Record<string, string> | undefined),
   };
 
   if (authToken) {
@@ -57,8 +57,14 @@ async function request<T = any>(
 
   // Throw error for non-2xx responses (mimics axios behavior)
   if (!response.ok) {
-    const error: any = new Error(response.statusText || "Request failed");
-    (error as any).response = {
+    const error = new Error(response.statusText || "Request failed") as Error & {
+      response?: {
+        status: number;
+        statusText: string;
+        data: T;
+      };
+    };
+    error.response = {
       status: response.status,
       statusText: response.statusText,
       data: responseData,
@@ -75,15 +81,15 @@ async function request<T = any>(
 
 // API object that mimics axios interface
 export const api = {
-  get: <T = any>(url: string, options?: RequestInit) =>
+  get: <T = unknown>(url: string, options?: RequestInit) =>
     request<T>("GET", url, undefined, options),
-  post: <T = any>(url: string, data?: any, options?: RequestInit) =>
+  post: <T = unknown>(url: string, data?: unknown, options?: RequestInit) =>
     request<T>("POST", url, data, options),
-  put: <T = any>(url: string, data?: any, options?: RequestInit) =>
+  put: <T = unknown>(url: string, data?: unknown, options?: RequestInit) =>
     request<T>("PUT", url, data, options),
-  patch: <T = any>(url: string, data?: any, options?: RequestInit) =>
+  patch: <T = unknown>(url: string, data?: unknown, options?: RequestInit) =>
     request<T>("PATCH", url, data, options),
-  delete: <T = any>(url: string, options?: RequestInit) =>
+  delete: <T = unknown>(url: string, options?: RequestInit) =>
     request<T>("DELETE", url, undefined, options),
 };
 
