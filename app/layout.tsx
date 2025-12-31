@@ -1,12 +1,19 @@
 import type { Metadata } from "next";
-import { JetBrains_Mono } from "next/font/google";
+import { Montserrat, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProviderWrapper } from "@/components/providers/AuthProviderWrapper";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
+import { Toaster } from "sonner";
 
-const jetbrainsMono = JetBrains_Mono({
+const montserrat = Montserrat({
   variable: "--font-sans",
   subsets: ["latin"],
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-mono",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -22,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${jetbrainsMono.variable} font-sans antialiased`}
+        className={`${montserrat.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >
         <ThemeProvider
           attribute="class"
@@ -31,6 +38,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AuthProviderWrapper>{children}</AuthProviderWrapper>
+          <Toaster position="top-center" richColors />
         </ThemeProvider>
       </body>
     </html>

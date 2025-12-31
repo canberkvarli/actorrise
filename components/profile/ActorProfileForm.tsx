@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -15,13 +15,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IconLoader2, IconCheck, IconInfoCircle, IconPhoto, IconEdit, IconUser, IconBriefcase, IconSettings, IconSparkles } from "@tabler/icons-react";
+import { IconLoader2, IconInfoCircle, IconPhoto, IconEdit, IconUser, IconBriefcase, IconSettings, IconSparkles } from "@tabler/icons-react";
 import { PhotoEditor } from "./PhotoEditor";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 const profileSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -36,7 +36,6 @@ const profileSchema = z.object({
   training_background: z.string().optional(),
   union_status: z.string().min(1, "Union status is required"),
   preferred_genres: z.array(z.string()),
-  comfort_with_difficult_material: z.string(),
   overdone_alert_sensitivity: z.number().min(0).max(1),
   profile_bias_enabled: z.boolean(),
   headshot_url: z.string().optional(),
@@ -47,26 +46,25 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 const genres = ["Drama", "Comedy", "Classical", "Contemporary", "Musical", "Shakespeare"];
 
 export function ActorProfileForm() {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [headshotPreview, setHeadshotPreview] = useState<string | null>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [imageToEdit, setImageToEdit] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("basic");
+  const [hasInitialized, setHasInitialized] = useState(false);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
     register,
-    handleSubmit,
     formState: { errors },
     setValue,
     watch,
+    getValues,
   } = useForm<ProfileFormData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
       preferred_genres: [],
-      comfort_with_difficult_material: "moderate",
       overdone_alert_sensitivity: 0.5,
       profile_bias_enabled: true,
     },
@@ -74,33 +72,35 @@ export function ActorProfileForm() {
 
   const profileBiasEnabled = watch("profile_bias_enabled");
   const preferredGenres = watch("preferred_genres");
+
+  // Watch all form values for auto-save
   const formValues = watch();
 
-  // Calculate profile completion percentage
+  // Calculate profile completion percentage - watch only required fields
   const completionPercentage = useMemo(() => {
     const requiredFields = [
-      formValues.name,
-      formValues.age_range,
-      formValues.gender,
-      formValues.location,
-      formValues.experience_level,
-      formValues.type,
-      formValues.union_status,
+      watch("name"),
+      watch("age_range"),
+      watch("gender"),
+      watch("location"),
+      watch("experience_level"),
+      watch("type"),
+      watch("union_status"),
     ];
     const optionalFields = [
-      formValues.ethnicity,
-      formValues.height,
-      formValues.build,
-      formValues.training_background,
-      formValues.headshot_url,
+      watch("ethnicity"),
+      watch("height"),
+      watch("build"),
+      watch("training_background"),
+      watch("headshot_url"),
     ];
-    
+
     const requiredCount = requiredFields.filter(Boolean).length;
     const optionalCount = optionalFields.filter(Boolean).length;
-    
+
     // Required fields are 70% of completion, optional are 30%
     return Math.min(100, Math.round((requiredCount / 7) * 70 + (optionalCount / 5) * 30));
-  }, [formValues]);
+  }, [watch]);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -115,16 +115,70 @@ export function ActorProfileForm() {
     } catch (err: unknown) {
       const error = err as { response?: { status?: number } };
       if (error.response?.status !== 404) {
-        setError("Failed to load profile");
+        toast.error("Failed to load profile");
       }
     } finally {
       setIsFetching(false);
+      // Mark as initialized after fetching
+      setTimeout(() => setHasInitialized(true), 500);
     }
   }, [setValue]);
 
   useEffect(() => {
     fetchProfile();
   }, [fetchProfile]);
+
+  // Auto-save functionality with debouncing
+  useEffect(() => {
+    // Don't auto-save until profile is fetched and form is initialized
+    if (!hasInitialized || isFetching) return;
+
+    // Clear existing timeout
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // Set new timeout for auto-save (2 seconds after last change)
+    saveTimeoutRef.current = setTimeout(async () => {
+      const data = getValues();
+
+      // Validate before saving
+      try {
+        profileSchema.parse(data);
+
+        setIsSaving(true);
+        try {
+          // If headshot_url is a base64 image, upload it first
+          let headshotUrl = data.headshot_url;
+          if (headshotUrl && headshotUrl.startsWith("data:image")) {
+            const uploadResponse = await api.post("/api/profile/headshot", {
+              image: headshotUrl,
+            });
+            headshotUrl = uploadResponse.data.headshot_url;
+          }
+
+          // Save profile with the headshot URL
+          await api.post("/api/profile", { ...data, headshot_url: headshotUrl });
+          toast.success("Profile saved!");
+        } catch (err: unknown) {
+          const error = err as { response?: { data?: { detail?: string } } };
+          toast.error(error.response?.data?.detail || "Failed to save profile");
+        } finally {
+          setIsSaving(false);
+        }
+      } catch (validationError) {
+        // Don't save if validation fails (required fields missing)
+        // User will see validation errors in the form
+      }
+    }, 2000); // 2 second debounce
+
+    // Cleanup function
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [formValues, hasInitialized, isFetching, getValues]);
 
   const handleHeadshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -188,40 +242,6 @@ export function ActorProfileForm() {
     setImageToEdit(null);
   };
 
-  const onSubmit = async (data: ProfileFormData) => {
-    setIsLoading(true);
-    setError(null);
-    setSuccess(false);
-
-    try {
-      // If headshot_url is a base64 image, upload it first
-      let headshotUrl = data.headshot_url;
-      if (headshotUrl && headshotUrl.startsWith("data:image")) {
-        try {
-          const uploadResponse = await api.post("/api/profile/headshot", {
-            image: headshotUrl,
-          });
-          headshotUrl = uploadResponse.data.headshot_url;
-        } catch (uploadErr: unknown) {
-          const uploadError = uploadErr as { response?: { data?: { detail?: string } } };
-          setError(uploadError.response?.data?.detail || "Failed to upload headshot");
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      // Save profile with the headshot URL
-      await api.post("/api/profile", { ...data, headshot_url: headshotUrl });
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string } } };
-      setError(error.response?.data?.detail || "Failed to save profile");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const toggleGenre = (genre: string) => {
     const current = preferredGenres || [];
     if (current.includes(genre)) {
@@ -253,7 +273,19 @@ export function ActorProfileForm() {
 
   return (
     <TooltipProvider>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <div className="space-y-6">
+        {/* Saving Indicator */}
+        {isSaving && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex items-center justify-center gap-2 text-sm text-muted-foreground bg-primary/5 border border-primary/20 rounded-lg py-2 px-4"
+          >
+            <IconLoader2 className="h-4 w-4 animate-spin" />
+            <span className="font-mono">Saving changes...</span>
+          </motion.div>
+        )}
+
         {/* Progress Bar */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -270,7 +302,7 @@ export function ActorProfileForm() {
                 </div>
                 <Progress value={completionPercentage} className="h-2" />
                 <p className="text-xs text-muted-foreground">
-                  Complete your profile to get better monologue recommendations
+                  Changes are automatically saved
                 </p>
               </div>
             </CardContent>
@@ -293,7 +325,7 @@ export function ActorProfileForm() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="headshot">Upload Photo</Label>
+                <Label htmlFor="headshot" className="font-mono">Upload Photo</Label>
                 <Input 
                   id="headshot" 
                   type="file"
@@ -349,38 +381,36 @@ export function ActorProfileForm() {
 
         {/* Tabs for organized sections */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-colshave-3">
-            <TabsTrigger value="basic" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="basic" className="flex items-center gap-2 font-mono">
               <IconUser className="h-4 w-4" />
               Basic Info
             </TabsTrigger>
-            <TabsTrigger value="acting" className="flex items-center gap-2">
+            <TabsTrigger value="acting" className="flex items-center gap-2 font-mono">
               <IconBriefcase className="h-4 w-4" />
               Acting Info
             </TabsTrigger>
-            <TabsTrigger value="preferences" className="flex items-center gap-2">
+            <TabsTrigger value="preferences" className="flex items-center gap-2 font-mono">
               <IconSettings className="h-4 w-4" />
               Preferences
             </TabsTrigger>
           </TabsList>
 
-          <AnimatePresence mode="wait">
-            {activeTab === "basic" && (
-              <TabsContent key="basic" value="basic" className="mt-6">
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.3 }}
-                >
+          <div className="min-h-[600px]">
+            <TabsContent value="basic" className="mt-6">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+              >
                   <Card>
                     <CardHeader>
                       <CardTitle>Basic Information</CardTitle>
                       <CardDescription>Tell us about yourself</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-6">
                       <div className="space-y-2">
-                        <Label htmlFor="name">Name *</Label>
+                        <Label htmlFor="name" className="font-mono">Name *</Label>
                         <Input id="name" {...register("name")} />
                         {errors.name && (
                           <motion.p
@@ -395,7 +425,7 @@ export function ActorProfileForm() {
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="age_range">Age Range *</Label>
+                          <Label htmlFor="age_range" className="font-mono">Age Range *</Label>
                           <Select id="age_range" {...register("age_range")}>
                             <option value="">Select age range</option>
                             <option value="18-25">18-25</option>
@@ -416,7 +446,7 @@ export function ActorProfileForm() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="gender">Gender Identity *</Label>
+                          <Label htmlFor="gender" className="font-mono">Gender Identity *</Label>
                           <Select id="gender" {...register("gender")}>
                             <option value="">Select gender</option>
                             <option value="Male">Male</option>
@@ -437,24 +467,24 @@ export function ActorProfileForm() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="ethnicity">Ethnicity (optional)</Label>
+                        <Label htmlFor="ethnicity" className="font-mono">Ethnicity (optional)</Label>
                         <Input id="ethnicity" {...register("ethnicity")} />
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="height">Height (optional)</Label>
+                          <Label htmlFor="height" className="font-mono">Height (optional)</Label>
                           <Input id="height" placeholder="5'10&quot;" {...register("height")} />
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="build">Build (optional)</Label>
+                          <Label htmlFor="build" className="font-mono">Build (optional)</Label>
                           <Input id="build" placeholder="Athletic" {...register("build")} />
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="location">Location/Market *</Label>
+                        <Label htmlFor="location" className="font-mono">Location/Market *</Label>
                         <Select id="location" {...register("location")}>
                           <option value="">Select location</option>
                           <option value="NYC">NYC</option>
@@ -477,25 +507,22 @@ export function ActorProfileForm() {
                   </Card>
                 </motion.div>
               </TabsContent>
-            )}
 
-            {activeTab === "acting" && (
-              <TabsContent key="acting" value="acting" className="mt-6">
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.3 }}
-                >
+            <TabsContent value="acting" className="mt-6">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+              >
                   <Card>
                     <CardHeader>
                       <CardTitle>Acting Background</CardTitle>
                       <CardDescription>Your acting experience and training</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-6">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <Label htmlFor="experience_level">Experience Level *</Label>
+                          <Label htmlFor="experience_level" className="font-mono">Experience Level *</Label>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button type="button" className="inline-flex items-center">
@@ -529,7 +556,7 @@ export function ActorProfileForm() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="type">Type *</Label>
+                        <Label htmlFor="type" className="font-mono">Type *</Label>
                         <Select id="type" {...register("type")}>
                           <option value="">Select type</option>
                           <option value="Leading Man/Woman">Leading Man/Woman</option>
@@ -550,13 +577,13 @@ export function ActorProfileForm() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="training_background">Training Background (optional)</Label>
+                        <Label htmlFor="training_background" className="font-mono">Training Background (optional)</Label>
                         <Input id="training_background" placeholder="BFA, MFA, Conservatory, etc." {...register("training_background")} />
                       </div>
 
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <Label htmlFor="union_status">Union Status *</Label>
+                          <Label htmlFor="union_status" className="font-mono">Union Status *</Label>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button type="button" className="inline-flex items-center">
@@ -592,16 +619,13 @@ export function ActorProfileForm() {
                   </Card>
                 </motion.div>
               </TabsContent>
-            )}
 
-            {activeTab === "preferences" && (
-              <TabsContent key="preferences" value="preferences" className="mt-6">
-                <motion.div
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.3 }}
-                >
+            <TabsContent value="preferences" className="mt-6">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.2 }}
+              >
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -610,10 +634,10 @@ export function ActorProfileForm() {
                       </CardTitle>
                       <CardDescription>Customize your monologue search experience</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
+                    <CardContent className="space-y-6">
                       <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
                         <div className="space-y-0.5">
-                          <Label htmlFor="profile_bias" className="text-base font-semibold">
+                          <Label htmlFor="profile_bias" className="text-base font-semibold font-mono">
                             AI-Powered Recommendations
                           </Label>
                           <p className="text-sm text-muted-foreground">
@@ -630,7 +654,7 @@ export function ActorProfileForm() {
                       <Separator />
 
                       <div className="space-y-2">
-                        <Label>Preferred Genres</Label>
+                        <Label className="font-mono">Preferred Genres</Label>
                         <div className="grid grid-cols-3 gap-2">
                           {genres.map((genre) => (
                             <motion.label
@@ -652,17 +676,8 @@ export function ActorProfileForm() {
                       <Separator />
 
                       <div className="space-y-2">
-                        <Label htmlFor="comfort">Comfort with Difficult Material</Label>
-                        <Select id="comfort" {...register("comfort_with_difficult_material")}>
-                          <option value="low">Low</option>
-                          <option value="moderate">Moderate</option>
-                          <option value="high">High</option>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <Label htmlFor="sensitivity">
+                          <Label htmlFor="sensitivity" className="font-mono">
                             Overdone Alert Sensitivity: {watch("overdone_alert_sensitivity")}
                           </Label>
                           <Tooltip>
@@ -694,64 +709,9 @@ export function ActorProfileForm() {
                   </Card>
                 </motion.div>
               </TabsContent>
-            )}
-          </AnimatePresence>
+          </div>
         </Tabs>
-
-        {/* Success/Error Messages */}
-        <AnimatePresence>
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            </motion.div>
-          )}
-          {success && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-            >
-              <div className="rounded-lg border border-green-500/50 bg-green-50 dark:bg-green-950 p-4">
-                <div className="flex items-center gap-2">
-                  <IconCheck className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  <p className="text-sm text-green-800 dark:text-green-200">
-                    Profile saved successfully!
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Submit Button */}
-        <div className="flex justify-center">
-          <motion.div
-            whileHover={{ scale: 1.01 }}
-            whileTap={{ scale: 0.99 }}
-            className="w-full max-w-md"
-          >
-            <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <IconCheck className="mr-2 h-4 w-4" />
-                  Save Profile
-                </>
-              )}
-            </Button>
-          </motion.div>
-        </div>
-      </form>
+      </div>
       {showEditor && imageToEdit && (
         <PhotoEditor
           image={imageToEdit}

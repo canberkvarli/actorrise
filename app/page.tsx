@@ -1,111 +1,59 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { IconSearch, IconUser, IconSparkles, IconMicrophone } from "@tabler/icons-react";
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="border-b-4 border-border">
-        <div className="container mx-auto px-6 py-6 flex items-center justify-between">
-          <div className="text-3xl font-bold tracking-tight">ACTORRISE</div>
-          <div className="flex items-center gap-3">
-            <Link href="/login">
-              <Button variant="ghost" size="sm">Sign in</Button>
-            </Link>
-            <Link href="/signup">
-              <Button size="sm">Get Started</Button>
-            </Link>
-          </div>
+      <nav className="border-b border-border">
+        <div className="container mx-auto px-8 py-6 flex items-center justify-end">
+          <Link href="/login">
+            <Button variant="ghost">Sign in</Button>
+          </Link>
         </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-6 py-24">
-        <div className="max-w-3xl">
-          <h1 className="text-6xl font-bold mb-6 leading-tight">
-            Your Complete Acting Platform
+      <section className="container mx-auto px-8 py-40 min-h-[80vh] flex flex-col justify-center">
+        <div className="max-w-6xl">
+          <h1 className="text-[10rem] md:text-[14rem] font-bold mb-12 leading-none tracking-tighter">
+            ACTORRISE
           </h1>
-          <p className="text-xl mb-10 leading-relaxed">
-            Everything you need to succeed as an actor. MonologueMatch, ScenePartner, CraftCoach, and more—all in one place.
+          <p className="text-4xl md:text-5xl text-muted-foreground font-mono font-light max-w-3xl">
+            AI-powered tools for actors
           </p>
-          <div className="flex gap-4">
-            <Link href="/signup">
-              <Button size="lg">Start Free Trial</Button>
-            </Link>
-            <Link href="/login">
-              <Button size="lg" variant="outline">Sign In</Button>
-            </Link>
-          </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="container mx-auto px-6 py-20">
-        <h2 className="text-4xl font-bold mb-12">What You Get</h2>
-        <div className="grid md:grid-cols-2 gap-6">
-          <Card>
-            <CardContent className="p-8">
-              <IconSearch className="h-10 w-10 mb-4" strokeWidth={2.5} />
-              <h3 className="text-2xl font-bold mb-3">MonologueMatch</h3>
-              <p className="text-base leading-relaxed">
-                AI-powered monologue discovery tailored to your profile and preferences.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-8">
-              <IconUser className="h-10 w-10 mb-4" strokeWidth={2.5} />
-              <h3 className="text-2xl font-bold mb-3">ScenePartner</h3>
-              <p className="text-base leading-relaxed">
-                AI scene partners for self-tape prep. Practice anytime, anywhere.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-8">
-              <IconSparkles className="h-10 w-10 mb-4" strokeWidth={2.5} />
-              <h3 className="text-2xl font-bold mb-3">CraftCoach</h3>
-              <p className="text-base leading-relaxed">
-                Get AI feedback on your performances to improve your craft.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-8">
-              <IconMicrophone className="h-10 w-10 mb-4" strokeWidth={2.5} />
-              <h3 className="text-2xl font-bold mb-3">AuditionTracker</h3>
-              <p className="text-base leading-relaxed">
-                Track submissions, callbacks, and bookings. Never miss an opportunity.
-              </p>
-            </CardContent>
-          </Card>
+      <section className="container mx-auto px-8 py-40 border-t border-border">
+        <div className="max-w-4xl space-y-8">
+          <h3 className="text-5xl md:text-6xl font-bold font-mono">MonologueMatch</h3>
+          <div className="flex items-center gap-4 flex-wrap">
+            <h3 className="text-5xl md:text-6xl font-bold font-mono">ScenePartner</h3>
+            <span className="text-sm font-mono text-muted-foreground border border-border px-3 py-1 rounded-md">
+              Coming Soon
+            </span>
+          </div>
+          <div className="flex items-center gap-4 flex-wrap">
+            <h3 className="text-5xl md:text-6xl font-bold font-mono">CraftCoach</h3>
+            <span className="text-sm font-mono text-muted-foreground border border-border px-3 py-1 rounded-md">
+              Coming Soon
+            </span>
+          </div>
+          <div className="flex items-center gap-4 flex-wrap">
+            <h3 className="text-5xl md:text-6xl font-bold font-mono">AuditionTracker</h3>
+            <span className="text-sm font-mono text-muted-foreground border border-border px-3 py-1 rounded-md">
+              Coming Soon
+            </span>
+          </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="container mx-auto px-6 py-20">
-        <Card>
-          <CardContent className="p-16 text-center">
-            <h2 className="text-4xl font-bold mb-6">Ready to Start?</h2>
-            <p className="text-lg mb-10 max-w-2xl mx-auto leading-relaxed">
-              Join thousands of actors using ActorRise to find the perfect monologues, practice scenes, and track their careers.
-            </p>
-            <Link href="/signup">
-              <Button size="lg">Get Started Free</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </section>
-
       {/* Footer */}
-      <footer className="border-t-4 border-border py-10">
-        <div className="container mx-auto px-6 text-center">
-          <p className="font-bold">© 2024 ACTORRISE</p>
+      <footer className="border-t border-border py-20">
+        <div className="container mx-auto px-8">
+          <p className="text-sm text-muted-foreground">© 2026 ACTORRISE</p>
         </div>
       </footer>
     </div>

@@ -25,7 +25,6 @@ class ActorProfileCreate(BaseModel):
     training_background: Optional[str] = None
     union_status: str
     preferred_genres: List[str] = []
-    comfort_with_difficult_material: str = "moderate"
     overdone_alert_sensitivity: float = 0.5
     profile_bias_enabled: bool = True
     headshot_url: Optional[str] = None
@@ -46,7 +45,6 @@ class ActorProfileResponse(BaseModel):
     training_background: Optional[str] = None
     union_status: Optional[str] = None
     preferred_genres: List[str] = []
-    comfort_with_difficult_material: str = "moderate"
     overdone_alert_sensitivity: float = 0.5
     profile_bias_enabled: bool = True
     headshot_url: Optional[str] = None

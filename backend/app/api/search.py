@@ -33,7 +33,8 @@ class MonologueResponse(BaseModel):
     age_range: str
     gender: str
     genre: str
-    difficulty: str
+    theme: Optional[str] = None
+    category: Optional[str] = None
     excerpt: str
     full_text_url: Optional[str] = None
     source_url: Optional[str] = None
@@ -64,7 +65,7 @@ def search_monologues(
     - Profile-based recommendations (when profile_bias=True)
     - Semantic/vector search (when query provided and embeddings available)
     - Keyword search (fallback when embeddings unavailable)
-    - Filtered search (by age_range, gender, genre, difficulty)
+    - Filtered search (by age_range, gender, genre, theme, category)
 
     Args:
         search_request: Search parameters including query, filters, and bias options
@@ -108,9 +109,13 @@ def search_monologues(
             query = query.filter(
                 Monologue.genre == search_request.filters["genre"]
             )
-        if search_request.filters.get("difficulty"):
+        if search_request.filters.get("theme"):
             query = query.filter(
-                Monologue.difficulty == search_request.filters["difficulty"]
+                Monologue.theme == search_request.filters["theme"]
+            )
+        if search_request.filters.get("category"):
+            query = query.filter(
+                Monologue.category == search_request.filters["category"]
             )
 
     # Only fetch all monologues if we need them for Python-based search
