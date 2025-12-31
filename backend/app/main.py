@@ -1,7 +1,11 @@
-from app.api import auth, profile
+from app.api import auth, profile, monologues
 from app.core.config import settings
+from app.core.database import Base, engine
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# Create database tables
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="ActorRise API", version="1.0.0")
 
@@ -17,6 +21,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router)
 app.include_router(profile.router)
+app.include_router(monologues.router)
 
 
 @app.get("/")
