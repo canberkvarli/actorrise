@@ -1,18 +1,13 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, JSON, Boolean, Float, Text
+from app.core.database import Base
+from sqlalchemy import (JSON, Boolean, Column, DateTime, Float, ForeignKey,
+                        Integer, String, text)
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
-from app.core.database import Base, is_postgres
 
-# Conditionally import pgvector
-if is_postgres:
-    try:
-        from pgvector.sqlalchemy import Vector
-        HAS_PGVECTOR = True
-    except ImportError:
-        HAS_PGVECTOR = False
-        print("Warning: pgvector not installed. Install with: pip install pgvector")
-else:
-    HAS_PGVECTOR = False
+# Import pgvector for PostgreSQL vector support
+try:
+    from pgvector.sqlalchemy import Vector
+except ImportError as exc:
+    raise ImportError("pgvector is required. Install with: pip install pgvector") from exc
 
 
 class ActorProfile(Base):
@@ -44,8 +39,8 @@ class ActorProfile(Base):
     # Headshot
     headshot_url = Column(String, nullable=True)
     
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=text('now()'))
+    updated_at = Column(DateTime(timezone=True), onupdate=text('now()'))
 
     # Relationship to user
     user = relationship("User", back_populates="actor_profile")
@@ -65,10 +60,7 @@ class Monologue(Base):
     excerpt = Column(String)
     full_text_url = Column(String, nullable=True)
     source_url = Column(String, nullable=True)
-    # Use Vector type for PostgreSQL with pgvector, fallback to Text for SQLite
-    embedding = Column(
-        Vector(1536) if (is_postgres and HAS_PGVECTOR) else Text,
-        nullable=True
-    )  # Vector for PostgreSQL, JSON string for SQLite
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    # Vector embedding for semantic search (pgvector)
+    embedding = Column(Vector(1536), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=text('now()'))
 

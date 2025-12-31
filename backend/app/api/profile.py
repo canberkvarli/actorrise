@@ -1,13 +1,14 @@
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from sqlalchemy.exc import OperationalError
-from pydantic import BaseModel
-from typing import Optional, List
-from app.core.database import get_db
+from typing import List, Optional, cast
+
 from app.api.auth import get_current_user
+from app.core.database import get_db
+from app.models.actor import ActorProfile
 from app.models.user import User
-from app.models.actor import ActorProfile, Monologue
-from app.services.storage import upload_headshot, delete_headshot
+from app.services.storage import delete_headshot, upload_headshot
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
@@ -151,17 +152,18 @@ def get_profile_stats(
         profile.headshot_url,
     ]
     
-    required_count = sum(1 for field in required_fields if field)
-    optional_count = sum(1 for field in optional_fields if field)
+    required_count = sum(1 for field in required_fields if field is not None)
+    optional_count = sum(1 for field in optional_fields if field is not None)
     
     # Required fields are 70% of completion, optional are 30%
     completion_percentage = min(100.0, (required_count / 7) * 70 + (optional_count / 5) * 30)
     
+    preferred_genres_list = cast(List[str], profile.preferred_genres) if profile.preferred_genres is not None else []
     return ProfileStatsResponse(
         completion_percentage=round(completion_percentage, 1),
-        has_headshot=bool(profile.headshot_url),
-        preferred_genres_count=len(profile.preferred_genres or []),
-        profile_bias_enabled=profile.profile_bias_enabled
+        has_headshot=profile.headshot_url is not None,
+        preferred_genres_count=len(preferred_genres_list),
+        profile_bias_enabled=bool(cast(bool, profile.profile_bias_enabled))
     )
 
 
@@ -185,21 +187,22 @@ def upload_headshot_endpoint(
     """
     try:
         # Upload to Supabase Storage
-        headshot_url = upload_headshot(request.image, current_user.id)
+        user_id = cast(int, current_user.id)
+        headshot_url = upload_headshot(request.image, user_id)
         
         # Update profile with new headshot URL
         try:
-            profile = db.query(ActorProfile).filter(ActorProfile.user_id == current_user.id).first()
+            profile = db.query(ActorProfile).filter(ActorProfile.user_id == user_id).first()
             if profile:
                 # Delete old headshot if it exists and is from Supabase
-                if profile.headshot_url and "supabase.co" in profile.headshot_url:
-                    delete_headshot(current_user.id)
-                profile.headshot_url = headshot_url
+                if profile.headshot_url is not None and "supabase.co" in profile.headshot_url:
+                    delete_headshot(user_id)
+                setattr(profile, 'headshot_url', headshot_url)
                 db.commit()
             else:
                 # Create profile if it doesn't exist yet
                 profile = ActorProfile(
-                    user_id=current_user.id,
+                    user_id=user_id,
                     headshot_url=headshot_url
                 )
                 db.add(profile)
@@ -217,10 +220,10 @@ def upload_headshot_endpoint(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
-        )
+        ) from e
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to upload headshot: {str(e)}"
-        )
+        ) from e
 

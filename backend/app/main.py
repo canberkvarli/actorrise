@@ -1,7 +1,7 @@
+from app.api import auth, profile, search
+from app.core.config import settings
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.core.config import settings
-from app.api import auth, profile, search
 
 app = FastAPI(title="ActorRise API", version="1.0.0")
 
