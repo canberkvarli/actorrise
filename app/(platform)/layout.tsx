@@ -1,8 +1,7 @@
 "use client";
 
 import { useAuth } from "@/lib/auth";
-import { useRouter, usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { IconHome, IconSearch, IconUser, IconLogout, IconMenu } from "@tabler/icons-react";
@@ -14,8 +13,7 @@ export default function PlatformLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading, logout, isAuthenticated } = useAuth();
-  const router = useRouter();
+  const { loading, logout } = useAuth();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -53,16 +51,18 @@ export default function PlatformLayout({
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
                 return (
-                  <Link key={item.href} href={item.href}>
-                    <Button
-                      variant={isActive ? "default" : "ghost"}
-                      size="sm"
-                      className="gap-2"
-                    >
+                  <Button
+                    key={item.href}
+                    asChild
+                    variant={isActive ? "default" : "ghost"}
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Link href={item.href}>
                       <Icon className="h-4 w-4" />
                       {item.label}
-                    </Button>
-                  </Link>
+                    </Link>
+                  </Button>
                 );
               })}
               <Button variant="ghost" size="sm" onClick={logout} className="gap-2">
@@ -97,20 +97,18 @@ export default function PlatformLayout({
                     const Icon = item.icon;
                     const isActive = pathname === item.href;
                     return (
-                      <Link
+                      <Button
                         key={item.href}
-                        href={item.href}
-                        onClick={() => setMobileMenuOpen(false)}
+                        asChild
+                        variant={isActive ? "default" : "ghost"}
+                        size="sm"
+                        className="w-full justify-start gap-2"
                       >
-                        <Button
-                          variant={isActive ? "default" : "ghost"}
-                          size="sm"
-                          className="w-full justify-start gap-2"
-                        >
+                        <Link href={item.href} onClick={() => setMobileMenuOpen(false)}>
                           <Icon className="h-4 w-4" />
                           {item.label}
-                        </Button>
-                      </Link>
+                        </Link>
+                      </Button>
                     );
                   })}
                   <Button

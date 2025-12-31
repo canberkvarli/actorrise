@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter } from "@tabler/icons-react";
 import { SearchRequest } from "@/types/actor";
 import api from "@/lib/api";
@@ -448,7 +447,8 @@ export function SearchInterface() {
                     age_range: "",
                     gender: "",
                     genre: "",
-                    difficulty: "",
+                    theme: "",
+                    category: "",
                   });
                 }}>
                   Clear Search

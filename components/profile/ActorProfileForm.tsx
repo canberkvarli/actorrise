@@ -4,7 +4,6 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import Image from "next/image";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,7 +45,6 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 const genres = ["Drama", "Comedy", "Classical", "Contemporary", "Musical", "Shakespeare"];
 
 export function ActorProfileForm() {
-  const [isSaving, setIsSaving] = useState(false);
   const [isFetching, setIsFetching] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | null>(null);
@@ -96,7 +94,40 @@ export function ActorProfileForm() {
   const headshotUrl = watch("headshot_url");
   
   // Track previous values to only save when something actually changes
-  const prevValuesRef = useRef<any>({});
+  type PreviousValues = {
+    name: string;
+    ageRange: string;
+    gender: string;
+    ethnicity: string | undefined;
+    height: string | undefined;
+    build: string | undefined;
+    location: string;
+    experienceLevel: string;
+    type: string;
+    trainingBackground: string | undefined;
+    unionStatus: string;
+    preferredGenres: string[];
+    overdoneSensitivity: number;
+    profileBias: boolean;
+    headshotUrl: string | undefined;
+  };
+  const prevValuesRef = useRef<PreviousValues>({
+    name: "",
+    ageRange: "",
+    gender: "",
+    ethnicity: undefined,
+    height: undefined,
+    build: undefined,
+    location: "",
+    experienceLevel: "",
+    type: "",
+    trainingBackground: undefined,
+    unionStatus: "",
+    preferredGenres: [],
+    overdoneSensitivity: 0.5,
+    profileBias: true,
+    headshotUrl: undefined,
+  });
 
   // Calculate profile completion percentage - matches backend calculation
   const completionPercentage = useMemo(() => {
@@ -142,7 +173,24 @@ export function ActorProfileForm() {
     try {
       setIsFetching(true);
       console.log("Fetching profile...");
-      const response = await api.get("/api/profile");
+      type ProfileResponse = {
+        name?: string | null;
+        age_range?: string | null;
+        gender?: string | null;
+        ethnicity?: string | null;
+        height?: string | null;
+        build?: string | null;
+        location?: string | null;
+        experience_level?: string | null;
+        type?: string | null;
+        training_background?: string | null;
+        union_status?: string | null;
+        preferred_genres?: string[] | null;
+        overdone_alert_sensitivity?: number | null;
+        profile_bias_enabled?: boolean | null;
+        headshot_url?: string | null;
+      };
+      const response = await api.get<ProfileResponse>("/api/profile");
       const profile = response.data;
       
       // Reset form with all profile data - this properly updates all registered inputs
@@ -270,7 +318,10 @@ export function ActorProfileForm() {
     // Check if anything actually changed
     const prevValues = prevValuesRef.current;
     const hasChanged = Object.keys(currentValues).some(
-      (key) => JSON.stringify(prevValues[key]) !== JSON.stringify(currentValues[key as keyof typeof currentValues])
+      (key) => {
+        const typedKey = key as keyof typeof currentValues;
+        return JSON.stringify(prevValues[typedKey as keyof PreviousValues]) !== JSON.stringify(currentValues[typedKey]);
+      }
     );
 
     if (!hasChanged) {
@@ -292,7 +343,24 @@ export function ActorProfileForm() {
 
       // Build save data - only include fields that have values (not empty strings)
       // Convert empty strings to null for optional fields to avoid validation errors
-      const saveData: any = {};
+      type SaveData = Partial<{
+        name: string;
+        age_range: string;
+        gender: string;
+        ethnicity: string | null;
+        height: string | null;
+        build: string | null;
+        location: string;
+        experience_level: string;
+        type: string;
+        training_background: string | null;
+        union_status: string;
+        preferred_genres: string[];
+        overdone_alert_sensitivity: number;
+        profile_bias_enabled: boolean;
+        headshot_url: string | null;
+      }>;
+      const saveData: SaveData = {};
       if (data.name && data.name.trim()) saveData.name = data.name.trim();
       if (data.age_range && data.age_range.trim()) saveData.age_range = data.age_range.trim();
       if (data.gender && data.gender.trim()) saveData.gender = data.gender.trim();
@@ -325,13 +393,15 @@ export function ActorProfileForm() {
       }
 
       try {
-        setIsSaving(true);
         setSaveStatus("saving");
         
         // If headshot_url is a base64 image, upload it first
         let finalHeadshotUrl = saveData.headshot_url;
         if (finalHeadshotUrl && finalHeadshotUrl.startsWith("data:image")) {
-          const uploadResponse = await api.post("/api/profile/headshot", {
+          type HeadshotResponse = {
+            headshot_url: string;
+          };
+          const uploadResponse = await api.post<HeadshotResponse>("/api/profile/headshot", {
             image: finalHeadshotUrl,
           });
           finalHeadshotUrl = uploadResponse.data.headshot_url;
@@ -339,7 +409,6 @@ export function ActorProfileForm() {
         }
 
         await api.post("/api/profile", saveData);
-        setIsSaving(false);
         setSaveStatus("saved");
         
         // Clear saved status after 3 seconds
@@ -351,14 +420,14 @@ export function ActorProfileForm() {
         }, 3000);
         } catch (err: unknown) {
           console.error("❌ Save error:", err);
-          const error = err as { response?: { data?: { detail?: string | any } } };
+          const error = err as { response?: { data?: { detail?: string | Array<{ msg?: string } | string> | Record<string, unknown> } } };
           let errorMessage = "Failed to save profile";
           if (error.response?.data?.detail) {
             if (typeof error.response.data.detail === 'string') {
               errorMessage = error.response.data.detail;
             } else if (Array.isArray(error.response.data.detail)) {
-              errorMessage = error.response.data.detail.map((e: any) => 
-                typeof e === 'string' ? e : e.msg || JSON.stringify(e)
+              errorMessage = error.response.data.detail.map((e) => 
+                typeof e === 'string' ? e : (typeof e === 'object' && e !== null && 'msg' in e ? String(e.msg) : JSON.stringify(e))
               ).join(', ');
             } else {
               errorMessage = JSON.stringify(error.response.data.detail);
@@ -366,7 +435,6 @@ export function ActorProfileForm() {
           }
           console.error("Error details:", errorMessage);
           toast.error(errorMessage);
-          setIsSaving(false);
           setSaveStatus(null);
       }
     }, 2000); // 2 second debounce
@@ -436,7 +504,10 @@ export function ActorProfileForm() {
     if (croppedImage.startsWith("data:image")) {
       try {
         setIsLoading(true);
-        const response = await api.post("/api/profile/headshot", {
+        type HeadshotResponse = {
+          headshot_url: string;
+        };
+        const response = await api.post<HeadshotResponse>("/api/profile/headshot", {
           image: croppedImage,
         });
           let uploadedUrl = response.data.headshot_url;
@@ -459,14 +530,14 @@ export function ActorProfileForm() {
         setImageToEdit(null);
         toast.success("Headshot uploaded successfully!");
       } catch (err: unknown) {
-        const error = err as { response?: { data?: { detail?: string | any } } };
+        const error = err as { response?: { data?: { detail?: string | Array<{ msg?: string } | string> | Record<string, unknown> } } };
         let errorMessage = "Failed to upload headshot";
         if (error.response?.data?.detail) {
           if (typeof error.response.data.detail === 'string') {
             errorMessage = error.response.data.detail;
           } else if (Array.isArray(error.response.data.detail)) {
-            errorMessage = error.response.data.detail.map((e: any) => 
-              typeof e === 'string' ? e : e.msg || JSON.stringify(e)
+            errorMessage = error.response.data.detail.map((e) => 
+              typeof e === 'string' ? e : (typeof e === 'object' && e !== null && 'msg' in e ? String(e.msg) : JSON.stringify(e))
             ).join(', ');
           } else {
             errorMessage = String(error.response.data.detail);
@@ -508,8 +579,8 @@ export function ActorProfileForm() {
       
       // Use PUT method and send only headshot_url: null
       // The backend uses exclude_unset=True, so we need to explicitly set it
-      const saveData = {
-        headshot_url: null as any, // Explicitly set to null to delete
+      const saveData: { headshot_url: null } = {
+        headshot_url: null, // Explicitly set to null to delete
       };
        await api.put("/api/profile", saveData);
        setValue("headshot_url", "", { shouldDirty: false });
@@ -517,14 +588,14 @@ export function ActorProfileForm() {
        prevValuesRef.current.headshotUrl = "";
        toast.success("Headshot deleted successfully");
      } catch (err: unknown) {
-      const error = err as { response?: { data?: { detail?: string | any } } };
+      const error = err as { response?: { data?: { detail?: string | Array<{ msg?: string } | string> | Record<string, unknown> } } };
       let errorMessage = "Failed to delete headshot";
       if (error.response?.data?.detail) {
         if (typeof error.response.data.detail === 'string') {
           errorMessage = error.response.data.detail;
         } else if (Array.isArray(error.response.data.detail)) {
-          errorMessage = error.response.data.detail.map((e: any) => 
-            typeof e === 'string' ? e : e.msg || JSON.stringify(e)
+          errorMessage = error.response.data.detail.map((e) => 
+            typeof e === 'string' ? e : (typeof e === 'object' && e !== null && 'msg' in e ? String(e.msg) : JSON.stringify(e))
           ).join(', ');
         } else {
           errorMessage = String(error.response.data.detail);
