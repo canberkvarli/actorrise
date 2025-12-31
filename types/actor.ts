@@ -13,7 +13,6 @@ export interface ActorProfile {
   training_background?: string;
   union_status: string;
   preferred_genres: string[];
-  comfort_with_difficult_material: string;
   overdone_alert_sensitivity: number;
   profile_bias_enabled: boolean;
   headshot_url?: string;
@@ -21,7 +20,6 @@ export interface ActorProfile {
 
 export interface SearchPreferences {
   preferred_genres: string[];
-  comfort_with_difficult_material: string;
   overdone_alert_sensitivity: number;
   profile_bias_enabled: boolean;
 }
@@ -33,7 +31,8 @@ export interface Monologue {
   age_range: string;
   gender: string;
   genre: string;
-  difficulty: string;
+  theme?: string;
+  category?: string;
   excerpt: string;
   full_text_url?: string;
   source_url?: string;
@@ -47,7 +46,8 @@ export interface SearchRequest {
     age_range?: string;
     gender?: string;
     genre?: string;
-    difficulty?: string;
+    theme?: string;
+    category?: string;
   };
 }
 

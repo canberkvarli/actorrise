@@ -38,7 +38,6 @@ class ActorProfile(Base):
     
     # Search Preferences
     preferred_genres = Column(JSON, default=list)
-    comfort_with_difficult_material = Column(String, default="moderate")
     overdone_alert_sensitivity = Column(Float, default=0.5)
     profile_bias_enabled = Column(Boolean, default=True)
     
@@ -61,7 +60,8 @@ class Monologue(Base):
     age_range = Column(String)
     gender = Column(String)
     genre = Column(String)
-    difficulty = Column(String)
+    theme = Column(String, nullable=True)
+    category = Column(String, nullable=True)  # Contemporary or Classical
     excerpt = Column(String)
     full_text_url = Column(String, nullable=True)
     source_url = Column(String, nullable=True)

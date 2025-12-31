@@ -8,10 +8,10 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { IconLoader2 } from "@tabler/icons-react";
 
 const signupSchema = z.object({
+  name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
@@ -39,7 +39,7 @@ export function SignupForm() {
     setError(null);
     setIsLoading(true);
     try {
-      await signup(data.email, data.password);
+      await signup(data.email, data.password, data.name);
     } catch (err: any) {
       setError(err.message || err.response?.data?.detail || "Failed to sign up");
     } finally {
@@ -48,13 +48,21 @@ export function SignupForm() {
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Create an account</CardTitle>
-        <CardDescription>Join ActorRise to start your acting journey</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <div className="w-full">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-2">
+            <Label htmlFor="name" className="font-mono">Name</Label>
+            <Input
+              id="name"
+              type="text"
+              placeholder="Your name"
+              {...register("name")}
+            />
+            {errors.name && (
+              <p className="text-sm text-destructive">{errors.name.message}</p>
+            )}
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -104,9 +112,8 @@ export function SignupForm() {
               "Sign up"
             )}
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+      </form>
+    </div>
   );
 }
 

@@ -1,120 +1,96 @@
-"""Authentication API endpoints using Supabase Auth."""
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import verify_supabase_token
 from app.models.user import User
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel
-from sqlalchemy.exc import OperationalError
-from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 security = HTTPBearer()
-
-
-
-
-class UserResponse(BaseModel):
-    """Pydantic model for user response data."""
-
-    id: int
-    email: str
-
-    class Config:
-        """Pydantic configuration."""
-
-        from_attributes = True
 
 
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
-    """Get the current authenticated user from Supabase JWT token.
-
-    Args:
-        credentials: HTTP Bearer token credentials
-        db: Database session
-
-    Returns:
-        User: The authenticated user object
-
-    Raises:
-        HTTPException: If token is invalid, expired, or user not found
+    """Dependency to get the current authenticated user.
+    
+    Extracts the Supabase JWT token from the Authorization header,
+    verifies it, and returns the corresponding User from the database.
+    Creates the user if it doesn't exist yet.
     """
     token = credentials.credentials
+    token_data = verify_supabase_token(token)
     
-    # Verify Supabase token
-    payload = verify_supabase_token(token)
-    if payload is None:
+    if not token_data:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Get Supabase user ID (UUID format)
-    supabase_user_id = payload.get("sub")
-    if not supabase_user_id:
+    supabase_id = token_data.get("sub")
+    email = token_data.get("email")
+
+    # Extract name from token metadata if available
+    user_metadata = token_data.get("user_metadata", {})
+    name = user_metadata.get("name") or user_metadata.get("full_name")
+
+    if not supabase_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
+            detail="Invalid token: missing user ID",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-    
-    # Get email from token
-    email = payload.get("email")
-    
-    try:
-        # Look up user by Supabase ID (stored in email field or we need to add supabase_id)
-        # For now, we'll use email to find the user
-        # TODO: Add supabase_id column to User model for better mapping
-        if email:
-            user = db.query(User).filter(User.email == email).first()
-        else:
-            # Fallback: try to find by any matching criteria
-            user = None
-        
-        # If user doesn't exist in our DB, create it (first time login after Supabase signup)
-        if user is None and email:
-            user = User(
-                email=email,
-                supabase_id=supabase_user_id,
-                hashed_password=None  # No password needed, auth handled by Supabase
+
+    # Get or create user
+    user = db.query(User).filter(User.supabase_id == supabase_id).first()
+
+    if not user:
+        # Create new user if it doesn't exist
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token: missing email",
+                headers={"WWW-Authenticate": "Bearer"},
             )
-            db.add(user)
+
+        # Check if user with this email already exists (shouldn't happen, but handle it)
+        existing_user = db.query(User).filter(User.email == email).first()
+        if existing_user:
+            # Update existing user with supabase_id and name
+            existing_user.supabase_id = supabase_id
+            if name:
+                existing_user.name = name
             db.commit()
-            db.refresh(user)
-        elif user and not user.supabase_id:
-            # Update existing user with Supabase ID if missing
-            user.supabase_id = supabase_user_id
-            db.commit()
-            db.refresh(user)
-        
-    except OperationalError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Database connection unavailable. Please try again later.",
-        ) from e
-    
-    if user is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="User not found",
+            db.refresh(existing_user)
+            return existing_user
+
+        # Create new user
+        user = User(
+            email=email,
+            supabase_id=supabase_id,
+            name=name
         )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    else:
+        # Update name if it's in the token and different from stored value
+        if name and user.name != name:
+            user.name = name
+            db.commit()
+            db.refresh(user)
     
     return user
 
 
-@router.get("/me", response_model=UserResponse)
+@router.get("/me")
 def get_me(current_user: User = Depends(get_current_user)):
-    """Get the current authenticated user's profile.
-    
-    Authentication is handled by Supabase Auth on the frontend.
-    This endpoint verifies the Supabase JWT token and returns the user.
-
-    Args:
-        current_user: The authenticated user (from dependency)
-
-    Returns:
-        UserResponse: The current user's profile data
-    """
-    return current_user
+    """Get current user information."""
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "name": current_user.name,
+        "supabase_id": current_user.supabase_id,
+    }

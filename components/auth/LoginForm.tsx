@@ -8,9 +8,9 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { IconLoader2 } from "@tabler/icons-react";
 import Link from "next/link";
+import { DemoLoginButton } from "@/components/auth/DemoLoginButton";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -48,13 +48,8 @@ export function LoginForm() {
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Welcome back</CardTitle>
-        <CardDescription>Sign in to your ActorRise account</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <div className="w-full">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input
@@ -104,9 +99,19 @@ export function LoginForm() {
               "Sign in"
             )}
           </Button>
-        </form>
-      </CardContent>
-    </Card>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">Or</span>
+            </div>
+          </div>
+
+          <DemoLoginButton />
+      </form>
+    </div>
   );
 }
 

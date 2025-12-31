@@ -49,8 +49,8 @@
 }
 
 :root {
-  /* Retro-modern design: minimal radius for cleaner, boxier look */
-  --radius: 2px;
+  /* Modern design: friendly rounded corners */
+  --radius: 6px;
 
   /* Cream/off-white background - retro paper aesthetic */
   --background: oklch(0.97 0.01 85);
@@ -76,8 +76,8 @@
   --muted: oklch(0.92 0.005 85);
   --muted-foreground: oklch(0.45 0 0);
 
-  /* Accent: Retro red */
-  --accent: oklch(0.6 0.2 25);
+  /* Accent: Modern orange */
+  --accent: oklch(0.68 0.25 35);
   --accent-foreground: oklch(0.99 0 0);
 
   /* Destructive */
@@ -88,9 +88,9 @@
   --input: oklch(0.3 0 0);
   --ring: oklch(0.5 0.18 260);
 
-  /* Chart colors: Simple, distinct retro palette */
+  /* Chart colors: Simple, distinct modern palette */
   --chart-1: oklch(0.5 0.18 260);
-  --chart-2: oklch(0.6 0.2 25);
+  --chart-2: oklch(0.68 0.25 35);
   --chart-3: oklch(0.55 0.15 150);
   --chart-4: oklch(0.65 0.18 60);
   --chart-5: oklch(0.5 0.15 300);
@@ -131,8 +131,8 @@
   --muted: oklch(0.28 0.01 260);
   --muted-foreground: oklch(0.65 0.01 85);
 
-  /* Accent: Brighter red */
-  --accent: oklch(0.7 0.22 25);
+  /* Accent: Bright orange */
+  --accent: oklch(0.72 0.28 35);
   --accent-foreground: oklch(0.99 0 0);
 
   /* Destructive */
@@ -145,7 +145,7 @@
 
   /* Chart colors */
   --chart-1: oklch(0.65 0.2 260);
-  --chart-2: oklch(0.7 0.22 25);
+  --chart-2: oklch(0.72 0.28 35);
   --chart-3: oklch(0.65 0.18 150);
   --chart-4: oklch(0.75 0.2 60);
   --chart-5: oklch(0.65 0.18 300);
@@ -197,13 +197,13 @@
     font-size: 1.5rem;
   }
 
-  /* Strong, visible borders */
+  /* Clean, modern borders */
   button,
   input,
   select,
   textarea,
   [role="button"] {
-    border-width: 2px;
+    border-width: 1px;
   }
 
   /* Retro focus states: thick borders instead of rings */

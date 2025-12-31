@@ -30,7 +30,7 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
         whileHover={{ scale: 1.02, y: -4 }}
         transition={{ duration: 0.2 }}
       >
-        <Card className="hover:shadow-xl transition-all duration-300 border-2 hover:border-primary/50 h-full flex flex-col">
+        <Card className="hover:shadow-xl transition-all duration-300 hover:border-primary/50 h-full flex flex-col">
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="flex-1">

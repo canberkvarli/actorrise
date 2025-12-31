@@ -24,7 +24,8 @@ export function SearchInterface() {
     age_range: "",
     gender: "",
     genre: "",
-    difficulty: "",
+    theme: "",
+    category: "",
   });
   const [results, setResults] = useState<Monologue[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -90,13 +91,19 @@ export function SearchInterface() {
       age_range: "",
       gender: "",
       genre: "",
-      difficulty: "",
+      theme: "",
+      category: "",
     });
   };
 
   const useHistoryItem = (item: string) => {
     setQuery(item);
     setTimeout(() => handleSearch(), 100);
+  };
+
+  const clearSearchHistory = () => {
+    setSearchHistory([]);
+    localStorage.removeItem("monologue_search_history");
   };
 
   return (
@@ -106,7 +113,7 @@ export function SearchInterface() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4 }}
       >
-        <Card className="border-2">
+        <Card className="">
           <CardContent className="pt-6">
             <div className="space-y-4">
               {/* Profile Bias Toggle */}
@@ -180,7 +187,7 @@ export function SearchInterface() {
                       </Button>
                     </div>
                     {searchHistory.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-2">
+                      <div className="relative flex flex-wrap gap-2 mt-2 border border-border rounded-lg p-3">
                         <span className="text-xs text-muted-foreground">Recent:</span>
                         {searchHistory.map((item, idx) => (
                           <motion.button
@@ -195,6 +202,15 @@ export function SearchInterface() {
                             {item}
                           </motion.button>
                         ))}
+
+                        {/* X icon button - top right corner */}
+                        <button
+                          onClick={clearSearchHistory}
+                          className="absolute top-2 right-2 p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                          aria-label="Clear search history"
+                        >
+                          <IconX className="h-4 w-4" />
+                        </button>
                       </div>
                     )}
                   </motion.div>
@@ -249,7 +265,7 @@ export function SearchInterface() {
                           </Button>
                         )}
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="age-range">Age Range</Label>
                           <Select
@@ -302,19 +318,41 @@ export function SearchInterface() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="difficulty">Difficulty</Label>
+                          <Label htmlFor="theme">Theme</Label>
                           <Select
-                            id="difficulty"
-                            value={filters.difficulty}
+                            id="theme"
+                            value={filters.theme}
                             onChange={(e) =>
-                              setFilters({ ...filters, difficulty: e.target.value })
+                              setFilters({ ...filters, theme: e.target.value })
                             }
                           >
-                            <option value="">All</option>
-                            <option value="Beginner">Beginner</option>
-                            <option value="Intermediate">Intermediate</option>
-                            <option value="Advanced">Advanced</option>
-                            <option value="Professional">Professional</option>
+                            <option value="">All Themes</option>
+                            <option value="Love">Love</option>
+                            <option value="Loss">Loss</option>
+                            <option value="Desire">Desire</option>
+                            <option value="Broken Promises">Broken Promises</option>
+                            <option value="Rejection">Rejection</option>
+                            <option value="Change">Change</option>
+                            <option value="Identity">Identity</option>
+                            <option value="Conflict">Conflict</option>
+                            <option value="Redemption">Redemption</option>
+                            <option value="Ambition">Ambition</option>
+                            <option value="Revenge">Revenge</option>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="category">Category</Label>
+                          <Select
+                            id="category"
+                            value={filters.category}
+                            onChange={(e) =>
+                              setFilters({ ...filters, category: e.target.value })
+                            }
+                          >
+                            <option value="">All Categories</option>
+                            <option value="Contemporary">Contemporary</option>
+                            <option value="Classical">Classical</option>
                           </Select>
                         </div>
                       </div>

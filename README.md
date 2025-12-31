@@ -5,7 +5,7 @@ A complete acting platform featuring MonologueMatch, ScenePartner, CraftCoach, a
 ## Features
 
 - **MonologueMatch**: AI-powered monologue discovery with profile-based recommendations
-- **Authentication**: Secure JWT-based authentication system
+- **Authentication**: Secure Supabase authentication system
 - **Actor Profiles**: Comprehensive profile system for personalized recommendations
 - **Smart Search**: Natural language search with optional profile bias
 - **Beautiful UI**: Modern design with shadcn/ui components
@@ -15,15 +15,15 @@ A complete acting platform featuring MonologueMatch, ScenePartner, CraftCoach, a
 ### Frontend
 - Next.js 14+ (App Router)
 - TypeScript
-- shadcn/ui (Lyra style, Orange theme)
-- Tailwind CSS
+- shadcn/ui (Modern orange/blue theme)
+- Tailwind CSS v4
 - React Hook Form + Zod
 - Axios
 
 ### Backend
 - FastAPI
 - SQLAlchemy (SQLite for MVP)
-- JWT Authentication
+- Supabase Authentication
 - Pydantic for validation
 
 ## Getting Started
@@ -49,7 +49,7 @@ Frontend will run on http://localhost:3000
 ```bash
 cd backend
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+source venv/bin/act ivate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 cp .env.example .env
 # Edit .env with your configuration
@@ -100,9 +100,16 @@ OPENAI_API_KEY=optional-for-mvp
 ## Usage
 
 1. **Sign Up**: Create an account at `/signup`
-2. **Complete Profile**: Fill out your actor profile at `/profile`
-3. **Search Monologues**: Use MonologueMatch at `/search` to find perfect monologues
-4. **Dashboard**: View your dashboard at `/dashboard`
+2. **Demo Login**: Try the demo account with one click on the login page
+3. **Complete Profile**: Fill out your actor profile at `/profile`
+4. **Search Monologues**: Use MonologueMatch at `/search` to find perfect monologues
+5. **Dashboard**: View your dashboard at `/dashboard`
+
+### Demo Account
+For testing, use the demo login button on the login page:
+- Email: demo@actorrise.com
+- Password: demo123
+
 
 ## Development
 
