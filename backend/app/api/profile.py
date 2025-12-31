@@ -14,17 +14,17 @@ router = APIRouter(prefix="/api/profile", tags=["profile"])
 
 
 class ActorProfileCreate(BaseModel):
-    name: str
-    age_range: str
-    gender: str
+    name: Optional[str] = None
+    age_range: Optional[str] = None
+    gender: Optional[str] = None
     ethnicity: Optional[str] = None
     height: Optional[str] = None
     build: Optional[str] = None
-    location: str
-    experience_level: str
-    type: str
+    location: Optional[str] = None
+    experience_level: Optional[str] = None
+    type: Optional[str] = None
     training_background: Optional[str] = None
-    union_status: str
+    union_status: Optional[str] = None
     preferred_genres: List[str] = []
     overdone_alert_sensitivity: float = 0.5
     profile_bias_enabled: bool = True
@@ -84,8 +84,9 @@ def create_or_update_profile(
         existing_profile = db.query(ActorProfile).filter(ActorProfile.user_id == current_user.id).first()
 
         if existing_profile:
-            # Update existing profile
-            for key, value in profile_data.model_dump().items():
+            # Update existing profile - update all provided fields (including None for deletion)
+            profile_dict = profile_data.model_dump(exclude_unset=True)  # Only include fields that were explicitly set
+            for key, value in profile_dict.items():
                 setattr(existing_profile, key, value)
             db.commit()
             db.refresh(existing_profile)

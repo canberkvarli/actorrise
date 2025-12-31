@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, [checkAuth, syncUserWithBackend]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, redirectTo?: string) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -92,7 +92,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Sync with backend
       await syncUserWithBackend();
-      router.push("/dashboard");
+      
+      // Redirect to specified path or default to dashboard
+      const redirectPath = redirectTo || "/dashboard";
+      router.push(redirectPath);
     } catch (error: unknown) {
       console.error("Login error:", error);
       const message = error instanceof Error ? error.message : "Failed to login";
