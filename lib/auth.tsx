@@ -140,7 +140,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await supabase.auth.signOut();
     setUser(null);
-    router.replace("/");
+    // Use window.location to force full page navigation and bypass platform layout redirect
+    window.location.href = "/";
   };
 
   return (
