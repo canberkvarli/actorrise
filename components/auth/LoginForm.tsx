@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { IconLoader2 } from "@tabler/icons-react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { DemoLoginButton } from "@/components/auth/DemoLoginButton";
 
 const loginSchema = z.object({
@@ -21,8 +22,12 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export function LoginForm() {
   const { login } = useAuth();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Get redirect path from URL params (set by middleware)
+  const redirectTo = searchParams.get("redirect");
 
   const {
     register,
@@ -36,7 +41,7 @@ export function LoginForm() {
     setError(null);
     setIsLoading(true);
     try {
-      await login(data.email, data.password);
+      await login(data.email, data.password, redirectTo || undefined);
     } catch (err: any) {
       console.error("Login form error:", err);
       // Handle both axios errors and regular Error objects
