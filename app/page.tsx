@@ -7,9 +7,9 @@ export default function LandingPage() {
       {/* Navigation */}
       <nav className="border-b border-border">
         <div className="container mx-auto px-8 py-6 flex items-center justify-end">
-          <Link href="/login">
-            <Button variant="ghost">Sign in</Button>
-          </Link>
+          <Button asChild variant="ghost">
+            <Link href="/login">Sign in</Link>
+          </Button>
         </div>
       </nav>
 

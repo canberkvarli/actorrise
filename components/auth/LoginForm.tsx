@@ -42,10 +42,16 @@ export function LoginForm() {
     setIsLoading(true);
     try {
       await login(data.email, data.password, redirectTo || undefined);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Login form error:", err);
       // Handle both axios errors and regular Error objects
-      const errorMessage = err.response?.data?.detail || err.message || "Failed to login. Please check your credentials.";
+      let errorMessage = "Failed to login. Please check your credentials.";
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (err && typeof err === "object" && "response" in err) {
+        const axiosError = err as { response?: { data?: { detail?: string } } };
+        errorMessage = axiosError.response?.data?.detail || errorMessage;
+      }
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -85,7 +91,7 @@ export function LoginForm() {
               <p className="text-sm text-destructive">{error}</p>
               {error.includes("No account found") && (
                 <p className="text-sm text-muted-foreground">
-                  Don't have an account?{" "}
+                  Don&apos;t have an account?{" "}
                   <Link href="/signup" className="text-primary hover:underline">
                     Sign up here
                   </Link>

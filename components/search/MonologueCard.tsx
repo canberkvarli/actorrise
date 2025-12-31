@@ -67,7 +67,6 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
               <Badge variant="outline">{monologue.age_range}</Badge>
               <Badge variant="outline">{monologue.gender}</Badge>
               <Badge variant="outline">{monologue.genre}</Badge>
-              <Badge variant="outline">{monologue.difficulty}</Badge>
             </div>
             <p className="text-sm text-muted-foreground line-clamp-3">
               {monologue.excerpt}
