@@ -459,7 +459,6 @@ export function ActorProfileForm() {
     const file = e.target.files?.[0];
     if (file) {
       console.log("File selected:", file.name, file.type, file.size);
-      
       // Validate file type
       if (!file.type.startsWith('image/')) {
         toast.error("Please upload an image file");
@@ -508,6 +507,12 @@ export function ActorProfileForm() {
     
     // Reset the input so the same file can be selected again
     e.target.value = '';
+  };
+
+  const handlePhotoClick = () => {
+    if (headshotPreview) {
+      setShowPhotoViewer(true);
+    }
   };
 
   const handlePhotoClick = () => {
