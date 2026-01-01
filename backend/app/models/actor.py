@@ -1,6 +1,6 @@
 from app.core.database import Base
 from sqlalchemy import (JSON, Boolean, Column, DateTime, Float, ForeignKey,
-                        Integer, String, Text, text, ARRAY)
+                        Integer, String, Text, text as sql_text, ARRAY)
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
@@ -34,8 +34,8 @@ class ActorProfile(Base):
     # Headshot
     headshot_url = Column(String, nullable=True)
 
-    created_at = Column(DateTime(timezone=True), server_default=text('now()'))
-    updated_at = Column(DateTime(timezone=True), onupdate=text('now()'))
+    created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
+    updated_at = Column(DateTime(timezone=True), onupdate=sql_text('now()'))
 
     # Relationship to user
     user = relationship("User", back_populates="actor_profile")
@@ -70,8 +70,8 @@ class Play(Base):
     time_period = Column(String, nullable=True)
     themes = Column(ARRAY(String), nullable=True)
 
-    created_at = Column(DateTime(timezone=True), server_default=text('now()'))
-    updated_at = Column(DateTime(timezone=True), onupdate=text('now()'))
+    created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
+    updated_at = Column(DateTime(timezone=True), onupdate=sql_text('now()'))
 
     # Relationships
     monologues = relationship("Monologue", back_populates="play")
@@ -124,8 +124,8 @@ class Monologue(Base):
     is_verified = Column(Boolean, default=False)  # Manual verification
     quality_score = Column(Float, nullable=True)  # AI quality assessment
 
-    created_at = Column(DateTime(timezone=True), server_default=text('now()'))
-    updated_at = Column(DateTime(timezone=True), onupdate=text('now()'))
+    created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
+    updated_at = Column(DateTime(timezone=True), onupdate=sql_text('now()'))
 
     # Relationships
     play = relationship("Play", back_populates="monologues")
@@ -140,7 +140,7 @@ class MonologueFavorite(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     monologue_id = Column(Integer, ForeignKey("monologues.id"), nullable=False, index=True)
     notes = Column(Text, nullable=True)  # User's performance notes
-    created_at = Column(DateTime(timezone=True), server_default=text('now()'))
+    created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
 
     # Relationships
     monologue = relationship("Monologue", back_populates="favorites")
@@ -155,5 +155,5 @@ class SearchHistory(Base):
     query = Column(String, nullable=False)
     filters = Column(JSONB, nullable=True)  # Applied filters
     result_count = Column(Integer, nullable=False)
-    created_at = Column(DateTime(timezone=True), server_default=text('now()'))
+    created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
 

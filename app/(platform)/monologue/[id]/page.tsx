@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IconHeart, IconArrowLeft, IconSparkles, IconExternalLink } from "@tabler/icons-react";
+import { IconBookmark, IconArrowLeft, IconSparkles, IconExternalLink } from "@tabler/icons-react";
 import { Monologue } from "@/types/actor";
 import api from "@/lib/api";
 import { motion } from "framer-motion";
@@ -102,7 +102,7 @@ export default function MonologueDetailPage() {
         <Button
           variant="ghost"
           onClick={() => router.back()}
-          className="mb-4"
+          className="mb-4 hover:text-primary"
         >
           <IconArrowLeft className="h-4 w-4 mr-2" />
           Back
@@ -115,8 +115,8 @@ export default function MonologueDetailPage() {
             <div className="space-y-3">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h1 className="text-3xl font-bold mb-2">{monologue.character_name}</h1>
-                  <p className="text-lg text-muted-foreground">
+                  <h1 className="text-3xl font-bold mb-2 font-typewriter">{monologue.character_name}</h1>
+                  <p className="text-lg text-muted-foreground font-typewriter">
                     From <span className="font-semibold">{monologue.play_title}</span> by {monologue.author}
                   </p>
                 </div>
@@ -124,9 +124,9 @@ export default function MonologueDetailPage() {
                   variant={isFavorited ? "default" : "outline"}
                   size="icon"
                   onClick={toggleFavorite}
-                  className="ml-4"
+                  className={`ml-4 ${isFavorited ? 'bg-accent text-accent-foreground hover:bg-accent/90' : 'hover:text-accent'}`}
                 >
-                  <IconHeart className={`h-5 w-5 ${isFavorited ? 'fill-current' : ''}`} />
+                  <IconBookmark className={`h-5 w-5 ${isFavorited ? 'fill-current' : ''}`} />
                 </Button>
               </div>
 
@@ -156,7 +156,7 @@ export default function MonologueDetailPage() {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Character:</p>
-                  <Badge variant="outline" className="font-normal">
+                  <Badge variant="outline" className="font-normal font-typewriter">
                     {monologue.character_name}
                   </Badge>
                 </div>
@@ -284,14 +284,14 @@ export default function MonologueDetailPage() {
                 Monologue Text
               </h3>
               <div className="bg-muted/30 p-6 rounded-lg border border-border">
-                <p className="text-base leading-relaxed whitespace-pre-wrap">
+                <p className="text-base leading-relaxed whitespace-pre-wrap font-typewriter">
                   {monologue.text}
                 </p>
               </div>
 
               {monologue.stage_directions && (
                 <div className="bg-muted/50 p-4 rounded-lg border border-border">
-                  <p className="text-sm italic text-muted-foreground">
+                  <p className="text-sm italic text-muted-foreground font-typewriter">
                     <span className="font-semibold not-italic">Stage Directions: </span>
                     {monologue.stage_directions}
                   </p>
@@ -302,9 +302,12 @@ export default function MonologueDetailPage() {
             {/* Footer Stats */}
             <Separator />
             <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <div className="flex gap-6">
+              <div className="flex gap-6 items-center">
                 <span>👁️ {monologue.view_count} views</span>
-                <span>❤️ {monologue.favorite_count} favorites</span>
+                <span className="flex items-center gap-1">
+                  <IconBookmark className="h-4 w-4" />
+                  {monologue.favorite_count} bookmarks
+                </span>
               </div>
               {monologue.overdone_score > 0.7 && (
                 <Badge variant="outline" className="text-amber-600 border-amber-600">
@@ -326,7 +329,7 @@ export default function MonologueDetailPage() {
                 </p>
               </div>
               {monologue.source_url && (
-                <Button variant="outline" asChild>
+                <Button variant="outline" asChild className="hover:border-primary hover:text-primary">
                   <a
                     href={monologue.source_url}
                     target="_blank"

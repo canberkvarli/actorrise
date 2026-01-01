@@ -1,6 +1,6 @@
 from app.api.auth import router as auth_router
-from app.api.profile import router as profile_router
 from app.api.monologues import router as monologues_router
+from app.api.profile import router as profile_router
 from app.core.config import settings
 from app.core.database import Base, engine
 from fastapi import FastAPI

@@ -459,22 +459,55 @@ export function ActorProfileForm() {
     const file = e.target.files?.[0];
     if (file) {
       console.log("File selected:", file.name, file.type, file.size);
+      
+      // Validate file type
       if (!file.type.startsWith('image/')) {
         toast.error("Please upload an image file");
         return;
       }
+      
+      // Validate file size
       if (file.size > 5 * 1024 * 1024) {
         toast.error("Image size must be less than 5MB");
         return;
       }
+      
+      // Check minimum file size (very small files might be corrupted)
+      if (file.size < 100) {
+        toast.error("Image file is too small. Please upload a valid image.");
+        return;
+      }
+      
       const reader = new FileReader();
+      
       reader.onloadend = () => {
         const base64String = reader.result as string;
+        if (!base64String || base64String.length < 100) {
+          toast.error("Failed to read image file. Please try again.");
+          return;
+        }
+        
+        // Validate the base64 string
+        if (!base64String.startsWith("data:image/")) {
+          toast.error("Invalid image format. Please try uploading again.");
+          return;
+        }
+        
+        console.log("Image loaded successfully, size:", base64String.length);
         setImageToEdit(base64String);
         setShowEditor(true);
       };
+      
+      reader.onerror = () => {
+        console.error("FileReader error:", reader.error);
+        toast.error("Failed to read image file. Please try again.");
+      };
+      
       reader.readAsDataURL(file);
     }
+    
+    // Reset the input so the same file can be selected again
+    e.target.value = '';
   };
 
   const handlePhotoClick = () => {
