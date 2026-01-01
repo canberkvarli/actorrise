@@ -182,3 +182,90 @@ Return ONLY valid JSON, no markdown or explanation."""
                 })
 
         return results
+
+    def parse_search_query(self, query: str) -> Dict:
+        """
+        Parse natural language search query to extract filters.
+
+        Args:
+            query: Natural language query like "funny piece for middle aged woman"
+
+        Returns:
+            Dict with extracted filters: {
+                'gender': 'female' | 'male' | None,
+                'age_range': '20s' | '30s' | '40s' | etc. | None,
+                'emotion': 'joy' | 'sadness' | etc. | None,
+                'themes': ['love', 'power'] | None,
+                'category': 'classical' | 'contemporary' | None,
+                'tone': 'comedic' | 'dramatic' | etc. | None
+            }
+        """
+
+        prompt = f"""Parse this monologue search query and extract any filters the user is specifying:
+
+QUERY: "{query}"
+
+Extract the following information if present in the query (return null if not mentioned):
+
+1. gender: Is the user looking for a male, female, or any gender character?
+   - Keywords: man/male/masculine/boy/he/him → "male"
+   - Keywords: woman/female/feminine/girl/she/her → "female"
+   - Otherwise → null
+
+2. age_range: What age range is mentioned?
+   - Keywords: young/teen/teenager/youth → "teens"
+   - Keywords: twenties/20s/young adult → "20s"
+   - Keywords: thirties/30s → "30s"
+   - Keywords: middle aged/forties/40s → "40s"
+   - Keywords: fifties/50s/older → "50s"
+   - Keywords: elderly/senior/60+ → "60+"
+   - Otherwise → null
+
+3. emotion: What primary emotion is requested?
+   - Keywords: funny/comedic/humorous/laugh → "joy"
+   - Keywords: sad/depressing/melancholy/tearful → "sadness"
+   - Keywords: angry/furious/rage → "anger"
+   - Keywords: scary/fearful/anxious → "fear"
+   - Keywords: hopeful/optimistic → "hope"
+   - Keywords: desperate/despairing → "despair"
+   - Otherwise → null
+
+4. themes: What themes are mentioned? (array of strings)
+   - Examples: love, death, betrayal, identity, power, family, revenge, loss, etc.
+   - Return array or null
+
+5. category: Classical or contemporary?
+   - Keywords: shakespeare/classical/greek/chekhov/ibsen → "classical"
+   - Keywords: modern/contemporary/recent/new → "contemporary"
+   - Otherwise → null
+
+6. tone: What tone is requested?
+   - Keywords: funny/comedic/humorous → "comedic"
+   - Keywords: serious/dramatic/tragic → "dramatic"
+   - Keywords: dark/grim → "dark"
+   - Keywords: romantic/loving → "romantic"
+   - Otherwise → null
+
+Return ONLY valid JSON with these keys. Use null for any filter not mentioned in the query."""
+
+        try:
+            response = self.client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a search query parser for theatrical monologues. Extract filters from natural language queries. Return only valid JSON."},
+                    {"role": "user", "content": prompt}
+                ],
+                temperature=0.1,  # Low temperature for consistent extraction
+                response_format={"type": "json_object"}
+            )
+
+            result = json.loads(response.choices[0].message.content)
+
+            # Clean up the result - remove None/null values
+            cleaned = {k: v for k, v in result.items() if v is not None}
+
+            return cleaned
+
+        except Exception as e:
+            print(f"Error parsing search query: {e}")
+            return {}
