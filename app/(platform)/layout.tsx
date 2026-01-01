@@ -6,7 +6,6 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { IconHome, IconSearch, IconUser, IconLogout, IconMenu } from "@tabler/icons-react";
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 
 export default function PlatformLayout({
   children,
@@ -83,66 +82,48 @@ export default function PlatformLayout({
           </div>
 
           {/* Mobile Navigation */}
-          <AnimatePresence>
-            {mobileMenuOpen && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.15 }}
-                className="md:hidden border-t-2 border-border overflow-hidden"
-              >
-                <div className="py-3 space-y-1">
-                  {navItems.map((item) => {
-                    const Icon = item.icon;
-                    const isActive = pathname === item.href;
-                    return (
-                      <Button
-                        key={item.href}
-                        asChild
-                        variant={isActive ? "default" : "ghost"}
-                        size="sm"
-                        className="w-full justify-start gap-2"
-                      >
-                        <Link href={item.href} onClick={() => setMobileMenuOpen(false)}>
-                          <Icon className="h-4 w-4" />
-                          {item.label}
-                        </Link>
-                      </Button>
-                    );
-                  })}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      logout();
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full justify-start gap-2"
-                  >
-                    <IconLogout className="h-4 w-4" />
-                    Logout
-                  </Button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {mobileMenuOpen && (
+            <div className="md:hidden border-t-2 border-border overflow-hidden animate-in slide-in-from-top-2 duration-200">
+              <div className="py-3 space-y-1">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = pathname === item.href;
+                  return (
+                    <Button
+                      key={item.href}
+                      asChild
+                      variant={isActive ? "default" : "ghost"}
+                      size="sm"
+                      className="w-full justify-start gap-2"
+                    >
+                      <Link href={item.href} onClick={() => setMobileMenuOpen(false)}>
+                        <Icon className="h-4 w-4" />
+                        {item.label}
+                      </Link>
+                    </Button>
+                  );
+                })}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    logout();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full justify-start gap-2"
+                >
+                  <IconLogout className="h-4 w-4" />
+                  Logout
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 
-      {/* Main Content with subtle fade-in */}
+      {/* Main Content */}
       <main>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={pathname}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
+        {children}
       </main>
     </div>
   );
