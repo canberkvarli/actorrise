@@ -40,61 +40,85 @@ class SemanticSearch:
             }
         """
 
+        # Parse query to extract filters using AI
+        print(f"Parsing query for filters: {query}")
+        extracted_filters = self.analyzer.parse_search_query(query)
+        print(f"Extracted filters: {extracted_filters}")
+
+        # Merge extracted filters with explicit filters (explicit takes precedence)
+        merged_filters = {**(extracted_filters or {}), **(filters or {})}
+        print(f"Merged filters: {merged_filters}")
+
         # Generate embedding for query
         print(f"Generating embedding for query: {query}")
         query_embedding = self.analyzer.generate_embedding(query)
 
         if not query_embedding:
             print("Failed to generate embedding, falling back to text search")
-            return self._fallback_text_search(query, limit, filters)
+            return self._fallback_text_search(query, limit, merged_filters)
 
         # Build base query
         base_query = self.db.query(Monologue).join(Play)
 
-        # Apply filters
-        if filters:
-            if filters.get('gender'):
+        # Apply merged filters
+        if merged_filters:
+            if merged_filters.get('gender'):
                 base_query = base_query.filter(
                     or_(
-                        Monologue.character_gender == filters['gender'],
+                        Monologue.character_gender == merged_filters['gender'],
                         Monologue.character_gender == 'any'
                     )
                 )
 
-            if filters.get('age_range'):
+            if merged_filters.get('age_range'):
                 base_query = base_query.filter(
-                    Monologue.character_age_range == filters['age_range']
+                    Monologue.character_age_range == merged_filters['age_range']
                 )
 
-            if filters.get('emotion'):
+            if merged_filters.get('emotion'):
                 base_query = base_query.filter(
-                    Monologue.primary_emotion == filters['emotion']
+                    Monologue.primary_emotion == merged_filters['emotion']
                 )
 
-            if filters.get('theme'):
+            if merged_filters.get('theme'):
                 # Check if theme is in the themes array
                 base_query = base_query.filter(
-                    Monologue.themes.contains([filters['theme']])
+                    Monologue.themes.contains([merged_filters['theme']])
                 )
 
-            if filters.get('difficulty'):
+            if merged_filters.get('themes'):
+                # Handle multiple themes from query parser
+                themes = merged_filters['themes']
+                if isinstance(themes, list) and len(themes) > 0:
+                    # Match if any of the requested themes are present
+                    base_query = base_query.filter(
+                        Monologue.themes.overlap(themes)
+                    )
+
+            if merged_filters.get('tone'):
+                # Filter by tone (e.g., 'comedic', 'dramatic')
                 base_query = base_query.filter(
-                    Monologue.difficulty_level == filters['difficulty']
+                    Monologue.tone == merged_filters['tone']
                 )
 
-            if filters.get('category'):
+            if merged_filters.get('difficulty'):
                 base_query = base_query.filter(
-                    Play.category == filters['category']
+                    Monologue.difficulty_level == merged_filters['difficulty']
                 )
 
-            if filters.get('author'):
+            if merged_filters.get('category'):
                 base_query = base_query.filter(
-                    Play.author == filters['author']
+                    Play.category == merged_filters['category']
                 )
 
-            if filters.get('max_duration'):
+            if merged_filters.get('author'):
                 base_query = base_query.filter(
-                    Monologue.estimated_duration_seconds <= filters['max_duration']
+                    Play.author == merged_filters['author']
+                )
+
+            if merged_filters.get('max_duration'):
+                base_query = base_query.filter(
+                    Monologue.estimated_duration_seconds <= merged_filters['max_duration']
                 )
 
         # Get filtered monologues
