@@ -1,54 +1,236 @@
-import { IconSparkles, IconTools } from "@tabler/icons-react";
+"use client";
+
+import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconHeart } from "@tabler/icons-react";
+import api from "@/lib/api";
+import { Monologue } from "@/types/actor";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function SearchPage() {
+  const [query, setQuery] = useState("");
+  const [filters, setFilters] = useState({
+    gender: "",
+    age_range: "",
+    emotion: "",
+    theme: "",
+    difficulty: "",
+    category: "",
+  });
+  const [results, setResults] = useState<Monologue[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+
+  const handleSearch = async () => {
+    if (!query.trim()) return;
+
+    setIsLoading(true);
+    setHasSearched(true);
+    try {
+      const params = new URLSearchParams({ q: query, limit: "20" });
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) params.append(key, value);
+      });
+
+      const response = await api.get(`/api/monologues/search?${params.toString()}`);
+      setResults(response.data);
+    } catch (error) {
+      console.error("Search error:", error);
+      setResults([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const activeFilters = Object.entries(filters).filter(([_, value]) => value !== "");
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">MonologueMatch</h1>
         <p className="text-muted-foreground">
-          Discover the perfect monologue for your next audition
+          AI-powered monologue discovery for actors
         </p>
       </div>
-      
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Card className="max-w-2xl w-full">
-          <CardContent className="pt-12 pb-12 px-8">
-            <div className="flex flex-col items-center text-center space-y-6">
-              <div className="relative">
-                <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
-                <div className="relative bg-primary/10 p-6 rounded-full">
-                  <IconTools className="h-16 w-16 text-primary" />
-                </div>
-              </div>
-              
+
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
               <div className="space-y-2">
-                <h2 className="text-2xl font-bold">Under Construction</h2>
-                <p className="text-muted-foreground text-lg">
-                  Our AI-powered search feature is being enhanced to provide you with the best monologue recommendations.
-                </p>
-              </div>
-              
-              <div className="pt-4">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-muted rounded-full">
+                <Label htmlFor="search" className="flex items-center gap-2">
                   <IconSparkles className="h-4 w-4 text-primary" />
-                  <span className="text-sm font-medium">Coming Soon</span>
+                  Semantic Search
+                </Label>
+                <div className="flex gap-2">
+                  <div className="flex-1 relative">
+                    <Input
+                      id="search"
+                      placeholder='Try "sad monologue about loss" or "funny piece for young woman"'
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                    />
+                    {query && (
+                      <button
+                        onClick={() => setQuery("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      >
+                        <IconX className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                  <Button onClick={handleSearch} disabled={isLoading || !query.trim()}>
+                    {isLoading ? (
+                      <IconLoader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <IconSearch className="h-4 w-4 mr-2" />
+                    )}
+                    Search
+                  </Button>
+                  <Button variant="outline" size="icon" onClick={() => setShowFilters(!showFilters)}>
+                    <IconFilter className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-              
-              <div className="pt-6 text-sm text-muted-foreground max-w-md">
-                <p>
-                  We're working hard to bring you intelligent search capabilities that understand context, 
-                  match your profile, and find the perfect monologues for your auditions.
-                </p>
-              </div>
+
+              {showFilters && (
+                <div className="space-y-3 pt-4 border-t">
+                  <Label className="flex items-center gap-2">
+                    <IconFilter className="h-4 w-4" />
+                    Filters
+                  </Label>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {[
+                      { key: "gender", label: "Gender", options: ["male", "female", "any"] },
+                      { key: "age_range", label: "Age", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
+                      { key: "emotion", label: "Emotion", options: ["joy", "sadness", "anger", "fear", "melancholy", "hope"] },
+                      { key: "theme", label: "Theme", options: ["love", "death", "betrayal", "identity", "power", "revenge"] },
+                      { key: "difficulty", label: "Difficulty", options: ["beginner", "intermediate", "advanced"] },
+                      { key: "category", label: "Category", options: ["classical", "contemporary"] },
+                    ].map(({ key, label, options }) => (
+                      <div key={key} className="space-y-2">
+                        <Label className="text-xs">{label}</Label>
+                        <select
+                          value={filters[key as keyof typeof filters]}
+                          onChange={(e) => setFilters({ ...filters, [key]: e.target.value })}
+                          className="w-full px-3 py-2 text-sm rounded-md border border-input bg-background"
+                        >
+                          <option value="">Any</option>
+                          {options.map(opt => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                  {activeFilters.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      {activeFilters.map(([key, value]) => (
+                        <Badge key={key} variant="secondary" className="gap-1">
+                          {key}: {value}
+                          <button
+                            onClick={() => setFilters({ ...filters, [key]: "" })}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            <IconX className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
+
+        <AnimatePresence mode="wait">
+          {isLoading ? (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Card key={i}>
+                  <CardContent className="pt-6 space-y-4">
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-20 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : hasSearched && results.length === 0 ? (
+            <Card>
+              <CardContent className="pt-12 pb-12 text-center">
+                <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No monologues found</h3>
+                <p className="text-sm text-muted-foreground">
+                  Try different search terms or adjust filters
+                </p>
+              </CardContent>
+            </Card>
+          ) : results.length > 0 ? (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Found <span className="font-semibold">{results.length}</span> monologues
+              </p>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {results.map((mono, idx) => (
+                  <motion.div
+                    key={mono.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                  >
+                    <Card className="hover:shadow-lg transition-shadow h-full flex flex-col">
+                      <CardContent className="pt-6 flex-1 flex flex-col">
+                        <div className="space-y-3 flex-1">
+                          <div>
+                            <h3 className="font-semibold text-lg mb-1">{mono.character_name}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              {mono.play_title} by {mono.author}
+                            </p>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            {mono.character_age_range && <Badge variant="outline">{mono.character_age_range}</Badge>}
+                            {mono.character_gender && <Badge variant="outline">{mono.character_gender}</Badge>}
+                            {mono.primary_emotion && <Badge variant="secondary">{mono.primary_emotion}</Badge>}
+                            {mono.difficulty_level && <Badge>{mono.difficulty_level}</Badge>}
+                          </div>
+                          <p className="text-sm line-clamp-3 text-muted-foreground">
+                            {mono.text.substring(0, 150)}...
+                          </p>
+                          {mono.themes && mono.themes.length > 0 && (
+                            <div className="flex flex-wrap gap-1">
+                              {mono.themes.slice(0, 3).map(theme => (
+                                <span key={theme} className="text-xs px-2 py-1 bg-muted rounded">
+                                  {theme}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-4 pt-4 border-t flex items-center justify-between text-xs text-muted-foreground">
+                          <span>{Math.floor(mono.estimated_duration_seconds / 60)}:{(mono.estimated_duration_seconds % 60).toString().padStart(2, '0')} min</span>
+                          <span>{mono.word_count} words</span>
+                          <button className="text-muted-foreground hover:text-primary transition-colors">
+                            <IconHeart className={`h-4 w-4 ${mono.is_favorited ? 'fill-current text-red-500' : ''}`} />
+                          </button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </AnimatePresence>
       </div>
     </div>
   );
 }
-
-
-
