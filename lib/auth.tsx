@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "./supabase";
 import api from "./api";
@@ -26,56 +26,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  const syncUserWithBackend = useCallback(async () => {
+  const syncUserWithBackend = useCallback(async (shouldSetLoading = false) => {
     try {
       // Sync user with backend to get our User model
       const response = await api.get<User>("/api/auth/me");
       setUser(response.data);
+      if (shouldSetLoading) {
+        setLoading(false);
+      }
     } catch (error: unknown) {
       console.error("Failed to sync user with backend:", error);
       // User might not exist in backend yet, that's okay
       // It will be created on first API call
-    } finally {
-      setLoading(false);
+      if (shouldSetLoading) {
+        setLoading(false);
+      }
     }
   }, []);
 
   const checkAuth = useCallback(async () => {
+    if (isInitialized) return;
+    
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
       if (!session) {
         setLoading(false);
+        setIsInitialized(true);
         return;
       }
 
-      await syncUserWithBackend();
+      await syncUserWithBackend(true);
+      setIsInitialized(true);
     } catch (error: unknown) {
       console.error("Auth check failed:", error);
       setLoading(false);
+      setIsInitialized(true);
     }
-  }, [syncUserWithBackend]);
+  }, [syncUserWithBackend, isInitialized]);
 
   useEffect(() => {
-    // Check initial session
-    checkAuth();
+    // Check initial session only once
+    if (!isInitialized) {
+      checkAuth();
+    }
 
     // Listen for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (session) {
-        syncUserWithBackend();
+        // Don't set loading on auth state changes to prevent flickering
+        syncUserWithBackend(false);
       } else {
         setUser(null);
+        // Only set loading if we're still initializing
+        if (!isInitialized) {
+          setLoading(false);
+          setIsInitialized(true);
+        }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [checkAuth, syncUserWithBackend]);
+  }, [checkAuth, syncUserWithBackend, isInitialized]);
 
-  const login = async (email: string, password: string, redirectTo?: string) => {
+  const login = useCallback(async (email: string, password: string, redirectTo?: string) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -90,8 +108,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("No session received");
       }
 
-      // Sync with backend
-      await syncUserWithBackend();
+      // Sync with backend (don't set loading to prevent flickering)
+      await syncUserWithBackend(false);
       
       // Redirect to specified path or default to dashboard
       const redirectPath = redirectTo || "/dashboard";
@@ -101,9 +119,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const message = error instanceof Error ? error.message : "Failed to login";
       throw new Error(message);
     }
-  };
+  }, [syncUserWithBackend, router]);
 
-  const signup = async (email: string, password: string, name?: string) => {
+  const signup = useCallback(async (email: string, password: string, name?: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -125,8 +143,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // If session exists, user is auto-confirmed (email confirmation disabled)
       if (data.session) {
-        // Auto-login after signup
-        await syncUserWithBackend();
+        // Auto-login after signup (don't set loading to prevent flickering)
+        await syncUserWithBackend(false);
         router.push("/dashboard");
       } else {
         // Email confirmation required - show success message
@@ -138,26 +156,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const message = error instanceof Error ? error.message : "Failed to sign up";
       throw new Error(message);
     }
-  };
+  }, [syncUserWithBackend, router]);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
     // Use window.location to force full page navigation and bypass platform layout redirect
     window.location.href = "/";
-  };
+  }, []);
+
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo<AuthContextType>(
+    () => ({
+      user,
+      loading,
+      login,
+      signup,
+      logout,
+      isAuthenticated: !!user,
+    }),
+    [user, loading, login, signup, logout]
+  );
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        login,
-        signup,
-        logout,
-        isAuthenticated: !!user,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

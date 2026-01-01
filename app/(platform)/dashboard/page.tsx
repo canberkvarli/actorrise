@@ -46,6 +46,7 @@ export default function DashboardPage() {
     fetchStats();
     fetchProfile();
     loadSearchHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
