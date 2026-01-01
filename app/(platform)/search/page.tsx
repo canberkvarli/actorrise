@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -13,13 +14,13 @@ import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function SearchPage() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState({
     gender: "",
     age_range: "",
     emotion: "",
     theme: "",
-    difficulty: "",
     category: "",
   });
   const [results, setResults] = useState<Monologue[]>([]);
@@ -109,10 +110,9 @@ export default function SearchPage() {
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {[
                       { key: "gender", label: "Gender", options: ["male", "female", "any"] },
-                      { key: "age_range", label: "Age", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
+                      { key: "age_range", label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
                       { key: "emotion", label: "Emotion", options: ["joy", "sadness", "anger", "fear", "melancholy", "hope"] },
                       { key: "theme", label: "Theme", options: ["love", "death", "betrayal", "identity", "power", "revenge"] },
-                      { key: "difficulty", label: "Difficulty", options: ["beginner", "intermediate", "advanced"] },
                       { key: "category", label: "Category", options: ["classical", "contemporary"] },
                     ].map(({ key, label, options }) => (
                       <div key={key} className="space-y-2">
@@ -124,7 +124,7 @@ export default function SearchPage() {
                         >
                           <option value="">Any</option>
                           {options.map(opt => (
-                            <option key={opt} value={opt}>{opt}</option>
+                            <option key={opt} value={opt} className="capitalize">{opt}</option>
                           ))}
                         </select>
                       </div>
@@ -187,7 +187,10 @@ export default function SearchPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.1 }}
                   >
-                    <Card className="hover:shadow-lg transition-shadow h-full flex flex-col">
+                    <Card
+                      className="hover:shadow-lg transition-all cursor-pointer h-full flex flex-col hover:border-primary/50"
+                      onClick={() => router.push(`/monologue/${mono.id}`)}
+                    >
                       <CardContent className="pt-6 flex-1 flex flex-col">
                         <div className="space-y-3 flex-1">
                           <div>
@@ -196,29 +199,72 @@ export default function SearchPage() {
                               {mono.play_title} by {mono.author}
                             </p>
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            {mono.character_age_range && <Badge variant="outline">{mono.character_age_range}</Badge>}
-                            {mono.character_gender && <Badge variant="outline">{mono.character_gender}</Badge>}
-                            {mono.primary_emotion && <Badge variant="secondary">{mono.primary_emotion}</Badge>}
-                            {mono.difficulty_level && <Badge>{mono.difficulty_level}</Badge>}
+
+                          {/* Details - Backstage.com Style */}
+                          <div className="space-y-2 text-xs">
+                            <div className="flex items-center gap-2">
+                              <span className="text-muted-foreground w-16">Genre:</span>
+                              <Badge variant="outline" className="capitalize">
+                                {mono.category}
+                              </Badge>
+                            </div>
+                            {mono.character_gender && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground w-16">Gender:</span>
+                                <Badge variant="outline" className="capitalize">
+                                  {mono.character_gender}
+                                </Badge>
+                              </div>
+                            )}
+                            {mono.character_age_range && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground w-16">Age Range:</span>
+                                <Badge variant="outline">
+                                  {mono.character_age_range}
+                                </Badge>
+                              </div>
+                            )}
+                            {mono.primary_emotion && (
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground w-16">Emotion:</span>
+                                <Badge variant="secondary" className="capitalize">
+                                  {mono.primary_emotion}
+                                </Badge>
+                              </div>
+                            )}
                           </div>
-                          <p className="text-sm line-clamp-3 text-muted-foreground">
-                            {mono.text.substring(0, 150)}...
-                          </p>
+
+                          {/* Themes */}
                           {mono.themes && mono.themes.length > 0 && (
-                            <div className="flex flex-wrap gap-1">
-                              {mono.themes.slice(0, 3).map(theme => (
-                                <span key={theme} className="text-xs px-2 py-1 bg-muted rounded">
-                                  {theme}
-                                </span>
-                              ))}
+                            <div className="space-y-1">
+                              <span className="text-xs text-muted-foreground">Themes:</span>
+                              <div className="flex flex-wrap gap-1">
+                                {mono.themes.slice(0, 3).map(theme => (
+                                  <span key={theme} className="text-xs px-2 py-1 bg-muted rounded capitalize">
+                                    {theme}
+                                  </span>
+                                ))}
+                              </div>
                             </div>
                           )}
+
+                          {/* Preview Text */}
+                          <p className="text-sm line-clamp-2 text-muted-foreground border-t pt-3">
+                            {mono.text.substring(0, 120)}...
+                          </p>
                         </div>
+
+                        {/* Footer */}
                         <div className="mt-4 pt-4 border-t flex items-center justify-between text-xs text-muted-foreground">
                           <span>{Math.floor(mono.estimated_duration_seconds / 60)}:{(mono.estimated_duration_seconds % 60).toString().padStart(2, '0')} min</span>
                           <span>{mono.word_count} words</span>
-                          <button className="text-muted-foreground hover:text-primary transition-colors">
+                          <button
+                            className="text-muted-foreground hover:text-primary transition-colors"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // TODO: Handle favorite toggle
+                            }}
+                          >
                             <IconHeart className={`h-4 w-4 ${mono.is_favorited ? 'fill-current text-red-500' : ''}`} />
                           </button>
                         </div>
