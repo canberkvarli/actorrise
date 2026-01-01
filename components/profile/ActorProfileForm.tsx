@@ -688,39 +688,27 @@ export function ActorProfileForm() {
           </Card>
         </motion.div>
 
-        {/* Headshot Section */}
+        {/* Headshot Section - Compact */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <IconPhoto className="h-5 w-5" />
-                Professional Headshot
-              </CardTitle>
-              <CardDescription>Upload a high-quality headshot for your profile</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {headshotPreview ? (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="space-y-4"
-                >
-                  {/* Photo Preview - Clickable */}
-                  <div className="relative w-full max-w-xs mx-auto">
+          <Card className="border-border/50">
+            <CardContent className="pt-6">
+              <div className="flex items-start gap-5">
+                <div className="flex-shrink-0">
+                  {headshotPreview ? (
                     <button
                       type="button"
                       onClick={handlePhotoClick}
-                      className="relative aspect-[2/3] w-full max-w-[200px] mx-auto rounded-xl overflow-hidden border-2 border-border bg-muted shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                      className="relative w-32 h-48 rounded-md overflow-hidden border-2 border-border bg-muted shadow-sm hover:shadow-md hover:border-primary/60 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 group"
                       aria-label="View headshot"
                     >
                       <img
                         src={headshotPreview}
                         alt="Headshot preview"
-                        className="absolute inset-0 w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-200"
                         onError={(e) => {
                           e.currentTarget.style.display = 'none';
                           const placeholder = e.currentTarget.nextElementSibling as HTMLElement;
@@ -728,40 +716,44 @@ export function ActorProfileForm() {
                         }}
                       />
                       <div className="absolute inset-0 hidden items-center justify-center bg-muted">
-                        <IconPhoto className="h-12 w-12 text-muted-foreground" />
+                        <IconPhoto className="h-8 w-8 text-muted-foreground" />
                       </div>
+                      {/* Hover overlay */}
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-200" />
                     </button>
-                    <p className="text-xs text-center text-muted-foreground mt-2">
-                      Click to view, edit, or replace
-                    </p>
-                  </div>
-                </motion.div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Upload Area */}
-                  <label
-                    htmlFor="headshot"
-                    className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-border rounded-xl bg-muted/50 hover:bg-muted hover:border-primary/50 transition-all cursor-pointer group"
-                  >
-                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                      <IconPhoto className="h-12 w-12 text-muted-foreground group-hover:text-primary transition-colors mb-4" />
-                      <p className="mb-2 text-sm font-semibold text-foreground">
-                        <span className="text-primary">Click to upload</span> or drag and drop
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        JPG, PNG or WEBP (MAX. 5MB)
-                      </p>
-                    </div>
-                    <Input 
-                      id="headshot" 
-                      type="file"
-                      accept="image/*"
-                      onChange={handleHeadshotChange}
-                      className="hidden"
-                    />
-                  </label>
+                  ) : (
+                    <label
+                      htmlFor="headshot"
+                      className="flex flex-col items-center justify-center w-32 h-48 rounded-md border-2 border-dashed border-border bg-muted/30 hover:bg-muted/50 hover:border-primary/50 transition-all duration-200 cursor-pointer group"
+                    >
+                      <IconPhoto className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
+                      <span className="text-xs text-muted-foreground group-hover:text-foreground text-center px-2">
+                        Upload
+                      </span>
+                      <Input 
+                        id="headshot" 
+                        type="file"
+                        accept="image/*"
+                        onChange={handleHeadshotChange}
+                        className="hidden"
+                      />
+                    </label>
+                  )}
                 </div>
-              )}
+                <div className="flex-1 min-w-0 pt-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Label className="text-base font-semibold">Headshot</Label>
+                    {headshotPreview && (
+                      <span className="text-xs text-muted-foreground">• Click to view or edit</span>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {headshotPreview 
+                      ? "Your professional headshot will appear on your profile and in search results. Click the image to view, edit, or replace it." 
+                      : "Upload a high-quality professional headshot. Recommended: JPG, PNG, or WEBP format, maximum 5MB. Standard resume size (2:3 aspect ratio)."}
+                  </p>
+                </div>
+              </div>
             </CardContent>
           </Card>
         </motion.div>
