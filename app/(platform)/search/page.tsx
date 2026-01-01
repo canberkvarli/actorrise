@@ -1,20 +1,22 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconHeart } from "@tabler/icons-react";
+import { Separator } from "@/components/ui/separator";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconHeart, IconExternalLink, IconArrowLeft } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
 
 export default function SearchPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState({
     gender: "",
@@ -27,6 +29,8 @@ export default function SearchPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [selectedMonologue, setSelectedMonologue] = useState<Monologue | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
 
   const handleSearch = async () => {
     if (!query.trim()) return;
@@ -49,6 +53,46 @@ export default function SearchPage() {
     }
   };
 
+  const openMonologue = async (mono: Monologue) => {
+    setSelectedMonologue(mono);
+    setIsLoadingDetail(true);
+    try {
+      // Fetch full details
+      const response = await api.get(`/api/monologues/${mono.id}`);
+      setSelectedMonologue(response.data);
+    } catch (error) {
+      console.error("Error fetching monologue:", error);
+    } finally {
+      setIsLoadingDetail(false);
+    }
+  };
+
+  const closeMonologue = () => {
+    setSelectedMonologue(null);
+  };
+
+  const toggleFavorite = async (e: React.MouseEvent, mono: Monologue) => {
+    e.stopPropagation();
+    try {
+      if (mono.is_favorited) {
+        await api.delete(`/api/monologues/${mono.id}/favorite`);
+        // Update in results
+        setResults(results.map(m => m.id === mono.id ? { ...m, is_favorited: false, favorite_count: m.favorite_count - 1 } : m));
+        if (selectedMonologue?.id === mono.id) {
+          setSelectedMonologue({ ...selectedMonologue, is_favorited: false, favorite_count: selectedMonologue.favorite_count - 1 });
+        }
+      } else {
+        await api.post(`/api/monologues/${mono.id}/favorite`);
+        setResults(results.map(m => m.id === mono.id ? { ...m, is_favorited: true, favorite_count: m.favorite_count + 1 } : m));
+        if (selectedMonologue?.id === mono.id) {
+          setSelectedMonologue({ ...selectedMonologue, is_favorited: true, favorite_count: selectedMonologue.favorite_count + 1 });
+        }
+      }
+    } catch (error) {
+      console.error("Error toggling favorite:", error);
+    }
+  };
+
   const activeFilters = Object.entries(filters).filter(([_, value]) => value !== "");
 
   return (
@@ -61,6 +105,7 @@ export default function SearchPage() {
       </div>
 
       <div className="space-y-6">
+        {/* Search Card */}
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-4">
@@ -107,7 +152,7 @@ export default function SearchPage() {
                     <IconFilter className="h-4 w-4" />
                     Filters
                   </Label>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     {[
                       { key: "gender", label: "Gender", options: ["male", "female", "any"] },
                       { key: "age_range", label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
@@ -134,7 +179,7 @@ export default function SearchPage() {
                     <div className="flex flex-wrap gap-2 pt-2">
                       {activeFilters.map(([key, value]) => (
                         <Badge key={key} variant="secondary" className="gap-1">
-                          {key}: {value}
+                          {key.replace("_", " ")}: {value}
                           <button
                             onClick={() => setFilters({ ...filters, [key]: "" })}
                             className="ml-1 hover:text-destructive"
@@ -151,6 +196,7 @@ export default function SearchPage() {
           </CardContent>
         </Card>
 
+        {/* Results */}
         <AnimatePresence mode="wait">
           {isLoading ? (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -185,88 +231,93 @@ export default function SearchPage() {
                     key={mono.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.1 }}
+                    transition={{ delay: idx * 0.05 }}
                   >
                     <Card
-                      className="hover:shadow-lg transition-all cursor-pointer h-full flex flex-col hover:border-primary/50"
-                      onClick={() => router.push(`/monologue/${mono.id}`)}
+                      className="hover:shadow-xl transition-all cursor-pointer h-full flex flex-col hover:border-primary/50 group"
+                      onClick={() => openMonologue(mono)}
                     >
                       <CardContent className="pt-6 flex-1 flex flex-col">
-                        <div className="space-y-3 flex-1">
-                          <div>
-                            <h3 className="font-semibold text-lg mb-1">{mono.character_name}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              {mono.play_title} by {mono.author}
-                            </p>
+                        <div className="space-y-4 flex-1">
+                          {/* Header */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <h3 className="font-bold text-xl mb-1 group-hover:text-primary transition-colors">
+                                {mono.character_name}
+                              </h3>
+                              <p className="text-sm text-muted-foreground line-clamp-1">
+                                {mono.play_title}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                by {mono.author}
+                              </p>
+                            </div>
+                            <button
+                              onClick={(e) => toggleFavorite(e, mono)}
+                              className="p-2 hover:bg-muted rounded-full transition-colors"
+                            >
+                              <IconHeart
+                                className={`h-5 w-5 ${
+                                  mono.is_favorited
+                                    ? 'fill-red-500 text-red-500'
+                                    : 'text-muted-foreground'
+                                }`}
+                              />
+                            </button>
                           </div>
 
-                          {/* Details - Backstage.com Style */}
-                          <div className="space-y-2 text-xs">
-                            <div className="flex items-center gap-2">
-                              <span className="text-muted-foreground w-16">Genre:</span>
-                              <Badge variant="outline" className="capitalize">
-                                {mono.category}
-                              </Badge>
-                            </div>
+                          {/* Tags */}
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="default" className="font-normal capitalize">
+                              {mono.category}
+                            </Badge>
                             {mono.character_gender && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground w-16">Gender:</span>
-                                <Badge variant="outline" className="capitalize">
-                                  {mono.character_gender}
-                                </Badge>
-                              </div>
+                              <Badge variant="outline" className="font-normal capitalize">
+                                {mono.character_gender}
+                              </Badge>
                             )}
                             {mono.character_age_range && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground w-16">Age Range:</span>
-                                <Badge variant="outline">
-                                  {mono.character_age_range}
-                                </Badge>
-                              </div>
+                              <Badge variant="outline" className="font-normal">
+                                {mono.character_age_range}
+                              </Badge>
                             )}
                             {mono.primary_emotion && (
-                              <div className="flex items-center gap-2">
-                                <span className="text-muted-foreground w-16">Emotion:</span>
-                                <Badge variant="secondary" className="capitalize">
-                                  {mono.primary_emotion}
-                                </Badge>
-                              </div>
+                              <Badge variant="secondary" className="font-normal capitalize">
+                                {mono.primary_emotion}
+                              </Badge>
                             )}
                           </div>
 
                           {/* Themes */}
                           {mono.themes && mono.themes.length > 0 && (
-                            <div className="space-y-1">
-                              <span className="text-xs text-muted-foreground">Themes:</span>
-                              <div className="flex flex-wrap gap-1">
-                                {mono.themes.slice(0, 3).map(theme => (
-                                  <span key={theme} className="text-xs px-2 py-1 bg-muted rounded capitalize">
-                                    {theme}
-                                  </span>
-                                ))}
-                              </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {mono.themes.slice(0, 3).map(theme => (
+                                <span
+                                  key={theme}
+                                  className="text-xs px-2.5 py-1 bg-primary/10 text-primary rounded-full font-medium capitalize"
+                                >
+                                  {theme}
+                                </span>
+                              ))}
                             </div>
                           )}
 
-                          {/* Preview Text */}
-                          <p className="text-sm line-clamp-2 text-muted-foreground border-t pt-3">
-                            {mono.text.substring(0, 120)}...
+                          {/* Preview */}
+                          <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed border-l-2 border-primary/30 pl-3">
+                            {mono.text.substring(0, 150)}...
                           </p>
                         </div>
 
                         {/* Footer */}
                         <div className="mt-4 pt-4 border-t flex items-center justify-between text-xs text-muted-foreground">
-                          <span>{Math.floor(mono.estimated_duration_seconds / 60)}:{(mono.estimated_duration_seconds % 60).toString().padStart(2, '0')} min</span>
+                          <span className="font-medium">
+                            {Math.floor(mono.estimated_duration_seconds / 60)}:{(mono.estimated_duration_seconds % 60).toString().padStart(2, '0')} min
+                          </span>
                           <span>{mono.word_count} words</span>
-                          <button
-                            className="text-muted-foreground hover:text-primary transition-colors"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              // TODO: Handle favorite toggle
-                            }}
-                          >
-                            <IconHeart className={`h-4 w-4 ${mono.is_favorited ? 'fill-current text-red-500' : ''}`} />
-                          </button>
+                          <span className="flex items-center gap-1">
+                            <IconHeart className="h-3 w-3" />
+                            {mono.favorite_count}
+                          </span>
                         </div>
                       </CardContent>
                     </Card>
@@ -277,6 +328,199 @@ export default function SearchPage() {
           ) : null}
         </AnimatePresence>
       </div>
+
+      {/* Slide-over Detail Panel - Backstage.com Style */}
+      <AnimatePresence>
+        {selectedMonologue && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeMonologue}
+              className="fixed inset-0 bg-black/50 z-40"
+            />
+
+            {/* Slide-over Panel */}
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 30, stiffness: 300 }}
+              className="fixed right-0 top-0 bottom-0 w-full md:w-[600px] lg:w-[700px] bg-background border-l shadow-2xl z-50 overflow-y-auto"
+            >
+              <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-10">
+                <div className="flex items-center justify-between p-6">
+                  <h2 className="text-2xl font-bold">Monologue Details</h2>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleFavorite(e as any, selectedMonologue);
+                      }}
+                      className="p-2 hover:bg-muted rounded-full transition-colors"
+                    >
+                      <IconHeart
+                        className={`h-5 w-5 ${
+                          selectedMonologue.is_favorited
+                            ? 'fill-red-500 text-red-500'
+                            : 'text-muted-foreground'
+                        }`}
+                      />
+                    </button>
+                    <Button variant="ghost" size="icon" onClick={closeMonologue}>
+                      <IconX className="h-5 w-5" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-6">
+                {isLoadingDetail ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-8 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-64 w-full" />
+                  </div>
+                ) : (
+                  <>
+                    {/* Header */}
+                    <div className="space-y-3">
+                      <h1 className="text-3xl font-bold">{selectedMonologue.character_name}</h1>
+                      <div>
+                        <p className="text-lg font-semibold">{selectedMonologue.play_title}</p>
+                        <p className="text-muted-foreground">by {selectedMonologue.author}</p>
+                      </div>
+
+                      {selectedMonologue.scene_description && (
+                        <div className="bg-primary/5 border border-primary/20 p-4 rounded-lg">
+                          <p className="text-sm italic flex items-start gap-2">
+                            <IconSparkles className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
+                            {selectedMonologue.scene_description}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    <Separator />
+
+                    {/* Details */}
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                        Details
+                      </h3>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Character:</p>
+                          <Badge variant="outline">{selectedMonologue.character_name}</Badge>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Genre:</p>
+                          <Badge variant="outline" className="capitalize">{selectedMonologue.category}</Badge>
+                        </div>
+                        {selectedMonologue.character_gender && (
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Gender:</p>
+                            <Badge variant="outline" className="capitalize">{selectedMonologue.character_gender}</Badge>
+                          </div>
+                        )}
+                        {selectedMonologue.character_age_range && (
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Age Range:</p>
+                            <Badge variant="outline">{selectedMonologue.character_age_range}</Badge>
+                          </div>
+                        )}
+                        <div className="space-y-1">
+                          <p className="text-xs text-muted-foreground">Category:</p>
+                          <Badge variant="outline" className="capitalize">{selectedMonologue.category}</Badge>
+                        </div>
+                        {selectedMonologue.primary_emotion && (
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground">Emotion:</p>
+                            <Badge className="capitalize">{selectedMonologue.primary_emotion}</Badge>
+                          </div>
+                        )}
+                      </div>
+
+                      {selectedMonologue.themes && selectedMonologue.themes.length > 0 && (
+                        <div className="space-y-2 pt-2">
+                          <p className="text-xs text-muted-foreground">Themes:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {selectedMonologue.themes.map((theme) => (
+                              <Badge key={theme} variant="secondary" className="capitalize">
+                                {theme}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <Separator />
+
+                    {/* Monologue Text */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                        Monologue Text
+                      </h3>
+                      <div className="bg-muted/30 p-6 rounded-lg border">
+                        <p className="text-base leading-relaxed whitespace-pre-wrap font-serif">
+                          {selectedMonologue.text}
+                        </p>
+                      </div>
+
+                      {selectedMonologue.stage_directions && (
+                        <div className="bg-muted/50 p-4 rounded-lg border">
+                          <p className="text-sm italic">
+                            <span className="font-semibold not-italic">Stage Directions: </span>
+                            {selectedMonologue.stage_directions}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Stats & Source */}
+                    <Separator />
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-3 gap-4 text-center">
+                        <div className="space-y-1">
+                          <p className="text-2xl font-bold">
+                            {Math.floor(selectedMonologue.estimated_duration_seconds / 60)}:{(selectedMonologue.estimated_duration_seconds % 60).toString().padStart(2, '0')}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Duration</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-2xl font-bold">{selectedMonologue.word_count}</p>
+                          <p className="text-xs text-muted-foreground">Words</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-2xl font-bold">{selectedMonologue.favorite_count}</p>
+                          <p className="text-xs text-muted-foreground">Favorites</p>
+                        </div>
+                      </div>
+
+                      {selectedMonologue.source_url && (
+                        <Button variant="outline" className="w-full" asChild>
+                          <a
+                            href={selectedMonologue.source_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center justify-center gap-2"
+                          >
+                            View Full Play
+                            <IconExternalLink className="h-4 w-4" />
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
