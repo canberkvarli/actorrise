@@ -1,9 +1,10 @@
 import base64
 import io
 from typing import Optional
-from PIL import Image
-from supabase import create_client, Client
+
 from app.core.config import settings
+from PIL import Image
+from supabase import Client, create_client
 
 
 def get_supabase_client() -> Optional[Client]:
