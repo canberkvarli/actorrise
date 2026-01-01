@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconHeart, IconExternalLink, IconArrowLeft } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconArrowLeft } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
@@ -43,7 +43,7 @@ export default function SearchPage() {
         if (value) params.append(key, value);
       });
 
-      const response = await api.get(`/api/monologues/search?${params.toString()}`);
+      const response = await api.get<Monologue[]>(`/api/monologues/search?${params.toString()}`);
       setResults(response.data);
     } catch (error) {
       console.error("Search error:", error);
@@ -58,7 +58,7 @@ export default function SearchPage() {
     setIsLoadingDetail(true);
     try {
       // Fetch full details
-      const response = await api.get(`/api/monologues/${mono.id}`);
+      const response = await api.get<Monologue>(`/api/monologues/${mono.id}`);
       setSelectedMonologue(response.data);
     } catch (error) {
       console.error("Error fetching monologue:", error);
@@ -254,13 +254,17 @@ export default function SearchPage() {
                             </div>
                             <button
                               onClick={(e) => toggleFavorite(e, mono)}
-                              className="p-2 hover:bg-muted rounded-full transition-colors"
+                              className={`p-2 rounded-full transition-colors ${
+                                mono.is_favorited
+                                  ? 'bg-accent/10 hover:bg-accent/20 text-accent'
+                                  : 'hover:bg-muted text-muted-foreground hover:text-accent'
+                              }`}
                             >
-                              <IconHeart
+                              <IconBookmark
                                 className={`h-5 w-5 ${
                                   mono.is_favorited
-                                    ? 'fill-red-500 text-red-500'
-                                    : 'text-muted-foreground'
+                                    ? 'fill-current'
+                                    : ''
                                 }`}
                               />
                             </button>
@@ -315,7 +319,7 @@ export default function SearchPage() {
                           </span>
                           <span>{mono.word_count} words</span>
                           <span className="flex items-center gap-1">
-                            <IconHeart className="h-3 w-3" />
+                            <IconBookmark className="h-3 w-3" />
                             {mono.favorite_count}
                           </span>
                         </div>
@@ -359,13 +363,17 @@ export default function SearchPage() {
                         e.stopPropagation();
                         toggleFavorite(e as any, selectedMonologue);
                       }}
-                      className="p-2 hover:bg-muted rounded-full transition-colors"
+                      className={`p-2 rounded-full transition-colors ${
+                        selectedMonologue.is_favorited
+                          ? 'bg-accent/10 hover:bg-accent/20 text-accent'
+                          : 'hover:bg-muted text-muted-foreground hover:text-accent'
+                      }`}
                     >
-                      <IconHeart
+                      <IconBookmark
                         className={`h-5 w-5 ${
                           selectedMonologue.is_favorited
-                            ? 'fill-red-500 text-red-500'
-                            : 'text-muted-foreground'
+                            ? 'fill-current'
+                            : ''
                         }`}
                       />
                     </button>
@@ -387,10 +395,10 @@ export default function SearchPage() {
                   <>
                     {/* Header */}
                     <div className="space-y-3">
-                      <h1 className="text-3xl font-bold">{selectedMonologue.character_name}</h1>
+                      <h1 className="text-3xl font-bold font-typewriter">{selectedMonologue.character_name}</h1>
                       <div>
-                        <p className="text-lg font-semibold">{selectedMonologue.play_title}</p>
-                        <p className="text-muted-foreground">by {selectedMonologue.author}</p>
+                        <p className="text-lg font-semibold font-typewriter">{selectedMonologue.play_title}</p>
+                        <p className="text-muted-foreground font-typewriter">by {selectedMonologue.author}</p>
                       </div>
 
                       {selectedMonologue.scene_description && (
@@ -465,7 +473,7 @@ export default function SearchPage() {
                         Monologue Text
                       </h3>
                       <div className="bg-muted/30 p-6 rounded-lg border">
-                        <p className="text-base leading-relaxed whitespace-pre-wrap font-serif">
+                        <p className="text-base leading-relaxed whitespace-pre-wrap font-typewriter">
                           {selectedMonologue.text}
                         </p>
                       </div>
@@ -501,7 +509,7 @@ export default function SearchPage() {
                       </div>
 
                       {selectedMonologue.source_url && (
-                        <Button variant="outline" className="w-full" asChild>
+                        <Button variant="outline" className="w-full hover:border-primary hover:text-primary" asChild>
                           <a
                             href={selectedMonologue.source_url}
                             target="_blank"
