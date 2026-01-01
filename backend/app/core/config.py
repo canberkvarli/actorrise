@@ -1,5 +1,6 @@
 import os
 from typing import List
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -8,7 +9,7 @@ load_dotenv()
 class Settings:
     database_url: str = os.getenv("DATABASE_URL", "")
     if not database_url or not database_url.startswith("postgresql"):
-        raise ValueError("DATABASE_URL must be set to a PostgreSQL connection string (e.g., postgresql://user:pass@host:5432/dbname)")
+        raise ValueError("DATABASE_URL must be set to a PostgreSQL connection string")
     jwt_secret: str = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
     jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
     cors_origins: List[str] = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
@@ -19,4 +20,3 @@ class Settings:
 
 
 settings = Settings()
-
