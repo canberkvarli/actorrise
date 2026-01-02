@@ -4,7 +4,7 @@ from typing import List, Optional
 
 from app.api.auth import get_current_user
 from app.core.database import get_db
-from app.models.actor import ActorProfile, Monologue, MonologueFavorite, Play
+from app.models.actor import Monologue, MonologueFavorite, Play
 from app.models.user import User
 from app.services.search.recommender import Recommender
 from app.services.search.semantic_search import SemanticSearch
@@ -551,7 +551,7 @@ async def get_all_plays(
     author: Optional[str] = None,
     limit: int = Query(100, le=500),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    _current_user: User = Depends(get_current_user)
 ):
     """Get all plays in the database"""
 
@@ -582,7 +582,7 @@ async def get_all_plays(
 @router.get("/stats/database", )
 async def get_database_stats(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    _current_user: User = Depends(get_current_user)
 ):
     """Get database statistics"""
 
@@ -607,8 +607,8 @@ async def get_database_stats(
 
 @router.get("/performance-metrics")
 async def get_performance_metrics(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    _db: Session = Depends(get_db),
+    _current_user: User = Depends(get_current_user)
 ):
     """
     Get search optimization performance metrics.
@@ -619,18 +619,21 @@ async def get_performance_metrics(
         - Cache performance statistics
         - Monthly cost projections
 
-    Note: This endpoint creates a temporary search instance to get metrics.
-    In production, metrics should be tracked globally across all requests.
+    Note: This endpoint is a placeholder. In production, metrics should be
+    tracked globally across all requests and stored in a metrics service.
     """
-    from app.services.search.semantic_search import SemanticSearch
-
-    # Create temporary search instance to access metrics
-    # In production, you would track these globally
-    search = SemanticSearch(db)
-
-    metrics = search.get_performance_metrics()
-
-    return metrics
+    # TODO: Implement metrics tracking
+    # For now, return placeholder data
+    return {
+        "cost_savings_percent": 0.0,
+        "tier_distribution": {
+            "keyword_only": 0,
+            "keyword_embedding": 0,
+            "full_ai": 0
+        },
+        "cache_hit_rate": 0.0,
+        "monthly_cost_projection": 0.0
+    }
 
 
 @router.get("/debug/author-distribution")
@@ -680,9 +683,9 @@ async def get_author_distribution(
     }
 
     # Also print to console for easy debugging
-    print(f"\n{'='*70}")
-    print(f"DATABASE AUTHOR DISTRIBUTION")
-    print(f"{'='*70}")
+    print("\n" + "="*70)
+    print("DATABASE AUTHOR DISTRIBUTION")
+    print("="*70)
     print(f"Total monologues: {result['total_monologues']}")
     print(f"With embeddings: {result['total_with_embeddings']} ({result['embedding_completion']}%)")
     print(f"\n{'Author':<30} {'Count':>8} {'w/Embed':>10} {'%':>6}")

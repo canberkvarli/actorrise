@@ -1,13 +1,14 @@
 """Semantic search for monologues using embeddings."""
 
-from sqlalchemy import func, select, and_, or_
-from sqlalchemy.orm import Session
+import hashlib
+import json
+from typing import Dict, List, Optional
+
+import numpy as np
 from app.models.actor import Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
-from typing import List, Dict, Optional
-import json
-import numpy as np
-import hashlib
+from sqlalchemy import func, or_
+from sqlalchemy.orm import Session
 
 
 class SemanticSearch:
@@ -50,7 +51,7 @@ class SemanticSearch:
         # Skip AI parsing if explicit filters are provided (optimization)
         if filters and len(filters) > 0:
             # If user provided explicit filters, skip AI parsing to save costs
-            print(f"Using explicit filters, skipping AI query parsing")
+            print("Using explicit filters, skipping AI query parsing")
             extracted_filters = {}
         else:
             # Cache query parsing results
@@ -129,7 +130,6 @@ class SemanticSearch:
                 if isinstance(themes, list) and len(themes) > 0:
                     # Match if any of the requested themes are present
                     # Use OR condition to match any theme
-                    from sqlalchemy import any_
                     theme_conditions = [Monologue.themes.contains([theme]) for theme in themes]
                     base_query = base_query.filter(or_(*theme_conditions))
 
@@ -178,10 +178,11 @@ class SemanticSearch:
         results_with_scores = []
 
         for mono in monologues:
-            if mono.embedding:
+            embedding_value: Optional[str] = mono.embedding  # type: ignore[assignment]
+            if embedding_value is not None and len(embedding_value) > 0:
                 try:
                     # Parse embedding from JSON
-                    mono_embedding = json.loads(mono.embedding)
+                    mono_embedding = json.loads(embedding_value)
 
                     # Calculate cosine similarity
                     similarity = self._cosine_similarity(query_embedding, mono_embedding)
@@ -193,7 +194,7 @@ class SemanticSearch:
 
                     results_with_scores.append((mono, similarity))
 
-                except Exception as e:
+                except (json.JSONDecodeError, ValueError, TypeError) as e:
                     print(f"Error calculating similarity for monologue {mono.id}: {e}")
                     continue
 
@@ -202,7 +203,7 @@ class SemanticSearch:
         top_results = results_with_scores[:limit]
 
         # Debug logging to see what authors are being returned
-        print(f"\n=== SEARCH RESULTS DEBUG ===")
+        print("\n=== SEARCH RESULTS DEBUG ===")
         print(f"Query: {query}")
         print(f"Total filtered monologues: {len(monologues)}")
         print(f"Results with scores: {len(results_with_scores)}")
@@ -216,7 +217,7 @@ class SemanticSearch:
         print(f"\nAuthor distribution in filtered results ({len(monologues)} total):")
         for author, count in author_dist.most_common(10):
             print(f"  • {author}: {count}")
-        print(f"=== END DEBUG ===\n")
+        print("=== END DEBUG ===\n")
 
         return [mono for mono, score in top_results]
 
@@ -241,8 +242,6 @@ class SemanticSearch:
         filters: Optional[Dict]
     ) -> List[Monologue]:
         """Fallback to simple text search if embedding fails"""
-
-        query_lower = query.lower()
 
         base_query = self.db.query(Monologue).join(Play)
 
