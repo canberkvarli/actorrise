@@ -603,3 +603,31 @@ async def get_database_stats(
         "analyzed_monologues": analyzed_monologues,
         "analysis_completion": round(analyzed_monologues / total_monologues * 100, 1) if total_monologues > 0 else 0
     }
+
+
+@router.get("/performance-metrics")
+async def get_performance_metrics(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Get search optimization performance metrics.
+
+    Returns:
+        - Cost savings vs baseline
+        - Tier distribution (keyword-only, keyword+embedding, full AI)
+        - Cache performance statistics
+        - Monthly cost projections
+
+    Note: This endpoint creates a temporary search instance to get metrics.
+    In production, metrics should be tracked globally across all requests.
+    """
+    from app.services.search.semantic_search import SemanticSearch
+
+    # Create temporary search instance to access metrics
+    # In production, you would track these globally
+    search = SemanticSearch(db)
+
+    metrics = search.get_performance_metrics()
+
+    return metrics
