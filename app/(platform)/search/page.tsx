@@ -242,9 +242,16 @@ export default function SearchPage() {
                           {/* Header */}
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1">
-                              <h3 className="font-bold text-xl mb-1 group-hover:text-primary transition-colors">
-                                {mono.character_name}
-                              </h3>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-bold text-xl mb-1 group-hover:text-primary transition-colors">
+                                  {mono.character_name}
+                                </h3>
+                                {mono.is_favorited && (
+                                  <span className="px-2 py-0.5 bg-accent/10 text-accent text-xs font-semibold rounded-full border border-accent/20">
+                                    Bookmarked
+                                  </span>
+                                )}
+                              </div>
                               <p className="text-sm text-muted-foreground line-clamp-1">
                                 {mono.play_title}
                               </p>
@@ -292,6 +299,15 @@ export default function SearchPage() {
                             )}
                           </div>
 
+                          {/* Synopsis / Scene Description */}
+                          {mono.scene_description && (
+                            <div className="bg-muted/50 px-3 py-2 rounded-md border-l-2 border-primary/40">
+                              <p className="text-xs italic text-muted-foreground line-clamp-2">
+                                {mono.scene_description}
+                              </p>
+                            </div>
+                          )}
+
                           {/* Themes */}
                           {mono.themes && mono.themes.length > 0 && (
                             <div className="flex flex-wrap gap-1.5">
@@ -307,8 +323,8 @@ export default function SearchPage() {
                           )}
 
                           {/* Preview */}
-                          <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed border-l-2 border-primary/30 pl-3">
-                            {mono.text.substring(0, 150)}...
+                          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                            "{mono.text.substring(0, 120)}..."
                           </p>
                         </div>
 
