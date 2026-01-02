@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProviderWrapper } from "@/components/providers/AuthProviderWrapper";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Toaster } from "sonner";
+import { FontLoader } from "@/components/FontLoader";
 
 const montserrat = Montserrat({
   variable: "--font-sans",
@@ -31,6 +32,7 @@ export default function RootLayout({
       <body
         className={`${montserrat.variable} ${jetbrainsMono.variable} font-sans antialiased`}
       >
+        <FontLoader />
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

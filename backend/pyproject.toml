@@ -13,4 +13,15 @@ dependencies = [
     "psycopg2-binary>=2.9.9",
     "supabase>=2.0.0",
     "pillow>=10.0.0",
+    # AI & NLP
+    "openai>=1.0.0",
+    "numpy>=1.24.0",
+    # Text Processing & Parsing
+    "lxml>=4.9.0",
+    "beautifulsoup4>=4.12.0",
+    "pdfplumber>=0.10.0",
+    "spacy>=3.7.0",
+    # Data Fetching
+    "requests>=2.31.0",
+    "aiohttp>=3.9.0",
 ]
