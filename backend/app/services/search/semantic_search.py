@@ -128,9 +128,10 @@ class SemanticSearch:
                 themes = merged_filters['themes']
                 if isinstance(themes, list) and len(themes) > 0:
                     # Match if any of the requested themes are present
-                    base_query = base_query.filter(
-                        Monologue.themes.overlap(themes)
-                    )
+                    # Use OR condition to match any theme
+                    from sqlalchemy import any_
+                    theme_conditions = [Monologue.themes.contains([theme]) for theme in themes]
+                    base_query = base_query.filter(or_(*theme_conditions))
 
             if merged_filters.get('tone'):
                 # Filter by tone (e.g., 'comedic', 'dramatic')
