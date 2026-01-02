@@ -7,6 +7,7 @@ from app.services.ai.content_analyzer import ContentAnalyzer
 from typing import List, Dict, Optional
 import json
 import numpy as np
+import hashlib
 
 
 class SemanticSearch:
@@ -15,6 +16,9 @@ class SemanticSearch:
     def __init__(self, db: Session):
         self.db = db
         self.analyzer = ContentAnalyzer()
+        # Simple in-memory cache for embeddings (consider Redis for production)
+        self._embedding_cache = {}
+        self._query_parse_cache = {}
 
     def search(
         self,
@@ -40,18 +44,49 @@ class SemanticSearch:
             }
         """
 
-        # Parse query to extract filters using AI
-        print(f"Parsing query for filters: {query}")
-        extracted_filters = self.analyzer.parse_search_query(query)
+        # Parse query to extract filters using AI (with caching)
+        # Skip AI parsing if explicit filters are provided (optimization)
+        if filters and len(filters) > 0:
+            # If user provided explicit filters, skip AI parsing to save costs
+            print(f"Using explicit filters, skipping AI query parsing")
+            extracted_filters = {}
+        else:
+            # Cache query parsing results
+            query_hash = hashlib.md5(query.lower().encode()).hexdigest()
+            if query_hash in self._query_parse_cache:
+                print(f"Using cached query parse for: {query}")
+                extracted_filters = self._query_parse_cache[query_hash]
+            else:
+                print(f"Parsing query for filters: {query}")
+                extracted_filters = self.analyzer.parse_search_query(query)
+                self._query_parse_cache[query_hash] = extracted_filters
+                # Limit cache size to prevent memory issues
+                if len(self._query_parse_cache) > 1000:
+                    # Remove oldest entry (simple FIFO)
+                    oldest_key = next(iter(self._query_parse_cache))
+                    del self._query_parse_cache[oldest_key]
+        
         print(f"Extracted filters: {extracted_filters}")
 
         # Merge extracted filters with explicit filters (explicit takes precedence)
         merged_filters = {**(extracted_filters or {}), **(filters or {})}
         print(f"Merged filters: {merged_filters}")
 
-        # Generate embedding for query
-        print(f"Generating embedding for query: {query}")
-        query_embedding = self.analyzer.generate_embedding(query)
+        # Generate embedding for query (with caching)
+        query_hash = hashlib.md5(query.lower().encode()).hexdigest()
+        if query_hash in self._embedding_cache:
+            print(f"Using cached embedding for: {query}")
+            query_embedding = self._embedding_cache[query_hash]
+        else:
+            print(f"Generating embedding for query: {query}")
+            query_embedding = self.analyzer.generate_embedding(query)
+            if query_embedding:
+                self._embedding_cache[query_hash] = query_embedding
+                # Limit cache size to prevent memory issues
+                if len(self._embedding_cache) > 1000:
+                    # Remove oldest entry (simple FIFO)
+                    oldest_key = next(iter(self._embedding_cache))
+                    del self._embedding_cache[oldest_key]
 
         if not query_embedding:
             print("Failed to generate embedding, falling back to text search")
