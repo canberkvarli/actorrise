@@ -83,7 +83,7 @@ export default function DashboardPage() {
 
   const fetchBookmarkedMonologues = async () => {
     try {
-      const response = await api.get<Monologue[]>("/api/monologues/favorites");
+      const response = await api.get<Monologue[]>("/api/monologues/favorites/my");
       setBookmarkedMonologues(response.data.slice(0, 3)); // Show top 3
     } catch (error: unknown) {
       console.error("Failed to fetch bookmarked monologues:", error);

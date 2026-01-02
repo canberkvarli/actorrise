@@ -7,7 +7,7 @@ from typing import Dict, List, Optional
 import numpy as np
 from app.models.actor import Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
-from sqlalchemy import func, or_
+from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session
 
 
@@ -119,9 +119,12 @@ class SemanticSearch:
                 )
 
             if merged_filters.get('theme'):
-                # Check if theme is in the themes array
+                # Check if theme is in the themes array using PostgreSQL array contains operator
+                theme = merged_filters['theme']
+                # Use PostgreSQL @> operator with proper type casting
+                # Cast array to character varying[] to match column type
                 base_query = base_query.filter(
-                    Monologue.themes.contains([merged_filters['theme']])
+                    text("monologues.themes @> ARRAY[:theme_val]::character varying[]").bindparams(theme_val=theme)
                 )
 
             if merged_filters.get('themes'):
@@ -130,7 +133,11 @@ class SemanticSearch:
                 if isinstance(themes, list) and len(themes) > 0:
                     # Match if any of the requested themes are present
                     # Use OR condition to match any theme
-                    theme_conditions = [Monologue.themes.contains([theme]) for theme in themes]
+                    # Use PostgreSQL @> operator with proper type casting
+                    theme_conditions = [
+                        text("monologues.themes @> ARRAY[:theme_val]::character varying[]").bindparams(theme_val=theme)
+                        for theme in themes
+                    ]
                     base_query = base_query.filter(or_(*theme_conditions))
 
             if merged_filters.get('tone'):
@@ -266,8 +273,12 @@ class SemanticSearch:
                 )
 
             if filters.get('theme'):
+                # Check if theme is in the themes array using PostgreSQL array contains operator
+                theme = filters['theme']
+                # Use PostgreSQL @> operator with proper type casting
+                # Cast array to character varying[] to match column type
                 base_query = base_query.filter(
-                    Monologue.themes.contains([filters['theme']])
+                    text("monologues.themes @> ARRAY[:theme_val]::character varying[]").bindparams(theme_val=theme)
                 )
 
             if filters.get('difficulty'):
