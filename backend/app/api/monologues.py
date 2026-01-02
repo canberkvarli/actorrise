@@ -635,12 +635,14 @@ async def get_performance_metrics(
 
 @router.get("/debug/author-distribution")
 async def get_author_distribution(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    db: Session = Depends(get_db)
+    # No auth required for debug endpoint
 ):
     """
     Debug endpoint: Get distribution of monologues by author.
     This helps diagnose if only certain authors are in the database.
+
+    Access via: http://localhost:8000/api/monologues/debug/author-distribution
     """
     from sqlalchemy import func
 
@@ -662,7 +664,7 @@ async def get_author_distribution(
         Monologue.embedding.isnot(None)
     ).count()
 
-    return {
+    result = {
         "total_monologues": total_monologues,
         "total_with_embeddings": total_with_embeddings,
         "embedding_completion": round(total_with_embeddings / total_monologues * 100, 1) if total_monologues > 0 else 0,
@@ -676,3 +678,18 @@ async def get_author_distribution(
             for author, count, with_emb in author_counts
         ]
     }
+
+    # Also print to console for easy debugging
+    print(f"\n{'='*70}")
+    print(f"DATABASE AUTHOR DISTRIBUTION")
+    print(f"{'='*70}")
+    print(f"Total monologues: {result['total_monologues']}")
+    print(f"With embeddings: {result['total_with_embeddings']} ({result['embedding_completion']}%)")
+    print(f"\n{'Author':<30} {'Count':>8} {'w/Embed':>10} {'%':>6}")
+    print(f"{'-'*70}")
+    for author_data in result['authors']:
+        print(f"{author_data['author']:<30} {author_data['monologue_count']:>8} "
+              f"{author_data['with_embedding']:>10} {author_data['embedding_percentage']:>5.1f}%")
+    print(f"{'='*70}\n")
+
+    return result
