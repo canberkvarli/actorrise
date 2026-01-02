@@ -98,9 +98,9 @@ export default function SearchPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">MonologueMatch</h1>
-        <p className="text-muted-foreground">
-          AI-powered monologue discovery for actors
+        <h1 className="text-4xl font-bold mb-2">Find Your Monologue</h1>
+        <p className="text-muted-foreground text-lg">
+          Search thousands of classical and contemporary monologues
         </p>
       </div>
 
@@ -110,9 +110,8 @@ export default function SearchPage() {
           <CardContent className="pt-6">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="search" className="flex items-center gap-2">
-                  <IconSparkles className="h-4 w-4 text-primary" />
-                  Semantic Search
+                <Label htmlFor="search" className="text-base font-semibold">
+                  Search
                 </Label>
                 <div className="flex gap-2">
                   <div className="flex-1 relative">
