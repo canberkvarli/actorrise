@@ -515,12 +515,6 @@ export function ActorProfileForm() {
     }
   };
 
-  const handlePhotoClick = () => {
-    if (headshotPreview) {
-      setShowPhotoViewer(true);
-    }
-  };
-
   const handleEditPhoto = () => {
     if (headshotPreview) {
       setShowPhotoViewer(false);

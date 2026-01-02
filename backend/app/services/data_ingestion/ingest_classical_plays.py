@@ -1,13 +1,14 @@
 """CLI script to ingest classical plays from Project Gutenberg."""
 
-import sys
 import os
+import sys
 
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..')))
 
 from app.core.database import SessionLocal
-from app.services.data_ingestion.gutenberg_scraper import GutenbergScraper, CLASSICAL_PLAYWRIGHTS
+from app.services.data_ingestion.gutenberg_scraper import (
+    CLASSICAL_PLAYWRIGHTS, GutenbergScraper)
 
 
 def ingest_all_classical_plays():
