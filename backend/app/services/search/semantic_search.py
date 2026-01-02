@@ -201,6 +201,23 @@ class SemanticSearch:
         results_with_scores.sort(key=lambda x: x[1], reverse=True)
         top_results = results_with_scores[:limit]
 
+        # Debug logging to see what authors are being returned
+        print(f"\n=== SEARCH RESULTS DEBUG ===")
+        print(f"Query: {query}")
+        print(f"Total filtered monologues: {len(monologues)}")
+        print(f"Results with scores: {len(results_with_scores)}")
+        print(f"\nTop {len(top_results)} results:")
+        for i, (mono, score) in enumerate(top_results[:5], 1):
+            print(f"  {i}. {mono.character_name} from '{mono.play.title}' by {mono.play.author} (score: {score:.3f})")
+
+        # Show author distribution in filtered results
+        from collections import Counter
+        author_dist = Counter(mono.play.author for mono in monologues)
+        print(f"\nAuthor distribution in filtered results ({len(monologues)} total):")
+        for author, count in author_dist.most_common(10):
+            print(f"  • {author}: {count}")
+        print(f"=== END DEBUG ===\n")
+
         return [mono for mono, score in top_results]
 
     def _cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:

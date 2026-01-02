@@ -631,3 +631,48 @@ async def get_performance_metrics(
     metrics = search.get_performance_metrics()
 
     return metrics
+
+
+@router.get("/debug/author-distribution")
+async def get_author_distribution(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Debug endpoint: Get distribution of monologues by author.
+    This helps diagnose if only certain authors are in the database.
+    """
+    from sqlalchemy import func
+
+    # Get count of monologues by author
+    author_counts = db.query(
+        Play.author,
+        func.count(Monologue.id).label('monologue_count'),
+        func.count(Monologue.embedding).label('with_embedding')
+    ).join(
+        Monologue, Monologue.play_id == Play.id
+    ).group_by(
+        Play.author
+    ).order_by(
+        func.count(Monologue.id).desc()
+    ).all()
+
+    total_monologues = db.query(Monologue).count()
+    total_with_embeddings = db.query(Monologue).filter(
+        Monologue.embedding.isnot(None)
+    ).count()
+
+    return {
+        "total_monologues": total_monologues,
+        "total_with_embeddings": total_with_embeddings,
+        "embedding_completion": round(total_with_embeddings / total_monologues * 100, 1) if total_monologues > 0 else 0,
+        "authors": [
+            {
+                "author": author,
+                "monologue_count": count,
+                "with_embedding": with_emb,
+                "embedding_percentage": round(with_emb / count * 100, 1) if count > 0 else 0
+            }
+            for author, count, with_emb in author_counts
+        ]
+    }
