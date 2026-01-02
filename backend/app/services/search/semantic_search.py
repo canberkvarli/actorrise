@@ -24,7 +24,8 @@ class SemanticSearch:
         self,
         query: str,
         limit: int = 20,
-        filters: Optional[Dict] = None
+        filters: Optional[Dict] = None,
+        user_id: Optional[int] = None
     ) -> List[Monologue]:
         """
         Semantic search for monologues.
@@ -42,6 +43,7 @@ class SemanticSearch:
                 'author': 'William Shakespeare',
                 'max_duration': 180  # seconds
             }
+            user_id: Optional user ID to prioritize bookmarked monologues
         """
 
         # Parse query to extract filters using AI (with caching)
@@ -162,6 +164,15 @@ class SemanticSearch:
         if not monologues:
             return []
 
+        # Get user's bookmarked monologues if user_id provided
+        bookmarked_ids = set()
+        if user_id:
+            from app.models.actor import MonologueFavorite
+            favorites = self.db.query(MonologueFavorite.monologue_id).filter(
+                MonologueFavorite.user_id == user_id
+            ).all()
+            bookmarked_ids = {f[0] for f in favorites}
+
         # Calculate cosine similarity for each monologue
         results_with_scores = []
 
@@ -173,6 +184,11 @@ class SemanticSearch:
 
                     # Calculate cosine similarity
                     similarity = self._cosine_similarity(query_embedding, mono_embedding)
+
+                    # Boost bookmarked monologues by adding 0.3 to similarity
+                    if mono.id in bookmarked_ids:
+                        similarity += 0.3
+                        print(f"  ⭐ Boosting bookmarked: {mono.character_name} from {mono.play.title}")
 
                     results_with_scores.append((mono, similarity))
 

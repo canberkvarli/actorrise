@@ -105,9 +105,9 @@ async def search_monologues(
     if max_duration:
         filters['max_duration'] = max_duration
 
-    # Search
+    # Search (pass user_id to prioritize bookmarked monologues)
     search_service = SemanticSearch(db)
-    results = search_service.search(q, limit=limit, filters=filters)
+    results = search_service.search(q, limit=limit, filters=filters, user_id=current_user.id)
 
     # Get user's favorites
     favorites = db.query(MonologueFavorite.monologue_id).filter(

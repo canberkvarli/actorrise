@@ -171,6 +171,30 @@ class KeywordExtractor:
             'new': 'contemporary', 'recent': 'contemporary',
         },
 
+        'author': {
+            # Shakespeare variations
+            'shakespeare': 'William Shakespeare', 'shakespear': 'William Shakespeare',
+            'shakspeare': 'William Shakespeare', 'shakespere': 'William Shakespeare',
+
+            # Chekhov variations (common misspellings)
+            'chekhov': 'Anton Chekhov', 'checkov': 'Anton Chekhov',
+            'chekov': 'Anton Chekhov', 'chechov': 'Anton Chekhov',
+            'checkhov': 'Anton Chekhov', 'tchekh': 'Anton Chekhov',
+            'anton': 'Anton Chekhov',
+
+            # Other classical authors
+            'ibsen': 'Henrik Ibsen', 'henrik': 'Henrik Ibsen',
+            'wilde': 'Oscar Wilde', 'oscar': 'Oscar Wilde',
+            'shaw': 'George Bernard Shaw', 'bernard': 'George Bernard Shaw',
+            'sophocles': 'Sophocles',
+            'euripides': 'Euripides',
+            'aeschylus': 'Aeschylus',
+            'moliere': 'Molière', 'molière': 'Molière',
+            'strindberg': 'August Strindberg',
+            'marlowe': 'Christopher Marlowe',
+            'jonson': 'Ben Jonson',
+        },
+
         'tone': {
             # Comedic
             'funny': 'comedic', 'comedic': 'comedic', 'humorous': 'comedic',
@@ -216,6 +240,10 @@ class KeywordExtractor:
 
         # Extract each filter type
         for word in words:
+            # Check author first (highest priority)
+            if 'author' not in filters and word in cls.KEYWORD_MAPPINGS['author']:
+                filters['author'] = cls.KEYWORD_MAPPINGS['author'][word]
+
             # Check emotions (only set if not already set)
             if 'emotion' not in filters and word in cls.KEYWORD_MAPPINGS['emotions']:
                 filters['emotion'] = cls.KEYWORD_MAPPINGS['emotions'][word]
