@@ -47,6 +47,9 @@ class SemanticSearch:
             user_id: Optional user ID to prioritize bookmarked monologues
         """
 
+        import time
+        overall_start = time.time()
+
         # Parse query to extract filters using AI (with caching)
         # Skip AI parsing if explicit filters are provided (optimization)
         if filters and len(filters) > 0:
@@ -57,18 +60,21 @@ class SemanticSearch:
             # Cache query parsing results
             query_hash = hashlib.md5(query.lower().encode()).hexdigest()
             if query_hash in self._query_parse_cache:
-                print(f"Using cached query parse for: {query}")
+                print(f"✅ Using cached query parse for: {query}")
                 extracted_filters = self._query_parse_cache[query_hash]
             else:
-                print(f"Parsing query for filters: {query}")
+                parse_start = time.time()
+                print(f"🤖 Parsing query for filters: {query}")
                 extracted_filters = self.analyzer.parse_search_query(query)
+                parse_time = time.time() - parse_start
+                print(f"⏱️  Query parsing took {parse_time:.2f}s")
                 self._query_parse_cache[query_hash] = extracted_filters
                 # Limit cache size to prevent memory issues
                 if len(self._query_parse_cache) > 1000:
                     # Remove oldest entry (simple FIFO)
                     oldest_key = next(iter(self._query_parse_cache))
                     del self._query_parse_cache[oldest_key]
-        
+
         print(f"Extracted filters: {extracted_filters}")
 
         # Merge extracted filters with explicit filters (explicit takes precedence)
@@ -78,11 +84,14 @@ class SemanticSearch:
         # Generate embedding for query (with caching)
         query_hash = hashlib.md5(query.lower().encode()).hexdigest()
         if query_hash in self._embedding_cache:
-            print(f"Using cached embedding for: {query}")
+            print(f"✅ Using cached embedding for: {query}")
             query_embedding = self._embedding_cache[query_hash]
         else:
-            print(f"Generating embedding for query: {query}")
+            emb_start = time.time()
+            print(f"🔢 Generating embedding for query: {query}")
             query_embedding = self.analyzer.generate_embedding(query)
+            emb_time = time.time() - emb_start
+            print(f"⏱️  Embedding generation took {emb_time:.2f}s")
             if query_embedding:
                 self._embedding_cache[query_hash] = query_embedding
                 # Limit cache size to prevent memory issues
@@ -166,12 +175,6 @@ class SemanticSearch:
                     Monologue.estimated_duration_seconds <= merged_filters['max_duration']
                 )
 
-        # Get filtered monologues
-        monologues = base_query.all()
-
-        if not monologues:
-            return []
-
         # Get user's bookmarked monologues if user_id provided
         bookmarked_ids = set()
         if user_id:
@@ -181,10 +184,23 @@ class SemanticSearch:
             ).all()
             bookmarked_ids = {f[0] for f in favorites}
 
+        # OPTIMIZATION: Only fetch monologues WITH embeddings for semantic search
+        # Limit to reasonable candidate pool size for performance (will expand with pgvector later)
+        MAX_CANDIDATES = 500  # Limit how many embeddings we compare against for speed
+
+        monologues_with_embeddings = base_query.filter(
+            Monologue.embedding.isnot(None),
+            Monologue.embedding != ''
+        ).limit(MAX_CANDIDATES).all()
+
+        print(f"Loaded {len(monologues_with_embeddings)} monologues with embeddings for semantic search (max: {MAX_CANDIDATES})")
+
         # Calculate cosine similarity for each monologue
         results_with_scores = []
 
-        for mono in monologues:
+        similarity_start = time.time()
+
+        for mono in monologues_with_embeddings:
             embedding_value: Optional[str] = mono.embedding  # type: ignore[assignment]
             if embedding_value is not None and len(embedding_value) > 0:
                 try:
@@ -205,28 +221,61 @@ class SemanticSearch:
                     print(f"Error calculating similarity for monologue {mono.id}: {e}")
                     continue
 
+        similarity_time = time.time() - similarity_start
+        print(f"⏱️  Similarity calculation took {similarity_time:.2f}s for {len(monologues_with_embeddings)} candidates")
+
         # Sort by similarity (descending) and limit
         results_with_scores.sort(key=lambda x: x[1], reverse=True)
         top_results = results_with_scores[:limit]
 
+        # FALLBACK: If we don't have enough semantic results, supplement with text search
+        # This ensures users get results even when embeddings aren't available
+        if len(top_results) < limit:
+            needed = limit - len(top_results)
+            print(f"Only {len(top_results)} semantic results, supplementing with {needed} text search results...")
+
+            # Get IDs we already have to avoid duplicates
+            existing_ids = {mono.id for mono, _ in top_results}
+
+            # Fallback to text search
+            fallback_start = time.time()
+            fallback_results = self._fallback_text_search(query, needed * 2, merged_filters)  # Get extra for filtering
+            fallback_time = time.time() - fallback_start
+            print(f"⏱️  Fallback text search took {fallback_time:.2f}s")
+
+            # Add fallback results that aren't already in semantic results
+            fallback_unique = [m for m in fallback_results if m.id not in existing_ids][:needed]
+
+            # Combine results: semantic results first, then fallback
+            final_results = [mono for mono, _ in top_results] + fallback_unique
+            overall_time = time.time() - overall_start
+            print(f"⏱️  Total search time: {overall_time:.2f}s")
+            print(f"Final results: {len([mono for mono, _ in top_results])} semantic + {len(fallback_unique)} text search = {len(final_results)} total")
+
+            # Return combined results
+            return final_results[:limit]
+
+        overall_time = time.time() - overall_start
+
         # Debug logging to see what authors are being returned
         print("\n=== SEARCH RESULTS DEBUG ===")
         print(f"Query: {query}")
-        print(f"Total filtered monologues: {len(monologues)}")
+        print(f"⏱️  Total search time: {overall_time:.2f}s")
+        print(f"Monologues with embeddings: {len(monologues_with_embeddings)}")
         print(f"Results with scores: {len(results_with_scores)}")
-        print(f"\nTop {len(top_results)} results:")
+        print(f"\nTop {len(top_results)} semantic results:")
         for i, (mono, score) in enumerate(top_results[:5], 1):
             print(f"  {i}. {mono.character_name} from '{mono.play.title}' by {mono.play.author} (score: {score:.3f})")
 
-        # Show author distribution in filtered results
+        # Show author distribution in semantic results
         from collections import Counter
-        author_dist = Counter(mono.play.author for mono in monologues)
-        print(f"\nAuthor distribution in filtered results ({len(monologues)} total):")
+        author_dist = Counter(mono.play.author for mono, _ in results_with_scores)
+        print(f"\nAuthor distribution in semantic results ({len(monologues_with_embeddings)} total):")
         for author, count in author_dist.most_common(10):
             print(f"  • {author}: {count}")
         print("=== END DEBUG ===\n")
 
-        return [mono for mono, score in top_results]
+        return [mono for mono, _ in top_results]
 
     def _cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
         """Calculate cosine similarity between two vectors"""

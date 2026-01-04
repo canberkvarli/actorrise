@@ -205,6 +205,12 @@ Return ONLY valid JSON, no markdown or explanation."""
 
 QUERY: "{query}"
 
+IMPORTANT INSTRUCTIONS:
+- Only extract filters that the user EXPLICITLY wants to filter by
+- If the user mentions a play title (e.g., "Hamlet", "Death of a Salesman"), they want monologues FROM that play or with similar themes
+- DO NOT extract category or author filters based on play title mentions
+- The search uses semantic similarity, so specific titles will match by content, not by filters
+
 Extract the following information if present in the query (return null if not mentioned):
 
 1. gender: Is the user looking for a male, female, or any gender character?
@@ -234,9 +240,10 @@ Extract the following information if present in the query (return null if not me
    - Examples: love, death, betrayal, identity, power, family, revenge, loss, etc.
    - Return array or null
 
-5. category: Classical or contemporary?
-   - Keywords: shakespeare/classical/greek/chekhov/ibsen → "classical"
-   - Keywords: modern/contemporary/recent/new → "contemporary"
+5. category: Classical or contemporary? ONLY extract if user explicitly requests classical/contemporary era.
+   - Keywords: "classical plays", "classical theatre", "greek tragedy", "elizabethan" → "classical"
+   - Keywords: "modern plays", "contemporary theatre", "recent plays", "new works" → "contemporary"
+   - DO NOT extract category if user mentions specific play titles (Hamlet, Macbeth, etc.) or author names
    - Otherwise → null
 
 6. tone: What tone is requested?

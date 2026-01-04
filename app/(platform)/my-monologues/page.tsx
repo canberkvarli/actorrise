@@ -1,121 +1,39 @@
 "use client";
 
-import { useAuth } from "@/lib/auth";
-import { useState, useEffect, useCallback } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
-import { IconSparkles, IconUserCheck, IconArrowRight, IconBookmark, IconX, IconEye, IconEyeOff, IconDownload } from "@tabler/icons-react";
+import { Button } from "@/components/ui/button";
+import { IconBookmark, IconX, IconEye, IconEyeOff, IconDownload, IconSparkles } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { Monologue } from "@/types/actor";
+import Link from "next/link";
 
-interface ProfileStats {
-  completion_percentage: number;
-  has_headshot: boolean;
-  preferred_genres_count: number;
-  profile_bias_enabled: boolean;
-}
-
-interface ActorProfile {
-  name?: string | null;
-  headshot_url?: string | null;
-}
-
-function cleanImageUrl(url: string) {
-  return url.trim().split("?")[0].split("#")[0];
-}
-
-function getInitials(displayName: string) {
-  const cleaned = displayName.trim();
-  if (!cleaned) return "?";
-  const parts = cleaned.split(/\s+/).filter(Boolean);
-  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  const token = parts[0];
-  const emailUser = token.includes("@") ? token.split("@")[0] : token;
-  return emailUser.slice(0, 2).toUpperCase();
-}
-
-export default function DashboardPage() {
-  const { user } = useAuth();
-  const [stats, setStats] = useState<ProfileStats | null>(null);
-  const [isLoadingStats, setIsLoadingStats] = useState(true);
-  const [profile, setProfile] = useState<ActorProfile | null>(null);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  const [recommendations, setRecommendations] = useState<Monologue[]>([]);
-  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(true);
-  const [headshotFailed, setHeadshotFailed] = useState(false);
+export default function MyMonologuesPage() {
+  const [favorites, setFavorites] = useState<Monologue[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedMonologue, setSelectedMonologue] = useState<Monologue | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
   useEffect(() => {
-    fetchStats();
-    fetchProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchFavorites();
   }, []);
 
-  useEffect(() => {
-    setHeadshotFailed(false);
-  }, [profile?.headshot_url]);
-
-  const fetchStats = async () => {
+  const fetchFavorites = async () => {
     try {
-      const response = await api.get<ProfileStats>("/api/profile/stats");
-      setStats(response.data);
-    } catch (error: unknown) {
-      console.error("Failed to fetch stats:", error);
+      const response = await api.get<Monologue[]>("/api/monologues/favorites/my");
+      setFavorites(response.data);
+    } catch (error) {
+      console.error("Failed to fetch favorites:", error);
     } finally {
-      setIsLoadingStats(false);
+      setIsLoading(false);
     }
   };
-
-  const fetchProfile = async () => {
-    try {
-      const response = await api.get<ActorProfile>("/api/profile");
-      setProfile(response.data);
-    } catch (error: unknown) {
-      const err = error as { response?: { status?: number } };
-      if (err.response?.status !== 404) {
-        console.error("Failed to fetch profile:", error);
-      }
-      setProfile(null);
-    } finally {
-      setIsLoadingProfile(false);
-    }
-  };
-
-  const fetchRecommendations = useCallback(async () => {
-    try {
-      const response = await api.get<Monologue[]>("/api/monologues/recommendations?limit=4");
-      setRecommendations(response.data);
-    } catch (error: unknown) {
-      const err = error as { response?: { status?: number } };
-      // 400 means profile not found/incomplete - this is expected
-      if (err.response?.status !== 400) {
-        console.error("Failed to fetch recommendations:", error);
-      }
-    } finally {
-      setIsLoadingRecommendations(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    // Fetch recommendations only if profile is complete enough
-    if (!isLoadingStats && stats && stats.completion_percentage >= 50) {
-      fetchRecommendations();
-    } else if (!isLoadingStats) {
-      setIsLoadingRecommendations(false);
-    }
-  }, [stats, isLoadingStats, fetchRecommendations]);
-
-  const headshotUrl = profile?.headshot_url ? cleanImageUrl(profile.headshot_url) : null;
-  const displayName = profile?.name || user?.name || user?.email || "Actor";
-  const isProfileComplete = stats && stats.completion_percentage >= 50;
 
   const openMonologue = async (mono: Monologue) => {
     setSelectedMonologue(mono);
@@ -140,21 +58,13 @@ export default function DashboardPage() {
   const toggleFavorite = async (e: React.MouseEvent, mono: Monologue) => {
     e.stopPropagation();
     try {
-      if (mono.is_favorited) {
-        await api.delete(`/api/monologues/${mono.id}/favorite`);
-        setRecommendations(recommendations.map(m => m.id === mono.id ? { ...m, is_favorited: false, favorite_count: m.favorite_count - 1 } : m));
-        if (selectedMonologue?.id === mono.id) {
-          setSelectedMonologue({ ...selectedMonologue, is_favorited: false, favorite_count: selectedMonologue.favorite_count - 1 });
-        }
-      } else {
-        await api.post(`/api/monologues/${mono.id}/favorite`);
-        setRecommendations(recommendations.map(m => m.id === mono.id ? { ...m, is_favorited: true, favorite_count: m.favorite_count + 1 } : m));
-        if (selectedMonologue?.id === mono.id) {
-          setSelectedMonologue({ ...selectedMonologue, is_favorited: true, favorite_count: selectedMonologue.favorite_count + 1 });
-        }
+      await api.delete(`/api/monologues/${mono.id}/favorite`);
+      setFavorites(favorites.filter(m => m.id !== mono.id));
+      if (selectedMonologue?.id === mono.id) {
+        setSelectedMonologue({ ...selectedMonologue, is_favorited: false, favorite_count: selectedMonologue.favorite_count - 1 });
       }
     } catch (error) {
-      console.error("Error toggling favorite:", error);
+      console.error("Error removing favorite:", error);
     }
   };
 
@@ -261,18 +171,18 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     <strong>Duration:</strong> ${Math.floor(mono.estimated_duration_seconds / 60)}:${(mono.estimated_duration_seconds % 60).toString().padStart(2, '0')}<br>
     <strong>Word Count:</strong> ${mono.word_count}
   </div>
-  
+
   ${mono.scene_description ? `<h2>Scene Description</h2><p class="stage-directions">${mono.scene_description}</p>` : ''}
-  
+
   <h2>Monologue</h2>
   <div class="monologue-text">${mono.text.replace(/\n/g, '<br>')}</div>
-  
+
   ${mono.stage_directions ? `<div class="stage-directions"><strong>Stage Directions:</strong> ${mono.stage_directions}</div>` : ''}
-  
+
   <div class="footer">
     <p>Downloaded from ActorRise</p>
   </div>
-  
+
   <script>
     window.onload = function() {
       window.print();
@@ -290,245 +200,158 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8 max-w-7xl">
-      {/* Welcome Header */}
+      {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-3xl lg:text-4xl font-bold mb-1">
-          Welcome back, {profile?.name?.split(' ')[0] || 'Actor'}
-        </h1>
+        <h1 className="text-3xl lg:text-4xl font-bold mb-2">Your Monologues</h1>
         <p className="text-muted-foreground">
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          Bookmarked monologues that you&apos;ve saved for later
         </p>
       </motion.div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Main Content - Full Width Recommendations */}
-        <div className="lg:col-span-2">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-          >
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <IconSparkles className="h-5 w-5 text-primary" />
-                  Recommended for you
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {isLoadingRecommendations ? (
-                  <div className="space-y-3">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />
-                    ))}
-                  </div>
-                ) : !isProfileComplete ? (
-                  <div className="text-center py-12">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-                      <IconUserCheck className="h-8 w-8 text-primary" />
-                    </div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      Complete your profile to get better recommendations
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-                      Add your preferences, experience level, and other details to receive personalized monologue recommendations tailored to your profile.
-                    </p>
-                    <Button asChild>
-                      <Link href="/profile">
-                        Complete Profile
-                        <IconArrowRight className="h-4 w-4 ml-2" />
-                      </Link>
-                    </Button>
-                          </div>
-                ) : recommendations.length > 0 ? (
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {recommendations.map((mono, idx) => (
-                      <motion.div
-                        key={mono.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.05, duration: 0.3, ease: "easeOut" }}
-                      >
-                        <Card
-                          className="hover:shadow-xl transition-all cursor-pointer h-full flex flex-col hover:border-primary/50 group"
-                          onClick={() => openMonologue(mono)}
-                        >
-                          <CardContent className="pt-6 flex-1 flex flex-col">
-                            <div className="space-y-4 flex-1">
-                              {/* Header */}
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="font-bold text-xl mb-1 group-hover:text-primary transition-colors">
-                              {mono.character_name}
-                                    </h3>
-                                    {mono.is_favorited && (
-                                      <span className="px-2 py-0.5 bg-accent/10 text-accent text-xs font-semibold rounded-full border border-accent/20">
-                                        Bookmarked
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-muted-foreground line-clamp-1">
-                                    {mono.play_title}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    by {mono.author}
-                                  </p>
-                                </div>
-                                <button
-                                  onClick={(e) => toggleFavorite(e, mono)}
-                                  className={`p-2 rounded-full transition-colors ${
-                                    mono.is_favorited
-                                      ? 'bg-accent/10 hover:bg-accent/20 text-accent'
-                                      : 'hover:bg-muted text-muted-foreground hover:text-accent'
-                                  }`}
-                                >
-                                  <IconBookmark
-                                    className={`h-5 w-5 ${
-                                      mono.is_favorited
-                                        ? 'fill-current'
-                                        : ''
-                                    }`}
-                                  />
-                                </button>
-                              </div>
-
-                              {/* Tags */}
-                              <div className="flex flex-wrap gap-2">
-                                <Badge variant="default" className="font-normal capitalize">
-                                  {mono.category}
-                                </Badge>
-                                {mono.character_gender && (
-                                  <Badge variant="outline" className="font-normal capitalize">
-                                    {mono.character_gender}
-                                  </Badge>
-                                )}
-                                {mono.character_age_range && (
-                                  <Badge variant="outline" className="font-normal">
-                                    {mono.character_age_range}
-                                  </Badge>
-                                )}
-                              {mono.primary_emotion && (
-                                  <Badge variant="secondary" className="font-normal capitalize">
-                                  {mono.primary_emotion}
-                                  </Badge>
-                                )}
-                              </div>
-
-                              {/* Synopsis / Scene Description */}
-                              {mono.scene_description && (
-                                <div className="bg-muted/50 px-3 py-2 rounded-md border-l-2 border-primary/40">
-                                  <p className="text-xs italic text-muted-foreground line-clamp-2">
-                                    {mono.scene_description}
-                                  </p>
-                                </div>
-                              )}
-
-                              {/* Themes */}
-                              {mono.themes && mono.themes.length > 0 && (
-                                <div className="flex flex-wrap gap-1.5">
-                                  {mono.themes.slice(0, 3).map(theme => (
-                                    <span
-                                      key={theme}
-                                      className="text-xs px-2.5 py-1 bg-primary/10 text-primary rounded-full font-medium capitalize"
-                                    >
-                                      {theme}
-                                </span>
-                                  ))}
-                                </div>
-                              )}
-
-                              {/* Preview */}
-                              <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                                "{mono.text.substring(0, 120)}..."
+      {/* Content */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <IconBookmark className="h-5 w-5 text-primary" />
+              Bookmarked Monologues ({favorites.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />
+                ))}
+              </div>
+            ) : favorites.length > 0 ? (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {favorites.map((mono, idx) => (
+                  <motion.div
+                    key={mono.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05, duration: 0.3, ease: "easeOut" }}
+                  >
+                    <Card
+                      className="hover:shadow-xl transition-all cursor-pointer h-full flex flex-col hover:border-primary/50 group"
+                      onClick={() => openMonologue(mono)}
+                    >
+                      <CardContent className="pt-6 flex-1 flex flex-col">
+                        <div className="space-y-4 flex-1">
+                          {/* Header */}
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1">
+                              <h3 className="font-bold text-xl mb-1 group-hover:text-primary transition-colors">
+                                {mono.character_name}
+                              </h3>
+                              <p className="text-sm text-muted-foreground line-clamp-1">
+                                {mono.play_title}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                by {mono.author}
                               </p>
                             </div>
-
-                            {/* Footer */}
-                            <div className="mt-4 pt-4 border-t flex items-center justify-between text-xs text-muted-foreground">
-                              <span className="font-medium">
-                                {Math.floor(mono.estimated_duration_seconds / 60)}:{(mono.estimated_duration_seconds % 60).toString().padStart(2, '0')} min
-                              </span>
-                              <span>{mono.word_count} words</span>
-                              <span className="flex items-center gap-1">
-                                <IconBookmark className="h-3 w-3" />
-                                {mono.favorite_count}
-                              </span>
+                            <button
+                              onClick={(e) => toggleFavorite(e, mono)}
+                              className="p-2 rounded-full transition-colors bg-accent/10 hover:bg-accent/20 text-accent"
+                            >
+                              <IconBookmark className="h-5 w-5 fill-current" />
+                            </button>
                           </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <IconSparkles className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
-                    <p className="text-sm text-muted-foreground mb-4">
-                      No recommendations available at the moment
-                    </p>
-                    <Button asChild variant="outline" size="sm">
-                      <Link href="/search">
-                        Browse Monologues
-                      </Link>
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
 
-        {/* Sidebar - Profile Card */}
-        <div>
-          <motion.div
-            initial={{ opacity: 0, x: 10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.15 }}
-          >
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center text-center space-y-4">
-                  {/* Avatar */}
-                  <div className="h-24 w-24 rounded-full overflow-hidden border-2 border-border bg-muted flex items-center justify-center">
-                    {headshotFailed || !headshotUrl ? (
-                      <div className="h-full w-full flex items-center justify-center bg-gradient-to-br from-primary/25 via-primary/10 to-muted">
-                        <span className="text-2xl font-bold">
-                          {getInitials(displayName)}
-                        </span>
-                      </div>
-                    ) : (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={headshotUrl}
-                        alt="Headshot"
-                        className="h-full w-full object-cover"
-                        onError={() => setHeadshotFailed(true)}
-                      />
-                    )}
-                  </div>
+                          {/* Tags */}
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="default" className="font-normal capitalize">
+                              {mono.category}
+                            </Badge>
+                            {mono.character_gender && (
+                              <Badge variant="outline" className="font-normal capitalize">
+                                {mono.character_gender}
+                              </Badge>
+                            )}
+                            {mono.character_age_range && (
+                              <Badge variant="outline" className="font-normal">
+                                {mono.character_age_range}
+                              </Badge>
+                            )}
+                            {mono.primary_emotion && (
+                              <Badge variant="secondary" className="font-normal capitalize">
+                                {mono.primary_emotion}
+                              </Badge>
+                            )}
+                          </div>
 
-                  <div className="space-y-1 w-full">
-                    <h3 className="font-semibold text-lg truncate">
-                      {isLoadingProfile ? "Loading…" : displayName}
-                    </h3>
-                    <p className="text-xs text-muted-foreground truncate">
-                      {user?.email}
-                    </p>
-                  </div>
+                          {/* Synopsis / Scene Description */}
+                          {mono.scene_description && (
+                            <div className="bg-muted/50 px-3 py-2 rounded-md border-l-2 border-primary/40">
+                              <p className="text-xs italic text-muted-foreground line-clamp-2">
+                                {mono.scene_description}
+                              </p>
+                            </div>
+                          )}
 
-                  <Button asChild variant="outline" size="sm" className="w-full">
-                    <Link href="/profile">Edit Profile</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-      </div>
+                          {/* Themes */}
+                          {mono.themes && mono.themes.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {mono.themes.slice(0, 3).map(theme => (
+                                <span
+                                  key={theme}
+                                  className="text-xs px-2.5 py-1 bg-primary/10 text-primary rounded-full font-medium capitalize"
+                                >
+                                  {theme}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Preview */}
+                          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+                            &quot;{mono.text.substring(0, 120)}...&quot;
+                          </p>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="mt-4 pt-4 border-t flex items-center justify-between text-xs text-muted-foreground">
+                          <span className="font-medium">
+                            {Math.floor(mono.estimated_duration_seconds / 60)}:{(mono.estimated_duration_seconds % 60).toString().padStart(2, '0')} min
+                          </span>
+                          <span>{mono.word_count} words</span>
+                          <span className="flex items-center gap-1">
+                            <IconBookmark className="h-3 w-3" />
+                            {mono.favorite_count}
+                          </span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12">
+                <IconBookmark className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No bookmarked monologues yet</h3>
+                <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                  Start exploring monologues and bookmark your favorites. They&apos;ll appear here for easy access.
+                </p>
+                <Button asChild variant="outline" size="sm">
+                  <Link href="/search">
+                    Browse Monologues
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Slide-over Detail Panel */}
       <AnimatePresence>
@@ -547,7 +370,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             />
 
             {/* Slide-over Panel */}
-          <motion.div
+            <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
@@ -565,7 +388,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   {!isReadingMode && <h2 className="text-2xl font-bold">Monologue Details</h2>}
                   {isReadingMode && <div className="flex-1" />}
                   <div className="flex items-center gap-2">
-                    {/* Download button - show in both modes */}
+                    {/* Download button */}
                     <div className="relative">
                       <button
                         onClick={(e) => {
@@ -617,19 +440,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           e.stopPropagation();
                           toggleFavorite(e as any, selectedMonologue);
                         }}
-                        className={`p-2 rounded-full transition-colors ${
-                          selectedMonologue.is_favorited
-                            ? 'bg-accent/10 hover:bg-accent/20 text-accent'
-                            : 'hover:bg-muted text-muted-foreground hover:text-accent'
-                        }`}
+                        className="p-2 rounded-full transition-colors bg-accent/10 hover:bg-accent/20 text-accent"
                       >
-                        <IconBookmark
-                          className={`h-5 w-5 ${
-                            selectedMonologue.is_favorited
-                              ? 'fill-current'
-                              : ''
-                          }`}
-                        />
+                        <IconBookmark className="h-5 w-5 fill-current" />
                       </button>
                     )}
                     <Button
@@ -804,9 +617,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <div className="space-y-1">
                           <p className="text-2xl font-bold">{selectedMonologue.favorite_count}</p>
                           <p className="text-xs text-muted-foreground">Favorites</p>
-                </div>
-        </div>
-      </div>
+                        </div>
+                      </div>
+                    </div>
                   </>
                 )}
               </div>

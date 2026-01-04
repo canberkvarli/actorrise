@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { IconHome, IconSearch, IconUser, IconLogout, IconMenu } from "@tabler/icons-react";
+import { IconHome, IconSearch, IconUser, IconLogout, IconMenu, IconBookmark } from "@tabler/icons-react";
 import { useState } from "react";
 
 export default function PlatformLayout({
@@ -31,6 +31,7 @@ export default function PlatformLayout({
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: IconHome },
     { href: "/search", label: "MonologueMatch", icon: IconSearch },
+    { href: "/my-monologues", label: "Your Monologues", icon: IconBookmark },
     { href: "/profile", label: "Profile", icon: IconUser },
   ];
 
