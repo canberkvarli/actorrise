@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconArrowLeft, IconEye, IconEyeOff, IconDownload } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
@@ -45,7 +45,14 @@ export default function SearchPage() {
       const historyEntry = getSearchById(historyId);
       if (historyEntry) {
         setQuery(historyEntry.query);
-        setFilters(historyEntry.filters);
+        // Normalize filters to ensure all required fields are strings
+        setFilters({
+          gender: historyEntry.filters.gender || "",
+          age_range: historyEntry.filters.age_range || "",
+          emotion: historyEntry.filters.emotion || "",
+          theme: historyEntry.filters.theme || "",
+          category: historyEntry.filters.category || "",
+        });
         setResults(historyEntry.resultPreviews);
         setHasSearched(true);
         return;
@@ -310,7 +317,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     }
   };
 
-  const activeFilters = Object.entries(filters).filter(([_, value]) => value !== "");
+  const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -561,7 +568,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
                           {/* Preview */}
                           <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                            "{mono.text.substring(0, 120)}..."
+                            &ldquo;{mono.text.substring(0, 120)}...&rdquo;
                           </p>
                         </div>
 
@@ -596,25 +603,29 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               animate={{ opacity: isReadingMode ? 0.95 : 0.5 }}
               exit={{ opacity: 0 }}
               onClick={closeMonologue}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-              className={`fixed inset-0 z-40 ${
+              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+              className={`fixed inset-0 z-[9998] ${
                 isReadingMode ? "bg-black/95" : "bg-black/50"
               }`}
             />
 
             {/* Slide-over Panel */}
             <motion.div
-              initial={{ x: "100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className={`fixed right-0 top-0 bottom-0 z-50 overflow-y-auto transition-all ${
+              initial={{ x: "100%", opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: "100%", opacity: 0 }}
+              transition={{ 
+                duration: 0.4,
+                ease: [0.4, 0, 0.2, 1],
+                opacity: { duration: 0.3 }
+              }}
+              className={`fixed right-0 top-0 bottom-0 z-[9999] overflow-y-auto transition-all ${
                 isReadingMode
                   ? "w-full bg-background"
                   : "w-full md:w-[600px] lg:w-[700px] bg-background border-l shadow-2xl"
               }`}
             >
-              <div className={`sticky top-0 bg-background/95 backdrop-blur-sm border-b z-10 ${
+              <div className={`sticky top-0 bg-background/95 backdrop-blur-sm border-b z-[10000] ${
                 isReadingMode ? "border-b-0" : ""
               }`}>
                 <div className="flex items-center justify-between p-6">
@@ -636,13 +647,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       {showDownloadMenu && (
                         <>
                           <div
-                            className="fixed inset-0 z-40"
+                            className="fixed inset-0 z-[10000]"
                             onClick={(e) => {
                               e.stopPropagation();
                               setShowDownloadMenu(false);
                             }}
                           />
-                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-50">
+                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-[10001]">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -671,7 +682,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleFavorite(e as any, selectedMonologue);
+                          toggleFavorite(e, selectedMonologue);
                         }}
                         className={`p-2 rounded-full transition-colors ${
                           selectedMonologue.is_favorited
