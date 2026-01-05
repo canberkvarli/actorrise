@@ -13,8 +13,9 @@ class User(Base):
     hashed_password = Column(String, nullable=True)  # Optional, auth handled by Supabase
     created_at = Column(DateTime(timezone=True), server_default=text('now()'))
 
-    # Relationship to actor profile
+    # Relationships
     actor_profile = relationship("ActorProfile", back_populates="user", uselist=False)
+    subscription = relationship("UserSubscription", back_populates="user", uselist=False)
 
 
 

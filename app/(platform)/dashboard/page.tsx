@@ -12,6 +12,8 @@ import { IconSparkles, IconUserCheck, IconArrowRight, IconBookmark, IconX, IconE
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { Monologue } from "@/types/actor";
+import RecentSearches from "@/components/search/RecentSearches";
+import BookmarksQuickAccess from "@/components/bookmarks/BookmarksQuickAccess";
 
 interface ProfileStats {
   completion_percentage: number;
@@ -480,10 +482,20 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </CardContent>
             </Card>
           </motion.div>
+
+          {/* Recent Searches */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mt-6"
+          >
+            <RecentSearches maxSearches={3} />
+          </motion.div>
         </div>
 
         {/* Sidebar - Profile Card */}
-        <div>
+        <div className="space-y-6">
           <motion.div
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
@@ -526,6 +538,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 </div>
               </CardContent>
             </Card>
+          </motion.div>
+
+          {/* Bookmarks Quick Access */}
+          <motion.div
+            initial={{ opacity: 0, x: 10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.25 }}
+          >
+            <BookmarksQuickAccess />
           </motion.div>
         </div>
       </div>

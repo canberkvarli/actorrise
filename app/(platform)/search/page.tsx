@@ -13,6 +13,7 @@ import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark,
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
+import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -33,10 +34,24 @@ export default function SearchPage() {
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [showBookmarkedOnly, setShowBookmarkedOnly] = useState(false);
 
   // Restore search state from URL and sessionStorage on mount
   // This allows search results to persist across page refreshes
   useEffect(() => {
+    // Check if this is a restoration from search history
+    const historyId = searchParams.get("id");
+    if (historyId) {
+      const historyEntry = getSearchById(historyId);
+      if (historyEntry) {
+        setQuery(historyEntry.query);
+        setFilters(historyEntry.filters);
+        setResults(historyEntry.resultPreviews);
+        setHasSearched(true);
+        return;
+      }
+    }
+
     const urlQuery = searchParams.get("q");
     const urlFilters: typeof filters = {
       gender: "",
@@ -56,11 +71,11 @@ export default function SearchPage() {
     if (urlQuery) {
       setQuery(urlQuery);
       setFilters(urlFilters);
-      
+
       // Try to restore results from sessionStorage (fast, no API call)
       const storageKey = `search_results_${urlQuery}_${JSON.stringify(urlFilters)}`;
       const cachedResults = sessionStorage.getItem(storageKey);
-      
+
       if (cachedResults) {
         try {
           const parsed = JSON.parse(cachedResults);
@@ -90,11 +105,19 @@ export default function SearchPage() {
 
       const response = await api.get<Monologue[]>(`/api/monologues/search?${params.toString()}`);
       setResults(response.data);
-      
+
       // Cache results in sessionStorage
       const storageKey = `search_results_${searchQuery}_${JSON.stringify(searchFilters)}`;
       sessionStorage.setItem(storageKey, JSON.stringify(response.data));
-      
+
+      // Add to search history
+      addSearchToHistory({
+        query: searchQuery,
+        filters: searchFilters,
+        resultPreviews: response.data.slice(0, 3),
+        resultCount: response.data.length,
+      });
+
       // Update URL without page reload
       const newParams = new URLSearchParams();
       newParams.set("q", searchQuery);
@@ -415,11 +438,32 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </Card>
           ) : results.length > 0 ? (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Found <span className="font-semibold">{results.length}</span> monologues
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {showBookmarkedOnly ? (
+                    <>
+                      Showing <span className="font-semibold">
+                        {results.filter((m) => m.is_favorited).length}
+                      </span> bookmarked monologues
+                    </>
+                  ) : (
+                    <>
+                      Found <span className="font-semibold">{results.length}</span> monologues
+                    </>
+                  )}
+                </p>
+                <Button
+                  variant={showBookmarkedOnly ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
+                  className="gap-2"
+                >
+                  <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
+                  Bookmarked Only
+                </Button>
+              </div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {results.map((mono, idx) => (
+                {(showBookmarkedOnly ? results.filter((m) => m.is_favorited) : results).map((mono, idx) => (
                   <motion.div
                     key={mono.id}
                     initial={{ opacity: 0, y: 20 }}

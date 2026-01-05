@@ -697,28 +697,30 @@ export function ActorProfileForm() {
           </motion.div>
         )}
 
-        {/* Progress Bar */}
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-base font-semibold">Profile Completion</Label>
-                  <span className="text-sm font-medium text-muted-foreground">
-                    {completionPercentage.toFixed(1)}%
-                  </span>
+        {/* Progress Bar - Only show if profile is not 100% complete */}
+        {completionPercentage < 100 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <Card>
+              <CardContent className="pt-6">
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-base font-semibold">Profile Completion</Label>
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {completionPercentage.toFixed(1)}%
+                    </span>
+                  </div>
+                  <Progress value={completionPercentage} className="h-2" />
+                  <p className="text-xs text-muted-foreground">
+                    Changes are automatically saved
+                  </p>
                 </div>
-                <Progress value={completionPercentage} className="h-2" />
-                <p className="text-xs text-muted-foreground">
-                  Changes are automatically saved
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         {/* Headshot Section - Compact */}
         <motion.div
