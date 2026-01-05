@@ -23,6 +23,10 @@ export default function PlatformLayout({
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const { count: bookmarkCount } = useBookmarkCount();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Use SWR hook for cached subscription data - must be called before any early returns
+  const { subscription } = useSubscription();
+  const userTier = subscription?.tier_name || "free";
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -50,10 +54,6 @@ export default function PlatformLayout({
     );
   }
 
-  // Use SWR hook for cached subscription data
-  const { subscription } = useSubscription();
-  const userTier = subscription?.tier_name || "free";
-
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: IconHome },
     { href: "/search", label: "MonologueMatch", icon: IconSearch },
@@ -69,7 +69,7 @@ export default function PlatformLayout({
     >
     <div className="min-h-screen bg-background">
       {/* Navigation */}
-      <nav className="bg-background/95 backdrop-blur-sm border-b border-border/40 relative z-[9998]">
+      <nav className="bg-background/95 backdrop-blur-sm border-b border-border/40 relative z-[9998]" style={{ position: 'relative' }}>
         <div className="container mx-auto px-6">
           <div className="flex items-center justify-between h-20">
             <Link href="/dashboard" className="text-3xl font-bold tracking-tight hover:opacity-80 transition-opacity">
