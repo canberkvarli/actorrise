@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +35,14 @@ export default function SearchPage() {
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [showBookmarkedOnly, setShowBookmarkedOnly] = useState(false);
+  const panelRef = useRef<HTMLDivElement>(null);
+
+  // Scroll panel to top when monologue is selected
+  useEffect(() => {
+    if (selectedMonologue && panelRef.current) {
+      panelRef.current.scrollTop = 0;
+    }
+  }, [selectedMonologue]);
 
   // Restore search state from URL and sessionStorage on mount
   // This allows search results to persist across page refreshes
@@ -597,38 +605,42 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               exit={{ opacity: 0 }}
               onClick={closeMonologue}
               transition={{ duration: 0.2, ease: "easeInOut" }}
-              className={`fixed inset-0 z-40 ${
+              className={`fixed inset-0 z-[9999] ${
                 isReadingMode ? "bg-black/95" : "bg-black/50"
               }`}
             />
 
             {/* Slide-over Panel */}
             <motion.div
+              ref={panelRef}
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className={`fixed right-0 top-0 bottom-0 z-50 overflow-y-auto transition-all ${
+              className={`fixed right-0 top-0 bottom-0 z-[10000] transition-all isolate ${
                 isReadingMode
                   ? "w-full bg-background"
                   : "w-full md:w-[600px] lg:w-[700px] bg-background border-l shadow-2xl"
               }`}
             >
-              <div className={`sticky top-0 bg-background/95 backdrop-blur-sm border-b z-10 ${
-                isReadingMode ? "border-b-0" : ""
-              }`}>
+              {/* Sticky Header - Positioned below nav (80px) */}
+              <div 
+                className={`sticky bg-background/95 backdrop-blur-sm border-b z-[10001] ${
+                  isReadingMode ? "border-b-0 top-0" : "top-20"
+                }`}
+              >
                 <div className="flex items-center justify-between p-6">
                   {!isReadingMode && <h2 className="text-2xl font-bold">Monologue Details</h2>}
                   {isReadingMode && <div className="flex-1" />}
                   <div className="flex items-center gap-2">
                     {/* Download button - show in both modes */}
-                    <div className="relative">
+                    <div className="relative z-[10002]">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setShowDownloadMenu(!showDownloadMenu);
                         }}
-                        className="p-2 rounded-full transition-colors hover:bg-muted text-muted-foreground hover:text-primary"
+                        className="p-2 rounded-full transition-colors hover:bg-muted text-muted-foreground hover:text-primary relative z-[10002]"
                         title="Download monologue"
                       >
                         <IconDownload className="h-5 w-5" />
@@ -636,13 +648,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       {showDownloadMenu && (
                         <>
                           <div
-                            className="fixed inset-0 z-40"
+                            className="fixed inset-0 z-[10002]"
                             onClick={(e) => {
                               e.stopPropagation();
                               setShowDownloadMenu(false);
                             }}
                           />
-                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-50">
+                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-[10003]">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -673,7 +685,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           e.stopPropagation();
                           toggleFavorite(e as any, selectedMonologue);
                         }}
-                        className={`p-2 rounded-full transition-colors ${
+                        className={`p-2 rounded-full transition-colors relative z-[10002] ${
                           selectedMonologue.is_favorited
                             ? 'bg-accent/10 hover:bg-accent/20 text-accent'
                             : 'hover:bg-muted text-muted-foreground hover:text-accent'
@@ -695,7 +707,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         e.stopPropagation();
                         setIsReadingMode(!isReadingMode);
                       }}
-                      className="hover:bg-muted"
+                      className="hover:bg-muted relative z-[10002]"
                     >
                       {isReadingMode ? (
                         <IconEyeOff className="h-5 w-5" />
@@ -703,13 +715,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <IconEye className="h-5 w-5" />
                       )}
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={closeMonologue}>
+                    <Button variant="ghost" size="icon" onClick={closeMonologue} className="relative z-[10002]">
                       <IconX className="h-5 w-5" />
                     </Button>
                   </div>
                 </div>
               </div>
 
+              {/* Scrollable Content */}
               <div className={`${isReadingMode ? "max-w-4xl mx-auto" : ""} p-6 space-y-6`}>
                 {isLoadingDetail ? (
                   <div className="space-y-4">
