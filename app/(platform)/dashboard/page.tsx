@@ -1,7 +1,7 @@
 "use client";
 
 import { useAuth } from "@/lib/auth";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -91,29 +91,41 @@ export default function DashboardPage() {
     }
   };
 
-  const fetchRecommendations = useCallback(async () => {
-    try {
-      const response = await api.get<Monologue[]>("/api/monologues/recommendations?limit=4");
-      setRecommendations(response.data);
-    } catch (error: unknown) {
-      const err = error as { response?: { status?: number } };
-      // 400 means profile not found/incomplete - this is expected
-      if (err.response?.status !== 400) {
-        console.error("Failed to fetch recommendations:", error);
-      }
-    } finally {
-      setIsLoadingRecommendations(false);
-    }
-  }, []);
-
   useEffect(() => {
     // Fetch recommendations only if profile is complete enough
+    // Using a local flag to prevent double-fetching
+    let isMounted = true;
+
+    const fetchRecommendations = async () => {
+      try {
+        const response = await api.get<Monologue[]>("/api/monologues/recommendations?limit=4");
+        if (isMounted) {
+          setRecommendations(response.data);
+        }
+      } catch (error: unknown) {
+        const err = error as { response?: { status?: number } };
+        // 400 means profile not found/incomplete - this is expected
+        if (err.response?.status !== 400) {
+          console.error("Failed to fetch recommendations:", error);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingRecommendations(false);
+        }
+      }
+    };
+
     if (!isLoadingStats && stats && stats.completion_percentage >= 50) {
       fetchRecommendations();
     } else if (!isLoadingStats) {
       setIsLoadingRecommendations(false);
     }
-  }, [stats, isLoadingStats, fetchRecommendations]);
+
+    // Cleanup to prevent state updates if component unmounts
+    return () => {
+      isMounted = false;
+    };
+  }, [stats?.completion_percentage, isLoadingStats]); // Only depend on the specific values we check
 
   const headshotUrl = profile?.headshot_url ? cleanImageUrl(profile.headshot_url) : null;
   const displayName = profile?.name || user?.name || user?.email || "Actor";
@@ -700,16 +712,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         {selectedMonologue.text}
                       </p>
                     </div>
-
-                    {/* Stage Directions - If Available */}
-                    {selectedMonologue.stage_directions && (
-                      <div className="bg-muted/30 p-6 rounded-lg border max-w-3xl mx-auto">
-                        <p className="text-base italic text-muted-foreground text-center">
-                          <span className="font-semibold not-italic">Stage Directions: </span>
-                          {selectedMonologue.stage_directions}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <>
@@ -797,15 +799,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           {selectedMonologue.text}
                         </p>
                       </div>
-
-                      {selectedMonologue.stage_directions && (
-                        <div className="bg-muted/50 p-4 rounded-lg border">
-                          <p className="text-sm italic">
-                            <span className="font-semibold not-italic">Stage Directions: </span>
-                            {selectedMonologue.stage_directions}
-                          </p>
-                        </div>
-                      )}
                     </div>
 
                     {/* Stats & Source */}
