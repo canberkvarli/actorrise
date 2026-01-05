@@ -9,7 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconArrowLeft, IconEye, IconEyeOff, IconDownload } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
@@ -53,7 +53,13 @@ export default function SearchPage() {
       const historyEntry = getSearchById(historyId);
       if (historyEntry) {
         setQuery(historyEntry.query);
-        setFilters(historyEntry.filters);
+        setFilters({
+          gender: historyEntry.filters.gender || "",
+          age_range: historyEntry.filters.age_range || "",
+          emotion: historyEntry.filters.emotion || "",
+          theme: historyEntry.filters.theme || "",
+          category: historyEntry.filters.category || "",
+        });
         setResults(historyEntry.resultPreviews);
         setHasSearched(true);
         return;
@@ -318,7 +324,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     }
   };
 
-  const activeFilters = Object.entries(filters).filter(([_, value]) => value !== "");
+  const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -569,7 +575,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
                           {/* Preview */}
                           <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                            "{mono.text.substring(0, 120)}..."
+                            &ldquo;{mono.text.substring(0, 120)}...&rdquo;
                           </p>
                         </div>
 
@@ -681,9 +687,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     </div>
                     {!isReadingMode && (
                       <button
-                        onClick={(e) => {
+                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation();
-                          toggleFavorite(e as any, selectedMonologue);
+                          toggleFavorite(e, selectedMonologue);
                         }}
                         className={`p-2 rounded-full transition-colors relative z-[10002] ${
                           selectedMonologue.is_favorited
