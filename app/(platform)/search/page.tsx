@@ -145,6 +145,30 @@ export default function SearchPage() {
     await performSearch(query, filters);
   };
 
+  const handleFindForMe = async () => {
+    setIsLoading(true);
+    setHasSearched(true);
+    setQuery(""); // Clear query to show it's AI-based
+    setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "" }); // Clear filters
+
+    try {
+      const response = await api.get<Monologue[]>("/api/monologues/recommendations?limit=20");
+      setResults(response.data);
+
+      // Update URL to reflect AI search
+      router.replace("/search?ai=true", { scroll: false });
+    } catch (error: any) {
+      console.error("Find For Me error:", error);
+      if (error.response?.status === 400) {
+        // Profile incomplete - show helpful message
+        alert("Please complete your actor profile to use AI-powered recommendations. Go to Profile to add your details.");
+      }
+      setResults([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const openMonologue = async (mono: Monologue) => {
     setSelectedMonologue(mono);
     setIsLoadingDetail(true);
@@ -322,10 +346,23 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Find Your Monologue</h1>
-        <p className="text-muted-foreground text-lg">
-          Search thousands of classical and contemporary monologues
-        </p>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-4xl font-bold mb-2">Find Your Monologue</h1>
+            <p className="text-muted-foreground text-lg">
+              Search thousands of classical and contemporary monologues
+            </p>
+          </div>
+          <Button
+            onClick={handleFindForMe}
+            disabled={isLoading}
+            size="lg"
+            className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
+          >
+            <IconSparkles className="h-5 w-5" />
+            Find For Me
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -445,6 +482,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </Card>
           ) : results.length > 0 ? (
             <div className="space-y-4">
+              {searchParams.get("ai") === "true" && (
+                <div className="flex items-center gap-2 p-4 bg-primary/10 border border-primary/20 rounded-lg">
+                  <IconSparkles className="h-5 w-5 text-primary flex-shrink-0" />
+                  <p className="text-sm font-medium text-primary">
+                    AI-powered recommendations based on your profile
+                  </p>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
                   {showBookmarkedOnly ? (
@@ -746,16 +791,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         {selectedMonologue.text}
                       </p>
                     </div>
-
-                    {/* Stage Directions - If Available */}
-                    {selectedMonologue.stage_directions && (
-                      <div className="bg-muted/30 p-6 rounded-lg border max-w-3xl mx-auto">
-                        <p className="text-base italic text-muted-foreground text-center">
-                          <span className="font-semibold not-italic">Stage Directions: </span>
-                          {selectedMonologue.stage_directions}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <>
@@ -843,15 +878,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           {selectedMonologue.text}
                         </p>
                       </div>
-
-                      {selectedMonologue.stage_directions && (
-                        <div className="bg-muted/50 p-4 rounded-lg border">
-                          <p className="text-sm italic">
-                            <span className="font-semibold not-italic">Stage Directions: </span>
-                            {selectedMonologue.stage_directions}
-                          </p>
-                        </div>
-                      )}
                     </div>
 
                     {/* Stats & Source */}
