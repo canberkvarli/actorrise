@@ -15,6 +15,7 @@ import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { MonologueCard } from "./MonologueCard";
 import { motion, AnimatePresence } from "framer-motion";
+import { addSearchToHistory } from "@/lib/searchHistory";
 
 export function SearchInterface() {
   const [profileBias, setProfileBias] = useState(true);
@@ -41,7 +42,7 @@ export function SearchInterface() {
 
   const handleSearch = async () => {
     if (!query.trim() && !profileBias) return;
-    
+
     setIsLoading(true);
     setHasSearched(true);
     try {
@@ -53,13 +54,27 @@ export function SearchInterface() {
 
       const response = await api.post("/api/search", searchRequest);
       setResults(response.data.results);
-      
-      // Save to search history
+
+      // Save to old format for backward compatibility
       if (query.trim()) {
         const newHistory = [query, ...searchHistory.filter(h => h !== query)].slice(0, 5);
         setSearchHistory(newHistory);
         localStorage.setItem("monologue_search_history", JSON.stringify(newHistory));
       }
+
+      // Save to new search history format
+      addSearchToHistory({
+        query: query || "",
+        filters: profileBias ? {} : {
+          gender: filters.gender,
+          age_range: filters.age_range,
+          emotion: "",
+          theme: filters.theme,
+          category: filters.category,
+        },
+        resultPreviews: response.data.results.slice(0, 3),
+        resultCount: response.data.results.length,
+      });
     } catch (error) {
       console.error("Search error:", error);
       setResults([]);
