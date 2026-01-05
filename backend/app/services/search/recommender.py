@@ -29,6 +29,7 @@ class Recommender:
         - Preferred genres
         - Overdone alert sensitivity
         - Previously favorited pieces (collaborative filtering)
+        - Falls back to SQL-based recommendations if semantic search fails
         """
 
         # Build filters from profile
@@ -56,14 +57,30 @@ class Recommender:
         # Generate query from preferences
         preferred_genres = actor_profile.preferred_genres or []
 
+        # Try semantic search first
+        results = []
         if preferred_genres:
             # Create a query from preferred genres
             query = f"monologue about {' and '.join(preferred_genres[:3])}"
-        else:
-            query = "dramatic monologue for actor"
+            try:
+                results = self.semantic_search.search(query, limit=limit * 2, filters=filters)
+            except Exception as e:
+                print(f"Semantic search failed: {e}")
+                results = []
 
-        # Search with filters
-        results = self.semantic_search.search(query, limit=limit * 2, filters=filters)
+        # Fallback to SQL-based recommendations if semantic search returns nothing
+        if len(results) < limit:
+            print(f"Only {len(results)} semantic results, using SQL fallback")
+            sql_results = self._get_sql_based_recommendations(actor_profile, limit * 2, filters)
+
+            # Combine results, avoiding duplicates
+            existing_ids = {m.id for m in results}
+            for m in sql_results:
+                if m.id not in existing_ids:
+                    results.append(m)
+                    existing_ids.add(m.id)
+                    if len(results) >= limit * 2:
+                        break
 
         # Apply overdone filtering
         if actor_profile.overdone_alert_sensitivity > 0:
@@ -72,6 +89,75 @@ class Recommender:
 
         # Limit results
         return results[:limit]
+
+    def _get_sql_based_recommendations(
+        self,
+        actor_profile: ActorProfile,
+        limit: int = 20,
+        filters: dict = None
+    ) -> List[Monologue]:
+        """
+        Get recommendations using SQL queries instead of semantic search.
+        Used as fallback when embeddings aren't available.
+        """
+        filters = filters or {}
+        preferred_genres = actor_profile.preferred_genres or []
+
+        # Build base query
+        query = self.db.query(Monologue).join(Play)
+
+        # Apply filters
+        if filters.get('gender'):
+            query = query.filter(
+                or_(
+                    Monologue.character_gender.ilike(f"%{filters['gender']}%"),
+                    Monologue.character_gender.is_(None)  # Include gender-neutral
+                )
+            )
+
+        if filters.get('age_range'):
+            # Map profile age ranges to database age ranges
+            # Profile uses: "18-25", "25-35", "35-45", "45-55", "55+"
+            # Database uses: "teens", "20-30", "30-40", "20s", "30s", "40s", "50s", "60+", "any"
+            age_mapping = {
+                '18-25': ['teens', '20-30', '20s', 'any'],
+                '25-35': ['20-30', '30-40', '20s', '30s', 'any'],
+                '35-45': ['30-40', '40s', 'any'],
+                '45-55': ['40s', '50s', 'any'],
+                '55+': ['50s', '60+', 'any']
+            }
+
+            db_age_ranges = age_mapping.get(filters['age_range'], ['any'])
+            query = query.filter(
+                or_(
+                    Monologue.character_age_range.in_(db_age_ranges),
+                    Monologue.character_age_range.is_(None)  # Include unspecified age
+                )
+            )
+
+        if filters.get('difficulty'):
+            query = query.filter(
+                or_(
+                    Monologue.difficulty_level == filters['difficulty'],
+                    Monologue.difficulty_level.is_(None)  # Include unspecified difficulty
+                )
+            )
+
+        # Filter by preferred genres if available
+        if preferred_genres:
+            # Match play category or monologue category
+            genre_conditions = [
+                Play.category.ilike(f"%{genre}%") for genre in preferred_genres
+            ]
+            query = query.filter(or_(*genre_conditions))
+
+        # Order by quality indicators (favor popular but not overdone)
+        query = query.order_by(
+            (Monologue.favorite_count * (1.0 - Monologue.overdone_score)).desc(),
+            func.random()
+        )
+
+        return query.limit(limit).all()
 
     def get_similar_monologues(
         self,
