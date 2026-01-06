@@ -111,6 +111,12 @@ export default function SearchPage() {
       });
 
       const response = await api.get<Monologue[]>(`/api/monologues/search?${params.toString()}`);
+      console.log('Search API Response:', {
+        status: 'success',
+        resultCount: response.data.length,
+        firstResult: response.data[0]?.character_name,
+        query: searchQuery
+      });
       setResults(response.data);
 
       // Cache results in sessionStorage
@@ -134,6 +140,11 @@ export default function SearchPage() {
       router.replace(`/search?${newParams.toString()}`, { scroll: false });
     } catch (error) {
       console.error("Search error:", error);
+      console.error("Search failed:", {
+        query: searchQuery,
+        filters: searchFilters,
+        error: error
+      });
       setResults([]);
     } finally {
       setIsLoading(false);
