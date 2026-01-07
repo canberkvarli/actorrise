@@ -38,7 +38,7 @@ export default function BookmarksQuickAccess() {
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <IconBookmark className="h-5 w-5" />
+            <IconBookmark className="h-5 w-5 text-accent" />
             Your Monologues
           </div>
           {!isCountLoading && count > 0 && (

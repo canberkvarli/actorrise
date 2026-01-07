@@ -193,7 +193,7 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+    <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4">
       <div className="relative w-full max-w-4xl bg-background rounded-lg shadow-lg overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
