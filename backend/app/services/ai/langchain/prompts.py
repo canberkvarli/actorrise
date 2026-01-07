@@ -51,9 +51,10 @@ QUERY: "{query}"
 
 IMPORTANT INSTRUCTIONS:
 - Only extract filters that the user EXPLICITLY wants to filter by
-- If the user mentions a play title (e.g., "Hamlet", "Death of a Salesman"), they want monologues FROM that play or with similar themes
+- If the user mentions a play title (e.g., "Hamlet", "Macbeth", "Romeo and Juliet") or famous character name (e.g., "Hamlet", "Ophelia", "Lady Macbeth"), DO NOT extract themes or filters
 - DO NOT extract category or author filters based on play title mentions
-- The search uses semantic similarity, so specific titles will match by content, not by filters
+- The search uses semantic similarity on play titles, character names, and monologue text, so specific titles/names/quotes will match by content, not by filters
+- ONLY extract filters when the user requests specific attributes like gender, age, emotion, tone, etc.
 
 Extract the following information if present in the query (return null if not mentioned):
 
@@ -80,8 +81,11 @@ Extract the following information if present in the query (return null if not me
    - Keywords: desperate/despairing → "despair"
    - Otherwise → null
 
-4. themes: What themes are mentioned? (array of strings)
-   - Examples: love, death, betrayal, identity, power, family, revenge, loss, etc.
+4. themes: What themes are EXPLICITLY mentioned as search criteria? (array of strings)
+   - ONLY extract if user explicitly wants to filter by theme (e.g., "monologues about love", "pieces dealing with revenge")
+   - DO NOT extract themes from play titles (e.g., "Hamlet" should NOT extract "death" theme)
+   - DO NOT extract themes from character names or famous quotes
+   - Examples of valid extractions: love, betrayal, identity, power, family, revenge, loss, etc.
    - Return array or null
 
 5. category: Classical or contemporary? ONLY extract if user explicitly requests classical/contemporary era.

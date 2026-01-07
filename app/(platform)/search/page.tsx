@@ -9,11 +9,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
 import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -364,15 +365,30 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               Search thousands of classical and contemporary monologues
             </p>
           </div>
-          <Button
-            onClick={handleFindForMe}
-            disabled={isLoading}
-            size="lg"
-            className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
-          >
-            <IconSparkles className="h-5 w-5" />
-            Find For Me
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleFindForMe}
+              disabled={isLoading}
+              size="lg"
+              className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
+            >
+              <IconSparkles className="h-5 w-5" />
+              Find For Me
+            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <IconInfoCircle className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p className="text-sm">
+                    Get AI-powered monologue recommendations tailored to your actor profile. 
+                    Complete your profile for the best personalized suggestions.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
         </div>
       </div>
 
@@ -547,7 +563,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                                   {mono.character_name}
                                 </h3>
                                 {mono.is_favorited && (
-                                  <span className="px-2 py-0.5 bg-accent/10 text-accent text-xs font-semibold rounded-full border border-accent/20">
+                                  <span className="px-2 py-0.5 bg-accent/10 text-accent text-xs font-semibold rounded-full">
                                     Bookmarked
                                   </span>
                                 )}
@@ -564,7 +580,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                               className={`p-2 rounded-full transition-colors ${
                                 mono.is_favorited
                                   ? 'bg-accent/10 hover:bg-accent/20 text-accent'
-                                  : 'hover:bg-muted text-muted-foreground hover:text-accent'
+                                  : 'hover:bg-accent hover:text-accent-foreground text-muted-foreground'
                               }`}
                             >
                               <IconBookmark
@@ -659,8 +675,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               animate={{ opacity: isReadingMode ? 0.95 : 0.5 }}
               exit={{ opacity: 0 }}
               onClick={closeMonologue}
-              transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
-              className={`fixed inset-0 z-[9998] ${
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className={`fixed inset-0 z-[10000] ${
                 isReadingMode ? "bg-black/95" : "bg-black/50"
               }`}
             />
@@ -671,17 +687,17 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "100%", opacity: 0 }}
               transition={{ 
-                duration: 0.4,
-                ease: [0.4, 0, 0.2, 1],
-                opacity: { duration: 0.3 }
+                duration: 0.3,
+                ease: "easeOut",
+                opacity: { duration: 0.25 }
               }}
-              className={`fixed right-0 top-0 bottom-0 z-[9999] overflow-y-auto transition-all ${
+              className={`fixed right-0 top-0 bottom-0 z-[10001] overflow-y-auto transition-all ${
                 isReadingMode
                   ? "w-full bg-background"
                   : "w-full md:w-[600px] lg:w-[700px] bg-background border-l shadow-2xl"
               }`}
             >
-              <div className={`sticky top-0 bg-background/95 backdrop-blur-sm border-b z-[10000] ${
+              <div className={`sticky top-0 bg-background/95 backdrop-blur-sm border-b z-[10002] ${
                 isReadingMode ? "border-b-0" : ""
               }`}>
                 <div className="flex items-center justify-between p-6">
@@ -703,13 +719,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       {showDownloadMenu && (
                         <>
                           <div
-                            className="fixed inset-0 z-[10000]"
+                            className="fixed inset-0 z-[10003]"
                             onClick={(e) => {
                               e.stopPropagation();
                               setShowDownloadMenu(false);
                             }}
                           />
-                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-[10001]">
+                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-[10004]">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -743,7 +759,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         className={`p-2 rounded-full transition-colors ${
                           selectedMonologue.is_favorited
                             ? 'bg-accent/10 hover:bg-accent/20 text-accent'
-                            : 'hover:bg-muted text-muted-foreground hover:text-accent'
+                            : 'hover:bg-accent hover:text-accent-foreground text-muted-foreground'
                         }`}
                       >
                         <IconBookmark

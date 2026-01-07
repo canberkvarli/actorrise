@@ -363,8 +363,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               animate={{ opacity: isReadingMode ? 0.95 : 0.5 }}
               exit={{ opacity: 0 }}
               onClick={closeMonologue}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-              className={`fixed inset-0 z-40 ${
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className={`fixed inset-0 z-[10000] ${
                 isReadingMode ? "bg-black/95" : "bg-black/50"
               }`}
             />
@@ -374,14 +374,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className={`fixed right-0 top-0 bottom-0 z-50 overflow-y-auto transition-all ${
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className={`fixed right-0 top-0 bottom-0 z-[10001] overflow-y-auto transition-all ${
                 isReadingMode
                   ? "w-full bg-background"
                   : "w-full md:w-[600px] lg:w-[700px] bg-background border-l shadow-2xl"
               }`}
             >
-              <div className={`sticky top-0 bg-background/95 backdrop-blur-sm border-b z-10 ${
+              <div className={`sticky top-0 bg-background/95 backdrop-blur-sm border-b z-[10002] ${
                 isReadingMode ? "border-b-0" : ""
               }`}>
                 <div className="flex items-center justify-between p-6">
@@ -403,13 +403,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       {showDownloadMenu && (
                         <>
                           <div
-                            className="fixed inset-0 z-40"
+                            className="fixed inset-0 z-[10003]"
                             onClick={(e) => {
                               e.stopPropagation();
                               setShowDownloadMenu(false);
                             }}
                           />
-                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-50">
+                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-[10004]">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
