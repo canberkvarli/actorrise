@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconHome, IconSearch, IconUser, IconLogout, IconMenu, IconBookmark, IconChevronDown, IconCreditCard } from "@tabler/icons-react";
+import { IconHome, IconSearch, IconUser, IconLogout, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask } from "@tabler/icons-react";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarkCount";
@@ -57,6 +57,7 @@ export default function PlatformLayout({
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: IconHome },
     { href: "/search", label: "MonologueMatch", icon: IconSearch },
+    { href: "/scenes", label: "ScenePartner", icon: IconMask },
   ];
 
   return (
