@@ -194,6 +194,18 @@ export function ActorProfileForm() {
       const profile = response.data;
       
       // Reset form with all profile data - this properly updates all registered inputs
+      // Handle type field - can be string (character type) or array (actor types)
+      let typeValue = "";
+      if (profile.type) {
+        if (Array.isArray(profile.type)) {
+          // If it's an array (actor types from onboarding), use empty string for character type
+          // Character type can be set separately
+          typeValue = "";
+        } else {
+          typeValue = profile.type;
+        }
+      }
+      
       const formData = {
         name: profile.name || "",
         age_range: profile.age_range || "",
@@ -203,7 +215,7 @@ export function ActorProfileForm() {
         build: profile.build || "",
         location: profile.location || "",
         experience_level: profile.experience_level || "",
-        type: profile.type || "",
+        type: typeValue,
         training_background: profile.training_background || "",
         union_status: profile.union_status || "",
         preferred_genres: Array.isArray(profile.preferred_genres) ? profile.preferred_genres : [],

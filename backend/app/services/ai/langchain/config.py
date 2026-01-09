@@ -40,7 +40,8 @@ def configure_langsmith():
 def get_llm(
     model: str = "gpt-4o-mini",
     temperature: float = 0.3,
-    api_key: Optional[str] = None
+    api_key: Optional[str] = None,
+    use_json_format: bool = False
 ) -> BaseChatModel:
     """
     Get a configured ChatOpenAI instance.
@@ -49,18 +50,21 @@ def get_llm(
         model: Model name (default: gpt-4o-mini for cost efficiency)
         temperature: Sampling temperature (0.0-2.0)
         api_key: Optional OpenAI API key (defaults to OPENAI_API_KEY env var)
+        use_json_format: If True, force JSON output format (requires "json" in prompts)
 
     Returns:
         Configured ChatOpenAI instance
     """
-    return ChatOpenAI(
-        model=model,
-        temperature=temperature,
-        api_key=api_key or os.getenv("OPENAI_API_KEY"),
-        model_kwargs={
-            "response_format": {"type": "json_object"}  # For structured outputs
-        }
-    )
+    kwargs = {
+        "model": model,
+        "temperature": temperature,
+        "api_key": api_key or os.getenv("OPENAI_API_KEY"),
+    }
+    
+    if use_json_format:
+        kwargs["model_kwargs"] = {"response_format": {"type": "json_object"}}
+    
+    return ChatOpenAI(**kwargs)
 
 
 def get_embeddings_model(

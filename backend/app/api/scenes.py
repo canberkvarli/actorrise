@@ -43,7 +43,6 @@ class SceneResponse(BaseModel):
 
     line_count: int
     estimated_duration_seconds: int
-    difficulty_level: Optional[str]
 
     primary_emotions: List[str]
     relationship_dynamic: Optional[str]
@@ -136,7 +135,6 @@ class SessionFeedbackResponse(BaseModel):
 async def list_scenes(
     skip: int = 0,
     limit: int = 20,
-    difficulty: Optional[str] = None,
     play_id: Optional[int] = None,
     character_gender: Optional[str] = None,
     db: Session = Depends(get_db),
@@ -146,14 +144,10 @@ async def list_scenes(
     Get list of available scenes with filters.
 
     Filters:
-    - difficulty: beginner, intermediate, advanced
     - play_id: Filter by specific play
     - character_gender: male, female, any
     """
     query = db.query(Scene)
-
-    if difficulty:
-        query = query.filter(Scene.difficulty_level == difficulty)
 
     if play_id:
         query = query.filter(Scene.play_id == play_id)
@@ -165,6 +159,10 @@ async def list_scenes(
         )
 
     scenes = query.offset(skip).limit(limit).all()
+    
+    # Debug logging
+    total_count = db.query(Scene).count()
+    print(f"Scenes API: Total scenes={total_count}, Returning={len(scenes)}")
 
     # Check which scenes are favorited by this user
     favorited_ids = {
@@ -175,14 +173,19 @@ async def list_scenes(
     # Convert to response models
     results = []
     for scene in scenes:
-        scene_dict = {
-            **scene.__dict__,
-            "play_title": scene.play.title,
-            "play_author": scene.play.author,
-            "is_favorited": scene.id in favorited_ids,
-            "primary_emotions": scene.primary_emotions or []
-        }
-        results.append(SceneResponse(**scene_dict))
+        try:
+            scene_dict = {
+                **scene.__dict__,
+                "play_title": scene.play.title if scene.play else "Unknown Play",
+                "play_author": scene.play.author if scene.play else "Unknown Author",
+                "is_favorited": scene.id in favorited_ids,
+                "primary_emotions": scene.primary_emotions or []
+            }
+            results.append(SceneResponse(**scene_dict))
+        except Exception as e:
+            # Log error but continue processing other scenes
+            print(f"Error processing scene {scene.id}: {e}")
+            continue
 
     return results
 
@@ -400,6 +403,9 @@ async def deliver_line(
         "mode": "rehearsing",
         "should_continue": True
     }
+    
+    # Add user input to state (needed by _respond_as_character)
+    state["last_user_input"] = request.user_input  # type: ignore
 
     # Get AI response using LangGraph scene partner
     partner = ScenePartnerGraph(temperature=0.7)

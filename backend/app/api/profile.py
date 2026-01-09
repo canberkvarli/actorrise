@@ -1,4 +1,4 @@
-from typing import List, Optional, cast
+from typing import List, Optional, Union, cast
 
 from app.api.auth import get_current_user
 from app.core.database import get_db
@@ -22,7 +22,7 @@ class ActorProfileCreate(BaseModel):
     build: Optional[str] = None
     location: Optional[str] = None
     experience_level: Optional[str] = None
-    type: Optional[str] = None
+    type: Optional[Union[str, List[str]]] = None  # Can be string (backward compat) or list of strings
     training_background: Optional[str] = None
     union_status: Optional[str] = None
     preferred_genres: List[str] = []
@@ -42,7 +42,7 @@ class ActorProfileResponse(BaseModel):
     build: Optional[str] = None
     location: Optional[str] = None
     experience_level: Optional[str] = None
-    type: Optional[str] = None
+    type: Optional[Union[str, List[str]]] = None  # Can be string or list
     training_background: Optional[str] = None
     union_status: Optional[str] = None
     preferred_genres: List[str] = []
@@ -86,6 +86,9 @@ def create_or_update_profile(
         if existing_profile:
             # Update existing profile - update all provided fields (including None for deletion)
             profile_dict = profile_data.model_dump(exclude_unset=True)  # Only include fields that were explicitly set
+            # Handle type field - convert string to list if needed
+            if 'type' in profile_dict and isinstance(profile_dict['type'], str):
+                profile_dict['type'] = [profile_dict['type']]
             for key, value in profile_dict.items():
                 setattr(existing_profile, key, value)
             db.commit()
@@ -93,9 +96,13 @@ def create_or_update_profile(
             return existing_profile
         else:
             # Create new profile
+            profile_dict = profile_data.model_dump()
+            # Handle type field - convert string to list if needed
+            if 'type' in profile_dict and isinstance(profile_dict['type'], str):
+                profile_dict['type'] = [profile_dict['type']]
             new_profile = ActorProfile(
                 user_id=current_user.id,
-                **profile_data.model_dump()
+                **profile_dict
             )
             db.add(new_profile)
             db.commit()
