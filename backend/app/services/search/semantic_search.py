@@ -161,9 +161,19 @@ class SemanticSearch:
                 )
 
             if merged_filters.get('category'):
-                base_query = base_query.filter(
-                    Play.category == merged_filters['category']
-                )
+                category = merged_filters['category']
+                # Handle both string and list formats
+                if isinstance(category, list):
+                    # If it's a list, use ILIKE with OR conditions
+                    category_conditions = [
+                        Play.category.ilike(f'%{cat}%') for cat in category
+                    ]
+                    base_query = base_query.filter(or_(*category_conditions))
+                else:
+                    # If it's a string, use exact match or ILIKE
+                    base_query = base_query.filter(
+                        Play.category.ilike(f'%{category}%')
+                    )
 
             if merged_filters.get('author'):
                 base_query = base_query.filter(
@@ -188,10 +198,19 @@ class SemanticSearch:
         # Limit to reasonable candidate pool size for performance (will expand with pgvector later)
         MAX_CANDIDATES = 500  # Limit how many embeddings we compare against for speed
 
-        monologues_with_embeddings = base_query.filter(
-            Monologue.embedding.isnot(None),
-            Monologue.embedding != ''
-        ).limit(MAX_CANDIDATES).all()
+        try:
+            monologues_with_embeddings = base_query.filter(
+                Monologue.embedding.isnot(None),
+                Monologue.embedding != ''
+            ).limit(MAX_CANDIDATES).all()
+        except Exception as e:
+            print(f"Error executing base query for semantic search: {e}")
+            # Rollback and fall back to text search
+            try:
+                self.db.rollback()
+            except Exception:
+                pass
+            return self._fallback_text_search(query, limit, merged_filters)
 
         print(f"Loaded {len(monologues_with_embeddings)} monologues with embeddings for semantic search (max: {MAX_CANDIDATES})")
 
@@ -336,9 +355,19 @@ class SemanticSearch:
                 )
 
             if filters.get('category'):
-                base_query = base_query.filter(
-                    Play.category == filters['category']
-                )
+                category = filters['category']
+                # Handle both string and list formats
+                if isinstance(category, list):
+                    # If it's a list, use ILIKE with OR conditions
+                    category_conditions = [
+                        Play.category.ilike(f'%{cat}%') for cat in category
+                    ]
+                    base_query = base_query.filter(or_(*category_conditions))
+                else:
+                    # If it's a string, use ILIKE for partial match
+                    base_query = base_query.filter(
+                        Play.category.ilike(f'%{category}%')
+                    )
 
             if filters.get('author'):
                 base_query = base_query.filter(

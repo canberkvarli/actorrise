@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconHome, IconSearch, IconUser, IconLogout, IconMenu, IconBookmark, IconChevronDown, IconCreditCard } from "@tabler/icons-react";
+import { IconHome, IconSearch, IconUser, IconLogout, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo } from "@tabler/icons-react";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarkCount";
@@ -24,7 +24,7 @@ export default function PlatformLayout({
   const { count: bookmarkCount } = useBookmarkCount();
   const dropdownRef = useRef<HTMLDivElement>(null);
   
-  // Use SWR hook for cached subscription data - must be called before any early returns
+  // Use SWR hook for cached subscription data - MUST be called before any early returns
   const { subscription } = useSubscription();
   const userTier = subscription?.tier_name || "free";
 
@@ -57,6 +57,8 @@ export default function PlatformLayout({
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: IconHome },
     { href: "/search", label: "MonologueMatch", icon: IconSearch },
+    { href: "/scenes", label: "ScenePartner", icon: IconMask },
+    { href: "/audition", label: "Audition Mode", icon: IconVideo },
   ];
 
   return (
