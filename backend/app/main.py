@@ -1,4 +1,5 @@
 from app.api.auth import router as auth_router
+from app.api.audition import router as audition_router
 from app.api.monologues import router as monologues_router
 from app.api.pricing import router as pricing_router
 from app.api.profile import router as profile_router
@@ -29,6 +30,7 @@ app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(monologues_router)
 app.include_router(scenes_router)
+app.include_router(audition_router)
 app.include_router(pricing_router)
 app.include_router(subscriptions_router)
 app.include_router(webhooks_router)
