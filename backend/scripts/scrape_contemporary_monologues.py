@@ -108,22 +108,27 @@ class ContemporaryMonologueScraper:
                 play_title = match.group(1).strip()
                 author = match.group(2).strip()
 
-                # Get content between this heading and next
-                content_parts = []
-                current = heading.next_sibling
-
-                while current and current != play_headings[i+1] if i+1 < len(play_headings) else current:
-                    if hasattr(current, 'get_text'):
-                        text = current.get_text(strip=True)
-                        if text:
-                            content_parts.append(text)
-                    current = current.next_sibling if hasattr(current, 'next_sibling') else None
-
-                    # Safety break
-                    if len(content_parts) > 500:
+                # Get all content between this heading and the next heading
+                # Find the next heading at the same or higher level
+                next_heading = None
+                for j in range(i + 1, len(play_headings)):
+                    if play_headings[j].name == heading.name or play_headings[j].name < heading.name:
+                        next_heading = play_headings[j]
                         break
 
-                full_text = '\n\n'.join(content_parts)
+                # Collect all text between headings
+                content_elements = []
+                current = heading.next_sibling
+                
+                while current:
+                    if next_heading and current == next_heading:
+                        break
+                    if hasattr(current, 'get_text'):
+                        content_elements.append(current)
+                    current = current.next_sibling
+
+                # Extract text from all collected elements
+                full_text = '\n'.join([elem.get_text(separator='\n', strip=True) for elem in content_elements if hasattr(elem, 'get_text')])
 
                 if full_text and len(full_text) > 100:
                     plays.append({
@@ -142,53 +147,80 @@ class ContemporaryMonologueScraper:
         Extract individual monologues from a play's full text.
 
         Uses heuristics to identify character speeches that are long enough
-        to be monologues (typically 5+ lines or 100+ words).
+        to be monologues (typically 50+ words).
         """
         monologues = []
         full_text = play['full_text']
+        
+        if not full_text or len(full_text) < 100:
+            return monologues
 
-        # Pattern to match character names followed by dialogue
-        # Common formats: "CHARACTER NAME: dialogue" or "CHARACTER NAME\ndialogue"
-        character_speech_pattern = r'([A-Z][A-Z\s]{2,30})[:.]?\s*\n\s*(.+?)(?=\n\s*[A-Z][A-Z\s]{2,30}[:.]|\Z)'
+        # Multiple patterns to match character names followed by dialogue
+        # Pattern 1: ALL CAPS character name followed by colon or period
+        # Pattern 2: Character name (mixed case) followed by colon
+        # Pattern 3: Character name on its own line followed by dialogue
+        
+        patterns = [
+            # ALL CAPS: "CHARACTER NAME: dialogue" or "CHARACTER NAME. dialogue"
+            r'([A-Z][A-Z\s]{2,40})[:.]\s*(.+?)(?=\n\s*[A-Z][A-Z\s]{2,40}[:.]|\n\s*[A-Z][a-z]+[:.]|\Z)',
+            # Mixed case: "Character Name: dialogue"
+            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})[:.]\s*(.+?)(?=\n\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3}[:.]|\n\s*[A-Z][A-Z\s]{2,40}[:.]|\Z)',
+        ]
 
-        matches = re.finditer(character_speech_pattern, full_text, re.DOTALL)
+        for pattern in patterns:
+            matches = re.finditer(pattern, full_text, re.DOTALL | re.MULTILINE)
+            
+            for match in matches:
+                character_name = match.group(1).strip()
+                speech_text = match.group(2).strip()
 
-        for match in matches:
-            character_name = match.group(1).strip()
-            speech_text = match.group(2).strip()
+                # Skip if character name looks like a stage direction or header
+                skip_names = ['STAGE DIRECTION', 'SCENE', 'ACT', 'CURTAIN', 'THE END', 
+                             'CHARACTERS', 'PERSONS', 'PERSONS OF THE PLAY', 'DRAMATIS PERSONAE']
+                if any(skip in character_name.upper() for skip in skip_names):
+                    continue
+                
+                # Skip very short character names (likely not real names)
+                if len(character_name) < 2 or len(character_name) > 50:
+                    continue
 
-            # Clean up the speech text
-            speech_text = re.sub(r'\s+', ' ', speech_text)
+                # Clean up the speech text
+                speech_text = re.sub(r'\s+', ' ', speech_text)
 
-            # Skip if too short or if it's a stage direction
-            word_count = len(speech_text.split())
-            if word_count < 50 or character_name in ['STAGE DIRECTION', 'SCENE', 'ACT', 'CURTAIN']:
-                continue
+                # Extract stage directions
+                stage_directions_pattern = r'\[([^\]]+)\]|\(([^)]+)\)'
+                stage_directions = re.findall(stage_directions_pattern, speech_text)
+                stage_directions_text = ' '.join([d[0] or d[1] for d in stage_directions])
 
-            # Extract stage directions
-            stage_directions_pattern = r'\[([^\]]+)\]|\(([^)]+)\)'
-            stage_directions = re.findall(stage_directions_pattern, speech_text)
-            stage_directions_text = ' '.join([d[0] or d[1] for d in stage_directions])
+                # Remove stage directions from speech for word count
+                clean_speech = re.sub(stage_directions_pattern, '', speech_text)
+                clean_word_count = len(clean_speech.split())
 
-            # Remove stage directions from speech for word count
-            clean_speech = re.sub(stage_directions_pattern, '', speech_text)
-            clean_word_count = len(clean_speech.split())
+                # Require at least 50 words for a monologue
+                if clean_word_count < 50:
+                    continue
 
-            if clean_word_count < 50:
-                continue
+                monologues.append({
+                    'character_name': character_name,
+                    'text': speech_text,
+                    'stage_directions': stage_directions_text if stage_directions_text else None,
+                    'play_title': play['title'],
+                    'author': play['author'],
+                    'category': play['category'],
+                    'word_count': clean_word_count,
+                    'source': play['source']
+                })
 
-            monologues.append({
-                'character_name': character_name,
-                'text': speech_text,
-                'stage_directions': stage_directions_text if stage_directions_text else None,
-                'play_title': play['title'],
-                'author': play['author'],
-                'category': play['category'],
-                'word_count': clean_word_count,
-                'source': play['source']
-            })
+        # Remove duplicates (same character name and similar text)
+        seen = set()
+        unique_monologues = []
+        for mono in monologues:
+            key = (mono['character_name'].lower(), mono['text'][:100])
+            if key not in seen:
+                seen.add(key)
+                unique_monologues.append(mono)
 
-        return monologues
+        return unique_monologues
 
     async def analyze_and_save_monologue(self, monologue_data: Dict, play: Play) -> Optional[Monologue]:
         """Analyze monologue with AI and save to database."""
@@ -266,25 +298,38 @@ class ContemporaryMonologueScraper:
             ).first()
 
             if existing_play:
-                print(f"  ℹ Play already exists, skipping...")
-                continue
-
-            # Create play record
-            play = Play(
-                title=play_data['title'],
-                author=play_data['author'],
-                year_written=play_data['year'],
-                genre='Drama',
-                category='Contemporary',
-                copyright_status='public_domain',
-                license_type='public_domain',
-                source_url=collection['url'],
-                full_text=play_data.get('full_text'),
-                text_format='html'
-            )
-            self.db.add(play)
-            self.db.commit()
-            self.db.refresh(play)
+                # Check if it has monologues
+                monologue_count = self.db.query(Monologue).filter_by(play_id=existing_play.id).count()
+                if monologue_count > 0:
+                    print(f"  ℹ Play already exists with {monologue_count} monologues, skipping...")
+                    continue
+                else:
+                    print(f"  ℹ Play exists but has no monologues, re-processing...")
+                    play = existing_play
+                    # Update full_text if we have better content
+                    if play_data.get('full_text') and len(play_data['full_text']) > len(play.full_text or ''):
+                        play.full_text = play_data['full_text']
+                        self.db.commit()
+                    # Use the database full_text if available and better
+                    if play.full_text and len(play.full_text) > len(play_data.get('full_text', '')):
+                        play_data['full_text'] = play.full_text
+            else:
+                # Create play record
+                play = Play(
+                    title=play_data['title'],
+                    author=play_data['author'],
+                    year_written=play_data['year'],
+                    genre='Drama',
+                    category='Contemporary',
+                    copyright_status='public_domain',
+                    license_type='public_domain',
+                    source_url=collection['url'],
+                    full_text=play_data.get('full_text'),
+                    text_format='html'
+                )
+                self.db.add(play)
+                self.db.commit()
+                self.db.refresh(play)
 
             # Extract monologues
             monologues = self.extract_monologues_from_play(play_data)

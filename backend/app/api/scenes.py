@@ -2,22 +2,19 @@
 API endpoints for ScenePartner - AI Scene Rehearsal feature
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
-from typing import List, Optional
-from pydantic import BaseModel
 from datetime import datetime
+from typing import List, Optional
 
-from app.core.database import get_db
-from app.models.actor import (
-    Scene, SceneLine, RehearsalSession, RehearsalLineDelivery, SceneFavorite
-)
-from app.models.user import User
 from app.api.auth import get_current_user
-from app.services.ai.langchain.scene_partner import (
-    ScenePartnerGraph, ScenePartnerState, create_scene_partner
-)
-
+from app.core.database import get_db
+from app.models.actor import (RehearsalLineDelivery, RehearsalSession, Scene,
+                              SceneFavorite)
+from app.models.user import User
+from app.services.ai.langchain.scene_partner import (ScenePartnerGraph,
+                                                     ScenePartnerState)
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/scenes", tags=["scenes"])
 
@@ -247,7 +244,8 @@ async def toggle_favorite(
     if existing:
         # Remove from favorites
         db.delete(existing)
-        scene.favorite_count = max(0, scene.favorite_count - 1)
+        current_count = int(scene.favorite_count) if scene.favorite_count is not None else 0  # type: ignore
+        scene.favorite_count = max(0, current_count - 1)  # type: ignore
         db.commit()
         return {"favorited": False}
     else:
@@ -257,7 +255,8 @@ async def toggle_favorite(
             scene_id=scene_id
         )
         db.add(favorite)
-        scene.favorite_count += 1
+        current_count = int(scene.favorite_count) if scene.favorite_count is not None else 0  # type: ignore
+        scene.favorite_count = current_count + 1  # type: ignore
         db.commit()
         return {"favorited": True}
 
@@ -306,7 +305,8 @@ async def start_rehearsal(
     )
 
     db.add(session)
-    scene.rehearsal_count += 1
+    current_count = int(scene.rehearsal_count) if scene.rehearsal_count is not None else 0  # type: ignore
+    scene.rehearsal_count = current_count + 1  # type: ignore
     db.commit()
     db.refresh(session)
 
@@ -331,7 +331,8 @@ async def deliver_line(
             detail="Rehearsal session not found"
         )
 
-    if session.status != "in_progress":
+    session_status_val = str(session.status) if session.status is not None else ""
+    if session_status_val != "in_progress":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Session is not in progress"
@@ -341,11 +342,12 @@ async def deliver_line(
     scene = session.scene
     all_lines = scene.lines
 
-    if session.current_line_index >= len(all_lines):
+    current_index = int(session.current_line_index) if session.current_line_index is not None else 0  # type: ignore
+    if current_index >= len(all_lines):
         # Scene complete
-        session.status = "completed"
-        session.completion_percentage = 100.0
-        session.completed_at = datetime.utcnow()
+        session.status = "completed"  # type: ignore
+        session.completion_percentage = 100.0  # type: ignore
+        session.completed_at = datetime.utcnow()  # type: ignore
         db.commit()
 
         return DeliverLineResponse(
@@ -356,45 +358,47 @@ async def deliver_line(
             completion_percentage=100.0
         )
 
-    current_line = all_lines[session.current_line_index]
+    current_line = all_lines[current_index]
 
     # Record the delivery
+    total_delivered = int(session.total_lines_delivered) if session.total_lines_delivered is not None else 0  # type: ignore
+    scene_line_id_val = int(current_line.id) if current_line.id is not None else 0  # type: ignore
+    session_id_val = int(session.id) if session.id is not None else 0  # type: ignore
     delivery = RehearsalLineDelivery(
-        session_id=session.id,
-        scene_line_id=current_line.id,
-        delivery_order=session.total_lines_delivered,
+        session_id=session_id_val,
+        scene_line_id=scene_line_id_val,
+        delivery_order=total_delivered,
         user_input=request.user_input,
         was_retry=request.request_retry
     )
 
     # Build state for AI scene partner
     state: ScenePartnerState = {
-        "scene_title": scene.title,
-        "play_title": scene.play.title,
-        "playwright": scene.play.author,
-        "setting": scene.setting or "",
-        "relationship_dynamic": scene.relationship_dynamic or "",
-        "user_character": session.user_character,
-        "ai_character": session.ai_character,
+        "scene_title": str(scene.title) if scene.title is not None else "",  # type: ignore
+        "play_title": str(scene.play.title) if scene.play.title is not None else "",  # type: ignore
+        "playwright": str(scene.play.author) if scene.play.author is not None else "",  # type: ignore
+        "setting": str(scene.setting) if scene.setting is not None else "",  # type: ignore
+        "relationship_dynamic": str(scene.relationship_dynamic) if scene.relationship_dynamic is not None else "",  # type: ignore
+        "user_character": str(session.user_character) if session.user_character is not None else "",  # type: ignore
+        "ai_character": str(session.ai_character) if session.ai_character is not None else "",  # type: ignore
         "user_character_description": "",
         "ai_character_description": "",
         "all_lines": [
             {
-                "character": line.character_name,
-                "text": line.text,
-                "order": line.line_order
+                "character": str(line.character_name) if line.character_name is not None else "",
+                "text": str(line.text) if line.text is not None else "",
+                "order": int(line.line_order) if line.line_order is not None else 0
             }
             for line in all_lines
         ],
-        "current_line_index": session.current_line_index,
+        "current_line_index": current_index,
         "messages": [],
         "dialogue_history": [],
         "feedback_notes": [],
         "strengths": [],
         "areas_to_improve": [],
         "mode": "rehearsing",
-        "should_continue": True,
-        "last_user_input": request.user_input
+        "should_continue": True
     }
 
     # Get AI response using LangGraph scene partner
@@ -405,39 +409,49 @@ async def deliver_line(
     ai_message = result_state["messages"][-1] if result_state["messages"] else {}
     ai_response_text = ai_message.get("content", "")
 
-    delivery.ai_response = ai_response_text
+    delivery.ai_response = ai_response_text  # type: ignore
 
     # Simple feedback if requested
     if request.request_feedback:
-        delivery.feedback = "Good delivery! Try varying your pace for more emotional impact."
+        delivery.feedback = "Good delivery! Try varying your pace for more emotional impact."  # type: ignore
 
     db.add(delivery)
 
     # Update session
-    session.total_lines_delivered += 1
+    new_total_delivered = total_delivered + 1
+    session.total_lines_delivered = new_total_delivered  # type: ignore
+    
     if request.request_retry:
-        session.lines_retried += 1
+        current_retried = int(session.lines_retried) if session.lines_retried is not None else 0  # type: ignore
+        session.lines_retried = current_retried + 1  # type: ignore
     else:
-        session.current_line_index += 1
+        session.current_line_index = current_index + 1  # type: ignore
 
     # Calculate completion
-    session.completion_percentage = (session.current_line_index / len(all_lines)) * 100
+    new_index = current_index + 1 if not request.request_retry else current_index
+    completion_pct = (new_index / len(all_lines)) * 100 if all_lines else 0.0
+    session.completion_percentage = completion_pct  # type: ignore
 
     # Get next line preview (user's next line)
     next_user_line = None
-    for i in range(session.current_line_index, len(all_lines)):
-        if all_lines[i].character_name == session.user_character:
-            next_user_line = all_lines[i].text
+    user_char = str(session.user_character) if session.user_character is not None else ""
+    for i in range(new_index, len(all_lines)):
+        line_char = str(all_lines[i].character_name) if all_lines[i].character_name is not None else ""
+        if line_char == user_char:
+            next_user_line = str(all_lines[i].text) if all_lines[i].text is not None else None
             break
 
     db.commit()
 
+    feedback_text = str(delivery.feedback) if delivery.feedback is not None else None  # type: ignore
+    session_status_str = str(session.status) if session.status is not None else "in_progress"  # type: ignore
+
     return DeliverLineResponse(
         ai_response=ai_response_text,
-        feedback=delivery.feedback,
+        feedback=feedback_text,
         next_line_preview=next_user_line,
-        session_status=session.status,
-        completion_percentage=session.completion_percentage
+        session_status=session_status_str,
+        completion_percentage=completion_pct
     )
 
 
@@ -462,25 +476,30 @@ async def get_session_feedback(
     # Build transcript
     deliveries = session.line_deliveries
     transcript_lines = []
+    user_char = str(session.user_character) if session.user_character is not None else ""
+    ai_char = str(session.ai_character) if session.ai_character is not None else ""
     for delivery in deliveries:
-        transcript_lines.append(f"{session.user_character}: {delivery.user_input}")
-        if delivery.ai_response:
-            transcript_lines.append(f"{session.ai_character}: {delivery.ai_response}")
+        user_input_val = str(delivery.user_input) if delivery.user_input is not None else ""
+        transcript_lines.append(f"{user_char}: {user_input_val}")
+        ai_response_val = str(delivery.ai_response) if delivery.ai_response is not None else None
+        if ai_response_val:
+            transcript_lines.append(f"{ai_char}: {ai_response_val}")
 
     transcript = "\n\n".join(transcript_lines)
 
     # If we don't have cached feedback, generate it
-    if not session.overall_feedback:
+    overall_feedback_val = str(session.overall_feedback) if session.overall_feedback is not None else None  # type: ignore
+    if not overall_feedback_val:
         # Use LangGraph to generate feedback
         partner = ScenePartnerGraph(temperature=0.7)
         state: ScenePartnerState = {
-            "scene_title": session.scene.title,
-            "play_title": session.scene.play.title,
-            "playwright": session.scene.play.author,
-            "setting": session.scene.setting or "",
-            "relationship_dynamic": session.scene.relationship_dynamic or "",
-            "user_character": session.user_character,
-            "ai_character": session.ai_character,
+            "scene_title": str(session.scene.title) if session.scene.title is not None else "",  # type: ignore
+            "play_title": str(session.scene.play.title) if session.scene.play.title is not None else "",  # type: ignore
+            "playwright": str(session.scene.play.author) if session.scene.play.author is not None else "",  # type: ignore
+            "setting": str(session.scene.setting) if session.scene.setting is not None else "",  # type: ignore
+            "relationship_dynamic": str(session.scene.relationship_dynamic) if session.scene.relationship_dynamic is not None else "",  # type: ignore
+            "user_character": str(session.user_character) if session.user_character is not None else "",  # type: ignore
+            "ai_character": str(session.ai_character) if session.ai_character is not None else "",  # type: ignore
             "user_character_description": "",
             "ai_character_description": "",
             "all_lines": [],
@@ -488,11 +507,11 @@ async def get_session_feedback(
             "messages": [],
             "dialogue_history": [
                 {
-                    "user_character": session.user_character,
-                    "user_line": d.user_input,
-                    "ai_character": session.ai_character,
-                    "ai_response": d.ai_response or "",
-                    "line_index": d.delivery_order
+                    "user_character": str(session.user_character) if session.user_character is not None else "",
+                    "user_line": str(d.user_input) if d.user_input is not None else "",
+                    "ai_character": str(session.ai_character) if session.ai_character is not None else "",
+                    "ai_response": str(d.ai_response) if d.ai_response is not None else "",
+                    "line_index": int(d.delivery_order) if d.delivery_order is not None else 0
                 }
                 for d in deliveries
             ],
@@ -506,18 +525,26 @@ async def get_session_feedback(
         feedback_state = partner._provide_coaching(state)
         feedback_message = feedback_state["messages"][-1] if feedback_state["messages"] else {}
 
-        session.overall_feedback = feedback_message.get("content", "Great work on the scene!")
-        session.strengths = ["Emotional authenticity", "Good pacing"]
-        session.areas_to_improve = ["Try varying vocal dynamics"]
-        session.overall_rating = 4.0
+        feedback_content = feedback_message.get("content", "Great work on the scene!")
+        session.overall_feedback = feedback_content  # type: ignore
+        session.strengths = ["Emotional authenticity", "Good pacing"]  # type: ignore
+        session.areas_to_improve = ["Try varying vocal dynamics"]  # type: ignore
+        session.overall_rating = 4.0  # type: ignore
 
         db.commit()
+        overall_feedback_val = feedback_content
+
+    strengths_val = session.strengths  # type: ignore
+    strengths_list = list(strengths_val) if strengths_val is not None else []  # type: ignore
+    areas_val = session.areas_to_improve  # type: ignore
+    areas_list = list(areas_val) if areas_val is not None else []  # type: ignore
+    rating_val = float(session.overall_rating) if session.overall_rating is not None else None  # type: ignore
 
     return SessionFeedbackResponse(
-        overall_feedback=session.overall_feedback or "",
-        strengths=session.strengths or [],
-        areas_to_improve=session.areas_to_improve or [],
-        overall_rating=session.overall_rating,
+        overall_feedback=overall_feedback_val or "",
+        strengths=strengths_list,
+        areas_to_improve=areas_list,
+        overall_rating=rating_val,
         transcript=transcript
     )
 

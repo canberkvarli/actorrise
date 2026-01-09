@@ -70,7 +70,7 @@ export default function OnboardingPage() {
     setIsLoading(true);
     try {
       // Save preferences to profile
-      await api.patch('/api/profile', {
+      await api.put('/api/profile', {
         type: formData.actorType,
         experience_level: formData.experience,
         preferred_genres: formData.goals
@@ -107,45 +107,15 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 relative overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-20" />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-
-      {/* Floating Orbs */}
-      <motion.div
-        className="absolute top-20 left-20 w-72 h-72 bg-purple-500/30 rounded-full blur-3xl"
-        animate={{
-          x: [0, 100, 0],
-          y: [0, -100, 0],
-        }}
-        transition={{
-          duration: 20,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      />
-      <motion.div
-        className="absolute bottom-20 right-20 w-96 h-96 bg-pink-500/30 rounded-full blur-3xl"
-        animate={{
-          x: [0, -100, 0],
-          y: [0, 100, 0],
-        }}
-        transition={{
-          duration: 25,
-          repeat: Infinity,
-          ease: "easeInOut"
-        }}
-      />
-
+    <div className="min-h-screen bg-background">
       {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col">
+      <div className="min-h-screen flex flex-col">
         {/* Progress Bar */}
         {currentStep > 0 && currentStep < steps.length - 1 && (
           <div className="fixed top-0 left-0 right-0 z-50">
-            <div className="h-1 bg-white/10">
+            <div className="h-1 bg-muted">
               <motion.div
-                className="h-full bg-gradient-to-r from-purple-500 to-pink-500"
+                className="h-full bg-primary"
                 initial={{ width: 0 }}
                 animate={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}
                 transition={{ duration: 0.5 }}
@@ -155,7 +125,7 @@ export default function OnboardingPage() {
         )}
 
         {/* Main Content */}
-        <div className="flex-1 flex items-center justify-center p-4">
+        <div className="flex-1 flex items-center justify-center px-4 py-10">
           <AnimatePresence mode="wait">
             {/* Step 0: Welcome */}
             {currentStep === 0 && (
@@ -221,7 +191,7 @@ export default function OnboardingPage() {
           >
             <button
               onClick={prevStep}
-              className="px-6 py-3 bg-white/10 hover:bg-white/20 backdrop-blur-xl rounded-xl font-medium text-white transition flex items-center gap-2"
+              className="px-6 py-3 rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:border-primary hover:text-primary transition flex items-center gap-2"
             >
               <ChevronLeft className="w-5 h-5" />
               Back
@@ -229,7 +199,7 @@ export default function OnboardingPage() {
             <button
               onClick={nextStep}
               disabled={!canProceed()}
-              className="px-8 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl font-bold text-white transition flex items-center gap-2 shadow-lg shadow-purple-500/50"
+              className="px-8 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90"
             >
               Continue
               <ChevronRight className="w-5 h-5" />
@@ -249,7 +219,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 1.1 }}
       transition={{ duration: 0.5 }}
-      className="text-center max-w-2xl"
+        className="text-center max-w-2xl"
     >
       <motion.div
         initial={{ scale: 0 }}
@@ -257,8 +227,8 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         transition={{ duration: 0.8, delay: 0.2 }}
         className="mb-8 inline-block"
       >
-        <div className="w-32 h-32 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-2xl shadow-purple-500/50">
-          <Sparkles className="w-16 h-16 text-white" />
+        <div className="w-32 h-32 rounded-full border border-border flex items-center justify-center bg-card shadow-sm">
+          <Sparkles className="w-16 h-16 text-primary" />
         </div>
       </motion.div>
 
@@ -266,7 +236,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4 }}
-        className="text-6xl font-bold text-white mb-6"
+        className="text-5xl md:text-6xl font-bold text-foreground mb-6"
       >
         Welcome to ActorRise
       </motion.h1>
@@ -275,7 +245,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6 }}
-        className="text-2xl text-purple-200 mb-12 leading-relaxed"
+        className="text-lg md:text-xl text-muted-foreground mb-12 leading-relaxed"
       >
         Your AI-powered acting coach. Let's personalize your experience
         <br />
@@ -289,7 +259,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={onNext}
-        className="px-12 py-5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 rounded-2xl font-bold text-xl text-white transition shadow-2xl shadow-purple-500/50 flex items-center gap-3 mx-auto"
+        className="px-10 py-4 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-semibold text-base md:text-lg transition flex items-center gap-3 mx-auto"
       >
         Let's Get Started
         <Zap className="w-6 h-6" />
@@ -299,7 +269,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 1 }}
-        className="text-purple-300 text-sm mt-8"
+        className="text-xs text-muted-foreground mt-8 uppercase tracking-[0.2em]"
       >
         Takes less than 2 minutes
       </motion.p>
@@ -361,7 +331,7 @@ function ActorTypeStep({
       <motion.h2
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-5xl font-bold text-white text-center mb-4"
+        className="text-3xl md:text-4xl font-bold text-foreground text-center mb-4"
       >
         What kind of actor are you?
       </motion.h2>
@@ -369,7 +339,7 @@ function ActorTypeStep({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="text-purple-200 text-center mb-12 text-lg"
+        className="text-muted-foreground text-center mb-12 text-sm md:text-base"
       >
         This helps us recommend the best content for you
       </motion.p>
@@ -388,30 +358,30 @@ function ActorTypeStep({
               whileHover={{ scale: 1.03, y: -5 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => onSelect(type.id)}
-              className={`relative p-8 rounded-3xl backdrop-blur-xl transition-all duration-300 ${
+              className={`relative p-8 rounded-2xl border transition-all duration-300 bg-card ${
                 isSelected
-                  ? 'bg-white/20 ring-4 ring-white/50 shadow-2xl'
-                  : 'bg-white/5 hover:bg-white/10'
+                  ? 'border-primary shadow-md'
+                  : 'border-border hover:border-primary/60'
               }`}
             >
               {isSelected && (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute top-4 right-4 w-8 h-8 bg-white rounded-full flex items-center justify-center"
+                  className="absolute top-4 right-4 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center"
                 >
-                  <Check className="w-5 h-5 text-purple-600" />
+                  <Check className="w-5 h-5" />
                 </motion.div>
               )}
 
-              <div className={`w-20 h-20 bg-gradient-to-br ${type.color} rounded-2xl flex items-center justify-center mb-6 mx-auto shadow-lg`}>
-                <Icon className="w-10 h-10 text-white" />
+              <div className="w-20 h-20 rounded-2xl border border-border flex items-center justify-center mb-6 mx-auto bg-muted">
+                <Icon className="w-10 h-10 text-primary" />
               </div>
 
-              <h3 className="text-2xl font-bold text-white mb-2">
+              <h3 className="text-2xl font-bold text-foreground mb-2">
                 {type.label}
               </h3>
-              <p className="text-purple-200">
+              <p className="text-muted-foreground">
                 {type.description}
               </p>
             </motion.button>
@@ -466,7 +436,7 @@ function ExperienceStep({
       <motion.h2
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-5xl font-bold text-white text-center mb-4"
+        className="text-3xl md:text-4xl font-bold text-foreground text-center mb-4"
       >
         What's your experience level?
       </motion.h2>
@@ -474,7 +444,7 @@ function ExperienceStep({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="text-purple-200 text-center mb-12 text-lg"
+        className="text-muted-foreground text-center mb-12 text-sm md:text-base"
       >
         We'll match you with content at the right difficulty
       </motion.p>
@@ -492,18 +462,18 @@ function ExperienceStep({
               whileHover={{ scale: 1.02, x: 10 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => onSelect(level.id)}
-              className={`w-full p-6 rounded-2xl backdrop-blur-xl transition-all duration-300 flex items-center gap-6 ${
+              className={`w-full p-6 rounded-2xl border bg-card transition-all duration-300 flex items-center gap-6 ${
                 isSelected
-                  ? 'bg-white/20 ring-4 ring-white/50 shadow-2xl'
-                  : 'bg-white/5 hover:bg-white/10'
+                  ? 'border-primary shadow-md'
+                  : 'border-border hover:border-primary/60'
               }`}
             >
-              <div className="text-6xl">{level.emoji}</div>
+              <div className="text-4xl">{level.emoji}</div>
               <div className="flex-1 text-left">
-                <h3 className="text-2xl font-bold text-white mb-1">
+                <h3 className="text-xl font-semibold text-foreground mb-1">
                   {level.label}
                 </h3>
-                <p className="text-purple-200">
+                <p className="text-muted-foreground text-sm">
                   {level.description}
                 </p>
               </div>
@@ -574,7 +544,7 @@ function GoalsStep({
       <motion.h2
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-5xl font-bold text-white text-center mb-4"
+        className="text-3xl md:text-4xl font-bold text-foreground text-center mb-4"
       >
         What are you working on?
       </motion.h2>
@@ -582,7 +552,7 @@ function GoalsStep({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="text-purple-200 text-center mb-12 text-lg"
+        className="text-muted-foreground text-center mb-12 text-sm md:text-base"
       >
         Select all that apply - we'll tailor your experience
       </motion.p>
@@ -601,31 +571,31 @@ function GoalsStep({
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => onToggle(goal.id)}
-              className={`relative p-6 rounded-2xl backdrop-blur-xl transition-all duration-300 text-left ${
+              className={`relative p-6 rounded-2xl border bg-card transition-all duration-300 text-left ${
                 isSelected
-                  ? 'bg-white/20 ring-2 ring-white/50 shadow-xl'
-                  : 'bg-white/5 hover:bg-white/10'
+                  ? 'border-primary shadow-md'
+                  : 'border-border hover:border-primary/60'
               }`}
             >
               {isSelected && (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute top-3 right-3 w-7 h-7 bg-white rounded-full flex items-center justify-center"
+                  className="absolute top-3 right-3 w-7 h-7 bg-primary text-primary-foreground rounded-full flex items-center justify-center"
                 >
-                  <Check className="w-4 h-4 text-purple-600" />
+                  <Check className="w-4 h-4" />
                 </motion.div>
               )}
 
               <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-pink-500 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <Icon className="w-6 h-6 text-white" />
+                <div className="w-12 h-12 rounded-xl border border-border bg-muted flex items-center justify-center flex-shrink-0">
+                  <Icon className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-white mb-1">
+                  <h3 className="text-lg font-semibold text-foreground mb-1">
                     {goal.label}
                   </h3>
-                  <p className="text-purple-200 text-sm">
+                  <p className="text-muted-foreground text-xs">
                     {goal.description}
                   </p>
                 </div>
@@ -662,8 +632,8 @@ function RecommendationsStep({
         transition={{ delay: 0.2 }}
         className="mb-8 inline-block"
       >
-        <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-2xl">
-          <Star className="w-12 h-12 text-white" />
+        <div className="w-24 h-24 rounded-full border border-border bg-card flex items-center justify-center shadow-sm">
+          <Star className="w-12 h-12 text-primary" />
         </div>
       </motion.div>
 
@@ -671,7 +641,7 @@ function RecommendationsStep({
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="text-5xl font-bold text-white mb-4"
+        className="text-3xl md:text-4xl font-bold text-foreground mb-4"
       >
         Perfect! We're preparing your
         <br />
@@ -682,7 +652,7 @@ function RecommendationsStep({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.4 }}
-        className="text-purple-200 text-lg mb-12"
+        className="text-muted-foreground text-sm md:text-base mb-12"
       >
         Based on your preferences, we're curating the best monologues and scenes for you
       </motion.p>
@@ -695,7 +665,7 @@ function RecommendationsStep({
         whileTap={{ scale: 0.95 }}
         onClick={onComplete}
         disabled={isLoading}
-        className="px-12 py-5 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 rounded-2xl font-bold text-xl text-white transition shadow-2xl shadow-purple-500/50 flex items-center gap-3 mx-auto"
+        className="px-10 py-4 bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 rounded-xl font-semibold text-base md:text-lg transition flex items-center gap-3 mx-auto"
       >
         {isLoading ? (
           <>
