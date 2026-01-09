@@ -22,7 +22,7 @@ class ActorProfile(Base):
 
     # Acting Info
     experience_level = Column(String)
-    type = Column(String)
+    type = Column(JSON, default=list)  # Can be array of types or single type for backward compatibility
     training_background = Column(String, nullable=True)
     union_status = Column(String)
 

@@ -49,7 +49,7 @@ def create_monologue_analysis_chain(
         >>> result['primary_emotion']
         'melancholy'
     """
-    llm = get_llm(temperature=temperature, api_key=api_key)
+    llm = get_llm(temperature=temperature, api_key=api_key, use_json_format=True)
 
     # Create the chain: prompt | llm | parse JSON
     chain = MONOLOGUE_ANALYSIS_TEMPLATE | llm | StrOutputParser()
@@ -105,7 +105,7 @@ def create_query_parsing_chain(
         >>> result
         {'gender': 'female', 'age_range': '20s', 'tone': 'comedic'}
     """
-    llm = get_llm(temperature=temperature, api_key=api_key)
+    llm = get_llm(temperature=temperature, api_key=api_key, use_json_format=True)
 
     # Create the chain
     chain = QUERY_PARSING_TEMPLATE | llm | StrOutputParser()

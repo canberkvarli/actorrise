@@ -23,7 +23,6 @@ interface Scene {
   character_2_gender: string | null;
   line_count: number;
   estimated_duration_seconds: number;
-  difficulty_level: string;
   primary_emotions: string[];
   relationship_dynamic: string;
   tone: string;
@@ -38,7 +37,6 @@ export default function ScenesPage() {
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState({
-    difficulty: '',
     tone: ''
   });
 
@@ -50,12 +48,18 @@ export default function ScenesPage() {
     try {
       setIsLoading(true);
       const params = new URLSearchParams();
-      if (filter.difficulty) params.append('difficulty', filter.difficulty);
 
-      const response = await api.get<Scene[]>(`/api/scenes?${params.toString()}`);
-      setScenes(response.data);
+      // Use trailing slash to avoid 307 redirect
+      const url = params.toString() 
+        ? `/api/scenes/?${params.toString()}`
+        : `/api/scenes/`;
+      const response = await api.get<Scene[]>(url);
+      console.log('Scenes API response:', response.data);
+      // Ensure response.data is an array
+      setScenes(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching scenes:', error);
+      setScenes([]); // Ensure scenes is set to empty array on error
     } finally {
       setIsLoading(false);
     }
@@ -66,30 +70,7 @@ export default function ScenesPage() {
     return `${minutes} min`;
   };
 
-  const getDifficultyVariant = (level: string): "default" | "secondary" | "outline" => {
-    switch (level) {
-      case 'beginner':
-        return 'default';
-      case 'intermediate':
-        return 'secondary';
-      case 'advanced':
-        return 'outline';
-      default:
-        return 'outline';
-    }
-  };
 
-  const getToneEmoji = (tone: string): string => {
-    const toneMap: Record<string, string> = {
-      romantic: '💕',
-      comedic: '😄',
-      tragic: '😢',
-      tense: '😰',
-      dramatic: '🎭',
-      philosophical: '🤔'
-    };
-    return toneMap[tone?.toLowerCase()] || '🎭';
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -120,22 +101,6 @@ export default function ScenesPage() {
             <CardContent className="pt-6">
               <div className="flex flex-wrap gap-6 items-end">
                 <div className="flex-1 min-w-[200px]">
-                  <Label htmlFor="difficulty" className="mb-2">
-                    Difficulty
-                  </Label>
-                  <Select
-                    id="difficulty"
-                    value={filter.difficulty}
-                    onChange={(e) => setFilter({ ...filter, difficulty: e.target.value })}
-                  >
-                    <option value="">All Levels</option>
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
-                  </Select>
-                </div>
-
-                <div className="flex-1 min-w-[200px]">
                   <Label htmlFor="tone" className="mb-2">
                     Tone
                   </Label>
@@ -145,11 +110,11 @@ export default function ScenesPage() {
                     onChange={(e) => setFilter({ ...filter, tone: e.target.value })}
                   >
                     <option value="">All Tones</option>
-                    <option value="romantic">💕 Romantic</option>
-                    <option value="comedic">😄 Comedic</option>
-                    <option value="tragic">😢 Tragic</option>
-                    <option value="tense">😰 Tense</option>
-                    <option value="dramatic">🎭 Dramatic</option>
+                    <option value="romantic">Romantic</option>
+                    <option value="comedic">Comedic</option>
+                    <option value="tragic">Tragic</option>
+                    <option value="tense">Tense</option>
+                    <option value="dramatic">Dramatic</option>
                   </Select>
                 </div>
               </div>
@@ -186,12 +151,6 @@ export default function ScenesPage() {
                     className="group hover:shadow-xl transition-all cursor-pointer h-full flex flex-col hover:border-primary/50"
                   >
                     <CardHeader>
-                      <div className="flex items-start justify-between mb-2">
-                        <span className="text-3xl">{getToneEmoji(scene.tone)}</span>
-                        <Badge variant={getDifficultyVariant(scene.difficulty_level)} className="capitalize">
-                          {scene.difficulty_level}
-                        </Badge>
-                      </div>
                       <CardTitle className="group-hover:text-primary transition-colors">
                         {scene.title}
                       </CardTitle>
@@ -271,9 +230,19 @@ export default function ScenesPage() {
             <h3 className="text-xl font-semibold mb-2">
               No scenes found
             </h3>
-            <p className="text-muted-foreground">
-              Try adjusting your filters or check back soon for new scenes!
+            <p className="text-muted-foreground mb-4">
+              {filter.tone
+                ? "Try adjusting your filters or check back soon for new scenes!"
+                : "Scenes are being extracted from plays. Check back soon!"}
             </p>
+            {filter.tone && (
+              <button
+                onClick={() => setFilter({ tone: '' })}
+                className="text-primary hover:underline"
+              >
+                Clear filters
+              </button>
+            )}
           </motion.div>
         )}
       </div>

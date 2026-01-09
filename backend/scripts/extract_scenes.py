@@ -51,33 +51,93 @@ class SceneExtractor:
             "start_pos": 0
         }
 
-        # Pattern for character name followed by dialogue
-        # Handles formats like:
-        # ROMEO: text
-        # ROMEO.
-        #   Text here
-        character_pattern = r'^([A-Z][A-Z\s]{1,25})[:.]?\s*$'
-        dialogue_pattern = r'^\s+(.+)'
+        # Pattern for character name - handles multiple formats:
+        # ROMEO: text (dialogue on same line)
+        # ROMEO. (just name, dialogue on next line)
+        # ROMEO (just name)
+        character_with_dialogue_pattern = r'^([A-Z][A-Z\s]{1,30})[:.]\s*(.+)$'
+        character_only_pattern = r'^([A-Z][A-Z\s]{1,30})[:.]?\s*$'
+        dialogue_pattern = r'^\s+(.+)'  # Indented dialogue
+        dialogue_no_indent_pattern = r'^([A-Z][a-z].+)$'  # Non-indented dialogue (sentence case)
+        
+        # Patterns to exclude (act/scene headers, stage directions, etc.)
+        exclude_patterns = [
+            r'^ACT\s+[IVX]+',  # ACT I, ACT II, etc.
+            r'^SCENE\s+[IVX]+',  # SCENE I, SCENE II, etc.
+            r'^ACT\s+\d+',  # ACT 1, ACT 2, etc.
+            r'^SCENE\s+\d+',  # SCENE 1, SCENE 2, etc.
+            r'^PROLOGUE',
+            r'^EPILOGUE',
+            r'^CHORUS',
+            r'^THE\s+CHORUS',
+            r'^ENTER',
+            r'^EXIT',
+            r'^EXEUNT',
+        ]
 
         lines = play_text.split('\n')
         current_character = None
         section_start = 0
 
         for i, line in enumerate(lines):
-            # Check for character name
-            char_match = re.match(character_pattern, line.strip())
+            line_stripped = line.strip()
+            if not line_stripped:
+                continue
 
+            # Check for character name with dialogue on same line: "ROMEO: Hello there"
+            char_with_dialogue = re.match(character_with_dialogue_pattern, line_stripped)
+            if char_with_dialogue:
+                character = char_with_dialogue.group(1).strip()
+                dialogue_text = char_with_dialogue.group(2).strip()
+                
+                # Skip if it matches exclusion patterns
+                if any(re.match(pattern, character, re.IGNORECASE) for pattern in exclude_patterns):
+                    continue
+
+                # Handle section transitions
+                if character not in current_section["characters"] and current_section["lines"]:
+                    if len(current_section["characters"]) >= 2:
+                        sections.append(current_section.copy())
+                        current_section = {
+                            "characters": {character},
+                            "lines": [],
+                            "start_pos": i
+                        }
+                    else:
+                        current_section["characters"].add(character)
+
+                current_character = character
+                
+                # Extract stage directions from dialogue
+                stage_dir = None
+                if '[' in dialogue_text or '(' in dialogue_text:
+                    stage_dir_match = re.search(r'[\[\(]([^\]\)]+)[\]\)]', dialogue_text)
+                    if stage_dir_match:
+                        stage_dir = stage_dir_match.group(1)
+                        dialogue_text = re.sub(r'[\[\(][^\]\)]+[\]\)]', '', dialogue_text).strip()
+
+                if dialogue_text:
+                    current_section["lines"].append({
+                        "character": current_character,
+                        "text": dialogue_text,
+                        "stage_direction": stage_dir,
+                        "line_num": i
+                    })
+                continue
+
+            # Check for character name only (dialogue on next line)
+            char_match = re.match(character_only_pattern, line_stripped)
             if char_match:
                 character = char_match.group(1).strip()
+                
+                # Skip if it matches exclusion patterns
+                if any(re.match(pattern, character, re.IGNORECASE) for pattern in exclude_patterns):
+                    continue
 
-                # If new character and we have lines, potentially new section
+                # Handle section transitions
                 if character not in current_section["characters"] and current_section["lines"]:
-                    # Check if this should be a new section
                     if len(current_section["characters"]) >= 2:
-                        # Save current section
                         sections.append(current_section.copy())
-
-                        # Start new section
                         current_section = {
                             "characters": {character},
                             "lines": [],
@@ -89,12 +149,25 @@ class SceneExtractor:
                 current_character = character
                 continue
 
-            # Check for dialogue
+            # Check for dialogue (indented or not)
             if current_character:
+                # Try indented dialogue first
                 dialogue_match = re.match(dialogue_pattern, line)
                 if dialogue_match:
                     text = dialogue_match.group(1).strip()
+                else:
+                    # Try non-indented dialogue (sentence case, not all caps)
+                    dialogue_match = re.match(dialogue_no_indent_pattern, line_stripped)
+                    if dialogue_match:
+                        text = dialogue_match.group(1).strip()
+                    else:
+                        # If line has content and doesn't look like a character name, treat as dialogue
+                        if line_stripped and not re.match(character_only_pattern, line_stripped):
+                            text = line_stripped
+                        else:
+                            text = None
 
+                if text:
                     # Extract stage directions
                     stage_dir = None
                     if '[' in text or '(' in text:
@@ -120,8 +193,8 @@ class SceneExtractor:
     def extract_two_person_scenes(
         self,
         sections: List[Dict],
-        min_lines: int = 8,
-        max_lines: int = 50
+        min_lines: int = 4,
+        max_lines: int = 100
     ) -> List[Dict]:
         """
         Extract scenes with exactly two characters.
@@ -150,13 +223,13 @@ class SceneExtractor:
             char1_lines = sum(1 for l in section["lines"] if l["character"] == char1)
             char2_lines = sum(1 for l in section["lines"] if l["character"] == char2)
 
-            # Both characters should have at least 3 lines
-            if char1_lines < 3 or char2_lines < 3:
+            # Both characters should have at least 1 line (relaxed from 2)
+            if char1_lines < 1 or char2_lines < 1:
                 continue
 
-            # Ratio shouldn't be too imbalanced (1:3 max)
+            # Ratio shouldn't be too imbalanced (1:6 max, relaxed from 4)
             ratio = max(char1_lines, char2_lines) / min(char1_lines, char2_lines)
-            if ratio > 3:
+            if ratio > 6:
                 continue
 
             two_person_scenes.append(section)
@@ -174,8 +247,31 @@ class SceneExtractor:
         Returns:
             Scene metadata dict or None if analysis fails
         """
+        # Local import to avoid any issues with closure/free-variable resolution
+        # when using `re` inside comprehensions/generator expressions
+        import re as _re
+
         characters = list(scene_data["characters"])
-        char1, char2 = characters[0], characters[1]
+        
+        # Filter out invalid character names (act/scene headers, etc.)
+        invalid_patterns = [
+            r'^ACT\s+[IVX]+', r'^ACT\s+\d+',
+            r'^SCENE\s+[IVX]+', r'^SCENE\s+\d+',
+            r'^PROLOGUE', r'^EPILOGUE', r'^CHORUS', r'^THE\s+CHORUS',
+            r'^ENTER', r'^EXIT', r'^EXEUNT'
+        ]
+        
+        valid_characters = [
+            char
+            for char in characters
+            if not any(_re.match(pattern, char, _re.IGNORECASE) for pattern in invalid_patterns)
+        ]
+        
+        if len(valid_characters) != 2:
+            print(f"  ✗ Invalid characters detected: {characters}, skipping scene")
+            return None
+        
+        char1, char2 = valid_characters[0], valid_characters[1]
 
         # Build scene text
         scene_text = "\n".join([
@@ -191,7 +287,7 @@ Characters: {char1} and {char2}
 Scene:
 {scene_text[:1500]}
 
-Provide analysis in JSON format:
+Provide analysis as a JSON object with these exact fields:
 {{
     "scene_title": "Brief descriptive title (e.g. 'Romeo & Juliet Balcony Scene')",
     "description": "1-2 sentence summary of what happens",
@@ -208,17 +304,34 @@ Provide analysis in JSON format:
             # Use content analyzer to get response
             from langchain_core.prompts import ChatPromptTemplate
             from langchain_core.output_parsers import StrOutputParser
+            from app.services.ai.langchain.config import get_llm
 
             template = ChatPromptTemplate.from_messages([
                 ("system", "You are a theater expert analyzing scenes. Respond only with valid JSON."),
                 ("human", "{prompt}")
             ])
 
-            chain = template | self.analyzer.llm | StrOutputParser()
+            llm = get_llm(temperature=0.3)
+            chain = template | llm | StrOutputParser()
             response = chain.invoke({"prompt": prompt})
 
-            # Parse JSON
-            analysis = json.loads(response)
+            # Parse JSON - handle both JSON object format and string responses
+            try:
+                # Try parsing as-is (should work with JSON mode)
+                analysis = json.loads(response)
+            except json.JSONDecodeError:
+                # If that fails, try extracting JSON from markdown code blocks
+                import re
+                json_match = re.search(r'```(?:json)?\s*(\{.*?\})\s*```', response, re.DOTALL)
+                if json_match:
+                    analysis = json.loads(json_match.group(1))
+                else:
+                    # Last resort: try to find JSON object in response
+                    json_match = re.search(r'\{.*\}', response, re.DOTALL)
+                    if json_match:
+                        analysis = json.loads(json_match.group(0))
+                    else:
+                        raise ValueError(f"Could not parse JSON from response: {response[:200]}")
 
             # Calculate estimated duration (150 words per minute)
             total_words = sum(len(line["text"].split()) for line in scene_data["lines"])
@@ -314,6 +427,17 @@ Provide analysis in JSON format:
         print("  🎭 Extracting two-person scenes...")
         two_person_scenes = self.extract_two_person_scenes(sections)
         print(f"  Found {len(two_person_scenes)} potential scenes")
+        
+        # Debug: Show why sections might be rejected
+        if len(two_person_scenes) == 0 and len(sections) > 0:
+            two_char_sections = [s for s in sections if len(s["characters"]) == 2]
+            print(f"  Debug: {len(two_char_sections)} sections have exactly 2 characters")
+            if two_char_sections:
+                sample = two_char_sections[0]
+                char1, char2 = list(sample["characters"])
+                char1_lines = sum(1 for l in sample["lines"] if l["character"] == char1)
+                char2_lines = sum(1 for l in sample["lines"] if l["character"] == char2)
+                print(f"  Debug: Sample section has {len(sample['lines'])} lines ({char1}: {char1_lines}, {char2}: {char2_lines})")
 
         # Limit scenes per play
         scenes_to_process = two_person_scenes[:limit_per_play]

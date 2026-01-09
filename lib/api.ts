@@ -29,11 +29,12 @@ async function request<T = unknown>(
     headers.Authorization = `Bearer ${authToken}`;
   }
 
-  // Make request
+  // Make request with redirect handling
   const response = await fetch(fullUrl, {
     method,
     headers,
     body: data ? JSON.stringify(data) : undefined,
+    redirect: 'follow', // Explicitly follow redirects
     ...options,
   });
 
@@ -49,15 +50,35 @@ async function request<T = unknown>(
   // Parse response
   let responseData: T;
   const contentType = response.headers.get("content-type");
-  if (contentType && contentType.includes("application/json")) {
-    responseData = await response.json();
-  } else {
-    responseData = (await response.text()) as unknown as T;
+  
+  try {
+    if (contentType && contentType.includes("application/json")) {
+      responseData = await response.json();
+    } else {
+      const text = await response.text();
+      responseData = text as unknown as T;
+    }
+  } catch (parseError) {
+    // If parsing fails, use empty object
+    responseData = {} as T;
   }
 
   // Throw error for non-2xx responses (mimics axios behavior)
   if (!response.ok) {
-    const error = new Error(response.statusText || "Request failed") as Error & {
+    // Try to extract error message from response
+    let errorMessage = response.statusText || "Request failed";
+    if (responseData && typeof responseData === 'object') {
+      const errorObj = responseData as any;
+      if (errorObj.detail) {
+        errorMessage = errorObj.detail;
+      } else if (errorObj.message) {
+        errorMessage = errorObj.message;
+      } else if (errorObj.error) {
+        errorMessage = errorObj.error;
+      }
+    }
+    
+    const error = new Error(errorMessage) as Error & {
       response?: {
         status: number;
         statusText: string;

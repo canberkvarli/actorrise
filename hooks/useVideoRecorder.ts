@@ -15,6 +15,8 @@ interface UseVideoRecorderReturn {
   recordedUrl: string | null;
   duration: number;
   isSupported: boolean;
+  hasCameraPermission: boolean | null;
+  isAudioOnly: boolean;
   startRecording: () => Promise<void>;
   stopRecording: () => void;
   pauseRecording: () => void;
@@ -50,6 +52,8 @@ export function useVideoRecorder(
   const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
   const [duration, setDuration] = useState(0);
   const [stream, setStream] = useState<MediaStream | null>(null);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
+  const [isAudioOnly, setIsAudioOnly] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -70,23 +74,86 @@ export function useVideoRecorder(
     }
 
     try {
-      // Request camera and microphone access
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: 'user'
-        },
-        audio: true
-      });
+      let mediaStream: MediaStream;
+      let audioOnly = false;
+
+      // First, check camera permission
+      try {
+        const cameraPermission = await navigator.permissions.query({ name: 'camera' as PermissionName });
+        setHasCameraPermission(cameraPermission.state === 'granted');
+        
+        // Try to get camera and microphone access
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              facingMode: 'user'
+            },
+            audio: true
+          });
+        } catch (videoError: any) {
+          // If camera permission is denied, fallback to audio-only
+          if (videoError.name === 'NotAllowedError' || videoError.name === 'PermissionDeniedError') {
+            console.warn('Camera permission denied, falling back to audio-only recording');
+            setHasCameraPermission(false);
+            setIsAudioOnly(true);
+            audioOnly = true;
+            
+            // Request audio-only access
+            mediaStream = await navigator.mediaDevices.getUserMedia({
+              video: false,
+              audio: true
+            });
+          } else {
+            throw videoError;
+          }
+        }
+      } catch (permissionError) {
+        // If permissions API is not supported, try direct access
+        try {
+          mediaStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+              facingMode: 'user'
+            },
+            audio: true
+          });
+        } catch (videoError: any) {
+          // If camera permission is denied, fallback to audio-only
+          if (videoError.name === 'NotAllowedError' || videoError.name === 'PermissionDeniedError') {
+            console.warn('Camera permission denied, falling back to audio-only recording');
+            setHasCameraPermission(false);
+            setIsAudioOnly(true);
+            audioOnly = true;
+            
+            // Request audio-only access
+            mediaStream = await navigator.mediaDevices.getUserMedia({
+              video: false,
+              audio: true
+            });
+          } else {
+            throw videoError;
+          }
+        }
+      }
 
       setStream(mediaStream);
+      setIsAudioOnly(audioOnly);
       chunksRef.current = [];
 
-      // Create MediaRecorder
+      // Create MediaRecorder - use audio mime type if audio-only
+      const mimeType = audioOnly 
+        ? 'audio/webm' 
+        : 'video/webm;codecs=vp9'; // Use VP9 codec if available
+      
       const mediaRecorder = new MediaRecorder(mediaStream, {
-        mimeType: 'video/webm;codecs=vp9' // Use VP9 codec if available
+        mimeType: mimeType
       });
+
+      // Capture audioOnly in closure
+      const isAudioOnlyRecording = audioOnly;
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data && event.data.size > 0) {
@@ -95,7 +162,8 @@ export function useVideoRecorder(
       };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+        const blobType = isAudioOnlyRecording ? 'audio/webm' : 'video/webm';
+        const blob = new Blob(chunksRef.current, { type: blobType });
         const url = URL.createObjectURL(blob);
 
         setRecordedBlob(blob);
@@ -103,9 +171,16 @@ export function useVideoRecorder(
         setIsRecording(false);
         setIsPaused(false);
 
-        // Stop all tracks
-        mediaStream.getTracks().forEach(track => track.stop());
+        // Stop all tracks and turn off camera/microphone
+        mediaStream.getTracks().forEach(track => {
+          track.stop();
+          // Explicitly stop video tracks to turn off camera
+          if (track.kind === 'video') {
+            track.stop();
+          }
+        });
         setStream(null);
+        setIsAudioOnly(false);
 
         // Clear duration interval
         if (durationIntervalRef.current) {
@@ -141,18 +216,21 @@ export function useVideoRecorder(
       // Set time limit if specified
       if (timeLimit) {
         timeLimitTimeoutRef.current = setTimeout(() => {
-          stopRecording();
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+            mediaRecorderRef.current.stop();
+          }
         }, timeLimit * 1000);
       }
 
     } catch (error) {
       console.error('Error starting recording:', error);
+      setIsAudioOnly(false);
       if (onError) onError(error as Error);
     }
   }, [isSupported, timeLimit, onRecordingComplete, onError]);
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
 
       // Clear timeouts/intervals
@@ -165,7 +243,20 @@ export function useVideoRecorder(
         timeLimitTimeoutRef.current = null;
       }
     }
-  }, [isRecording]);
+    
+    // Also stop all tracks immediately when stopping recording to turn off camera
+    if (stream) {
+      stream.getTracks().forEach(track => {
+        track.stop();
+        // Explicitly stop video tracks to turn off camera
+        if (track.kind === 'video') {
+          track.stop();
+        }
+      });
+      setStream(null);
+      setIsAudioOnly(false);
+    }
+  }, [stream]);
 
   const pauseRecording = useCallback(() => {
     if (mediaRecorderRef.current && isRecording && !isPaused) {
@@ -210,6 +301,8 @@ export function useVideoRecorder(
     recordedUrl,
     duration,
     isSupported,
+    hasCameraPermission,
+    isAudioOnly,
     startRecording,
     stopRecording,
     pauseRecording,
