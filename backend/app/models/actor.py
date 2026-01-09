@@ -75,7 +75,7 @@ class Play(Base):
 
     # Relationships
     monologues = relationship("Monologue", back_populates="play")
-    scenes = relationship("Scene", back_populates="play")
+    scenes = relationship("Scene", backref="play", lazy="select")
 
 
 class Monologue(Base):
@@ -212,7 +212,8 @@ class Scene(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=sql_text('now()'))
 
     # Relationships
-    play = relationship("Play", backref="scenes")
+    # Play relationship is defined via backref in Play.scenes
+    # play = relationship("Play", back_populates="scenes", lazy="select")
     lines = relationship("SceneLine", back_populates="scene", order_by="SceneLine.line_order")
     rehearsal_sessions = relationship("RehearsalSession", back_populates="scene")
 

@@ -145,7 +145,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.session) {
         // Auto-login after signup (don't set loading to prevent flickering)
         await syncUserWithBackend(false);
-        router.push("/dashboard");
+        // Send new users through onboarding wizard before dashboard
+        router.push("/onboarding");
       } else {
         // Email confirmation required - show success message
         // User will need to confirm email before logging in

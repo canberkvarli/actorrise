@@ -23,6 +23,10 @@ export default function PlatformLayout({
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const { count: bookmarkCount } = useBookmarkCount();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  
+  // Use SWR hook for cached subscription data - MUST be called before any early returns
+  const { subscription } = useSubscription();
+  const userTier = subscription?.tier_name || "free";
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -49,10 +53,6 @@ export default function PlatformLayout({
       </div>
     );
   }
-
-  // Use SWR hook for cached subscription data
-  const { subscription } = useSubscription();
-  const userTier = subscription?.tier_name || "free";
 
   const navItems = [
     { href: "/dashboard", label: "Dashboard", icon: IconHome },

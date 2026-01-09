@@ -8,8 +8,9 @@ from pydantic import BaseModel
 from typing import Optional
 
 from app.core.database import get_db
-from app.core.auth import get_current_user
-from app.models.actor import User, Monologue
+from app.api.auth import get_current_user
+from app.models.actor import Monologue
+from app.models.user import User
 from app.services.ai.langchain.audition_coach import get_audition_coach
 
 router = APIRouter(prefix="/api/audition", tags=["audition"])

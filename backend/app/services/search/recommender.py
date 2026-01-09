@@ -66,12 +66,27 @@ class Recommender:
                 results = self.semantic_search.search(query, limit=limit * 2, filters=filters)
             except Exception as e:
                 print(f"Semantic search failed: {e}")
+                # Rollback any failed transaction to allow fallback to work
+                try:
+                    self.db.rollback()
+                except Exception:
+                    pass  # Ignore rollback errors
                 results = []
 
         # Fallback to SQL-based recommendations if semantic search returns nothing
         if len(results) < limit:
             print(f"Only {len(results)} semantic results, using SQL fallback")
-            sql_results = self._get_sql_based_recommendations(actor_profile, limit * 2, filters)
+            sql_results = []
+            try:
+                sql_results = self._get_sql_based_recommendations(actor_profile, limit * 2, filters)
+            except Exception as e:
+                print(f"SQL fallback failed: {e}")
+                # Rollback any failed transaction
+                try:
+                    self.db.rollback()
+                except Exception:
+                    pass
+                sql_results = []
 
             # Combine results, avoiding duplicates
             existing_ids = {m.id for m in results}
