@@ -13,8 +13,15 @@ import {
   Bot,
   Check,
   Trophy,
-  Star
+  Star,
+  Mic,
+  MicOff,
+  Volume2,
+  VolumeX,
+  Settings
 } from 'lucide-react';
+import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
+import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
 
 interface RehearsalSession {
   id: number;
@@ -48,6 +55,43 @@ export default function RehearsalPage() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [sessionFeedback, setSessionFeedback] = useState<any>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Voice settings
+  const [voiceEnabled, setVoiceEnabled] = useState(true);
+  const [autoSpeak, setAutoSpeak] = useState(true);
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false);
+
+  // Speech recognition hook
+  const {
+    transcript,
+    isListening,
+    isSupported: isSpeechRecognitionSupported,
+    startListening,
+    stopListening,
+    resetTranscript,
+  } = useSpeechRecognition({
+    continuous: false,
+    interimResults: true,
+    onResult: (text) => {
+      setUserInput(text);
+      stopListening();
+    },
+  });
+
+  // Speech synthesis hook
+  const {
+    speak,
+    cancel: cancelSpeech,
+    isSpeaking,
+    isSupported: isSpeechSynthesisSupported,
+    voices,
+    selectedVoice,
+    setVoice,
+  } = useSpeechSynthesis({
+    rate: 1.0,
+    pitch: 1.0,
+    volume: 1.0,
+  });
 
   useEffect(() => {
     if (sessionId) {
@@ -115,6 +159,11 @@ export default function RehearsalPage() {
       };
 
       setMessages(prev => [...prev, aiMessage]);
+
+      // Auto-speak AI response if voice enabled
+      if (autoSpeak && voiceEnabled && isSpeechSynthesisSupported) {
+        speak(response.data.ai_response);
+      }
 
       // Update session
       setSession({
@@ -273,23 +322,67 @@ export default function RehearsalPage() {
         {/* Input Area */}
         {!showFeedback && (
           <div className="sticky bottom-4 bg-black/40 backdrop-blur-xl rounded-2xl border border-white/10 p-4">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center justify-between gap-3 mb-2">
               <div className="flex items-center gap-2 text-purple-300 text-sm">
                 <User className="w-4 h-4" />
                 <span>{session.user_character}</span>
+              </div>
+
+              {/* Voice Controls */}
+              <div className="flex items-center gap-2">
+                {isSpeechRecognitionSupported && (
+                  <span className="text-xs text-purple-300">
+                    🎤 Voice enabled
+                  </span>
+                )}
+                {isSpeaking && (
+                  <span className="flex items-center gap-1 text-xs text-green-300 animate-pulse">
+                    <Volume2 className="w-3 h-3" />
+                    AI speaking...
+                  </span>
+                )}
+                {isListening && (
+                  <span className="flex items-center gap-1 text-xs text-red-300 animate-pulse">
+                    <Mic className="w-3 h-3" />
+                    Listening...
+                  </span>
+                )}
+                <button
+                  onClick={() => setAutoSpeak(!autoSpeak)}
+                  className="px-2 py-1 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg transition text-xs"
+                  title={autoSpeak ? 'Disable AI voice' : 'Enable AI voice'}
+                >
+                  {autoSpeak ? <Volume2 className="w-3 h-3" /> : <VolumeX className="w-3 h-3" />}
+                </button>
               </div>
             </div>
 
             <div className="flex gap-3">
               <input
                 type="text"
-                value={userInput}
+                value={isListening ? transcript : userInput}
                 onChange={(e) => setUserInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && handleDeliverLine()}
-                placeholder="Type your line here..."
-                disabled={isProcessing}
+                onKeyPress={(e) => e.key === 'Enter' && !isListening && handleDeliverLine()}
+                placeholder={isListening ? 'Listening...' : 'Type or speak your line...'}
+                disabled={isProcessing || isListening}
                 className="flex-1 bg-white/5 border border-white/10 rounded-xl px-6 py-4 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent disabled:opacity-50"
               />
+
+              {/* Voice Input Button */}
+              {isSpeechRecognitionSupported && (
+                <button
+                  onClick={isListening ? stopListening : startListening}
+                  disabled={isProcessing || isSpeaking}
+                  className={`px-4 py-4 border border-white/10 rounded-xl transition ${
+                    isListening
+                      ? 'bg-red-600 hover:bg-red-500 animate-pulse'
+                      : 'bg-white/5 hover:bg-white/10'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                  title={isListening ? 'Stop recording' : 'Record voice'}
+                >
+                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </button>
+              )}
 
               <button
                 onClick={handleRetry}
@@ -319,7 +412,9 @@ export default function RehearsalPage() {
             </div>
 
             <p className="text-xs text-purple-300 mt-2">
-              Press Enter to deliver your line
+              {isSpeechRecognitionSupported
+                ? '🎤 Click the microphone to speak your line, or type and press Enter'
+                : 'Type your line and press Enter to deliver'}
             </p>
           </div>
         )}
