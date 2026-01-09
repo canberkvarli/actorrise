@@ -1,16 +1,61 @@
-"""Analyze monologue content using AI."""
+"""Analyze monologue content using AI.
 
-from openai import OpenAI
+This module has been migrated to use LangChain/LangGraph infrastructure
+while maintaining 100% backward compatibility with existing code.
+"""
+
 import os
 from typing import Dict, List, Optional
-import json
+
+# LangChain imports
+from .langchain.chains import (
+    create_monologue_analysis_chain,
+    create_query_parsing_chain
+)
+from .langchain.embeddings import generate_embedding as langchain_generate_embedding
 
 
 class ContentAnalyzer:
-    """Analyze monologue content using AI"""
+    """
+    Analyze monologue content using AI.
+
+    Now powered by LangChain for better observability, error handling,
+    and future extensibility. The API remains identical to the original
+    OpenAI-based implementation.
+    """
 
     def __init__(self, api_key: Optional[str] = None):
-        self.client = OpenAI(api_key=api_key or os.getenv("OPENAI_API_KEY"))
+        """
+        Initialize ContentAnalyzer with optional API key.
+
+        Args:
+            api_key: Optional OpenAI API key (defaults to OPENAI_API_KEY env var)
+        """
+        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
+
+        # Initialize LangChain chains (lazy loading for performance)
+        self._analysis_chain = None
+        self._query_chain = None
+
+    @property
+    def analysis_chain(self):
+        """Lazy-load the analysis chain"""
+        if self._analysis_chain is None:
+            self._analysis_chain = create_monologue_analysis_chain(
+                temperature=0.3,
+                api_key=self.api_key
+            )
+        return self._analysis_chain
+
+    @property
+    def query_chain(self):
+        """Lazy-load the query parsing chain"""
+        if self._query_chain is None:
+            self._query_chain = create_query_parsing_chain(
+                temperature=0.1,
+                api_key=self.api_key
+            )
+        return self._query_chain
 
     def analyze_monologue(
         self,
@@ -20,7 +65,16 @@ class ContentAnalyzer:
         author: str = "Unknown"
     ) -> Dict:
         """
-        Comprehensive analysis of a monologue.
+        Comprehensive analysis of a monologue using LangChain.
+
+        This method now uses LangChain chains for better observability
+        and error handling, while maintaining the exact same return format.
+
+        Args:
+            text: The monologue text
+            character: Character name
+            play_title: Title of the play
+            author: Author name (default: "Unknown")
 
         Returns:
             {
@@ -34,44 +88,19 @@ class ContentAnalyzer:
                 'scene_description': str
             }
         """
-
-        prompt = f"""Analyze this theatrical monologue and provide structured data:
-
-PLAY: {play_title}
-AUTHOR: {author}
-CHARACTER: {character}
-TEXT:
-{text}
-
-Provide a JSON response with:
-1. primary_emotion: The dominant emotion (choose one: joy, sadness, anger, fear, surprise, disgust, anticipation, trust, melancholy, hope, despair, longing, confusion, determination)
-2. emotion_scores: A dictionary of emotions to scores 0.0-1.0 (include at least 3-5 emotions that are present)
-3. themes: List of 2-4 themes (e.g., love, death, betrayal, identity, power, family, revenge, ambition, honor, fate, freedom, isolation, redemption, madness, jealousy)
-4. tone: Overall tone (choose one: dramatic, comedic, sarcastic, philosophical, romantic, dark, inspirational, melancholic, defiant, contemplative, anguished, joyful)
-5. difficulty_level: beginner, intermediate, or advanced (based on language complexity, emotional range, metaphorical content)
-6. character_age_range: Estimated age (e.g., "teens", "20s", "30s", "40s", "50s", "60+", "20-30", "30-40", etc.)
-7. character_gender: male, female, or any (use "any" if the piece could be performed by any gender)
-8. scene_description: 1-2 sentence description of the dramatic situation/context
-
-Return ONLY valid JSON, no markdown or explanation."""
-
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a theatrical content analyzer specializing in dramatic literature. Return only valid JSON."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.3,
-                response_format={"type": "json_object"}
-            )
-
-            result = json.loads(response.choices[0].message.content)
+            # Use LangChain chain instead of direct OpenAI call
+            result = self.analysis_chain.invoke({
+                "text": text,
+                "character": character,
+                "play_title": play_title,
+                "author": author
+            })
             return result
 
         except Exception as e:
             print(f"Error analyzing monologue: {e}")
-            # Return minimal default analysis
+            # Return minimal default analysis (same as original)
             return {
                 'primary_emotion': 'unknown',
                 'emotion_scores': {},
@@ -84,16 +113,26 @@ Return ONLY valid JSON, no markdown or explanation."""
             }
 
     def generate_embedding(self, text: str) -> List[float]:
-        """Generate semantic embedding for search"""
+        """
+        Generate semantic embedding for search using LangChain.
 
+        This method now uses LangChain's OpenAIEmbeddings for better
+        error handling, automatic retries, and LangSmith tracing.
+
+        Args:
+            text: Text to embed
+
+        Returns:
+            List of floats representing the embedding vector (1536 dimensions)
+        """
         try:
-            response = self.client.embeddings.create(
+            # Use LangChain embedding generation
+            return langchain_generate_embedding(
+                text=text,
                 model="text-embedding-3-small",
-                input=text,
-                dimensions=1536
+                dimensions=1536,
+                api_key=self.api_key
             )
-
-            return response.data[0].embedding
 
         except Exception as e:
             print(f"Error generating embedding: {e}")
@@ -185,7 +224,10 @@ Return ONLY valid JSON, no markdown or explanation."""
 
     def parse_search_query(self, query: str) -> Dict:
         """
-        Parse natural language search query to extract filters.
+        Parse natural language search query to extract filters using LangChain.
+
+        This method now uses LangChain chains for better observability
+        and error handling, while maintaining the exact same return format.
 
         Args:
             query: Natural language query like "funny piece for middle aged woman"
@@ -200,78 +242,10 @@ Return ONLY valid JSON, no markdown or explanation."""
                 'tone': 'comedic' | 'dramatic' | etc. | None
             }
         """
-
-        prompt = f"""Parse this monologue search query and extract any filters the user is specifying:
-
-QUERY: "{query}"
-
-IMPORTANT INSTRUCTIONS:
-- Only extract filters that the user EXPLICITLY wants to filter by
-- If the user mentions a play title (e.g., "Hamlet", "Death of a Salesman"), they want monologues FROM that play or with similar themes
-- DO NOT extract category or author filters based on play title mentions
-- The search uses semantic similarity, so specific titles will match by content, not by filters
-
-Extract the following information if present in the query (return null if not mentioned):
-
-1. gender: Is the user looking for a male, female, or any gender character?
-   - Keywords: man/male/masculine/boy/he/him → "male"
-   - Keywords: woman/female/feminine/girl/she/her → "female"
-   - Otherwise → null
-
-2. age_range: What age range is mentioned?
-   - Keywords: young/teen/teenager/youth → "teens"
-   - Keywords: twenties/20s/young adult → "20s"
-   - Keywords: thirties/30s → "30s"
-   - Keywords: middle aged/forties/40s → "40s"
-   - Keywords: fifties/50s/older → "50s"
-   - Keywords: elderly/senior/60+ → "60+"
-   - Otherwise → null
-
-3. emotion: What primary emotion is requested?
-   - Keywords: funny/comedic/humorous/laugh → "joy"
-   - Keywords: sad/depressing/melancholy/tearful → "sadness"
-   - Keywords: angry/furious/rage → "anger"
-   - Keywords: scary/fearful/anxious → "fear"
-   - Keywords: hopeful/optimistic → "hope"
-   - Keywords: desperate/despairing → "despair"
-   - Otherwise → null
-
-4. themes: What themes are mentioned? (array of strings)
-   - Examples: love, death, betrayal, identity, power, family, revenge, loss, etc.
-   - Return array or null
-
-5. category: Classical or contemporary? ONLY extract if user explicitly requests classical/contemporary era.
-   - Keywords: "classical plays", "classical theatre", "greek tragedy", "elizabethan" → "classical"
-   - Keywords: "modern plays", "contemporary theatre", "recent plays", "new works" → "contemporary"
-   - DO NOT extract category if user mentions specific play titles (Hamlet, Macbeth, etc.) or author names
-   - Otherwise → null
-
-6. tone: What tone is requested?
-   - Keywords: funny/comedic/humorous → "comedic"
-   - Keywords: serious/dramatic/tragic → "dramatic"
-   - Keywords: dark/grim → "dark"
-   - Keywords: romantic/loving → "romantic"
-   - Otherwise → null
-
-Return ONLY valid JSON with these keys. Use null for any filter not mentioned in the query."""
-
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[
-                    {"role": "system", "content": "You are a search query parser for theatrical monologues. Extract filters from natural language queries. Return only valid JSON."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.1,  # Low temperature for consistent extraction
-                response_format={"type": "json_object"}
-            )
-
-            result = json.loads(response.choices[0].message.content)
-
-            # Clean up the result - remove None/null values
-            cleaned = {k: v for k, v in result.items() if v is not None}
-
-            return cleaned
+            # Use LangChain chain instead of direct OpenAI call
+            result = self.query_chain.invoke({"query": query})
+            return result
 
         except Exception as e:
             print(f"Error parsing search query: {e}")

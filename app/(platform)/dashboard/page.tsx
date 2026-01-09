@@ -1,19 +1,20 @@
 "use client";
 
 import { useAuth } from "@/lib/auth";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-import { IconSparkles, IconUserCheck, IconArrowRight, IconBookmark, IconX, IconEye, IconEyeOff, IconDownload } from "@tabler/icons-react";
+import { IconSparkles, IconUserCheck, IconArrowRight, IconBookmark, IconX, IconEye, IconEyeOff, IconDownload, IconInfoCircle } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { Monologue } from "@/types/actor";
 import RecentSearches from "@/components/search/RecentSearches";
 import BookmarksQuickAccess from "@/components/bookmarks/BookmarksQuickAccess";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface ProfileStats {
   completion_percentage: number;
@@ -91,29 +92,41 @@ export default function DashboardPage() {
     }
   };
 
-  const fetchRecommendations = useCallback(async () => {
-    try {
-      const response = await api.get<Monologue[]>("/api/monologues/recommendations?limit=4");
-      setRecommendations(response.data);
-    } catch (error: unknown) {
-      const err = error as { response?: { status?: number } };
-      // 400 means profile not found/incomplete - this is expected
-      if (err.response?.status !== 400) {
-        console.error("Failed to fetch recommendations:", error);
-      }
-    } finally {
-      setIsLoadingRecommendations(false);
-    }
-  }, []);
-
   useEffect(() => {
     // Fetch recommendations only if profile is complete enough
+    // Using a local flag to prevent double-fetching
+    let isMounted = true;
+
+    const fetchRecommendations = async () => {
+      try {
+        const response = await api.get<Monologue[]>("/api/monologues/recommendations?limit=4");
+        if (isMounted) {
+          setRecommendations(response.data);
+        }
+      } catch (error: unknown) {
+        const err = error as { response?: { status?: number } };
+        // 400 means profile not found/incomplete - this is expected
+        if (err.response?.status !== 400) {
+          console.error("Failed to fetch recommendations:", error);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoadingRecommendations(false);
+        }
+      }
+    };
+
     if (!isLoadingStats && stats && stats.completion_percentage >= 50) {
       fetchRecommendations();
     } else if (!isLoadingStats) {
       setIsLoadingRecommendations(false);
     }
-  }, [stats, isLoadingStats, fetchRecommendations]);
+
+    // Cleanup to prevent state updates if component unmounts
+    return () => {
+      isMounted = false;
+    };
+  }, [stats?.completion_percentage, isLoadingStats]); // Only depend on the specific values we check
 
   const headshotUrl = profile?.headshot_url ? cleanImageUrl(profile.headshot_url) : null;
   const displayName = profile?.name || user?.name || user?.email || "Actor";
@@ -319,6 +332,19 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 <CardTitle className="flex items-center gap-2">
                   <IconSparkles className="h-5 w-5 text-primary" />
                   Recommended for you
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <IconInfoCircle className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p className="text-sm">
+                          Recommendations are updated based on your profile preferences, search history, and favorite monologues. 
+                          They refresh automatically as you interact with the platform.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -369,7 +395,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                               {mono.character_name}
                                     </h3>
                                     {mono.is_favorited && (
-                                      <span className="px-2 py-0.5 bg-accent/10 text-accent text-xs font-semibold rounded-full border border-accent/20">
+                                      <span className="px-2 py-0.5 bg-accent/10 text-accent text-xs font-semibold rounded-full">
                                         Bookmarked
                                       </span>
                                     )}
@@ -386,7 +412,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                                   className={`p-2 rounded-full transition-colors ${
                                     mono.is_favorited
                                       ? 'bg-accent/10 hover:bg-accent/20 text-accent'
-                                      : 'hover:bg-muted text-muted-foreground hover:text-accent'
+                                      : 'hover:bg-accent hover:text-accent-foreground text-muted-foreground'
                                   }`}
                                 >
                                   <IconBookmark
@@ -561,8 +587,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               animate={{ opacity: isReadingMode ? 0.95 : 0.5 }}
               exit={{ opacity: 0 }}
               onClick={closeMonologue}
-              transition={{ duration: 0.2, ease: "easeInOut" }}
-              className={`fixed inset-0 z-40 ${
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className={`fixed inset-0 z-[10000] ${
                 isReadingMode ? "bg-black/95" : "bg-black/50"
               }`}
             />
@@ -572,14 +598,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className={`fixed right-0 top-0 bottom-0 z-50 overflow-y-auto transition-all ${
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className={`fixed right-0 top-0 bottom-0 z-[10001] overflow-y-auto transition-all ${
                 isReadingMode
                   ? "w-full bg-background"
                   : "w-full md:w-[600px] lg:w-[700px] bg-background border-l shadow-2xl"
               }`}
             >
-              <div className={`sticky top-0 bg-background/95 backdrop-blur-sm border-b z-10 ${
+              <div className={`sticky top-0 bg-background/95 backdrop-blur-sm border-b z-[10002] ${
                 isReadingMode ? "border-b-0" : ""
               }`}>
                 <div className="flex items-center justify-between p-6">
@@ -601,13 +627,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       {showDownloadMenu && (
                         <>
                           <div
-                            className="fixed inset-0 z-40"
+                            className="fixed inset-0 z-[10003]"
                             onClick={(e) => {
                               e.stopPropagation();
                               setShowDownloadMenu(false);
                             }}
                           />
-                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-50">
+                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-[10004]">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -641,7 +667,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         className={`p-2 rounded-full transition-colors ${
                           selectedMonologue.is_favorited
                             ? 'bg-accent/10 hover:bg-accent/20 text-accent'
-                            : 'hover:bg-muted text-muted-foreground hover:text-accent'
+                            : 'hover:bg-accent hover:text-accent-foreground text-muted-foreground'
                         }`}
                       >
                         <IconBookmark
@@ -700,16 +726,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         {selectedMonologue.text}
                       </p>
                     </div>
-
-                    {/* Stage Directions - If Available */}
-                    {selectedMonologue.stage_directions && (
-                      <div className="bg-muted/30 p-6 rounded-lg border max-w-3xl mx-auto">
-                        <p className="text-base italic text-muted-foreground text-center">
-                          <span className="font-semibold not-italic">Stage Directions: </span>
-                          {selectedMonologue.stage_directions}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <>
@@ -797,15 +813,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           {selectedMonologue.text}
                         </p>
                       </div>
-
-                      {selectedMonologue.stage_directions && (
-                        <div className="bg-muted/50 p-4 rounded-lg border">
-                          <p className="text-sm italic">
-                            <span className="font-semibold not-italic">Stage Directions: </span>
-                            {selectedMonologue.stage_directions}
-                          </p>
-                        </div>
-                      )}
                     </div>
 
                     {/* Stats & Source */}
