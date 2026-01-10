@@ -11,6 +11,19 @@ import { useState, useEffect, useRef } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarkCount";
 import { SWRConfig } from "swr";
 import { useSubscription } from "@/hooks/useSubscription";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+// Create a client instance
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 2 * 60 * 1000, // 2 minutes
+      gcTime: 5 * 60 * 1000, // 5 minutes (formerly cacheTime)
+      refetchOnWindowFocus: true,
+      retry: 1,
+    },
+  },
+});
 
 export default function PlatformLayout({
   children,
@@ -62,6 +75,7 @@ export default function PlatformLayout({
   ];
 
   return (
+    <QueryClientProvider client={queryClient}>
     <SWRConfig
       value={{
         revalidateOnFocus: false,
@@ -280,6 +294,7 @@ export default function PlatformLayout({
       </main>
     </div>
     </SWRConfig>
+    </QueryClientProvider>
   );
 }
 

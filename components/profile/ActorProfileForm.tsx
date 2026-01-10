@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import api from "@/lib/api";
+import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -45,6 +46,7 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 const genres = ["Drama", "Comedy", "Classical", "Contemporary", "Musical", "Shakespeare"];
 
 export function ActorProfileForm() {
+  const queryClient = useQueryClient();
   const [isFetching, setIsFetching] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | null>(null);
@@ -418,10 +420,18 @@ export function ActorProfileForm() {
           });
           finalHeadshotUrl = uploadResponse.data.headshot_url;
           saveData.headshot_url = finalHeadshotUrl;
+          // Invalidate cache after headshot upload
+          queryClient.invalidateQueries({ queryKey: ["profile"] });
+          queryClient.invalidateQueries({ queryKey: ["profile-stats"] });
         }
 
         await api.post("/api/profile", saveData);
         setSaveStatus("saved");
+        
+        // Invalidate profile-related cache
+        queryClient.invalidateQueries({ queryKey: ["profile"] });
+        queryClient.invalidateQueries({ queryKey: ["profile-stats"] });
+        queryClient.invalidateQueries({ queryKey: ["recommendations"] });
         
         // Clear saved status after 3 seconds
         if (saveStatusTimeoutRef.current) {
@@ -558,6 +568,9 @@ export function ActorProfileForm() {
           // Clean the URL - remove trailing query params, fragments, and whitespace
           uploadedUrl = uploadedUrl.trim().split('?')[0].split('#')[0];
           console.log("Uploaded headshot URL (cleaned):", uploadedUrl);
+          // Invalidate cache after headshot upload
+          queryClient.invalidateQueries({ queryKey: ["profile"] });
+          queryClient.invalidateQueries({ queryKey: ["profile-stats"] });
           
           // Set both preview and form value
         setHeadshotPreview(uploadedUrl);
