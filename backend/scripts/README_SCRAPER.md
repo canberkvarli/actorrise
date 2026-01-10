@@ -214,9 +214,7 @@ id | play_id | character_name | text | word_count | character_gender | primary_e
 ### After running the scraper:
 
 1. **Verify data quality**:
-   ```bash
-   python check_db.py
-   ```
+   - Check the database directly or use the API endpoints to verify monologues were added
 
 2. **Test search**:
    - Search for monologues in the web app
