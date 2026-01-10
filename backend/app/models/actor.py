@@ -169,6 +169,7 @@ class Scene(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     play_id = Column(Integer, ForeignKey("plays.id"), nullable=False, index=True)
+    user_script_id = Column(Integer, ForeignKey("user_scripts.id"), nullable=True, index=True)  # Link to user's uploaded script
 
     # Scene Info
     title = Column(String, nullable=False)  # "Romeo & Juliet Balcony Scene"
@@ -214,6 +215,7 @@ class Scene(Base):
     # Relationships
     # Play relationship is defined via backref in Play.scenes
     # play = relationship("Play", back_populates="scenes", lazy="select")
+    user_script = relationship("UserScript", back_populates="scenes", foreign_keys=[user_script_id])
     lines = relationship("SceneLine", back_populates="scene", order_by="SceneLine.line_order")
     rehearsal_sessions = relationship("RehearsalSession", back_populates="scene")
 
@@ -316,4 +318,45 @@ class SceneFavorite(Base):
     scene_id = Column(Integer, ForeignKey("scenes.id"), nullable=False, index=True)
     notes = Column(Text, nullable=True)  # User's notes about this scene
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
+
+
+class UserScript(Base):
+    """User-uploaded scripts (PDF/text files)"""
+    __tablename__ = "user_scripts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+
+    # Script Info
+    title = Column(String, nullable=False)  # Script title
+    author = Column(String, nullable=False)  # Script author
+    description = Column(Text, nullable=True)  # User's description
+
+    # File Info
+    original_filename = Column(String, nullable=False)  # "my_script.pdf"
+    file_path = Column(String, nullable=True)  # Path to stored file
+    file_type = Column(String, nullable=False)  # "pdf", "txt", "docx"
+    file_size_bytes = Column(Integer, nullable=True)
+
+    # Extracted Content
+    raw_text = Column(Text, nullable=True)  # Full extracted text
+    characters = Column(JSON, default=list)  # [{"name": "Sarah", "gender": "female", "description": "..."}, ...]
+
+    # Processing Status
+    processing_status = Column(String, default="pending")  # pending, processing, completed, failed
+    processing_error = Column(Text, nullable=True)  # Error message if failed
+    ai_extraction_completed = Column(Boolean, default=False)
+
+    # Metadata
+    genre = Column(String, nullable=True)
+    estimated_length_minutes = Column(Integer, nullable=True)
+    num_characters = Column(Integer, default=0)
+    num_scenes_extracted = Column(Integer, default=0)
+
+    created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
+    updated_at = Column(DateTime(timezone=True), onupdate=sql_text('now()'))
+
+    # Relationships
+    scenes = relationship("Scene", back_populates="user_script", foreign_keys="Scene.user_script_id")
+
 
