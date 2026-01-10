@@ -4,11 +4,13 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
-import { Theater, Users, Clock, TrendingUp, ChevronRight, Sparkles } from 'lucide-react';
+import { Theater, Users, Clock, TrendingUp, ChevronRight, Sparkles, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
+import { SceneUploadModal } from '@/components/upload/SceneUploadModal';
 
 interface Scene {
   id: number;
@@ -36,6 +38,7 @@ export default function ScenesPage() {
   const router = useRouter();
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [showUploadModal, setShowUploadModal] = useState(false);
   const [filter, setFilter] = useState({
     tone: ''
   });
@@ -81,14 +84,27 @@ export default function ScenesPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <div className="flex items-center gap-3 mb-4">
-            <Theater className="w-8 h-8 text-primary" />
-            <Sparkles className="w-5 h-5 text-primary" />
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <Theater className="w-8 h-8 text-primary" />
+                <Sparkles className="w-5 h-5 text-primary" />
+              </div>
+              <h1 className="text-3xl lg:text-4xl font-bold mb-2">ScenePartner</h1>
+              <p className="text-muted-foreground max-w-2xl">
+                Practice two-person scenes with your AI scene partner. Available 24/7, always ready to rehearse.
+              </p>
+            </div>
+            <Button
+              onClick={() => setShowUploadModal(true)}
+              variant="outline"
+              size="lg"
+              className="gap-2"
+            >
+              <Upload className="h-5 w-5" />
+              Upload Scene
+            </Button>
           </div>
-          <h1 className="text-3xl lg:text-4xl font-bold mb-2">ScenePartner</h1>
-          <p className="text-muted-foreground max-w-2xl">
-            Practice two-person scenes with your AI scene partner. Available 24/7, always ready to rehearse.
-          </p>
         </motion.div>
         {/* Filters */}
         <motion.div
@@ -246,6 +262,16 @@ export default function ScenesPage() {
           </motion.div>
         )}
       </div>
+
+      {/* Upload Modal */}
+      <SceneUploadModal
+        open={showUploadModal}
+        onOpenChange={setShowUploadModal}
+        onSuccess={() => {
+          // Refresh scenes list
+          fetchScenes();
+        }}
+      />
     </div>
   );
 }

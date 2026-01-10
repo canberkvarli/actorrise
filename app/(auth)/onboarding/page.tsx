@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
+import { useQueryClient } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -48,6 +49,7 @@ const ONBOARDING_STORAGE_KEY = 'actorrise_onboarding_progress';
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   
   // Load saved progress from localStorage
   const loadSavedProgress = () => {
@@ -221,6 +223,11 @@ export default function OnboardingPage() {
       const response = await api.post('/api/profile', saveData);
       console.log('Profile saved successfully:', response.data);
 
+      // Invalidate profile-related cache
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["profile-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["recommendations"] });
+
       // Trigger confetti
       confetti({
         particleCount: 100,
@@ -285,6 +292,9 @@ export default function OnboardingPage() {
         });
         const uploadedUrl = response.data.headshot_url.trim().split('?')[0].split('#')[0];
         updateFormData('headshot_url', uploadedUrl);
+        // Invalidate cache after headshot upload
+        queryClient.invalidateQueries({ queryKey: ["profile"] });
+        queryClient.invalidateQueries({ queryKey: ["profile-stats"] });
       } else {
         updateFormData('headshot_url', croppedImage);
       }

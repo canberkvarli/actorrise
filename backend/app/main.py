@@ -4,6 +4,7 @@ from app.api.monologues import router as monologues_router
 from app.api.pricing import router as pricing_router
 from app.api.profile import router as profile_router
 from app.api.scenes import router as scenes_router
+from app.api.scripts import router as scripts_router
 from app.api.subscriptions import router as subscriptions_router
 from app.api.webhooks import router as webhooks_router
 from app.core.config import settings
@@ -30,6 +31,7 @@ app.include_router(auth_router)
 app.include_router(profile_router)
 app.include_router(monologues_router)
 app.include_router(scenes_router)
+app.include_router(scripts_router)
 app.include_router(audition_router)
 app.include_router(pricing_router)
 app.include_router(subscriptions_router)
