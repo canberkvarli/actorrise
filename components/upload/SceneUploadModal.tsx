@@ -115,9 +115,12 @@ export function SceneUploadModal({
 
       onOpenChange(false);
       onSuccess?.();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Upload error:", error);
-      toast.error(error?.response?.data?.detail || "Failed to upload scene");
+      const errorMessage = error && typeof error === 'object' && 'response' in error
+        ? (error as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : undefined;
+      toast.error(errorMessage || "Failed to upload scene");
     } finally {
       setIsLoading(false);
     }
