@@ -10,7 +10,6 @@ import { Select } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { SceneUploadModal } from '@/components/upload/SceneUploadModal';
 
 interface Scene {
   id: number;
@@ -38,7 +37,6 @@ export default function ScenesPage() {
   const router = useRouter();
   const [scenes, setScenes] = useState<Scene[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showUploadModal, setShowUploadModal] = useState(false);
   const [filter, setFilter] = useState({
     tone: ''
   });
@@ -96,13 +94,13 @@ export default function ScenesPage() {
               </p>
             </div>
             <Button
-              onClick={() => setShowUploadModal(true)}
+              onClick={() => router.push('/my-scripts')}
               variant="outline"
               size="lg"
               className="gap-2"
             >
               <Upload className="h-5 w-5" />
-              Upload Scene
+              Upload Script
             </Button>
           </div>
         </motion.div>
@@ -262,16 +260,6 @@ export default function ScenesPage() {
           </motion.div>
         )}
       </div>
-
-      {/* Upload Modal */}
-      <SceneUploadModal
-        open={showUploadModal}
-        onOpenChange={setShowUploadModal}
-        onSuccess={() => {
-          // Refresh scenes list
-          fetchScenes();
-        }}
-      />
     </div>
   );
 }

@@ -9,13 +9,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconUpload } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
 import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { MonologueUploadModal } from "@/components/upload/MonologueUploadModal";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -37,7 +36,6 @@ export default function SearchPage() {
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [showBookmarkedOnly, setShowBookmarkedOnly] = useState(false);
-  const [showUploadModal, setShowUploadModal] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // Scroll panel to top when monologue is selected
@@ -376,15 +374,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setShowUploadModal(true)}
-              variant="outline"
-              size="lg"
-              className="gap-2"
-            >
-              <IconUpload className="h-5 w-5" />
-              Upload Script
-            </Button>
             <Button
               onClick={handleFindForMe}
               disabled={isLoading}
@@ -969,18 +958,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </>
         )}
       </AnimatePresence>
-
-      {/* Upload Modal */}
-      <MonologueUploadModal
-        open={showUploadModal}
-        onOpenChange={setShowUploadModal}
-        onSuccess={() => {
-          // Optionally refresh search results
-          if (hasSearched) {
-            handleSearch();
-          }
-        }}
-      />
     </div>
   );
 }
