@@ -177,7 +177,7 @@ export default function MyScriptsPage() {
             </div>
             <h1 className="text-4xl font-bold mb-2">My Scripts</h1>
             <p className="text-muted-foreground text-lg">
-              Upload your scripts and let AI extract scenes for ScenePartner practice
+              Upload your scripts (PDF/TXT) and AI will extract characters, scenes, and monologues. Practice with ScenePartner or edit everything inline.
             </p>
           </div>
 
@@ -233,7 +233,7 @@ export default function MyScriptsPage() {
             <FileText className="w-16 h-16 text-muted-foreground/50 mx-auto mb-4" />
             <h3 className="text-lg font-semibold mb-2">No scripts yet</h3>
             <p className="text-sm text-muted-foreground mb-6">
-              Upload your first script to get started. AI will automatically extract characters and scenes.
+              Upload a script (PDF/TXT) - audition sides, play, or scene - and AI will extract everything: characters, dialogue, scenes. Then edit inline or practice with ScenePartner.
             </p>
             <Button
               onClick={() => document.getElementById("script-upload")?.click()}
