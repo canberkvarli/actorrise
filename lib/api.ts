@@ -116,5 +116,51 @@ export const api = {
 
 export default api;
 
+// ============================================================================
+// Upload API Functions
+// ============================================================================
+
+export interface MonologueUploadData {
+  title: string;
+  character_name: string;
+  text: string;
+  stage_directions?: string;
+  play_title: string;
+  author: string;
+  character_gender?: string;
+  character_age_range?: string;
+  notes?: string;
+}
+
+export interface SceneLineUploadData {
+  character_name: string;
+  text: string;
+  stage_direction?: string;
+}
+
+export interface SceneUploadData {
+  title: string;
+  play_title: string;
+  author: string;
+  description?: string;
+  character_1_name: string;
+  character_2_name: string;
+  character_1_gender?: string;
+  character_2_gender?: string;
+  character_1_age_range?: string;
+  character_2_age_range?: string;
+  setting?: string;
+  context_before?: string;
+  context_after?: string;
+  lines: SceneLineUploadData[];
+}
+
+export async function uploadMonologue(data: MonologueUploadData) {
+  return api.post("/api/monologues/upload", data);
+}
+
+export async function uploadScene(data: SceneUploadData) {
+  return api.post("/api/scenes/upload", data);
+}
 
 

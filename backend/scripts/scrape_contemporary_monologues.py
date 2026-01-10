@@ -136,7 +136,7 @@ class ContemporaryMonologueScraper:
                         'author': author,
                         'full_text': full_text,
                         'source': 'Project Gutenberg - Contemporary One-Act Plays',
-                        'category': 'Contemporary',
+                        'category': 'contemporary',
                         'year': 1922
                     })
 
@@ -320,7 +320,7 @@ class ContemporaryMonologueScraper:
                     author=play_data['author'],
                     year_written=play_data['year'],
                     genre='Drama',
-                    category='Contemporary',
+                    category='contemporary',
                     copyright_status='public_domain',
                     license_type='public_domain',
                     source_url=collection['url'],
