@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select } from "@/components/ui/select";
 import { uploadMonologue, type MonologueUploadData } from "@/lib/api";
 import { toast } from "sonner";
 import { Upload, Loader2 } from "lucide-react";
@@ -136,18 +136,15 @@ export function MonologueUploadModal({
             <div className="space-y-2">
               <Label htmlFor="character_gender">Character Gender (Optional)</Label>
               <Select
-                value={formData.character_gender}
-                onValueChange={(value) => setFormData({ ...formData, character_gender: value })}
+                id="character_gender"
+                value={formData.character_gender || ""}
+                onChange={(e) => setFormData({ ...formData, character_gender: e.target.value || undefined })}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">Male</SelectItem>
-                  <SelectItem value="female">Female</SelectItem>
-                  <SelectItem value="non-binary">Non-binary</SelectItem>
-                  <SelectItem value="any">Any</SelectItem>
-                </SelectContent>
+                <option value="">Select gender</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="non-binary">Non-binary</option>
+                <option value="any">Any</option>
               </Select>
             </div>
             <div className="space-y-2">

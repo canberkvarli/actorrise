@@ -1,0 +1,87 @@
+"use client";
+
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import api from "@/lib/api";
+import { Monologue } from "@/types/actor";
+
+interface ProfileStats {
+  completion_percentage: number;
+  has_headshot: boolean;
+  preferred_genres_count: number;
+  profile_bias_enabled: boolean;
+}
+
+interface ActorProfile {
+  name?: string | null;
+  headshot_url?: string | null;
+}
+
+// Hook for profile stats
+export function useProfileStats() {
+  return useQuery<ProfileStats>({
+    queryKey: ["profile-stats"],
+    queryFn: async () => {
+      const response = await api.get<ProfileStats>("/api/profile/stats");
+      return response.data;
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+    retry: 1,
+  });
+}
+
+// Hook for profile data
+export function useProfile() {
+  return useQuery<ActorProfile | null>({
+    queryKey: ["profile"],
+    queryFn: async () => {
+      try {
+        const response = await api.get<ActorProfile>("/api/profile");
+        return response.data;
+      } catch (error: unknown) {
+        const err = error as { response?: { status?: number } };
+        // 404 is expected if profile doesn't exist yet
+        if (err.response?.status === 404) {
+          return null;
+        }
+        throw error;
+      }
+    },
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 30 * 60 * 1000, // 30 minutes
+    retry: 1,
+  });
+}
+
+// Hook for recommendations
+export function useRecommendations(enabled: boolean = true) {
+  return useQuery<Monologue[]>({
+    queryKey: ["recommendations"],
+    queryFn: async () => {
+      const response = await api.get<Monologue[]>("/api/monologues/recommendations?limit=4");
+      return response.data;
+    },
+    enabled, // Only fetch if profile is complete enough
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+  });
+}
+
+// Hook for updating profile (with cache invalidation)
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (profileData: any) => {
+      const response = await api.post("/api/profile", profileData);
+      return response.data;
+    },
+    onSuccess: () => {
+      // Invalidate profile-related queries
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      queryClient.invalidateQueries({ queryKey: ["profile-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["recommendations"] });
+    },
+  });
+}
