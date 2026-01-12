@@ -390,7 +390,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p className="text-sm">
-                    Get AI-powered monologue recommendations tailored to your actor profile. 
+                    Get AI-powered monologue recommendations tailored to your actor profile.
                     Complete your profile for the best personalized suggestions.
                   </p>
                 </TooltipContent>

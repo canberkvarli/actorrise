@@ -696,3 +696,148 @@ async def get_author_distribution(
     print(f"{'='*70}\n")
 
     return result
+
+
+class MonologueUpload(BaseModel):
+    """Schema for uploading a custom monologue"""
+    title: str
+    character_name: str
+    text: str
+    stage_directions: Optional[str] = None
+    play_title: str
+    author: str
+    character_gender: Optional[str] = None
+    character_age_range: Optional[str] = None
+    notes: Optional[str] = None  # User's notes about the piece
+
+
+@router.post("/upload", response_model=MonologueResponse)
+async def upload_monologue(
+    upload: MonologueUpload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Upload a custom monologue from user's own script.
+
+    This allows users to upload their own scripts and use them with
+    Scene Partner and other features.
+    """
+    from app.services.ai.content_analyzer import ContentAnalyzer
+    import json
+
+    try:
+        # Check if play exists (user-uploaded custom play)
+        play = db.query(Play).filter(
+            Play.title == upload.play_title,
+            Play.author == upload.author,
+            Play.copyright_status == 'user_uploaded'
+        ).first()
+
+        if not play:
+            # Create a custom play record for user uploads
+            play = Play(
+                title=upload.play_title,
+                author=upload.author,
+                year_written=None,
+                genre='Custom',
+                category='contemporary',
+                copyright_status='user_uploaded',
+                license_type='user_content',
+                source_url=None,
+                full_text=None,  # Don't store full text for user uploads
+                text_format='plain'
+            )
+            db.add(play)
+            db.commit()
+            db.refresh(play)
+
+        # Use AI to analyze the monologue
+        analyzer = ContentAnalyzer()
+        analysis = analyzer.analyze_monologue(
+            text=upload.text,
+            character=upload.character_name,
+            play_title=upload.play_title,
+            author=upload.author
+        )
+
+        # Generate embedding for search
+        embedding = analyzer.generate_embedding(
+            f"{upload.character_name} from {upload.play_title}: {upload.text[:500]}"
+        )
+
+        # Calculate word count and duration
+        word_count = len(upload.text.split())
+        duration_seconds = int((word_count / 150) * 60)
+
+        # Use provided gender/age if available, otherwise use AI analysis
+        character_gender = upload.character_gender or analysis.get('character_gender')
+        character_age_range = upload.character_age_range or analysis.get('character_age_range')
+
+        # Create monologue record
+        monologue = Monologue(
+            play_id=play.id,
+            title=upload.title,
+            character_name=upload.character_name,
+            text=upload.text,
+            stage_directions=upload.stage_directions,
+            character_gender=character_gender,
+            character_age_range=character_age_range,
+            primary_emotion=analysis.get('primary_emotion'),
+            emotion_scores=analysis.get('emotion_scores', {}),
+            themes=analysis.get('themes', []),
+            tone=analysis.get('tone'),
+            difficulty_level=analysis.get('difficulty_level'),
+            word_count=word_count,
+            estimated_duration_seconds=duration_seconds,
+            embedding=json.dumps(embedding) if embedding else None,
+            overdone_score=0.0,  # User uploads start at 0
+            is_verified=False  # Mark as user content
+        )
+
+        db.add(monologue)
+        db.commit()
+        db.refresh(monologue)
+
+        # Automatically favorite the uploaded monologue for the user
+        favorite = MonologueFavorite(
+            user_id=current_user.id,
+            monologue_id=monologue.id,
+            notes=upload.notes
+        )
+        db.add(favorite)
+        monologue.favorite_count += 1
+        db.commit()
+
+        return MonologueResponse(
+            id=monologue.id,
+            title=monologue.title,
+            character_name=monologue.character_name,
+            text=monologue.text,
+            stage_directions=monologue.stage_directions,
+            play_title=play.title,
+            play_id=play.id,
+            author=play.author,
+            category=play.category,
+            character_gender=monologue.character_gender,
+            character_age_range=monologue.character_age_range,
+            primary_emotion=monologue.primary_emotion,
+            emotion_scores=monologue.emotion_scores,
+            themes=monologue.themes or [],
+            tone=monologue.tone,
+            difficulty_level=monologue.difficulty_level,
+            word_count=monologue.word_count,
+            estimated_duration_seconds=monologue.estimated_duration_seconds,
+            view_count=monologue.view_count,
+            favorite_count=monologue.favorite_count,
+            is_favorited=True,
+            overdone_score=monologue.overdone_score,
+            scene_description=monologue.scene_description
+        )
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to upload monologue: {str(e)}"
+        )

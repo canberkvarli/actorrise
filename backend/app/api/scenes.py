@@ -570,3 +570,205 @@ async def list_rehearsal_sessions(
     ).offset(skip).limit(limit).all()
 
     return [RehearsalSessionResponse(**s.__dict__) for s in sessions]
+
+
+# ============================================================================
+# Scene Upload
+# ============================================================================
+
+class SceneLineUpload(BaseModel):
+    """Schema for uploading a scene line"""
+    character_name: str
+    text: str
+    stage_direction: Optional[str] = None
+
+
+class SceneUpload(BaseModel):
+    """Schema for uploading a custom scene"""
+    title: str
+    play_title: str
+    author: str
+    description: Optional[str] = None
+    character_1_name: str
+    character_2_name: str
+    character_1_gender: Optional[str] = None
+    character_2_gender: Optional[str] = None
+    character_1_age_range: Optional[str] = None
+    character_2_age_range: Optional[str] = None
+    setting: Optional[str] = None
+    context_before: Optional[str] = None
+    context_after: Optional[str] = None
+    lines: List[SceneLineUpload]  # All the dialogue lines
+
+
+@router.post("/upload", response_model=SceneDetailResponse)
+async def upload_scene(
+    upload: SceneUpload,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Upload a custom scene from user's own script.
+
+    This allows users to upload their own scripts and rehearse with Scene Partner.
+    """
+    from app.models.actor import Play, SceneLine
+
+    try:
+        # Validate that we have at least 2 lines
+        if len(upload.lines) < 2:
+            raise HTTPException(
+                status_code=400,
+                detail="Scene must have at least 2 lines"
+            )
+
+        # Validate that both characters appear in the lines
+        character_names = {upload.character_1_name, upload.character_2_name}
+        line_characters = {line.character_name for line in upload.lines}
+
+        if not character_names.issubset(line_characters):
+            missing = character_names - line_characters
+            raise HTTPException(
+                status_code=400,
+                detail=f"Characters {missing} must have lines in the scene"
+            )
+
+        # Check if play exists (user-uploaded custom play)
+        play = db.query(Play).filter(
+            Play.title == upload.play_title,
+            Play.author == upload.author,
+            Play.copyright_status == 'user_uploaded'
+        ).first()
+
+        if not play:
+            # Create a custom play record for user uploads
+            play = Play(
+                title=upload.play_title,
+                author=upload.author,
+                year_written=None,
+                genre='Custom',
+                category='contemporary',
+                copyright_status='user_uploaded',
+                license_type='user_content',
+                source_url=None,
+                full_text=None,
+                text_format='plain'
+            )
+            db.add(play)
+            db.commit()
+            db.refresh(play)
+
+        # Calculate scene metadata
+        total_words = sum(len(line.text.split()) for line in upload.lines)
+        estimated_duration = int((total_words / 150) * 60)  # ~150 words per minute
+
+        # Create scene record
+        scene = Scene(
+            play_id=play.id,
+            title=upload.title,
+            act=None,  # User scenes don't have act/scene numbers
+            scene_number=None,
+            description=upload.description,
+            character_1_name=upload.character_1_name,
+            character_2_name=upload.character_2_name,
+            character_1_gender=upload.character_1_gender,
+            character_2_gender=upload.character_2_gender,
+            character_1_age_range=upload.character_1_age_range,
+            character_2_age_range=upload.character_2_age_range,
+            line_count=len(upload.lines),
+            estimated_duration_seconds=estimated_duration,
+            difficulty_level='intermediate',  # Default for user uploads
+            primary_emotions=[],  # Could enhance with AI analysis
+            relationship_dynamic=None,
+            tone=None,
+            context_before=upload.context_before,
+            context_after=upload.context_after,
+            setting=upload.setting,
+            rehearsal_count=0,
+            favorite_count=0,
+            is_verified=False  # Mark as user content
+        )
+
+        db.add(scene)
+        db.commit()
+        db.refresh(scene)
+
+        # Add scene lines
+        scene_lines = []
+        for idx, line_data in enumerate(upload.lines):
+            scene_line = SceneLine(
+                scene_id=scene.id,
+                line_order=idx,
+                character_name=line_data.character_name,
+                text=line_data.text,
+                stage_direction=line_data.stage_direction,
+                word_count=len(line_data.text.split()),
+                primary_emotion=None  # Could enhance with AI analysis
+            )
+            db.add(scene_line)
+            scene_lines.append(scene_line)
+
+        db.commit()
+
+        # Refresh to get IDs
+        for line in scene_lines:
+            db.refresh(line)
+
+        # Automatically favorite the uploaded scene for the user
+        favorite = SceneFavorite(
+            user_id=current_user.id,
+            scene_id=scene.id
+        )
+        db.add(favorite)
+        scene.favorite_count += 1
+        db.commit()
+
+        # Return the complete scene with lines
+        return SceneDetailResponse(
+            id=scene.id,
+            play_id=play.id,
+            play_title=play.title,
+            play_author=play.author,
+            title=scene.title,
+            act=scene.act,
+            scene_number=scene.scene_number,
+            description=scene.description,
+            character_1_name=scene.character_1_name,
+            character_2_name=scene.character_2_name,
+            character_1_gender=scene.character_1_gender,
+            character_2_gender=scene.character_2_gender,
+            character_1_age_range=scene.character_1_age_range,
+            character_2_age_range=scene.character_2_age_range,
+            line_count=scene.line_count,
+            estimated_duration_seconds=scene.estimated_duration_seconds,
+            primary_emotions=scene.primary_emotions or [],
+            relationship_dynamic=scene.relationship_dynamic,
+            tone=scene.tone,
+            setting=scene.setting,
+            context_before=scene.context_before,
+            context_after=scene.context_after,
+            rehearsal_count=scene.rehearsal_count,
+            favorite_count=scene.favorite_count,
+            is_favorited=True,
+            lines=[
+                SceneLineResponse(
+                    id=line.id,
+                    line_order=line.line_order,
+                    character_name=line.character_name,
+                    text=line.text,
+                    stage_direction=line.stage_direction,
+                    word_count=line.word_count,
+                    primary_emotion=line.primary_emotion
+                )
+                for line in scene_lines
+            ]
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to upload scene: {str(e)}"
+        )
