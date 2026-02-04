@@ -8,8 +8,9 @@ This module handles:
 
 import os
 from typing import Optional
-from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
 
 def configure_langsmith():

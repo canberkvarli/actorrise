@@ -14,9 +14,15 @@ interface PlanBadgeProps {
   planName: string;
   variant?: "default" | "outline" | "secondary";
   showIcon?: boolean;
+  className?: string;
 }
 
-export function PlanBadge({ planName, variant = "default", showIcon = true }: PlanBadgeProps) {
+export function PlanBadge({
+  planName,
+  variant = "outline",
+  showIcon = true,
+  className,
+}: PlanBadgeProps) {
   const getIcon = () => {
     switch (planName.toLowerCase()) {
       case "pro":
@@ -41,8 +47,15 @@ export function PlanBadge({ planName, variant = "default", showIcon = true }: Pl
     }
   };
 
+  const combinedClassName = [
+    showIcon ? "gap-1" : "",
+    className || "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return (
-    <Badge variant={variant} className={showIcon ? "gap-1" : ""}>
+    <Badge variant={variant} className={combinedClassName}>
       {showIcon && getIcon()}
       {getDisplayName()}
     </Badge>

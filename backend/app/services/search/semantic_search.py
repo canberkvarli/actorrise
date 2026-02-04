@@ -2,11 +2,14 @@
 
 import hashlib
 import json
+import re
 from typing import Dict, List, Optional
 
 import numpy as np
 from app.models.actor import Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
+from app.services.search.cache_manager import cache_manager
+from app.services.search.query_optimizer import QueryOptimizer
 from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session
 
@@ -17,9 +20,12 @@ class SemanticSearch:
     def __init__(self, db: Session):
         self.db = db
         self.analyzer = ContentAnalyzer()
-        # Simple in-memory cache for embeddings (consider Redis for production)
+        # Simple in-memory cache for embeddings (Level 0 hot cache).
+        # For production-grade caching, we also use the global Redis-based cache_manager.
         self._embedding_cache = {}
         self._query_parse_cache = {}
+        self.query_optimizer = QueryOptimizer()
+        self.cache = cache_manager
 
     def search(
         self,
@@ -50,59 +56,113 @@ class SemanticSearch:
         import time
         overall_start = time.time()
 
-        # Parse query to extract filters using AI (with caching)
-        # Skip AI parsing if explicit filters are provided (optimization)
-        if filters and len(filters) > 0:
-            # If user provided explicit filters, skip AI parsing to save costs
+        # Normalize explicit filters once
+        explicit_filters = filters or {}
+
+        # Tiered, cost-aware query optimization:
+        # - Tier 1/2: keyword-only extraction (no AI parsing)
+        # - Tier 3: allow AI parsing (with Redis + in-memory caching)
+        tier, optimized_filters = self.query_optimizer.optimize(query, explicit_filters)
+        print(f"Query tier: {tier}, optimized (keyword + explicit) filters: {optimized_filters}")
+
+        extracted_filters: Dict = {}
+        if explicit_filters:
+            # If the user provided explicit filters, skip AI parsing entirely to save cost.
             print("Using explicit filters, skipping AI query parsing")
-            extracted_filters = {}
         else:
-            # Cache query parsing results
-            query_hash = hashlib.md5(query.lower().encode()).hexdigest()
-            if query_hash in self._query_parse_cache:
-                print(f"✅ Using cached query parse for: {query}")
-                extracted_filters = self._query_parse_cache[query_hash]
+            if tier in (1, 2):
+                # For simple/medium queries, rely on keyword extraction only (no AI).
+                print("Tier 1/2 query with no explicit filters - skipping AI query parsing")
             else:
-                parse_start = time.time()
-                print(f"🤖 Parsing query for filters: {query}")
-                extracted_filters = self.analyzer.parse_search_query(query)
-                parse_time = time.time() - parse_start
-                print(f"⏱️  Query parsing took {parse_time:.2f}s")
-                self._query_parse_cache[query_hash] = extracted_filters
-                # Limit cache size to prevent memory issues
-                if len(self._query_parse_cache) > 1000:
-                    # Remove oldest entry (simple FIFO)
-                    oldest_key = next(iter(self._query_parse_cache))
-                    del self._query_parse_cache[oldest_key]
+                # Tier 3: complex semantic query – use AI parsing with multi-level caching.
+                query_hash = hashlib.md5(query.lower().encode()).hexdigest()
 
-        print(f"Extracted filters: {extracted_filters}")
+                # Level 0: in-memory cache
+                if query_hash in self._query_parse_cache:
+                    print(f"✅ Using in-memory cached query parse for: {query}")
+                    extracted_filters = self._query_parse_cache[query_hash]
+                else:
+                    # Level 1: Redis cache via CacheManager
+                    cached_filters = self.cache.get_parsed_filters(query)
+                    if cached_filters:
+                        print(f"✅ Using Redis cached query parse for: {query}")
+                        extracted_filters = cached_filters
+                        self._query_parse_cache[query_hash] = extracted_filters
+                    else:
+                        parse_start = time.time()
+                        print(f"🤖 Parsing query for filters (AI): {query}")
+                        extracted_filters = self.analyzer.parse_search_query(query)
+                        parse_time = time.time() - parse_start
+                        print(f"⏱️  Query parsing took {parse_time:.2f}s")
+                        # Store in both in-memory and Redis caches
+                        self._query_parse_cache[query_hash] = extracted_filters
+                        self.cache.set_parsed_filters(query, extracted_filters)
 
-        # Merge extracted filters with explicit filters (explicit takes precedence)
-        merged_filters = {**(extracted_filters or {}), **(filters or {})}
-        print(f"Merged filters: {merged_filters}")
+                        # Limit in-memory cache size to prevent memory issues
+                        if len(self._query_parse_cache) > 1000:
+                            # Remove oldest entry (simple FIFO)
+                            oldest_key = next(iter(self._query_parse_cache))
+                            del self._query_parse_cache[oldest_key]
 
-        # Generate embedding for query (with caching)
+        print(f"Extracted filters (AI): {extracted_filters}")
+
+        # Merge filters in precedence order:
+        # AI-parsed < keyword-derived (optimized) < explicit filters
+        merged_filters = {**(extracted_filters or {}), **(optimized_filters or {})}
+        print(f"Merged filters (final): {merged_filters}")
+
+        # Optional: check Redis cache for full search results for this (query, filters, user)
+        cache_filters_for_results: Dict = dict(merged_filters)
+        if user_id is not None:
+            cache_filters_for_results["_user_id"] = user_id
+
+        cached_result_ids = self.cache.get_search_results(query, cache_filters_for_results)
+        if cached_result_ids:
+            print(f"✅ Using cached search results for query='{query}' filters={cache_filters_for_results}")
+            # Re-load monologues by ID to get current ORM instances, preserving order.
+            mons = self.db.query(Monologue).join(Play).filter(Monologue.id.in_(cached_result_ids)).all()
+            mon_by_id = {m.id: m for m in mons}
+            ordered = [mon_by_id[mid] for mid in cached_result_ids if mid in mon_by_id]
+            overall_time = time.time() - overall_start
+            print(f"⏱️  Total search time (cache hit): {overall_time:.2f}s, results: {len(ordered)}")
+            return ordered[:limit]
+
+        # Generate embedding for query (with caching at multiple levels)
         query_hash = hashlib.md5(query.lower().encode()).hexdigest()
         if query_hash in self._embedding_cache:
             print(f"✅ Using cached embedding for: {query}")
             query_embedding = self._embedding_cache[query_hash]
         else:
-            emb_start = time.time()
-            print(f"🔢 Generating embedding for query: {query}")
-            query_embedding = self.analyzer.generate_embedding(query)
-            emb_time = time.time() - emb_start
-            print(f"⏱️  Embedding generation took {emb_time:.2f}s")
-            if query_embedding:
+            # Try Redis-backed embedding cache first
+            cached_embedding = self.cache.get_embedding(query)
+            if cached_embedding:
+                print(f"✅ Using Redis cached embedding for: {query}")
+                query_embedding = cached_embedding
                 self._embedding_cache[query_hash] = query_embedding
-                # Limit cache size to prevent memory issues
-                if len(self._embedding_cache) > 1000:
-                    # Remove oldest entry (simple FIFO)
-                    oldest_key = next(iter(self._embedding_cache))
-                    del self._embedding_cache[oldest_key]
+            else:
+                emb_start = time.time()
+                print(f"🔢 Generating embedding for query (AI): {query}")
+                query_embedding = self.analyzer.generate_embedding(query)
+                emb_time = time.time() - emb_start
+                print(f"⏱️  Embedding generation took {emb_time:.2f}s")
+                if query_embedding:
+                    # Store in in-memory and Redis caches
+                    self._embedding_cache[query_hash] = query_embedding
+                    self.cache.set_embedding(query, query_embedding)
+                    # Limit in-memory cache size to prevent memory issues
+                    if len(self._embedding_cache) > 1000:
+                        # Remove oldest entry (simple FIFO)
+                        oldest_key = next(iter(self._embedding_cache))
+                        del self._embedding_cache[oldest_key]
 
         if not query_embedding:
             print("Failed to generate embedding, falling back to text search")
             return self._fallback_text_search(query, limit, merged_filters)
+
+        # Hybrid search: run text search for direct play/character/title matches and merge on top.
+        # Many monologues (e.g. from Gutenberg) have no embeddings, so "hamlet" would otherwise
+        # return only semantic results from other plays and never show Hamlet.
+        text_match_results = self._fallback_text_search(query, limit=limit, filters=merged_filters)
 
         # Build base query
         base_query = self.db.query(Monologue).join(Play)
@@ -245,7 +305,22 @@ class SemanticSearch:
 
         # Sort by similarity (descending) and limit
         results_with_scores.sort(key=lambda x: x[1], reverse=True)
-        top_results = results_with_scores[:limit]
+        top_semantic = [(mono, score) for mono, score in results_with_scores[:limit]]
+
+        # Merge hybrid: text matches (play/character/title) first, then semantic results not already in text matches
+        if text_match_results:
+            existing_ids = {m.id for m in text_match_results}
+            semantic_only = [(mono, score) for mono, score in top_semantic if mono.id not in existing_ids]
+            # Fill up to limit: text matches first, then semantic
+            combined = list(text_match_results)
+            for mono, _ in semantic_only:
+                if len(combined) >= limit:
+                    break
+                combined.append(mono)
+            top_results = [(m, 0.0) for m in combined[:limit]]  # keep (mono, score) for fallback logic
+            print(f"Hybrid: {len(text_match_results)} text matches + {min(len(semantic_only), limit - len(text_match_results))} semantic = {len(combined)} results")
+        else:
+            top_results = top_semantic
 
         # FALLBACK: If we don't have enough semantic results, supplement with text search
         # This ensures users get results even when embeddings aren't available
@@ -267,6 +342,14 @@ class SemanticSearch:
 
             # Combine results: semantic results first, then fallback
             final_results = [mono for mono, _ in top_results] + fallback_unique
+
+            # Cache final ordered results (per query + filters + user) in Redis.
+            self.cache.set_search_results(
+                query,
+                cache_filters_for_results,
+                [m.id for m in final_results],
+            )
+
             overall_time = time.time() - overall_start
             print(f"⏱️  Total search time: {overall_time:.2f}s")
             print(f"Final results: {len([mono for mono, _ in top_results])} semantic + {len(fallback_unique)} text search = {len(final_results)} total")
@@ -294,7 +377,16 @@ class SemanticSearch:
             print(f"  • {author}: {count}")
         print("=== END DEBUG ===\n")
 
-        return [mono for mono, _ in top_results]
+        final_semantic_results = [mono for mono, _ in top_results]
+
+        # Cache final ordered results (per query + filters + user) in Redis.
+        self.cache.set_search_results(
+            query,
+            cache_filters_for_results,
+            [m.id for m in final_semantic_results],
+        )
+
+        return final_semantic_results
 
     def _cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
         """Calculate cosine similarity between two vectors"""
@@ -316,7 +408,15 @@ class SemanticSearch:
         limit: int,
         filters: Optional[Dict]
     ) -> List[Monologue]:
-        """Fallback to simple text search if embedding fails"""
+        """
+        Fallback to simple text search if embedding fails.
+
+        This is intentionally AI-free and keyword-friendly to keep costs low.
+        For natural-language queries like "give me the hamlet monologue", we
+        extract strong keyword tokens (e.g. "hamlet", "monologue") so that
+        classical pieces like Hamlet still surface even when the exact phrase
+        doesn't appear in the script.
+        """
 
         base_query = self.db.query(Monologue).join(Play)
 
@@ -374,15 +474,57 @@ class SemanticSearch:
                     Play.author == filters['author']
                 )
 
-        # Simple text search in title, text, and character name
-        base_query = base_query.filter(
-            or_(
-                Monologue.title.ilike(f'%{query}%'),
-                Monologue.text.ilike(f'%{query}%'),
-                Monologue.character_name.ilike(f'%{query}%'),
-                Play.title.ilike(f'%{query}%'),
-                Play.author.ilike(f'%{query}%')
+        # Simple keyword-friendly text search: play title, character, author, monologue title/text.
+        # We search both the full query and important keywords so that
+        # multi-word queries like "give me the hamlet monologue" still match "Hamlet".
+        terms = [query]
+
+        # Extract strong keyword tokens (lowercase, length > 3, not common stopwords).
+        stopwords = {
+            "the",
+            "a",
+            "an",
+            "and",
+            "or",
+            "but",
+            "for",
+            "with",
+            "of",
+            "to",
+            "me",
+            "you",
+            "give",
+            "show",
+            "find",
+            "please",
+        }
+        tokens = {
+            token
+            for token in re.findall(r"\w+", query.lower())
+            if token not in stopwords and len(token) > 3
+        }
+        terms.extend(tokens)
+
+        ilike_clauses = []
+        for term in terms:
+            ilike_clauses.extend(
+                [
+                    Monologue.title.ilike(f"%{term}%"),
+                    Monologue.text.ilike(f"%{term}%"),
+                    Monologue.character_name.ilike(f"%{term}%"),
+                    Play.title.ilike(f"%{term}%"),
+                    Play.author.ilike(f"%{term}%"),
+                ]
             )
+
+        base_query = base_query.filter(or_(*ilike_clauses))
+
+        # Prefer play title and character name matches (e.g. "Hamlet" → play Hamlet, character Hamlet first)
+        base_query = base_query.order_by(
+            Play.title.ilike(f'%{query}%').desc(),
+            Monologue.character_name.ilike(f'%{query}%').desc(),
+            Play.title,
+            Monologue.character_name
         ).limit(limit)
 
         return base_query.all()
@@ -400,5 +542,6 @@ class SemanticSearch:
             if filters.get('difficulty'):
                 base_query = base_query.filter(Monologue.difficulty_level == filters['difficulty'])
 
-        # Order by random and limit
-        return base_query.order_by(func.random()).limit(limit).all()
+        # Order by random and limit. SQLAlchemy's func.random() is callable at runtime,
+        # but static analysis (pylint) may flag it as not-callable, so we disable that check here.
+        return base_query.order_by(func.random()).limit(limit).all()  # pylint: disable=not-callable

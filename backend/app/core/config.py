@@ -8,6 +8,9 @@ load_dotenv()
 
 class Settings:
     database_url: str = os.getenv("DATABASE_URL", "")
+    # "Tenant or user not found" from Supabase? Check: 1) Project not paused (Dashboard → Restore)
+    # 2) Use the exact connection string from Supabase → Settings → Database → Connection string (Session pooler)
+    # 3) Password in URL is the database password, not the anon key
     if not database_url or not database_url.startswith("postgresql"):
         raise ValueError("DATABASE_URL must be set to a PostgreSQL connection string")
     jwt_secret: str = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")

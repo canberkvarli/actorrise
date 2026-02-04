@@ -36,6 +36,8 @@ export default function PlatformLayout({
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const { count: bookmarkCount } = useBookmarkCount();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const profileInitial = (user?.email || "?").charAt(0).toUpperCase();
+  const displayName = user?.name?.trim() || "";
   
   // Use SWR hook for cached subscription data - MUST be called before any early returns
   const { subscription } = useSubscription();
@@ -101,9 +103,9 @@ export default function PlatformLayout({
                   <Button
                     key={item.href}
                     asChild
-                    variant={isActive ? "default" : "ghost"}
+                    variant={isActive ? "outline" : "ghost"}
                     size="sm"
-                    className="gap-2"
+                    className="gap-2 rounded-full px-4"
                   >
                     <Link href={item.href}>
                       <Icon className="h-4 w-4" />
@@ -116,44 +118,69 @@ export default function PlatformLayout({
               {/* Profile Dropdown */}
               <div className="relative" ref={dropdownRef}>
                 <Button
-                  variant={pathname === "/profile" || pathname === "/my-monologues" ? "default" : "ghost"}
+                  variant="ghost"
                   size="sm"
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="gap-2"
+                  className="gap-2 rounded-full border border-border/60 bg-card/60 px-3.5 py-1.5"
                 >
-                  <IconUser className="h-4 w-4" />
-                  Profile
-                  <IconChevronDown className={`h-3 w-3 transition-transform ${profileDropdownOpen ? "rotate-180" : ""}`} />
+                  <span className="flex items-center justify-center h-6 w-6 rounded-full bg-foreground text-background text-xs">
+                    {profileInitial}
+                  </span>
+                  {displayName && (
+                    <span className="hidden lg:inline text-xs font-medium text-foreground">
+                      {displayName}
+                    </span>
+                  )}
+                  <IconChevronDown
+                    className={`h-3 w-3 text-muted-foreground transition-transform ${
+                      profileDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
                 </Button>
 
                 {/* Dropdown Menu */}
                 {profileDropdownOpen && (
-                  <div className="absolute right-0 top-full mt-1 w-56 bg-background/95 backdrop-blur-sm border border-border/40 rounded-lg shadow-lg overflow-hidden z-[9999]">
-                    <div className="py-1">
-                      <div className="px-3 py-2 border-b border-border/30 bg-muted/50">
-                        <p className="text-sm font-medium truncate">{user?.email}</p>
-                        <div className="mt-1">
-                          <PlanBadge planName={userTier} variant="outline" />
+                  <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl border border-border/50 bg-card/95 backdrop-blur-sm shadow-lg shadow-black/40 z-[9999]">
+                    <div className="p-2">
+                      <div className="flex items-center gap-3 rounded-xl bg-muted/60 px-3.5 py-3 mb-2">
+                        <div className="flex items-center justify-center h-9 w-9 rounded-full bg-foreground text-background text-sm">
+                          {profileInitial}
+                        </div>
+                        <div className="min-w-0 flex flex-col gap-0.5">
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-semibold leading-tight truncate">
+                              {displayName || "Actor"}
+                            </p>
+                            <PlanBadge
+                              planName={userTier}
+                              variant="secondary"
+                              showIcon={false}
+                              className="h-5 px-2 text-[10px] font-medium uppercase tracking-wide"
+                            />
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Account
+                          </p>
                         </div>
                       </div>
 
                       <Link
                         href="/profile"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
+                        className="flex items-center gap-3 px-3.5 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
                       >
-                        <IconUser className="h-4 w-4" />
-                        Edit Profile
+                        <IconUser className="h-4 w-4 text-muted-foreground" />
+                        <span>Edit profile</span>
                       </Link>
 
                       <Link
                         href="/my-monologues"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
+                        className="mt-1 flex items-center justify-between gap-2 px-3.5 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
                       >
-                        <div className="flex items-center gap-2">
-                          <IconBookmark className="h-4 w-4" />
-                          Your Monologues
+                        <div className="flex items-center gap-3">
+                          <IconBookmark className="h-4 w-4 text-muted-foreground" />
+                          <span>Your monologues</span>
                         </div>
                         {bookmarkCount > 0 && (
                           <Badge variant="secondary" className="text-xs">
@@ -165,23 +192,23 @@ export default function PlatformLayout({
                       <Link
                         href="/billing"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors"
+                        className="mt-1 flex items-center gap-3 px-3.5 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
                       >
-                        <IconCreditCard className="h-4 w-4" />
-                        Billing
+                        <IconCreditCard className="h-4 w-4 text-muted-foreground" />
+                        <span>Billing</span>
                       </Link>
 
-                      <div className="border-t border-border/30 my-1" />
+                      <div className="my-2 h-px bg-border/40" />
 
                       <button
                         onClick={() => {
                           setProfileDropdownOpen(false);
                           logout();
                         }}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
+                        className="w-full flex items-center gap-3 px-3.5 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors text-left text-destructive"
                       >
                         <IconLogout className="h-4 w-4" />
-                        Logout
+                        <span>Log out</span>
                       </button>
                     </div>
                   </div>
