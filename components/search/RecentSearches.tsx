@@ -114,14 +114,14 @@ export default function RecentSearches({ maxSearches = 3, compact = false }: Rec
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
+                    <p className="text-sm font-medium truncate group-hover:text-foreground transition-colors">
                       {entry.query || "Browse all"}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {formatRelativeTime(entry.timestamp)}
                     </p>
                   </div>
-                  <IconArrowRight className="h-3 w-3 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                  <IconArrowRight className="h-3 w-3 text-muted-foreground/50 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                 </div>
               </div>
             ))}

@@ -333,8 +333,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </div>
                 ) : !isProfileComplete ? (
                   <div className="text-center py-20">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
-                      <IconUserCheck className="h-8 w-8 text-primary" />
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary/10 mb-4">
+                      <IconUserCheck className="h-8 w-8 text-secondary-foreground" />
                     </div>
                     <h3 className="text-lg font-semibold mb-2">
                       Complete your profile
@@ -342,7 +342,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
                       Add your preferences to get personalized recommendations.
                     </p>
-                    <Button asChild>
+                      <Button asChild variant="outline">
                       <Link href="/profile">
                         Complete Profile
                         <IconArrowRight className="h-4 w-4 ml-2" />
@@ -440,42 +440,42 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </h3>
             
             <Link href="/scenes" className="block group">
-              <Card className="hover:shadow-sm transition-all hover:border-primary/30 border-border/50">
+              <Card className="hover:shadow-sm transition-all hover:border-secondary/40 border-border/50">
                 <CardContent className="pt-4 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-md bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                      <IconMicrophone className="h-4 w-4 text-primary" />
+                    <div className="p-2 rounded-md bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
+                      <IconMicrophone className="h-4 w-4 text-secondary-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm group-hover:text-primary transition-colors">
+                      <h4 className="font-medium text-sm group-hover:text-foreground transition-colors">
                         Voice ScenePartner
                       </h4>
                       <p className="text-xs text-muted-foreground truncate">
                         Practice scenes with AI
                       </p>
                     </div>
-                    <IconArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                    <IconArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                   </div>
                 </CardContent>
               </Card>
             </Link>
 
             <Link href="/audition" className="block group">
-              <Card className="hover:shadow-sm transition-all hover:border-primary/30 border-border/50">
+              <Card className="hover:shadow-sm transition-all hover:border-secondary/40 border-border/50">
                 <CardContent className="pt-4 pb-4">
                   <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-md bg-primary/10 group-hover:bg-primary/20 transition-colors">
-                      <IconVideo className="h-4 w-4 text-primary" />
+                    <div className="p-2 rounded-md bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
+                      <IconVideo className="h-4 w-4 text-secondary-foreground" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm group-hover:text-primary transition-colors">
+                      <h4 className="font-medium text-sm group-hover:text-foreground transition-colors">
                         Audition Mode
                       </h4>
                       <p className="text-xs text-muted-foreground truncate">
                         Record & get feedback
                       </p>
                     </div>
-                    <IconArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                    <IconArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                   </div>
                 </CardContent>
               </Card>
@@ -657,10 +657,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <p className="text-muted-foreground font-typewriter">by {currentMonologue.author}</p>
                       </div>
 
-                      {currentMonologue.scene_description && (
-                        <div className="bg-primary/5 border border-primary/20 p-4 rounded-lg">
+                    {currentMonologue.scene_description && (
+                      <div className="bg-secondary/10 border border-secondary/30 p-4 rounded-lg">
                           <p className="text-sm italic flex items-start gap-2">
-                            <IconSparkles className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
+                            <IconSparkles className="h-4 w-4 mt-0.5 flex-shrink-0 text-accent" />
                             {currentMonologue.scene_description}
                           </p>
                         </div>

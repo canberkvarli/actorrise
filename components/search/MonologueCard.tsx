@@ -44,7 +44,7 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
                   transition={{ delay: index * 0.1 + 0.2, type: "spring" }}
                   className="flex flex-col items-end gap-2"
                 >
-                  <div className="flex items-center gap-1 text-primary">
+                  <div className="flex items-center gap-1 text-accent">
                     <motion.div
                       animate={{ rotate: [0, 10, -10, 0] }}
                       transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
@@ -78,7 +78,7 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
                 href={monologue.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-primary hover:underline flex items-center gap-1"
+                className="text-sm text-accent hover:underline flex items-center gap-1"
                 whileHover={{ x: 4 }}
                 transition={{ duration: 0.2 }}
               >
@@ -91,7 +91,7 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
                 href={monologue.full_text_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm text-primary hover:underline flex items-center gap-1"
+                className="text-sm text-accent hover:underline flex items-center gap-1"
                 whileHover={{ x: 4 }}
                 transition={{ duration: 0.2 }}
               >

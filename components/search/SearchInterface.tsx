@@ -35,11 +35,34 @@ export function SearchInterface() {
   const [hasSearched, setHasSearched] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
 
-  // Load search history from localStorage
+  const PERSIST_KEY = "dashboard_monologue_search_v1";
+
+  // Load persisted search state (results + query + filters) and history from storage
   useEffect(() => {
-    const history = localStorage.getItem("monologue_search_history");
-    if (history) {
-      setSearchHistory(JSON.parse(history));
+    try {
+      const history = localStorage.getItem("monologue_search_history");
+      if (history) {
+        setSearchHistory(JSON.parse(history));
+      }
+
+      const persisted = typeof window !== "undefined" ? window.sessionStorage.getItem(PERSIST_KEY) : null;
+      if (persisted) {
+        const parsed = JSON.parse(persisted) as {
+          query: string;
+          profileBias: boolean;
+          era: "" | "classical" | "contemporary";
+          filters: typeof filters;
+          results: Monologue[];
+        };
+        setQuery(parsed.query);
+        setProfileBias(parsed.profileBias);
+        setEra(parsed.era);
+        setFilters(parsed.filters);
+        setResults(parsed.results);
+        setHasSearched(parsed.results.length > 0);
+      }
+    } catch (err) {
+      console.error("Error restoring persisted dashboard search state:", err);
     }
   }, []);
 
@@ -80,6 +103,22 @@ export function SearchInterface() {
 
       const response = await api.post("/api/search", searchRequest);
       setResults(response.data.results);
+
+      // Persist full search state so a refresh or navigation keeps results
+      try {
+        if (typeof window !== "undefined") {
+          const payload = {
+            query,
+            profileBias,
+            era,
+            filters,
+            results: response.data.results,
+          };
+          window.sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
+        }
+      } catch (err) {
+        console.error("Error persisting dashboard search state:", err);
+      }
 
       // Save to old format for backward compatibility
       if (query.trim()) {
@@ -171,7 +210,7 @@ export function SearchInterface() {
                     Choose whether to search classical or contemporary monologues, or both
                   </p>
                 </div>
-                <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
+                <div className="inline-flex rounded-full border border-secondary/50 bg-secondary/10 overflow-hidden text-xs">
                   <button
                     type="button"
                     onClick={() => {
@@ -180,8 +219,8 @@ export function SearchInterface() {
                     }}
                     className={`px-3 py-1.5 ${
                       era === ""
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background text-foreground hover:bg-muted/50"
+                        ? "bg-secondary text-secondary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-muted/50"
                     }`}
                   >
                     Either
@@ -192,10 +231,10 @@ export function SearchInterface() {
                       setEra("contemporary");
                       setFilters(prev => ({ ...prev, category: "Contemporary" }));
                     }}
-                    className={`px-3 py-1.5 border-l border-border ${
+                    className={`px-3 py-1.5 border-l border-transparent ${
                       era === "contemporary"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background text-foreground hover:bg-muted/50"
+                        ? "bg-secondary text-secondary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-muted/50"
                     }`}
                   >
                     Contemporary
@@ -206,10 +245,10 @@ export function SearchInterface() {
                       setEra("classical");
                       setFilters(prev => ({ ...prev, category: "Classical" }));
                     }}
-                    className={`px-3 py-1.5 border-l border-border ${
+                    className={`px-3 py-1.5 border-l border-transparent ${
                       era === "classical"
-                        ? "bg-primary text-primary-foreground"
-                        : "bg-background text-foreground hover:bg-muted/50"
+                        ? "bg-secondary text-secondary-foreground"
+                        : "bg-background text-muted-foreground hover:bg-muted/50"
                     }`}
                   >
                     Classical
@@ -226,7 +265,7 @@ export function SearchInterface() {
               >
                 <div className="space-y-0.5">
                   <Label htmlFor="profile-bias" className="text-base font-semibold flex items-center gap-2">
-                    <IconSparkles className="h-4 w-4 text-primary" />
+                    <IconSparkles className="h-4 w-4 text-accent" />
                     AI-Powered Search
                   </Label>
                   <p className="text-sm text-muted-foreground">
@@ -251,8 +290,8 @@ export function SearchInterface() {
                     transition={{ duration: 0.3 }}
                     className="space-y-2"
                   >
-                    <Label htmlFor="smart-search" className="flex items-center gap-2">
-                      <IconSparkles className="h-4 w-4 text-primary animate-pulse" />
+                      <Label htmlFor="smart-search" className="flex items-center gap-2">
+                        <IconSparkles className="h-4 w-4 text-accent animate-pulse" />
                       Smart Search
                     </Label>
                     <div className="flex gap-2">

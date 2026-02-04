@@ -38,6 +38,8 @@ export default function SearchPage() {
   const [showBookmarkedOnly, setShowBookmarkedOnly] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
+  const LAST_SEARCH_KEY = "monologue_search_last_results_v1";
+
   // Scroll panel to top when monologue is selected
   useEffect(() => {
     if (selectedMonologue && panelRef.current) {
@@ -45,8 +47,9 @@ export default function SearchPage() {
     }
   }, [selectedMonologue]);
 
-  // Restore search state from URL and sessionStorage on mount
-  // This allows search results to persist across page refreshes
+  // Restore search state from URL and sessionStorage whenever this page is (re)visited.
+  // This allows search results to persist across refreshes AND when navigating away
+  // to other pages and then back to /search.
   useEffect(() => {
     // Check if this is a restoration from search history
     const historyId = searchParams.get("id");
@@ -83,7 +86,7 @@ export default function SearchPage() {
       }
     });
 
-    // Restore from URL params
+    // Restore from URL params if present
     if (urlQuery) {
       setQuery(urlQuery);
       setFilters(urlFilters);
@@ -97,18 +100,40 @@ export default function SearchPage() {
           const parsed = JSON.parse(cachedResults);
           setResults(parsed);
           setHasSearched(true);
+          return;
         } catch (e) {
           console.error("Error parsing cached results:", e);
           // If cache is corrupted, perform fresh search
           performSearch(urlQuery, urlFilters);
+          return;
         }
       } else {
         // If no cache but URL has query, perform fresh search
         performSearch(urlQuery, urlFilters);
+        return;
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run on mount - we don't want to re-trigger on searchParams changes
+
+    // If there is no query in the URL, fall back to the last search
+    // stored in sessionStorage so users don't lose expensive results
+    // when navigating away and back to /search.
+    try {
+      const lastSearchRaw = sessionStorage.getItem(LAST_SEARCH_KEY);
+      if (lastSearchRaw) {
+        const last = JSON.parse(lastSearchRaw) as {
+          query: string;
+          filters: typeof filters;
+          results: Monologue[];
+        };
+        setQuery(last.query);
+        setFilters(last.filters);
+        setResults(last.results);
+        setHasSearched(last.results.length > 0);
+      }
+    } catch (e) {
+      console.error("Error restoring last search state:", e);
+    }
+  }, [searchParams]);
 
   const performSearch = async (searchQuery: string, searchFilters: typeof filters) => {
     setIsLoading(true);
@@ -128,9 +153,20 @@ export default function SearchPage() {
       });
       setResults(response.data);
 
-      // Cache results in sessionStorage
+      // Cache results in sessionStorage keyed by query+filters
       const storageKey = `search_results_${searchQuery}_${JSON.stringify(searchFilters)}`;
       sessionStorage.setItem(storageKey, JSON.stringify(response.data));
+
+      // Also store this as the "last search" so returning to /search
+      // (without a query in the URL) restores these results.
+      sessionStorage.setItem(
+        LAST_SEARCH_KEY,
+        JSON.stringify({
+          query: searchQuery,
+          filters: searchFilters,
+          results: response.data,
+        })
+      );
 
       // Add to search history
       addSearchToHistory({
@@ -174,6 +210,17 @@ export default function SearchPage() {
     try {
       const response = await api.get<Monologue[]>("/api/monologues/recommendations?limit=20");
       setResults(response.data);
+
+      // Persist AI "Find for me" results as the last search so that
+      // navigating away and back to /search keeps them visible.
+      sessionStorage.setItem(
+        LAST_SEARCH_KEY,
+        JSON.stringify({
+          query: "",
+          filters: { gender: "", age_range: "", emotion: "", theme: "", category: "" },
+          results: response.data,
+        })
+      );
 
       // Update URL to reflect AI search
       router.replace("/search?ai=true", { scroll: false });
@@ -368,9 +415,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       <div className="mb-8">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-4xl font-bold mb-2">Find Your Monologue</h1>
-            <p className="text-muted-foreground text-lg">
-              Search thousands of classical and contemporary monologues
+            <p className="inline-flex items-center gap-2 rounded-full border border-secondary/40 bg-secondary/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-secondary-foreground/90">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+              MonologueMatch
+            </p>
+            <h1 className="mt-4 text-4xl font-bold tracking-[-0.04em]">Find your next piece.</h1>
+            <p className="text-muted-foreground text-lg max-w-xl">
+              Search thousands of classical and contemporary monologues with filters that actually matter.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -378,10 +429,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               onClick={handleFindForMe}
               disabled={isLoading}
               size="lg"
-              className="gap-2 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg"
+              variant="secondary"
+              className="gap-2 rounded-full px-6"
             >
               <IconSparkles className="h-5 w-5" />
-              Find For Me
+              Find for me
             </Button>
             <TooltipProvider>
               <Tooltip>
@@ -427,7 +479,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       </button>
                     )}
                   </div>
-                  <Button onClick={handleSearch} disabled={isLoading || !query.trim()}>
+                  <Button
+                    onClick={handleSearch}
+                    disabled={isLoading || !query.trim()}
+                    variant="secondary"
+                    className="rounded-full px-6"
+                  >
                     {isLoading ? (
                       <IconLoader2 className="h-4 w-4 animate-spin mr-2" />
                     ) : (
@@ -518,9 +575,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           ) : results.length > 0 ? (
             <div className="space-y-4">
               {searchParams.get("ai") === "true" && (
-                <div className="flex items-center gap-2 p-4 bg-primary/10 border border-primary/20 rounded-lg">
-                  <IconSparkles className="h-5 w-5 text-primary flex-shrink-0" />
-                  <p className="text-sm font-medium text-primary">
+                <div className="flex items-center gap-2 p-4 bg-secondary/10 border border-secondary/30 rounded-lg">
+                  <IconSparkles className="h-5 w-5 text-accent flex-shrink-0" />
+                  <p className="text-sm font-medium text-secondary-foreground">
                     AI-powered recommendations based on your profile
                   </p>
                 </div>
@@ -540,13 +597,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   )}
                 </p>
                 <Button
-                  variant={showBookmarkedOnly ? "default" : "outline"}
+                  variant={showBookmarkedOnly ? "secondary" : "outline"}
                   size="sm"
                   onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
-                  className="gap-2"
+                  className="gap-2 rounded-full"
                 >
                   <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                  Bookmarked Only
+                  Bookmarked only
                 </Button>
               </div>
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -558,7 +615,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     transition={{ delay: idx * 0.05, duration: 0.3, ease: "easeOut" }}
                   >
                     <Card
-                      className="hover:shadow-xl transition-all cursor-pointer h-full flex flex-col hover:border-primary/50 group"
+                      className="hover:shadow-xl transition-all cursor-pointer h-full flex flex-col hover:border-secondary/50 group"
                       onClick={() => openMonologue(mono)}
                     >
                       <CardContent className="pt-6 flex-1 flex flex-col">
@@ -567,7 +624,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex-1">
                               <div className="flex items-center gap-2">
-                                <h3 className="font-bold text-xl mb-1 group-hover:text-primary transition-colors">
+                                <h3 className="font-bold text-xl mb-1 group-hover:text-foreground transition-colors">
                                   {mono.character_name}
                                 </h3>
                                 {mono.is_favorited && (
@@ -603,7 +660,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
                           {/* Tags */}
                           <div className="flex flex-wrap gap-2">
-                            <Badge variant="default" className="font-normal capitalize">
+                            <Badge variant="secondary" className="font-normal capitalize">
                               {mono.category}
                             </Badge>
                             {mono.character_gender && (
@@ -625,7 +682,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
                           {/* Synopsis / Scene Description */}
                           {mono.scene_description && (
-                            <div className="bg-muted/50 px-3 py-2 rounded-md border-l-2 border-primary/40">
+                            <div className="bg-secondary/10 px-3 py-2 rounded-md border-l-2 border-secondary/40">
                               <p className="text-xs italic text-muted-foreground line-clamp-2">
                                 {mono.scene_description}
                               </p>
@@ -638,7 +695,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                               {mono.themes.slice(0, 3).map(theme => (
                                 <span
                                   key={theme}
-                                  className="text-xs px-2.5 py-1 bg-primary/10 text-primary rounded-full font-medium capitalize"
+                                  className="text-xs px-2.5 py-1 bg-secondary/10 text-secondary-foreground/90 rounded-full font-medium capitalize"
                                 >
                                   {theme}
                                 </span>
@@ -720,7 +777,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           e.stopPropagation();
                           setShowDownloadMenu(!showDownloadMenu);
                         }}
-                        className="p-2 rounded-full transition-colors hover:bg-muted text-muted-foreground hover:text-primary relative z-[10002]"
+                        className="p-2 rounded-full transition-colors hover:bg-muted text-muted-foreground hover:text-foreground relative z-[10002]"
                         title="Download monologue"
                       >
                         <IconDownload className="h-5 w-5" />
@@ -840,9 +897,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       </div>
 
                       {selectedMonologue.scene_description && (
-                        <div className="bg-primary/5 border border-primary/20 p-4 rounded-lg">
+                        <div className="bg-secondary/10 border border-secondary/30 p-4 rounded-lg">
                           <p className="text-sm italic flex items-start gap-2">
-                            <IconSparkles className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
+                            <IconSparkles className="h-4 w-4 mt-0.5 flex-shrink-0 text-accent" />
                             {selectedMonologue.scene_description}
                           </p>
                         </div>
@@ -884,7 +941,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         {selectedMonologue.primary_emotion && (
                           <div className="space-y-1">
                             <p className="text-xs text-muted-foreground">Emotion:</p>
-                            <Badge className="capitalize">{selectedMonologue.primary_emotion}</Badge>
+                            <Badge variant="secondary" className="capitalize">
+                              {selectedMonologue.primary_emotion}
+                            </Badge>
                           </div>
                         )}
                       </div>
@@ -938,7 +997,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       </div>
 
                       {selectedMonologue.source_url && (
-                        <Button variant="outline" className="w-full hover:border-primary hover:text-primary" asChild>
+                        <Button variant="outline" className="w-full" asChild>
                           <a
                             href={selectedMonologue.source_url}
                             target="_blank"
