@@ -39,6 +39,7 @@ export default function SearchPage() {
   const panelRef = useRef<HTMLDivElement>(null);
 
   const LAST_SEARCH_KEY = "monologue_search_last_results_v1";
+  const [restoredFromLastSearch, setRestoredFromLastSearch] = useState(false);
 
   // Scroll panel to top when monologue is selected
   useEffect(() => {
@@ -86,6 +87,8 @@ export default function SearchPage() {
       }
     });
 
+    setRestoredFromLastSearch(false);
+
     // Restore from URL params if present
     if (urlQuery) {
       setQuery(urlQuery);
@@ -100,6 +103,8 @@ export default function SearchPage() {
           const parsed = JSON.parse(cachedResults);
           setResults(parsed);
           setHasSearched(true);
+          // Results came from a specific query in the URL, not the generic "last search" key.
+          setRestoredFromLastSearch(false);
           return;
         } catch (e) {
           console.error("Error parsing cached results:", e);
@@ -129,6 +134,8 @@ export default function SearchPage() {
         setFilters(last.filters);
         setResults(last.results);
         setHasSearched(last.results.length > 0);
+         // These results were restored from the generic "last search" slot.
+        setRestoredFromLastSearch(true);
       }
     } catch (e) {
       console.error("Error restoring last search state:", e);
@@ -138,6 +145,7 @@ export default function SearchPage() {
   const performSearch = async (searchQuery: string, searchFilters: typeof filters) => {
     setIsLoading(true);
     setHasSearched(true);
+    setRestoredFromLastSearch(false);
     try {
       const params = new URLSearchParams({ q: searchQuery, limit: "20" });
       Object.entries(searchFilters).forEach(([key, value]) => {
@@ -606,6 +614,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   Bookmarked only
                 </Button>
               </div>
+              {restoredFromLastSearch && searchParams.get("q") === null && (
+                <p className="text-[11px] text-muted-foreground/80">
+                  Showing results from your last search. New searches will update this list.
+                </p>
+              )}
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {(showBookmarkedOnly ? results.filter((m) => m.is_favorited) : results).map((mono, idx) => (
                   <motion.div
@@ -628,7 +641,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                                   {mono.character_name}
                                 </h3>
                                 {mono.is_favorited && (
-                                  <span className="px-2 py-0.5 bg-accent/10 text-accent text-xs font-semibold rounded-full">
+                                  <span className="px-2 py-0.5 bg-primary/25 text-primary-foreground text-xs font-semibold rounded-full">
                                     Bookmarked
                                   </span>
                                 )}
@@ -644,8 +657,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                               onClick={(e) => toggleFavorite(e, mono)}
                               className={`p-2 rounded-full transition-colors ${
                                 mono.is_favorited
-                                  ? 'bg-accent/10 hover:bg-accent/20 text-accent'
-                                  : 'hover:bg-accent hover:text-accent-foreground text-muted-foreground'
+                                  ? 'bg-primary/20 hover:bg-primary/30 text-primary-foreground'
+                                  : 'hover:bg-primary/15 hover:text-primary-foreground text-muted-foreground'
                               }`}
                             >
                               <IconBookmark

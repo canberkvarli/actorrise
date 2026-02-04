@@ -3,7 +3,7 @@
 import hashlib
 import json
 import re
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 from app.models.actor import Monologue, Play
@@ -20,7 +20,7 @@ from sqlalchemy.orm import Session
 # so trivial variants like "Hamlet", "hamlet ", or "HAMLET!!!" all share entries.
 EMBEDDING_CACHE: Dict[str, List[float]] = {}
 QUERY_PARSE_CACHE: Dict[str, Dict] = {}
-SEARCH_RESULTS_CACHE: Dict[str, List[int]] = {}
+SEARCH_RESULTS_CACHE: Dict[str, List[Any]] = {}
 
 
 def _canonicalize_query_for_cache(raw_query: str) -> str:
@@ -166,8 +166,8 @@ class SemanticSearch:
             print(f"✅ Using cached search results for query='{query}' filters={cache_filters_for_results}")
             # Re-load monologues by ID to get current ORM instances, preserving order.
             mons = self.db.query(Monologue).join(Play).filter(Monologue.id.in_(cached_result_ids)).all()
-            mon_by_id = {m.id: m for m in mons}
-            ordered = [mon_by_id[mid] for mid in cached_result_ids if mid in mon_by_id]
+            mon_by_id: Dict[Any, Monologue] = {m.id: m for m in mons}
+            ordered = [mon_by_id[mid] for mid in cached_result_ids if mid in mon_by_id]  # type: ignore[index]
             overall_time = time.time() - overall_start
             print(f"⏱️  Total search time (cache hit): {overall_time:.2f}s, results: {len(ordered)}")
             return ordered[:limit]
