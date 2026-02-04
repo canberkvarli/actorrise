@@ -14,17 +14,45 @@ from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session
 
 
+# Module-level in-memory caches (Level 0 hot cache shared across SemanticSearch instances).
+# These are always available, even when Redis is not installed, and keep repeat
+# queries cheap within a single process. Keys use a *canonical* form of the query
+# so trivial variants like "Hamlet", "hamlet ", or "HAMLET!!!" all share entries.
+EMBEDDING_CACHE: Dict[str, List[float]] = {}
+QUERY_PARSE_CACHE: Dict[str, Dict] = {}
+SEARCH_RESULTS_CACHE: Dict[str, List[int]] = {}
+
+
+def _canonicalize_query_for_cache(raw_query: str) -> str:
+    """
+    Canonicalize queries for caching so trivial variants map to the same key.
+
+    This is intentionally conservative to avoid UX regressions:
+    - Lowercase
+    - Strip leading/trailing whitespace
+    - Collapse internal whitespace
+    - Strip common trailing punctuation like "!!!" or "??"
+
+    We DO NOT remove content words (like "hamlet", "monologue") here, so
+    different natural-language queries still get their own embeddings/results
+    (e.g., "hamlet" vs "give me the hamlet monologue").
+    """
+    q = raw_query.lower().strip()
+    # Strip trailing punctuation
+    q = re.sub(r"[!?.,;:]+$", "", q)
+    # Collapse multiple spaces/tabs into a single space
+    q = re.sub(r"\s+", " ", q)
+    return q
+
+
 class SemanticSearch:
     """Semantic search using vector embeddings"""
 
     def __init__(self, db: Session):
         self.db = db
         self.analyzer = ContentAnalyzer()
-        # Simple in-memory cache for embeddings (Level 0 hot cache).
-        # For production-grade caching, we also use the global Redis-based cache_manager.
-        self._embedding_cache = {}
-        self._query_parse_cache = {}
         self.query_optimizer = QueryOptimizer()
+        # Global cache manager: Level 1 Redis if available, otherwise memory-only.
         self.cache = cache_manager
 
     def search(
@@ -56,6 +84,9 @@ class SemanticSearch:
         import time
         overall_start = time.time()
 
+        # Normalize query for caching (conservative canonicalization)
+        canonical_query = _canonicalize_query_for_cache(query)
+
         # Normalize explicit filters once
         explicit_filters = filters or {}
 
@@ -75,19 +106,19 @@ class SemanticSearch:
                 print("Tier 1/2 query with no explicit filters - skipping AI query parsing")
             else:
                 # Tier 3: complex semantic query – use AI parsing with multi-level caching.
-                query_hash = hashlib.md5(query.lower().encode()).hexdigest()
+                query_hash = hashlib.md5(canonical_query.encode()).hexdigest()
 
-                # Level 0: in-memory cache
-                if query_hash in self._query_parse_cache:
+                # Level 0: in-memory cache (shared across all SemanticSearch instances)
+                if query_hash in QUERY_PARSE_CACHE:
                     print(f"✅ Using in-memory cached query parse for: {query}")
-                    extracted_filters = self._query_parse_cache[query_hash]
+                    extracted_filters = QUERY_PARSE_CACHE[query_hash]
                 else:
                     # Level 1: Redis cache via CacheManager
-                    cached_filters = self.cache.get_parsed_filters(query)
+                    cached_filters = self.cache.get_parsed_filters(canonical_query)
                     if cached_filters:
                         print(f"✅ Using Redis cached query parse for: {query}")
                         extracted_filters = cached_filters
-                        self._query_parse_cache[query_hash] = extracted_filters
+                        QUERY_PARSE_CACHE[query_hash] = extracted_filters
                     else:
                         parse_start = time.time()
                         print(f"🤖 Parsing query for filters (AI): {query}")
@@ -95,14 +126,14 @@ class SemanticSearch:
                         parse_time = time.time() - parse_start
                         print(f"⏱️  Query parsing took {parse_time:.2f}s")
                         # Store in both in-memory and Redis caches
-                        self._query_parse_cache[query_hash] = extracted_filters
-                        self.cache.set_parsed_filters(query, extracted_filters)
+                        QUERY_PARSE_CACHE[query_hash] = extracted_filters
+                        self.cache.set_parsed_filters(canonical_query, extracted_filters)
 
                         # Limit in-memory cache size to prevent memory issues
-                        if len(self._query_parse_cache) > 1000:
+                        if len(QUERY_PARSE_CACHE) > 1000:
                             # Remove oldest entry (simple FIFO)
-                            oldest_key = next(iter(self._query_parse_cache))
-                            del self._query_parse_cache[oldest_key]
+                            oldest_key = next(iter(QUERY_PARSE_CACHE))
+                            del QUERY_PARSE_CACHE[oldest_key]
 
         print(f"Extracted filters (AI): {extracted_filters}")
 
@@ -111,12 +142,26 @@ class SemanticSearch:
         merged_filters = {**(extracted_filters or {}), **(optimized_filters or {})}
         print(f"Merged filters (final): {merged_filters}")
 
-        # Optional: check Redis cache for full search results for this (query, filters, user)
+        # Optional: check cache for full search results for this (query, filters, user)
         cache_filters_for_results: Dict = dict(merged_filters)
         if user_id is not None:
             cache_filters_for_results["_user_id"] = user_id
 
-        cached_result_ids = self.cache.get_search_results(query, cache_filters_for_results)
+        # Build a deterministic cache key for the in-memory result cache
+        results_cache_key = json.dumps(
+            {"query": canonical_query, "filters": cache_filters_for_results},
+            sort_keys=True,
+        )
+
+        cached_result_ids: Optional[List[int]] = None
+
+        # Level 1: Redis cache for full search results (if enabled)
+        if self.cache.redis_enabled:
+            cached_result_ids = self.cache.get_search_results(canonical_query, cache_filters_for_results)
+        else:
+            # Level 0: in-memory result cache shared within this process
+            cached_result_ids = SEARCH_RESULTS_CACHE.get(results_cache_key)
+
         if cached_result_ids:
             print(f"✅ Using cached search results for query='{query}' filters={cache_filters_for_results}")
             # Re-load monologues by ID to get current ORM instances, preserving order.
@@ -128,17 +173,17 @@ class SemanticSearch:
             return ordered[:limit]
 
         # Generate embedding for query (with caching at multiple levels)
-        query_hash = hashlib.md5(query.lower().encode()).hexdigest()
-        if query_hash in self._embedding_cache:
+        query_hash = hashlib.md5(canonical_query.encode()).hexdigest()
+        if query_hash in EMBEDDING_CACHE:
             print(f"✅ Using cached embedding for: {query}")
-            query_embedding = self._embedding_cache[query_hash]
+            query_embedding = EMBEDDING_CACHE[query_hash]
         else:
             # Try Redis-backed embedding cache first
-            cached_embedding = self.cache.get_embedding(query)
+            cached_embedding = self.cache.get_embedding(canonical_query)
             if cached_embedding:
                 print(f"✅ Using Redis cached embedding for: {query}")
                 query_embedding = cached_embedding
-                self._embedding_cache[query_hash] = query_embedding
+                EMBEDDING_CACHE[query_hash] = query_embedding
             else:
                 emb_start = time.time()
                 print(f"🔢 Generating embedding for query (AI): {query}")
@@ -147,13 +192,13 @@ class SemanticSearch:
                 print(f"⏱️  Embedding generation took {emb_time:.2f}s")
                 if query_embedding:
                     # Store in in-memory and Redis caches
-                    self._embedding_cache[query_hash] = query_embedding
-                    self.cache.set_embedding(query, query_embedding)
+                    EMBEDDING_CACHE[query_hash] = query_embedding
+                    self.cache.set_embedding(canonical_query, query_embedding)
                     # Limit in-memory cache size to prevent memory issues
-                    if len(self._embedding_cache) > 1000:
+                    if len(EMBEDDING_CACHE) > 1000:
                         # Remove oldest entry (simple FIFO)
-                        oldest_key = next(iter(self._embedding_cache))
-                        del self._embedding_cache[oldest_key]
+                        oldest_key = next(iter(EMBEDDING_CACHE))
+                        del EMBEDDING_CACHE[oldest_key]
 
         if not query_embedding:
             print("Failed to generate embedding, falling back to text search")
@@ -343,12 +388,15 @@ class SemanticSearch:
             # Combine results: semantic results first, then fallback
             final_results = [mono for mono, _ in top_results] + fallback_unique
 
-            # Cache final ordered results (per query + filters + user) in Redis.
-            self.cache.set_search_results(
-                query,
-                cache_filters_for_results,
-                [m.id for m in final_results],
-            )
+            # Cache final ordered results (per query + filters + user).
+            if self.cache.redis_enabled:
+                self.cache.set_search_results(
+                    canonical_query,
+                    cache_filters_for_results,
+                    [m.id for m in final_results],
+                )
+            else:
+                SEARCH_RESULTS_CACHE[results_cache_key] = [m.id for m in final_results]
 
             overall_time = time.time() - overall_start
             print(f"⏱️  Total search time: {overall_time:.2f}s")
@@ -379,12 +427,15 @@ class SemanticSearch:
 
         final_semantic_results = [mono for mono, _ in top_results]
 
-        # Cache final ordered results (per query + filters + user) in Redis.
-        self.cache.set_search_results(
-            query,
-            cache_filters_for_results,
-            [m.id for m in final_semantic_results],
-        )
+        # Cache final ordered results (per query + filters + user).
+        if self.cache.redis_enabled:
+            self.cache.set_search_results(
+                canonical_query,
+                cache_filters_for_results,
+                [m.id for m in final_semantic_results],
+            )
+        else:
+            SEARCH_RESULTS_CACHE[results_cache_key] = [m.id for m in final_semantic_results]
 
         return final_semantic_results
 
