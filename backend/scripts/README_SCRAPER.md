@@ -40,8 +40,17 @@ See `CONTEMPORARY_SOURCES.md` for full legal analysis.
 ### Run the scraper:
 
 ```bash
-cd /home/user/actorrise/backend
-python scripts/scrape_contemporary_monologues.py
+cd backend
+uv run python scripts/scrape_contemporary_monologues.py
+```
+
+**Options (for testing or partial runs):**
+- `--limit-collections N` – only process the first N Gutenberg books (e.g. `1` to test)
+- `--limit-monologues N` – cap monologues saved per collection (e.g. `5` for a quick run)
+
+Example quick test (1 book, 5 monologues):
+```bash
+uv run python scripts/scrape_contemporary_monologues.py --limit-collections 1 --limit-monologues 5
 ```
 
 ### What it does:

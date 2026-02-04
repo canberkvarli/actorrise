@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Montserrat, JetBrains_Mono } from "next/font/google";
+import { Montserrat, JetBrains_Mono, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
 import { AuthProviderWrapper } from "@/components/providers/AuthProviderWrapper";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
@@ -17,6 +17,12 @@ const jetbrainsMono = JetBrains_Mono({
   weight: ["400", "500", "600", "700"],
 });
 
+const cormorantGaramond = Cormorant_Garamond({
+  variable: "--font-serif",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
 export const metadata: Metadata = {
   title: "ActorRise - Your Complete Acting Platform",
   description: "MonologueMatch, ScenePartner, CraftCoach, and more - all in one place for actors",
@@ -30,7 +36,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${montserrat.variable} ${jetbrainsMono.variable} font-sans antialiased`}
+        className={`${montserrat.variable} ${jetbrainsMono.variable} ${cormorantGaramond.variable} font-sans antialiased`}
       >
         <FontLoader />
         <ThemeProvider

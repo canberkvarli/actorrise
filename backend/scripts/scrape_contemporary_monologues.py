@@ -61,10 +61,16 @@ GUTENBERG_CONTEMPORARY_PLAYS = [
 class ContemporaryMonologueScraper:
     """Scrape and process contemporary public domain monologues."""
 
-    def __init__(self):
+    def __init__(
+        self,
+        limit_monologues_per_collection: Optional[int] = None,
+        limit_collections: Optional[int] = None,
+    ):
         self.db = SessionLocal()
         self.analyzer = ContentAnalyzer()
         self.client = httpx.AsyncClient(timeout=30.0)
+        self.limit_monologues_per_collection = limit_monologues_per_collection
+        self.limit_collections = limit_collections
 
     async def close(self):
         """Close database and HTTP client."""
@@ -78,69 +84,117 @@ class ContemporaryMonologueScraper:
         response.raise_for_status()
         return response.text
 
-    def parse_contemporary_plays_html(self, html: str) -> List[Dict]:
+    def parse_contemporary_plays_html(self, html: str, collection: Dict) -> List[Dict]:
         """
-        Parse HTML from 'Contemporary One-Act Plays' collection.
+        Parse HTML from a Gutenberg contemporary play collection.
+
+        Handles two formats:
+        1. "PLAY TITLE by Author Name" in a single heading (e.g. Contemporary One-Act Plays 1922)
+        2. "## PLAY TITLE" then "By Author" in following content (e.g. Fifty Contemporary One-Act Plays)
 
         Returns list of plays with metadata.
         """
         soup = BeautifulSoup(html, 'html.parser')
+        source_label = f"Project Gutenberg - {collection['title']}"
+        year = collection.get('year', 1920)
         plays = []
 
-        # The book structure has plays separated by headings
-        # We need to identify play titles, authors, and content
-
-        # Look for h2 or h3 tags that indicate play titles
+        # Strategy 1: "TITLE by AUTHOR" in heading (37970, 33907 style)
         play_headings = soup.find_all(['h2', 'h3'])
+        skip_titles = {
+            'contents', 'preface', 'introduction', 'copyright', 'bibliography',
+            'the one-act play', 'dramatic analysis', 'proper approach', 'theme',
+            'technic', 'characters', 'persons', 'scene', 'people', 'outline study',
+        }
 
         for i, heading in enumerate(play_headings):
-            # Skip table of contents and front matter
             heading_text = heading.get_text(strip=True)
-
-            if not heading_text or heading_text in ['Contents', 'Preface', 'Introduction']:
+            if not heading_text or len(heading_text) < 3:
+                continue
+            if any(skip in heading_text.lower()[:50] for skip in skip_titles):
                 continue
 
-            # Try to extract play title and author
-            # Format is usually: "PLAY TITLE by Author Name"
-            match = re.match(r'(.+?)\s+by\s+(.+)', heading_text, re.IGNORECASE)
-
+            # BY may be concatenated (no space) in Gutenberg HTML: "TITLEBYAUTHOR"
+            match = re.match(r'(.+?)\s*[Bb][Yy]\s*(.+)', heading_text)
             if match:
                 play_title = match.group(1).strip()
                 author = match.group(2).strip()
-
-                # Get all content between this heading and the next heading
-                # Find the next heading at the same or higher level
-                next_heading = None
-                for j in range(i + 1, len(play_headings)):
-                    if play_headings[j].name == heading.name or play_headings[j].name < heading.name:
-                        next_heading = play_headings[j]
-                        break
-
-                # Collect all text between headings
-                content_elements = []
-                current = heading.next_sibling
-                
-                while current:
-                    if next_heading and current == next_heading:
-                        break
-                    if hasattr(current, 'get_text'):
-                        content_elements.append(current)
-                    current = current.next_sibling
-
-                # Extract text from all collected elements
-                full_text = '\n'.join([elem.get_text(separator='\n', strip=True) for elem in content_elements if hasattr(elem, 'get_text')])
-
-                if full_text and len(full_text) > 100:
+                if len(play_title) < 2 or len(author) < 2:
+                    continue
+                full_text = self._content_until_next_heading(soup, heading, play_headings, i)
+                if full_text and len(full_text) > 200:
                     plays.append({
                         'title': play_title,
                         'author': author,
                         'full_text': full_text,
-                        'source': 'Project Gutenberg - Contemporary One-Act Plays',
+                        'source': source_label,
                         'category': 'contemporary',
-                        'year': 1922
+                        'year': year,
+                    })
+
+        # Strategy 2: "## PLAY TITLE" then "By Author" in next lines (36984 style)
+        if not plays:
+            # Split by h2 only for clean play boundaries
+            for i, heading in enumerate(play_headings):
+                if heading.name != 'h2':
+                    continue
+                heading_text = heading.get_text(strip=True)
+                if not heading_text or len(heading_text) > 200:
+                    continue
+                if any(skip in heading_text.lower() for skip in skip_titles):
+                    continue
+                # Skip if it looks like "TITLE BY AUTHOR" (already handled)
+                if re.search(r'\bby\b', heading_text, re.IGNORECASE):
+                    continue
+                full_text = self._content_until_next_heading(soup, heading, play_headings, i)
+                if not full_text or len(full_text) < 200:
+                    continue
+                # First 400 chars often contain "By Author Name" or "Translated by"
+                author_match = re.search(
+                    r'(?:^|\n)\s*By\s+([A-Za-z][A-Za-z\s\.\'-]{2,60})(?:\s|\.|$|\n)',
+                    full_text[:500],
+                    re.IGNORECASE,
+                )
+                if author_match:
+                    author = author_match.group(1).strip()
+                    # Trim "Translated by X" to just author when present
+                    if 'translated' in full_text[:200].lower():
+                        trans = re.search(r'Translated\s+(?:from[^.]*?)?by\s+([A-Za-z][A-Za-z\s\.\'-]{2,50})', full_text[:400], re.I)
+                        if trans:
+                            author = trans.group(1).strip()
+                    plays.append({
+                        'title': heading_text,
+                        'author': author,
+                        'full_text': full_text,
+                        'source': source_label,
+                        'category': 'contemporary',
+                        'year': year,
                     })
 
         return plays
+
+    def _content_until_next_heading(self, soup, heading, play_headings, i):
+        """Collect all text from heading until the next same-level heading."""
+        next_heading = None
+        for j in range(i + 1, len(play_headings)):
+            if play_headings[j].name == heading.name or (
+                heading.name == 'h2' and play_headings[j].name in ('h1', 'h2')
+            ):
+                next_heading = play_headings[j]
+                break
+        content_elements = []
+        current = heading.next_sibling
+        while current:
+            if next_heading and current == next_heading:
+                break
+            if hasattr(current, 'get_text'):
+                content_elements.append(current)
+            current = current.next_sibling
+        return '\n'.join(
+            elem.get_text(separator='\n', strip=True)
+            for elem in content_elements
+            if hasattr(elem, 'get_text')
+        )
 
     def extract_monologues_from_play(self, play: Dict) -> List[Dict]:
         """
@@ -163,8 +217,12 @@ class ContemporaryMonologueScraper:
         patterns = [
             # ALL CAPS: "CHARACTER NAME: dialogue" or "CHARACTER NAME. dialogue"
             r'([A-Z][A-Z\s]{2,40})[:.]\s*(.+?)(?=\n\s*[A-Z][A-Z\s]{2,40}[:.]|\n\s*[A-Z][a-z]+[:.]|\Z)',
-            # Mixed case: "Character Name: dialogue"
+            # Mixed case: "Character Name: dialogue" or "Character Name. dialogue"
             r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3})[:.]\s*(.+?)(?=\n\s*[A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,3}[:.]|\n\s*[A-Z][A-Z\s]{2,40}[:.]|\Z)',
+            # "Character [ _stage_ ]. dialogue" (Fifty Contemporary / verse plays)
+            r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+){0,2})\s*\[[^\]]*\]\s*\.\s*(.+?)(?=\n\s*[A-Z][a-z]+\s*\[|\n\s*[A-Z][A-Z\s]{2,20}[:.]|\n\n\s*\[|\Z)',
+            # "CHARACTER. [stage]. dialogue"
+            r'([A-Z][A-Z\s]{2,30})\.\s*\[[^\]]*\]\s*(.+?)(?=\n\s*[A-Z][A-Z\s]{2,30}\.|\n\s*[A-Z][a-z]+\.|\Z)',
         ]
 
         for pattern in patterns:
@@ -175,11 +233,40 @@ class ContemporaryMonologueScraper:
                 speech_text = match.group(2).strip()
 
                 # Skip if character name looks like a stage direction or header
-                skip_names = ['STAGE DIRECTION', 'SCENE', 'ACT', 'CURTAIN', 'THE END', 
-                             'CHARACTERS', 'PERSONS', 'PERSONS OF THE PLAY', 'DRAMATIS PERSONAE']
+                skip_names = ['STAGE DIRECTION', 'SCENE', 'ACT', 'CURTAIN', 'THE END',
+                             'CHARACTERS', 'PERSONS', 'PERSONS OF THE PLAY', 'DRAMATIS PERSONAE',
+                             'PAUSE', 'READS', 'EXIT', 'ENTER', 'CURTAIN FALLS']
                 if any(skip in character_name.upper() for skip in skip_names):
                     continue
-                
+
+                # Reject obvious non-character names: places, publishers, generic words
+                reject_names = {
+                    'mr', 'mrs', 'miss', 'ms', 'dr',  # standalone title only
+                    'sir james', 'sir james m',  # author byline, not character
+                    'new york', 'york city', 'new york city', 'america', 'city', 'germany',
+                    'italy', 'berlin', 'illinois', 'carolina', 'north dakota', 'white russia',
+                    'palace', 'badger', 'koch', 'company', 'edison electric light company',
+                    'althea thurston', 'percy mackaye', 'eugene pillot', 'alfred kreymborg',
+                    'oscar m', 'oscar m.', 'reads.', 'pause.', 'translated', 'copyright',
+                }
+                name_lower = character_name.lower().replace('\n', ' ').strip()
+                if name_lower in reject_names:
+                    continue
+                if any(name_lower == r or name_lower.startswith(r + ' ') for r in reject_names):
+                    continue
+                # Reject "Place." or "Author Name." (e.g. "North Dakota", "Alfred\nKreymborg")
+                if re.match(r'^[A-Z][a-z]+\s+(?:Russia|Dakota|City|America|Carolina|Germany|Italy|Illinois)$', character_name, re.I):
+                    continue
+                if character_name.count(' ') > 2 and not re.search(r'^[A-Z][a-z]+ [A-Z]\.?\s+[A-Z]', character_name):
+                    # Likely "New York City" or "Edison Electric Light Company"
+                    if any(place in name_lower for place in ('city', 'company', 'electric', 'light', 'street', 'avenue')):
+                        continue
+
+                # Skip if this is the play author (bylines like "Arthur Schnitzler.")
+                author_lower = (play.get('author') or '').lower()
+                if author_lower and (name_lower in author_lower or author_lower in name_lower):
+                    continue
+
                 # Skip very short character names (likely not real names)
                 if len(character_name) < 2 or len(character_name) > 50:
                     continue
@@ -283,7 +370,7 @@ class ContemporaryMonologueScraper:
         html = await self.fetch_gutenberg_book(collection['id'], collection['url'])
 
         # Parse plays from the collection
-        plays = self.parse_contemporary_plays_html(html)
+        plays = self.parse_contemporary_plays_html(html, collection)
         print(f"Found {len(plays)} plays in collection")
 
         # Process each play
@@ -335,6 +422,13 @@ class ContemporaryMonologueScraper:
             monologues = self.extract_monologues_from_play(play_data)
             print(f"  Found {len(monologues)} potential monologues")
 
+            limit = self.limit_monologues_per_collection
+            if limit is not None and total_monologues >= limit:
+                monologues = []
+            elif limit is not None:
+                remaining = limit - total_monologues
+                monologues = monologues[:remaining]
+
             # Analyze and save each monologue
             for mono_data in monologues:
                 result = await self.analyze_and_save_monologue(mono_data, play)
@@ -355,8 +449,11 @@ class ContemporaryMonologueScraper:
         print("  ✓ No copyright violations\n")
 
         try:
+            collections = GUTENBERG_CONTEMPORARY_PLAYS
+            if self.limit_collections is not None:
+                collections = collections[: self.limit_collections]
             # Scrape each Gutenberg collection
-            for collection in GUTENBERG_CONTEMPORARY_PLAYS:
+            for collection in collections:
                 await self.scrape_gutenberg_collection(collection)
 
             print("\n✅ Scraping completed successfully!")
@@ -370,7 +467,25 @@ class ContemporaryMonologueScraper:
 
 async def main():
     """Run the scraper."""
-    scraper = ContemporaryMonologueScraper()
+    import argparse
+    parser = argparse.ArgumentParser(description="Scrape contemporary monologues from Project Gutenberg")
+    parser.add_argument(
+        "--limit-monologues",
+        type=int,
+        default=None,
+        help="Max monologues to save per collection (default: no limit)",
+    )
+    parser.add_argument(
+        "--limit-collections",
+        type=int,
+        default=None,
+        help="Max Gutenberg collections to process (default: all)",
+    )
+    args = parser.parse_args()
+    scraper = ContemporaryMonologueScraper(
+        limit_monologues_per_collection=args.limit_monologues,
+        limit_collections=args.limit_collections,
+    )
     await scraper.run()
 
 

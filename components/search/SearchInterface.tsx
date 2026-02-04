@@ -20,6 +20,7 @@ import { addSearchToHistory } from "@/lib/searchHistory";
 export function SearchInterface() {
   const [profileBias, setProfileBias] = useState(true);
   const [query, setQuery] = useState("");
+  // Shared filter state (manual filters + era/category)
   const [filters, setFilters] = useState({
     age_range: "",
     gender: "",
@@ -27,6 +28,8 @@ export function SearchInterface() {
     theme: "",
     category: "",
   });
+  // Era toggle: "" = either, "classical" or "contemporary"
+  const [era, setEra] = useState<"" | "classical" | "contemporary">("");
   const [results, setResults] = useState<Monologue[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -46,10 +49,33 @@ export function SearchInterface() {
     setIsLoading(true);
     setHasSearched(true);
     try {
+      // Build effective filters, including era/category, in a single place
+      const baseFilters = {
+        ...(profileBias ? {} : filters),
+      };
+
+      // Era override for category (matches acting-world \"classical\" vs \"contemporary\")
+      const effectiveCategory =
+        era === "classical"
+          ? "Classical"
+          : era === "contemporary"
+          ? "Contemporary"
+          : (baseFilters as any).category || "";
+
+      const effectiveFilters =
+        effectiveCategory || !profileBias
+          ? {
+              ...(baseFilters as any),
+              ...(effectiveCategory ? { category: effectiveCategory } : {}),
+            }
+          : undefined;
+
       const searchRequest: SearchRequest = {
         query: query || undefined,
         profile_bias: profileBias,
-        filters: profileBias ? undefined : filters,
+        // Always send filters when we have an era/category or manual filters.
+        // This lets the backend skip AI query parsing for budget/perf.
+        filters: effectiveFilters,
       };
 
       const response = await api.post("/api/search", searchRequest);
@@ -63,6 +89,7 @@ export function SearchInterface() {
       }
 
       // Save to new search history format
+      const historyCategory = effectiveCategory || "";
       addSearchToHistory({
         query: query || "",
         filters: profileBias ? {} : {
@@ -70,7 +97,7 @@ export function SearchInterface() {
           age_range: filters.age_range,
           emotion: "",
           theme: filters.theme,
-          category: filters.category,
+          category: historyCategory,
         },
         resultPreviews: response.data.results.slice(0, 3),
         resultCount: response.data.results.length,
@@ -108,6 +135,7 @@ export function SearchInterface() {
       theme: "",
       category: "",
     });
+    setEra("");
   };
 
   const useHistoryItem = (item: string) => {
@@ -130,6 +158,65 @@ export function SearchInterface() {
         <Card className="">
           <CardContent className="pt-6">
             <div className="space-y-4">
+              {/* Era toggle - shared across AI and manual search modes */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.05 }}
+                className="flex items-center justify-between pb-3"
+              >
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-semibold">Era</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Choose whether to search classical or contemporary monologues, or both
+                  </p>
+                </div>
+                <div className="inline-flex rounded-md border border-border overflow-hidden text-xs">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEra("");
+                      setFilters(prev => ({ ...prev, category: "" }));
+                    }}
+                    className={`px-3 py-1.5 ${
+                      era === ""
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    Either
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEra("contemporary");
+                      setFilters(prev => ({ ...prev, category: "Contemporary" }));
+                    }}
+                    className={`px-3 py-1.5 border-l border-border ${
+                      era === "contemporary"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    Contemporary
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEra("classical");
+                      setFilters(prev => ({ ...prev, category: "Classical" }));
+                    }}
+                    className={`px-3 py-1.5 border-l border-border ${
+                      era === "classical"
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-background text-foreground hover:bg-muted/50"
+                    }`}
+                  >
+                    Classical
+                  </button>
+                </div>
+              </motion.div>
+
               {/* Profile Bias Toggle */}
               <motion.div
                 initial={{ opacity: 0 }}
@@ -360,9 +447,18 @@ export function SearchInterface() {
                           <Select
                             id="category"
                             value={filters.category}
-                            onChange={(e) =>
-                              setFilters({ ...filters, category: e.target.value })
-                            }
+                            onChange={(e) => {
+                              const value = e.target.value;
+                              setFilters({ ...filters, category: value });
+                              // Keep era in sync with manual category selection
+                              if (value === "Contemporary") {
+                                setEra("contemporary");
+                              } else if (value === "Classical") {
+                                setEra("classical");
+                              } else {
+                                setEra("");
+                              }
+                            }}
                           >
                             <option value="">All Categories</option>
                             <option value="Contemporary">Contemporary</option>

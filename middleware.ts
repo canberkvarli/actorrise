@@ -27,10 +27,19 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refresh session if expired
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // Refresh session if expired (can fail if Supabase is unreachable from Edge)
+  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] = null
+  let supabaseUnreachable = false
+  try {
+    const { data } = await supabase.auth.getUser()
+    user = data.user
+  } catch (err) {
+    // Supabase unreachable (e.g. network, wrong URL) – continue without auth for this request.
+    if (process.env.NODE_ENV === 'development') {
+      supabaseUnreachable = true
+      console.warn('[middleware] Supabase auth unavailable:', (err as Error).message)
+    }
+  }
 
   const { pathname } = request.nextUrl
 
@@ -39,6 +48,12 @@ export async function middleware(request: NextRequest) {
       pathname.startsWith('/profile') || 
       pathname.startsWith('/search')) {
     if (!user) {
+      // In dev, if Supabase was unreachable from middleware, allow the request through:
+      // the client has the session and will render; avoids "login then redirect back" when
+      // only the server can't reach Supabase (e.g. network/DNS).
+      if (supabaseUnreachable && process.env.NODE_ENV === 'development') {
+        return supabaseResponse
+      }
       const redirectUrl = new URL('/login', request.url)
       redirectUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(redirectUrl)
