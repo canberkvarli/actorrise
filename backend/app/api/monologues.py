@@ -1,9 +1,10 @@
 """API endpoints for monologue search and discovery."""
 
-from typing import List, Optional
+from typing import List, Optional, cast
 
 from app.api.auth import get_current_user
 from app.core.database import get_db
+from app.middleware.rate_limiting import require_ai_search_when_query
 from app.models.actor import Monologue, MonologueFavorite, Play
 from app.models.user import User
 from app.services.search.recommender import Recommender
@@ -45,6 +46,15 @@ class MonologueResponse(BaseModel):
         from_attributes = True
 
 
+class SearchResponse(BaseModel):
+    """Standardized search response with pagination metadata."""
+
+    results: List[MonologueResponse]
+    total: int
+    page: int
+    page_size: int
+
+
 class PlayResponse(BaseModel):
     id: int
     title: str
@@ -62,9 +72,52 @@ class FavoriteNoteUpdate(BaseModel):
     notes: Optional[str] = None
 
 
-@router.get("/search", response_model=List[MonologueResponse])
+def _monologue_to_response(m: Monologue, is_favorited: bool = False) -> MonologueResponse:
+    """Build MonologueResponse from ORM instance with correct types for the type checker."""
+    play = m.play
+    return MonologueResponse(
+        id=cast(int, m.id),
+        title=cast(str, m.title),
+        character_name=cast(str, m.character_name),
+        text=cast(str, m.text),
+        stage_directions=cast(Optional[str], m.stage_directions),
+        play_title=cast(str, play.title),
+        play_id=cast(int, play.id),
+        author=cast(str, play.author),
+        category=cast(str, play.category),
+        character_gender=cast(Optional[str], m.character_gender),
+        character_age_range=cast(Optional[str], m.character_age_range),
+        primary_emotion=cast(Optional[str], m.primary_emotion),
+        emotion_scores=cast(Optional[dict], m.emotion_scores),
+        themes=(list(cast(list, m.themes)) if m.themes is not None else []) or [],
+        tone=cast(Optional[str], m.tone),
+        difficulty_level=cast(Optional[str], m.difficulty_level),
+        word_count=cast(int, m.word_count),
+        estimated_duration_seconds=cast(int, m.estimated_duration_seconds),
+        view_count=cast(int, m.view_count),
+        favorite_count=cast(int, m.favorite_count),
+        is_favorited=is_favorited,
+        overdone_score=cast(float, m.overdone_score),
+        scene_description=cast(Optional[str], m.scene_description),
+    )
+
+
+def _play_to_response(p: Play) -> PlayResponse:
+    """Build PlayResponse from ORM instance with correct types for the type checker."""
+    return PlayResponse(
+        id=cast(int, p.id),
+        title=cast(str, p.title),
+        author=cast(str, p.author),
+        year_written=cast(Optional[int], p.year_written),
+        genre=cast(str, p.genre),
+        category=cast(str, p.category),
+        source_url=cast(Optional[str], p.source_url),
+    )
+
+
+@router.get("/search", response_model=SearchResponse)
 async def search_monologues(
-    q: str = Query(..., min_length=1, description="Search query"),
+    q: Optional[str] = Query(None, max_length=500, description="Search query (omit for discover/random)"),
     gender: Optional[str] = None,
     age_range: Optional[str] = None,
     emotion: Optional[str] = None,
@@ -74,11 +127,16 @@ async def search_monologues(
     author: Optional[str] = None,
     max_duration: Optional[int] = None,
     limit: int = Query(20, le=100),
+    page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _ai_search_gate: bool = Depends(require_ai_search_when_query),
 ):
     """
-    Semantic search for monologues.
+    Semantic search for monologues. Same contract for dashboard and /search page.
+
+    When q is provided: hybrid semantic + keyword search.
+    When q is omitted or empty: returns discover (random) monologues with filters.
 
     Example queries:
     - "sad monologue about loss"
@@ -105,9 +163,13 @@ async def search_monologues(
     if max_duration:
         filters['max_duration'] = max_duration
 
-    # Search (pass user_id to prioritize bookmarked monologues)
     search_service = SemanticSearch(db)
-    results = search_service.search(q, limit=limit, filters=filters, user_id=current_user.id)
+    if q and q.strip():
+        results = search_service.search(
+            q.strip(), limit=limit, filters=filters, user_id=cast(int, current_user.id)
+        )
+    else:
+        results = search_service.get_random_monologues(limit=limit, filters=filters)
 
     # Get user's favorites
     favorites = db.query(MonologueFavorite.monologue_id).filter(
@@ -116,34 +178,22 @@ async def search_monologues(
     favorite_ids = {f[0] for f in favorites}
 
     # Format response
-    return [
-        MonologueResponse(
-            id=m.id,
-            title=m.title,
-            character_name=m.character_name,
-            text=m.text,
-            stage_directions=m.stage_directions,
-            play_title=m.play.title,
-            play_id=m.play.id,
-            author=m.play.author,
-            category=m.play.category,
-            character_gender=m.character_gender,
-            character_age_range=m.character_age_range,
-            primary_emotion=m.primary_emotion,
-            emotion_scores=m.emotion_scores,
-            themes=m.themes or [],
-            tone=m.tone,
-            difficulty_level=m.difficulty_level,
-            word_count=m.word_count,
-            estimated_duration_seconds=m.estimated_duration_seconds,
-            view_count=m.view_count,
-            favorite_count=m.favorite_count,
-            is_favorited=m.id in favorite_ids,
-            overdone_score=m.overdone_score,
-            scene_description=m.scene_description
-        )
+    monologue_responses = [
+        _monologue_to_response(m, is_favorited=(m.id in favorite_ids))
         for m in results
     ]
+
+    # For now, total is the number of results returned for this query.
+    # In the future, this can be expanded to support true multi-page
+    # pagination by exposing total hit count from the search service.
+    total = len(monologue_responses)
+
+    return SearchResponse(
+        results=monologue_responses,
+        total=total,
+        page=page,
+        page_size=limit,
+    )
 
 
 @router.get("/recommendations", response_model=List[MonologueResponse])
@@ -175,31 +225,7 @@ async def get_recommendations(
 
     # Format response
     return [
-        MonologueResponse(
-            id=m.id,
-            title=m.title,
-            character_name=m.character_name,
-            text=m.text,
-            stage_directions=m.stage_directions,
-            play_title=m.play.title,
-            play_id=m.play.id,
-            author=m.play.author,
-            category=m.play.category,
-            character_gender=m.character_gender,
-            character_age_range=m.character_age_range,
-            primary_emotion=m.primary_emotion,
-            emotion_scores=m.emotion_scores,
-            themes=m.themes or [],
-            tone=m.tone,
-            difficulty_level=m.difficulty_level,
-            word_count=m.word_count,
-            estimated_duration_seconds=m.estimated_duration_seconds,
-            view_count=m.view_count,
-            favorite_count=m.favorite_count,
-            is_favorited=m.id in favorite_ids,
-            overdone_score=m.overdone_score,
-            scene_description=m.scene_description
-        )
+        _monologue_to_response(m, is_favorited=(m.id in favorite_ids))
         for m in results
     ]
 
@@ -230,31 +256,7 @@ async def discover_monologues(
     favorite_ids = {f[0] for f in favorites}
 
     return [
-        MonologueResponse(
-            id=m.id,
-            title=m.title,
-            character_name=m.character_name,
-            text=m.text,
-            stage_directions=m.stage_directions,
-            play_title=m.play.title,
-            play_id=m.play.id,
-            author=m.play.author,
-            category=m.play.category,
-            character_gender=m.character_gender,
-            character_age_range=m.character_age_range,
-            primary_emotion=m.primary_emotion,
-            emotion_scores=m.emotion_scores,
-            themes=m.themes or [],
-            tone=m.tone,
-            difficulty_level=m.difficulty_level,
-            word_count=m.word_count,
-            estimated_duration_seconds=m.estimated_duration_seconds,
-            view_count=m.view_count,
-            favorite_count=m.favorite_count,
-            is_favorited=m.id in favorite_ids,
-            overdone_score=m.overdone_score,
-            scene_description=m.scene_description
-        )
+        _monologue_to_response(m, is_favorited=(m.id in favorite_ids))
         for m in results
     ]
 
@@ -277,31 +279,7 @@ async def get_trending(
     favorite_ids = {f[0] for f in favorites}
 
     return [
-        MonologueResponse(
-            id=m.id,
-            title=m.title,
-            character_name=m.character_name,
-            text=m.text,
-            stage_directions=m.stage_directions,
-            play_title=m.play.title,
-            play_id=m.play.id,
-            author=m.play.author,
-            category=m.play.category,
-            character_gender=m.character_gender,
-            character_age_range=m.character_age_range,
-            primary_emotion=m.primary_emotion,
-            emotion_scores=m.emotion_scores,
-            themes=m.themes or [],
-            tone=m.tone,
-            difficulty_level=m.difficulty_level,
-            word_count=m.word_count,
-            estimated_duration_seconds=m.estimated_duration_seconds,
-            view_count=m.view_count,
-            favorite_count=m.favorite_count,
-            is_favorited=m.id in favorite_ids,
-            overdone_score=m.overdone_score,
-            scene_description=m.scene_description
-        )
+        _monologue_to_response(m, is_favorited=(m.id in favorite_ids))
         for m in results
     ]
 
@@ -320,7 +298,7 @@ async def get_monologue(
         raise HTTPException(status_code=404, detail="Monologue not found")
 
     # Increment view count
-    monologue.view_count += 1
+    monologue.view_count = int(monologue.view_count) + 1  # type: ignore[assignment]
     db.commit()
 
     # Check if favorited
@@ -329,31 +307,7 @@ async def get_monologue(
         MonologueFavorite.monologue_id == monologue_id
     ).first() is not None
 
-    return MonologueResponse(
-        id=monologue.id,
-        title=monologue.title,
-        character_name=monologue.character_name,
-        text=monologue.text,
-        stage_directions=monologue.stage_directions,
-        play_title=monologue.play.title,
-        play_id=monologue.play.id,
-        author=monologue.play.author,
-        category=monologue.play.category,
-        character_gender=monologue.character_gender,
-        character_age_range=monologue.character_age_range,
-        primary_emotion=monologue.primary_emotion,
-        emotion_scores=monologue.emotion_scores,
-        themes=monologue.themes or [],
-        tone=monologue.tone,
-        difficulty_level=monologue.difficulty_level,
-        word_count=monologue.word_count,
-        estimated_duration_seconds=monologue.estimated_duration_seconds,
-        view_count=monologue.view_count,
-        favorite_count=monologue.favorite_count,
-        is_favorited=is_favorited,
-        overdone_score=monologue.overdone_score,
-        scene_description=monologue.scene_description
-    )
+    return _monologue_to_response(monologue, is_favorited=is_favorited)
 
 
 @router.post("/{monologue_id}/favorite")
@@ -386,7 +340,7 @@ async def favorite_monologue(
     db.add(favorite)
 
     # Update favorite count
-    monologue.favorite_count += 1
+    monologue.favorite_count = int(monologue.favorite_count) + 1  # type: ignore[assignment]
 
     db.commit()
 
@@ -413,8 +367,8 @@ async def unfavorite_monologue(
 
     # Update favorite count
     monologue = db.query(Monologue).get(monologue_id)
-    if monologue and monologue.favorite_count > 0:
-        monologue.favorite_count -= 1
+    if monologue and int(monologue.favorite_count) > 0:
+        monologue.favorite_count = int(monologue.favorite_count) - 1  # type: ignore[assignment]
 
     db.commit()
 
@@ -438,7 +392,7 @@ async def update_favorite_notes(
     if not favorite:
         raise HTTPException(status_code=404, detail="Favorite not found")
 
-    favorite.notes = data.notes
+    setattr(favorite, "notes", data.notes)
     db.commit()
 
     return {"message": "Notes updated successfully"}
@@ -468,31 +422,7 @@ async def get_similar_monologues(
     favorite_ids = {f[0] for f in favorites}
 
     return [
-        MonologueResponse(
-            id=m.id,
-            title=m.title,
-            character_name=m.character_name,
-            text=m.text,
-            stage_directions=m.stage_directions,
-            play_title=m.play.title,
-            play_id=m.play.id,
-            author=m.play.author,
-            category=m.play.category,
-            character_gender=m.character_gender,
-            character_age_range=m.character_age_range,
-            primary_emotion=m.primary_emotion,
-            emotion_scores=m.emotion_scores,
-            themes=m.themes or [],
-            tone=m.tone,
-            difficulty_level=m.difficulty_level,
-            word_count=m.word_count,
-            estimated_duration_seconds=m.estimated_duration_seconds,
-            view_count=m.view_count,
-            favorite_count=m.favorite_count,
-            is_favorited=m.id in favorite_ids,
-            overdone_score=m.overdone_score,
-            scene_description=m.scene_description
-        )
+        _monologue_to_response(m, is_favorited=(m.id in favorite_ids))
         for m in results
     ]
 
@@ -515,34 +445,7 @@ async def get_my_favorites(
 
     monologues = db.query(Monologue).filter(Monologue.id.in_(monologue_ids)).all()
 
-    return [
-        MonologueResponse(
-            id=m.id,
-            title=m.title,
-            character_name=m.character_name,
-            text=m.text,
-            stage_directions=m.stage_directions,
-            play_title=m.play.title,
-            play_id=m.play.id,
-            author=m.play.author,
-            category=m.play.category,
-            character_gender=m.character_gender,
-            character_age_range=m.character_age_range,
-            primary_emotion=m.primary_emotion,
-            emotion_scores=m.emotion_scores,
-            themes=m.themes or [],
-            tone=m.tone,
-            difficulty_level=m.difficulty_level,
-            word_count=m.word_count,
-            estimated_duration_seconds=m.estimated_duration_seconds,
-            view_count=m.view_count,
-            favorite_count=m.favorite_count,
-            is_favorited=True,
-            overdone_score=m.overdone_score,
-            scene_description=m.scene_description
-        )
-        for m in monologues
-    ]
+    return [_monologue_to_response(m, is_favorited=True) for m in monologues]
 
 
 @router.get("/plays/all", response_model=List[PlayResponse])
@@ -565,18 +468,7 @@ async def get_all_plays(
 
     plays = query.order_by(Play.author, Play.title).limit(limit).all()
 
-    return [
-        PlayResponse(
-            id=p.id,
-            title=p.title,
-            author=p.author,
-            year_written=p.year_written,
-            genre=p.genre,
-            category=p.category,
-            source_url=p.source_url
-        )
-        for p in plays
-    ]
+    return [_play_to_response(p) for p in plays]
 
 
 @router.get("/stats/database", )
@@ -637,29 +529,26 @@ async def get_performance_metrics(
 
 
 @router.get("/debug/author-distribution")
-async def get_author_distribution(
-    db: Session = Depends(get_db)
-    # No auth required for debug endpoint
-):
+async def get_author_distribution(db: Session = Depends(get_db)):
     """
     Debug endpoint: Get distribution of monologues by author.
     This helps diagnose if only certain authors are in the database.
 
     Access via: http://localhost:8000/api/monologues/debug/author-distribution
     """
-    from sqlalchemy import func
+    from sqlalchemy import func as sql_func
 
-    # Get count of monologues by author
+    # Get count of monologues by author (sql_func.count is SQLAlchemy's count generator)
     author_counts = db.query(
         Play.author,
-        func.count(Monologue.id).label('monologue_count'),
-        func.count(Monologue.embedding).label('with_embedding')
+        sql_func.count(Monologue.id).label('monologue_count'),  # pylint: disable=not-callable
+        sql_func.count(Monologue.embedding).label('with_embedding'),  # pylint: disable=not-callable
     ).join(
         Monologue, Monologue.play_id == Play.id
     ).group_by(
         Play.author
     ).order_by(
-        func.count(Monologue.id).desc()
+        sql_func.count(Monologue.id).desc()  # pylint: disable=not-callable
     ).all()
 
     total_monologues = db.query(Monologue).count()
@@ -723,8 +612,9 @@ async def upload_monologue(
     This allows users to upload their own scripts and use them with
     Scene Partner and other features.
     """
-    from app.services.ai.content_analyzer import ContentAnalyzer
     import json
+
+    from app.services.ai.content_analyzer import ContentAnalyzer
 
     try:
         # Check if play exists (user-uploaded custom play)
@@ -806,38 +696,14 @@ async def upload_monologue(
             notes=upload.notes
         )
         db.add(favorite)
-        monologue.favorite_count += 1
+        monologue.favorite_count = int(monologue.favorite_count) + 1  # type: ignore[assignment]
         db.commit()
 
-        return MonologueResponse(
-            id=monologue.id,
-            title=monologue.title,
-            character_name=monologue.character_name,
-            text=monologue.text,
-            stage_directions=monologue.stage_directions,
-            play_title=play.title,
-            play_id=play.id,
-            author=play.author,
-            category=play.category,
-            character_gender=monologue.character_gender,
-            character_age_range=monologue.character_age_range,
-            primary_emotion=monologue.primary_emotion,
-            emotion_scores=monologue.emotion_scores,
-            themes=monologue.themes or [],
-            tone=monologue.tone,
-            difficulty_level=monologue.difficulty_level,
-            word_count=monologue.word_count,
-            estimated_duration_seconds=monologue.estimated_duration_seconds,
-            view_count=monologue.view_count,
-            favorite_count=monologue.favorite_count,
-            is_favorited=True,
-            overdone_score=monologue.overdone_score,
-            scene_description=monologue.scene_description
-        )
+        return _monologue_to_response(monologue, is_favorited=True)
 
     except Exception as e:
         db.rollback()
         raise HTTPException(
             status_code=500,
             detail=f"Failed to upload monologue: {str(e)}"
-        )
+        ) from e

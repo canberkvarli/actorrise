@@ -1,11 +1,14 @@
 """Multi-level caching for search optimization."""
 
-from typing import Optional, List, Any, Dict
-from functools import lru_cache
 import hashlib
 import json
+import logging
 import time
 from datetime import datetime
+from functools import lru_cache
+from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class CacheManager:
@@ -28,7 +31,7 @@ class CacheManager:
         self.redis_enabled = False
 
         try:
-            import redis
+            import redis  # type: ignore[import-untyped]
             from app.core.config import settings
 
             self.redis_client = redis.Redis(
@@ -41,10 +44,9 @@ class CacheManager:
             # Test connection
             self.redis_client.ping()
             self.redis_enabled = True
-            print("✓ Redis cache enabled")
-
+            logger.info("Redis cache enabled for search")
         except Exception as e:
-            print(f"⚠ Redis not available (will use memory cache only): {e}")
+            logger.debug("Redis not available (using memory cache only): %s", e)
             self.redis_enabled = False
 
         # Metrics
@@ -86,6 +88,7 @@ class CacheManager:
         if not self.redis_enabled:
             return None
 
+        assert self.redis_client is not None
         cache_key = self._generate_cache_key('search', query, filters)
 
         try:
@@ -120,6 +123,7 @@ class CacheManager:
         if not self.redis_enabled:
             return
 
+        assert self.redis_client is not None
         cache_key = self._generate_cache_key('search', query, filters)
 
         try:
@@ -148,7 +152,7 @@ class CacheManager:
         cache_key = self._generate_cache_key('embedding', query)
 
         # Try Redis first
-        if self.redis_enabled:
+        if self.redis_enabled and self.redis_client is not None:
             try:
                 cached = self.redis_client.get(cache_key)
                 if cached:
@@ -179,6 +183,7 @@ class CacheManager:
         if not self.redis_enabled:
             return
 
+        assert self.redis_client is not None
         cache_key = self._generate_cache_key('embedding', query)
 
         try:
@@ -203,6 +208,7 @@ class CacheManager:
         if not self.redis_enabled:
             return None
 
+        assert self.redis_client is not None
         cache_key = self._generate_cache_key('filters', query)
 
         try:
@@ -235,6 +241,7 @@ class CacheManager:
         if not self.redis_enabled:
             return
 
+        assert self.redis_client is not None
         cache_key = self._generate_cache_key('filters', query)
 
         try:
@@ -249,7 +256,7 @@ class CacheManager:
 
     def clear_all(self):
         """Clear all caches (for testing/debugging)"""
-        if self.redis_enabled:
+        if self.redis_enabled and self.redis_client is not None:
             try:
                 self.redis_client.flushdb()
                 print("✓ All caches cleared")
@@ -258,7 +265,7 @@ class CacheManager:
 
     def clear_search_cache(self):
         """Clear only search result caches"""
-        if self.redis_enabled:
+        if self.redis_enabled and self.redis_client is not None:
             try:
                 keys = self.redis_client.keys('search:*')
                 if keys:
@@ -286,7 +293,7 @@ class CacheManager:
             'hit_rate': round(hit_rate * 100, 2),
         }
 
-        if self.redis_enabled:
+        if self.redis_enabled and self.redis_client is not None:
             try:
                 info = self.redis_client.info('memory')
                 stats['redis_memory_mb'] = round(info['used_memory'] / 1024 / 1024, 2)
@@ -347,9 +354,6 @@ def lru_cached_search(maxsize=100):
             # Convert tuple back to dict
             filters = dict(filters_tuple) if filters_tuple else {}
             return func(query, filters)
-
-        wrapper.cache_info = lambda: lru_cache.__wrapped__(wrapper).cache_info()
-        wrapper.cache_clear = lambda: lru_cache.__wrapped__(wrapper).cache_clear()
 
         return wrapper
 

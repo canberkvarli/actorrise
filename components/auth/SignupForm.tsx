@@ -56,7 +56,7 @@ export function SignupForm() {
 
   return (
     <div className="w-full">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form method="post" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <div className="space-y-2">
             <Label htmlFor="name" className="font-mono">Name</Label>
             <Input
@@ -113,7 +113,7 @@ export function SignupForm() {
             {isLoading ? (
               <>
                 <IconLoader2 className="mr-2 h-4 w-4 animate-spin" />
-                Creating account...
+                Create account
               </>
             ) : (
               "Sign up"

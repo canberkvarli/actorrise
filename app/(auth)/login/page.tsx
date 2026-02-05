@@ -2,6 +2,7 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { IconArrowLeft } from "@tabler/icons-react";
+import { Suspense } from "react";
 
 export default function LoginPage() {
   return (
@@ -25,7 +26,9 @@ export default function LoginPage() {
               Use your email and password to access your dashboard.
             </p>
           </div>
-          <LoginForm />
+          <Suspense fallback={<div className="h-10 animate-pulse rounded bg-muted" />}>
+            <LoginForm />
+          </Suspense>
           <div className="text-center text-xs text-muted-foreground">
             <span>Don&apos;t have an account? </span>
             <Link href="/signup" className="font-semibold text-primary hover:underline">

@@ -10,12 +10,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter } from "@tabler/icons-react";
-import { SearchRequest } from "@/types/actor";
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { MonologueCard } from "./MonologueCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { addSearchToHistory } from "@/lib/searchHistory";
+
+type MonologueSearchResponse = {
+  results: Monologue[];
+  total: number;
+  page: number;
+  page_size: number;
+};
 
 export function SearchInterface() {
   const [profileBias, setProfileBias] = useState(true);
@@ -34,6 +40,7 @@ export function SearchInterface() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   const PERSIST_KEY = "dashboard_monologue_search_v1";
 
@@ -70,6 +77,7 @@ export function SearchInterface() {
     if (!query.trim() && !profileBias) return;
 
     setIsLoading(true);
+    setSearchError(null);
     setHasSearched(true);
     try {
       // Build effective filters, including era/category, in a single place
@@ -93,15 +101,28 @@ export function SearchInterface() {
             }
           : undefined;
 
-      const searchRequest: SearchRequest = {
-        query: query || undefined,
-        profile_bias: profileBias,
-        // Always send filters when we have an era/category or manual filters.
-        // This lets the backend skip AI query parsing for budget/perf.
-        filters: effectiveFilters,
-      };
+      // Build query params for unified monologue search endpoint
+      const params = new URLSearchParams();
+      if (query.trim()) {
+        params.set("q", query);
+      }
 
-      const response = await api.post("/api/search", searchRequest);
+      const effective = effectiveFilters || {};
+      if ((effective as any).gender) params.set("gender", (effective as any).gender);
+      if ((effective as any).age_range) params.set("age_range", (effective as any).age_range);
+      if ((effective as any).emotion) params.set("emotion", (effective as any).emotion);
+      if ((effective as any).theme) params.set("theme", (effective as any).theme);
+      if ((effective as any).difficulty) params.set("difficulty", (effective as any).difficulty);
+      if ((effective as any).category) params.set("category", (effective as any).category);
+      if ((effective as any).author) params.set("author", (effective as any).author);
+      if ((effective as any).max_duration)
+        params.set("max_duration", String((effective as any).max_duration));
+
+      params.set("limit", "20");
+
+      const response = await api.get<MonologueSearchResponse>(
+        `/api/monologues/search?${params.toString()}`
+      );
       setResults(response.data.results);
 
       // Persist full search state so a refresh or navigation keeps results
@@ -141,8 +162,18 @@ export function SearchInterface() {
         resultPreviews: response.data.results.slice(0, 3),
         resultCount: response.data.results.length,
       });
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Search error:", error);
+      const raw = (error as { response?: { data?: { detail?: string | { message?: string } } } })?.response?.data?.detail;
+      const message =
+        typeof raw === "string"
+          ? raw
+          : raw && typeof raw === "object" && "message" in raw
+            ? (raw as { message: string }).message
+            : error instanceof Error
+              ? error.message
+              : "Search failed. Please try again.";
+      setSearchError(message);
       setResults([]);
     } finally {
       setIsLoading(false);
@@ -275,7 +306,7 @@ export function SearchInterface() {
                 <Switch
                   id="profile-bias"
                   checked={profileBias}
-                  onChange={(e) => setProfileBias(e.target.checked)}
+                  onCheckedChange={setProfileBias}
                 />
               </motion.div>
 
@@ -536,6 +567,18 @@ export function SearchInterface() {
           </CardContent>
         </Card>
       </motion.div>
+
+      {/* Error banner with retry */}
+      {searchError && (
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <p className="text-sm text-destructive font-medium">{searchError}</p>
+            <Button variant="outline" size="sm" onClick={() => handleSearch()}>
+              Try again
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Results */}
       <AnimatePresence mode="wait">

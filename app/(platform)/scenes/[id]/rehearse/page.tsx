@@ -151,37 +151,44 @@ export default function RehearsalPage() {
     setIsProcessing(true);
 
     try {
-      const response = await api.post('/api/scenes/rehearse/deliver', {
+      const response = await api.post<{
+        ai_response: string;
+        feedback?: string;
+        completion_percentage: number;
+        session_status: string;
+      }>('/api/scenes/rehearse/deliver', {
         session_id: session.id,
         user_input: inputToSend,
         request_feedback: false,
         request_retry: false
       });
 
+      const data = response.data;
+
       // Add AI response
       const aiMessage: Message = {
         type: 'ai',
         character: session.ai_character,
-        content: response.data.ai_response,
-        feedback: response.data.feedback
+        content: data.ai_response,
+        feedback: data.feedback
       };
 
       setMessages(prev => [...prev, aiMessage]);
 
       // Auto-speak AI response if voice enabled
       if (autoSpeak && voiceEnabled && isSpeechSynthesisSupported) {
-        speak(response.data.ai_response);
+        speak(data.ai_response);
       }
 
       // Update session
       setSession({
         ...session,
-        completion_percentage: response.data.completion_percentage,
+        completion_percentage: data.completion_percentage,
         total_lines_delivered: session.total_lines_delivered + 1
       });
 
       // Check if scene complete
-      if (response.data.session_status === 'completed') {
+      if (data.session_status === 'completed') {
         await loadFeedback();
         setShowFeedback(true);
       }

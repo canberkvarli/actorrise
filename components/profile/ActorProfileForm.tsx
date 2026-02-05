@@ -22,19 +22,31 @@ import { IconLoader2, IconInfoCircle, IconPhoto, IconEdit, IconX, IconUser, Icon
 import { PhotoEditor } from "./PhotoEditor";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+import {
+  LOCATIONS,
+  EXPERIENCE_LEVELS,
+  GENDERS,
+  AGE_RANGES,
+  BUILD_OPTIONS,
+  UNION_STATUSES,
+  CHARACTER_TYPES,
+  PREFERRED_GENRES,
+  ACTOR_TYPE_IDS,
+  ACTOR_TYPE_LABELS,
+} from "@/lib/profileOptions";
 
 const profileSchema = z.object({
   name: z.string().min(1, "Name is required"),
-  age_range: z.string().min(1, "Age range is required"),
-  gender: z.string().min(1, "Gender is required"),
+  age_range: z.string().optional(),
+  gender: z.string().optional(),
   ethnicity: z.string().optional(),
   height: z.string().optional(),
   build: z.string().optional(),
-  location: z.string().min(1, "Location is required"),
-  experience_level: z.string().min(1, "Experience level is required"),
-  type: z.string().min(1, "Type is required"),
+  location: z.string().optional(),
+  experience_level: z.string().optional(),
+  type: z.string().optional(),
   training_background: z.string().optional(),
-  union_status: z.string().min(1, "Union status is required"),
+  union_status: z.string().optional(),
   preferred_genres: z.array(z.string()),
   overdone_alert_sensitivity: z.number().min(0).max(1),
   profile_bias_enabled: z.boolean(),
@@ -42,8 +54,6 @@ const profileSchema = z.object({
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
-
-const genres = ["Drama", "Comedy", "Classical", "Contemporary", "Musical", "Shakespeare"];
 
 export function ActorProfileForm() {
   const queryClient = useQueryClient();
@@ -56,6 +66,8 @@ export function ActorProfileForm() {
   const [showPhotoViewer, setShowPhotoViewer] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
   const [hasInitialized, setHasInitialized] = useState(false);
+  /** Actor types (from onboarding) - multi-select; when non-empty we save type as array */
+  const [actorTypes, setActorTypes] = useState<string[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const saveStatusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -95,7 +107,6 @@ export function ActorProfileForm() {
   const profileBias = watch("profile_bias_enabled");
   const headshotUrl = watch("headshot_url");
   
-  // Track previous values to only save when something actually changes
   type PreviousValues = {
     name: string;
     ageRange: string;
@@ -106,6 +117,7 @@ export function ActorProfileForm() {
     location: string;
     experienceLevel: string;
     type: string;
+    actorTypes: string[];
     trainingBackground: string | undefined;
     unionStatus: string;
     preferredGenres: string[];
@@ -123,6 +135,7 @@ export function ActorProfileForm() {
     location: "",
     experienceLevel: "",
     type: "",
+    actorTypes: [],
     trainingBackground: undefined,
     unionStatus: "",
     preferredGenres: [],
@@ -133,13 +146,14 @@ export function ActorProfileForm() {
 
   // Calculate profile completion percentage - matches backend calculation
   const completionPercentage = useMemo(() => {
+    const hasType = type || actorTypes.length > 0;
     const requiredFields = [
       name,
       ageRange,
       gender,
       location,
       experienceLevel,
-      type,
+      hasType,
       unionStatus,
     ];
     const optionalFields = [
@@ -164,6 +178,7 @@ export function ActorProfileForm() {
     experienceLevel,
     type,
     unionStatus,
+    actorTypes,
     ethnicity,
     height,
     build,
@@ -195,19 +210,20 @@ export function ActorProfileForm() {
       const response = await api.get<ProfileResponse>("/api/profile");
       const profile = response.data;
       
-      // Reset form with all profile data - this properly updates all registered inputs
-      // Handle type field - can be string (character type) or array (actor types)
+      const rawType = profile.type;
       let typeValue = "";
-      if (profile.type) {
-        if (Array.isArray(profile.type)) {
-          // If it's an array (actor types from onboarding), use empty string for character type
-          // Character type can be set separately
+      if (rawType) {
+        if (Array.isArray(rawType)) {
+          setActorTypes(rawType.map((t: unknown) => String(t)));
           typeValue = "";
         } else {
-          typeValue = profile.type;
+          setActorTypes([]);
+          typeValue = String(rawType);
         }
+      } else {
+        setActorTypes([]);
       }
-      
+
       const formData = {
         name: profile.name || "",
         age_range: profile.age_range || "",
@@ -242,7 +258,7 @@ export function ActorProfileForm() {
         setHeadshotPreview(null);
       }
       
-      // Initialize previous values to prevent auto-save on load
+      const loadedActorTypes = Array.isArray(rawType) ? rawType.map((t: unknown) => String(t)) : [];
       prevValuesRef.current = {
         name: profile.name || "",
         ageRange: profile.age_range || "",
@@ -252,7 +268,8 @@ export function ActorProfileForm() {
         build: profile.build || "",
         location: profile.location || "",
         experienceLevel: profile.experience_level || "",
-        type: profile.type || "",
+        type: Array.isArray(rawType) ? "" : (profile.type || ""),
+        actorTypes: loadedActorTypes,
         trainingBackground: profile.training_background || "",
         unionStatus: profile.union_status || "",
         preferredGenres: Array.isArray(profile.preferred_genres) ? profile.preferred_genres : [],
@@ -287,6 +304,7 @@ export function ActorProfileForm() {
           profileBias: true,
           headshotUrl: "",
         };
+        setActorTypes([]);
       }
     } finally {
       setIsFetching(false);
@@ -310,7 +328,6 @@ export function ActorProfileForm() {
       return;
     }
 
-    // Get current values
     const currentValues = {
       name,
       ageRange,
@@ -321,6 +338,7 @@ export function ActorProfileForm() {
       location,
       experienceLevel,
       type,
+      actorTypes,
       trainingBackground,
       unionStatus,
       preferredGenres: preferredGenresValue,
@@ -366,7 +384,7 @@ export function ActorProfileForm() {
         build: string | null;
         location: string;
         experience_level: string;
-        type: string;
+        type: string | string[];
         training_background: string | null;
         union_status: string;
         preferred_genres: string[];
@@ -386,7 +404,8 @@ export function ActorProfileForm() {
       else if (data.build === "") saveData.build = null;
       if (data.location && data.location.trim()) saveData.location = data.location.trim();
       if (data.experience_level && data.experience_level.trim()) saveData.experience_level = data.experience_level.trim();
-      if (data.type && data.type.trim()) saveData.type = data.type.trim();
+      if (actorTypes.length > 0) saveData.type = actorTypes;
+      else if (data.type && data.type.trim()) saveData.type = data.type.trim();
       if (data.training_background && data.training_background.trim()) saveData.training_background = data.training_background.trim();
       else if (data.training_background === "") saveData.training_background = null;
       if (data.union_status && data.union_status.trim()) saveData.union_status = data.union_status.trim();
@@ -472,7 +491,7 @@ export function ActorProfileForm() {
     };
   }, [
     name, ageRange, gender, ethnicity, height, build, location,
-    experienceLevel, type, trainingBackground, unionStatus,
+    experienceLevel, type, actorTypes, trainingBackground, unionStatus,
     preferredGenresValue, overdoneSensitivity, profileBias, headshotUrl,
     hasInitialized, isFetching, getValues
   ]);
@@ -867,18 +886,16 @@ export function ActorProfileForm() {
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="age_range" className="font-mono">Age Range *</Label>
-                          <Select 
-                            id="age_range" 
-                            value={watch("age_range") || ""}
-                            onChange={(e) => setValue("age_range", e.target.value)}
-                          >
-                            <option value="">Select age range</option>
-                            <option value="18-25">18-25</option>
-                            <option value="25-35">25-35</option>
-                            <option value="35-45">35-45</option>
-                            <option value="45-55">45-55</option>
-                            <option value="55+">55+</option>
-                          </Select>
+                        <Select 
+                          id="age_range" 
+                          value={watch("age_range") || ""}
+                          onChange={(e) => setValue("age_range", e.target.value)}
+                        >
+                          <option value="">Select age range</option>
+                          {AGE_RANGES.map((r) => (
+                            <option key={r} value={r}>{r}</option>
+                          ))}
+                        </Select>
                           {errors.age_range && (
                             <motion.p
                               initial={{ opacity: 0 }}
@@ -892,17 +909,16 @@ export function ActorProfileForm() {
 
                         <div className="space-y-2">
                           <Label htmlFor="gender" className="font-mono">Gender Identity *</Label>
-                          <Select 
-                            id="gender" 
-                            value={watch("gender") || ""}
-                            onChange={(e) => setValue("gender", e.target.value)}
-                          >
-                            <option value="">Select gender</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Non-binary">Non-binary</option>
-                            <option value="Other">Other</option>
-                          </Select>
+                        <Select 
+                          id="gender" 
+                          value={watch("gender") || ""}
+                          onChange={(e) => setValue("gender", e.target.value)}
+                        >
+                          <option value="">Select gender</option>
+                          {GENDERS.map((g) => (
+                            <option key={g} value={g}>{g}</option>
+                          ))}
+                        </Select>
                           {errors.gender && (
                             <motion.p
                               initial={{ opacity: 0 }}
@@ -935,27 +951,30 @@ export function ActorProfileForm() {
 
                         <div className="space-y-2">
                           <Label htmlFor="build" className="font-mono">Build (optional)</Label>
-                          <Input 
-                            id="build" 
-                            placeholder="Athletic" 
-                            {...register("build")}
-                          />
+                          <Select
+                            id="build"
+                            value={watch("build") || ""}
+                            onChange={(e) => setValue("build", e.target.value)}
+                          >
+                            <option value="">Select build</option>
+                            {BUILD_OPTIONS.map((b) => (
+                              <option key={b} value={b}>{b}</option>
+                            ))}
+                          </Select>
                         </div>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="location" className="font-mono">Location/Market *</Label>
+                        <Label htmlFor="location" className="font-mono">Location / market</Label>
                         <Select 
                           id="location" 
                           value={watch("location") || ""}
                           onChange={(e) => setValue("location", e.target.value)}
                         >
                           <option value="">Select location</option>
-                          <option value="NYC">NYC</option>
-                          <option value="LA">LA</option>
-                          <option value="Chicago">Chicago</option>
-                          <option value="Regional">Regional</option>
-                          <option value="Other">Other</option>
+                          {LOCATIONS.map((loc) => (
+                            <option key={loc} value={loc}>{loc}</option>
+                          ))}
                         </Select>
                         {errors.location && (
                           <motion.p
@@ -985,6 +1004,31 @@ export function ActorProfileForm() {
                     </CardHeader>
                     <CardContent className="space-y-6">
                       <div className="space-y-2">
+                        <Label className="font-mono">Actor types</Label>
+                        <p className="text-xs text-muted-foreground mb-2">Select all that apply (e.g. Theater, Film & TV)</p>
+                        <div className="flex flex-wrap gap-2">
+                          {ACTOR_TYPE_IDS.filter((id) => id !== "other").map((id) => {
+                            const isSelected = actorTypes.includes(id);
+                            return (
+                              <button
+                                key={id}
+                                type="button"
+                                onClick={() => {
+                                  setActorTypes((prev) =>
+                                    prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+                                  );
+                                }}
+                                className={`px-3 py-2 rounded-xl border text-sm transition ${
+                                  isSelected ? "border-accent bg-accent/10" : "border-border hover:border-accent/50 bg-card"
+                                }`}
+                              >
+                                {ACTOR_TYPE_LABELS[id] || id}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
                         <div className="flex items-center gap-2">
                           <Label htmlFor="experience_level" className="font-mono">Experience Level *</Label>
                           <Tooltip>
@@ -1012,9 +1056,9 @@ export function ActorProfileForm() {
                           onChange={(e) => setValue("experience_level", e.target.value)}
                         >
                           <option value="">Select experience level</option>
-                          <option value="Student">Student</option>
-                          <option value="Emerging">Emerging</option>
-                          <option value="Professional">Professional</option>
+                          {EXPERIENCE_LEVELS.map((l) => (
+                            <option key={l.id} value={l.id}>{l.label}</option>
+                          ))}
                         </Select>
                         {errors.experience_level && (
                           <motion.p
@@ -1034,12 +1078,10 @@ export function ActorProfileForm() {
                           value={watch("type") || ""}
                           onChange={(e) => setValue("type", e.target.value)}
                         >
-                          <option value="">Select type</option>
-                          <option value="Leading Man/Woman">Leading Man/Woman</option>
-                          <option value="Character Actor">Character Actor</option>
-                          <option value="Ingénue">Ingénue</option>
-                          <option value="Comic">Comic</option>
-                          <option value="Other">Other</option>
+                          <option value="">Character type (optional)</option>
+                          {CHARACTER_TYPES.map((t) => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
                         </Select>
                         {errors.type && (
                           <motion.p
@@ -1089,9 +1131,9 @@ export function ActorProfileForm() {
                           onChange={(e) => setValue("union_status", e.target.value)}
                         >
                           <option value="">Select union status</option>
-                          <option value="Non-union">Non-union</option>
-                          <option value="SAG-E">SAG-E</option>
-                          <option value="SAG">SAG</option>
+                          {UNION_STATUSES.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
                         </Select>
                         {errors.union_status && (
                           <motion.p
@@ -1135,16 +1177,16 @@ export function ActorProfileForm() {
                         <Switch
                           id="profile_bias"
                           checked={profileBiasEnabled}
-                          onChange={(e) => setValue("profile_bias_enabled", e.target.checked)}
+                          onCheckedChange={(checked) => setValue("profile_bias_enabled", checked)}
                         />
                       </div>
 
                       <Separator />
 
                       <div className="space-y-2">
-                        <Label className="font-mono">Preferred Genres</Label>
+                        <Label className="font-mono">Preferred genres</Label>
                         <div className="grid grid-cols-3 gap-2">
-                          {genres.map((genre) => (
+                          {PREFERRED_GENRES.map((genre) => (
                             <motion.label
                               key={genre}
                               whileHover={{ scale: 1.05 }}

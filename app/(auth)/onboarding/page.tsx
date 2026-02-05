@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
 import { useQueryClient } from '@tanstack/react-query';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { PhotoEditor } from '@/components/profile/PhotoEditor';
@@ -26,7 +27,6 @@ import {
   Calendar,
   Briefcase,
   Settings,
-  Image,
   Info
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -47,52 +47,45 @@ const steps = [
 
 const ONBOARDING_STORAGE_KEY = 'actorrise_onboarding_progress';
 
+/** Resize image data URL to max 1200px so the crop editor opens quickly. */
+function resizeImageForCrop(dataUrl: string, maxPx = 1200): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const w = img.width;
+      const h = img.height;
+      if (w <= maxPx && h <= maxPx) {
+        resolve(dataUrl);
+        return;
+      }
+      const scale = maxPx / Math.max(w, h);
+      const c = document.createElement('canvas');
+      c.width = Math.round(w * scale);
+      c.height = Math.round(h * scale);
+      const ctx = c.getContext('2d');
+      if (!ctx) {
+        reject(new Error('No canvas context'));
+        return;
+      }
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      resolve(c.toDataURL('image/jpeg', 0.88));
+    };
+    img.onerror = () => reject(new Error('Image load failed'));
+    img.src = dataUrl;
+  });
+}
+
 export default function OnboardingPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
-  
-  // Load saved progress from localStorage
-  const loadSavedProgress = () => {
-    if (typeof window === 'undefined') return { step: 0, data: null };
-    try {
-      const saved = localStorage.getItem(ONBOARDING_STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return { step: parsed.step || 0, data: parsed.data || null };
-      }
-    } catch (e) {
-      console.error('Error loading onboarding progress:', e);
-    }
-    return { step: 0, data: null };
-  };
 
-  const savedProgress = loadSavedProgress();
-  
-  // Check if user already has a profile (completed onboarding)
-  useEffect(() => {
-    const checkProfile = async () => {
-      try {
-        const response = await api.get('/api/profile');
-        if (response.data && response.data.name) {
-          // User has a profile, redirect to dashboard
-          router.push('/dashboard');
-        }
-      } catch (error: any) {
-        // 404 means no profile yet, which is fine - continue onboarding
-        if (error.response?.status !== 404) {
-          console.error('Error checking profile:', error);
-        }
-      }
-    };
-    checkProfile();
-  }, [router]);
-
-  const [currentStep, setCurrentStep] = useState(savedProgress.step);
+  // Always start at step 0 so new signups see Welcome; we only restore progress after confirming user has incomplete profile
+  const [currentStep, setCurrentStep] = useState(0);
   const [formData, setFormData] = useState({
     name: '',
     location: '',
-    actorTypes: [] as string[], // Changed to array for multiple selections
-    actorTypeOther: '', // For "Other" option
+    actorTypes: [] as string[],
+    actorTypeOther: '',
     experience: '',
     age_range: '',
     gender: '',
@@ -102,16 +95,62 @@ export default function OnboardingPage() {
     build: '',
     training_background: '',
     union_status: '',
-    union_status_other: '', // For "Other" option
+    union_status_other: '',
     type: '',
-    type_other: '', // For "Other" option
+    type_other: '',
     preferred_genres: [] as string[],
     overdone_alert_sensitivity: 0.5,
     profile_bias_enabled: true,
     headshot_url: '',
-    ...(savedProgress.data || {})
   });
+
+  // Check profile: redirect if complete, clear stale progress if new user (404), restore progress if incomplete
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const response = await api.get<{ name?: string }>('/api/profile');
+        if (cancelled) return;
+        const profile = response.data;
+        if (profile?.name) {
+          router.push('/dashboard');
+          return;
+        }
+        // Profile exists but no name (incomplete): restore from localStorage so they can continue where they left off
+        if (profile && typeof window !== 'undefined') {
+          try {
+            const saved = localStorage.getItem(ONBOARDING_STORAGE_KEY);
+            if (saved) {
+              const parsed = JSON.parse(saved);
+              const step = Math.min(Number(parsed.step) || 0, steps.length - 1);
+              if (step > 0) {
+                setCurrentStep(step);
+                if (parsed.data && typeof parsed.data === 'object') {
+                  setFormData(prev => ({ ...prev, ...parsed.data }));
+                }
+              }
+            }
+          } catch (_) {
+            /* ignore parse errors */
+          }
+        }
+      } catch (error: unknown) {
+        if (cancelled) return;
+        const err = error as { response?: { status?: number } };
+        if (err.response?.status === 404) {
+          // New user (no profile yet): clear stale onboarding progress from another session so we don't show "Complete"
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem(ONBOARDING_STORAGE_KEY);
+          }
+        } else {
+          console.error('Error checking profile:', error);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [router]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isPreparingImage, setIsPreparingImage] = useState(false);
   const [showPhotoEditor, setShowPhotoEditor] = useState(false);
   const [photoToEdit, setPhotoToEdit] = useState<string | null>(null);
 
@@ -164,62 +203,39 @@ export default function OnboardingPage() {
   const completeOnboarding = async () => {
     setIsLoading(true);
     try {
-      // Build save data - only include fields that have values
-      const saveData: any = {};
-      
-      // Required field
-      if (formData.name.trim()) saveData.name = formData.name.trim();
-      
-      // Optional fields - only send if they have values
-      if (formData.location && formData.location.trim()) saveData.location = formData.location.trim();
-      
-      // Handle actor types - can be multiple + other
-      // Store in type field as array
       const actorTypes = [...formData.actorTypes];
-      if (formData.actorTypeOther.trim()) {
-        actorTypes.push(formData.actorTypeOther.trim());
-      }
-      if (actorTypes.length > 0) {
-        saveData.type = actorTypes.length === 1 ? actorTypes[0] : actorTypes;
-      }
-      
-      if (formData.experience) saveData.experience_level = formData.experience;
-      if (formData.age_range) saveData.age_range = formData.age_range;
-      if (formData.gender) saveData.gender = formData.gender;
-      if (formData.ethnicity?.trim()) saveData.ethnicity = formData.ethnicity.trim();
-      
-      // Combine height - only save if both are provided and not empty
-      if ((formData.height_feet && formData.height_feet !== '0') || (formData.height_inches && formData.height_inches !== '0')) {
-        const feet = formData.height_feet || '0';
-        const inches = formData.height_inches || '0';
-        saveData.height = `${feet}'${inches}"`;
-      }
-      
-      if (formData.build?.trim()) saveData.build = formData.build.trim();
-      if (formData.training_background?.trim()) saveData.training_background = formData.training_background.trim();
-      
-      // Handle union status - can have "Other"
-      if (formData.union_status) {
-        saveData.union_status = formData.union_status === 'Other' && formData.union_status_other.trim()
-          ? formData.union_status_other.trim()
-          : formData.union_status;
-      }
-      
-      // Character type (Leading Man/Woman, etc.) - only save if actor types weren't set
-      // This is a different concept from actor types, but they share the same backend field
-      // For now, prioritize actor types in onboarding, character type can be set in profile
-      if (!saveData.type && formData.type && formData.type !== 'Other') {
-        saveData.type = formData.type;
-      } else if (!saveData.type && formData.type === 'Other' && formData.type_other.trim()) {
-        saveData.type = formData.type_other.trim();
-      }
-      if (formData.preferred_genres.length > 0) saveData.preferred_genres = formData.preferred_genres;
-      if (formData.overdone_alert_sensitivity !== undefined) saveData.overdone_alert_sensitivity = formData.overdone_alert_sensitivity;
-      if (formData.profile_bias_enabled !== undefined) saveData.profile_bias_enabled = formData.profile_bias_enabled;
-      if (formData.headshot_url?.trim()) saveData.headshot_url = formData.headshot_url.trim();
+      if (formData.actorTypeOther.trim()) actorTypes.push(formData.actorTypeOther.trim());
+      const typeValue = actorTypes.length === 0
+        ? (formData.type === 'Other' && formData.type_other.trim() ? formData.type_other.trim() : formData.type || null)
+        : (actorTypes.length === 1 ? actorTypes[0] : actorTypes);
 
-      // Save to profile using POST
-      console.log('Saving profile data:', JSON.stringify(saveData, null, 2));
+      const unionValue = formData.union_status
+        ? (formData.union_status === 'Other' && formData.union_status_other.trim() ? formData.union_status_other.trim() : formData.union_status)
+        : null;
+
+      const feet = formData.height_feet?.trim() && formData.height_feet !== '0' ? formData.height_feet : '';
+      const inches = formData.height_inches?.trim() && formData.height_inches !== '0' ? formData.height_inches : '';
+      const heightValue = (feet || inches) ? `${feet || '0'}'${inches || '0'}"` : null;
+
+      // Send full profile payload so backend receives every field (fixes headshot-only profile not getting name, etc.)
+      const saveData = {
+        name: formData.name?.trim() || null,
+        location: formData.location?.trim() || null,
+        age_range: formData.age_range || null,
+        gender: formData.gender || null,
+        ethnicity: formData.ethnicity?.trim() || null,
+        height: heightValue,
+        build: formData.build?.trim() || null,
+        experience_level: formData.experience || null,
+        type: typeValue,
+        training_background: formData.training_background?.trim() || null,
+        union_status: unionValue,
+        preferred_genres: formData.preferred_genres?.length ? formData.preferred_genres : [],
+        overdone_alert_sensitivity: formData.overdone_alert_sensitivity ?? 0.5,
+        profile_bias_enabled: formData.profile_bias_enabled ?? true,
+        headshot_url: formData.headshot_url?.trim() || null,
+      };
+
       const response = await api.post('/api/profile', saveData);
       console.log('Profile saved successfully:', response.data);
 
@@ -268,14 +284,23 @@ export default function OnboardingPage() {
         toast.error('Image size must be less than 5MB');
         return;
       }
-      
+      setIsPreparingImage(true);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result as string;
-        setPhotoToEdit(base64String);
-        setShowPhotoEditor(true);
+      reader.onloadend = async () => {
+        try {
+          const base64String = reader.result as string;
+          const resized = await resizeImageForCrop(base64String);
+          setPhotoToEdit(resized);
+          setShowPhotoEditor(true);
+        } catch (err) {
+          console.error('Error preparing image:', err);
+          toast.error('Failed to prepare image. Try a smaller file.');
+        } finally {
+          setIsPreparingImage(false);
+        }
       };
       reader.onerror = () => {
+        setIsPreparingImage(false);
         toast.error('Failed to read image file');
       };
       reader.readAsDataURL(file);
@@ -315,22 +340,39 @@ export default function OnboardingPage() {
     <TooltipProvider>
       <div className="min-h-screen bg-background [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
       <div className="min-h-screen flex flex-col">
-        {/* Progress Bar */}
+        {/* Progress Bar — muted palette, orange reserved for CTAs */}
         {currentStep > 0 && currentStep < steps.length - 1 && (
           <div className="fixed top-0 left-0 right-0 z-50">
-            <div className="h-1 bg-muted">
+            <div className="h-0.5 bg-muted">
               <motion.div
-                className="h-full bg-primary"
+                className="h-full bg-foreground/15"
                 initial={{ width: 0 }}
                 animate={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}
-                transition={{ duration: 0.5 }}
+                transition={{ duration: 0.4 }}
               />
             </div>
           </div>
         )}
 
-        {/* Main Content */}
+        {/* Main Content — same layout as login/signup */}
         <div className="flex-1 flex items-center justify-center px-4 py-10 pb-32">
+          <div className="w-full max-w-2xl">
+            {currentStep > 0 && currentStep < steps.length - 1 && (
+              <div className="mb-4 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={prevStep}
+                  className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  Back
+                </button>
+                <span className="text-xs font-mono text-muted-foreground tabular-nums">
+                  {currentStep} of {steps.length - 1}
+                </span>
+              </div>
+            )}
+            <div className="border border-border/60 rounded-2xl bg-card shadow-sm px-6 py-8 md:px-8 md:py-10">
           <AnimatePresence mode="wait">
             {currentStep === 0 && <WelcomeStep key="welcome" onNext={nextStep} />}
             {currentStep === 1 && (
@@ -423,44 +465,40 @@ export default function OnboardingPage() {
                 onBack={prevStep}
                 onSkip={completeOnboarding}
                 isLoading={isLoading}
+                isPreparingImage={isPreparingImage}
               />
             )}
             {currentStep === 9 && <CompleteStep key="complete" onNavigate={() => router.push('/dashboard')} />}
           </AnimatePresence>
-        </div>
+            </div>
 
-        {/* Navigation */}
-        {currentStep > 0 && currentStep < steps.length - 1 && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="fixed bottom-8 left-0 right-0 flex justify-center gap-4 px-4"
-          >
-            <button
-              onClick={prevStep}
-              className="px-6 py-3 rounded-xl border border-border bg-card text-sm font-medium text-foreground hover:border-primary hover:text-primary transition flex items-center gap-2"
-            >
-              <ChevronLeft className="w-5 h-5" />
-              Back
-            </button>
-            {currentStep > 1 && (
-              <button
-                onClick={skipStep}
-                className="px-6 py-3 rounded-xl border border-border bg-card text-sm font-medium text-muted-foreground hover:border-primary hover:text-primary transition"
+            {/* Navigation — primary only on main CTA */}
+            {currentStep > 0 && currentStep < steps.length - 1 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-8 flex flex-wrap items-center justify-between gap-4"
               >
-                Skip
-              </button>
+                <div className="flex gap-2">
+                  {currentStep > 1 && (
+                    <Button type="button" variant="ghost" size="sm" onClick={skipStep} className="text-muted-foreground">
+                      Skip
+                    </Button>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  onClick={nextStep}
+                  disabled={!canProceed()}
+                  className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
+                >
+                  Continue
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </motion.div>
             )}
-            <button
-              onClick={nextStep}
-              disabled={!canProceed()}
-              className="px-8 py-3 rounded-xl bg-primary text-primary-foreground text-sm font-semibold transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90"
-            >
-              Continue
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          </motion.div>
-        )}
+          </div>
+        </div>
       </div>
 
       {/* Photo Editor */}
@@ -480,59 +518,36 @@ export default function OnboardingPage() {
   );
 }
 
-// Welcome Step
+// Welcome Step — professional, palette-conscious (orange only on CTA)
 function WelcomeStep({ onNext }: { onNext: () => void }) {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 1.1 }}
-      transition={{ duration: 0.5 }}
-        className="text-center max-w-2xl"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-8"
     >
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1, rotate: 360 }}
-        transition={{ duration: 0.8, delay: 0.2 }}
-        className="mb-8 inline-block"
-      >
-        <div className="w-32 h-32 rounded-full border border-border flex items-center justify-center bg-card shadow-sm">
-          <Sparkles className="w-16 h-16 text-primary" />
+      <div className="space-y-3">
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+          ACTORRISE
+        </h1>
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-mono">
+          Set up your profile
+        </p>
+        <p className="text-sm text-muted-foreground leading-relaxed max-w-md">
+          A short setup so we can tailor monologue suggestions and audition tools to you. You can update anything later in your profile.
+        </p>
+      </div>
+      <div className="flex justify-center py-6">
+        <div className="w-20 h-20 rounded-full border border-border flex items-center justify-center bg-muted/80">
+          <Sparkles className="w-10 h-10 text-muted-foreground" />
         </div>
-      </motion.div>
-
-      <motion.h1
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4 }}
-        className="text-5xl md:text-6xl font-bold text-foreground mb-6"
-      >
-        Welcome to ActorRise
-      </motion.h1>
-
-      <motion.p
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        className="text-lg md:text-xl text-muted-foreground mb-12 leading-relaxed"
-      >
-        Set up your profile to get started.
-        <br />
-        You can always add more details later.
-      </motion.p>
-
-      <motion.button
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8 }}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={onNext}
-        className="px-10 py-4 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-semibold text-base md:text-lg transition flex items-center gap-3 mx-auto"
-      >
-        Get Started
-        <ChevronRight className="w-6 h-6" />
-      </motion.button>
+      </div>
+      <Button onClick={onNext} className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+        Get started
+        <ChevronRight className="w-4 h-4" />
+      </Button>
     </motion.div>
   );
 }
@@ -541,8 +556,6 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
 function NameStep({
   name,
   onUpdate,
-  onNext,
-  onBack
 }: {
   name: string;
   onUpdate: (value: string) => void;
@@ -551,43 +564,30 @@ function NameStep({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: 100 }}
+      initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -100 }}
-      transition={{ duration: 0.3 }}
-      className="max-w-2xl w-full"
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.25 }}
+      className="space-y-6"
     >
-      <div className="flex items-center justify-center mb-8">
-        <div className="w-16 h-16 rounded-full border border-border flex items-center justify-center bg-card">
-          <User className="w-8 h-8 text-primary" />
-        </div>
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-mono">
+          Your name
+        </p>
+        <h2 className="text-2xl font-bold text-foreground">
+          What should we call you?
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          This appears on your profile and in the app.
+        </p>
       </div>
-
-      <motion.h2
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-3xl md:text-4xl font-bold text-foreground text-center mb-4"
-      >
-        What's your name?
-      </motion.h2>
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="text-muted-foreground text-center mb-8 text-sm md:text-base"
-      >
-        This will appear on your profile
-      </motion.p>
-
-      <div className="space-y-4">
-        <Input
-          value={name}
-          onChange={(e) => onUpdate(e.target.value)}
-          placeholder="Enter your full name"
-          className="w-full text-lg py-6"
-          autoFocus
-        />
-      </div>
+      <Input
+        value={name}
+        onChange={(e) => onUpdate(e.target.value)}
+        placeholder="Full name"
+        className="w-full"
+        autoFocus
+      />
     </motion.div>
   );
 }
@@ -596,9 +596,6 @@ function NameStep({
 function LocationStep({
   location,
   onUpdate,
-  onNext,
-  onBack,
-  onSkip
 }: {
   location: string;
   onUpdate: (value: string) => void;
@@ -610,56 +607,42 @@ function LocationStep({
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 100 }}
+      initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -100 }}
-      transition={{ duration: 0.3 }}
-      className="max-w-2xl w-full"
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.25 }}
+      className="space-y-6"
     >
-      <div className="flex items-center justify-center mb-8">
-        <div className="w-16 h-16 rounded-full border border-border flex items-center justify-center bg-card">
-          <MapPin className="w-8 h-8 text-primary" />
-        </div>
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-mono">
+          Location
+        </p>
+        <h2 className="text-2xl font-bold text-foreground">
+          Where are you based?
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Optional — helps us surface relevant opportunities.
+        </p>
       </div>
-
-      <motion.h2
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-3xl md:text-4xl font-bold text-foreground text-center mb-4"
-      >
-        Where are you based?
-      </motion.h2>
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="text-muted-foreground text-center mb-8 text-sm md:text-base"
-      >
-        Optional - helps us show you relevant opportunities
-      </motion.p>
-
-      <div className="space-y-3">
+      <div className="space-y-2">
         {locations.map((loc) => {
           const isSelected = location === loc;
           return (
-            <motion.button
+            <button
               key={loc}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+              type="button"
               onClick={() => onUpdate(loc)}
-              className={`w-full p-4 rounded-xl border transition text-left ${
+              className={`w-full p-3 rounded-xl border text-left text-sm font-medium transition ${
                 isSelected
-                  ? 'border-primary bg-primary/10'
-                  : 'border-border hover:border-primary/60 bg-card'
+                  ? 'border-accent bg-accent/10 text-foreground'
+                  : 'border-border hover:border-accent/50 bg-muted/30 text-foreground'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="font-medium">{loc}</span>
-                {isSelected && <Check className="w-5 h-5 text-primary" />}
+                <span>{loc}</span>
+                {isSelected && <Check className="w-4 h-4 text-accent-foreground" />}
               </div>
-            </motion.button>
+            </button>
           );
         })}
       </div>
@@ -673,9 +656,6 @@ function ActorTypeStep({
   otherValue,
   onToggle,
   onOtherChange,
-  onNext,
-  onBack,
-  onSkip
 }: {
   selected: string[];
   otherValue: string;
@@ -686,133 +666,83 @@ function ActorTypeStep({
   onSkip: () => void;
 }) {
   const types = [
-    { id: 'theater', label: 'Theater', icon: Theater, description: 'Stage performance and live acting' },
-    { id: 'film', label: 'Film & TV', icon: Film, description: 'On-camera work for screen' },
-    { id: 'voice', label: 'Voice Acting', icon: Mic, description: 'Animation, audiobooks, and VO' },
-    { id: 'student', label: 'Student', icon: GraduationCap, description: 'Learning and training' }
+    { id: 'theater', label: 'Theater', icon: Theater, description: 'Stage & live' },
+    { id: 'film', label: 'Film & TV', icon: Film, description: 'On-camera' },
+    { id: 'voice', label: 'Voice', icon: Mic, description: 'Animation, VO' },
+    { id: 'student', label: 'Student', icon: GraduationCap, description: 'Training' },
   ];
   const hasOther = selected.includes('other');
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 100 }}
+      initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -100 }}
-      transition={{ duration: 0.3 }}
-      className="max-w-2xl w-full"
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.25 }}
+      className="space-y-6"
     >
-      <div className="flex items-center justify-center mb-8">
-        <div className="w-16 h-16 rounded-full border border-border flex items-center justify-center bg-card">
-          <Theater className="w-8 h-8 text-primary" />
-        </div>
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-mono">
+          Actor type
+        </p>
+        <h2 className="text-2xl font-bold text-foreground">
+          What kind of work do you do?
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Optional — select all that apply.
+        </p>
       </div>
-
-      <motion.h2
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-3xl md:text-4xl font-bold text-foreground text-center mb-4"
-      >
-        What kind of actor are you?
-      </motion.h2>
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="text-muted-foreground text-center mb-8 text-sm md:text-base"
-      >
-        Optional - select all that apply
-      </motion.p>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {types.map((type, index) => {
+      <div className="grid grid-cols-2 gap-3">
+        {types.map((type) => {
           const Icon = type.icon;
           const isSelected = selected.includes(type.id);
           return (
-            <motion.button
+            <button
               key={type.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ scale: 1.03, y: -5 }}
-              whileTap={{ scale: 0.98 }}
+              type="button"
               onClick={() => onToggle(type.id)}
-              className={`relative p-6 rounded-xl border transition-all duration-300 bg-card ${
-                isSelected
-                  ? 'border-primary shadow-md'
-                  : 'border-border hover:border-primary/60'
+              className={`relative p-4 rounded-xl border text-left transition ${
+                isSelected ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/50 bg-muted/30'
               }`}
             >
               {isSelected && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute top-4 right-4 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center"
-                >
-                  <Check className="w-5 h-5" />
-                </motion.div>
+                <div className="absolute top-2 right-2 w-5 h-5 bg-accent rounded-full flex items-center justify-center">
+                  <Check className="w-3 h-3 text-accent-foreground" />
+                </div>
               )}
-
-              <div className="w-16 h-16 rounded-xl border border-border flex items-center justify-center mb-4 mx-auto bg-muted">
-                <Icon className="w-8 h-8 text-primary" />
-              </div>
-
-              <h3 className="text-xl font-bold text-foreground mb-2 text-center">
-                {type.label}
-              </h3>
-              <p className="text-muted-foreground text-sm text-center">
-                {type.description}
-              </p>
-            </motion.button>
+              <Icon className="w-6 h-6 text-muted-foreground mb-2" />
+              <div className="font-medium text-foreground text-sm">{type.label}</div>
+              <div className="text-xs text-muted-foreground">{type.description}</div>
+            </button>
           );
         })}
-        <motion.button
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: types.length * 0.1 }}
-          whileHover={{ scale: 1.03, y: -5 }}
-          whileTap={{ scale: 0.98 }}
+        <button
+          type="button"
           onClick={() => onToggle('other')}
-          className={`relative p-6 rounded-xl border transition-all duration-300 bg-card ${
-            hasOther
-              ? 'border-primary shadow-md'
-              : 'border-border hover:border-primary/60'
+          className={`relative p-4 rounded-xl border text-left transition col-span-2 ${
+            hasOther ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/50 bg-muted/30'
           }`}
         >
           {hasOther && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="absolute top-4 right-4 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center"
-            >
-              <Check className="w-5 h-5" />
-            </motion.div>
+            <div className="absolute top-2 right-2 w-5 h-5 bg-accent rounded-full flex items-center justify-center">
+              <Check className="w-3 h-3 text-accent-foreground" />
+            </div>
           )}
-          <div className="w-16 h-16 rounded-xl border border-border flex items-center justify-center mb-4 mx-auto bg-muted">
-            <User className="w-8 h-8 text-primary" />
+          <User className="w-6 h-6 text-muted-foreground mb-2" />
+          <div className="font-medium text-foreground text-sm">Other</div>
+          <div className="text-xs text-muted-foreground">Specify your own</div>
+        </button>
       </div>
-          <h3 className="text-xl font-bold text-foreground mb-2 text-center">
-            Other
-          </h3>
-          <p className="text-muted-foreground text-sm text-center">
-            Specify your own type
-          </p>
-        </motion.button>
-      </div>
-      
       {hasOther && (
-        <motion.div
-          initial={{ opacity: 0, height: 0 }}
-          animate={{ opacity: 1, height: 'auto' }}
-          className="mt-4 mb-20"
-        >
+        <div className="pt-2">
           <Input
             value={otherValue}
             onChange={(e) => onOtherChange(e.target.value)}
-            placeholder="Enter your actor type"
+            placeholder="Your actor type"
             className="w-full"
             autoFocus
           />
-        </motion.div>
+        </div>
       )}
     </motion.div>
   );
@@ -822,9 +752,6 @@ function ActorTypeStep({
 function ExperienceStep({
   selected,
   onSelect,
-  onNext,
-  onBack,
-  onSkip
 }: {
   selected: string;
   onSelect: (value: string) => void;
@@ -833,78 +760,49 @@ function ExperienceStep({
   onSkip: () => void;
 }) {
   const levels = [
-    { id: 'beginner', label: 'Beginner', emoji: '🌱', description: 'Just starting my acting journey' },
-    { id: 'intermediate', label: 'Intermediate', emoji: '🎭', description: 'Some training and experience' },
-    { id: 'professional', label: 'Professional', emoji: '⭐', description: 'Working actor with credits' }
+    { id: 'Student', label: 'Student', emoji: '🌱', description: 'Just starting' },
+    { id: 'Emerging', label: 'Emerging', emoji: '🎭', description: 'Some training' },
+    { id: 'Professional', label: 'Professional', emoji: '⭐', description: 'Working actor' },
   ];
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: 100 }}
+      initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -100 }}
-      transition={{ duration: 0.3 }}
-      className="max-w-2xl w-full"
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.25 }}
+      className="space-y-6"
     >
-      <div className="flex items-center justify-center mb-8">
-        <div className="w-16 h-16 rounded-full border border-border flex items-center justify-center bg-card">
-          <Star className="w-8 h-8 text-primary" />
-        </div>
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-mono">
+          Experience
+        </p>
+        <h2 className="text-2xl font-bold text-foreground">
+          What's your experience level?
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Optional — we use this to match you with the right material.
+        </p>
       </div>
-
-      <motion.h2
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-3xl md:text-4xl font-bold text-foreground text-center mb-4"
-      >
-        What's your experience level?
-      </motion.h2>
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="text-muted-foreground text-center mb-8 text-sm md:text-base"
-      >
-        Optional - helps us match you with appropriate content
-      </motion.p>
-
-      <div className="space-y-4">
-        {levels.map((level, index) => {
+      <div className="space-y-2">
+        {levels.map((level) => {
           const isSelected = selected === level.id;
           return (
-            <motion.button
+            <button
               key={level.id}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: index * 0.1 }}
-              whileHover={{ scale: 1.02, x: 10 }}
-              whileTap={{ scale: 0.98 }}
+              type="button"
               onClick={() => onSelect(level.id)}
-              className={`w-full p-6 rounded-xl border bg-card transition-all duration-300 flex items-center gap-6 ${
-                isSelected
-                  ? 'border-primary shadow-md'
-                  : 'border-border hover:border-primary/60'
+              className={`w-full p-4 rounded-xl border flex items-center gap-4 text-left transition ${
+                isSelected ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/50 bg-muted/30'
               }`}
             >
-              <div className="text-4xl">{level.emoji}</div>
-              <div className="flex-1 text-left">
-                <h3 className="text-xl font-semibold text-foreground mb-1">
-                  {level.label}
-                </h3>
-                <p className="text-muted-foreground text-sm">
-                  {level.description}
-                </p>
+              <span className="text-2xl">{level.emoji}</span>
+              <div className="flex-1">
+                <div className="font-medium text-foreground">{level.label}</div>
+                <div className="text-xs text-muted-foreground">{level.description}</div>
               </div>
-              {isSelected && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="w-10 h-10 bg-primary rounded-full flex items-center justify-center"
-                >
-                  <Check className="w-6 h-6 text-primary-foreground" />
-                </motion.div>
-              )}
-            </motion.button>
+              {isSelected && <Check className="w-5 h-5 text-accent-foreground" />}
+            </button>
           );
         })}
       </div>
@@ -916,9 +814,6 @@ function ExperienceStep({
 function PhysicalDetailsStep({
   formData,
   updateFormData,
-  onNext,
-  onBack,
-  onSkip
 }: {
   formData: any;
   updateFormData: (key: string, value: any) => void;
@@ -928,34 +823,23 @@ function PhysicalDetailsStep({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: 100 }}
+      initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -100 }}
-      transition={{ duration: 0.3 }}
-      className="max-w-2xl w-full"
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.25 }}
+      className="space-y-6"
     >
-      <div className="flex items-center justify-center mb-8">
-        <div className="w-16 h-16 rounded-full border border-border flex items-center justify-center bg-card">
-          <User className="w-8 h-8 text-primary" />
-        </div>
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-mono">
+          Physical details
+        </p>
+        <h2 className="text-2xl font-bold text-foreground">
+          Optional details
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          All fields can be skipped. Helps casting and character matching.
+        </p>
       </div>
-
-      <motion.h2
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-3xl md:text-4xl font-bold text-foreground text-center mb-4"
-      >
-        Physical Details
-      </motion.h2>
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="text-muted-foreground text-center mb-8 text-sm md:text-base"
-      >
-        Optional - all fields can be skipped
-      </motion.p>
-
       <div className="space-y-6">
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground flex items-center gap-2">
@@ -969,10 +853,10 @@ function PhysicalDetailsStep({
                 <button
                   key={range}
                   onClick={() => updateFormData('age_range', range)}
-                  className={`p-3 rounded-lg border transition ${
+                  className={`p-3 rounded-xl border transition ${
                     isSelected
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border hover:border-primary/60 bg-card'
+                      ? 'border-accent bg-accent/10'
+                      : 'border-border hover:border-accent/50 bg-card'
                   }`}
                 >
                   {range}
@@ -994,10 +878,10 @@ function PhysicalDetailsStep({
                 <button
                   key={gender}
                   onClick={() => updateFormData('gender', gender)}
-                  className={`p-3 rounded-lg border transition ${
+                  className={`p-3 rounded-xl border transition ${
                 isSelected
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border hover:border-primary/60 bg-card'
+                      ? 'border-accent bg-accent/10'
+                      : 'border-border hover:border-accent/50 bg-card'
                   }`}
                 >
                   {gender}
@@ -1060,12 +944,23 @@ function PhysicalDetailsStep({
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Build (optional)</label>
-          <Input
-            value={formData.build || ''}
-            onChange={(e) => updateFormData('build', e.target.value)}
-            placeholder="e.g., Athletic, Average, Slender"
-            className="w-full"
-          />
+          <div className="flex flex-wrap gap-2">
+            {['Slender', 'Average', 'Athletic', 'Heavy', 'Other'].map((b) => {
+              const isSelected = formData.build === b;
+              return (
+                <button
+                  key={b}
+                  type="button"
+                  onClick={() => updateFormData('build', b)}
+                  className={`px-3 py-2 rounded-xl border text-sm transition ${
+                    isSelected ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/50 bg-card'
+                  }`}
+                >
+                  {b}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
     </motion.div>
@@ -1076,9 +971,6 @@ function PhysicalDetailsStep({
 function ActingBackgroundStep({
   formData,
   updateFormData,
-  onNext,
-  onBack,
-  onSkip
 }: {
   formData: any;
   updateFormData: (key: string, value: any) => void;
@@ -1088,34 +980,23 @@ function ActingBackgroundStep({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: 100 }}
+      initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -100 }}
-      transition={{ duration: 0.3 }}
-      className="max-w-2xl w-full"
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.25 }}
+      className="space-y-6"
     >
-      <div className="flex items-center justify-center mb-8">
-        <div className="w-16 h-16 rounded-full border border-border flex items-center justify-center bg-card">
-          <Briefcase className="w-8 h-8 text-primary" />
-        </div>
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-mono">
+          Acting background
+        </p>
+        <h2 className="text-2xl font-bold text-foreground">
+          Training & experience
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Optional — helps us tailor suggestions.
+        </p>
       </div>
-
-      <motion.h2
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-3xl md:text-4xl font-bold text-foreground text-center mb-4"
-      >
-        Acting Background
-      </motion.h2>
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="text-muted-foreground text-center mb-8 text-sm md:text-base"
-      >
-        Optional - tell us about your training and experience
-      </motion.p>
-
       <div className="space-y-6">
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Training Background (optional)</label>
@@ -1152,10 +1033,10 @@ function ActingBackgroundStep({
                 <button
                   key={status}
                   onClick={() => updateFormData('union_status', status)}
-                  className={`p-3 rounded-lg border transition text-sm ${
+                  className={`p-3 rounded-xl border transition text-sm ${
                 isSelected
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border hover:border-primary/60 bg-card'
+                      ? 'border-accent bg-accent/10'
+                      : 'border-border hover:border-accent/50 bg-card'
                   }`}
                 >
                   {status}
@@ -1189,10 +1070,10 @@ function ActingBackgroundStep({
                 <button
                   key={type}
                   onClick={() => updateFormData('type', type)}
-                  className={`p-3 rounded-lg border transition text-sm ${
+                  className={`p-3 rounded-xl border transition text-sm ${
                     isSelected
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border hover:border-primary/60 bg-card'
+                      ? 'border-accent bg-accent/10'
+                      : 'border-border hover:border-accent/50 bg-card'
                   }`}
                 >
                   {type}
@@ -1227,9 +1108,6 @@ function PreferencesStep({
   updateFormData,
   toggleGenre,
   genres,
-  onNext,
-  onBack,
-  onSkip
 }: {
   formData: any;
   updateFormData: (key: string, value: any) => void;
@@ -1241,40 +1119,29 @@ function PreferencesStep({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: 100 }}
+      initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -100 }}
-      transition={{ duration: 0.3 }}
-      className="max-w-2xl w-full"
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.25 }}
+      className="space-y-6"
     >
-      <div className="flex items-center justify-center mb-8">
-        <div className="w-16 h-16 rounded-full border border-border flex items-center justify-center bg-card">
-          <Settings className="w-8 h-8 text-primary" />
-        </div>
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-mono">
+          Preferences
+        </p>
+        <h2 className="text-2xl font-bold text-foreground">
+          Search preferences
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Optional — genres and recommendation settings. You can change these anytime.
+        </p>
       </div>
-
-      <motion.h2
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-3xl md:text-4xl font-bold text-foreground text-center mb-4"
-      >
-        AI Preferences
-      </motion.h2>
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="text-muted-foreground text-center mb-8 text-sm md:text-base"
-      >
-        Optional - customize your AI-powered search experience
-      </motion.p>
-
       <div className="space-y-6">
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Preferred Genres</label>
           <div className="grid grid-cols-3 gap-2">
             {genres.map((genre) => (
-              <label key={genre} className="flex items-center space-x-2 cursor-pointer p-3 rounded-lg border border-border hover:border-primary/60 bg-card">
+              <label key={genre} className="flex items-center space-x-2 cursor-pointer p-3 rounded-xl border border-border hover:border-accent/50 bg-card">
                 <Checkbox
                   checked={formData.preferred_genres?.includes(genre)}
                   onChange={() => toggleGenre(genre)}
@@ -1338,15 +1205,12 @@ function PreferencesStep({
   );
 }
 
-// Headshot Step
+// Headshot Step — prominent, professional; encourages upload for better results
 function HeadshotStep({
   headshotUrl,
   onHeadshotChange,
   onRemove,
-  onNext,
-  onBack,
-  onSkip,
-  isLoading
+  isPreparingImage = false,
 }: {
   headshotUrl: string;
   onHeadshotChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -1355,62 +1219,68 @@ function HeadshotStep({
   onBack: () => void;
   onSkip: () => void;
   isLoading: boolean;
+  isPreparingImage?: boolean;
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: 100 }}
+      initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: -100 }}
-      transition={{ duration: 0.3 }}
-      className="max-w-2xl w-full"
+      exit={{ opacity: 0, x: -20 }}
+      transition={{ duration: 0.25 }}
+      className="space-y-6"
     >
-      <div className="flex items-center justify-center mb-8">
-        <div className="w-16 h-16 rounded-full border border-border flex items-center justify-center bg-card">
-          <Camera className="w-8 h-8 text-primary" />
-        </div>
+      <div className="space-y-2">
+        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-mono">
+          Profile photo
+        </p>
+        <h2 className="text-2xl font-bold text-foreground">
+          Add a headshot
+        </h2>
+        <p className="text-sm text-muted-foreground max-w-md">
+          A clear headshot helps us personalize your experience and improves recommendation quality. Standard 2:3 ratio, max 5MB. You can skip and add one later.
+        </p>
       </div>
-
-      <motion.h2
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="text-3xl md:text-4xl font-bold text-foreground text-center mb-4"
-      >
-        Add a Headshot
-      </motion.h2>
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.2 }}
-        className="text-muted-foreground text-center mb-8 text-sm md:text-base"
-      >
-        Optional - upload a professional headshot
-      </motion.p>
-
-      <div className="flex justify-center">
+      <div className="flex justify-center relative">
         {headshotUrl ? (
-          <div className="space-y-4">
+          <div className="space-y-4 flex flex-col items-center">
             <img
               src={headshotUrl}
               alt="Headshot"
-              className="w-32 h-48 object-cover rounded-md border"
+              className="w-36 h-54 object-cover rounded-xl border border-border shadow-sm"
             />
             <button
+              type="button"
               onClick={onRemove}
-              className="text-sm text-destructive hover:underline w-full"
+              className="text-sm text-muted-foreground hover:text-foreground transition"
             >
-              Remove headshot
+              Remove photo
             </button>
           </div>
         ) : (
-          <label className="flex flex-col items-center justify-center w-32 h-48 rounded-md border-2 border-dashed border-border bg-muted/30 hover:bg-muted/50 hover:border-primary/50 transition cursor-pointer">
-            <Image className="h-8 w-8 text-muted-foreground mb-2" />
-            <span className="text-xs text-muted-foreground">Upload</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={onHeadshotChange}
-              className="hidden"
-            />
+          <label
+            className={`flex flex-col items-center justify-center w-40 h-56 rounded-xl border-2 border-dashed border-border transition group relative ${
+              isPreparingImage ? 'bg-muted/50 cursor-wait' : 'bg-muted/30 hover:bg-muted/50 hover:border-accent/50 cursor-pointer'
+            }`}
+          >
+            {isPreparingImage ? (
+              <>
+                <div className="h-8 w-8 rounded-full border-2 border-muted-foreground/30 border-t-muted-foreground animate-spin mb-3" />
+                <span className="text-sm font-medium text-muted-foreground">Preparing image…</span>
+                <span className="text-xs text-muted-foreground mt-1">Opening editor in a moment</span>
+              </>
+            ) : (
+              <>
+                <Camera className="h-10 w-10 text-muted-foreground group-hover:text-foreground/70 mb-3 transition-colors" />
+                <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground/80">Upload headshot</span>
+                <span className="text-xs text-muted-foreground mt-1">JPG, PNG or WEBP</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={onHeadshotChange}
+                  className="hidden"
+                />
+              </>
+            )}
           </label>
         )}
       </div>
@@ -1418,56 +1288,32 @@ function HeadshotStep({
   );
 }
 
-// Complete Step
+// Complete Step — one clear orange CTA
 function CompleteStep({ onNavigate }: { onNavigate: () => void }) {
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.5 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5 }}
-      className="text-center max-w-2xl"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
+      className="space-y-8 text-center"
     >
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: [0, 1.2, 1], rotate: [0, 360, 360] }}
-        transition={{ duration: 0.8 }}
-        className="mb-8 inline-block"
-      >
-        <div className="w-32 h-32 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center shadow-2xl">
-          <Check className="w-16 h-16 text-primary-foreground" />
+      <div className="flex justify-center">
+        <div className="w-20 h-20 rounded-full bg-primary flex items-center justify-center">
+          <Check className="w-10 h-10 text-primary-foreground" />
         </div>
-      </motion.div>
-
-      <motion.h1
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="text-6xl font-bold text-foreground mb-6"
-      >
-        You're All Set!
-      </motion.h1>
-
-      <motion.p
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        className="text-2xl text-muted-foreground mb-8"
-      >
-        Your profile has been saved.
-        <br />
-        Ready to get started!
-      </motion.p>
-
-      <motion.button
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
-        onClick={onNavigate}
-        className="px-10 py-4 bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl font-semibold text-base md:text-lg transition flex items-center gap-3 mx-auto"
-      >
-        Go to Dashboard
-        <ChevronRight className="w-6 h-6" />
-      </motion.button>
+      </div>
+      <div className="space-y-2">
+        <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+          You're all set
+        </h2>
+        <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+          Your profile is saved. You can update it anytime from your profile. Head to the dashboard to find monologues and start preparing.
+        </p>
+      </div>
+      <Button onClick={onNavigate} className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
+        Go to dashboard
+        <ChevronRight className="w-4 h-4" />
+      </Button>
     </motion.div>
   );
 }

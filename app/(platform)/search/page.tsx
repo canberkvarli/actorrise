@@ -40,6 +40,12 @@ export default function SearchPage() {
 
   const LAST_SEARCH_KEY = "monologue_search_last_results_v1";
   const [restoredFromLastSearch, setRestoredFromLastSearch] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 20;
+  const [hasMore, setHasMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
   // Scroll panel to top when monologue is selected
   useEffect(() => {
@@ -100,10 +106,10 @@ export default function SearchPage() {
 
       if (cachedResults) {
         try {
-          const parsed = JSON.parse(cachedResults);
+          const parsed = JSON.parse(cachedResults) as Monologue[];
           setResults(parsed);
+          setTotal(parsed.length);
           setHasSearched(true);
-          // Results came from a specific query in the URL, not the generic "last search" key.
           setRestoredFromLastSearch(false);
           return;
         } catch (e) {
@@ -133,6 +139,7 @@ export default function SearchPage() {
         setQuery(last.query);
         setFilters(last.filters);
         setResults(last.results);
+        setTotal(last.results.length);
         setHasSearched(last.results.length > 0);
          // These results were restored from the generic "last search" slot.
         setRestoredFromLastSearch(true);
@@ -142,66 +149,95 @@ export default function SearchPage() {
     }
   }, [searchParams]);
 
-  const performSearch = async (searchQuery: string, searchFilters: typeof filters) => {
-    setIsLoading(true);
+  type SearchResponseShape = {
+    results: Monologue[];
+    total: number;
+    page: number;
+    page_size: number;
+  };
+
+  const performSearch = async (
+    searchQuery: string,
+    searchFilters: typeof filters,
+    pageNum: number = 1,
+    append: boolean = false
+  ) => {
+    if (!append) {
+      setIsLoading(true);
+      setSearchError(null);
+    } else {
+      setIsLoadingMore(true);
+    }
     setHasSearched(true);
     setRestoredFromLastSearch(false);
     try {
-      const params = new URLSearchParams({ q: searchQuery, limit: "20" });
+      const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: String(pageNum) });
+      if (searchQuery.trim()) params.set("q", searchQuery);
       Object.entries(searchFilters).forEach(([key, value]) => {
         if (value) params.append(key, value);
       });
 
-      const response = await api.get<Monologue[]>(`/api/monologues/search?${params.toString()}`);
-      console.log('Search API Response:', {
-        status: 'success',
-        resultCount: response.data.length,
-        firstResult: response.data[0]?.character_name,
-        query: searchQuery
-      });
-      setResults(response.data);
+      const response = await api.get<SearchResponseShape>(
+        `/api/monologues/search?${params.toString()}`
+      );
+      const data = response.data;
+      const newResults = data.results;
 
-      // Cache results in sessionStorage keyed by query+filters
-      const storageKey = `search_results_${searchQuery}_${JSON.stringify(searchFilters)}`;
-      sessionStorage.setItem(storageKey, JSON.stringify(response.data));
+      if (append) {
+        setResults((prev) => [...prev, ...newResults]);
+      } else {
+        setResults(newResults);
+      }
+      setTotal(data.total);
+      setPage(data.page);
+      setHasMore(newResults.length === PAGE_SIZE && newResults.length < data.total);
 
-      // Also store this as the "last search" so returning to /search
-      // (without a query in the URL) restores these results.
-      sessionStorage.setItem(
-        LAST_SEARCH_KEY,
-        JSON.stringify({
+      // Cache results (first page only) in sessionStorage keyed by query+filters
+      if (pageNum === 1) {
+        const storageKey = `search_results_${searchQuery}_${JSON.stringify(searchFilters)}`;
+        sessionStorage.setItem(storageKey, JSON.stringify(newResults));
+        sessionStorage.setItem(
+          LAST_SEARCH_KEY,
+          JSON.stringify({
+            query: searchQuery,
+            filters: searchFilters,
+            results: newResults,
+          })
+        );
+        addSearchToHistory({
           query: searchQuery,
           filters: searchFilters,
-          results: response.data,
-        })
-      );
-
-      // Add to search history
-      addSearchToHistory({
-        query: searchQuery,
-        filters: searchFilters,
-        resultPreviews: response.data.slice(0, 3),
-        resultCount: response.data.length,
-      });
-
-      // Update URL without page reload
-      const newParams = new URLSearchParams();
-      newParams.set("q", searchQuery);
-      Object.entries(searchFilters).forEach(([key, value]) => {
-        if (value) newParams.set(key, value);
-      });
-      router.replace(`/search?${newParams.toString()}`, { scroll: false });
-    } catch (error) {
-      console.error("Search error:", error);
-      console.error("Search failed:", {
-        query: searchQuery,
-        filters: searchFilters,
-        error: error
-      });
-      setResults([]);
+          resultPreviews: newResults.slice(0, 3),
+          resultCount: data.total,
+        });
+        const newParams = new URLSearchParams();
+        if (searchQuery) newParams.set("q", searchQuery);
+        Object.entries(searchFilters).forEach(([key, value]) => {
+          if (value) newParams.set(key, value);
+        });
+        router.replace(`/search?${newParams.toString()}`, { scroll: false });
+      }
+    } catch (error: unknown) {
+      const raw = (error as { response?: { data?: { detail?: string | { message?: string } } } })?.response?.data?.detail;
+      const message =
+        typeof raw === "string"
+          ? raw
+          : raw && typeof raw === "object" && "message" in raw
+            ? (raw as { message: string }).message
+            : error instanceof Error
+              ? error.message
+              : "Search failed. Please try again.";
+      setSearchError(message);
+      if (!append) setResults([]);
     } finally {
       setIsLoading(false);
+      setIsLoadingMore(false);
     }
+  };
+
+  const loadMore = () => {
+    if (!query.trim() || isLoadingMore || !hasMore) return;
+    performSearch(query, filters, page + 1, true);
   };
 
   const handleSearch = async () => {
@@ -556,6 +592,18 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </CardContent>
         </Card>
 
+        {/* Error banner with retry */}
+        {searchError && (
+          <Card className="border-destructive/50 bg-destructive/5">
+            <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <p className="text-sm text-destructive font-medium">{searchError}</p>
+              <Button variant="outline" size="sm" onClick={() => performSearch(query, filters)}>
+                Try again
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Results */}
         <AnimatePresence mode="wait">
           {isLoading ? (
@@ -600,7 +648,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     </>
                   ) : (
                     <>
-                      Found <span className="font-semibold">{results.length}</span> monologues
+                      Found <span className="font-semibold">{total > 0 ? total : results.length}</span> monologues
                     </>
                   )}
                 </p>
@@ -738,6 +786,21 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </motion.div>
                 ))}
               </div>
+              {hasMore && !showBookmarkedOnly && (
+                <div className="flex justify-center pt-6">
+                  <Button
+                    variant="outline"
+                    onClick={loadMore}
+                    disabled={isLoadingMore}
+                    className="rounded-full px-8"
+                  >
+                    {isLoadingMore ? (
+                      <IconLoader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : null}
+                    Load more
+                  </Button>
+                </div>
+              )}
             </div>
           ) : null}
         </AnimatePresence>
