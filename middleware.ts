@@ -43,10 +43,11 @@ export async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // Protect platform routes (require auth)
-  if (pathname.startsWith('/dashboard') || 
-      pathname.startsWith('/profile') || 
-      pathname.startsWith('/search')) {
+  // Protect platform and onboarding (require auth)
+  if (pathname.startsWith('/dashboard') ||
+      pathname.startsWith('/profile') ||
+      pathname.startsWith('/search') ||
+      pathname === '/onboarding') {
     if (!user) {
       // In dev, if Supabase was unreachable from middleware, allow the request through:
       // the client has the session and will render; avoids "login then redirect back" when

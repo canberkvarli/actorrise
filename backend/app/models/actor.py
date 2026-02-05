@@ -1,8 +1,20 @@
 from app.core.database import Base
-from sqlalchemy import (JSON, Boolean, Column, DateTime, Float, ForeignKey,
-                        Integer, String, Text, text as sql_text, ARRAY)
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    text as sql_text,
+    ARRAY,
+)
 from sqlalchemy.dialects.postgresql import JSONB
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import deferred, relationship
+from pgvector.sqlalchemy import Vector
 
 
 class ActorProfile(Base):
@@ -113,7 +125,11 @@ class Monologue(Base):
     scene_description = Column(Text, nullable=True)  # Setting and situation
 
     # Search & Discovery
-    embedding = Column(Text, nullable=True)  # Vector embedding as JSON string (will add pgvector later)
+    # Legacy JSON/text embedding for backward compatibility with existing data.
+    # New searches should prefer `embedding_vector`, which uses Postgres pgvector.
+    embedding = Column(Text, nullable=True)
+    # Deferred so DBs without this column still load; add column and run backfill when using pgvector.
+    embedding_vector = deferred(Column(Vector, nullable=True))
     search_tags = Column(ARRAY(String), nullable=True)  # Searchable keywords
 
     # Usage Analytics

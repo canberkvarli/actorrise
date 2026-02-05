@@ -114,20 +114,20 @@ export default function AuditionModePage() {
       try {
         setLoadingMonologues(true);
         // First try to get favorites
-        const favoritesResponse = await api.get('/api/monologues/favorites/my');
-        let monologues = favoritesResponse.data;
+        const favoritesResponse = await api.get<Monologue[]>('/api/monologues/favorites/my');
+        let monologues: Monologue[] = Array.isArray(favoritesResponse.data) ? favoritesResponse.data : [];
         
         // If no favorites, fall back to trending monologues
         if (monologues.length === 0) {
           try {
-            const trendingResponse = await api.get('/api/monologues/trending?limit=50');
-            monologues = trendingResponse.data;
+            const trendingResponse = await api.get<Monologue[]>('/api/monologues/trending?limit=50');
+            monologues = Array.isArray(trendingResponse.data) ? trendingResponse.data : [];
           } catch (trendingError) {
             console.error('Failed to load trending monologues:', trendingError);
             // If trending also fails, try discover
             try {
-              const discoverResponse = await api.get('/api/monologues/discover?limit=50');
-              monologues = discoverResponse.data;
+              const discoverResponse = await api.get<Monologue[]>('/api/monologues/discover?limit=50');
+              monologues = Array.isArray(discoverResponse.data) ? discoverResponse.data : [];
             } catch (discoverError) {
               console.error('Failed to load discover monologues:', discoverError);
             }
@@ -230,9 +230,9 @@ export default function AuditionModePage() {
         duration: take.duration,
       });
 
-      const updatedTake = {
+      const updatedTake: Take = {
         ...take,
-        feedback: response.data
+        feedback: response.data as Take['feedback']
       };
 
       setTakes(prev => prev.map(t => t.id === take.id ? updatedTake : t));

@@ -18,10 +18,11 @@ from datetime import date
 from typing import Callable
 
 from app.api.auth import get_current_user
+from app.core.config import settings
 from app.core.database import get_db
 from app.models.billing import PricingTier, UsageMetrics, UserSubscription
 from app.models.user import User
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 
@@ -251,6 +252,28 @@ def require_ai_search(increment: bool = True) -> Callable:
             # User has access to AI search
     """
     return FeatureGate("ai_search", increment=increment)
+
+
+async def require_ai_search_when_query(
+    request: Request,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> bool:
+    """
+    Enforce AI search limits only when the request includes a search query.
+
+    - In development/local (ENVIRONMENT=development or local), limits are not enforced.
+    - If the request has no `q` or empty `q` (e.g. discover/random), the check is
+      skipped and usage is not incremented.
+    - Otherwise the same tier/usage rules as FeatureGate("ai_search", increment=True) apply.
+    """
+    if settings.environment in ("development", "local"):
+        return True
+    q = (request.query_params.get("q") or "").strip()
+    if not q:
+        return True
+    gate = FeatureGate("ai_search", increment=True)
+    return await gate(current_user=current_user, db=db)
 
 
 def require_scene_partner(increment: bool = True) -> Callable:

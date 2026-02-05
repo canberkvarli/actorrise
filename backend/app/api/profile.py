@@ -84,26 +84,19 @@ def create_or_update_profile(
         existing_profile = db.query(ActorProfile).filter(ActorProfile.user_id == current_user.id).first()
 
         if existing_profile:
-            # Update existing profile - update all provided fields (including None for deletion)
-            profile_dict = profile_data.model_dump(exclude_unset=True)  # Only include fields that were explicitly set
-            # Handle type field - convert string to list if needed
-            if 'type' in profile_dict and isinstance(profile_dict['type'], str):
-                profile_dict['type'] = [profile_dict['type']]
+            profile_dict = profile_data.model_dump(exclude_unset=True)
+            if "type" in profile_dict and isinstance(profile_dict["type"], str):
+                profile_dict["type"] = [profile_dict["type"]]
             for key, value in profile_dict.items():
                 setattr(existing_profile, key, value)
             db.commit()
             db.refresh(existing_profile)
             return existing_profile
         else:
-            # Create new profile
             profile_dict = profile_data.model_dump()
-            # Handle type field - convert string to list if needed
-            if 'type' in profile_dict and isinstance(profile_dict['type'], str):
-                profile_dict['type'] = [profile_dict['type']]
-            new_profile = ActorProfile(
-                user_id=current_user.id,
-                **profile_dict
-            )
+            if profile_dict.get("type") is not None and isinstance(profile_dict["type"], str):
+                profile_dict["type"] = [profile_dict["type"]]
+            new_profile = ActorProfile(user_id=current_user.id, **profile_dict)
             db.add(new_profile)
             db.commit()
             db.refresh(new_profile)

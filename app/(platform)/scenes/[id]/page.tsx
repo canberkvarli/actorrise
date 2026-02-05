@@ -84,7 +84,7 @@ export default function SceneDetailPage() {
     if (!selectedCharacter || !scene) return;
 
     try {
-      const response = await api.post('/api/scenes/rehearse/start', {
+      const response = await api.post<{ id: string }>('/api/scenes/rehearse/start', {
         scene_id: scene.id,
         user_character: selectedCharacter
       });

@@ -27,7 +27,7 @@ export default function MonologueDetailPage() {
 
   const fetchMonologue = async (id: string) => {
     try {
-      const response = await api.get(`/api/monologues/${id}`);
+      const response = await api.get<Monologue>(`/api/monologues/${id}`);
       setMonologue(response.data);
       setIsFavorited(response.data.is_favorited);
     } catch (error) {

@@ -2,17 +2,19 @@
 
 import hashlib
 import json
+import logging
 import re
 from typing import Any, Dict, List, Optional
 
 import numpy as np
+
+logger = logging.getLogger(__name__)
 from app.models.actor import Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
 from app.services.search.cache_manager import cache_manager
 from app.services.search.query_optimizer import QueryOptimizer
 from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session
-
 
 # Module-level in-memory caches (Level 0 hot cache shared across SemanticSearch instances).
 # These are always available, even when Redis is not installed, and keep repeat
@@ -94,37 +96,37 @@ class SemanticSearch:
         # - Tier 1/2: keyword-only extraction (no AI parsing)
         # - Tier 3: allow AI parsing (with Redis + in-memory caching)
         tier, optimized_filters = self.query_optimizer.optimize(query, explicit_filters)
-        print(f"Query tier: {tier}, optimized (keyword + explicit) filters: {optimized_filters}")
+        logger.debug("Query tier: %s, optimized filters: %s", tier, optimized_filters)
 
         extracted_filters: Dict = {}
         if explicit_filters:
             # If the user provided explicit filters, skip AI parsing entirely to save cost.
-            print("Using explicit filters, skipping AI query parsing")
+            logger.debug("Using explicit filters, skipping AI query parsing")
         else:
             if tier in (1, 2):
                 # For simple/medium queries, rely on keyword extraction only (no AI).
-                print("Tier 1/2 query with no explicit filters - skipping AI query parsing")
+                logger.debug("Tier 1/2 query with no explicit filters - skipping AI query parsing")
             else:
                 # Tier 3: complex semantic query – use AI parsing with multi-level caching.
                 query_hash = hashlib.md5(canonical_query.encode()).hexdigest()
 
                 # Level 0: in-memory cache (shared across all SemanticSearch instances)
                 if query_hash in QUERY_PARSE_CACHE:
-                    print(f"✅ Using in-memory cached query parse for: {query}")
+                    logger.debug("Using in-memory cached query parse for: %s", query)
                     extracted_filters = QUERY_PARSE_CACHE[query_hash]
                 else:
                     # Level 1: Redis cache via CacheManager
                     cached_filters = self.cache.get_parsed_filters(canonical_query)
                     if cached_filters:
-                        print(f"✅ Using Redis cached query parse for: {query}")
+                        logger.debug("Using Redis cached query parse for: %s", query)
                         extracted_filters = cached_filters
                         QUERY_PARSE_CACHE[query_hash] = extracted_filters
                     else:
                         parse_start = time.time()
-                        print(f"🤖 Parsing query for filters (AI): {query}")
+                        logger.debug("Parsing query for filters (AI): %s", query)
                         extracted_filters = self.analyzer.parse_search_query(query)
                         parse_time = time.time() - parse_start
-                        print(f"⏱️  Query parsing took {parse_time:.2f}s")
+                        logger.debug("Query parsing took %.2fs", parse_time)
                         # Store in both in-memory and Redis caches
                         QUERY_PARSE_CACHE[query_hash] = extracted_filters
                         self.cache.set_parsed_filters(canonical_query, extracted_filters)
@@ -135,12 +137,12 @@ class SemanticSearch:
                             oldest_key = next(iter(QUERY_PARSE_CACHE))
                             del QUERY_PARSE_CACHE[oldest_key]
 
-        print(f"Extracted filters (AI): {extracted_filters}")
+        logger.debug("Extracted filters (AI): %s", extracted_filters)
 
         # Merge filters in precedence order:
         # AI-parsed < keyword-derived (optimized) < explicit filters
         merged_filters = {**(extracted_filters or {}), **(optimized_filters or {})}
-        print(f"Merged filters (final): {merged_filters}")
+        logger.debug("Merged filters (final): %s", merged_filters)
 
         # Optional: check cache for full search results for this (query, filters, user)
         cache_filters_for_results: Dict = dict(merged_filters)
@@ -163,33 +165,33 @@ class SemanticSearch:
             cached_result_ids = SEARCH_RESULTS_CACHE.get(results_cache_key)
 
         if cached_result_ids:
-            print(f"✅ Using cached search results for query='{query}' filters={cache_filters_for_results}")
+            logger.debug("Using cached search results for query=%r filters=%s", query, cache_filters_for_results)
             # Re-load monologues by ID to get current ORM instances, preserving order.
             mons = self.db.query(Monologue).join(Play).filter(Monologue.id.in_(cached_result_ids)).all()
             mon_by_id: Dict[Any, Monologue] = {m.id: m for m in mons}
             ordered = [mon_by_id[mid] for mid in cached_result_ids if mid in mon_by_id]  # type: ignore[index]
             overall_time = time.time() - overall_start
-            print(f"⏱️  Total search time (cache hit): {overall_time:.2f}s, results: {len(ordered)}")
+            logger.debug("Total search time (cache hit): %.2fs, results: %s", overall_time, len(ordered))
             return ordered[:limit]
 
         # Generate embedding for query (with caching at multiple levels)
         query_hash = hashlib.md5(canonical_query.encode()).hexdigest()
         if query_hash in EMBEDDING_CACHE:
-            print(f"✅ Using cached embedding for: {query}")
+            logger.debug("Using cached embedding for: %s", query)
             query_embedding = EMBEDDING_CACHE[query_hash]
         else:
             # Try Redis-backed embedding cache first
             cached_embedding = self.cache.get_embedding(canonical_query)
             if cached_embedding:
-                print(f"✅ Using Redis cached embedding for: {query}")
+                logger.debug("Using Redis cached embedding for: %s", query)
                 query_embedding = cached_embedding
                 EMBEDDING_CACHE[query_hash] = query_embedding
             else:
                 emb_start = time.time()
-                print(f"🔢 Generating embedding for query (AI): {query}")
+                logger.debug("Generating embedding for query (AI): %s", query)
                 query_embedding = self.analyzer.generate_embedding(query)
                 emb_time = time.time() - emb_start
-                print(f"⏱️  Embedding generation took {emb_time:.2f}s")
+                logger.debug("Embedding generation took %.2fs", emb_time)
                 if query_embedding:
                     # Store in in-memory and Redis caches
                     EMBEDDING_CACHE[query_hash] = query_embedding
@@ -201,7 +203,7 @@ class SemanticSearch:
                         del EMBEDDING_CACHE[oldest_key]
 
         if not query_embedding:
-            print("Failed to generate embedding, falling back to text search")
+            logger.info("Failed to generate embedding, falling back to text search")
             return self._fallback_text_search(query, limit, merged_filters)
 
         # Hybrid search: run text search for direct play/character/title matches and merge on top.
@@ -299,54 +301,111 @@ class SemanticSearch:
             ).all()
             bookmarked_ids = {f[0] for f in favorites}
 
-        # OPTIMIZATION: Only fetch monologues WITH embeddings for semantic search
-        # Limit to reasonable candidate pool size for performance (will expand with pgvector later)
-        MAX_CANDIDATES = 500  # Limit how many embeddings we compare against for speed
+        # OPTIMIZATION: Prefer DB-side vector search via pgvector when available.
+        # We first try to use the `embedding_vector` pgvector column, and only
+        # fall back to legacy JSON embeddings + Python cosine similarity when
+        # pgvector is not available or no vectors exist yet.
+        MAX_CANDIDATES = 500  # Upper bound for candidate pool size
+
+        results_with_scores: List[tuple[Monologue, float]] = []
 
         try:
-            monologues_with_embeddings = base_query.filter(
-                Monologue.embedding.isnot(None),
-                Monologue.embedding != ''
-            ).limit(MAX_CANDIDATES).all()
-        except Exception as e:
-            print(f"Error executing base query for semantic search: {e}")
-            # Rollback and fall back to text search
-            try:
-                self.db.rollback()
-            except Exception:
-                pass
-            return self._fallback_text_search(query, limit, merged_filters)
+            # Primary path: pgvector-based similarity search in the database.
+            # Order by cosine distance and take a modest multiple of `limit`
+            # so we can still apply bookmark boosts and hybrid merging.
+            VECTOR_CANDIDATES = min(MAX_CANDIDATES, max(limit * 3, limit))
+            semantic_candidates = (
+                base_query.filter(Monologue.embedding_vector.isnot(None))
+                .order_by(Monologue.embedding_vector.cosine_distance(query_embedding))
+                .limit(VECTOR_CANDIDATES)
+                .all()
+            )
 
-        print(f"Loaded {len(monologues_with_embeddings)} monologues with embeddings for semantic search (max: {MAX_CANDIDATES})")
+            logger.debug(
+                "Loaded %s monologues with pgvector embeddings (max: %s)",
+                len(semantic_candidates), VECTOR_CANDIDATES
+            )
 
-        # Calculate cosine similarity for each monologue
-        results_with_scores = []
-
-        similarity_start = time.time()
-
-        for mono in monologues_with_embeddings:
-            embedding_value: Optional[str] = mono.embedding  # type: ignore[assignment]
-            if embedding_value is not None and len(embedding_value) > 0:
-                try:
-                    # Parse embedding from JSON
-                    mono_embedding = json.loads(embedding_value)
-
-                    # Calculate cosine similarity
-                    similarity = self._cosine_similarity(query_embedding, mono_embedding)
+            similarity_start = time.time()
+            for mono in semantic_candidates:
+                # The pgvector column is exposed as a Python sequence of floats.
+                mono_embedding_vec: Optional[List[float]] = getattr(mono, "embedding_vector", None)  # type: ignore[assignment]
+                if mono_embedding_vec:
+                    similarity = self._cosine_similarity(query_embedding, mono_embedding_vec)
 
                     # Boost bookmarked monologues by adding 0.3 to similarity
                     if mono.id in bookmarked_ids:
                         similarity += 0.3
-                        print(f"  ⭐ Boosting bookmarked: {mono.character_name} from {mono.play.title}")
+                        logger.debug("Boosting bookmarked (pgvector): %s from %s", mono.character_name, mono.play.title)
 
                     results_with_scores.append((mono, similarity))
 
-                except (json.JSONDecodeError, ValueError, TypeError) as e:
-                    print(f"Error calculating similarity for monologue {mono.id}: {e}")
-                    continue
+            similarity_time = time.time() - similarity_start
+            logger.debug(
+                "Similarity (pgvector) took %.2fs for %s candidates",
+                similarity_time, len(semantic_candidates)
+            )
 
-        similarity_time = time.time() - similarity_start
-        print(f"⏱️  Similarity calculation took {similarity_time:.2f}s for {len(monologues_with_embeddings)} candidates")
+        except Exception as e:
+            # If pgvector is unavailable or misconfigured, fall back to legacy
+            # JSON-based embeddings to keep search functional.
+            logger.debug("pgvector search failed, using legacy embeddings: %s", e)
+            try:
+                self.db.rollback()
+            except Exception:
+                pass
+
+            try:
+                monologues_with_embeddings = (
+                    base_query.filter(
+                        Monologue.embedding.isnot(None),
+                        Monologue.embedding != "",
+                    )
+                    .order_by(Monologue.id)  # deterministic ordering for candidate pool
+                    .limit(MAX_CANDIDATES)
+                    .all()
+                )
+            except Exception as inner_e:
+                logger.debug("Legacy semantic search base query failed: %s", inner_e)
+                # Rollback and fall back to pure text search
+                try:
+                    self.db.rollback()
+                except Exception:
+                    pass
+                return self._fallback_text_search(query, limit, merged_filters)
+
+            logger.debug(
+                "Loaded %s monologues with legacy JSON embeddings (max: %s)",
+                len(monologues_with_embeddings), MAX_CANDIDATES
+            )
+
+            similarity_start = time.time()
+            for mono in monologues_with_embeddings:
+                embedding_value: Optional[str] = mono.embedding  # type: ignore[assignment]
+                if embedding_value is not None and len(embedding_value) > 0:
+                    try:
+                        # Parse embedding from JSON
+                        mono_embedding = json.loads(embedding_value)
+
+                        # Calculate cosine similarity
+                        similarity = self._cosine_similarity(query_embedding, mono_embedding)
+
+                        # Boost bookmarked monologues by adding 0.3 to similarity
+                        if mono.id in bookmarked_ids:
+                            similarity += 0.3
+                            logger.debug("Boosting bookmarked: %s from %s", mono.character_name, mono.play.title)
+
+                        results_with_scores.append((mono, similarity))
+
+                    except (json.JSONDecodeError, ValueError, TypeError) as parse_e:
+                        logger.debug("Error calculating similarity for monologue %s: %s", mono.id, parse_e)
+                        continue
+
+            similarity_time = time.time() - similarity_start
+            logger.debug(
+                "Similarity (legacy JSON) took %.2fs for %s candidates",
+                similarity_time, len(results_with_scores)
+            )
 
         # Sort by similarity (descending) and limit
         results_with_scores.sort(key=lambda x: x[1], reverse=True)
@@ -363,7 +422,10 @@ class SemanticSearch:
                     break
                 combined.append(mono)
             top_results = [(m, 0.0) for m in combined[:limit]]  # keep (mono, score) for fallback logic
-            print(f"Hybrid: {len(text_match_results)} text matches + {min(len(semantic_only), limit - len(text_match_results))} semantic = {len(combined)} results")
+            logger.debug(
+                "Hybrid: %s text + %s semantic = %s results",
+                len(text_match_results), min(len(semantic_only), limit - len(text_match_results)), len(combined)
+            )
         else:
             top_results = top_semantic
 
@@ -371,7 +433,7 @@ class SemanticSearch:
         # This ensures users get results even when embeddings aren't available
         if len(top_results) < limit:
             needed = limit - len(top_results)
-            print(f"Only {len(top_results)} semantic results, supplementing with {needed} text search results...")
+            logger.debug("Only %s semantic results, supplementing with %s text search", len(top_results), needed)
 
             # Get IDs we already have to avoid duplicates
             existing_ids = {mono.id for mono, _ in top_results}
@@ -380,7 +442,7 @@ class SemanticSearch:
             fallback_start = time.time()
             fallback_results = self._fallback_text_search(query, needed * 2, merged_filters)  # Get extra for filtering
             fallback_time = time.time() - fallback_start
-            print(f"⏱️  Fallback text search took {fallback_time:.2f}s")
+            logger.debug("Fallback text search took %.2fs", fallback_time)
 
             # Add fallback results that aren't already in semantic results
             fallback_unique = [m for m in fallback_results if m.id not in existing_ids][:needed]
@@ -399,31 +461,21 @@ class SemanticSearch:
                 SEARCH_RESULTS_CACHE[results_cache_key] = [m.id for m in final_results]
 
             overall_time = time.time() - overall_start
-            print(f"⏱️  Total search time: {overall_time:.2f}s")
-            print(f"Final results: {len([mono for mono, _ in top_results])} semantic + {len(fallback_unique)} text search = {len(final_results)} total")
+            logger.debug("Total search time: %.2fs, final results: %s", overall_time, len(final_results))
 
             # Return combined results
             return final_results[:limit]
 
         overall_time = time.time() - overall_start
 
-        # Debug logging to see what authors are being returned
-        print("\n=== SEARCH RESULTS DEBUG ===")
-        print(f"Query: {query}")
-        print(f"⏱️  Total search time: {overall_time:.2f}s")
-        print(f"Monologues with embeddings: {len(monologues_with_embeddings)}")
-        print(f"Results with scores: {len(results_with_scores)}")
-        print(f"\nTop {len(top_results)} semantic results:")
-        for i, (mono, score) in enumerate(top_results[:5], 1):
-            print(f"  {i}. {mono.character_name} from '{mono.play.title}' by {mono.play.author} (score: {score:.3f})")
-
-        # Show author distribution in semantic results
-        from collections import Counter
-        author_dist = Counter(mono.play.author for mono, _ in results_with_scores)
-        print(f"\nAuthor distribution in semantic results ({len(monologues_with_embeddings)} total):")
-        for author, count in author_dist.most_common(10):
-            print(f"  • {author}: {count}")
-        print("=== END DEBUG ===\n")
+        if logger.isEnabledFor(logging.DEBUG):
+            from collections import Counter
+            author_dist = Counter(mono.play.author for mono, _ in results_with_scores)
+            logger.debug(
+                "Search complete: query=%r, time=%.2fs, candidates=%s, top=%s; author dist: %s",
+                query, overall_time, len(results_with_scores), len(top_results),
+                dict(author_dist.most_common(5)),
+            )
 
         final_semantic_results = [mono for mono, _ in top_results]
 

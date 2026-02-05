@@ -16,6 +16,8 @@ class Settings:
     jwt_secret: str = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
     jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
     cors_origins: List[str] = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+    # When "development" or "local", feature limits (e.g. AI search) are not enforced.
+    environment: str = os.getenv("ENVIRONMENT", "development").lower()
     # Supabase Storage settings
     supabase_url: str | None = os.getenv("SUPABASE_URL")
     supabase_service_role_key: str | None = os.getenv("SUPABASE_SERVICE_ROLE_KEY")

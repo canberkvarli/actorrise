@@ -102,7 +102,7 @@ export default function DashboardPage() {
   const toggleFavoriteMutation = useToggleFavorite();
 
   // Fetch monologue detail
-  const { data: monologueDetail } = useQuery<Monologue>({
+  const { data: monologueDetail } = useQuery<Monologue | null>({
     queryKey: ["monologue", selectedMonologue?.id],
     queryFn: async () => {
       if (!selectedMonologue?.id) return null;
