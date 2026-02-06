@@ -5,7 +5,7 @@ from app.core.database import get_db
 from app.models.actor import ActorProfile
 from app.models.user import User
 from app.services.storage import delete_headshot, upload_headshot
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
@@ -76,15 +76,21 @@ def get_profile(
 @router.post("", response_model=ActorProfileResponse, status_code=status.HTTP_201_CREATED)
 @router.put("", response_model=ActorProfileResponse)
 def create_or_update_profile(
+    request: Request,
     profile_data: ActorProfileCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     try:
         existing_profile = db.query(ActorProfile).filter(ActorProfile.user_id == current_user.id).first()
-
+        # PUT = full replace (e.g. onboarding completion) so all fields from body overwrite existing
+        use_full_replace = request.method == "PUT"
         if existing_profile:
-            profile_dict = profile_data.model_dump(exclude_unset=True)
+            profile_dict = (
+                profile_data.model_dump()
+                if use_full_replace
+                else profile_data.model_dump(exclude_unset=True)
+            )
             if "type" in profile_dict and isinstance(profile_dict["type"], str):
                 profile_dict["type"] = [profile_dict["type"]]
             for key, value in profile_dict.items():

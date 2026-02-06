@@ -60,6 +60,26 @@ export const PREFERRED_GENRES = [
   "Shakespeare",
 ] as const;
 
+export const TRAINING_BACKGROUND_OPTIONS = [
+  "BFA",
+  "MFA",
+  "Conservatory",
+  "Studio training",
+  "University / College",
+  "Other",
+] as const;
+
+export const ETHNICITY_OPTIONS = [
+  "Asian",
+  "Black",
+  "Hispanic / Latine",
+  "Indigenous",
+  "Middle Eastern",
+  "White",
+  "Multiracial",
+  "Other",
+] as const;
+
 export type Location = (typeof LOCATIONS)[number];
 export type ExperienceLevel = (typeof EXPERIENCE_LEVELS)[number]["id"];
 export type ActorTypeId = (typeof ACTOR_TYPE_IDS)[number];

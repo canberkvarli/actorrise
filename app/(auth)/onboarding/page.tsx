@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { toast } from 'sonner';
+import { ETHNICITY_OPTIONS, TRAINING_BACKGROUND_OPTIONS } from '@/lib/profileOptions';
 
 const steps = [
   { id: 'welcome', title: 'Welcome' },
@@ -236,7 +237,8 @@ export default function OnboardingPage() {
         headshot_url: formData.headshot_url?.trim() || null,
       };
 
-      const response = await api.post('/api/profile', saveData);
+      // PUT = full replace so every field from onboarding overwrites existing (e.g. headshot-only profile)
+      const response = await api.put('/api/profile', saveData);
       console.log('Profile saved successfully:', response.data);
 
       // Invalidate profile-related cache
@@ -472,7 +474,7 @@ export default function OnboardingPage() {
           </AnimatePresence>
             </div>
 
-            {/* Navigation — primary only on main CTA */}
+            {/* Navigation — on headshot step, Continue saves profile then goes to complete */}
             {currentStep > 0 && currentStep < steps.length - 1 && (
               <motion.div
                 initial={{ opacity: 0 }}
@@ -481,18 +483,18 @@ export default function OnboardingPage() {
               >
                 <div className="flex gap-2">
                   {currentStep > 1 && (
-                    <Button type="button" variant="ghost" size="sm" onClick={skipStep} className="text-muted-foreground">
+                    <Button type="button" variant="ghost" size="sm" onClick={currentStep === 8 ? completeOnboarding : skipStep} className="text-muted-foreground" disabled={isLoading}>
                       Skip
                     </Button>
                   )}
                 </div>
                 <Button
                   type="button"
-                  onClick={nextStep}
-                  disabled={!canProceed()}
+                  onClick={currentStep === 8 ? completeOnboarding : nextStep}
+                  disabled={!canProceed() || isLoading}
                   className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
                 >
-                  Continue
+                  {currentStep === 8 && isLoading ? 'Saving…' : 'Continue'}
                   <ChevronRight className="w-4 h-4" />
                 </Button>
               </motion.div>
@@ -893,12 +895,23 @@ function PhysicalDetailsStep({
 
         <div className="space-y-2">
           <label className="text-sm font-medium text-foreground">Ethnicity (optional)</label>
-          <Input
-            value={formData.ethnicity || ''}
-            onChange={(e) => updateFormData('ethnicity', e.target.value)}
-            placeholder="Enter your ethnicity"
-            className="w-full"
-          />
+          <div className="flex flex-wrap gap-2">
+            {ETHNICITY_OPTIONS.map((e) => {
+              const isSelected = formData.ethnicity === e;
+              return (
+                <button
+                  key={e}
+                  type="button"
+                  onClick={() => updateFormData('ethnicity', e)}
+                  className={`px-3 py-2 rounded-xl border text-sm transition ${
+                    isSelected ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/50 bg-card'
+                  }`}
+                >
+                  {e}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="space-y-2">
@@ -999,18 +1012,29 @@ function ActingBackgroundStep({
       </div>
       <div className="space-y-6">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground">Training Background (optional)</label>
-          <Input
-            value={formData.training_background || ''}
-            onChange={(e) => updateFormData('training_background', e.target.value)}
-            placeholder="e.g., BFA, MFA, Conservatory, Studio training"
-            className="w-full"
-          />
-                </div>
+          <label className="text-sm font-medium text-foreground">Training background (optional)</label>
+          <div className="flex flex-wrap gap-2">
+            {TRAINING_BACKGROUND_OPTIONS.map((t) => {
+              const isSelected = formData.training_background === t;
+              return (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => updateFormData('training_background', t)}
+                  className={`px-3 py-2 rounded-xl border text-sm transition ${
+                    isSelected ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/50 bg-card'
+                  }`}
+                >
+                  {t}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         <div className="space-y-2">
           <div className="flex items-center gap-2">
-            <label className="text-sm font-medium text-foreground">Union Status</label>
+            <label className="text-sm font-medium text-foreground">Union status</label>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
