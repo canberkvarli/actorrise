@@ -33,6 +33,8 @@ import {
   PREFERRED_GENRES,
   ACTOR_TYPE_IDS,
   ACTOR_TYPE_LABELS,
+  TRAINING_BACKGROUND_OPTIONS,
+  ETHNICITY_OPTIONS,
 } from "@/lib/profileOptions";
 
 const profileSchema = z.object({
@@ -199,7 +201,7 @@ export function ActorProfileForm() {
         build?: string | null;
         location?: string | null;
         experience_level?: string | null;
-        type?: string | null;
+        type?: string | string[] | null;
         training_background?: string | null;
         union_status?: string | null;
         preferred_genres?: string[] | null;
@@ -933,10 +935,16 @@ export function ActorProfileForm() {
 
                       <div className="space-y-2">
                         <Label htmlFor="ethnicity" className="font-mono">Ethnicity (optional)</Label>
-                        <Input 
-                          id="ethnicity" 
-                          {...register("ethnicity")}
-                        />
+                        <Select
+                          id="ethnicity"
+                          value={watch("ethnicity") || ""}
+                          onChange={(e) => setValue("ethnicity", e.target.value)}
+                        >
+                          <option value="">Select</option>
+                          {ETHNICITY_OPTIONS.map((e) => (
+                            <option key={e} value={e}>{e}</option>
+                          ))}
+                        </Select>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
@@ -1095,12 +1103,17 @@ export function ActorProfileForm() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="training_background" className="font-mono">Training Background (optional)</Label>
-                        <Input 
-                          id="training_background" 
-                          placeholder="BFA, MFA, Conservatory, etc." 
-                          {...register("training_background")}
-                        />
+                        <Label htmlFor="training_background" className="font-mono">Training background (optional)</Label>
+                        <Select
+                          id="training_background"
+                          value={watch("training_background") || ""}
+                          onChange={(e) => setValue("training_background", e.target.value)}
+                        >
+                          <option value="">Select</option>
+                          {TRAINING_BACKGROUND_OPTIONS.map((t) => (
+                            <option key={t} value={t}>{t}</option>
+                          ))}
+                        </Select>
                       </div>
 
                       <div className="space-y-2">
