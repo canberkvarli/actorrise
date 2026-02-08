@@ -17,9 +17,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <div className="flex items-center gap-3">
               <Link
                 href="/"
-                className="text-sm tracking-[0.24em] text-foreground/80 hover:text-foreground transition-colors"
+                className="font-serif text-sm tracking-[0.12em] text-foreground/80 hover:text-foreground transition-colors"
               >
-                ACTORRISE
+                ActorRise
               </Link>
               <span className="hidden sm:inline-flex items-center rounded-full border border-border/70 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground/90">
                 For working actors

@@ -1,12 +1,46 @@
 """Recommend monologues based on actor profile and preferences."""
 
-from sqlalchemy.orm import Session
-from sqlalchemy import func, or_
-from app.models.actor import ActorProfile, Monologue, MonologueFavorite, Play
-from .semantic_search import SemanticSearch
-from typing import List, Optional
 import json
+from typing import Any, List, Optional, cast
+
 import numpy as np
+from app.models.actor import ActorProfile, Monologue, Play
+from sqlalchemy import or_
+from sqlalchemy import text as sql_text
+from sqlalchemy.orm import Session
+
+from .semantic_search import SemanticSearch
+
+
+def _attr_bool(obj: Any, name: str, default: bool = False) -> bool:
+    """Read ORM attribute as bool for type-safe conditionals."""
+    val = getattr(obj, name, default)
+    return bool(val) if val is not None else default
+
+
+def _attr_str(obj: Any, name: str) -> Optional[str]:
+    """Read ORM attribute as str | None."""
+    val = getattr(obj, name, None)
+    return str(val) if val is not None and val != "" else None
+
+
+def _attr_float(obj: Any, name: str, default: float = 0.0) -> float:
+    """Read ORM attribute as float."""
+    val = getattr(obj, name, default)
+    if val is None:
+        return default
+    try:
+        return float(val)
+    except (TypeError, ValueError):
+        return default
+
+
+def _preferred_genres_list(actor_profile: ActorProfile) -> List[str]:
+    """Get preferred genres as a list of strings."""
+    raw = getattr(actor_profile, "preferred_genres", None)
+    if not raw or not isinstance(raw, list):
+        return []
+    return [str(g) for g in raw[:10] if g]
 
 
 class Recommender:
@@ -19,7 +53,8 @@ class Recommender:
     def recommend_for_actor(
         self,
         actor_profile: ActorProfile,
-        limit: int = 20
+        limit: int = 20,
+        fast: bool = False
     ) -> List[Monologue]:
         """
         Recommend monologues based on actor profile.
@@ -30,35 +65,57 @@ class Recommender:
         - Overdone alert sensitivity
         - Previously favorited pieces (collaborative filtering)
         - Falls back to SQL-based recommendations if semantic search fails
+
+        When fast=True, uses only SQL-based recommendations (no semantic search)
+        for quicker response e.g. dashboard widgets.
         """
-
-        # Build filters from profile
-        filters = {}
-
-        if actor_profile.profile_bias_enabled:
-            if actor_profile.gender and actor_profile.gender != 'prefer not to say':
-                filters['gender'] = actor_profile.gender.lower()
-
-            if actor_profile.age_range:
-                filters['age_range'] = actor_profile.age_range
-
-            if actor_profile.experience_level:
+        # Build filters from profile (use helpers for type-safe ORM attribute access)
+        filters: dict = {}
+        if _attr_bool(actor_profile, "profile_bias_enabled"):
+            gender = _attr_str(actor_profile, "gender")
+            if gender and gender != "prefer not to say":
+                filters["gender"] = gender.lower()
+            age_range = _attr_str(actor_profile, "age_range")
+            if age_range:
+                filters["age_range"] = age_range
+            exp_level = _attr_str(actor_profile, "experience_level")
+            if exp_level:
                 difficulty_map = {
-                    'beginner': 'beginner',
-                    'intermediate': 'intermediate',
-                    'advanced': 'advanced',
-                    'professional': 'advanced'
+                    "beginner": "beginner",
+                    "intermediate": "intermediate",
+                    "advanced": "advanced",
+                    "professional": "advanced",
                 }
-                filters['difficulty'] = difficulty_map.get(
-                    actor_profile.experience_level.lower(),
-                    'intermediate'
+                filters["difficulty"] = difficulty_map.get(
+                    exp_level.lower(), "intermediate"
                 )
 
-        # Generate query from preferences
-        preferred_genres = actor_profile.preferred_genres or []
+        preferred_genres = _preferred_genres_list(actor_profile)
+        overdone_sensitivity = _attr_float(actor_profile, "overdone_alert_sensitivity", 0.0)
+
+        # Fast path: SQL-only for dashboard/small requests (no embedding call)
+        if fast:
+            try:
+                results = self._get_sql_based_recommendations(
+                    actor_profile, limit=limit * 2, filters=filters
+                )
+                if overdone_sensitivity > 0:
+                    threshold = 1.0 - overdone_sensitivity
+                    results = [
+                        m for m in results
+                        if (getattr(m, "overdone_score", None) or 0) <= threshold
+                    ]
+                return results[:limit]
+            except Exception as e:
+                print(f"Fast recommendations failed: {e}")
+                try:
+                    self.db.rollback()
+                except Exception:
+                    pass
+                return []
 
         # Try semantic search first
-        results = []
+        results: List[Monologue] = []
         if preferred_genres:
             # Create a query from preferred genres
             query = f"monologue about {' and '.join(preferred_genres[:3])}"
@@ -98,9 +155,12 @@ class Recommender:
                         break
 
         # Apply overdone filtering
-        if actor_profile.overdone_alert_sensitivity > 0:
-            threshold = 1.0 - actor_profile.overdone_alert_sensitivity
-            results = [m for m in results if m.overdone_score <= threshold]
+        if overdone_sensitivity > 0:
+            threshold = 1.0 - overdone_sensitivity
+            results = [
+                m for m in results
+                if (getattr(m, "overdone_score", None) or 0) <= threshold
+            ]
 
         # Limit results
         return results[:limit]
@@ -109,14 +169,14 @@ class Recommender:
         self,
         actor_profile: ActorProfile,
         limit: int = 20,
-        filters: dict = None
+        filters: Optional[dict] = None
     ) -> List[Monologue]:
         """
         Get recommendations using SQL queries instead of semantic search.
         Used as fallback when embeddings aren't available.
         """
         filters = filters or {}
-        preferred_genres = actor_profile.preferred_genres or []
+        preferred_genres = _preferred_genres_list(actor_profile)
 
         # Build base query
         query = self.db.query(Monologue).join(Play)
@@ -160,16 +220,15 @@ class Recommender:
 
         # Filter by preferred genres if available
         if preferred_genres:
-            # Match play category or monologue category
             genre_conditions = [
                 Play.category.ilike(f"%{genre}%") for genre in preferred_genres
             ]
             query = query.filter(or_(*genre_conditions))
 
-        # Order by quality indicators (favor popular but not overdone)
+        # Order by quality indicators (favor popular but not overdone); random() for tie-break
         query = query.order_by(
             (Monologue.favorite_count * (1.0 - Monologue.overdone_score)).desc(),
-            func.random()
+            sql_text("random()"),
         )
 
         return query.limit(limit).all()
@@ -183,12 +242,13 @@ class Recommender:
 
         monologue = self.db.query(Monologue).filter(Monologue.id == monologue_id).first()
 
-        if not monologue or not monologue.embedding:
+        embedding_raw = getattr(monologue, "embedding", None) if monologue else None
+        if not monologue or not embedding_raw:
             return []
 
+        embedding_str = cast(str, embedding_raw)
         try:
-            # Parse the target embedding
-            target_embedding = json.loads(monologue.embedding)
+            target_embedding = json.loads(embedding_str)
 
             # Get all monologues with embeddings (excluding the current one)
             all_monologues = self.db.query(Monologue).filter(
@@ -196,14 +256,16 @@ class Recommender:
                 Monologue.embedding.isnot(None)
             ).all()
 
-            # Calculate similarities
-            similarities = []
+            similarities: List[tuple] = []
             for mono in all_monologues:
                 try:
-                    mono_embedding = json.loads(mono.embedding)
+                    mono_emb_raw = getattr(mono, "embedding", None)
+                    if not mono_emb_raw:
+                        continue
+                    mono_embedding = json.loads(cast(str, mono_emb_raw))
                     similarity = self._cosine_similarity(target_embedding, mono_embedding)
                     similarities.append((mono, similarity))
-                except:
+                except (TypeError, ValueError, json.JSONDecodeError):
                     continue
 
             # Sort by similarity (descending)
@@ -249,10 +311,7 @@ class Recommender:
     def get_fresh_picks(self, limit: int = 20) -> List[Monologue]:
         """Get fresh, under-performed monologues (opposite of trending)"""
 
-        # Get monologues with low overdone scores and few favorites
         return self.db.query(Monologue).filter(
             Monologue.overdone_score < 0.3,
             Monologue.favorite_count < 10
-        ).order_by(
-            func.random()
-        ).limit(limit).all()
+        ).order_by(sql_text("random()")).limit(limit).all()

@@ -30,13 +30,22 @@ async function request<T = unknown>(
   }
 
   // Make request with redirect handling
-  const response = await fetch(fullUrl, {
-    method,
-    headers,
-    body: data ? JSON.stringify(data) : undefined,
-    redirect: 'follow', // Explicitly follow redirects
-    ...options,
-  });
+  let response: Response;
+  try {
+    response = await fetch(fullUrl, {
+      method,
+      headers,
+      body: data ? JSON.stringify(data) : undefined,
+      redirect: 'follow', // Explicitly follow redirects
+      ...options,
+    });
+  } catch (err) {
+    const message =
+      err instanceof TypeError && (err as Error).message === "Failed to fetch"
+        ? `Backend unreachable at ${fullUrl}. Is the API running? For local dev: start the backend (e.g. \`cd backend && uv run uvicorn app.main:app --reload\`) and set NEXT_PUBLIC_API_URL=http://localhost:8000 if needed.`
+        : (err as Error).message;
+    throw new Error(message);
+  }
 
   // Handle 401 errors
   if (response.status === 401) {

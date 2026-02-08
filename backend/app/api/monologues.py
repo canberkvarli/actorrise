@@ -202,6 +202,7 @@ async def search_monologues(
 @router.get("/recommendations", response_model=List[MonologueResponse])
 async def get_recommendations(
     limit: int = Query(20, le=100),
+    fast: bool = Query(False, description="Use SQL-only for faster response (e.g. dashboard)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -216,9 +217,9 @@ async def get_recommendations(
             detail="Actor profile not found. Please complete your profile first."
         )
 
-    # Get recommendations
+    # Get recommendations (fast=True skips semantic search for quicker dashboard load)
     recommender = Recommender(db)
-    results = recommender.recommend_for_actor(actor_profile, limit=limit)
+    results = recommender.recommend_for_actor(actor_profile, limit=limit, fast=fast)
 
     # Get favorites
     favorites = db.query(MonologueFavorite.monologue_id).filter(

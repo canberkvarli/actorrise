@@ -38,8 +38,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     } catch (error: unknown) {
       console.error("Failed to sync user with backend:", error);
-      // User might not exist in backend yet, that's okay
-      // It will be created on first API call
+      // Backend unreachable or user not in DB yet: fall back to Supabase session so the app still shows as logged in
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUser({
+            id: 0,
+            email: session.user.email ?? "",
+            name: session.user.user_metadata?.name ?? undefined,
+          });
+        }
+      } catch {
+        // ignore
+      }
       if (shouldSetLoading) {
         setLoading(false);
       }
@@ -111,15 +122,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Sync with backend (don't set loading to prevent flickering)
       await syncUserWithBackend(false);
       
-      // Redirect to specified path or default to dashboard
+      // Full page redirect so session cookies are sent on the next request (e.g. /search).
+      // router.push() is client-only and can leave middleware without cookies on first nav.
       const redirectPath = redirectTo || "/dashboard";
-      router.push(redirectPath);
+      window.location.href = redirectPath;
     } catch (error: unknown) {
       console.error("Login error:", error);
       const message = error instanceof Error ? error.message : "Failed to login";
       throw new Error(message);
     }
-  }, [syncUserWithBackend, router]);
+  }, [syncUserWithBackend]);
 
   const signup = useCallback(async (email: string, password: string, name?: string) => {
     try {
