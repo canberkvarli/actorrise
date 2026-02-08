@@ -7,7 +7,7 @@ export const API_URL =
   (process.env.VERCEL ? PRODUCTION_API_URL : "http://localhost:8000");
 
 // Extended options: RequestInit + optional timeout (for slow endpoints like search)
-type RequestOptions = RequestInit & { timeoutMs?: number };
+export type RequestOptions = RequestInit & { timeoutMs?: number };
 
 // Fetch wrapper that mimics axios API for easy migration
 async function request<T = unknown>(
@@ -141,15 +141,15 @@ async function request<T = unknown>(
 
 // API object that mimics axios interface
 export const api = {
-  get: <T = unknown>(url: string, options?: RequestInit) =>
+  get: <T = unknown>(url: string, options?: RequestOptions) =>
     request<T>("GET", url, undefined, options),
-  post: <T = unknown>(url: string, data?: unknown, options?: RequestInit) =>
+  post: <T = unknown>(url: string, data?: unknown, options?: RequestOptions) =>
     request<T>("POST", url, data, options),
-  put: <T = unknown>(url: string, data?: unknown, options?: RequestInit) =>
+  put: <T = unknown>(url: string, data?: unknown, options?: RequestOptions) =>
     request<T>("PUT", url, data, options),
-  patch: <T = unknown>(url: string, data?: unknown, options?: RequestInit) =>
+  patch: <T = unknown>(url: string, data?: unknown, options?: RequestOptions) =>
     request<T>("PATCH", url, data, options),
-  delete: <T = unknown>(url: string, options?: RequestInit) =>
+  delete: <T = unknown>(url: string, options?: RequestOptions) =>
     request<T>("DELETE", url, undefined, options),
 };
 
