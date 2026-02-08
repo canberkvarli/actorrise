@@ -122,7 +122,7 @@ export function SearchInterface() {
 
       const response = await api.get<MonologueSearchResponse>(
         `/api/monologues/search?${params.toString()}`,
-        { timeoutMs: 120000 }
+        { timeoutMs: 180000 }
       );
       setResults(response.data.results);
 

@@ -59,12 +59,15 @@ async function request<T = unknown>(
   } catch (err) {
     if (timeoutId != null) clearTimeout(timeoutId);
     const isAbort = err instanceof Error && err.name === "AbortError";
-    const isFailedFetch = err instanceof TypeError && (err as Error).message === "Failed to fetch";
+    const isNetworkError =
+      err instanceof TypeError ||
+      (err instanceof Error && /fetch|network|loaded/i.test((err as Error).message));
+    const isSearch = url.includes("/search");
     let message: string;
-    if (isAbort || (isFailedFetch && url.includes("/search"))) {
+    if (isSearch && (isAbort || isNetworkError)) {
       message =
-        "Search is taking longer than usual. On free hosting the first search can take 1–2 minutes—please try again.";
-    } else if (isFailedFetch) {
+        "Search is taking longer than usual. On free hosting the first search can take 1–3 minutes—please try again.";
+    } else if (isNetworkError) {
       message = `Backend unreachable at ${fullUrl}. Is the API running? For local dev: start the backend (e.g. \`cd backend && uv run uvicorn app.main:app --reload\`) and set NEXT_PUBLIC_API_URL=http://localhost:8000 if needed.`;
     } else {
       message = (err as Error).message;

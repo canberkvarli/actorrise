@@ -49,7 +49,22 @@ export function useProfile() {
   });
 }
 
-// Hook for recommendations (fast=true uses SQL-only for quicker dashboard load)
+// Hook for discover monologues (no profile required – used when profile incomplete)
+export function useDiscover(enabled: boolean = true) {
+  return useQuery<Monologue[]>({
+    queryKey: ["discover"],
+    queryFn: async () => {
+      const response = await api.get<Monologue[]>("/api/monologues/discover?limit=6");
+      return response.data;
+    },
+    enabled,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
+    retry: 1,
+  });
+}
+
+// Hook for recommendations (fast=true uses SQL-only for quicker dashboard load; requires profile)
 export function useRecommendations(enabled: boolean = true, fast: boolean = true) {
   return useQuery<Monologue[]>({
     queryKey: ["recommendations", fast],
