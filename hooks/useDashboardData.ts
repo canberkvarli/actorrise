@@ -30,22 +30,18 @@ export function useProfileStats() {
   });
 }
 
-// Hook for profile data
+// Hook for profile data (backend returns 200 with empty profile when none exists)
 export function useProfile() {
   return useQuery<ActorProfile | null>({
     queryKey: ["profile"],
     queryFn: async () => {
-      try {
-        const response = await api.get<ActorProfile>("/api/profile");
-        return response.data;
-      } catch (error: unknown) {
-        const err = error as { response?: { status?: number } };
-        // 404 is expected if profile doesn't exist yet
-        if (err.response?.status === 404) {
-          return null;
-        }
-        throw error;
+      const response = await api.get<ActorProfile & { id?: number }>("/api/profile");
+      const data = response.data;
+      // Backend returns id=0 when no profile row exists; treat as null for display
+      if (data && (data as { id?: number }).id === 0) {
+        return null;
       }
+      return data as ActorProfile;
     },
     staleTime: 10 * 60 * 1000, // 10 minutes
     gcTime: 30 * 60 * 1000, // 30 minutes
