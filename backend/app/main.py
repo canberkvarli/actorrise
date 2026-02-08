@@ -7,10 +7,17 @@ from app.api.scenes import router as scenes_router
 from app.api.scripts import router as scripts_router
 from app.api.subscriptions import router as subscriptions_router
 from app.api.webhooks import router as webhooks_router
+from sqlalchemy import text
+
 from app.core.config import settings
 from app.core.database import Base, engine
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+
+# Enable pgvector extension (required for embedding_vector column; safe if already enabled)
+with engine.connect() as conn:
+    conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+    conn.commit()
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
