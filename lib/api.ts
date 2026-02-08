@@ -1,6 +1,10 @@
 import { supabase } from "./supabase";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+// Production API (Render). Override with NEXT_PUBLIC_API_URL in Vercel if using a custom domain.
+export const PRODUCTION_API_URL = "https://actorrise-api.onrender.com";
+export const API_URL =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (process.env.VERCEL ? PRODUCTION_API_URL : "http://localhost:8000");
 
 // Fetch wrapper that mimics axios API for easy migration
 async function request<T = unknown>(
