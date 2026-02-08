@@ -52,10 +52,10 @@ def seed_pricing_tiers():
                 is_active=True,
                 sort_order=0,
             ),
-            # PRO TIER
+            # PLUS TIER
             PricingTier(
-                name="pro",
-                display_name="Pro",
+                name="plus",
+                display_name="Plus",
                 description="For working actors and students",
                 monthly_price_cents=1200,  # $12.00
                 annual_price_cents=9900,  # $99.00 ($8.25/mo, 31% discount)
@@ -74,10 +74,10 @@ def seed_pricing_tiers():
                 is_active=True,
                 sort_order=1,
             ),
-            # ELITE TIER
+            # UNLIMITED TIER
             PricingTier(
-                name="elite",
-                display_name="Elite",
+                name="unlimited",
+                display_name="Unlimited",
                 description="For professionals and coaches",
                 monthly_price_cents=2400,  # $24.00
                 annual_price_cents=19900,  # $199.00 ($16.58/mo, 31% discount)
@@ -119,14 +119,14 @@ def seed_pricing_tiers():
         print("\n🎉 Pricing tiers seeded successfully!")
         print("\n📝 Next steps:")
         print("1. Create products in Stripe Dashboard:")
-        print("   - Pro: $12/month and $99/year")
-        print("   - Elite: $24/month and $199/year")
+        print("   - Plus: $12/month and $99/year")
+        print("   - Unlimited: $24/month and $199/year")
         print("2. Copy the Stripe price IDs (price_xxxxx)")
         print("3. Update the database with SQL:")
         print("   UPDATE pricing_tiers SET")
         print("     stripe_monthly_price_id = 'price_xxxxx',")
         print("     stripe_annual_price_id = 'price_yyyyy'")
-        print("   WHERE name = 'pro';")
+        print("   WHERE name = 'plus';")
 
     except IntegrityError as e:
         db.rollback()
