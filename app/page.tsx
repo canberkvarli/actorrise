@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 
 export default function LandingPage() {
@@ -8,11 +9,9 @@ export default function LandingPage() {
         <div className="container mx-auto px-6 py-3">
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <Link
-                href="/"
-                className="text-lg tracking-[0.24em] text-foreground/80 hover:text-foreground transition-colors"
-              >
-                ActorRise
+              <Link href="/" className="flex items-center gap-2.5 text-foreground/80 hover:text-foreground transition-colors">
+                <Image src="/logo.png" alt="ActorRise" width={32} height={32} className="rounded-md" />
+                <span className="text-lg tracking-[0.24em]">ActorRise</span>
               </Link>
               <span className="hidden sm:inline-flex items-center rounded-full border border-border/70 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground/90">
                 For actors

@@ -26,6 +26,21 @@ const cormorantGaramond = Cormorant_Garamond({
 export const metadata: Metadata = {
   title: "ActorRise - Your Complete Acting Platform",
   description: "MonologueMatch, ScenePartner, CraftCoach, and more - all in one place for actors",
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/apple-touch-icon.png",
+  },
+  openGraph: {
+    title: "ActorRise - Your Complete Acting Platform",
+    description: "MonologueMatch, ScenePartner, CraftCoach, and more - all in one place for actors",
+    images: ["/logo.png"],
+  },
+  twitter: {
+    card: "summary",
+    title: "ActorRise - Your Complete Acting Platform",
+    description: "MonologueMatch, ScenePartner, CraftCoach, and more - all in one place for actors",
+    images: ["/logo.png"],
+  },
 };
 
 export default function RootLayout({
