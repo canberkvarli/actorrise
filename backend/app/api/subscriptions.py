@@ -115,14 +115,11 @@ async def get_my_subscription(current_user: User = Depends(get_current_user), db
     subscription = db.query(UserSubscription).filter(UserSubscription.user_id == current_user.id).first()
 
     if not subscription:
-        # Return Free tier by default
+        # Return Free tier by default (even if DB not seeded yet)
         free_tier = db.query(PricingTier).filter(PricingTier.name == "free").first()
-        if not free_tier:
-            raise HTTPException(status_code=500, detail="Free tier not found in database")
-
         return SubscriptionResponse(
             tier_name="free",
-            tier_display_name="Free",
+            tier_display_name=free_tier.display_name if free_tier else "Free",
             status="active",
             billing_period="monthly",
             current_period_end=None,
@@ -131,7 +128,15 @@ async def get_my_subscription(current_user: User = Depends(get_current_user), db
 
     tier = db.query(PricingTier).get(subscription.tier_id)
     if not tier:
-        raise HTTPException(status_code=500, detail="Subscription tier not found")
+        # Fallback to free if tier missing (e.g. tier deleted)
+        return SubscriptionResponse(
+            tier_name="free",
+            tier_display_name="Free",
+            status=subscription.status,
+            billing_period=subscription.billing_period or "monthly",
+            current_period_end=subscription.current_period_end,
+            cancel_at_period_end=subscription.cancel_at_period_end or False,
+        )
 
     return SubscriptionResponse(
         tier_name=tier.name,
