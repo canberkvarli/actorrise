@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 
-// Production API (Render). Override with NEXT_PUBLIC_API_URL in Vercel if using a custom domain.
-export const PRODUCTION_API_URL = "https://actorrise-api.onrender.com";
+// Production API (Render). Use custom domain when verified; fallback to onrender.com.
+export const PRODUCTION_API_URL = "https://api.actorrise.com";
 export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   (process.env.VERCEL ? PRODUCTION_API_URL : "http://localhost:8000");
