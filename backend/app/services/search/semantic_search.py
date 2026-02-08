@@ -429,6 +429,17 @@ class SemanticSearch:
         else:
             top_results = top_semantic
 
+        # Famous-line boost: if the query looks like a quote (multi-word), put monologues whose
+        # text contains the query at the very top so "to be or not to be" returns Hamlet first
+        query_lower = query.strip().lower()
+        if len(query_lower.split()) >= 2:
+            monologues_with_scores = list(top_results)
+            text_contains = [(m, s) for m, s in monologues_with_scores if m.text and query_lower in m.text.lower()]
+            text_does_not = [(m, s) for m, s in monologues_with_scores if not m.text or query_lower not in m.text.lower()]
+            if text_contains:
+                top_results = text_contains + text_does_not
+                logger.debug("Famous-line boost: %s monologue(s) with query in text moved first", len(text_contains))
+
         # FALLBACK: If we don't have enough semantic results, supplement with text search
         # This ensures users get results even when embeddings aren't available
         if len(top_results) < limit:
@@ -622,10 +633,13 @@ class SemanticSearch:
 
         base_query = base_query.filter(or_(*ilike_clauses))
 
-        # Prefer play title and character name matches (e.g. "Hamlet" → play Hamlet, character Hamlet first)
+        # When user types a famous line (e.g. "to be or not to be"), put monologues that
+        # contain that exact phrase in the text first. Then play/character matches.
+        normalized_query = query.strip()
         base_query = base_query.order_by(
-            Play.title.ilike(f'%{query}%').desc(),
-            Monologue.character_name.ilike(f'%{query}%').desc(),
+            Monologue.text.ilike(f"%{normalized_query}%").desc(),
+            Play.title.ilike(f'%{normalized_query}%').desc(),
+            Monologue.character_name.ilike(f'%{normalized_query}%').desc(),
             Play.title,
             Monologue.character_name
         ).limit(limit)
