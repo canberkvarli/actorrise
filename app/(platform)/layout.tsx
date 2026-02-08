@@ -90,7 +90,7 @@ export default function PlatformLayout({
       <nav className="bg-background/95 backdrop-blur-sm border-b border-border/40 relative z-[9998]" style={{ position: 'relative' }}>
         <div className="container mx-auto px-6">
           <div className="flex items-center justify-between h-20">
-            <Link href="/dashboard" className="font-serif text-3xl font-bold tracking-tight hover:opacity-80 transition-opacity">
+            <Link href="/dashboard" className="text-3xl font-bold tracking-tight hover:opacity-80 transition-opacity">
               ActorRise
             </Link>
 

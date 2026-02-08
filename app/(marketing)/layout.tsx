@@ -17,12 +17,12 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <div className="flex items-center gap-3">
               <Link
                 href="/"
-                className="font-serif text-sm tracking-[0.12em] text-foreground/80 hover:text-foreground transition-colors"
+                className="text-lg tracking-[0.24em] text-foreground/80 hover:text-foreground transition-colors"
               >
                 ActorRise
               </Link>
               <span className="hidden sm:inline-flex items-center rounded-full border border-border/70 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground/90">
-                For working actors
+                For actors
               </span>
             </div>
             <nav className="hidden md:flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2 py-1">
