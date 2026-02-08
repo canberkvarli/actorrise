@@ -53,12 +53,14 @@ export function useProfile() {
   });
 }
 
-// Hook for recommendations
-export function useRecommendations(enabled: boolean = true) {
+// Hook for recommendations (fast=true uses SQL-only for quicker dashboard load)
+export function useRecommendations(enabled: boolean = true, fast: boolean = true) {
   return useQuery<Monologue[]>({
-    queryKey: ["recommendations"],
+    queryKey: ["recommendations", fast],
     queryFn: async () => {
-      const response = await api.get<Monologue[]>("/api/monologues/recommendations?limit=4");
+      const params = new URLSearchParams({ limit: "4" });
+      if (fast) params.set("fast", "true");
+      const response = await api.get<Monologue[]>(`/api/monologues/recommendations?${params}`);
       return response.data;
     },
     enabled, // Only fetch if profile is complete enough

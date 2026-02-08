@@ -10,9 +10,9 @@ export default function LandingPage() {
             <div className="flex items-center gap-3">
               <Link
                 href="/"
-                className="text-sm tracking-[0.24em] text-foreground/80 hover:text-foreground transition-colors"
+                className="font-serif text-sm tracking-[0.12em] text-foreground/80 hover:text-foreground transition-colors"
               >
-                ACTORRISE
+                ActorRise
               </Link>
               <span className="hidden sm:inline-flex items-center rounded-full border border-border/70 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground/90">
                 For working actors
@@ -56,13 +56,12 @@ export default function LandingPage() {
         {/* Hero */}
         <section className="container mx-auto px-6 pt-24 pb-20 md:pt-36 md:pb-28">
           <div className="max-w-5xl">
-            <p className="inline-flex items-center gap-2 rounded-full border border-secondary/40 bg-secondary/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-secondary-foreground/90">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              8,600+ monologues. AI search.
-            </p>
-            <h1 className="mt-5 text-5xl md:text-7xl leading-[1.02] tracking-[-0.04em]">
+            <h1 className="text-5xl md:text-7xl leading-[1.02] tracking-[-0.04em]">
               Find the monologue. In seconds.
             </h1>
+            <p className="mt-4 text-lg text-muted-foreground">
+              World&apos;s largest monologue database.
+            </p>
             <div className="mt-12 grid grid-cols-3 gap-4 max-w-2xl">
               <div className="space-y-1 rounded-2xl border border-secondary/40 bg-secondary/10 px-4 py-3">
                 <div className="text-2xl">8,600+</div>
@@ -83,14 +82,6 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-            <div className="mt-10 flex flex-wrap items-center gap-3">
-              <Button asChild size="lg" className="px-8">
-                <Link href="/signup">Start free</Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="px-8">
-                <Link href="/search">Explore search</Link>
-              </Button>
-            </div>
           </div>
         </section>
 
@@ -101,8 +92,13 @@ export default function LandingPage() {
               Search what you&apos;re looking for.
             </h2>
             <p className="mt-4 text-muted-foreground">
-              One search box. No filters to learn. Find the right piece from 8,600+ monologues.
+              One search box. No filters to learn. Understands what you mean, not just what you type.
             </p>
+            <div className="mt-6">
+              <Button asChild size="lg" className="px-8">
+                <Link href="/signup">Start free</Link>
+              </Button>
+            </div>
             <p className="mt-8 text-sm text-muted-foreground">
               ScenePartner, CraftCoach & more coming soon.
             </p>
@@ -145,7 +141,7 @@ export default function LandingPage() {
         <section id="proof" className="container mx-auto px-6 py-20 md:py-28 border-t border-border/60">
           <div className="max-w-3xl">
             <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
-              Less searching. More doing.
+              Get back to what matters: performing.
             </h2>
           </div>
         </section>
@@ -154,7 +150,7 @@ export default function LandingPage() {
         <section id="pricing" className="container mx-auto px-6 py-20 md:py-28 border-t border-border/60">
           <div className="max-w-4xl">
             <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
-              Start free.
+              Simple pricing.
             </h2>
             <p className="mt-2 text-muted-foreground">
               Free tier to explore. Upgrade when you&apos;re ready.
@@ -198,8 +194,11 @@ export default function LandingPage() {
       </main>
 
       <footer className="border-t border-border/60">
-        <div className="container mx-auto px-6 py-10 flex items-center justify-between gap-4 flex-wrap">
-          <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} ActorRise</p>
+        <div className="container mx-auto px-6 py-10 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} ActorRise</p>
+            <p className="text-xs text-muted-foreground/80">Built by an actor, for actors.</p>
+          </div>
           <div className="text-sm text-muted-foreground flex items-center gap-4">
             <Link href="/pricing" className="hover:text-foreground transition-colors">
               Pricing

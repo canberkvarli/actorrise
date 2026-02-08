@@ -284,9 +284,28 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
   const greetingName = profile?.name?.trim().split(/\s+/)[0] || null;
   const showWelcomeSkeleton = isLoadingProfile;
+  const isLoadingDashboard = isLoadingStats || isLoadingProfile;
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8 max-w-7xl">
+      {/* Full dashboard loading state so users don't navigate away thinking it's broken */}
+      {isLoadingDashboard && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex flex-col items-center justify-center py-24 gap-6"
+        >
+          <div className="relative">
+            <div className="h-12 w-12 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+            <IconSparkles className="h-6 w-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+          </div>
+          <p className="text-muted-foreground font-medium">Loading your dashboard...</p>
+          <p className="text-sm text-muted-foreground/80">Fetching your profile and stats</p>
+        </motion.div>
+      )}
+
+      {!isLoadingDashboard && (
+        <>
       {/* Welcome Header - no "Actor" flash; skeleton or name once loaded */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -338,10 +357,28 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             <Card>
               <CardContent className="pt-6">
                 {isLoadingRecommendations ? (
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {[1, 2, 3, 4].map((i) => (
-                      <div key={i} className="h-40 bg-muted/50 animate-pulse rounded-lg" />
-                    ))}
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground text-center">
+                      Personalizing your recommendations…
+                    </p>
+                    <div className="grid md:grid-cols-2 gap-5">
+                      {[1, 2, 3, 4].map((i) => (
+                        <Card key={i} className="border-border/50 overflow-hidden">
+                          <CardContent className="pt-6 flex flex-col gap-4">
+                            <div className="space-y-2">
+                              <Skeleton className="h-5 w-3/4 rounded-md" />
+                              <Skeleton className="h-4 w-1/2 rounded-md" />
+                              <Skeleton className="h-3 w-1/3 rounded-md" />
+                            </div>
+                            <Skeleton className="h-12 flex-1 rounded-md" />
+                            <div className="flex justify-between pt-4 border-t">
+                              <Skeleton className="h-4 w-12 rounded-md" />
+                              <Skeleton className="h-4 w-16 rounded-md" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
                   </div>
                 ) : !isProfileComplete ? (
                   <div className="text-center py-20">
@@ -774,6 +811,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </>
         )}
       </AnimatePresence>
+        </>
+      )}
     </div>
   );
 }
