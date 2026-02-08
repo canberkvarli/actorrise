@@ -43,6 +43,19 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
+  // If getUser() returned no user (e.g. timeout, edge cold start), check for session in cookies.
+  // This avoids redirecting logged-in users to login when Supabase is slow or briefly unreachable.
+  if (!user) {
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      if (sessionData?.session != null) {
+        user = sessionData.session.user
+      }
+    } catch {
+      // ignore
+    }
+  }
+
   const { pathname } = request.nextUrl
 
   // Protect platform and onboarding (require auth)

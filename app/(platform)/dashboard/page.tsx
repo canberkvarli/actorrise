@@ -282,20 +282,32 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
   const currentMonologue = monologueDetail || selectedMonologue;
 
+  const greetingName = profile?.name?.trim().split(/\s+/)[0] || null;
+  const showWelcomeSkeleton = isLoadingProfile;
+
   return (
     <div className="container mx-auto px-4 lg:px-8 py-8 max-w-7xl">
-      {/* Welcome Header */}
+      {/* Welcome Header - no "Actor" flash; skeleton or name once loaded */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-3xl lg:text-4xl font-bold mb-1">
-          Welcome back, {profile?.name?.split(' ')[0] || 'Actor'}
-        </h1>
-        <p className="text-muted-foreground">
-          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-        </p>
+        {showWelcomeSkeleton ? (
+          <>
+            <Skeleton className="h-9 w-64 mb-2 rounded-md" />
+            <Skeleton className="h-5 w-48 rounded-md" />
+          </>
+        ) : (
+          <>
+            <h1 className="text-3xl lg:text-4xl font-bold mb-1">
+              Welcome back{greetingName ? `, ${greetingName}` : ''}
+            </h1>
+            <p className="text-muted-foreground">
+              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </p>
+          </>
+        )}
       </motion.div>
 
       {/* Quick Actions - Only shows if profile incomplete */}

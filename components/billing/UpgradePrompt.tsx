@@ -24,7 +24,7 @@ interface UpgradePromptProps {
   feature: string;
   message: string;
   currentPlan: string;
-  recommendedPlan: "pro" | "elite";
+  recommendedPlan: "pro" | "elite" | "plus" | "unlimited";
   onClose?: () => void;
   variant?: "card" | "modal";
 }
@@ -40,8 +40,9 @@ export function UpgradePrompt({
   const getPlanDetails = () => {
     switch (recommendedPlan) {
       case "elite":
+      case "unlimited":
         return {
-          name: "Elite",
+          name: "Unlimited",
           icon: <IconCrown className="h-5 w-5 text-accent" />,
           price: "$24/month",
           annualPrice: "$199/year",
@@ -53,9 +54,10 @@ export function UpgradePrompt({
           ],
         };
       case "pro":
+      case "plus":
       default:
         return {
-          name: "Pro",
+          name: "Plus",
           icon: <IconRocket className="h-5 w-5 text-accent" />,
           price: "$12/month",
           annualPrice: "$99/year",

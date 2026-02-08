@@ -63,21 +63,7 @@ export default function LandingPage() {
             <h1 className="mt-5 text-5xl md:text-7xl leading-[1.02] tracking-[-0.04em]">
               Find the monologue. In seconds.
             </h1>
-            <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-2xl">
-              Type a line you know and get that monologue. Or describe what you need: tragedy, a role that fits you, a playwright. Save it. Take it with you.
-            </p>
-            <div className="mt-10 flex flex-wrap items-center gap-3">
-              <Button asChild size="lg" className="px-8">
-                <Link href="/signup">Start free</Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="px-8">
-                <Link href="/search">Explore search</Link>
-              </Button>
-              <Button asChild size="lg" variant="ghost" className="px-8">
-                <Link href="#pricing">Pricing</Link>
-              </Button>
-            </div>
-            <div className="mt-10 grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-3xl">
+            <div className="mt-12 grid grid-cols-3 gap-4 max-w-2xl">
               <div className="space-y-1 rounded-2xl border border-secondary/40 bg-secondary/10 px-4 py-3">
                 <div className="text-2xl">8,600+</div>
                 <div className="text-xs text-muted-foreground uppercase tracking-[0.16em]">
@@ -91,11 +77,19 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="space-y-1 rounded-2xl border border-secondary/40 bg-secondary/10 px-4 py-3">
-                <div className="text-2xl">Free to start</div>
+                <div className="text-2xl">Save it</div>
                 <div className="text-xs text-muted-foreground uppercase tracking-[0.16em]">
-                  no credit card
+                  bookmark, take it with you
                 </div>
               </div>
+            </div>
+            <div className="mt-10 flex flex-wrap items-center gap-3">
+              <Button asChild size="lg" className="px-8">
+                <Link href="/signup">Start free</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="px-8">
+                <Link href="/search">Explore search</Link>
+              </Button>
             </div>
           </div>
         </section>
@@ -107,13 +101,8 @@ export default function LandingPage() {
               Search what you&apos;re looking for.
             </h2>
             <p className="mt-4 text-muted-foreground">
-              One search box. No filters to learn. We match you to the right piece from 8,600+ monologues.
+              One search box. No filters to learn. Find the right piece from 8,600+ monologues.
             </p>
-            <div className="mt-6">
-              <Button asChild variant="outline" size="lg">
-                <Link href="/search">Try search</Link>
-              </Button>
-            </div>
             <p className="mt-8 text-sm text-muted-foreground">
               ScenePartner, CraftCoach & more coming soon.
             </p>
@@ -158,25 +147,6 @@ export default function LandingPage() {
             <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
               Less searching. More doing.
             </h2>
-            <div className="mt-12 grid md:grid-cols-2 gap-6">
-              <blockquote className="rounded-2xl border border-border/60 bg-card/40 p-6">
-                <p className="leading-relaxed">
-                  &ldquo;Shortlist in minutes that actually matched the room.&rdquo;
-                </p>
-                <footer className="mt-4 text-sm text-muted-foreground">Working actor</footer>
-              </blockquote>
-              <blockquote className="rounded-2xl border border-border/60 bg-card/40 p-6">
-                <p className="leading-relaxed">
-                  &ldquo;Understood what I meant, not what I typed.&rdquo;
-                </p>
-                <footer className="mt-4 text-sm text-muted-foreground">Student</footer>
-              </blockquote>
-            </div>
-            <div className="mt-8">
-              <Button asChild size="lg" className="px-8">
-                <Link href="/signup">Create your account</Link>
-              </Button>
-            </div>
           </div>
         </section>
 
@@ -200,16 +170,16 @@ export default function LandingPage() {
                 </Button>
               </div>
               <div className="rounded-2xl border border-border/60 bg-card/40 p-6 flex flex-col">
-                <h3 className="text-xl font-semibold">Pro</h3>
+                <h3 className="text-xl font-semibold">Plus</h3>
                 <p className="mt-1 text-2xl font-bold">$12<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
                 <p className="mt-2 text-sm text-muted-foreground">150 searches, unlimited bookmarks</p>
                 <div className="mt-6 flex-1" />
-                <Button asChild className="mt-4 w-full">
+                <Button asChild variant="outline" className="mt-4 w-full">
                   <Link href="/pricing">Subscribe</Link>
                 </Button>
               </div>
               <div className="rounded-2xl border border-border/60 bg-card/40 p-6 flex flex-col">
-                <h3 className="text-xl font-semibold">Elite</h3>
+                <h3 className="text-xl font-semibold">Unlimited</h3>
                 <p className="mt-1 text-2xl font-bold">$24<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
                 <p className="mt-2 text-sm text-muted-foreground">Unlimited searches + more</p>
                 <div className="mt-6 flex-1" />
@@ -236,9 +206,6 @@ export default function LandingPage() {
             </Link>
             <Link href="/login" className="hover:text-foreground transition-colors">
               Sign in
-            </Link>
-            <Link href="/signup" className="hover:text-foreground transition-colors">
-              Get started
             </Link>
           </div>
         </div>

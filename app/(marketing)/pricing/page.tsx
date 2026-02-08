@@ -50,9 +50,61 @@ interface PricingTier {
 
 const tierIcons: Record<string, React.ReactNode> = {
   free: <IconSparkles className="h-6 w-6" />,
-  pro: <IconRocket className="h-6 w-6" />,
-  elite: <IconCrown className="h-6 w-6" />,
+  plus: <IconRocket className="h-6 w-6" />,
+  unlimited: <IconCrown className="h-6 w-6" />,
 };
+
+/** Fallback when API is unreachable (e.g. backend not running) */
+const DEFAULT_TIERS: PricingTier[] = [
+  {
+    id: 1,
+    name: "free",
+    display_name: "Free",
+    description: "Perfect for exploring ActorRise",
+    monthly_price_cents: 0,
+    annual_price_cents: 0,
+    features: {
+      ai_searches_per_month: 10,
+      bookmarks_limit: 5,
+      recommendations: false,
+      download_formats: ["txt"],
+      priority_support: false,
+    },
+    sort_order: 0,
+  },
+  {
+    id: 2,
+    name: "plus",
+    display_name: "Plus",
+    description: "For working actors and students",
+    monthly_price_cents: 1200,
+    annual_price_cents: 9900,
+    features: {
+      ai_searches_per_month: 150,
+      bookmarks_limit: -1,
+      recommendations: true,
+      download_formats: ["txt", "pdf"],
+      priority_support: true,
+    },
+    sort_order: 1,
+  },
+  {
+    id: 3,
+    name: "unlimited",
+    display_name: "Unlimited",
+    description: "Unlimited searches and more",
+    monthly_price_cents: 2400,
+    annual_price_cents: 19900,
+    features: {
+      ai_searches_per_month: -1,
+      bookmarks_limit: -1,
+      recommendations: true,
+      download_formats: ["txt", "pdf"],
+      priority_support: true,
+    },
+    sort_order: 2,
+  },
+];
 
 const faqs = [
   {
@@ -141,15 +193,29 @@ export default function PricingPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch pricing tiers from API
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/pricing/tiers`)
-      .then((res) => res.json())
-      .then((data) => {
-        setTiers(data);
+    const apiUrl =
+      typeof window !== "undefined"
+        ? process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+        : "";
+    const url = apiUrl ? `${apiUrl}/api/pricing/tiers` : "";
+
+    if (!url) {
+      setTiers(DEFAULT_TIERS);
+      setIsLoading(false);
+      return;
+    }
+
+    fetch(url)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: PricingTier[]) => {
+        setTiers(Array.isArray(data) && data.length > 0 ? data : DEFAULT_TIERS);
         setIsLoading(false);
       })
-      .catch((error) => {
-        console.error("Failed to fetch pricing tiers:", error);
+      .catch(() => {
+        setTiers(DEFAULT_TIERS);
         setIsLoading(false);
       });
   }, []);
@@ -285,9 +351,7 @@ export default function PricingPage() {
             Annual
           </Label>
           {isAnnual && (
-            <Badge variant="secondary" className="ml-2">
-              Save up to 31%
-            </Badge>
+            <span className="ml-2 text-xs text-muted-foreground">Save up to 31%</span>
           )}
         </motion.div>
       </div>
@@ -305,7 +369,7 @@ export default function PricingPage() {
               ? calculateSavings(tier.monthly_price_cents, tier.annual_price_cents)
               : null;
 
-          const isHighlighted = tier.name === "pro";
+          const isHighlighted = tier.name === "plus";
           const features = getFeaturesList(tier);
 
           return (
@@ -317,13 +381,15 @@ export default function PricingPage() {
               className="h-full"
             >
               <Card
-                className={`h-full flex flex-col relative border-0 shadow-none bg-muted/30 ${
-                  isHighlighted ? "bg-primary/5 ring-2 ring-primary/20" : ""
+                className={`h-full flex flex-col relative border border-border/50 shadow-none ${
+                  isHighlighted ? "bg-muted/40" : "bg-muted/20"
                 }`}
               >
                 {isHighlighted && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <Badge className="px-4 py-1">Most Popular</Badge>
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      Most popular
+                    </span>
                   </div>
                 )}
 
@@ -345,9 +411,9 @@ export default function PricingPage() {
                       </p>
                     )}
                     {isAnnual && savings && (
-                      <Badge variant="secondary" className="mt-2">
+                      <p className="mt-1 text-xs text-muted-foreground">
                         Save {formatPrice(savings.savings)}/year
-                      </Badge>
+                      </p>
                     )}
                   </div>
                 </CardHeader>
@@ -356,7 +422,7 @@ export default function PricingPage() {
                   <ul className="space-y-3">
                     {features.map((feature, idx) => (
                       <li key={idx} className="flex items-start gap-2">
-                        <IconCheck className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                        <IconCheck className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
                         <span className="text-sm">{feature}</span>
                       </li>
                     ))}
@@ -366,7 +432,7 @@ export default function PricingPage() {
                 <CardFooter className="mt-auto">
                   <Button
                     asChild
-                    variant={isHighlighted ? "default" : "outline"}
+                    variant="outline"
                     size="lg"
                     className="w-full"
                   >
