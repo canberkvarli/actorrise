@@ -63,10 +63,12 @@ async function request<T = unknown>(
       err instanceof TypeError ||
       (err instanceof Error && /fetch|network|loaded/i.test((err as Error).message));
     const isSearch = url.includes("/search");
+    const isLocal = typeof window !== "undefined" ? API_URL.includes("localhost") : !process.env.VERCEL;
     let message: string;
     if (isSearch && (isAbort || isNetworkError)) {
-      message =
-        "Search is taking longer than usual. On free hosting the first search can take 1–3 minutes—please try again.";
+      message = isLocal
+        ? "Search timed out or the backend is unreachable. Make sure the API is running (e.g. cd backend && uv run uvicorn app.main:app --reload) and try again."
+        : "Search is taking longer than usual. On free hosting the first search can take 1–3 minutes—please try again.";
     } else if (isNetworkError) {
       const isProd = typeof window !== "undefined" ? !API_URL.includes("localhost") : process.env.VERCEL;
       message = isProd

@@ -16,9 +16,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         <div className="container mx-auto px-6 py-3">
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <Link href="/" className="flex items-center gap-2.5 text-foreground hover:text-foreground transition-colors">
+              <Link href="/" className="flex items-center gap-2.5 text-foreground hover:opacity-80 transition-opacity">
                 <Image src="/logo.png" alt="ActorRise" width={32} height={32} className="rounded-md" />
-                <span className="text-xl tracking-[0.24em]">ActorRise</span>
+                <span className="font-serif text-xl font-semibold tracking-[0.2em] text-foreground">ActorRise</span>
               </Link>
               <span className="hidden sm:inline-flex items-center rounded-full border border-border/70 px-3 py-1 text-xs uppercase tracking-[0.16em] text-foreground/90">
                 For actors
