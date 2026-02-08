@@ -3,6 +3,7 @@
 import { useAuth } from "@/lib/auth";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { IconHome, IconSearch, IconUser, IconLogout, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo } from "@tabler/icons-react";
@@ -90,7 +91,8 @@ export default function PlatformLayout({
       <nav className="bg-background/95 backdrop-blur-sm border-b border-border/40 relative z-[9998]" style={{ position: 'relative' }}>
         <div className="container mx-auto px-6">
           <div className="flex items-center justify-between h-20">
-            <Link href="/dashboard" className="text-3xl font-bold tracking-tight hover:opacity-80 transition-opacity">
+            <Link href="/dashboard" className="flex items-center gap-2.5 text-3xl font-bold tracking-tight hover:opacity-80 transition-opacity">
+              <Image src="/logo.png" alt="ActorRise" width={36} height={36} className="rounded-md" />
               ActorRise
             </Link>
 
