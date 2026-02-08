@@ -20,9 +20,6 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 <Image src="/logo.png" alt="ActorRise" width={32} height={32} className="rounded-md" />
                 <span className="font-serif text-xl font-semibold tracking-[0.2em] text-foreground">ActorRise</span>
               </Link>
-              <span className="hidden sm:inline-flex items-center rounded-full border border-border/70 px-3 py-1 text-xs uppercase tracking-[0.16em] text-foreground/90">
-                For actors
-              </span>
             </div>
             <nav className="hidden md:flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2 py-1">
               <Link
