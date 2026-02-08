@@ -66,9 +66,25 @@ def get_profile(
             detail="Database connection unavailable. Please try again later.",
         ) from e
     if not profile:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Profile not found",
+        # Return 200 with empty profile so frontend always gets data (no 404)
+        return ActorProfileResponse(
+            id=0,
+            user_id=current_user.id,
+            name=None,
+            age_range=None,
+            gender=None,
+            ethnicity=None,
+            height=None,
+            build=None,
+            location=None,
+            experience_level=None,
+            type=None,
+            training_background=None,
+            union_status=None,
+            preferred_genres=[],
+            overdone_alert_sensitivity=0.5,
+            profile_bias_enabled=True,
+            headshot_url=None,
         )
     return profile
 

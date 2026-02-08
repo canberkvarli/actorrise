@@ -6,12 +6,15 @@ export const API_URL =
   process.env.NEXT_PUBLIC_API_URL ||
   (process.env.VERCEL ? PRODUCTION_API_URL : "http://localhost:8000");
 
+// Extended options: RequestInit + optional timeout (for slow endpoints like search)
+type RequestOptions = RequestInit & { timeoutMs?: number };
+
 // Fetch wrapper that mimics axios API for easy migration
 async function request<T = unknown>(
   method: string,
   url: string,
   data?: unknown,
-  options?: RequestInit
+  options?: RequestOptions
 ): Promise<{ data: T; status: number; statusText: string }> {
   // Get auth token
   let authToken: string | undefined;
@@ -33,22 +36,42 @@ async function request<T = unknown>(
     headers.Authorization = `Bearer ${authToken}`;
   }
 
+  const { timeoutMs, ...fetchInit } = options ?? {};
+  const init: RequestInit = {
+    method,
+    headers,
+    body: data ? JSON.stringify(data) : undefined,
+    redirect: "follow",
+    ...fetchInit,
+  };
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  if (timeoutMs != null && timeoutMs > 0) {
+    const controller = new AbortController();
+    timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    init.signal = controller.signal;
+  }
+
   // Make request with redirect handling
   let response: Response;
   try {
-    response = await fetch(fullUrl, {
-      method,
-      headers,
-      body: data ? JSON.stringify(data) : undefined,
-      redirect: 'follow', // Explicitly follow redirects
-      ...options,
-    });
+    response = await fetch(fullUrl, init);
   } catch (err) {
-    const message =
-      err instanceof TypeError && (err as Error).message === "Failed to fetch"
-        ? `Backend unreachable at ${fullUrl}. Is the API running? For local dev: start the backend (e.g. \`cd backend && uv run uvicorn app.main:app --reload\`) and set NEXT_PUBLIC_API_URL=http://localhost:8000 if needed.`
-        : (err as Error).message;
+    if (timeoutId != null) clearTimeout(timeoutId);
+    const isAbort = err instanceof Error && err.name === "AbortError";
+    const isFailedFetch = err instanceof TypeError && (err as Error).message === "Failed to fetch";
+    let message: string;
+    if (isAbort || (isFailedFetch && url.includes("/search"))) {
+      message =
+        "Search is taking longer than usual. On free hosting the first search can take 1–2 minutes—please try again.";
+    } else if (isFailedFetch) {
+      message = `Backend unreachable at ${fullUrl}. Is the API running? For local dev: start the backend (e.g. \`cd backend && uv run uvicorn app.main:app --reload\`) and set NEXT_PUBLIC_API_URL=http://localhost:8000 if needed.`;
+    } else {
+      message = (err as Error).message;
+    }
     throw new Error(message);
+  } finally {
+    if (timeoutId != null) clearTimeout(timeoutId);
   }
 
   // Handle 401 errors

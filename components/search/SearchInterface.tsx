@@ -121,7 +121,8 @@ export function SearchInterface() {
       params.set("limit", "20");
 
       const response = await api.get<MonologueSearchResponse>(
-        `/api/monologues/search?${params.toString()}`
+        `/api/monologues/search?${params.toString()}`,
+        { timeoutMs: 120000 }
       );
       setResults(response.data.results);
 
