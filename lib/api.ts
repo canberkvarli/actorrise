@@ -68,7 +68,10 @@ async function request<T = unknown>(
       message =
         "Search is taking longer than usual. On free hosting the first search can take 1–3 minutes—please try again.";
     } else if (isNetworkError) {
-      message = `Backend unreachable at ${fullUrl}. Is the API running? For local dev: start the backend (e.g. \`cd backend && uv run uvicorn app.main:app --reload\`) and set NEXT_PUBLIC_API_URL=http://localhost:8000 if needed.`;
+      const isProd = typeof window !== "undefined" ? !API_URL.includes("localhost") : process.env.VERCEL;
+      message = isProd
+        ? "Something went wrong. Please try again in a moment."
+        : `Backend unreachable at ${fullUrl}. Is the API running? Start the backend (e.g. \`cd backend && uv run uvicorn app.main:app --reload\`) and set NEXT_PUBLIC_API_URL=http://localhost:8000 if needed.`;
     } else {
       message = (err as Error).message;
     }
