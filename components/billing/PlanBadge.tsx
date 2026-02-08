@@ -26,8 +26,10 @@ export function PlanBadge({
   const getIcon = () => {
     switch (planName.toLowerCase()) {
       case "pro":
+      case "plus":
         return <IconRocket className="h-3 w-3" />;
       case "elite":
+      case "unlimited":
         return <IconCrown className="h-3 w-3" />;
       case "free":
       default:
@@ -39,8 +41,12 @@ export function PlanBadge({
     switch (planName.toLowerCase()) {
       case "pro":
         return "Pro";
+      case "plus":
+        return "Plus";
       case "elite":
         return "Elite";
+      case "unlimited":
+        return "Unlimited";
       case "free":
       default:
         return "Free";
