@@ -91,8 +91,8 @@ export default function PlatformLayout({
       <nav className="bg-background/95 backdrop-blur-sm border-b border-border/40 relative z-[9998]" style={{ position: 'relative' }}>
         <div className="container mx-auto px-6">
           <div className="flex items-center justify-between h-20">
-            <Link href="/dashboard" className="flex items-center gap-2.5 text-3xl font-bold tracking-tight hover:opacity-80 transition-opacity">
-              <Image src="/logo.png" alt="ActorRise" width={36} height={36} className="rounded-md" />
+            <Link href="/dashboard" className="flex items-center gap-2.5 text-xl font-semibold tracking-[0.24em] text-foreground hover:opacity-80 transition-opacity">
+              <Image src="/logo.png" alt="ActorRise" width={32} height={32} className="rounded-md" />
               ActorRise
             </Link>
 
@@ -107,7 +107,7 @@ export default function PlatformLayout({
                     asChild
                     variant={isActive ? "outline" : "ghost"}
                     size="sm"
-                    className="gap-2 rounded-full px-4"
+                    className="gap-2 rounded-full px-4 text-sm"
                   >
                     <Link href={item.href}>
                       <Icon className="h-4 w-4" />

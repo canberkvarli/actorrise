@@ -9,32 +9,32 @@ export default function LandingPage() {
         <div className="container mx-auto px-6 py-3">
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <Link href="/" className="flex items-center gap-2.5 text-foreground/80 hover:text-foreground transition-colors">
+              <Link href="/" className="flex items-center gap-2.5 text-foreground hover:text-foreground transition-colors">
                 <Image src="/logo.png" alt="ActorRise" width={32} height={32} className="rounded-md" />
-                <span className="text-lg tracking-[0.24em]">ActorRise</span>
+                <span className="text-xl tracking-[0.24em]">ActorRise</span>
               </Link>
-              <span className="hidden sm:inline-flex items-center rounded-full border border-border/70 px-3 py-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground/90">
+              <span className="hidden sm:inline-flex items-center rounded-full border border-border/70 px-3 py-1 text-xs uppercase tracking-[0.16em] text-foreground/90">
                 For actors
               </span>
             </div>
             <div className="hidden md:flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2 py-1">
               <Link
                 href="#suite"
-                className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
               >
                 Search
               </Link>
               <span className="h-4 w-px bg-border/60" />
               <Link
                 href="#how"
-                className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
               >
                 How it works
               </Link>
               <span className="h-4 w-px bg-border/60" />
               <Link
                 href="#pricing"
-                className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
               >
                 Pricing
               </Link>
@@ -111,24 +111,24 @@ export default function LandingPage() {
               Three steps.
             </h2>
             <div className="mt-12 grid md:grid-cols-3 gap-6">
-              <div className="rounded-2xl border border-border/60 p-8">
-                <div className="text-sm text-muted-foreground">01</div>
-                <h3 className="mt-3 text-xl tracking-[-0.02em]">Search</h3>
-                <p className="mt-3 text-muted-foreground">
+              <div className="rounded-2xl border border-border p-8">
+                <div className="text-base text-foreground/80">01</div>
+                <h3 className="mt-3 text-2xl tracking-[-0.02em]">Search</h3>
+                <p className="mt-3 text-foreground/85">
                   Describe what you need. Get a shortlist.
                 </p>
               </div>
-              <div className="rounded-2xl border border-border/60 p-8">
-                <div className="text-sm text-muted-foreground">02</div>
-                <h3 className="mt-3 text-xl tracking-[-0.02em]">Save</h3>
-                <p className="mt-3 text-muted-foreground">
+              <div className="rounded-2xl border border-border p-8">
+                <div className="text-base text-foreground/80">02</div>
+                <h3 className="mt-3 text-2xl tracking-[-0.02em]">Save</h3>
+                <p className="mt-3 text-foreground/85">
                   Bookmark what you like.
                 </p>
               </div>
-              <div className="rounded-2xl border border-border/60 p-8">
-                <div className="text-sm text-muted-foreground">03</div>
-                <h3 className="mt-3 text-xl tracking-[-0.02em]">Rehearse</h3>
-                <p className="mt-3 text-muted-foreground">
+              <div className="rounded-2xl border border-border p-8">
+                <div className="text-base text-foreground/80">03</div>
+                <h3 className="mt-3 text-2xl tracking-[-0.02em]">Rehearse</h3>
+                <p className="mt-3 text-foreground/85">
                   Walk in ready.
                 </p>
               </div>

@@ -77,7 +77,7 @@ export default function RecentSearches({ maxSearches = 3, compact = false }: Rec
     return (
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base text-foreground">
             <IconClock className="h-5 w-5" />
             Recent Searches
           </CardTitle>
@@ -144,7 +144,7 @@ export default function RecentSearches({ maxSearches = 3, compact = false }: Rec
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 text-base text-foreground">
           <IconClock className="h-5 w-5" />
           Recent Searches
         </CardTitle>
