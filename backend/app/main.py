@@ -14,6 +14,7 @@ from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.database import Base, engine
+from app.core.seed import ensure_pricing_tiers
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -41,6 +42,10 @@ def _init_db() -> None:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _init_db()
+    try:
+        ensure_pricing_tiers()
+    except Exception as e:
+        logger.warning("Could not ensure pricing tiers (non-fatal): %s", e)
     yield
 
 
