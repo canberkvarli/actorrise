@@ -1,0 +1,41 @@
+# ActorRise – Render Blueprint
+# Deploy: connect this repo in Render, then use "New" → "Blueprint" and point to this file.
+# Or create a Web Service manually and set build to Docker with dockerfilePath: ./backend/Dockerfile, dockerContext: ./backend.
+
+databases:
+  - name: actorrise-db
+    plan: free
+    # Optional: region, databaseName, user. Omit to use defaults.
+
+services:
+  - type: web
+    name: actorrise-api
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+
+    # Build only when backend changes (monorepo)
+    buildFilter:
+      paths:
+        - backend/**
+
+    # Env: DATABASE_URL from Render Postgres above. Set the rest in Dashboard (or add here with sync).
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: actorrise-db
+          property: connectionString
+      - key: ENVIRONMENT
+        value: production
+      - key: CORS_ORIGINS
+        value: https://actorrise.vercel.app
+        # Add your Vercel frontend URL(s), comma-separated. Example: https://yourapp.vercel.app,https://www.yourapp.com
+      # Set these in Render Dashboard → Service → Environment (secrets):
+      # - JWT_SECRET (generate a long random string)
+      # - SUPABASE_URL (your Supabase project URL)
+      # - SUPABASE_SERVICE_ROLE_KEY (Supabase service role key)
+      # - OPENAI_API_KEY (if you use AI search)
+
+    healthCheckPath: /health
+    autoDeployTrigger: commit
