@@ -41,10 +41,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="ActorRise API", version="1.0.0", lifespan=lifespan)
 
-# Configure CORS
+# Configure CORS (OPTIONS preflight must succeed or browser blocks requests)
+# Allow explicit origins from CORS_ORIGINS plus any *.vercel.app (preview + prod)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    allow_origin_regex=r"^https://[\w.-]+\.vercel\.app$",  # Vercel production + previews
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
