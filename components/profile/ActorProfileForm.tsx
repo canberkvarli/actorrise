@@ -299,6 +299,7 @@ export function ActorProfileForm() {
           location: "",
           experienceLevel: "",
           type: "",
+          actorTypes: [],
           trainingBackground: "",
           unionStatus: "",
           preferredGenres: [],
