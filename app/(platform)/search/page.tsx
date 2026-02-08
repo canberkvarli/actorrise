@@ -432,22 +432,32 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
   const toggleFavorite = async (e: React.MouseEvent, mono: Monologue) => {
     e.stopPropagation();
+    // Store previous state for rollback on error
+    const previousResults = results;
+    const previousSelected = selectedMonologue;
+
     try {
       if (mono.is_favorited) {
-        await api.delete(`/api/monologues/${mono.id}/favorite`);
-        // Update in results
+        // Optimistic update: immediately unfavorite in UI
         setResults(results.map(m => m.id === mono.id ? { ...m, is_favorited: false, favorite_count: m.favorite_count - 1 } : m));
         if (selectedMonologue?.id === mono.id) {
           setSelectedMonologue({ ...selectedMonologue, is_favorited: false, favorite_count: selectedMonologue.favorite_count - 1 });
         }
+        // Then make the API call
+        await api.delete(`/api/monologues/${mono.id}/favorite`);
       } else {
-        await api.post(`/api/monologues/${mono.id}/favorite`);
+        // Optimistic update: immediately favorite in UI
         setResults(results.map(m => m.id === mono.id ? { ...m, is_favorited: true, favorite_count: m.favorite_count + 1 } : m));
         if (selectedMonologue?.id === mono.id) {
           setSelectedMonologue({ ...selectedMonologue, is_favorited: true, favorite_count: selectedMonologue.favorite_count + 1 });
         }
+        // Then make the API call
+        await api.post(`/api/monologues/${mono.id}/favorite`);
       }
     } catch (error) {
+      // Rollback on error
+      setResults(previousResults);
+      setSelectedMonologue(previousSelected);
       console.error("Error toggling favorite:", error);
     }
   };
