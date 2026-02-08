@@ -15,7 +15,9 @@ class Settings:
         raise ValueError("DATABASE_URL must be set to a PostgreSQL connection string")
     jwt_secret: str = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
     jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
-    cors_origins: List[str] = os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",")
+    cors_origins: List[str] = [
+        o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()
+    ]
     # When "development" or "local", feature limits (e.g. AI search) are not enforced.
     environment: str = os.getenv("ENVIRONMENT", "development").lower()
     # Supabase Storage settings
