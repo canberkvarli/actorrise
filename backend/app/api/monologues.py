@@ -164,12 +164,20 @@ async def search_monologues(
         filters['max_duration'] = max_duration
 
     search_service = SemanticSearch(db)
+    # Fetch more results than requested to get accurate total for pagination
+    fetch_limit = max(limit * 3, 100)  # Fetch 3x or at least 100 to get better total estimate
+
     if q and q.strip():
-        results = search_service.search(
-            q.strip(), limit=limit, filters=filters, user_id=cast(int, current_user.id)
+        all_results = search_service.search(
+            q.strip(), limit=fetch_limit, filters=filters, user_id=cast(int, current_user.id)
         )
     else:
-        results = search_service.get_random_monologues(limit=limit, filters=filters)
+        all_results = search_service.get_random_monologues(limit=fetch_limit, filters=filters)
+
+    # Apply pagination
+    offset = (page - 1) * limit
+    results = all_results[offset:offset + limit]
+    total = len(all_results)
 
     # Get user's favorites
     favorites = db.query(MonologueFavorite.monologue_id).filter(
@@ -182,11 +190,6 @@ async def search_monologues(
         _monologue_to_response(m, is_favorited=(m.id in favorite_ids))
         for m in results
     ]
-
-    # For now, total is the number of results returned for this query.
-    # In the future, this can be expanded to support true multi-page
-    # pagination by exposing total hit count from the search service.
-    total = len(monologue_responses)
 
     return SearchResponse(
         results=monologue_responses,

@@ -110,18 +110,18 @@ export function ActorProfileForm() {
   const headshotUrl = watch("headshot_url");
   
   type PreviousValues = {
-    name: string;
-    ageRange: string;
-    gender: string;
+    name: string | undefined;
+    ageRange: string | undefined;
+    gender: string | undefined;
     ethnicity: string | undefined;
     height: string | undefined;
     build: string | undefined;
-    location: string;
-    experienceLevel: string;
-    type: string;
+    location: string | undefined;
+    experienceLevel: string | undefined;
+    type: string | undefined;
     actorTypes: string[];
     trainingBackground: string | undefined;
-    unionStatus: string;
+    unionStatus: string | undefined;
     preferredGenres: string[];
     overdoneSensitivity: number;
     profileBias: boolean;
