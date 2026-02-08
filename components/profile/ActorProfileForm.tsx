@@ -270,7 +270,7 @@ export function ActorProfileForm() {
         build: profile.build || "",
         location: profile.location || "",
         experienceLevel: profile.experience_level || "",
-        type: Array.isArray(rawType) ? "" : (profile.type || ""),
+        type: Array.isArray(profile.type) ? "" : (typeof profile.type === 'string' ? profile.type : ""),
         actorTypes: loadedActorTypes,
         trainingBackground: profile.training_background || "",
         unionStatus: profile.union_status || "",
