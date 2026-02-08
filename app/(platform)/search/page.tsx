@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -41,6 +42,7 @@ export default function SearchPage() {
   const LAST_SEARCH_KEY = "monologue_search_last_results_v1";
   const [restoredFromLastSearch, setRestoredFromLastSearch] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchUpgradeUrl, setSearchUpgradeUrl] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
@@ -165,6 +167,7 @@ export default function SearchPage() {
     if (!append) {
       setIsLoading(true);
       setSearchError(null);
+      setSearchUpgradeUrl(null);
     } else {
       setIsLoadingMore(true);
     }
@@ -219,7 +222,8 @@ export default function SearchPage() {
         router.replace(`/search?${newParams.toString()}`, { scroll: false });
       }
     } catch (error: unknown) {
-      const raw = (error as { response?: { data?: { detail?: string | { message?: string } } } })?.response?.data?.detail;
+      const res = (error as { response?: { data?: { detail?: string | { message?: string; upgrade_url?: string } } } })?.response;
+      const raw = res?.data?.detail;
       const message =
         typeof raw === "string"
           ? raw
@@ -228,7 +232,9 @@ export default function SearchPage() {
             : error instanceof Error
               ? error.message
               : "Search failed. Please try again.";
+      const upgradeUrl = raw && typeof raw === "object" && "upgrade_url" in raw ? (raw as { upgrade_url: string }).upgrade_url : null;
       setSearchError(message);
+      setSearchUpgradeUrl(upgradeUrl ?? null);
       if (!append) setResults([]);
     } finally {
       setIsLoading(false);
@@ -607,8 +613,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         {searchError && (
           <Card className="border-destructive/50 bg-destructive/5">
             <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <p className="text-sm text-destructive font-medium">{searchError}</p>
-              <Button variant="outline" size="sm" onClick={() => performSearch(query, filters)}>
+              <div className="flex flex-col gap-2">
+                <p className="text-sm text-destructive font-medium">{searchError}</p>
+                {searchUpgradeUrl && (
+                  <Link href={searchUpgradeUrl}>
+                    <Button variant="default" size="sm">View plans & upgrade</Button>
+                  </Link>
+                )}
+              </div>
+              <Button variant="outline" size="sm" onClick={() => { setSearchError(null); setSearchUpgradeUrl(null); performSearch(query, filters); }}>
                 Try again
               </Button>
             </CardContent>

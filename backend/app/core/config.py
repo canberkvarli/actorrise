@@ -20,6 +20,8 @@ class Settings:
     ]
     # When "development" or "local", feature limits (e.g. AI search) are not enforced.
     environment: str = os.getenv("ENVIRONMENT", "development").lower()
+    # Comma-separated emails that bypass tier/usage limits (e.g. canberkvarli@gmail.com).
+    superuser_emails: str = os.getenv("SUPERUSER_EMAILS", "canberkvarli@gmail.com").strip()
     # Supabase Storage settings
     supabase_url: str | None = os.getenv("SUPABASE_URL")
     supabase_service_role_key: str | None = os.getenv("SUPABASE_SERVICE_ROLE_KEY")

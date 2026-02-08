@@ -56,6 +56,13 @@ class FeatureGate:
         self, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
     ) -> bool:
         """Check if user has access to feature."""
+        # Superuser bypass (e.g. local dev or admin)
+        if settings.superuser_emails and current_user.email:
+            emails = [e.strip().lower() for e in settings.superuser_emails.split(",") if e.strip()]
+            if current_user.email.lower() in emails:
+                if self.increment and self.feature == "ai_search":
+                    self._increment_usage(current_user.id, "ai_searches_count", db)
+                return True
 
         # Get user's subscription and tier
         subscription = (
@@ -262,6 +269,7 @@ async def require_ai_search_when_query(
     """
     Enforce AI search limits only when the request includes a search query.
 
+    - Superuser emails (SUPERUSER_EMAILS) bypass limits (checked inside FeatureGate).
     - In development/local (ENVIRONMENT=development or local), limits are not enforced.
     - If the request has no `q` or empty `q` (e.g. discover/random), the check is
       skipped and usage is not incremented.
