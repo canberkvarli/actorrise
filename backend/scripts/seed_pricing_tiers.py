@@ -56,7 +56,7 @@ def seed_pricing_tiers():
             PricingTier(
                 name="plus",
                 display_name="Plus",
-                description="For working actors and students",
+                description="For actors",
                 monthly_price_cents=1200,  # $12.00
                 annual_price_cents=9900,  # $99.00 ($8.25/mo, 31% discount)
                 stripe_monthly_price_id=None,  # TODO: Replace with actual Stripe price ID

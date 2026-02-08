@@ -76,7 +76,7 @@ const DEFAULT_TIERS: PricingTier[] = [
     id: 2,
     name: "plus",
     display_name: "Plus",
-    description: "For working actors and students",
+    description: "For actors",
     monthly_price_cents: 1200,
     annual_price_cents: 9900,
     features: {
