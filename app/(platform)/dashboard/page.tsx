@@ -26,7 +26,7 @@ import { Monologue } from "@/types/actor";
 import RecentSearches from "@/components/search/RecentSearches";
 import BookmarksQuickAccess from "@/components/bookmarks/BookmarksQuickAccess";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { useProfileStats, useProfile, useRecommendations } from "@/hooks/useDashboardData";
+import { useProfileStats, useProfile, useRecommendations, useDiscover } from "@/hooks/useDashboardData";
 import { useBookmarkCount, useToggleFavorite } from "@/hooks/useBookmarks";
 import { useQuery } from "@tanstack/react-query";
 
@@ -99,6 +99,9 @@ export default function DashboardPage() {
   const { count: bookmarkCount } = useBookmarkCount();
   const isProfileComplete = stats && stats.completion_percentage >= 50;
   const { data: recommendations = [], isLoading: isLoadingRecommendations } = useRecommendations(isProfileComplete ?? false);
+  const { data: discoverMonologues = [], isLoading: isLoadingDiscover } = useDiscover(!(isProfileComplete ?? false));
+  const mainMonologues = isProfileComplete ? recommendations : discoverMonologues;
+  const isLoadingMain = isProfileComplete ? isLoadingRecommendations : isLoadingDiscover;
   const toggleFavoriteMutation = useToggleFavorite();
 
   // Fetch monologue detail
@@ -342,7 +345,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           >
             <div className="mb-6">
               <div className="flex items-center justify-between mb-1">
-                <h2 className="text-2xl font-semibold">Recommended for you</h2>
+                <h2 className="text-2xl font-semibold">
+                  {isProfileComplete ? "Recommended for you" : "Discover"}
+                </h2>
                 <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
                   <Link href="/search">
                     View all
@@ -351,15 +356,17 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground">
-                Personalized monologues based on your profile
+                {isProfileComplete
+                  ? "Personalized monologues based on your profile"
+                  : "Explore monologues — complete your profile for personalized picks"}
               </p>
             </div>
             <Card>
               <CardContent className="pt-6">
-                {isLoadingRecommendations ? (
+                {isLoadingMain ? (
                   <div className="space-y-4">
                     <p className="text-sm text-muted-foreground text-center">
-                      Personalizing your recommendations…
+                      {isProfileComplete ? "Personalizing your recommendations…" : "Loading…"}
                     </p>
                     <div className="grid md:grid-cols-2 gap-5">
                       {[1, 2, 3, 4].map((i) => (
@@ -380,27 +387,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       ))}
                     </div>
                   </div>
-                ) : !isProfileComplete ? (
-                  <div className="text-center py-20">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-secondary/10 mb-4">
-                      <IconUserCheck className="h-8 w-8 text-secondary-foreground" />
-                    </div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      Complete your profile
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-                      Add your preferences to get personalized recommendations.
-                    </p>
-                      <Button asChild variant="outline">
-                      <Link href="/profile">
-                        Complete Profile
-                        <IconArrowRight className="h-4 w-4 ml-2" />
-                      </Link>
-                    </Button>
-                  </div>
-                ) : recommendations.length > 0 ? (
+                ) : mainMonologues.length > 0 ? (
                   <div className="grid md:grid-cols-2 gap-5">
-                    {recommendations.map((mono, idx) => (
+                    {mainMonologues.map((mono, idx) => (
                       <motion.div
                         key={mono.id}
                         initial={{ opacity: 0, y: 20 }}

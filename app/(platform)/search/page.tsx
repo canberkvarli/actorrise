@@ -179,7 +179,7 @@ export default function SearchPage() {
 
       const response = await api.get<SearchResponseShape>(
         `/api/monologues/search?${params.toString()}`,
-        { timeoutMs: 120000 }
+        { timeoutMs: 180000 }
       );
       const data = response.data;
       const newResults = data.results;
