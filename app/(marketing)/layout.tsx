@@ -32,14 +32,13 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               >
                 Home
               </Link>
-              {/* Hide pricing entry for now */}
-              {/* <span className="h-4 w-px bg-border/60" />
+              <span className="h-4 w-px bg-border/60" />
               <Link
                 href="/pricing"
                 className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 Pricing
-              </Link> */}
+              </Link>
             </nav>
             <div className="flex items-center gap-2">
               <Button asChild variant="ghost" size="sm">
@@ -62,6 +61,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
           <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} ActorRise</p>
             <div className="flex items-center gap-4">
+              <Link href="/pricing" className="hover:text-foreground transition-colors">
+                Pricing
+              </Link>
               <Link href="/terms" className="hover:text-foreground transition-colors">
                 Terms
               </Link>
