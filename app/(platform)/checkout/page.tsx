@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconRocket, IconCrown, IconArrowLeft } from "@tabler/icons-react";
-import api from "@/lib/api";
+import api, { API_URL } from "@/lib/api";
 import Link from "next/link";
 
 interface PricingTier {
@@ -44,7 +44,7 @@ export default function CheckoutPage() {
     }
 
     // Fetch tier details
-    fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/pricing/tiers/${tierName}`)
+    fetch(`${API_URL}/api/pricing/tiers/${tierName}`)
       .then((res) => res.json())
       .then((data) => {
         setTier(data);

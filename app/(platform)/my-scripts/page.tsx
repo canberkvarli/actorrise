@@ -11,7 +11,7 @@ import {
   FileCheck, FileX, Loader2, ChevronRight, Sparkles
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import api from "@/lib/api";
+import api, { API_URL } from "@/lib/api";
 import { toast } from "sonner";
 
 interface UserScript {
@@ -86,7 +86,7 @@ export default function MyScriptsPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/scripts/upload`, {
+      const response = await fetch(`${API_URL}/api/scripts/upload`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${(await import("@/lib/supabase")).supabase.auth.getSession().then(s => s.data.session?.access_token)}`,

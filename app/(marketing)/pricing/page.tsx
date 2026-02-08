@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { API_URL } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -193,10 +194,7 @@ export default function PricingPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const apiUrl =
-      typeof window !== "undefined"
-        ? process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-        : "";
+    const apiUrl = typeof window !== "undefined" ? API_URL : "";
     const url = apiUrl ? `${apiUrl}/api/pricing/tiers` : "";
 
     if (!url) {
