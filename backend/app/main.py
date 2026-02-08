@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from app.api.auth import router as auth_router
@@ -15,6 +16,10 @@ from app.core.config import settings
 from app.core.database import Base, engine
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+
+logger = logging.getLogger("uvicorn.error")
 
 
 def _init_db() -> None:
@@ -41,12 +46,26 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="ActorRise API", version="1.0.0", lifespan=lifespan)
 
+
+class LogCORSOriginMiddleware(BaseHTTPMiddleware):
+    """Log Origin on OPTIONS so we can see what the browser sends (for CORS debugging)."""
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method == "OPTIONS":
+            origin = request.headers.get("origin", "(none)")
+            logger.info("CORS preflight Origin: %s", origin)
+        return await call_next(request)
+
+
+# Log OPTIONS origin first (runs last), then CORS
+app.add_middleware(LogCORSOriginMiddleware)
+
 # Configure CORS (OPTIONS preflight must succeed or browser blocks requests)
-# Allow explicit origins from CORS_ORIGINS plus any *.vercel.app (preview + prod)
+# allow_origins from env; regex covers *.vercel.app and actorrise.com
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
-    allow_origin_regex=r"^https://[\w.-]+\.vercel\.app$",  # Vercel production + previews
+    allow_origin_regex=r"^https://([^/]+\.vercel\.app|(www\.)?actorrise\.com)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
