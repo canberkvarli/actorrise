@@ -299,10 +299,10 @@ async def get_usage_limits(current_user: User = Depends(get_current_user), db: S
         .all()
     )
 
-    # Sum up usage for the month
-    ai_searches_used = sum(u.ai_searches_count for u in usage_records)
-    scene_partner_used = sum(u.scene_partner_sessions for u in usage_records)
-    craft_coach_used = sum(u.craft_coach_sessions for u in usage_records)
+    # Sum up usage for the month (guard against None from DB)
+    ai_searches_used = sum((u.ai_searches_count or 0) for u in usage_records)
+    scene_partner_used = sum((u.scene_partner_sessions or 0) for u in usage_records)
+    craft_coach_used = sum((u.craft_coach_sessions or 0) for u in usage_records)
 
     # Get limits from tier features
     features = tier.features

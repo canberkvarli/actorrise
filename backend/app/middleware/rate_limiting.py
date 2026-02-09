@@ -219,7 +219,7 @@ class FeatureGate:
             .all()
         )
 
-        return sum(getattr(record, field, 0) for record in usage_records)
+        return sum((getattr(record, field, 0) or 0) for record in usage_records)
 
     def _increment_usage(self, user_id: int, field: str, db: Session):
         """Increment usage counter for today."""
@@ -236,8 +236,8 @@ class FeatureGate:
             usage = UsageMetrics(user_id=user_id, date=today)
             db.add(usage)
 
-        # Increment the specified field
-        current_value = getattr(usage, field, 0)
+        # Increment the specified field (handle None from DB or new instance)
+        current_value = getattr(usage, field, 0) or 0
         setattr(usage, field, current_value + 1)
 
         db.commit()
