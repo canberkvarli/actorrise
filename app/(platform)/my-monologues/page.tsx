@@ -1,39 +1,52 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { IconBookmark, IconX, IconEye, IconEyeOff, IconDownload, IconSparkles } from "@tabler/icons-react";
+import { IconBookmark, IconX, IconEye, IconEyeOff, IconDownload, IconSparkles, IconArrowsSort } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { Monologue } from "@/types/actor";
 import Link from "next/link";
+import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
+import { Select } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { useBookmarks, useToggleFavorite } from "@/hooks/useBookmarks";
+
+export type MyMonologuesSort = "last_added" | "character_az" | "character_za" | "play_az" | "play_za" | "author_az";
 
 export default function MyMonologuesPage() {
-  const [favorites, setFavorites] = useState<Monologue[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: favorites = [], isLoading } = useBookmarks();
+  const toggleFavoriteMutation = useToggleFavorite();
   const [selectedMonologue, setSelectedMonologue] = useState<Monologue | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [sort, setSort] = useState<MyMonologuesSort>("last_added");
 
-  useEffect(() => {
-    fetchFavorites();
-  }, []);
-
-  const fetchFavorites = async () => {
-    try {
-      const response = await api.get<Monologue[]>("/api/monologues/favorites/my");
-      setFavorites(response.data);
-    } catch (error) {
-      console.error("Failed to fetch favorites:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const sortedFavorites = useMemo(() => {
+    if (sort === "last_added") return [...favorites];
+    const cmp = (a: Monologue, b: Monologue) => {
+      switch (sort) {
+        case "character_az":
+          return (a.character_name ?? "").localeCompare(b.character_name ?? "", undefined, { sensitivity: "base" });
+        case "character_za":
+          return (b.character_name ?? "").localeCompare(a.character_name ?? "", undefined, { sensitivity: "base" });
+        case "play_az":
+          return (a.play_title ?? "").localeCompare(b.play_title ?? "", undefined, { sensitivity: "base" });
+        case "play_za":
+          return (b.play_title ?? "").localeCompare(a.play_title ?? "", undefined, { sensitivity: "base" });
+        case "author_az":
+          return (a.author ?? "").localeCompare(b.author ?? "", undefined, { sensitivity: "base" });
+        default:
+          return 0;
+      }
+    };
+    return [...favorites].sort(cmp);
+  }, [favorites, sort]);
 
   const openMonologue = async (mono: Monologue) => {
     setSelectedMonologue(mono);
@@ -55,17 +68,10 @@ export default function MyMonologuesPage() {
     setShowDownloadMenu(false);
   };
 
-  const toggleFavorite = async (e: React.MouseEvent, mono: Monologue) => {
+  const toggleFavorite = (e: React.MouseEvent, mono: Monologue) => {
     e.stopPropagation();
-    try {
-      await api.delete(`/api/monologues/${mono.id}/favorite`);
-      setFavorites(favorites.filter(m => m.id !== mono.id));
-      if (selectedMonologue?.id === mono.id) {
-        setSelectedMonologue({ ...selectedMonologue, is_favorited: false, favorite_count: selectedMonologue.favorite_count - 1 });
-      }
-    } catch (error) {
-      console.error("Error removing favorite:", error);
-    }
+    if (selectedMonologue?.id === mono.id) setSelectedMonologue(null);
+    toggleFavoriteMutation.mutate({ monologueId: mono.id, isFavorited: mono.is_favorited ?? true });
   };
 
   const downloadMonologue = (mono: Monologue, format: 'text' | 'pdf' = 'text') => {
@@ -219,11 +225,32 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         transition={{ delay: 0.1 }}
       >
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <CardTitle className="flex items-center gap-2">
               <IconBookmark className="h-5 w-5 text-primary" />
               Bookmarked Monologues ({favorites.length})
             </CardTitle>
+            {favorites.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Label htmlFor="my-monologues-sort" className="text-sm text-muted-foreground whitespace-nowrap flex items-center gap-1.5">
+                  <IconArrowsSort className="h-4 w-4" />
+                  Sort
+                </Label>
+                <Select
+                  id="my-monologues-sort"
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value as MyMonologuesSort)}
+                  className="w-[180px] rounded-xl"
+                >
+                  <option value="last_added">Last added</option>
+                  <option value="character_az">Character A–Z</option>
+                  <option value="character_za">Character Z–A</option>
+                  <option value="play_az">Play A–Z</option>
+                  <option value="play_za">Play Z–A</option>
+                  <option value="author_az">Author A–Z</option>
+                </Select>
+              </div>
+            )}
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -234,7 +261,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </div>
             ) : favorites.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {favorites.map((mono, idx) => (
+                {sortedFavorites.map((mono, idx) => (
                   <motion.div
                     key={mono.id}
                     initial={{ opacity: 0, y: 20 }}
@@ -492,135 +519,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         {selectedMonologue.text}
                       </p>
                     </div>
-
-                    {/* Stage Directions - If Available */}
-                    {selectedMonologue.stage_directions && (
-                      <div className="bg-muted/30 p-6 rounded-lg border max-w-3xl mx-auto">
-                        <p className="text-base italic text-muted-foreground text-center">
-                          <span className="font-semibold not-italic">Stage Directions: </span>
-                          {selectedMonologue.stage_directions}
-                        </p>
-                      </div>
-                    )}
                   </div>
                 ) : (
-                  <>
-                    {/* Header */}
-                    <div className="space-y-3">
-                      <h1 className="text-3xl font-bold font-typewriter">{selectedMonologue.character_name}</h1>
-                      <div>
-                        <p className="text-lg font-semibold font-typewriter">{selectedMonologue.play_title}</p>
-                        <p className="text-muted-foreground font-typewriter">by {selectedMonologue.author}</p>
-                      </div>
-
-                      {selectedMonologue.scene_description && (
-                        <div className="bg-primary/5 border border-primary/20 p-4 rounded-lg">
-                          <p className="text-sm italic flex items-start gap-2">
-                            <IconSparkles className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
-                            {selectedMonologue.scene_description}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <Separator />
-
-                    {/* Details */}
-                    <div className="space-y-3">
-                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                        Details
-                      </h3>
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Character:</p>
-                          <Badge variant="outline">{selectedMonologue.character_name}</Badge>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Genre:</p>
-                          <Badge variant="outline" className="capitalize">{selectedMonologue.category}</Badge>
-                        </div>
-                        {selectedMonologue.character_gender && (
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Gender:</p>
-                            <Badge variant="outline" className="capitalize">{selectedMonologue.character_gender}</Badge>
-                          </div>
-                        )}
-                        {selectedMonologue.character_age_range && (
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Age Range:</p>
-                            <Badge variant="outline">{selectedMonologue.character_age_range}</Badge>
-                          </div>
-                        )}
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Category:</p>
-                          <Badge variant="outline" className="capitalize">{selectedMonologue.category}</Badge>
-                        </div>
-                        {selectedMonologue.primary_emotion && (
-                          <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Emotion:</p>
-                            <Badge className="capitalize">{selectedMonologue.primary_emotion}</Badge>
-                          </div>
-                        )}
-                      </div>
-
-                      {selectedMonologue.themes && selectedMonologue.themes.length > 0 && (
-                        <div className="space-y-2 pt-2">
-                          <p className="text-xs text-muted-foreground">Themes:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {selectedMonologue.themes.map((theme) => (
-                              <Badge key={theme} variant="secondary" className="capitalize">
-                                {theme}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <Separator />
-
-                    {/* Monologue Text */}
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                        Monologue Text
-                      </h3>
-                      <div className="bg-muted/30 p-6 rounded-lg border">
-                        <p className="text-base leading-relaxed whitespace-pre-wrap font-typewriter">
-                          {selectedMonologue.text}
-                        </p>
-                      </div>
-
-                      {selectedMonologue.stage_directions && (
-                        <div className="bg-muted/50 p-4 rounded-lg border">
-                          <p className="text-sm italic">
-                            <span className="font-semibold not-italic">Stage Directions: </span>
-                            {selectedMonologue.stage_directions}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Stats & Source */}
-                    <Separator />
-                    <div className="space-y-4">
-                      <div className="grid grid-cols-3 gap-4 text-center">
-                        <div className="space-y-1">
-                          <p className="text-2xl font-bold">
-                            {Math.floor(selectedMonologue.estimated_duration_seconds / 60)}:{(selectedMonologue.estimated_duration_seconds % 60).toString().padStart(2, '0')}
-                          </p>
-                          <p className="text-xs text-muted-foreground">Duration</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-2xl font-bold">{selectedMonologue.word_count}</p>
-                          <p className="text-xs text-muted-foreground">Words</p>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-2xl font-bold">{selectedMonologue.favorite_count}</p>
-                          <p className="text-xs text-muted-foreground">Favorites</p>
-                        </div>
-                      </div>
-                    </div>
-                  </>
+                  <MonologueDetailContent
+                    monologue={selectedMonologue}
+                    showOpenInNewPage
+                  />
                 )}
               </div>
             </motion.div>

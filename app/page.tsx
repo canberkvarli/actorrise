@@ -137,7 +137,7 @@ export default function LandingPage() {
         <section id="proof" className="container mx-auto px-6 py-20 md:py-28 border-t border-border/60">
           <div className="max-w-3xl">
             <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
-              Get back to what matters: performing.
+              Get back to what matters: <span className="italic underline underline-offset-2 decoration-primary/60">performing.</span>
             </h2>
           </div>
         </section>

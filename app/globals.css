@@ -52,7 +52,7 @@
 }
 
 :root {
-  --radius: 14px;
+  --radius: 16px;
 
   /* Light theme kept tasteful (dark is default) */
   --background: oklch(0.985 0 0);
@@ -122,8 +122,8 @@
   --muted: oklch(0.22 0 0);
   --muted-foreground: oklch(0.78 0 0);
 
-  --accent: oklch(0.26 0.04 215);
-  --accent-foreground: oklch(0.92 0.02 215);
+  --accent: oklch(0.35 0.08 215);
+  --accent-foreground: oklch(0.95 0.02 215);
 
   --destructive: oklch(0.66 0.22 27);
 

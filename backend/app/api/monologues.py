@@ -436,20 +436,31 @@ async def get_my_favorites(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get user's favorited monologues"""
+    """Get user's favorited monologues, ordered by last added first."""
 
-    favorites = db.query(MonologueFavorite).filter(
-        MonologueFavorite.user_id == current_user.id
-    ).all()
+    favorites = (
+        db.query(MonologueFavorite)
+        .filter(MonologueFavorite.user_id == current_user.id)
+        .order_by(MonologueFavorite.created_at.desc())
+        .all()
+    )
 
-    monologue_ids = [f.monologue_id for f in favorites]
-
-    if not monologue_ids:
+    if not favorites:
         return []
 
-    monologues = db.query(Monologue).filter(Monologue.id.in_(monologue_ids)).all()
+    monologues = (
+        db.query(Monologue)
+        .filter(Monologue.id.in_([f.monologue_id for f in favorites]))
+        .all()
+    )
+    mono_by_id = {m.id: m for m in monologues}
 
-    return [_monologue_to_response(m, is_favorited=True) for m in monologues]
+    # Preserve order: last added first
+    return [
+        _monologue_to_response(mono_by_id[f.monologue_id], is_favorited=True)
+        for f in favorites
+        if f.monologue_id in mono_by_id
+    ]
 
 
 @router.get("/plays/all", response_model=List[PlayResponse])
