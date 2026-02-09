@@ -10,6 +10,8 @@
   --font-mono: var(--font-mono);
   --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
   --font-family-serif: var(--font-serif);
+  /* Brand wordmark – Playfair Display (use same name in Canva for consistency) */
+  --font-family-brand: var(--font-brand), var(--font-serif), serif;
   --font-typewriter: "Courier Prime", "Courier New", Courier, monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -191,5 +193,11 @@
     font-family: var(--font-typewriter);
     letter-spacing: 0.02em;
     line-height: 1.7;
+  }
+
+  /* Brand wordmark – "ActorRise". Font: Playfair Display (use "Playfair Display" in Canva to match). */
+  .font-brand {
+    font-family: var(--font-brand), var(--font-serif), serif;
+    letter-spacing: 0.04em;
   }
 }
