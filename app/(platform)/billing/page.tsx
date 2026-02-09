@@ -92,7 +92,7 @@ export default function BillingPage() {
   if (subError) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-5xl">
-        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6 text-center">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 text-center">
           <p className="text-lg font-semibold mb-2">Unable to load billing information</p>
           <p className="text-muted-foreground mb-4">
             There was an error loading your subscription data. Please try refreshing the page.
@@ -119,22 +119,22 @@ export default function BillingPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Billing & Subscription</h1>
-        <p className="text-muted-foreground">
-          Manage your subscription, track usage, and view billing history.
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
+        <h1 className="text-3xl font-bold mb-2 text-foreground">Billing</h1>
+        <p className="text-muted-foreground text-sm">
+          Manage your plan and see usage.
         </p>
       </motion.div>
 
-      <div className="grid md:grid-cols-2 gap-6 mb-6">
+      <div className="grid md:grid-cols-2 gap-6 mb-8">
         {/* Current Plan Card */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card>
-            <CardHeader>
+          <Card className="rounded-xl">
+            <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle>Current Plan</CardTitle>
                 <Badge
@@ -146,25 +146,25 @@ export default function BillingPage() {
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-5">
               {subscription?.tier_name !== "free" && (
                 <>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Billing Period</p>
-                    <p className="font-medium capitalize">{subscription?.billing_period}</p>
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5">Billing period</p>
+                    <p className="font-medium capitalize text-foreground">{subscription?.billing_period}</p>
                   </div>
 
                   {subscription?.current_period_end && (
                     <div>
-                      <p className="text-sm text-muted-foreground mb-1">
-                        {subscription.cancel_at_period_end ? "Ends On" : "Renews On"}
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5">
+                        {subscription.cancel_at_period_end ? "Ends" : "Renews"}
                       </p>
-                      <p className="font-medium">{formatDate(subscription.current_period_end)}</p>
+                      <p className="font-medium text-foreground">{formatDate(subscription.current_period_end)}</p>
                     </div>
                   )}
 
                   {subscription?.cancel_at_period_end && (
-                    <Badge variant="secondary" className="mt-2">
+                    <Badge variant="secondary" className="rounded-lg">
                       Cancels at period end
                     </Badge>
                   )}
@@ -173,12 +173,11 @@ export default function BillingPage() {
 
               {subscription?.tier_name === "free" && (
                 <p className="text-sm text-muted-foreground">
-                  You're on the free plan. Upgrade to unlock unlimited searches, bookmarks, and
-                  more!
+                  Free plan. Upgrade for unlimited searches and bookmarks.
                 </p>
               )}
             </CardContent>
-            <CardFooter className="flex gap-2">
+            <CardFooter className="flex gap-2 pt-2">
               {subscription?.tier_name === "free" ? (
                 <Button asChild className="w-full">
                   <Link href="/pricing">
@@ -207,10 +206,10 @@ export default function BillingPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Card>
-            <CardHeader>
-              <CardTitle>Usage This Month</CardTitle>
-              <CardDescription>Resets on the 1st of each month</CardDescription>
+          <Card className="rounded-xl">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-foreground">Usage this month</CardTitle>
+              <CardDescription className="text-xs">Resets on the 1st</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {/* AI Searches */}
@@ -267,18 +266,17 @@ export default function BillingPage() {
               {usage &&
                 usage.ai_searches_limit !== -1 &&
                 getUsagePercentage(usage.ai_searches_used, usage.ai_searches_limit) > 80 && (
-                  <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
-                    <p className="text-sm font-medium mb-2">Running low on searches?</p>
+                  <div className="bg-accent/10 border border-accent/20 rounded-xl p-4">
+                    <p className="text-sm font-medium text-foreground mb-1">Running low on searches</p>
                     <p className="text-xs text-muted-foreground mb-3">
-                      You've used{" "}
                       {Math.round(
                         getUsagePercentage(usage.ai_searches_used, usage.ai_searches_limit)
                       )}
-                      % of your monthly searches.
+                      % used this month.
                     </p>
-                    <Button asChild size="sm" variant="outline">
+                    <Button asChild size="sm" variant="outline" className="rounded-full">
                       <Link href="/pricing">
-                        Upgrade for More
+                        Upgrade
                         <IconArrowUpRight className="h-3 w-3 ml-1" />
                       </Link>
                     </Button>
@@ -296,45 +294,44 @@ export default function BillingPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <Card>
-            <CardHeader>
-              <CardTitle>Billing History</CardTitle>
-              <CardDescription>Your recent transactions and invoices</CardDescription>
+          <Card className="rounded-xl">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-foreground">Billing history</CardTitle>
+              <CardDescription className="text-xs">Invoices and payments</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-1">
                 {billingHistory.map((item, index) => (
                   <div key={item.id}>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between py-3">
                       <div>
-                        <p className="font-medium">{item.description || "Payment"}</p>
-                        <p className="text-sm text-muted-foreground">{formatDate(item.created_at)}</p>
+                        <p className="font-medium text-foreground text-sm">{item.description || "Payment"}</p>
+                        <p className="text-xs text-muted-foreground">{formatDate(item.created_at)}</p>
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold">{formatPrice(item.amount_cents)}</p>
-                        <div className="flex items-center gap-2 justify-end">
-                          <Badge
-                            variant={
-                              item.status === "succeeded"
-                                ? "default"
-                                : item.status === "failed"
-                                ? "destructive"
-                                : "secondary"
-                            }
-                          >
-                            {item.status}
-                          </Badge>
-                          {item.invoice_url && (
-                            <Button asChild size="sm" variant="ghost">
-                              <a href={item.invoice_url} target="_blank" rel="noopener noreferrer">
-                                <IconDownload className="h-4 w-4" />
-                              </a>
-                            </Button>
-                          )}
-                        </div>
+                      <div className="flex items-center gap-3">
+                        <p className="font-semibold text-foreground tabular-nums">{formatPrice(item.amount_cents)}</p>
+                        <Badge
+                          variant={
+                            item.status === "succeeded"
+                              ? "default"
+                              : item.status === "failed"
+                              ? "destructive"
+                              : "secondary"
+                          }
+                          className="rounded-md text-[10px] uppercase"
+                        >
+                          {item.status}
+                        </Badge>
+                        {item.invoice_url && (
+                          <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0">
+                            <a href={item.invoice_url} target="_blank" rel="noopener noreferrer" title="Download invoice">
+                              <IconDownload className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        )}
                       </div>
                     </div>
-                    {index < billingHistory.length - 1 && <Separator className="mt-4" />}
+                    {index < billingHistory.length - 1 && <Separator />}
                   </div>
                 ))}
               </div>
