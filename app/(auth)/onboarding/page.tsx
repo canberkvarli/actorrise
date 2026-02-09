@@ -531,7 +531,7 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
       className="space-y-8"
     >
       <div className="space-y-3">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+        <h1 className="font-brand text-4xl md:text-5xl font-bold tracking-tight text-foreground">
           ActorRise
         </h1>
         <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-mono">

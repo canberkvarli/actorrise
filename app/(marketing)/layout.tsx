@@ -18,7 +18,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
             <div className="flex items-center gap-3">
               <Link href="/" className="flex items-center gap-2.5 text-foreground hover:opacity-80 transition-opacity">
                 <Image src="/logo.png" alt="ActorRise" width={32} height={32} className="rounded-md" />
-                <span className="font-serif text-xl font-semibold tracking-[0.2em] text-foreground">ActorRise</span>
+                <span className="font-brand text-xl font-semibold text-foreground">ActorRise</span>
               </Link>
             </div>
             <nav className="hidden md:flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2 py-1">

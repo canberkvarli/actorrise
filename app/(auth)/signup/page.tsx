@@ -17,7 +17,7 @@ export default function SignupPage() {
         </div>
         <div className="border rounded-2xl bg-card shadow-sm px-8 py-10 space-y-10">
           <div className="space-y-3">
-            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">ActorRise</h1>
+            <h1 className="font-brand text-4xl md:text-5xl font-bold tracking-tight">ActorRise</h1>
             <p className="text-sm uppercase tracking-[0.2em] text-primary font-mono">
               Create account
             </p>
