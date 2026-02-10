@@ -99,7 +99,7 @@ export default function MonologueDetailPage() {
           onClick={() => router.back()}
           className="mb-4 hover:text-primary"
         >
-          <IconArrowLeft className="h-4 w-4 mr-2" />
+          <IconArrowLeft className="h-4 w-4" />
           Back
         </Button>
 

@@ -342,8 +342,8 @@ export default function AuditionModePage() {
                 <CardContent>
                   {/* Search */}
                   <div className="mb-4">
-                    <div className="relative">
-                      <IconSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <div className="relative flex items-center">
+                      <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4 pointer-events-none" />
                       <Input
                         placeholder="Search monologues by title, character, or play..."
                         value={searchQuery}
@@ -626,7 +626,7 @@ export default function AuditionModePage() {
                 {/* Layout Mode */}
                 <div>
                   <Label className="mb-2">Layout</Label>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <Button
                       variant={layoutMode === 'side-by-side' ? 'default' : 'outline'}
                       size="sm"

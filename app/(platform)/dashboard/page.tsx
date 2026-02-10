@@ -77,7 +77,7 @@ function QuickActions({ stats }: { stats: any }) {
             <Button asChild size="sm">
               <Link href="/profile">
                 Complete
-                <IconArrowRight className="h-4 w-4 ml-1" />
+                <IconArrowRight className="h-4 w-4" />
               </Link>
             </Button>
           </div>
@@ -357,7 +357,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
                   <Link href="/search">
                     View all
-                    <IconArrowRight className="h-4 w-4 ml-1" />
+                    <IconArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
               </div>

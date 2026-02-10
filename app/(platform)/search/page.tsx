@@ -244,12 +244,14 @@ export default function SearchPage() {
   };
 
   const loadMore = () => {
-    if (!query.trim() || isLoadingMore || !hasMore) return;
+    const hasQueryOrFilters = query.trim() !== "" || Object.entries(filters).some(([, v]) => v !== "");
+    if (!hasQueryOrFilters || isLoadingMore || !hasMore) return;
     performSearch(query, filters, page + 1, true);
   };
 
   const handleSearch = async () => {
-    if (!query.trim()) return;
+    const hasQueryOrFilters = query.trim() !== "" || Object.entries(filters).some(([, v]) => v !== "");
+    if (!hasQueryOrFilters) return;
     await performSearch(query, filters);
   };
 
@@ -471,6 +473,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   };
 
   const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
+  const canSearch = query.trim() !== "" || activeFilters.length > 0;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -483,7 +486,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </p>
             <h1 className="mt-4 text-4xl font-bold tracking-[-0.04em]">Find your next piece.</h1>
             <p className="text-muted-foreground text-lg max-w-xl">
-              Search 8,600+ monologues with filters that actually matter.
+              Search by description, or browse by filters, or both.
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -523,19 +526,22 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 <Label htmlFor="search" className="text-base font-semibold">
                   Search
                 </Label>
-                <div className="flex gap-2">
-                  <div className="flex-1 relative">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 relative flex items-center">
                     <Input
                       id="search"
                       placeholder='e.g. funny piece for young woman, 2 min'
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                      className={query ? "pr-10" : ""}
                     />
                     {query && (
                       <button
+                        type="button"
                         onClick={() => setQuery("")}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/50 transition-colors"
+                        aria-label="Clear search"
                       >
                         <IconX className="h-4 w-4" />
                       </button>
@@ -543,14 +549,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </div>
                   <Button
                     onClick={handleSearch}
-                    disabled={isLoading || !query.trim()}
+                    disabled={isLoading || !canSearch}
                     variant="secondary"
                     className="rounded-full px-6"
                   >
                     {isLoading ? (
-                      <IconLoader2 className="h-4 w-4 animate-spin mr-2" />
+                      <IconLoader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <IconSearch className="h-4 w-4 mr-2" />
+                      <IconSearch className="h-4 w-4" />
                     )}
                     Search
                   </Button>
@@ -562,10 +568,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
               {showFilters && (
                 <div className="space-y-3 pt-4 border-t">
-                  <Label className="flex items-center gap-2">
-                    <IconFilter className="h-4 w-4" />
-                    Filters
-                  </Label>
+                  <div>
+                    <Label className="flex items-center gap-2">
+                      <IconFilter className="h-4 w-4" />
+                      Refine by
+                    </Label>
+                    <p className="text-xs text-muted-foreground mt-1">Narrow by gender, age, emotion, theme, category.</p>
+                  </div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     {[
                       { key: "gender", label: "Gender", options: ["male", "female", "any"] },
@@ -662,6 +671,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     AI-powered recommendations based on your profile
                   </p>
                 </div>
+              )}
+              {query.trim() && activeFilters.length > 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Showing monologues matching <span className="font-semibold text-foreground">&ldquo;{query}&rdquo;</span> in {activeFilters.map(([k, v]) => `${k.replace("_", " ")}: ${v}`).join(", ")}. Filters narrow the set; search ranks by meaning.
+                </p>
               )}
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
@@ -818,7 +832,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     className="rounded-full px-8"
                   >
                     {isLoadingMore ? (
-                      <IconLoader2 className="h-4 w-4 animate-spin mr-2" />
+                      <IconLoader2 className="h-4 w-4 animate-spin" />
                     ) : null}
                     Load more
                   </Button>

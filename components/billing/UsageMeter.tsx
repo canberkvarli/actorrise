@@ -52,7 +52,7 @@ export function UsageMeter({
           <Button asChild size="sm" variant="ghost" className="h-6 text-xs">
             <Link href={upgradeUrl}>
               Upgrade
-              <IconArrowUpRight className="h-3 w-3 ml-1" />
+              <IconArrowUpRight className="h-3 w-3" />
             </Link>
           </Button>
         </div>

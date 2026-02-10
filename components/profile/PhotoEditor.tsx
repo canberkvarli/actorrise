@@ -309,12 +309,12 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
             <Button onClick={handleSave} disabled={isSaving || !croppedAreaPixels}>
               {isSaving ? (
                 <>
-                  <IconLoader2 className="h-4 w-4 mr-2 animate-spin" />
+                  <IconLoader2 className="h-4 w-4 animate-spin" />
                   Saving...
                 </>
               ) : (
                 <>
-                  <IconCheck className="h-4 w-4 mr-2" />
+                  <IconCheck className="h-4 w-4" />
                   Save
                 </>
               )}

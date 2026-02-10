@@ -274,7 +274,41 @@ class KeywordExtractor:
         if themes_found:
             filters['themes'] = themes_found
 
+        # Extract act/scene numbers (pattern-based, not keyword)
+        # Matches: "act 3", "act iii", "act III", "scene 1", etc.
+        act_match = re.search(r'\bact\s+(\d+|[ivxIVX]+)\b', query_lower)
+        if act_match:
+            act_val = act_match.group(1)
+            if act_val.isdigit():
+                filters['act'] = int(act_val)
+            else:
+                # Convert Roman numeral to int
+                filters['act'] = cls._roman_to_int(act_val.upper())
+
+        scene_match = re.search(r'\bscene\s+(\d+|[ivxIVX]+)\b', query_lower)
+        if scene_match:
+            scene_val = scene_match.group(1)
+            if scene_val.isdigit():
+                filters['scene'] = int(scene_val)
+            else:
+                filters['scene'] = cls._roman_to_int(scene_val.upper())
+
         return filters
+
+    @staticmethod
+    def _roman_to_int(roman: str) -> int:
+        """Convert Roman numeral to integer."""
+        values = {'I': 1, 'V': 5, 'X': 10, 'L': 50, 'C': 100}
+        result = 0
+        prev = 0
+        for char in reversed(roman.upper()):
+            curr = values.get(char, 0)
+            if curr < prev:
+                result -= curr
+            else:
+                result += curr
+            prev = curr
+        return result if result > 0 else 1  # Default to 1 if parse fails
 
     @classmethod
     def get_extraction_confidence(cls, query: str, extracted: Dict) -> float:

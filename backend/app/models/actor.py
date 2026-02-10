@@ -103,6 +103,11 @@ class Monologue(Base):
     text = Column(Text, nullable=False)  # The actual monologue text
     stage_directions = Column(Text, nullable=True)  # Extracted stage directions
 
+    # Location in play (for classical works)
+    # Deferred so DBs without these columns still load; add columns via add_act_scene_columns.py
+    act = deferred(Column(Integer, nullable=True, index=True))  # Act number (1, 2, 3, etc.)
+    scene = deferred(Column(Integer, nullable=True, index=True))  # Scene number within act
+
     # Character Requirements (AI-extracted + manual curation)
     character_gender = Column(String, nullable=True, index=True)  # male, female, non-binary, any
     character_age_range = Column(String, nullable=True, index=True)  # 20s, 30-40, 50+, etc.

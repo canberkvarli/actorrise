@@ -87,7 +87,7 @@ export default function BookmarksQuickAccess({ onSelectMonologue }: BookmarksQui
               >
                 <Link href="/my-monologues" className="cursor-pointer text-inherit hover:text-inherit">
                   View all {count}
-                  <IconArrowRight className="h-3.5 w-3 ml-1" />
+                  <IconArrowRight className="h-3.5 w-3" />
                 </Link>
               </Button>
             )}
