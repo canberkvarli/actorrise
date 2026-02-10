@@ -442,7 +442,7 @@ export default function RehearsalPage() {
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
                   <input
                     type="text"
                     value={isListening ? transcript : userInput}

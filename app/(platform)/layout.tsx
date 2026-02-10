@@ -106,12 +106,12 @@ export default function PlatformLayout({
             {pathname === "/dashboard" ? (
               <span className="flex items-center gap-2.5 text-foreground cursor-default">
                 <Image src="/logo.png" alt="ActorRise" width={32} height={32} className="rounded-md" />
-                <span className="font-brand text-xl font-semibold text-foreground">ActorRise</span>
+                <span className="font-brand text-2xl font-semibold text-foreground">ActorRise</span>
               </span>
             ) : (
               <Link href="/dashboard" className="flex items-center gap-2.5 text-foreground hover:opacity-80 transition-opacity">
                 <Image src="/logo.png" alt="ActorRise" width={32} height={32} className="rounded-md" />
-                <span className="font-brand text-xl font-semibold text-foreground">ActorRise</span>
+                <span className="font-brand text-2xl font-semibold text-foreground">ActorRise</span>
               </Link>
             )}
 

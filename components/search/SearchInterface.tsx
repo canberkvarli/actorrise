@@ -23,6 +23,21 @@ type MonologueSearchResponse = {
   page_size: number;
 };
 
+const LOADING_MESSAGES = [
+  "Rehearsing...",
+  "Blocking...",
+  "Cueing...",
+  "Projecting...",
+  "Emoting...",
+  "Monologuing...",
+  "Soliloquizing...",
+  "Improvising...",
+  "Dramatizing...",
+  "Stage-whispering...",
+  "Method acting...",
+  "Breaking legs...",
+];
+
 export function SearchInterface() {
   const [profileBias, setProfileBias] = useState(true);
   const [query, setQuery] = useState("");
@@ -41,6 +56,7 @@ export function SearchInterface() {
   const [hasSearched, setHasSearched] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
 
   const PERSIST_KEY = "dashboard_monologue_search_v1";
 
@@ -191,6 +207,18 @@ export function SearchInterface() {
     }
   }, [filters, profileBias]);
 
+  // Rotate loading messages
+  useEffect(() => {
+    if (!isLoading) {
+      setLoadingMessageIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setLoadingMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
   const activeFilters = Object.entries(filters).filter(([_, value]) => value !== "");
   const hasActiveFilters = activeFilters.length > 0;
 
@@ -326,11 +354,11 @@ export function SearchInterface() {
                         <IconSparkles className="h-4 w-4 text-accent animate-pulse" />
                       Smart Search
                     </Label>
-                    <div className="flex gap-2">
-                      <div className="flex-1 relative">
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 relative flex items-center">
                         <Input
                           id="smart-search"
-                          placeholder="What kind of monologue are you looking for? (e.g., emotional, comedic, dramatic)"
+                          placeholder={`Try "to be or not to be" or "funny piece for a middle-aged man"`}
                           value={query}
                           onChange={(e) => setQuery(e.target.value)}
                           onKeyDown={(e) => e.key === "Enter" && handleSearch()}
@@ -338,10 +366,12 @@ export function SearchInterface() {
                         />
                         {query && (
                           <motion.button
+                            type="button"
                             initial={{ opacity: 0, scale: 0 }}
                             animate={{ opacity: 1, scale: 1 }}
                             onClick={() => setQuery("")}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/50 transition-colors"
+                            aria-label="Clear search"
                           >
                             <IconX className="h-4 w-4" />
                           </motion.button>
@@ -400,7 +430,7 @@ export function SearchInterface() {
                         <IconSearch className="h-4 w-4" />
                         Search Monologues
                       </Label>
-                      <div className="flex gap-2">
+                      <div className="flex items-center gap-2">
                         <Input
                           id="search"
                           placeholder="Search by title, author, or excerpt..."
@@ -594,7 +624,15 @@ export function SearchInterface() {
             <div className="flex items-center justify-center p-12">
               <div className="text-center space-y-4">
                 <IconLoader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
-                <p className="text-sm text-muted-foreground">Searching monologues...</p>
+                <motion.p
+                  key={loadingMessageIndex}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="text-sm text-muted-foreground"
+                >
+                  {LOADING_MESSAGES[loadingMessageIndex]}
+                </motion.p>
               </div>
             </div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">

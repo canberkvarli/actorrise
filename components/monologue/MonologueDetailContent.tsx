@@ -228,7 +228,7 @@ export function MonologueDetailContent({
           <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
             <Link href={`/monologue/${monologue.id}`} target="_blank" rel="noopener noreferrer">
               Open in new page
-              <IconExternalLink className="h-4 w-4 ml-2" />
+              <IconExternalLink className="h-4 w-4" />
             </Link>
           </Button>
         </div>

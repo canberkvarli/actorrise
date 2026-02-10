@@ -181,7 +181,7 @@ export default function BillingPage() {
               {subscription?.tier_name === "free" ? (
                 <Button asChild className="w-full">
                   <Link href="/pricing">
-                    <IconSparkles className="h-4 w-4 mr-2" />
+                    <IconSparkles className="h-4 w-4" />
                     Upgrade Plan
                   </Link>
                 </Button>
@@ -192,7 +192,7 @@ export default function BillingPage() {
                   variant="outline"
                   className="w-full"
                 >
-                  <IconCreditCard className="h-4 w-4 mr-2" />
+                  <IconCreditCard className="h-4 w-4" />
                   Manage Subscription
                 </Button>
               )}
@@ -277,7 +277,7 @@ export default function BillingPage() {
                     <Button asChild size="sm" variant="outline" className="rounded-full">
                       <Link href="/pricing">
                         Upgrade
-                        <IconArrowUpRight className="h-3 w-3 ml-1" />
+                        <IconArrowUpRight className="h-3 w-3" />
                       </Link>
                     </Button>
                   </div>

@@ -47,6 +47,18 @@ def _canonicalize_query_for_cache(raw_query: str) -> str:
     return q
 
 
+def _strip_punctuation(text: str) -> str:
+    """
+    Strip punctuation from text for fuzzy famous-line matching.
+    E.g., "To be, or not to be" -> "to be or not to be"
+    """
+    # Remove all punctuation except apostrophes (for contractions like "don't")
+    text = re.sub(r"[^\w\s']", "", text.lower())
+    # Collapse whitespace
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
 class SemanticSearch:
     """Semantic search using vector embeddings"""
 
@@ -292,6 +304,17 @@ class SemanticSearch:
                     Monologue.estimated_duration_seconds <= merged_filters['max_duration']
                 )
 
+            # Act/scene filters for classical plays
+            if merged_filters.get('act'):
+                base_query = base_query.filter(
+                    Monologue.act == merged_filters['act']
+                )
+
+            if merged_filters.get('scene'):
+                base_query = base_query.filter(
+                    Monologue.scene == merged_filters['scene']
+                )
+
         # Get user's bookmarked monologues if user_id provided
         bookmarked_ids = set()
         if user_id:
@@ -431,11 +454,19 @@ class SemanticSearch:
 
         # Famous-line boost: if the query looks like a quote (multi-word), put monologues whose
         # text contains the query at the very top so "to be or not to be" returns Hamlet first
+        # Use punctuation-stripped comparison so "to be or not to be" matches "To be, or not to be"
         query_lower = query.strip().lower()
+        query_stripped = _strip_punctuation(query)
         if len(query_lower.split()) >= 2:
             monologues_with_scores = list(top_results)
-            text_contains = [(m, s) for m, s in monologues_with_scores if m.text and query_lower in m.text.lower()]
-            text_does_not = [(m, s) for m, s in monologues_with_scores if not m.text or query_lower not in m.text.lower()]
+            text_contains = [
+                (m, s) for m, s in monologues_with_scores
+                if m.text and query_stripped in _strip_punctuation(m.text)
+            ]
+            text_does_not = [
+                (m, s) for m, s in monologues_with_scores
+                if not m.text or query_stripped not in _strip_punctuation(m.text)
+            ]
             if text_contains:
                 top_results = text_contains + text_does_not
                 logger.debug("Famous-line boost: %s monologue(s) with query in text moved first", len(text_contains))
@@ -588,6 +619,17 @@ class SemanticSearch:
                     Play.author == filters['author']
                 )
 
+            # Act/scene filters for classical plays
+            if filters.get('act'):
+                base_query = base_query.filter(
+                    Monologue.act == filters['act']
+                )
+
+            if filters.get('scene'):
+                base_query = base_query.filter(
+                    Monologue.scene == filters['scene']
+                )
+
         # Simple keyword-friendly text search: play title, character, author, monologue title/text.
         # We search both the full query and important keywords so that
         # multi-word queries like "give me the hamlet monologue" still match "Hamlet".
@@ -631,12 +673,31 @@ class SemanticSearch:
                 ]
             )
 
+        # For famous line matching: also search with punctuation stripped
+        # This allows "to be or not to be" to match "To be, or not to be"
+        normalized_for_punctuation = _strip_punctuation(query)
+        if len(normalized_for_punctuation) > 5:
+            # Use PostgreSQL regexp_replace to strip punctuation from text before comparing
+            # Pattern: remove all non-word chars except spaces and apostrophes
+            ilike_clauses.append(
+                text(
+                    "regexp_replace(lower(monologues.text), '[^\\w\\s'']', '', 'g') ILIKE :pattern"
+                ).bindparams(pattern=f"%{normalized_for_punctuation}%")
+            )
+
         base_query = base_query.filter(or_(*ilike_clauses))
 
         # When user types a famous line (e.g. "to be or not to be"), put monologues that
         # contain that exact phrase in the text first. Then play/character matches.
+        # Use punctuation-stripped comparison to boost famous lines correctly.
         normalized_query = query.strip()
         base_query = base_query.order_by(
+            # First priority: exact famous line match (punctuation-stripped)
+            text(
+                "CASE WHEN regexp_replace(lower(monologues.text), '[^\\w\\s'']', '', 'g') "
+                "ILIKE :pattern THEN 1 ELSE 0 END DESC"
+            ).bindparams(pattern=f"%{normalized_for_punctuation}%"),
+            # Then exact match with punctuation
             Monologue.text.ilike(f"%{normalized_query}%").desc(),
             Play.title.ilike(f'%{normalized_query}%').desc(),
             Monologue.character_name.ilike(f'%{normalized_query}%').desc(),

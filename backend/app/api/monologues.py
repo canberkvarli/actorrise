@@ -41,6 +41,8 @@ class MonologueResponse(BaseModel):
     is_favorited: bool = False
     overdone_score: float
     scene_description: Optional[str]
+    act: Optional[int] = None  # Act number (for classical plays)
+    scene: Optional[int] = None  # Scene number (for classical plays)
 
     class Config:
         from_attributes = True
@@ -99,6 +101,8 @@ def _monologue_to_response(m: Monologue, is_favorited: bool = False) -> Monologu
         is_favorited=is_favorited,
         overdone_score=cast(float, m.overdone_score),
         scene_description=cast(Optional[str], m.scene_description),
+        act=cast(Optional[int], m.act),
+        scene=cast(Optional[int], m.scene),
     )
 
 
@@ -125,6 +129,8 @@ async def search_monologues(
     difficulty: Optional[str] = None,
     category: Optional[str] = None,
     author: Optional[str] = None,
+    act: Optional[int] = Query(None, ge=1, le=10, description="Act number (1-10)"),
+    scene: Optional[int] = Query(None, ge=1, le=20, description="Scene number (1-20)"),
     max_duration: Optional[int] = None,
     limit: int = Query(20, le=100),
     page: int = Query(1, ge=1),
@@ -160,6 +166,10 @@ async def search_monologues(
         filters['category'] = category
     if author:
         filters['author'] = author
+    if act:
+        filters['act'] = act
+    if scene:
+        filters['scene'] = scene
     if max_duration:
         filters['max_duration'] = max_duration
 

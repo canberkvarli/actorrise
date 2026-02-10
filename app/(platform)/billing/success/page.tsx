@@ -147,7 +147,7 @@ export default function SuccessPage() {
             <Button asChild className="flex-1">
               <Link href="/search">
                 Start Searching
-                <IconArrowRight className="h-4 w-4 ml-2" />
+                <IconArrowRight className="h-4 w-4" />
               </Link>
             </Button>
           </CardFooter>

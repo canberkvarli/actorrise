@@ -128,7 +128,7 @@ export default function CheckoutPage() {
             </p>
             <Button asChild>
               <Link href="/pricing">
-                <IconArrowLeft className="h-4 w-4 mr-2" />
+                <IconArrowLeft className="h-4 w-4" />
                 Back to Pricing
               </Link>
             </Button>
@@ -213,7 +213,7 @@ export default function CheckoutPage() {
         <CardFooter className="flex gap-2">
           <Button asChild variant="outline" className="flex-1">
             <Link href="/pricing">
-              <IconArrowLeft className="h-4 w-4 mr-2" />
+              <IconArrowLeft className="h-4 w-4" />
               Back
             </Link>
           </Button>
