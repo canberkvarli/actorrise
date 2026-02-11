@@ -11,17 +11,9 @@ This module contains models for:
 from datetime import date, datetime
 
 from app.core.database import Base
-from sqlalchemy import (
-    Boolean,
-    Column,
-    Date,
-    DateTime,
-    ForeignKey,
-    Index,
-    Integer,
-    String,
-    text as sql_text,
-)
+from sqlalchemy import (Boolean, Column, Date, DateTime, ForeignKey, Index,
+                        Integer, String)
+from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import JSON, JSONB
 from sqlalchemy.orm import relationship
 
