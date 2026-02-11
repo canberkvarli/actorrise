@@ -43,6 +43,7 @@ class MonologueResponse(BaseModel):
     scene_description: Optional[str]
     act: Optional[int] = None  # Act number (for classical plays)
     scene: Optional[int] = None  # Scene number (for classical plays)
+    relevance_score: Optional[float] = None  # Similarity score from search (0.0-1.0)
 
     class Config:
         from_attributes = True
@@ -74,7 +75,11 @@ class FavoriteNoteUpdate(BaseModel):
     notes: Optional[str] = None
 
 
-def _monologue_to_response(m: Monologue, is_favorited: bool = False) -> MonologueResponse:
+def _monologue_to_response(
+    m: Monologue,
+    is_favorited: bool = False,
+    relevance_score: Optional[float] = None
+) -> MonologueResponse:
     """Build MonologueResponse from ORM instance with correct types for the type checker."""
     play = m.play
     return MonologueResponse(
@@ -103,6 +108,7 @@ def _monologue_to_response(m: Monologue, is_favorited: bool = False) -> Monologu
         scene_description=cast(Optional[str], m.scene_description),
         act=cast(Optional[int], m.act),
         scene=cast(Optional[int], m.scene),
+        relevance_score=relevance_score,
     )
 
 
@@ -177,17 +183,31 @@ async def search_monologues(
     # Fetch more results than requested to get accurate total for pagination
     fetch_limit = max(limit * 3, 100)  # Fetch 3x or at least 100 to get better total estimate
 
+    # Track whether we have relevance scores (semantic search vs random/discover)
+    has_scores = False
+    all_results_with_scores: list[tuple[Monologue, float]] = []
+
     if q and q.strip():
-        all_results = search_service.search(
+        # Semantic search returns (Monologue, score) tuples
+        all_results_with_scores = search_service.search(
             q.strip(), limit=fetch_limit, filters=filters, user_id=cast(int, current_user.id)
         )
+        has_scores = True
+        # DEBUG: Log first few results
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"SEARCH DEBUG: query='{q}', got {len(all_results_with_scores)} results")
+        for i, (m, s) in enumerate(all_results_with_scores[:3]):
+            logger.warning(f"  {i+1}. {m.character_name} ({m.play.title}) score={s:.2f}")
     else:
-        all_results = search_service.get_random_monologues(limit=fetch_limit, filters=filters)
+        # Random/discover returns just Monologues, wrap with None score
+        random_results = search_service.get_random_monologues(limit=fetch_limit, filters=filters)
+        all_results_with_scores = [(m, 0.0) for m in random_results]
 
     # Apply pagination
     offset = (page - 1) * limit
-    results = all_results[offset:offset + limit]
-    total = len(all_results)
+    results_with_scores = all_results_with_scores[offset:offset + limit]
+    total = len(all_results_with_scores)
 
     # Get user's favorites
     favorites = db.query(MonologueFavorite.monologue_id).filter(
@@ -195,10 +215,14 @@ async def search_monologues(
     ).all()
     favorite_ids = {f[0] for f in favorites}
 
-    # Format response
+    # Format response with relevance scores (only for semantic search)
     monologue_responses = [
-        _monologue_to_response(m, is_favorited=(m.id in favorite_ids))
-        for m in results
+        _monologue_to_response(
+            m,
+            is_favorited=(m.id in favorite_ids),
+            relevance_score=score if has_scores else None
+        )
+        for m, score in results_with_scores
     ]
 
     return SearchResponse(

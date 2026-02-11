@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { IconSparkles, IconExternalLink, IconInfoCircle, IconBookmark } from "@tabler/icons-react";
 import Link from "next/link";
 import { Monologue } from "@/types/actor";
+import { MonologueText } from "@/components/monologue/MonologueText";
 
 export interface MonologueDetailContentProps {
   monologue: Monologue;
@@ -189,8 +190,8 @@ export function MonologueDetailContent({
           Monologue Text
         </h3>
         <div className="bg-muted/30 p-6 rounded-lg border border-border">
-          <p className="text-base leading-relaxed whitespace-pre-wrap font-typewriter">
-            {monologue.text}
+          <p className="text-base leading-relaxed font-typewriter">
+            <MonologueText text={monologue.text} />
           </p>
         </div>
       </div>

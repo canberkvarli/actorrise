@@ -12,6 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Monologue } from "@/types/actor";
 import Link from "next/link";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
+import { MonologueText } from "@/components/monologue/MonologueText";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useBookmarks, useToggleFavorite } from "@/hooks/useBookmarks";
@@ -515,8 +516,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
                     {/* Monologue Text - Large and Centered */}
                     <div className="bg-background p-8 rounded-lg">
-                      <p className="text-xl leading-relaxed whitespace-pre-wrap font-typewriter max-w-3xl mx-auto text-center">
-                        {selectedMonologue.text}
+                      <p className="text-xl leading-relaxed font-typewriter max-w-3xl mx-auto text-center">
+                        <MonologueText text={selectedMonologue.text} />
                       </p>
                     </div>
                   </div>
