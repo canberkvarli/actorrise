@@ -240,7 +240,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   id="my-monologues-sort"
                   value={sort}
                   onChange={(e) => setSort(e.target.value as MyMonologuesSort)}
-                  className="w-[180px] rounded-xl"
+                  className="w-[180px] rounded-lg"
                 >
                   <option value="last_added">Last added</option>
                   <option value="character_az">Character A–Z</option>

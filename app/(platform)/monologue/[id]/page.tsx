@@ -56,9 +56,9 @@ export default function MonologueDetailPage() {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Skeleton className="h-8 w-32 mb-8" />
-        <Card className="rounded-xl">
+        <Card className="rounded-lg">
           <CardContent className="pt-6 space-y-6">
-            <Skeleton className="h-10 w-3/4 rounded-xl" />
+            <Skeleton className="h-10 w-3/4 rounded-lg" />
             <Skeleton className="h-6 w-1/2" />
             <div className="flex gap-2">
               <Skeleton className="h-8 w-20" />
@@ -75,7 +75,7 @@ export default function MonologueDetailPage() {
   if (!monologue) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Card className="rounded-xl">
+        <Card className="rounded-lg">
           <CardContent className="pt-12 pb-12 text-center">
             <h3 className="text-lg font-semibold mb-2">Monologue not found</h3>
             <Button onClick={() => router.push("/search")} className="mt-4">
@@ -103,7 +103,7 @@ export default function MonologueDetailPage() {
           Back
         </Button>
 
-        <Card className="rounded-xl">
+        <Card className="rounded-lg">
           <CardContent className="pt-8">
             <MonologueDetailContent
               monologue={monologue}

@@ -92,7 +92,7 @@ export default function BillingPage() {
   if (subError) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-5xl">
-        <div className="bg-destructive/10 border border-destructive/20 rounded-xl p-6 text-center">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6 text-center">
           <p className="text-lg font-semibold mb-2">Unable to load billing information</p>
           <p className="text-muted-foreground mb-4">
             There was an error loading your subscription data. Please try refreshing the page.
@@ -133,7 +133,7 @@ export default function BillingPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
         >
-          <Card className="rounded-xl">
+          <Card className="rounded-lg">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between">
                 <CardTitle>Current Plan</CardTitle>
@@ -206,7 +206,7 @@ export default function BillingPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <Card className="rounded-xl">
+          <Card className="rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-foreground">Usage this month</CardTitle>
               <CardDescription className="text-xs">Resets on the 1st</CardDescription>
@@ -266,7 +266,7 @@ export default function BillingPage() {
               {usage &&
                 usage.ai_searches_limit !== -1 &&
                 getUsagePercentage(usage.ai_searches_used, usage.ai_searches_limit) > 80 && (
-                  <div className="bg-accent/10 border border-accent/20 rounded-xl p-4">
+                  <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
                     <p className="text-sm font-medium text-foreground mb-1">Running low on searches</p>
                     <p className="text-xs text-muted-foreground mb-3">
                       {Math.round(
@@ -294,7 +294,7 @@ export default function BillingPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
         >
-          <Card className="rounded-xl">
+          <Card className="rounded-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-foreground">Billing history</CardTitle>
               <CardDescription className="text-xs">Invoices and payments</CardDescription>

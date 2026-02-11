@@ -41,7 +41,7 @@ export function MonologueDetailContent({
 
         {/* Scene Description */}
         {monologue.scene_description && (
-          <div className="bg-muted/50 p-4 rounded-xl border border-border">
+          <div className="bg-muted/50 p-4 rounded-lg border border-border">
             <p className="text-sm italic text-muted-foreground flex items-start gap-2">
               <IconSparkles className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
               {monologue.scene_description}
@@ -188,7 +188,7 @@ export function MonologueDetailContent({
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Monologue Text
         </h3>
-        <div className="bg-muted/30 p-6 rounded-xl border border-border">
+        <div className="bg-muted/30 p-6 rounded-lg border border-border">
           <p className="text-base leading-relaxed whitespace-pre-wrap font-typewriter">
             {monologue.text}
           </p>
@@ -235,7 +235,7 @@ export function MonologueDetailContent({
       )}
 
       {/* Source Attribution */}
-      <Card className="rounded-xl">
+      <Card className="rounded-lg">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>

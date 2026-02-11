@@ -374,7 +374,7 @@ export default function OnboardingPage() {
                 </span>
               </div>
             )}
-            <div className="border border-border/60 rounded-2xl bg-card shadow-sm px-6 py-8 md:px-8 md:py-10">
+            <div className="border border-border/60 rounded-xl bg-card shadow-sm px-6 py-8 md:px-8 md:py-10">
           <AnimatePresence mode="wait">
             {currentStep === 0 && <WelcomeStep key="welcome" onNext={nextStep} />}
             {currentStep === 1 && (
@@ -634,7 +634,7 @@ function LocationStep({
               key={loc}
               type="button"
               onClick={() => onUpdate(loc)}
-              className={`w-full p-3 rounded-xl border text-left text-sm font-medium transition ${
+              className={`w-full p-3 rounded-lg border text-left text-sm font-medium transition ${
                 isSelected
                   ? 'border-accent bg-accent/10 text-foreground'
                   : 'border-border hover:border-accent/50 bg-muted/30 text-foreground'
@@ -703,7 +703,7 @@ function ActorTypeStep({
               key={type.id}
               type="button"
               onClick={() => onToggle(type.id)}
-              className={`relative p-4 rounded-xl border text-left transition ${
+              className={`relative p-4 rounded-lg border text-left transition ${
                 isSelected ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/50 bg-muted/30'
               }`}
             >
@@ -721,7 +721,7 @@ function ActorTypeStep({
         <button
           type="button"
           onClick={() => onToggle('other')}
-          className={`relative p-4 rounded-xl border text-left transition col-span-2 ${
+          className={`relative p-4 rounded-lg border text-left transition col-span-2 ${
             hasOther ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/50 bg-muted/30'
           }`}
         >
@@ -855,7 +855,7 @@ function PhysicalDetailsStep({
                 <button
                   key={range}
                   onClick={() => updateFormData('age_range', range)}
-                  className={`p-3 rounded-xl border transition ${
+                  className={`p-3 rounded-lg border transition ${
                     isSelected
                       ? 'border-accent bg-accent/10'
                       : 'border-border hover:border-accent/50 bg-card'
@@ -880,7 +880,7 @@ function PhysicalDetailsStep({
                 <button
                   key={gender}
                   onClick={() => updateFormData('gender', gender)}
-                  className={`p-3 rounded-xl border transition ${
+                  className={`p-3 rounded-lg border transition ${
                 isSelected
                       ? 'border-accent bg-accent/10'
                       : 'border-border hover:border-accent/50 bg-card'
@@ -903,7 +903,7 @@ function PhysicalDetailsStep({
                   key={e}
                   type="button"
                   onClick={() => updateFormData('ethnicity', e)}
-                  className={`px-3 py-2 rounded-xl border text-sm transition ${
+                  className={`px-3 py-2 rounded-lg border text-sm transition ${
                     isSelected ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/50 bg-card'
                   }`}
                 >
@@ -965,7 +965,7 @@ function PhysicalDetailsStep({
                   key={b}
                   type="button"
                   onClick={() => updateFormData('build', b)}
-                  className={`px-3 py-2 rounded-xl border text-sm transition ${
+                  className={`px-3 py-2 rounded-lg border text-sm transition ${
                     isSelected ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/50 bg-card'
                   }`}
                 >
@@ -1021,7 +1021,7 @@ function ActingBackgroundStep({
                   key={t}
                   type="button"
                   onClick={() => updateFormData('training_background', t)}
-                  className={`px-3 py-2 rounded-xl border text-sm transition ${
+                  className={`px-3 py-2 rounded-lg border text-sm transition ${
                     isSelected ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/50 bg-card'
                   }`}
                 >
@@ -1057,7 +1057,7 @@ function ActingBackgroundStep({
                 <button
                   key={status}
                   onClick={() => updateFormData('union_status', status)}
-                  className={`p-3 rounded-xl border transition text-sm ${
+                  className={`p-3 rounded-lg border transition text-sm ${
                 isSelected
                       ? 'border-accent bg-accent/10'
                       : 'border-border hover:border-accent/50 bg-card'
@@ -1094,7 +1094,7 @@ function ActingBackgroundStep({
                 <button
                   key={type}
                   onClick={() => updateFormData('type', type)}
-                  className={`p-3 rounded-xl border transition text-sm ${
+                  className={`p-3 rounded-lg border transition text-sm ${
                     isSelected
                       ? 'border-accent bg-accent/10'
                       : 'border-border hover:border-accent/50 bg-card'
@@ -1165,7 +1165,7 @@ function PreferencesStep({
           <label className="text-sm font-medium text-foreground">Preferred Genres</label>
           <div className="grid grid-cols-3 gap-2">
             {genres.map((genre) => (
-              <label key={genre} className="flex items-center space-x-2 cursor-pointer p-3 rounded-xl border border-border hover:border-accent/50 bg-card">
+              <label key={genre} className="flex items-center space-x-2 cursor-pointer p-3 rounded-lg border border-border hover:border-accent/50 bg-card">
                 <Checkbox
                   checked={formData.preferred_genres?.includes(genre)}
                   onChange={() => toggleGenre(genre)}
@@ -1270,7 +1270,7 @@ function HeadshotStep({
             <img
               src={headshotUrl}
               alt="Headshot"
-              className="w-36 h-54 object-cover rounded-xl border border-border shadow-sm"
+              className="w-36 h-54 object-cover rounded-lg border border-border shadow-sm"
             />
             <button
               type="button"
@@ -1282,7 +1282,7 @@ function HeadshotStep({
           </div>
         ) : (
           <label
-            className={`flex flex-col items-center justify-center w-40 h-56 rounded-xl border-2 border-dashed border-border transition group relative ${
+            className={`flex flex-col items-center justify-center w-40 h-56 rounded-lg border-2 border-dashed border-border transition group relative ${
               isPreparingImage ? 'bg-muted/50 cursor-wait' : 'bg-muted/30 hover:bg-muted/50 hover:border-accent/50 cursor-pointer'
             }`}
           >
