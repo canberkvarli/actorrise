@@ -59,19 +59,19 @@ export default function LandingPage() {
               World&apos;s largest monologue database.
             </p>
             <div className="mt-12 grid grid-cols-3 gap-4 max-w-2xl">
-              <div className="space-y-1 rounded-2xl border border-secondary/40 bg-secondary/10 px-4 py-3">
+              <div className="space-y-1 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3">
                 <div className="text-2xl">8,600+</div>
                 <div className="text-xs text-muted-foreground uppercase tracking-[0.16em]">
                   monologues
                 </div>
               </div>
-              <div className="space-y-1 rounded-2xl border border-secondary/40 bg-secondary/10 px-4 py-3">
+              <div className="space-y-1 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3">
                 <div className="text-2xl">AI search</div>
                 <div className="text-xs text-muted-foreground uppercase tracking-[0.16em]">
                   type what you want
                 </div>
               </div>
-              <div className="space-y-1 rounded-2xl border border-secondary/40 bg-secondary/10 px-4 py-3">
+              <div className="space-y-1 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3">
                 <div className="text-2xl">Save it</div>
                 <div className="text-xs text-muted-foreground uppercase tracking-[0.16em]">
                   bookmark, take it with you
@@ -108,21 +108,21 @@ export default function LandingPage() {
               Three steps.
             </h2>
             <div className="mt-12 grid md:grid-cols-3 gap-6">
-              <div className="rounded-2xl border border-border p-8">
+              <div className="rounded-xl border border-border p-8">
                 <div className="text-base text-foreground/80">01</div>
                 <h3 className="mt-3 text-2xl tracking-[-0.02em]">Search</h3>
                 <p className="mt-3 text-foreground/85">
                   Describe what you need. Get a shortlist.
                 </p>
               </div>
-              <div className="rounded-2xl border border-border p-8">
+              <div className="rounded-xl border border-border p-8">
                 <div className="text-base text-foreground/80">02</div>
                 <h3 className="mt-3 text-2xl tracking-[-0.02em]">Save</h3>
                 <p className="mt-3 text-foreground/85">
                   Bookmark what you like.
                 </p>
               </div>
-              <div className="rounded-2xl border border-border p-8">
+              <div className="rounded-xl border border-border p-8">
                 <div className="text-base text-foreground/80">03</div>
                 <h3 className="mt-3 text-2xl tracking-[-0.02em]">Rehearse</h3>
                 <p className="mt-3 text-foreground/85">
@@ -152,7 +152,7 @@ export default function LandingPage() {
               Free tier to explore. Upgrade when you&apos;re ready.
             </p>
             <div className="mt-12 grid md:grid-cols-3 gap-6">
-              <div className="rounded-2xl border border-border/60 bg-card/40 p-6 flex flex-col">
+              <div className="rounded-xl border border-border/60 bg-card/40 p-6 flex flex-col">
                 <h3 className="text-xl font-semibold">Free</h3>
                 <p className="mt-1 text-2xl font-bold">$0</p>
                 <p className="mt-2 text-sm text-muted-foreground">10 AI searches, 5 bookmarks</p>
@@ -161,7 +161,7 @@ export default function LandingPage() {
                   <Link href="/signup">Get started</Link>
                 </Button>
               </div>
-              <div className="rounded-2xl border border-border/60 bg-card/40 p-6 flex flex-col">
+              <div className="rounded-xl border border-border/60 bg-card/40 p-6 flex flex-col">
                 <h3 className="text-xl font-semibold">Plus</h3>
                 <p className="mt-1 text-2xl font-bold">$12<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
                 <p className="mt-2 text-sm text-muted-foreground">150 searches, unlimited bookmarks</p>
@@ -170,7 +170,7 @@ export default function LandingPage() {
                   <Link href="/pricing">Subscribe</Link>
                 </Button>
               </div>
-              <div className="rounded-2xl border border-border/60 bg-card/40 p-6 flex flex-col">
+              <div className="rounded-xl border border-border/60 bg-card/40 p-6 flex flex-col">
                 <h3 className="text-xl font-semibold">Unlimited</h3>
                 <p className="mt-1 text-2xl font-bold">$24<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
                 <p className="mt-2 text-sm text-muted-foreground">Unlimited searches + more</p>

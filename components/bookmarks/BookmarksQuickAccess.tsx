@@ -13,7 +13,7 @@ export interface BookmarksQuickAccessProps {
 }
 
 const bookmarkRowBase =
-  "flex items-center gap-3 w-full text-left p-4 rounded-xl border border-border/60 transition-all duration-200 group " +
+  "flex items-center gap-3 w-full text-left p-4 rounded-lg border border-border/60 transition-all duration-200 group " +
   "hover:shadow-md hover:border-secondary/50 hover:bg-secondary/5 cursor-pointer";
 
 export default function BookmarksQuickAccess({ onSelectMonologue }: BookmarksQuickAccessProps = {}) {
@@ -23,12 +23,12 @@ export default function BookmarksQuickAccess({ onSelectMonologue }: BookmarksQui
   const recentBookmarks = allBookmarks.slice(0, 3);
 
   return (
-    <Card className="rounded-xl border-border/50">
+    <Card className="rounded-lg border-border/50">
       <CardContent className="pt-4">
         {isLoading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="h-14 bg-muted/50 animate-pulse rounded-xl" />
+              <div key={i} className="h-14 bg-muted/50 animate-pulse rounded-lg" />
             ))}
           </div>
         ) : recentBookmarks.length === 0 ? (
@@ -47,7 +47,7 @@ export default function BookmarksQuickAccess({ onSelectMonologue }: BookmarksQui
                   onClick={() => onSelectMonologue(mono)}
                   className={bookmarkRowBase}
                 >
-                  <div className="p-2 rounded-full bg-accent/15 text-accent flex-shrink-0" aria-hidden>
+                  <div className="p-2 rounded-full bg-violet-500/15 text-violet-500 dark:text-violet-400 flex-shrink-0" aria-hidden>
                     <IconBookmark className="h-4 w-4 fill-current" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -62,7 +62,7 @@ export default function BookmarksQuickAccess({ onSelectMonologue }: BookmarksQui
                 </button>
               ) : (
                 <Link key={mono.id} href={`/monologue/${mono.id}`} className={bookmarkRowBase}>
-                  <div className="p-2 rounded-full bg-accent/15 text-accent flex-shrink-0" aria-hidden>
+                  <div className="p-2 rounded-full bg-violet-500/15 text-violet-500 dark:text-violet-400 flex-shrink-0" aria-hidden>
                     <IconBookmark className="h-4 w-4 fill-current" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -83,7 +83,7 @@ export default function BookmarksQuickAccess({ onSelectMonologue }: BookmarksQui
                 asChild
                 variant="outline"
                 size="sm"
-                className="w-full rounded-xl border-secondary/40 hover:bg-secondary/10 hover:border-secondary/50 hover:text-foreground text-foreground text-sm mt-1"
+                className="w-full rounded-lg border-secondary/40 hover:bg-secondary/10 hover:border-secondary/50 hover:text-foreground text-foreground text-sm mt-1"
               >
                 <Link href="/my-monologues" className="cursor-pointer text-inherit hover:text-inherit">
                   View all {count}

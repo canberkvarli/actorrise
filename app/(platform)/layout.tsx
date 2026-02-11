@@ -181,7 +181,7 @@ export default function PlatformLayout({
                 {profileDropdownOpen && (
                   <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-border/50 bg-card/95 backdrop-blur-sm shadow-lg shadow-black/40 z-[9999]">
                     <div className="p-3">
-                      <div className="flex items-center gap-4 rounded-xl bg-muted/60 px-4 py-4 mb-3">
+                      <div className="flex items-center gap-4 rounded-lg bg-muted/60 px-4 py-4 mb-3">
                         {headshotUrl ? (
                           <Image
                             src={headshotUrl}
@@ -211,7 +211,7 @@ export default function PlatformLayout({
                       <Link
                         href="/profile"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3 text-sm rounded-xl hover:bg-muted/60 transition-colors"
+                        className="flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors"
                       >
                         <IconUser className="h-4 w-4 text-muted-foreground" />
                         <span>Edit profile</span>
@@ -220,7 +220,7 @@ export default function PlatformLayout({
                       <Link
                         href="/my-monologues"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="mt-0.5 flex items-center justify-between gap-2 px-4 py-3 text-sm rounded-xl hover:bg-muted/60 transition-colors"
+                        className="mt-0.5 flex items-center justify-between gap-2 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors"
                       >
                         <div className="flex items-center gap-3">
                           <IconBookmark className="h-4 w-4 text-muted-foreground" />
@@ -236,7 +236,7 @@ export default function PlatformLayout({
                       <Link
                         href="/billing"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="mt-0.5 flex items-center gap-3 px-4 py-3 text-sm rounded-xl hover:bg-muted/60 transition-colors"
+                        className="mt-0.5 flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors"
                       >
                         <IconCreditCard className="h-4 w-4 text-muted-foreground" />
                         <span>Billing</span>
@@ -249,7 +249,7 @@ export default function PlatformLayout({
                           setProfileDropdownOpen(false);
                           logout();
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-sm rounded-xl hover:bg-muted/60 transition-colors text-left text-destructive"
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors text-left text-destructive"
                       >
                         <IconLogout className="h-4 w-4" />
                         <span>Log out</span>

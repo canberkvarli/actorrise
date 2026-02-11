@@ -11,12 +11,11 @@ import { Label } from "@/components/ui/label";
 import { IconLoader2 } from "@tabler/icons-react";
 
 const signupSchema = z.object({
-  name: z.string().min(1, "Name is required"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don&apos;t match",
+  message: "Passwords don't match",
   path: ["confirmPassword"],
 });
 
@@ -39,7 +38,8 @@ export function SignupForm() {
     setError(null);
     setIsLoading(true);
     try {
-      await signup(data.email, data.password, data.name);
+      // Pass empty string for name - will be collected in onboarding
+      await signup(data.email, data.password, "");
     } catch (err: unknown) {
       let errorMessage = "Failed to sign up";
       if (err instanceof Error) {
@@ -56,73 +56,59 @@ export function SignupForm() {
 
   return (
     <div className="w-full">
-      <form method="post" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          <div className="space-y-2">
-            <Label htmlFor="name" className="font-mono">Name</Label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="Your name"
-              {...register("name")}
-            />
-            {errors.name && (
-              <p className="text-sm text-destructive">{errors.name.message}</p>
-            )}
-          </div>
+      <form method="post" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            {...register("email")}
+          />
+          {errors.email && (
+            <p className="text-sm text-destructive">{errors.email.message}</p>
+          )}
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              {...register("email")}
-            />
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
-            )}
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">Password</Label>
+          <Input
+            id="password"
+            type="password"
+            placeholder="At least 6 characters"
+            {...register("password")}
+          />
+          {errors.password && (
+            <p className="text-sm text-destructive">{errors.password.message}</p>
+          )}
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              {...register("password")}
-            />
-            {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
-            )}
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="confirmPassword">Confirm Password</Label>
+          <Input
+            id="confirmPassword"
+            type="password"
+            placeholder="Confirm your password"
+            {...register("confirmPassword")}
+          />
+          {errors.confirmPassword && (
+            <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
+          )}
+        </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirm Password</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              {...register("confirmPassword")}
-            />
-            {errors.confirmPassword && (
-              <p className="text-sm text-destructive">{errors.confirmPassword.message}</p>
-            )}
-          </div>
+        {error && <p className="text-sm text-destructive">{error}</p>}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
-
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <IconLoader2 className="h-4 w-4 animate-spin" />
-                Create account
-              </>
-            ) : (
-              "Sign up"
-            )}
-          </Button>
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <IconLoader2 className="h-4 w-4 animate-spin" />
+              Creating account...
+            </>
+          ) : (
+            "Create account"
+          )}
+        </Button>
       </form>
     </div>
   );
 }
-
-
-

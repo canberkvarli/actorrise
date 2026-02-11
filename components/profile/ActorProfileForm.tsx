@@ -1027,7 +1027,7 @@ export function ActorProfileForm() {
                                     prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
                                   );
                                 }}
-                                className={`px-3 py-2 rounded-xl border text-sm transition ${
+                                className={`px-3 py-2 rounded-lg border text-sm transition ${
                                   isSelected ? "border-accent bg-accent/10" : "border-border hover:border-accent/50 bg-card"
                                 }`}
                               >

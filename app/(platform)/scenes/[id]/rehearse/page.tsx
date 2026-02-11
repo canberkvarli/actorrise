@@ -510,7 +510,7 @@ export default function RehearsalPage() {
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-4 space-y-4 rounded-xl border border-border bg-muted/60 p-4"
+                className="mt-4 space-y-4 rounded-lg border border-border bg-muted/60 p-4"
               >
                 <div className="flex items-center gap-2">
                   <Trophy className="h-5 w-5 text-yellow-500" />

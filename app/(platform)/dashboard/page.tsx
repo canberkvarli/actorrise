@@ -8,18 +8,21 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
-import { 
-  IconSparkles, 
-  IconUserCheck, 
-  IconArrowRight, 
-  IconBookmark, 
-  IconX, 
-  IconEye, 
-  IconEyeOff, 
-  IconDownload, 
+import {
+  IconSparkles,
+  IconUserCheck,
+  IconArrowRight,
+  IconBookmark,
+  IconX,
+  IconEye,
+  IconEyeOff,
+  IconDownload,
   IconMicrophone,
   IconVideo,
-  IconInfoCircle
+  IconInfoCircle,
+  IconSearch,
+  IconHistory,
+  IconChevronRight
 } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -60,7 +63,7 @@ function QuickActions({ stats }: { stats: any }) {
       animate={{ opacity: 1, y: 0 }}
       className="mb-6"
     >
-      <Card className="border-accent/20 bg-accent/5 rounded-xl">
+      <Card className="border-accent/20 bg-accent/5 rounded-lg">
         <CardContent className="pt-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -312,245 +315,239 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       )}
 
       {!showFullPageLoader && (
-        <>
-      {/* Welcome Header - no "Actor" flash; skeleton or name once loaded */}
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-6"
-      >
-        {showWelcomeSkeleton ? (
-          <>
-            <Skeleton className="h-9 w-64 mb-2 rounded-xl" />
-            <Skeleton className="h-5 w-48 rounded-xl" />
-          </>
-        ) : (
-          <>
-            <h1 className="text-3xl lg:text-4xl font-bold mb-1 text-foreground">
-              Welcome back{greetingName ? `, ${greetingName}` : ''}
-            </h1>
-            <p className="text-muted-foreground text-sm">
-              {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-            </p>
-          </>
-        )}
-      </motion.div>
+        <div className="space-y-12">
+          {/* ========== SECTION 1: Hero Welcome ========== */}
+          <motion.section
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            {showWelcomeSkeleton ? (
+              <div className="space-y-3">
+                <Skeleton className="h-12 w-80 rounded-lg" />
+                <Skeleton className="h-6 w-56 rounded-lg" />
+              </div>
+            ) : (
+              <div>
+                <p className="text-sm font-medium text-primary mb-2">
+                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                </p>
+                <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+                  Welcome back{greetingName ? `, ${greetingName}` : ''}
+                </h1>
+              </div>
+            )}
+          </motion.section>
 
-      <Separator className="mb-8" />
+          {/* ========== SECTION 2: Quick Search Bar ========== */}
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+          >
+            <Link href="/search" className="block group">
+              <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-md transition-all">
+                <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
+                  <IconSearch className="h-6 w-6 text-primary" />
+                </div>
+                <div className="flex-1">
+                  <p className="text-lg font-medium text-foreground group-hover:text-primary transition-colors">
+                    Find your next monologue
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Search by description, emotion, character type, or browse filters
+                  </p>
+                </div>
+                <IconChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+              </div>
+            </Link>
+          </motion.section>
 
-      {/* Quick Actions - Only shows if profile incomplete */}
-      <QuickActions stats={stats} />
+          {/* ========== SECTION 3: Profile Completion (if needed) ========== */}
+          <QuickActions stats={stats} />
 
-      <div className="grid gap-8 lg:grid-cols-3">
-        {/* Main Content - Recommendations */}
-        <div className="lg:col-span-2">
-          <motion.div
+          {/* ========== SECTION 4: Recommendations ========== */}
+          <motion.section
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
           >
-            <div className="mb-6">
-              <div className="flex items-center justify-between mb-1">
-                <h2 className="text-2xl font-semibold text-foreground">
-                  {isProfileComplete ? "Recommended for you" : "Discover"}
+            <div className="flex items-end justify-between mb-6">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+                  {isProfileComplete ? "Recommended for you" : "Discover monologues"}
                 </h2>
-                <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
-                  <Link href="/search">
-                    View all
-                    <IconArrowRight className="h-4 w-4" />
-                  </Link>
+                <p className="text-muted-foreground mt-1">
+                  {isProfileComplete ? "Personalized picks based on your profile" : "Explore our curated collection"}
+                </p>
+              </div>
+              <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground">
+                <Link href="/search">
+                  View all
+                  <IconArrowRight className="h-4 w-4 ml-1" />
+                </Link>
+              </Button>
+            </div>
+
+            {isLoadingMain ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="p-6 bg-card border border-border rounded-xl">
+                    <Skeleton className="h-6 w-3/4 mb-3 rounded-md" />
+                    <Skeleton className="h-4 w-1/2 mb-2 rounded-md" />
+                    <Skeleton className="h-4 w-1/3 mb-4 rounded-md" />
+                    <Skeleton className="h-20 w-full rounded-md" />
+                  </div>
+                ))}
+              </div>
+            ) : mainMonologues.length > 0 ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {mainMonologues.slice(0, 4).map((mono, idx) => (
+                  <motion.div
+                    key={mono.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.05, duration: 0.3 }}
+                  >
+                    <div
+                      className="group p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col"
+                      onClick={() => openMonologue(mono)}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-4">
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                            {mono.character_name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
+                            {mono.play_title}
+                          </p>
+                          <p className="text-xs text-muted-foreground/70 mt-0.5">
+                            by {mono.author}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => toggleFavorite(e, mono)}
+                          className={`p-2 rounded-full transition-colors flex-shrink-0 ${
+                            mono.is_favorited
+                              ? "bg-violet-500/15 text-violet-500 dark:text-violet-400"
+                              : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground/50"
+                          }`}
+                        >
+                          <IconBookmark className={`h-5 w-5 ${mono.is_favorited ? "fill-current" : ""}`} />
+                        </button>
+                      </div>
+
+                      <p className="text-sm text-muted-foreground line-clamp-3 flex-1 leading-relaxed">
+                        "{mono.text.substring(0, 120)}..."
+                      </p>
+
+                      <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border/50 text-xs text-muted-foreground">
+                        <span className="font-medium">
+                          {Math.floor(mono.estimated_duration_seconds / 60)}:{(mono.estimated_duration_seconds % 60).toString().padStart(2, "0")}
+                        </span>
+                        <span className="text-border">•</span>
+                        <span>{mono.word_count} words</span>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 bg-card border border-border rounded-xl">
+                <IconSparkles className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
+                <p className="text-lg font-medium text-foreground mb-2">No recommendations yet</p>
+                <p className="text-muted-foreground mb-6">Complete your profile or search to discover monologues</p>
+                <Button asChild>
+                  <Link href="/search">Browse Monologues</Link>
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground">
-                {isProfileComplete ? "For you" : "Explore"}
-              </p>
+            )}
+          </motion.section>
+
+          {/* ========== SECTION 5: Quick Actions Row ========== */}
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+          >
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6">
+              Practice tools
+            </h2>
+            <div className="grid sm:grid-cols-2 gap-6">
+              <Link href="/scenes" className="block group">
+                <div className="flex items-center gap-5 p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-md transition-all">
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 group-hover:from-violet-500/30 group-hover:to-purple-500/30 transition-colors">
+                    <IconMicrophone className="h-7 w-7 text-violet-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                      Voice ScenePartner
+                    </h3>
+                    <p className="text-muted-foreground mt-1">
+                      Practice scenes with an AI scene partner
+                    </p>
+                  </div>
+                  <IconChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                </div>
+              </Link>
+
+              <Link href="/audition" className="block group">
+                <div className="flex items-center gap-5 p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-md transition-all">
+                  <div className="p-4 rounded-xl bg-gradient-to-br from-rose-500/20 to-orange-500/20 group-hover:from-rose-500/30 group-hover:to-orange-500/30 transition-colors">
+                    <IconVideo className="h-7 w-7 text-rose-500" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
+                      Audition Mode
+                    </h3>
+                    <p className="text-muted-foreground mt-1">
+                      Record yourself and get AI feedback
+                    </p>
+                  </div>
+                  <IconChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                </div>
+              </Link>
             </div>
-            <Card className="rounded-xl">
-              <CardContent className="pt-6">
-                {isLoadingMain ? (
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground text-center">
-                      {isProfileComplete ? "Personalizing…" : "Loading…"}
-                    </p>
-                    <div className="grid md:grid-cols-2 gap-5">
-                      {[1, 2, 3, 4].map((i) => (
-                        <Card key={i} className="border-border/50 overflow-hidden rounded-xl">
-                          <CardContent className="pt-6 flex flex-col gap-4">
-                            <div className="space-y-2">
-                              <Skeleton className="h-5 w-3/4 rounded-md" />
-                              <Skeleton className="h-4 w-1/2 rounded-md" />
-                              <Skeleton className="h-3 w-1/3 rounded-md" />
-                            </div>
-                            <Skeleton className="h-12 flex-1 rounded-md" />
-                            <div className="flex justify-between pt-4 border-t">
-                              <Skeleton className="h-4 w-12 rounded-md" />
-                              <Skeleton className="h-4 w-16 rounded-md" />
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                ) : mainMonologues.length > 0 ? (
-                  <div className="grid md:grid-cols-2 gap-5">
-                    {mainMonologues.map((mono, idx) => (
-                      <motion.div
-                        key={mono.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.05, duration: 0.3, ease: "easeOut" }}
-                      >
-                        <Card
-                          className="hover:shadow-xl transition-all cursor-pointer h-full flex flex-col hover:border-secondary/50 group border-border/50 rounded-xl"
-                          onClick={() => openMonologue(mono)}
-                        >
-                          <CardContent className="pt-6 flex-1 flex flex-col">
-                            <div className="space-y-4 flex-1">
-                              {/* Header - same as search */}
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <h3 className="font-bold text-xl mb-1.5 group-hover:text-foreground transition-colors">
-                                      {mono.character_name}
-                                    </h3>
-                                    {mono.is_favorited && (
-                                      <span className="px-2 py-0.5 bg-accent/20 text-accent-foreground text-xs font-semibold rounded-full">
-                                        Bookmarked
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-muted-foreground mb-1">
-                                    {mono.play_title}
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    by {mono.author}
-                                  </p>
-                                </div>
-                                <button
-                                  type="button"
-                                  onClick={(e) => toggleFavorite(e, mono)}
-                                  className={`p-2 rounded-full transition-colors flex-shrink-0 cursor-pointer ${
-                                    mono.is_favorited
-                                      ? "bg-accent/10 hover:bg-accent/20 text-accent"
-                                      : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
-                                  }`}
-                                  aria-label={mono.is_favorited ? "Remove bookmark" : "Add bookmark"}
-                                >
-                                  <IconBookmark
-                                    className={`h-5 w-5 ${mono.is_favorited ? "fill-current" : ""}`}
-                                  />
-                                </button>
-                              </div>
+          </motion.section>
 
-                              {/* Preview */}
-                              <p className="text-sm text-muted-foreground line-clamp-3 leading-relaxed">
-                                {mono.text.substring(0, 180)}...
-                              </p>
-                            </div>
+          {/* ========== SECTION 6: Bookmarks & Recent Searches ========== */}
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* Bookmarks */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                    <IconBookmark className="h-5 w-5 text-violet-500" />
+                    Your Monologues
+                  </h2>
+                  <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
+                    <Link href="/my-monologues">
+                      View all
+                      <IconArrowRight className="h-4 w-4 ml-1" />
+                    </Link>
+                  </Button>
+                </div>
+                <BookmarksQuickAccess onSelectMonologue={openMonologue} />
+              </div>
 
-                            {/* Footer - same as search */}
-                            <div className="mt-5 pt-4 border-t flex items-center justify-between text-xs text-muted-foreground">
-                              <span className="font-medium">
-                                {Math.floor(mono.estimated_duration_seconds / 60)}:
-                                {(mono.estimated_duration_seconds % 60).toString().padStart(2, "0")} min
-                              </span>
-                              <span>{mono.word_count} words</span>
-                              <span className="flex items-center gap-1">
-                                <IconBookmark className="h-3 w-3" />
-                                {mono.favorite_count}
-                              </span>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </motion.div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-16">
-                    <IconSparkles className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-                    <p className="text-sm text-muted-foreground mb-4">
-                      No recommendations available
-                    </p>
-                    <Button asChild variant="outline" size="sm">
-                      <Link href="/search">
-                        Browse Monologues
-                      </Link>
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </motion.div>
+              {/* Recent Searches */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                    <IconHistory className="h-5 w-5 text-muted-foreground" />
+                    Recent Searches
+                  </h2>
+                </div>
+                <RecentSearches maxSearches={4} compact />
+              </div>
+            </div>
+          </motion.section>
         </div>
-
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Quick Actions */}
-          <div className="space-y-3">
-            <h3 className="text-lg font-semibold text-foreground">
-              Quick Actions
-            </h3>
-            
-            <Link href="/scenes" className="block group">
-              <Card className="hover:shadow-sm transition-all hover:border-secondary/40 border-border/50 rounded-xl">
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-md bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
-                      <IconMicrophone className="h-4 w-4 text-secondary-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm group-hover:text-foreground transition-colors">
-                        Voice ScenePartner
-                      </h4>
-                      <p className="text-xs text-muted-foreground truncate">
-                        Practice scenes with AI
-                      </p>
-                    </div>
-                    <IconArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-
-            <Link href="/audition" className="block group">
-              <Card className="hover:shadow-sm transition-all hover:border-secondary/40 border-border/50 rounded-xl">
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-md bg-secondary/10 group-hover:bg-secondary/20 transition-colors">
-                      <IconVideo className="h-4 w-4 text-secondary-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-sm group-hover:text-foreground transition-colors">
-                        Audition Mode
-                      </h4>
-                      <p className="text-xs text-muted-foreground truncate">
-                        Record & get feedback
-                      </p>
-                    </div>
-                    <IconArrowRight className="h-4 w-4 text-muted-foreground/50 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          </div>
-
-          {/* Recent Searches */}
-          <div>
-            <h3 className="text-lg font-semibold text-foreground mb-3">
-              Recent Searches
-            </h3>
-            <RecentSearches maxSearches={4} compact />
-          </div>
-
-          {/* Bookmarks */}
-          <div>
-            <h3 className="text-lg font-semibold text-foreground mb-3">
-              Your Monologues
-            </h3>
-            <BookmarksQuickAccess onSelectMonologue={openMonologue} />
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Slide-over Detail Panel */}
       <AnimatePresence>
@@ -608,14 +605,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                               setShowDownloadMenu(false);
                             }}
                           />
-                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-xl shadow-lg p-1 min-w-[140px] z-[10004]">
+                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-[10004]">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 downloadMonologue(currentMonologue, 'text');
                                 setShowDownloadMenu(false);
                               }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-xl transition-colors"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
                             >
                               Download as TXT
                             </button>
@@ -625,7 +622,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                                 downloadMonologue(currentMonologue, 'pdf');
                                 setShowDownloadMenu(false);
                               }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-xl transition-colors"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
                             >
                               Download as PDF
                             </button>
@@ -642,8 +639,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         }}
                         className={`p-2 rounded-full transition-colors cursor-pointer relative z-[10002] ${
                           currentMonologue.is_favorited
-                            ? "bg-accent/10 hover:bg-accent/20 text-accent"
-                            : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                            ? "bg-violet-500/15 hover:bg-violet-500/25 text-violet-500 dark:text-violet-400"
+                            : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground"
                         }`}
                         aria-label={currentMonologue.is_favorited ? "Remove bookmark" : "Add bookmark"}
                       >
@@ -708,8 +705,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </>
         )}
       </AnimatePresence>
-        </>
-      )}
     </div>
   );
 }

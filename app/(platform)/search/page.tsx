@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,19 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments } from "@tabler/icons-react";
+
+// Fun loading messages for AI search
+const LOADING_MESSAGES = [
+  "Clanking through the archives...",
+  "Working our magic...",
+  "Squeezing the monologue database...",
+  "Asking Shakespeare for advice...",
+  "Consulting the drama gods...",
+  "Searching backstage...",
+  "Finding your perfect piece...",
+  "Digging through the classics...",
+];
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
@@ -49,6 +61,20 @@ export default function SearchPage() {
   const PAGE_SIZE = 20;
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [isTyping, setIsTyping] = useState(false);
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Rotate loading messages every 2 seconds while searching
+  useEffect(() => {
+    if (!isLoading) return;
+    const interval = setInterval(() => {
+      setLoadingMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [isLoading]);
+
+  const currentLoadingMessage = LOADING_MESSAGES[loadingMessageIndex];
 
   // Scroll panel to top when monologue is selected
   useEffect(() => {
@@ -477,147 +503,191 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
-      <div className="mb-8">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <p className="inline-flex items-center gap-2 rounded-full border border-secondary/40 bg-secondary/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-secondary-foreground/90">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              MonologueMatch
-            </p>
-            <h1 className="mt-4 text-4xl font-bold tracking-[-0.04em]">Find your next piece.</h1>
-            <p className="text-muted-foreground text-lg max-w-xl">
-              Search by description, or browse by filters, or both.
-            </p>
+      {/* Hero Search Section */}
+      <div className="mb-10">
+        <div className="text-center mb-8">
+          <p className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-primary mb-4">
+            <IconSparkles className="h-3 w-3" />
+            AI-Powered Search
+          </p>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">Find your next piece</h1>
+          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+            Describe what you&apos;re looking for in plain English, or use filters to browse.
+          </p>
+        </div>
+
+        {/* Search Bar - Hero Style with Spotlight Effect */}
+        <div className="max-w-3xl mx-auto">
+          <div className="relative group">
+            {/* Ambient glow effect - subtle background */}
+            <div
+              className={`absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-primary/0 via-primary/30 to-primary/0 blur-lg transition-all duration-500 ${
+                isTyping ? "opacity-100 scale-105" : "opacity-0 scale-100"
+              }`}
+            />
+
+            {/* Sweeping spotlight overlay */}
+            <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
+              <div
+                className={`absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent transition-transform duration-700 ease-out ${
+                  isTyping ? "translate-x-full" : "-translate-x-full"
+                }`}
+              />
+            </div>
+
+            <div className={`relative flex items-center gap-2 p-2 bg-card border rounded-xl shadow-sm transition-all duration-300 ${
+              isTyping ? "border-primary/50 shadow-lg shadow-primary/5" : "border-border"
+            }`}>
+              <div className="flex-1 relative">
+                <IconSearch className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors duration-300 ${
+                  isTyping ? "text-primary" : "text-muted-foreground"
+                }`} />
+                <Input
+                  id="search"
+                  placeholder="e.g. funny piece for young woman, 2 minutes..."
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    // Trigger typing animation
+                    setIsTyping(true);
+                    if (typingTimeoutRef.current) {
+                      clearTimeout(typingTimeoutRef.current);
+                    }
+                    typingTimeoutRef.current = setTimeout(() => {
+                      setIsTyping(false);
+                    }, 800);
+                  }}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  onFocus={() => query && setIsTyping(true)}
+                  onBlur={() => setTimeout(() => setIsTyping(false), 200)}
+                  className="pl-12 pr-10 h-12 text-base border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                />
+                {query && (
+                  <button
+                    type="button"
+                    onClick={() => setQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted/50 transition-colors"
+                    aria-label="Clear search"
+                  >
+                    <IconX className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+              <Button
+                onClick={handleSearch}
+                disabled={isLoading || !canSearch}
+                size="lg"
+                className={`h-10 px-6 rounded-lg transition-all duration-300 ${
+                  isTyping ? "shadow-md shadow-primary/20" : ""
+                }`}
+              >
+                {isLoading ? (
+                  <IconLoader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  "Search"
+                )}
+              </Button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* Action Row - Filters & Find for me */}
+          <div className="flex items-center justify-between mt-4">
             <Button
-              onClick={handleFindForMe}
-              disabled={isLoading}
-              size="lg"
-              variant="secondary"
-              className="gap-2 rounded-full px-6"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+              className={`gap-2 text-muted-foreground hover:text-foreground ${showFilters ? "text-foreground bg-muted" : ""}`}
             >
-              <IconSparkles className="h-5 w-5" />
-              Find for me
+              <IconAdjustments className="h-4 w-4" />
+              Filters
+              {activeFilters.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                  {activeFilters.length}
+                </Badge>
+              )}
             </Button>
+
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <IconInfoCircle className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors cursor-help" />
+                  <Button
+                    onClick={handleFindForMe}
+                    disabled={isLoading}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <IconSparkles className="h-4 w-4 text-primary" />
+                    Find for me
+                  </Button>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
                   <p className="text-sm">
-                    Get AI-powered monologue recommendations tailored to your actor profile.
-                    Complete your profile for the best personalized suggestions.
+                    Get AI-powered recommendations based on your actor profile.
                   </p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </div>
+
+          {/* Expandable Filters */}
+          {showFilters && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mt-4 p-4 bg-card border border-border rounded-lg"
+            >
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {[
+                  { key: "gender", label: "Gender", options: ["male", "female", "any"] },
+                  { key: "age_range", label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
+                  { key: "emotion", label: "Emotion", options: ["joy", "sadness", "anger", "fear", "melancholy", "hope"] },
+                  { key: "theme", label: "Theme", options: ["love", "death", "betrayal", "identity", "power", "revenge"] },
+                  { key: "category", label: "Category", options: ["classical", "contemporary"] },
+                ].map(({ key, label, options }) => (
+                  <div key={key} className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">{label}</Label>
+                    <select
+                      value={filters[key as keyof typeof filters]}
+                      onChange={(e) => setFilters({ ...filters, [key]: e.target.value })}
+                      className="w-full px-3 py-2 text-sm rounded-lg border border-input bg-background"
+                    >
+                      <option value="">Any</option>
+                      {options.map(opt => (
+                        <option key={opt} value={opt} className="capitalize">{opt}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+              {activeFilters.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                  {activeFilters.map(([key, value]) => (
+                    <Badge key={key} variant="secondary" className="gap-1 capitalize">
+                      {key.replace("_", " ")}: {value}
+                      <button
+                        onClick={() => setFilters({ ...filters, [key]: "" })}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <IconX className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                  <button
+                    onClick={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "" })}
+                    className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+                  >
+                    Clear all
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          )}
         </div>
       </div>
 
       <div className="space-y-6">
-        {/* Search Card */}
-        <Card className="rounded-xl">
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="search" className="text-base font-semibold">
-                  Search
-                </Label>
-                <div className="flex items-center gap-2">
-                  <div className="flex-1 relative flex items-center">
-                    <Input
-                      id="search"
-                      placeholder='e.g. funny piece for young woman, 2 min'
-                      value={query}
-                      onChange={(e) => setQuery(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                      className={query ? "pr-10" : ""}
-                    />
-                    {query && (
-                      <button
-                        type="button"
-                        onClick={() => setQuery("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-muted/50 transition-colors"
-                        aria-label="Clear search"
-                      >
-                        <IconX className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                  <Button
-                    onClick={handleSearch}
-                    disabled={isLoading || !canSearch}
-                    variant="secondary"
-                    className="rounded-full px-6"
-                  >
-                    {isLoading ? (
-                      <IconLoader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <IconSearch className="h-4 w-4" />
-                    )}
-                    Search
-                  </Button>
-                  <Button variant="outline" size="icon" onClick={() => setShowFilters(!showFilters)}>
-                    <IconFilter className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {showFilters && (
-                <div className="space-y-3 pt-4 border-t">
-                  <div>
-                    <Label className="flex items-center gap-2">
-                      <IconFilter className="h-4 w-4" />
-                      Refine by
-                    </Label>
-                    <p className="text-xs text-muted-foreground mt-1">Narrow by gender, age, emotion, theme, category.</p>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {[
-                      { key: "gender", label: "Gender", options: ["male", "female", "any"] },
-                      { key: "age_range", label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
-                      { key: "emotion", label: "Emotion", options: ["joy", "sadness", "anger", "fear", "melancholy", "hope"] },
-                      { key: "theme", label: "Theme", options: ["love", "death", "betrayal", "identity", "power", "revenge"] },
-                      { key: "category", label: "Category", options: ["classical", "contemporary"] },
-                    ].map(({ key, label, options }) => (
-                      <div key={key} className="space-y-2">
-                        <Label className="text-xs">{label}</Label>
-                        <select
-                          value={filters[key as keyof typeof filters]}
-                          onChange={(e) => setFilters({ ...filters, [key]: e.target.value })}
-                          className="w-full px-3 py-2 text-sm rounded-xl border border-input bg-background"
-                        >
-                          <option value="">Any</option>
-                          {options.map(opt => (
-                            <option key={opt} value={opt} className="capitalize">{opt}</option>
-                          ))}
-                        </select>
-                      </div>
-                    ))}
-                  </div>
-                  {activeFilters.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-2">
-                      {activeFilters.map(([key, value]) => (
-                        <Badge key={key} variant="secondary" className="gap-1">
-                          {key.replace("_", " ")}: {value}
-                          <button
-                            onClick={() => setFilters({ ...filters, [key]: "" })}
-                            className="ml-1 hover:text-destructive"
-                          >
-                            <IconX className="h-3 w-3" />
-                          </button>
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Error banner with retry */}
         {searchError && (
@@ -641,17 +711,43 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         {/* Results */}
         <AnimatePresence mode="wait">
           {isLoading ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Card key={i}>
-                  <CardContent className="pt-6 space-y-4">
-                    <Skeleton className="h-6 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                    <Skeleton className="h-20 w-full" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="py-16"
+            >
+              {/* Fun Loading State */}
+              <div className="flex flex-col items-center justify-center gap-6 mb-12">
+                <div className="relative">
+                  <div className="h-16 w-16 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                  <IconSparkles className="h-7 w-7 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                </div>
+                <motion.p
+                  key={loadingMessageIndex}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="text-lg font-medium text-foreground"
+                >
+                  {currentLoadingMessage}
+                </motion.p>
+                <p className="text-sm text-muted-foreground">This may take a moment...</p>
+              </div>
+
+              {/* Skeleton cards */}
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <Card key={i} className="opacity-50">
+                    <CardContent className="pt-6 space-y-4">
+                      <Skeleton className="h-6 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                      <Skeleton className="h-20 w-full" />
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </motion.div>
           ) : hasSearched && results.length === 0 ? (
             <Card>
               <CardContent className="pt-12 pb-12 text-center">
@@ -715,7 +811,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     transition={{ delay: idx * 0.05, duration: 0.3, ease: "easeOut" }}
                   >
                     <Card
-                      className="hover:shadow-xl transition-all cursor-pointer h-full flex flex-col hover:border-secondary/50 group rounded-xl"
+                      className="hover:shadow-xl transition-all cursor-pointer h-full flex flex-col hover:border-secondary/50 group rounded-lg"
                       onClick={() => openMonologue(mono)}
                     >
                       <CardContent className="pt-6 flex-1 flex flex-col">
@@ -745,8 +841,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                               onClick={(e) => toggleFavorite(e, mono)}
                               className={`p-2 rounded-full transition-colors cursor-pointer ${
                                 mono.is_favorited
-                                  ? "bg-accent/10 hover:bg-accent/20 text-accent"
-                                  : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                                  ? "bg-violet-500/15 hover:bg-violet-500/25 text-violet-500 dark:text-violet-400"
+                                  : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground"
                               }`}
                               aria-label={mono.is_favorited ? "Remove bookmark" : "Add bookmark"}
                             >
@@ -904,14 +1000,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                               setShowDownloadMenu(false);
                             }}
                           />
-                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-xl shadow-lg p-1 min-w-[140px] z-[10004]">
+                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-[10004]">
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 downloadMonologue(selectedMonologue, 'text');
                                 setShowDownloadMenu(false);
                               }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-xl transition-colors"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
                             >
                               Download as TXT
                             </button>
@@ -921,7 +1017,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                                 downloadMonologue(selectedMonologue, 'pdf');
                                 setShowDownloadMenu(false);
                               }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-xl transition-colors"
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
                             >
                               Download as PDF
                             </button>
@@ -938,8 +1034,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         }}
                         className={`p-2 rounded-full transition-colors cursor-pointer relative z-[10002] ${
                           selectedMonologue.is_favorited
-                            ? "bg-accent/10 hover:bg-accent/20 text-accent"
-                            : "hover:bg-accent hover:text-accent-foreground text-muted-foreground"
+                            ? "bg-violet-500/15 hover:bg-violet-500/25 text-violet-500 dark:text-violet-400"
+                            : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground"
                         }`}
                         aria-label={selectedMonologue.is_favorited ? "Remove bookmark" : "Add bookmark"}
                       >
@@ -991,7 +1087,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     </div>
 
                     {/* Monologue Text - Large and Centered */}
-                    <div className="bg-background p-8 rounded-xl">
+                    <div className="bg-background p-8 rounded-lg">
                       <p className="text-xl leading-relaxed whitespace-pre-wrap font-typewriter max-w-3xl mx-auto text-center">
                         {selectedMonologue.text}
                       </p>
