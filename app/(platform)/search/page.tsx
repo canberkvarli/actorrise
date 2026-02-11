@@ -32,15 +32,18 @@ import { MonologueDetailContent } from "@/components/monologue/MonologueDetailCo
 import { MonologueText } from "@/components/monologue/MonologueText";
 
 function getScoreBadgeClass(score: number, isBestMatch: boolean) {
-  if (isBestMatch || score >= 0.70) return "bg-primary/15 text-primary";
+  if (isBestMatch || score >= 0.65) return "bg-primary/15 text-primary";
   if (score >= 0.5) return "bg-secondary/20 text-secondary-foreground";
-  return "bg-muted text-muted-foreground";
+  if (score >= 0.35) return "bg-primary/10 text-primary/90";
+  return "bg-muted/80 text-muted-foreground";
 }
 
-/** Tiered match labels for non-quote results. Quote matches use match_type for "Exact quote" / "This is the one". */
+/** Encouraging tiered labels for non-quote results. Quote matches use match_type. */
 function getMatchLabel(score: number): string {
+  if (score >= 0.65) return "Great match";
   if (score >= 0.5) return "Good match";
-  return "Relevant";
+  if (score >= 0.35) return "Worth a look";
+  return "Related";
 }
 
 function MonologueResultCard({
