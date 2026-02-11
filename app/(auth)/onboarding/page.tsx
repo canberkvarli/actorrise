@@ -47,7 +47,7 @@ const ONBOARDING_STORAGE_KEY = 'actorrise_onboarding_progress';
 /** Resize image data URL to max 1200px so the crop editor opens quickly. */
 function resizeImageForCrop(dataUrl: string, maxPx = 1200): Promise<string> {
   return new Promise((resolve, reject) => {
-    const img = new Image();
+    const img = new window.Image();
     img.onload = () => {
       const w = img.width;
       const h = img.height;
