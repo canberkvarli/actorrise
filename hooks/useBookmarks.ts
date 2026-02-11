@@ -54,7 +54,7 @@ export function useToggleFavorite() {
     onMutate: async (variables) => {
       const { monologueId, isFavorited } = variables;
       const nextFavorited = !isFavorited;
-      const previous: { key: unknown[]; data: unknown }[] = [];
+      const previous: { key: readonly unknown[]; data: unknown }[] = [];
 
       // Apply bookmarks cache update first (synchronously) so My Monologues list updates immediately
       const bookmarks = queryClient.getQueryData<Monologue[]>(["bookmarks"]);
