@@ -173,6 +173,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
     setUser(null);
+
+    // Clear search-related session storage on logout
+    // Keep storage for page navigation, but clear on explicit logout
+    try {
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && (key.startsWith('search_results_') || key.startsWith('monologue_search_'))) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(key => sessionStorage.removeItem(key));
+    } catch (e) {
+      // Session storage might be unavailable
+      console.error('Failed to clear session storage:', e);
+    }
+
     // Use window.location to force full page navigation and bypass platform layout redirect
     window.location.href = "/";
   }, []);

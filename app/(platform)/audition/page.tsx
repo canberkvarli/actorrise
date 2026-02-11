@@ -26,6 +26,7 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select } from '@/components/ui/select';
+import { MonologueText } from '@/components/monologue/MonologueText';
 
 interface Monologue {
   id: number;
@@ -443,7 +444,9 @@ export default function AuditionModePage() {
                 {showMonologueText && (
                   <CardContent>
                     <div className="p-4 bg-muted/50 rounded-lg max-h-64 overflow-y-auto">
-                      <p className="text-sm whitespace-pre-wrap">{selectedMonologue.text}</p>
+                      <p className="text-sm">
+                        <MonologueText text={selectedMonologue.text} />
+                      </p>
                     </div>
                   </CardContent>
                 )}

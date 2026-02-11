@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow } from "@tabler/icons-react";
 
 // Fun loading messages for AI search
 const LOADING_MESSAGES = [
@@ -29,6 +29,160 @@ import { motion, AnimatePresence } from "framer-motion";
 import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
+import { MonologueText } from "@/components/monologue/MonologueText";
+
+function getScoreBadgeClass(score: number, isBestMatch: boolean) {
+  if (isBestMatch || score >= 0.70) return "bg-primary/15 text-primary";
+  if (score >= 0.5) return "bg-secondary/20 text-secondary-foreground";
+  return "bg-muted text-muted-foreground";
+}
+
+/** Tiered match labels: Exact match (95%+), Best match (70–95%), Good match (50–70%), Relevant (10–50%). */
+function getMatchLabel(score: number): string {
+  if (score >= 0.95) return "Exact match";
+  if (score >= 0.70) return "Best match";
+  if (score >= 0.5) return "Good match";
+  return "Relevant";
+}
+
+function MonologueResultCard({
+  mono,
+  onSelect,
+  onToggleFavorite,
+  variant = "default",
+  index = 0,
+  showMatchBadge = true,
+}: {
+  mono: Monologue;
+  onSelect: () => void;
+  onToggleFavorite: (e: React.MouseEvent, mono: Monologue) => void;
+  variant?: "default" | "bestMatch";
+  index?: number;
+  showMatchBadge?: boolean;
+}) {
+  const isBestMatch = variant === "bestMatch";
+  const displayList = (mono: Monologue) => {
+    if (!showMatchBadge || !mono.relevance_score || mono.relevance_score <= 0.1) return null;
+    const score = mono.relevance_score;
+    const label = getMatchLabel(score);
+    const pct = Math.round(score * 100);
+    return (
+      <span
+        className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${getScoreBadgeClass(
+          score,
+          isBestMatch
+        )}`}
+      >
+        {label} · {pct}%
+      </span>
+    );
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05, duration: 0.3, ease: "easeOut" }}
+    >
+      <Card
+        className={`hover:shadow-xl transition-all cursor-pointer h-full flex flex-col group rounded-lg ${
+          isBestMatch ? "border-l-4 border-primary hover:border-primary/70" : "hover:border-secondary/50"
+        }`}
+        onClick={onSelect}
+      >
+        <CardContent className="pt-6 flex-1 flex flex-col">
+          <div className="space-y-4 flex-1">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="font-bold text-xl mb-1 group-hover:text-foreground transition-colors">
+                    {mono.character_name}
+                  </h3>
+                  {displayList(mono)}
+                  {mono.is_favorited && (
+                    <span className="px-2 py-0.5 bg-accent/20 text-accent-foreground text-xs font-semibold rounded-full">
+                      Bookmarked
+                    </span>
+                  )}
+                </div>
+                <p className="text-sm text-muted-foreground line-clamp-1">{mono.play_title}</p>
+                <p className="text-xs text-muted-foreground">by {mono.author}</p>
+              </div>
+              <button
+                type="button"
+                onClick={(e) => onToggleFavorite(e, mono)}
+                className={`p-2 rounded-full transition-colors cursor-pointer ${
+                  mono.is_favorited
+                    ? "bg-violet-500/15 hover:bg-violet-500/25 text-violet-500 dark:text-violet-400"
+                    : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground"
+                }`}
+                aria-label={mono.is_favorited ? "Remove bookmark" : "Add bookmark"}
+              >
+                <IconBookmark className={`h-5 w-5 ${mono.is_favorited ? "fill-current" : ""}`} />
+              </button>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Badge variant="secondary" className="font-normal capitalize">
+                {mono.category}
+              </Badge>
+              {mono.character_gender && (
+                <Badge variant="outline" className="font-normal capitalize">
+                  {mono.character_gender}
+                </Badge>
+              )}
+              {mono.character_age_range && (
+                <Badge variant="outline" className="font-normal">
+                  {mono.character_age_range}
+                </Badge>
+              )}
+              {mono.primary_emotion && (
+                <Badge variant="secondary" className="font-normal capitalize">
+                  {mono.primary_emotion}
+                </Badge>
+              )}
+            </div>
+
+            {mono.scene_description && (
+              <div className="bg-secondary/10 px-3 py-2 rounded-md border-l-2 border-secondary/40">
+                <p className="text-xs italic text-muted-foreground line-clamp-2">{mono.scene_description}</p>
+              </div>
+            )}
+
+            {mono.themes && mono.themes.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {mono.themes.slice(0, 3).map((theme) => (
+                  <span
+                    key={theme}
+                    className="text-xs px-2.5 py-1 bg-secondary/10 text-secondary-foreground/90 rounded-full font-medium capitalize"
+                  >
+                    {theme}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
+              &ldquo;{mono.text.substring(0, 120)}...&rdquo;
+            </p>
+          </div>
+
+          <div className="mt-4 pt-4 border-t flex items-center justify-between text-xs text-muted-foreground">
+            <span className="font-medium">
+              {Math.floor(mono.estimated_duration_seconds / 60)}:
+              {(mono.estimated_duration_seconds % 60).toString().padStart(2, "0")} min
+            </span>
+            <span>{mono.word_count} words</span>
+            <span className="flex items-center gap-1">
+              <IconBookmark className="h-3 w-3" />
+              {mono.favorite_count}
+            </span>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
 
 export default function SearchPage() {
   const router = useRouter();
@@ -501,6 +655,36 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
   const canSearch = query.trim() !== "" || activeFilters.length > 0;
 
+  // Sort by confidence score (desc), then split into Best Match vs Related or treat as one list for broad queries
+  const BEST_MATCH_THRESHOLD = 0.70;
+  const HIGH_SCORE_CAP_FOR_CONFIDENCE = 5; // If more than this many have score >= 0.70, treat as broad query and hide confidence
+  const { bestMatches, relatedResults, sortedResults, showConfidence } = useMemo(() => {
+    const sorted = [...results].sort(
+      (a, b) => (b.relevance_score ?? -1) - (a.relevance_score ?? -1)
+    );
+    const scores = sorted
+      .map((r) => r.relevance_score)
+      .filter((s): s is number => s != null && s > 0.1);
+    const highCount = scores.filter((s) => s >= BEST_MATCH_THRESHOLD).length;
+    const showConf = scores.length > 0 && highCount <= HIGH_SCORE_CAP_FOR_CONFIDENCE;
+
+    const best: Monologue[] = [];
+    const related: Monologue[] = [];
+    for (const mono of sorted) {
+      if (showConf && mono.relevance_score != null && mono.relevance_score >= BEST_MATCH_THRESHOLD) {
+        best.push(mono);
+      } else {
+        related.push(mono);
+      }
+    }
+
+    return {
+      bestMatches: best,
+      relatedResults: related,
+      showConfidence: showConf,
+    };
+  }, [results]);
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Hero Search Section */}
@@ -512,7 +696,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </p>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">Find your next piece</h1>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-            Describe what you&apos;re looking for in plain English, or use filters to browse.
+            Describe what you&apos;re looking for in plain English; filters narrow results or let you browse by criteria.
           </p>
         </div>
 
@@ -732,7 +916,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 >
                   {currentLoadingMessage}
                 </motion.p>
-                <p className="text-sm text-muted-foreground">This may take a moment...</p>
               </div>
 
               {/* Skeleton cards */}
@@ -802,123 +985,56 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   Showing results from your last search. New searches will update this list.
                 </p>
               )}
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(showBookmarkedOnly ? results.filter((m) => m.is_favorited) : results).map((mono, idx) => (
-                  <motion.div
-                    key={mono.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05, duration: 0.3, ease: "easeOut" }}
-                  >
-                    <Card
-                      className="hover:shadow-xl transition-all cursor-pointer h-full flex flex-col hover:border-secondary/50 group rounded-lg"
-                      onClick={() => openMonologue(mono)}
-                    >
-                      <CardContent className="pt-6 flex-1 flex flex-col">
-                        <div className="space-y-4 flex-1">
-                          {/* Header */}
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-bold text-xl mb-1 group-hover:text-foreground transition-colors">
-                                  {mono.character_name}
-                                </h3>
-                                {mono.is_favorited && (
-                                  <span className="px-2 py-0.5 bg-accent/20 text-accent-foreground text-xs font-semibold rounded-full">
-                                    Bookmarked
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground line-clamp-1">
-                                {mono.play_title}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                by {mono.author}
-                              </p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={(e) => toggleFavorite(e, mono)}
-                              className={`p-2 rounded-full transition-colors cursor-pointer ${
-                                mono.is_favorited
-                                  ? "bg-violet-500/15 hover:bg-violet-500/25 text-violet-500 dark:text-violet-400"
-                                  : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground"
-                              }`}
-                              aria-label={mono.is_favorited ? "Remove bookmark" : "Add bookmark"}
-                            >
-                              <IconBookmark
-                                className={`h-5 w-5 ${mono.is_favorited ? "fill-current" : ""}`}
-                              />
-                            </button>
-                          </div>
 
-                          {/* Tags */}
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant="secondary" className="font-normal capitalize">
-                              {mono.category}
-                            </Badge>
-                            {mono.character_gender && (
-                              <Badge variant="outline" className="font-normal capitalize">
-                                {mono.character_gender}
-                              </Badge>
-                            )}
-                            {mono.character_age_range && (
-                              <Badge variant="outline" className="font-normal">
-                                {mono.character_age_range}
-                              </Badge>
-                            )}
-                            {mono.primary_emotion && (
-                              <Badge variant="secondary" className="font-normal capitalize">
-                                {mono.primary_emotion}
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Synopsis / Scene Description */}
-                          {mono.scene_description && (
-                            <div className="bg-secondary/10 px-3 py-2 rounded-md border-l-2 border-secondary/40">
-                              <p className="text-xs italic text-muted-foreground line-clamp-2">
-                                {mono.scene_description}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Themes */}
-                          {mono.themes && mono.themes.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {mono.themes.slice(0, 3).map(theme => (
-                                <span
-                                  key={theme}
-                                  className="text-xs px-2.5 py-1 bg-secondary/10 text-secondary-foreground/90 rounded-full font-medium capitalize"
-                                >
-                                  {theme}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Preview */}
-                          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                            &ldquo;{mono.text.substring(0, 120)}...&rdquo;
-                          </p>
+              {/* Unified results grid: Best Match + Related use same card layout; hide confidence for broad queries */}
+              {(() => {
+                const relatedOrBookmarked = showBookmarkedOnly ? results.filter((m) => m.is_favorited) : relatedResults;
+                const hasCards = (!showBookmarkedOnly && bestMatches.length > 0) || relatedOrBookmarked.length > 0;
+                if (!hasCards) return null;
+                const showBadges = showConfidence && !showBookmarkedOnly;
+                return (
+                  <>
+                    {!showBookmarkedOnly && showConfidence && bestMatches.length > 0 && (
+                      <div className="flex items-center gap-2 mb-4">
+                        <div className="p-2 rounded-lg bg-primary/10 ring-1 ring-primary/20">
+                          <IconTargetArrow className="h-5 w-5 text-primary" />
                         </div>
-
-                        {/* Footer */}
-                        <div className="mt-4 pt-4 border-t flex items-center justify-between text-xs text-muted-foreground">
-                          <span className="font-medium">
-                            {Math.floor(mono.estimated_duration_seconds / 60)}:{(mono.estimated_duration_seconds % 60).toString().padStart(2, '0')} min
-                          </span>
-                          <span>{mono.word_count} words</span>
-                          <span className="flex items-center gap-1">
-                            <IconBookmark className="h-3 w-3" />
-                            {mono.favorite_count}
-                          </span>
+                        <div>
+                          <h2 className="text-lg font-semibold text-foreground">Best match</h2>
+                          <p className="text-sm text-muted-foreground">We found exactly what you&apos;re looking for</p>
                         </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
+                      </div>
+                    )}
+                    {!showBookmarkedOnly && !showConfidence && relatedOrBookmarked.length > 0 && (
+                      <p className="text-sm text-muted-foreground mb-4">Sorted by relevance</p>
+                    )}
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {!showBookmarkedOnly && bestMatches.map((mono, idx) => (
+                        <MonologueResultCard
+                          key={mono.id}
+                          mono={mono}
+                          onSelect={() => openMonologue(mono)}
+                          onToggleFavorite={toggleFavorite}
+                          variant="bestMatch"
+                          index={idx}
+                          showMatchBadge={showBadges}
+                        />
+                      ))}
+                      {relatedOrBookmarked.map((mono, idx) => (
+                        <MonologueResultCard
+                          key={mono.id}
+                          mono={mono}
+                          onSelect={() => openMonologue(mono)}
+                          onToggleFavorite={toggleFavorite}
+                          variant="default"
+                          index={(!showBookmarkedOnly ? bestMatches.length : 0) + idx}
+                          showMatchBadge={showBadges}
+                        />
+                      ))}
+                    </div>
+                  </>
+                );
+              })()}
               {hasMore && !showBookmarkedOnly && (
                 <div className="flex justify-center pt-6">
                   <Button
@@ -1088,8 +1204,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
                     {/* Monologue Text - Large and Centered */}
                     <div className="bg-background p-8 rounded-lg">
-                      <p className="text-xl leading-relaxed whitespace-pre-wrap font-typewriter max-w-3xl mx-auto text-center">
-                        {selectedMonologue.text}
+                      <p className="text-xl leading-relaxed font-typewriter max-w-3xl mx-auto text-center">
+                        <MonologueText text={selectedMonologue.text} />
                       </p>
                     </div>
                   </div>
