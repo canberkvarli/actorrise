@@ -4,7 +4,7 @@ import hashlib
 import json
 import logging
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -59,14 +59,18 @@ def _strip_punctuation(text: str) -> str:
     return text
 
 
-def _fuzzy_quote_match(query: str, text: str, min_word_ratio: float = 0.75) -> bool:
+def _fuzzy_quote_match(
+    query: str, text: str, min_word_ratio: float = 0.75, max_span_words: int = 16
+) -> bool:
     """
     Check if query is a fuzzy match for a famous line in text.
     Handles minor typos like "to be or not be" matching "to be or not to be".
 
-    Returns True if:
-    - At least min_word_ratio of query words appear in sequence in text, OR
-    - The query words are all in text in order (even if not consecutive)
+    Returns True only if:
+    - At least min_word_ratio of query words appear in order in text, AND
+    - Those matches fall within a span of at most max_span_words (so we match
+      a real phrase like "to be or not to be", not scattered "to"/"be"/"or"/"not"
+      across a long essay).
     """
     query_words = query.split()
     text_words = text.split()
@@ -74,19 +78,23 @@ def _fuzzy_quote_match(query: str, text: str, min_word_ratio: float = 0.75) -> b
     if len(query_words) < 2:
         return False
 
-    # Check if all query words appear in text in order (allowing gaps)
+    # Find query words in order and record their indices in text
     text_idx = 0
-    matches = 0
+    matched_indices: List[int] = []
     for qword in query_words:
         while text_idx < len(text_words):
             if text_words[text_idx] == qword:
-                matches += 1
+                matched_indices.append(text_idx)
                 text_idx += 1
                 break
             text_idx += 1
 
-    # If we matched at least min_word_ratio of query words in order, it's a match
-    return matches >= len(query_words) * min_word_ratio
+    if len(matched_indices) < len(query_words) * min_word_ratio:
+        return False
+
+    # Require matches to be within a short span (actual phrase, not scattered)
+    span = matched_indices[-1] - matched_indices[0] + 1
+    return span <= max_span_words
 
 
 class SemanticSearch:
@@ -230,7 +238,11 @@ class SemanticSearch:
             ]
             overall_time = time.time() - overall_start
             logger.debug("Total search time (cache hit): %.2fs, results: %s", overall_time, len(ordered_with_scores))
-            return ordered_with_scores[:limit]
+            # Restore quote_match_type from cache if stored (payload item length >= 3)
+            quote_types: Dict[int, str] = {}
+            if cached and isinstance(cached[0], (list, tuple)) and len(cached[0]) >= 3:
+                quote_types = {item[0]: item[2] for item in cached if len(item) >= 3 and item[2]}
+            return (ordered_with_scores[:limit], quote_types)
 
         # Generate embedding for query (with caching at multiple levels)
         query_hash = hashlib.md5(canonical_query.encode()).hexdigest()
@@ -262,7 +274,8 @@ class SemanticSearch:
 
         if not query_embedding:
             logger.info("Failed to generate embedding, falling back to text search")
-            return self._fallback_text_search(query, limit, merged_filters)
+            fallback = self._fallback_text_search(query, limit, merged_filters)
+            return ([(m, 0.0) for m in fallback], {})
 
         # Hybrid search: run text search for direct play/character/title matches and merge on top.
         # Many monologues (e.g. from Gutenberg) have no embeddings, so "hamlet" would otherwise
@@ -505,12 +518,13 @@ class SemanticSearch:
             top_results = top_semantic
 
         # Famous-line boost: if the query looks like a quote (multi-word), put monologues whose
-        # text contains the query at the very top AND boost their score
-        # Use punctuation-stripped comparison so "to be or not to be" matches "To be, or not to be"
+        # text contains the query at the very top AND boost their score. Track match_type so the
+        # frontend can show "Exact quote" / "This is the one" only for the actual quote monologue(s).
         query_lower = query.strip().lower()
         query_stripped = _strip_punctuation(query)
         EXACT_QUOTE_MATCH_SCORE = 0.98  # Very high score for exact text matches
         FUZZY_QUOTE_MATCH_SCORE = 0.90  # High score for fuzzy matches (handles typos)
+        quote_match_type_by_id: Dict[int, str] = {}
         if len(query_lower.split()) >= 2:
             monologues_with_scores = list(top_results)
             exact_matches: list[tuple[Monologue, float]] = []
@@ -525,9 +539,11 @@ class SemanticSearch:
                 # Exact substring match gets highest boost
                 if query_stripped in text_stripped:
                     exact_matches.append((m, max(s, EXACT_QUOTE_MATCH_SCORE)))
+                    quote_match_type_by_id[m.id] = "exact_quote"
                 # Fuzzy match (handles minor typos like "to be or not be" → "to be or not to be")
                 elif _fuzzy_quote_match(query_stripped, text_stripped):
                     fuzzy_matches.append((m, max(s, FUZZY_QUOTE_MATCH_SCORE)))
+                    quote_match_type_by_id[m.id] = "fuzzy_quote"
                 else:
                     other_results.append((m, s))
 
@@ -561,8 +577,11 @@ class SemanticSearch:
             final_results_with_scores = list(top_results) + [(m, 0.0) for m in fallback_unique]
             final_results = [mono for mono, _ in final_results_with_scores]
 
-            # Cache final ordered results with scores (so cached searches still show confidence)
-            cache_payload = [[m.id, round(s, 4)] for m, s in final_results_with_scores]
+            # Cache final ordered results with scores and quote match types
+            cache_payload = [
+                [m.id, round(s, 4), quote_match_type_by_id.get(m.id, "")]
+                for m, s in final_results_with_scores
+            ]
             if self.cache.redis_enabled:
                 self.cache.set_search_results(
                     canonical_query,
@@ -575,8 +594,7 @@ class SemanticSearch:
             overall_time = time.time() - overall_start
             logger.debug("Total search time: %.2fs, final results: %s", overall_time, len(final_results))
 
-            # Return combined results with scores
-            return final_results_with_scores[:limit]
+            return (final_results_with_scores[:limit], quote_match_type_by_id)
 
         overall_time = time.time() - overall_start
 
@@ -589,8 +607,11 @@ class SemanticSearch:
                 dict(author_dist.most_common(5)),
             )
 
-        # Cache final ordered results with scores (so cached searches still show confidence)
-        cache_payload = [[m.id, round(s, 4)] for m, s in top_results]
+        # Cache final ordered results with scores and quote match types
+        cache_payload = [
+            [m.id, round(s, 4), quote_match_type_by_id.get(m.id, "")]
+            for m, s in top_results
+        ]
         if self.cache.redis_enabled:
             self.cache.set_search_results(
                 canonical_query,
@@ -600,8 +621,7 @@ class SemanticSearch:
         else:
             SEARCH_RESULTS_CACHE[results_cache_key] = cache_payload
 
-        # Return results with their scores
-        return list(top_results)
+        return (list(top_results), quote_match_type_by_id)
 
     def _cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
         """Calculate cosine similarity between two vectors"""

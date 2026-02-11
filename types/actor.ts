@@ -56,6 +56,8 @@ export interface Monologue {
   full_text_url?: string;
   source_url?: string;
   relevance_score?: number;
+  /** "exact_quote" | "fuzzy_quote" when this monologue is the actual quote match (e.g. Hamlet for "to be or not to be") */
+  match_type?: string;
   difficulty?: string;
 }
 
