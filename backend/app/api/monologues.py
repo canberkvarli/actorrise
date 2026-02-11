@@ -44,6 +44,7 @@ class MonologueResponse(BaseModel):
     act: Optional[int] = None  # Act number (for classical plays)
     scene: Optional[int] = None  # Scene number (for classical plays)
     relevance_score: Optional[float] = None  # Similarity score from search (0.0-1.0)
+    match_type: Optional[str] = None  # "exact_quote" | "fuzzy_quote" when this monologue is the actual quote match
 
     class Config:
         from_attributes = True
@@ -78,7 +79,8 @@ class FavoriteNoteUpdate(BaseModel):
 def _monologue_to_response(
     m: Monologue,
     is_favorited: bool = False,
-    relevance_score: Optional[float] = None
+    relevance_score: Optional[float] = None,
+    match_type: Optional[str] = None,
 ) -> MonologueResponse:
     """Build MonologueResponse from ORM instance with correct types for the type checker."""
     play = m.play
@@ -109,6 +111,7 @@ def _monologue_to_response(
         act=cast(Optional[int], m.act),
         scene=cast(Optional[int], m.scene),
         relevance_score=relevance_score,
+        match_type=match_type,
     )
 
 
@@ -187,9 +190,10 @@ async def search_monologues(
     has_scores = False
     all_results_with_scores: list[tuple[Monologue, float]] = []
 
+    quote_match_types: dict[int, str] = {}
     if q and q.strip():
-        # Semantic search returns (Monologue, score) tuples
-        all_results_with_scores = search_service.search(
+        # Semantic search returns (list of (Monologue, score), quote_match_types)
+        all_results_with_scores, quote_match_types = search_service.search(
             q.strip(), limit=fetch_limit, filters=filters, user_id=cast(int, current_user.id)
         )
         has_scores = True
@@ -215,12 +219,13 @@ async def search_monologues(
     ).all()
     favorite_ids = {f[0] for f in favorites}
 
-    # Format response with relevance scores (only for semantic search)
+    # Format response with relevance scores and quote match type (only for semantic search)
     monologue_responses = [
         _monologue_to_response(
             m,
             is_favorited=(m.id in favorite_ids),
-            relevance_score=score if has_scores else None
+            relevance_score=score if has_scores else None,
+            match_type=quote_match_types.get(m.id) if has_scores else None,
         )
         for m, score in results_with_scores
     ]

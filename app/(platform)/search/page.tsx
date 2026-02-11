@@ -37,10 +37,8 @@ function getScoreBadgeClass(score: number, isBestMatch: boolean) {
   return "bg-muted text-muted-foreground";
 }
 
-/** Tiered match labels: Exact match (95%+), Best match (70–95%), Good match (50–70%), Relevant (10–50%). */
+/** Tiered match labels for non-quote results. Quote matches use match_type for "Exact quote" / "This is the one". */
 function getMatchLabel(score: number): string {
-  if (score >= 0.95) return "Exact match";
-  if (score >= 0.70) return "Best match";
   if (score >= 0.5) return "Good match";
   return "Relevant";
 }
@@ -64,8 +62,13 @@ function MonologueResultCard({
   const displayList = (mono: Monologue) => {
     if (!showMatchBadge || !mono.relevance_score || mono.relevance_score <= 0.1) return null;
     const score = mono.relevance_score;
-    const label = getMatchLabel(score);
     const pct = Math.round(score * 100);
+    const label =
+      mono.match_type === "exact_quote"
+        ? "Exact quote"
+        : mono.match_type === "fuzzy_quote"
+          ? "This is the one"
+          : getMatchLabel(score);
     return (
       <span
         className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${getScoreBadgeClass(
@@ -655,23 +658,22 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
   const canSearch = query.trim() !== "" || activeFilters.length > 0;
 
-  // Sort by confidence score (desc), then split into Best Match vs Related or treat as one list for broad queries
-  const BEST_MATCH_THRESHOLD = 0.70;
+  // Sort by confidence score (desc). Best match = only actual quote matches (exact_quote/fuzzy_quote); rest are related.
   const HIGH_SCORE_CAP_FOR_CONFIDENCE = 5; // If more than this many have score >= 0.70, treat as broad query and hide confidence
-  const { bestMatches, relatedResults, sortedResults, showConfidence } = useMemo(() => {
+  const { bestMatches, relatedResults, showConfidence } = useMemo(() => {
     const sorted = [...results].sort(
       (a, b) => (b.relevance_score ?? -1) - (a.relevance_score ?? -1)
     );
     const scores = sorted
       .map((r) => r.relevance_score)
       .filter((s): s is number => s != null && s > 0.1);
-    const highCount = scores.filter((s) => s >= BEST_MATCH_THRESHOLD).length;
+    const highCount = scores.filter((s) => s >= 0.70).length;
     const showConf = scores.length > 0 && highCount <= HIGH_SCORE_CAP_FOR_CONFIDENCE;
 
     const best: Monologue[] = [];
     const related: Monologue[] = [];
     for (const mono of sorted) {
-      if (showConf && mono.relevance_score != null && mono.relevance_score >= BEST_MATCH_THRESHOLD) {
+      if (showConf && (mono.match_type === "exact_quote" || mono.match_type === "fuzzy_quote")) {
         best.push(mono);
       } else {
         related.push(mono);
@@ -1000,8 +1002,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           <IconTargetArrow className="h-5 w-5 text-primary" />
                         </div>
                         <div>
-                          <h2 className="text-lg font-semibold text-foreground">Best match</h2>
-                          <p className="text-sm text-muted-foreground">We found exactly what you&apos;re looking for</p>
+                          <h2 className="text-lg font-semibold text-foreground">This is the monologue</h2>
+                          <p className="text-sm text-muted-foreground">We found the piece that contains your quote</p>
                         </div>
                       </div>
                     )}
