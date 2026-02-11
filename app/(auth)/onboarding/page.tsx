@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import api from '@/lib/api';
@@ -11,7 +12,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { PhotoEditor } from '@/components/profile/PhotoEditor';
 import {
-  Sparkles,
   Theater,
   Film,
   Mic,
@@ -19,14 +19,10 @@ import {
   ChevronRight,
   ChevronLeft,
   Check,
-  Star,
   User,
-  MapPin,
   Camera,
   Ruler,
   Calendar,
-  Briefcase,
-  Settings,
   Info
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
@@ -530,21 +526,27 @@ function WelcomeStep({ onNext }: { onNext: () => void }) {
       transition={{ duration: 0.3 }}
       className="space-y-8"
     >
-      <div className="space-y-3">
-        <h1 className="font-brand text-4xl md:text-5xl font-bold tracking-tight text-foreground">
-          ActorRise
-        </h1>
-        <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-mono">
-          Set up your profile
-        </p>
+      <div className="flex flex-col items-center text-center space-y-4">
+        <div className="relative w-24 h-24 md:w-28 md:h-28 flex-shrink-0">
+          <Image
+            src="/logo.png"
+            alt="ActorRise"
+            fill
+            className="object-contain"
+            priority
+          />
+        </div>
+        <div className="space-y-2">
+          <h1 className="font-brand text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+            ActorRise
+          </h1>
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground font-mono">
+            Set up your profile
+          </p>
+        </div>
         <p className="text-sm text-muted-foreground leading-relaxed max-w-md">
           A short setup so we can tailor monologue suggestions and audition tools to you. You can update anything later in your profile.
         </p>
-      </div>
-      <div className="flex justify-center py-6">
-        <div className="w-20 h-20 rounded-full border border-border flex items-center justify-center bg-muted/80">
-          <Sparkles className="w-10 h-10 text-muted-foreground" />
-        </div>
       </div>
       <Button onClick={onNext} className="w-full gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
         Get started
@@ -605,7 +607,7 @@ function LocationStep({
   onBack: () => void;
   onSkip: () => void;
 }) {
-  const locations = ['NYC', 'LA', 'Chicago', 'Atlanta', 'Boston', 'Seattle', 'Regional', 'Other'];
+  const locations = ['NYC', 'LA', 'San Francisco', 'Chicago', 'Atlanta', 'Boston', 'Seattle', 'Regional', 'Other'];
 
   return (
     <motion.div
@@ -762,9 +764,9 @@ function ExperienceStep({
   onSkip: () => void;
 }) {
   const levels = [
-    { id: 'Student', label: 'Student', emoji: '🌱', description: 'Just starting' },
-    { id: 'Emerging', label: 'Emerging', emoji: '🎭', description: 'Some training' },
-    { id: 'Professional', label: 'Professional', emoji: '⭐', description: 'Working actor' },
+    { id: 'Student', label: 'Student', description: 'Just starting' },
+    { id: 'Emerging', label: 'Emerging', description: 'Some training' },
+    { id: 'Professional', label: 'Professional', description: 'Working actor' },
   ];
 
   return (
@@ -798,12 +800,11 @@ function ExperienceStep({
                 isSelected ? 'border-accent bg-accent/10' : 'border-border hover:border-accent/50 bg-muted/30'
               }`}
             >
-              <span className="text-2xl">{level.emoji}</span>
               <div className="flex-1">
                 <div className="font-medium text-foreground">{level.label}</div>
                 <div className="text-xs text-muted-foreground">{level.description}</div>
               </div>
-              {isSelected && <Check className="w-5 h-5 text-accent-foreground" />}
+              {isSelected && <Check className="w-5 h-5 text-accent-foreground flex-shrink-0" />}
             </button>
           );
         })}
@@ -1210,19 +1211,6 @@ function PreferencesStep({
             <span>Low</span>
             <span>High</span>
           </div>
-        </div>
-
-        <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
-          <div>
-            <div className="font-medium">AI-Powered Recommendations</div>
-            <div className="text-sm text-muted-foreground">Enable semantic search</div>
-          </div>
-          <input
-            type="checkbox"
-            checked={formData.profile_bias_enabled}
-            onChange={(e) => updateFormData('profile_bias_enabled', e.target.checked)}
-            className="w-4 h-4"
-          />
         </div>
       </div>
     </motion.div>

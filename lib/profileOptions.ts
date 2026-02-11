@@ -6,6 +6,7 @@
 export const LOCATIONS = [
   "NYC",
   "LA",
+  "San Francisco",
   "Chicago",
   "Atlanta",
   "Boston",
