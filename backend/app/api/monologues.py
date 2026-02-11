@@ -191,18 +191,24 @@ async def search_monologues(
     all_results_with_scores: list[tuple[Monologue, float]] = []
 
     quote_match_types: dict[int, str] = {}
+    actor_profile_for_search: dict | None = None
+    if current_user.actor_profile:
+        ap = current_user.actor_profile
+        actor_profile_for_search = {
+            "gender": (ap.gender or "").strip(),
+            "age_range": (ap.age_range or "").strip(),
+            "profile_bias_enabled": getattr(ap, "profile_bias_enabled", True),
+        }
     if q and q.strip():
         # Semantic search returns (list of (Monologue, score), quote_match_types)
         all_results_with_scores, quote_match_types = search_service.search(
-            q.strip(), limit=fetch_limit, filters=filters, user_id=cast(int, current_user.id)
+            q.strip(),
+            limit=fetch_limit,
+            filters=filters,
+            user_id=cast(int, current_user.id),
+            actor_profile=actor_profile_for_search,
         )
         has_scores = True
-        # DEBUG: Log first few results
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.warning(f"SEARCH DEBUG: query='{q}', got {len(all_results_with_scores)} results")
-        for i, (m, s) in enumerate(all_results_with_scores[:3]):
-            logger.warning(f"  {i+1}. {m.character_name} ({m.play.title}) score={s:.2f}")
     else:
         # Random/discover returns just Monologues, wrap with None score
         random_results = search_service.get_random_monologues(limit=fetch_limit, filters=filters)

@@ -59,6 +59,64 @@ def _strip_punctuation(text: str) -> str:
     return text
 
 
+def _profile_match_boost(mono: Monologue, actor_profile: Optional[Dict]) -> float:
+    """
+    Return a small score boost when the monologue matches the actor's profile
+    (e.g. character gender/age fits the actor). Only applies when profile_bias_enabled.
+    """
+    if not actor_profile or not actor_profile.get("profile_bias_enabled", True):
+        return 0.0
+    boost = 0.0
+    ap_gender = (actor_profile.get("gender") or "").strip().lower()
+    if ap_gender:
+        cg = (mono.character_gender or "").lower()
+        if cg == ap_gender or cg == "any":
+            boost += 0.08
+    ap_age = (actor_profile.get("age_range") or "").strip().lower()
+    if ap_age:
+        ca = (mono.character_age_range or "").lower()
+        if ca == ap_age or ca == "any":
+            boost += 0.07
+    return min(0.12, boost)
+
+
+def _filter_match_boost(mono: Monologue, merged_filters: Dict) -> float:
+    """
+    Return a score boost (0.0 to 0.35) when the monologue matches parsed query filters.
+    So "funny piece for a woman 2min" results that match female + joy + duration get
+    a higher displayed confidence (e.g. 37% -> 65%) and feel more encouraging.
+    """
+    if not merged_filters:
+        return 0.0
+    boost = 0.0
+    if merged_filters.get("gender"):
+        g = (mono.character_gender or "").lower()
+        want = (merged_filters["gender"] or "").lower()
+        if g == want or g == "any" or want == "any":
+            boost += 0.12
+    if merged_filters.get("emotion"):
+        e = (mono.primary_emotion or "").lower()
+        if e == (merged_filters["emotion"] or "").lower():
+            boost += 0.12
+    if merged_filters.get("max_duration"):
+        try:
+            max_sec = int(merged_filters["max_duration"])
+            if mono.estimated_duration_seconds <= max_sec:
+                boost += 0.11
+        except (TypeError, ValueError):
+            pass
+    want_themes = merged_filters.get("themes")
+    if not want_themes and merged_filters.get("theme"):
+        want_themes = [merged_filters["theme"]]
+    if want_themes and mono.themes:
+        mono_themes_lower = [str(t).lower() for t in (mono.themes or []) if t]
+        for wt in want_themes if isinstance(want_themes, list) else [want_themes]:
+            if wt and str(wt).lower() in mono_themes_lower:
+                boost += 0.05
+                break
+    return min(0.35, boost)
+
+
 def _fuzzy_quote_match(
     query: str, text: str, min_word_ratio: float = 0.75, max_span_words: int = 16
 ) -> bool:
@@ -112,7 +170,8 @@ class SemanticSearch:
         query: str,
         limit: int = 20,
         filters: Optional[Dict] = None,
-        user_id: Optional[int] = None
+        user_id: Optional[int] = None,
+        actor_profile: Optional[Dict] = None,
     ) -> List[tuple[Monologue, float]]:
         """
         Semantic search for monologues.
@@ -131,6 +190,7 @@ class SemanticSearch:
                 'max_duration': 180  # seconds
             }
             user_id: Optional user ID to prioritize bookmarked monologues
+            actor_profile: Optional dict with gender, age_range, profile_bias_enabled to boost results that fit the actor
 
         Returns:
             List of (Monologue, relevance_score) tuples, sorted by relevance.
@@ -488,6 +548,19 @@ class SemanticSearch:
                 "Similarity (legacy JSON) took %.2fs for %s candidates",
                 similarity_time, len(results_with_scores)
             )
+
+        # Boost scores when monologue matches parsed filters (gender, emotion, duration, theme)
+        results_with_scores = [
+            (mono, min(1.0, score + _filter_match_boost(mono, merged_filters)))
+            for mono, score in results_with_scores
+        ]
+
+        # Boost when monologue fits the actor's profile (gender, age) if profile_bias_enabled
+        if actor_profile:
+            results_with_scores = [
+                (mono, min(1.0, score + _profile_match_boost(mono, actor_profile)))
+                for mono, score in results_with_scores
+            ]
 
         # Sort by similarity (descending) and limit
         results_with_scores.sort(key=lambda x: x[1], reverse=True)
