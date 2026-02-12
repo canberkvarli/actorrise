@@ -10,7 +10,14 @@ from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
 from app.core.database import get_db
-from app.models.actor import Play, Scene, SceneLine, UserScript
+from app.models.actor import (
+    Play,
+    RehearsalLineDelivery,
+    RehearsalSession,
+    Scene,
+    SceneLine,
+    UserScript,
+)
 from app.models.user import User
 from app.services.script_parser import ScriptParser
 
@@ -87,6 +94,14 @@ class SceneUpdate(BaseModel):
     setting: Optional[str] = None
     context_before: Optional[str] = None
     context_after: Optional[str] = None
+
+
+class CreateScriptFromTextRequest(BaseModel):
+    """Create a script from pasted text (no file upload)"""
+    body: str
+    title: Optional[str] = None
+    author: Optional[str] = None
+    description: Optional[str] = None
 
 
 # ============================================================================
@@ -238,10 +253,10 @@ async def upload_script(
         db.commit()
         db.refresh(user_script)
 
-        # Return detailed response
+        # Return detailed response (use model_validate so ORM instances serialize correctly)
         return UserScriptDetailResponse(
-            **user_script.__dict__,
-            scenes=[SceneInScriptResponse(**s.__dict__) for s in scenes_created]
+            **UserScriptResponse.model_validate(user_script).model_dump(),
+            scenes=[SceneInScriptResponse.model_validate(s) for s in scenes_created],
         )
 
     except Exception as e:
@@ -256,6 +271,135 @@ async def upload_script(
         )
 
 
+@router.post("/from-text", response_model=UserScriptDetailResponse)
+async def create_script_from_text(
+    request: CreateScriptFromTextRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Create a script from pasted text. AI extracts title, author, characters,
+    and two-person scenes (same as file upload). Use this to rehearse without uploading a file.
+    """
+    body = request.body.strip()
+    if len(body) < 100:
+        raise HTTPException(
+            status_code=400,
+            detail="Text is too short. Paste at least a few lines of dialogue to extract a scene."
+        )
+    text_bytes = body.encode("utf-8")
+    if len(text_bytes) > 10 * 1024 * 1024:  # 10MB
+        raise HTTPException(status_code=400, detail="Text too long (max 10MB)")
+
+    user_script = UserScript(
+        user_id=current_user.id,
+        title=request.title or "Pasted Script",
+        author=request.author or "Unknown",
+        description=request.description,
+        original_filename="Pasted script",
+        file_type="txt",
+        file_size_bytes=len(text_bytes),
+        file_path=None,
+        processing_status="processing",
+    )
+    db.add(user_script)
+    db.commit()
+    db.refresh(user_script)
+
+    try:
+        parser = ScriptParser()
+        result = parser.parse_script(text_bytes, "txt", "Pasted script.txt")
+
+        metadata = result["metadata"]
+        user_script.raw_text = result["raw_text"]
+        user_script.title = request.title or metadata.get("title", "Pasted Script")
+        user_script.author = request.author or metadata.get("author", "Unknown")
+        user_script.characters = metadata.get("characters", [])
+        user_script.genre = metadata.get("genre")
+        user_script.estimated_length_minutes = metadata.get("estimated_length_minutes")
+        user_script.num_characters = len(metadata.get("characters", []))
+
+        play = Play(
+            title=user_script.title,
+            author=user_script.author,
+            year_written=None,
+            genre=user_script.genre or "Drama",
+            category="contemporary",
+            copyright_status="user_uploaded",
+            license_type="user_content",
+            source_url=None,
+            full_text=result["raw_text"],
+            text_format="plain",
+        )
+        db.add(play)
+        db.commit()
+        db.refresh(play)
+
+        scenes_created = []
+        for scene_data in result["scenes"]:
+            lines_count = len(scene_data.get("lines", []))
+            total_words = sum(len(line.get("text", "").split()) for line in scene_data.get("lines", []))
+            duration_seconds = int((total_words / 150) * 60)
+            char1_info = next(
+                (c for c in user_script.characters if c.get("name") == scene_data.get("character_1")),
+                {},
+            )
+            char2_info = next(
+                (c for c in user_script.characters if c.get("name") == scene_data.get("character_2")),
+                {},
+            )
+            scene = Scene(
+                play_id=play.id,
+                user_script_id=user_script.id,
+                title=scene_data.get("title", "Untitled Scene"),
+                description=scene_data.get("description"),
+                character_1_name=scene_data.get("character_1", "Character 1"),
+                character_2_name=scene_data.get("character_2", "Character 2"),
+                character_1_gender=char1_info.get("gender"),
+                character_2_gender=char2_info.get("gender"),
+                character_1_age_range=char1_info.get("age_range"),
+                character_2_age_range=char2_info.get("age_range"),
+                line_count=lines_count,
+                estimated_duration_seconds=duration_seconds,
+                setting=scene_data.get("setting"),
+                difficulty_level="intermediate",
+                primary_emotions=[],
+                is_verified=False,
+            )
+            db.add(scene)
+            db.flush()
+            for idx, line_data in enumerate(scene_data.get("lines", [])):
+                scene_line = SceneLine(
+                    scene_id=scene.id,
+                    line_order=idx,
+                    character_name=line_data.get("character", "Unknown"),
+                    text=line_data.get("text", ""),
+                    stage_direction=line_data.get("stage_direction"),
+                    word_count=len(line_data.get("text", "").split()),
+                )
+                db.add(scene_line)
+            scenes_created.append(scene)
+
+        user_script.num_scenes_extracted = len(scenes_created)
+        user_script.processing_status = "completed"
+        user_script.ai_extraction_completed = True
+        db.commit()
+        db.refresh(user_script)
+
+        return UserScriptDetailResponse(
+            **UserScriptResponse.model_validate(user_script).model_dump(),
+            scenes=[SceneInScriptResponse.model_validate(s) for s in scenes_created],
+        )
+    except Exception as e:
+        user_script.processing_status = "failed"
+        user_script.processing_error = str(e)
+        db.commit()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process script: {str(e)}",
+        )
+
+
 @router.get("/", response_model=List[UserScriptResponse])
 async def list_user_scripts(
     db: Session = Depends(get_db),
@@ -266,7 +410,7 @@ async def list_user_scripts(
         UserScript.user_id == current_user.id
     ).order_by(UserScript.created_at.desc()).all()
 
-    return [UserScriptResponse(**s.__dict__) for s in scripts]
+    return [UserScriptResponse.model_validate(s) for s in scripts]
 
 
 @router.get("/{script_id}", response_model=UserScriptDetailResponse)
@@ -288,8 +432,8 @@ async def get_script(
     scenes = db.query(Scene).filter(Scene.user_script_id == script_id).all()
 
     return UserScriptDetailResponse(
-        **script.__dict__,
-        scenes=[SceneInScriptResponse(**s.__dict__) for s in scenes]
+        **UserScriptResponse.model_validate(script).model_dump(),
+        scenes=[SceneInScriptResponse.model_validate(s) for s in scenes],
     )
 
 
@@ -322,7 +466,7 @@ async def update_script_metadata(
     db.commit()
     db.refresh(script)
 
-    return UserScriptResponse(**script.__dict__)
+    return UserScriptResponse.model_validate(script)
 
 
 @router.delete("/{script_id}")
@@ -472,8 +616,16 @@ async def delete_scene(
     if not scene:
         raise HTTPException(status_code=404, detail="Scene not found")
 
+    # Delete rehearsal data that references this scene (session.scene_id is NOT NULL)
+    session_ids = [r[0] for r in db.query(RehearsalSession.id).filter(RehearsalSession.scene_id == scene_id).all()]
+    if session_ids:
+        db.query(RehearsalLineDelivery).filter(RehearsalLineDelivery.session_id.in_(session_ids)).delete(
+            synchronize_session=False
+        )
+        db.query(RehearsalSession).filter(RehearsalSession.scene_id == scene_id).delete(synchronize_session=False)
+
     # Delete scene lines
-    db.query(SceneLine).filter(SceneLine.scene_id == scene_id).delete()
+    db.query(SceneLine).filter(SceneLine.scene_id == scene_id).delete(synchronize_session=False)
 
     # Delete scene
     db.delete(scene)

@@ -27,5 +27,8 @@ class Settings:
     supabase_service_role_key: str | None = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
     supabase_storage_bucket: str = os.getenv("SUPABASE_STORAGE_BUCKET", "headshots")
 
+    # OpenAI (script parsing, scene partner, embeddings)
+    openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
+
 
 settings = Settings()

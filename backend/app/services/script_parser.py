@@ -16,7 +16,12 @@ class ScriptParser:
     """Parse scripts from various file formats"""
 
     def __init__(self):
-        self.client = OpenAI(api_key=settings.OPENAI_API_KEY)
+        api_key = settings.openai_api_key
+        if not api_key:
+            raise ValueError(
+                "OPENAI_API_KEY is not set. Add it to your backend .env file (e.g. OPENAI_API_KEY=sk-...)."
+            )
+        self.client = OpenAI(api_key=api_key)
 
     def extract_text_from_pdf(self, file_content: bytes) -> str:
         """Extract text from PDF file using pdfplumber"""

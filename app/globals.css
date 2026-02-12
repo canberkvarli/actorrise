@@ -64,8 +64,8 @@
   --popover: oklch(0.995 0 0);
   --popover-foreground: var(--foreground);
 
-  /* Primary: ActorRise orange (buttons/CTAs only) */
-  --primary: oklch(0.7 0.16 45);
+  /* Primary: ActorRise orange – deeper shade so white text has good contrast */
+  --primary: oklch(0.58 0.18 45);
   --primary-foreground: oklch(0.99 0 0);
 
   /* Soft blue secondary for tints/badges */
@@ -111,9 +111,9 @@
   --popover: oklch(0.19 0 0);
   --popover-foreground: var(--foreground);
 
-  /* Primary: ActorRise orange (buttons/CTAs only) */
-  --primary: oklch(0.7 0.16 45);
-  --primary-foreground: oklch(0.98 0 0);
+  /* Primary: ActorRise orange – deeper shade so white text has good contrast */
+  --primary: oklch(0.58 0.18 45);
+  --primary-foreground: oklch(0.99 0 0);
 
   /* Soft blue secondary for tints/badges */
   --secondary: oklch(0.3 0.06 220);
