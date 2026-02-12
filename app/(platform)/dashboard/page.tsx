@@ -17,8 +17,6 @@ import {
   IconEye,
   IconEyeOff,
   IconDownload,
-  IconMicrophone,
-  IconVideo,
   IconInfoCircle,
   IconSearch,
   IconHistory,
@@ -32,7 +30,6 @@ import BookmarksQuickAccess from "@/components/bookmarks/BookmarksQuickAccess";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { useProfileStats, useProfile, useRecommendations, useDiscover } from "@/hooks/useDashboardData";
-import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import { useBookmarkCount, useToggleFavorite } from "@/hooks/useBookmarks";
 import { useQuery } from "@tanstack/react-query";
 
@@ -465,55 +462,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             )}
           </motion.section>
 
-          {/* ========== SECTION 5: Quick Actions Row (Practice tools) ========== */}
-          <motion.section
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-          >
-            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-6">
-              Practice tools
-            </h2>
-            <div className={`grid gap-6 ${SCRIPTS_FEATURE_ENABLED ? "sm:grid-cols-2" : "sm:grid-cols-1 max-w-md"}`}>
-              {SCRIPTS_FEATURE_ENABLED && (
-                <Link href="/scenes" className="block group">
-                  <div className="flex items-center gap-5 p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-md transition-all">
-                    <div className="p-4 rounded-xl bg-gradient-to-br from-violet-500/20 to-purple-500/20 group-hover:from-violet-500/30 group-hover:to-purple-500/30 transition-colors">
-                      <IconMicrophone className="h-7 w-7 text-violet-500" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
-                        Voice ScenePartner
-                      </h3>
-                      <p className="text-muted-foreground mt-1">
-                        Practice scenes with an AI scene partner
-                      </p>
-                    </div>
-                    <IconChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                  </div>
-                </Link>
-              )}
-
-              <Link href="/audition" className="block group">
-                <div className="flex items-center gap-5 p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-md transition-all">
-                  <div className="p-4 rounded-xl bg-gradient-to-br from-rose-500/20 to-orange-500/20 group-hover:from-rose-500/30 group-hover:to-orange-500/30 transition-colors">
-                    <IconVideo className="h-7 w-7 text-rose-500" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
-                      Audition Mode
-                    </h3>
-                    <p className="text-muted-foreground mt-1">
-                      Record yourself and get AI feedback
-                    </p>
-                  </div>
-                  <IconChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                </div>
-              </Link>
-            </div>
-          </motion.section>
-
-          {/* ========== SECTION 6: Bookmarks & Recent Searches ========== */}
+          {/* ========== SECTION 5: Bookmarks & Recent Searches ========== */}
           <motion.section
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
