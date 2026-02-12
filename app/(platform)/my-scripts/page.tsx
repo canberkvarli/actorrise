@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
+import UnderConstructionScripts from "@/components/UnderConstructionScripts";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -64,6 +66,8 @@ interface UserScript {
 }
 
 export default function MyScriptsPage() {
+  if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
+
   const router = useRouter();
   const [scripts, setScripts] = useState<UserScript[]>([]);
   const [isLoading, setIsLoading] = useState(true);

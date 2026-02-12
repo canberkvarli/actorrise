@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
+import UnderConstructionScripts from "@/components/UnderConstructionScripts";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,6 +50,8 @@ interface UserScript {
 }
 
 export default function ScriptDetailPage() {
+  if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
+
   const router = useRouter();
   const params = useParams();
   const scriptId = parseInt(params.id as string);

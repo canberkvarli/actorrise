@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter, useParams } from 'next/navigation';
+import { SCRIPTS_FEATURE_ENABLED } from '@/lib/featureFlags';
+import UnderConstructionScripts from '@/components/UnderConstructionScripts';
 import api from '@/lib/api';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -55,6 +57,8 @@ interface Scene {
 }
 
 export default function SceneDetailPage() {
+  if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
+
   const router = useRouter();
   const params = useParams();
   const sceneId = params.id as string;

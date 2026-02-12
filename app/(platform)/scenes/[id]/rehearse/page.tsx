@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
+import { SCRIPTS_FEATURE_ENABLED } from '@/lib/featureFlags';
+import UnderConstructionScripts from '@/components/UnderConstructionScripts';
 import api from '@/lib/api';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -48,6 +50,8 @@ interface Message {
 }
 
 export default function RehearsalPage() {
+  if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
+
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();

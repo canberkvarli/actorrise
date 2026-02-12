@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { IconHome, IconSearch, IconUser, IconLogout, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo } from "@tabler/icons-react";
+import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarkCount";
@@ -85,7 +86,7 @@ export default function PlatformLayout({
   const navItems = [
     { href: "/dashboard", label: "Home", icon: IconHome },
     { href: "/search", label: "MonologueMatch", icon: IconSearch },
-    { href: "/my-scripts", label: "ScenePartner", icon: IconMask },
+    ...(SCRIPTS_FEATURE_ENABLED ? [{ href: "/my-scripts", label: "ScenePartner", icon: IconMask }] : []),
     { href: "/audition", label: "Audition Mode", icon: IconVideo },
   ];
 
