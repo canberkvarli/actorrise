@@ -30,24 +30,96 @@ const playfairDisplay = Playfair_Display({
   weight: ["500", "600", "700"],
 });
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+
 export const metadata: Metadata = {
-  title: "ActorRise - Your Complete Acting Platform",
-  description: "MonologueMatch, ScenePartner, CraftCoach, and more - all in one place for actors",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "ActorRise - World's Largest AI-Powered Monologue Search | 8,600+ Monologues",
+    template: "%s | ActorRise",
+  },
+  description:
+    "Find audition-ready monologues in seconds. 8,600+ searchable monologues (4–8x larger than Backstage), AI semantic search that understands what you need. Free tier available.",
+  keywords: [
+    "monologue search",
+    "audition monologues",
+    "AI monologue finder",
+    "actor monologues",
+    "theatre monologues",
+    "monologue database",
+    "semantic search monologues",
+    "contemporary monologues",
+    "classical monologues",
+    "acting auditions",
+  ],
+  authors: [{ name: "ActorRise", url: siteUrl }],
+  creator: "ActorRise",
   icons: {
     icon: "/favicon.ico",
     apple: "/apple-touch-icon.png",
   },
   openGraph: {
-    title: "ActorRise - Your Complete Acting Platform",
-    description: "MonologueMatch, ScenePartner, CraftCoach, and more - all in one place for actors",
-    images: ["/logo.png"],
+    type: "website",
+    locale: "en_US",
+    url: siteUrl,
+    siteName: "ActorRise",
+    title: "ActorRise - World's Largest AI-Powered Monologue Search | 8,600+ Monologues",
+    description:
+      "Find audition-ready monologues in seconds. 8,600+ searchable monologues (4–8x larger than Backstage), AI semantic search that understands what you need.",
+    images: [
+      {
+        url: "/logo.png",
+        width: 512,
+        height: 512,
+        alt: "ActorRise - AI-powered monologue discovery for actors",
+      },
+    ],
   },
   twitter: {
-    card: "summary",
-    title: "ActorRise - Your Complete Acting Platform",
-    description: "MonologueMatch, ScenePartner, CraftCoach, and more - all in one place for actors",
+    card: "summary_large_image",
+    title: "ActorRise - World's Largest AI-Powered Monologue Search | 8,600+ Monologues",
+    description:
+      "Find audition-ready monologues in seconds. 8,600+ monologues, AI semantic search. Free tier available.",
     images: ["/logo.png"],
   },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large" as const,
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
+  alternates: { canonical: siteUrl },
+};
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": `${siteUrl}/#organization`,
+      name: "ActorRise",
+      url: siteUrl,
+      description:
+        "World's largest AI-powered monologue discovery platform. 8,600+ searchable monologues with semantic search for actors.",
+      logo: { "@type": "ImageObject", url: `${siteUrl}/logo.png` },
+    },
+    {
+      "@type": "WebApplication",
+      "@id": `${siteUrl}/#webapp`,
+      name: "ActorRise",
+      url: siteUrl,
+      description:
+        "Find audition-ready monologues in seconds. 8,600+ monologues (4–8x larger than competitors), AI semantic search that understands natural language.",
+      applicationCategory: "EntertainmentApplication",
+      operatingSystem: "Any",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    },
+  ],
 };
 
 export default function RootLayout({
@@ -60,6 +132,10 @@ export default function RootLayout({
       <body
         className={`${montserrat.variable} ${jetbrainsMono.variable} ${cormorantGaramond.variable} ${playfairDisplay.variable} font-sans antialiased`}
       >
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         <FontLoader />
         <ThemeProvider
           attribute="class"

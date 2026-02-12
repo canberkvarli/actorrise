@@ -36,6 +36,8 @@ interface RehearsalSession {
   current_line_index: number;
   total_lines_delivered: number;
   completion_percentage: number;
+  first_line_for_user?: string | null;
+  current_line_for_user?: string | null;
 }
 
 interface Message {
@@ -53,6 +55,8 @@ export default function RehearsalPage() {
   const sessionId = searchParams.get('session');
 
   const [session, setSession] = useState<RehearsalSession | null>(null);
+  /** The line the user should deliver next (from script). Updated from session fetch and deliver response next_line_preview. */
+  const [currentLineForUser, setCurrentLineForUser] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [userInput, setUserInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -101,6 +105,8 @@ export default function RehearsalPage() {
   useEffect(() => {
     if (sessionId) {
       loadSession();
+    } else {
+      setError('No session. Start rehearsal from your script (My Scripts → pick character → Rehearse).');
     }
   }, [sessionId]);
 
@@ -113,25 +119,22 @@ export default function RehearsalPage() {
   };
 
   const loadSession = async () => {
-    // For now, just create a mock session
-    // In production, this would fetch the actual session
-    setSession({
-      id: parseInt(sessionId!),
-      scene_id: parseInt(sceneId),
-      user_character: 'Character 1',
-      ai_character: 'Character 2',
-      status: 'in_progress',
-      current_line_index: 0,
-      total_lines_delivered: 0,
-      completion_percentage: 0
-    });
-
-    // Add welcome message
-    setMessages([{
-      type: 'system',
-      character: 'Director',
-      content: `Welcome to rehearsal! You're playing Character 1. I'll be your scene partner as Character 2. Ready when you are!`
-    }]);
+    if (!sessionId) return;
+    try {
+      const { data } = await api.get<RehearsalSession>(
+        `/api/scenes/rehearse/sessions/${sessionId}`
+      );
+      setSession(data);
+      const lineToShow = data.current_line_for_user ?? data.first_line_for_user ?? null;
+      setCurrentLineForUser(lineToShow);
+      setMessages([{
+        type: 'system',
+        character: 'Director',
+        content: `You're playing ${data.user_character}. I'll be your scene partner as ${data.ai_character}. Deliver your lines when ready.`
+      }]);
+    } catch {
+      setError('Session not found. Start rehearsal from your script.');
+    }
   };
 
   const handleDeliverLine = async () => {
@@ -156,6 +159,7 @@ export default function RehearsalPage() {
         feedback?: string;
         completion_percentage: number;
         session_status: string;
+        next_line_preview?: string | null;
       }>('/api/scenes/rehearse/deliver', {
         session_id: session.id,
         user_input: inputToSend,
@@ -180,15 +184,17 @@ export default function RehearsalPage() {
         speak(data.ai_response);
       }
 
-      // Update session
+      // Update session and next line for user
       setSession({
         ...session,
         completion_percentage: data.completion_percentage,
         total_lines_delivered: session.total_lines_delivered + 1
       });
+      setCurrentLineForUser(data.next_line_preview ?? null);
 
       // Check if scene complete
       if (data.session_status === 'completed') {
+        setCurrentLineForUser(null);
         await loadFeedback();
         setShowFeedback(true);
       }
@@ -239,8 +245,19 @@ export default function RehearsalPage() {
     return (
       <div className="container mx-auto px-4 py-16 max-w-4xl">
         <div className="flex flex-col items-center justify-center text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-primary mx-auto" />
-          <p className="text-muted-foreground text-sm">Preparing your rehearsal session...</p>
+          {error ? (
+            <>
+              <p className="text-muted-foreground text-sm">{error}</p>
+              <Button variant="outline" onClick={() => router.push('/my-scripts')}>
+                Go to My Scripts
+              </Button>
+            </>
+          ) : (
+            <>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-primary mx-auto" />
+              <p className="text-muted-foreground text-sm">Preparing your rehearsal session...</p>
+            </>
+          )}
         </div>
       </div>
     );
@@ -400,6 +417,13 @@ export default function RehearsalPage() {
                     >
                       Dismiss
                     </button>
+                  </div>
+                )}
+
+                {currentLineForUser && (
+                  <div className="rounded-md border border-border bg-muted/50 px-3 py-2">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Your line</p>
+                    <p className="text-sm">{currentLineForUser}</p>
                   </div>
                 )}
 

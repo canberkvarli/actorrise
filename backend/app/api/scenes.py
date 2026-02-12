@@ -8,7 +8,7 @@ from typing import List, Optional
 from app.api.auth import get_current_user
 from app.core.database import get_db
 from app.models.actor import (RehearsalLineDelivery, RehearsalSession, Scene,
-                              SceneFavorite)
+                              SceneFavorite, UserScript)
 from app.models.user import User
 from app.services.ai.langchain.scene_partner import (ScenePartnerGraph,
                                                      ScenePartnerState)
@@ -96,6 +96,8 @@ class RehearsalSessionResponse(BaseModel):
     total_lines_delivered: int
     completion_percentage: float
     started_at: datetime
+    first_line_for_user: Optional[str] = None  # User's first line to deliver (when first in scene)
+    current_line_for_user: Optional[str] = None  # User's next line to deliver (for GET session)
 
     class Config:
         from_attributes = True
@@ -137,6 +139,7 @@ async def list_scenes(
     limit: int = 20,
     play_id: Optional[int] = None,
     character_gender: Optional[str] = None,
+    user_scripts_only: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -146,8 +149,14 @@ async def list_scenes(
     Filters:
     - play_id: Filter by specific play
     - character_gender: male, female, any
+    - user_scripts_only: if True, only return scenes from the current user's uploaded scripts
     """
     query = db.query(Scene)
+
+    if user_scripts_only:
+        query = query.filter(Scene.user_script_id.isnot(None)).join(
+            UserScript, Scene.user_script_id == UserScript.id
+        ).filter(UserScript.user_id == current_user.id)
 
     if play_id:
         query = query.filter(Scene.play_id == play_id)
@@ -274,13 +283,29 @@ async def start_rehearsal(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Start a new rehearsal session"""
+    """Start a new rehearsal session. Only scenes from the user's own scripts can be rehearsed."""
     scene = db.query(Scene).filter_by(id=request.scene_id).first()
 
     if not scene:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Scene not found"
+        )
+
+    # Enforce custom-script-only: rehearsal only for scenes from user's scripts
+    if not scene.user_script_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Rehearsal is only available for scenes from your own scripts. Upload or paste a script in My Scripts first."
+        )
+    script = db.query(UserScript).filter(
+        UserScript.id == scene.user_script_id,
+        UserScript.user_id == current_user.id
+    ).first()
+    if not script:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Rehearsal is only available for scenes from your own scripts."
         )
 
     # Validate character choice
@@ -313,7 +338,16 @@ async def start_rehearsal(
     db.commit()
     db.refresh(session)
 
-    return RehearsalSessionResponse(**session.__dict__)
+    # First line for user: when the first line in the scene is the user's character
+    ordered_lines = sorted(scene.lines, key=lambda l: l.line_order)
+    first_line_for_user = None
+    for line in ordered_lines:
+        if line.character_name == request.user_character:
+            first_line_for_user = line.text
+            break
+
+    out = {**session.__dict__, "first_line_for_user": first_line_for_user}
+    return RehearsalSessionResponse(**out)
 
 
 @router.post("/rehearse/deliver", response_model=DeliverLineResponse)
@@ -570,6 +604,42 @@ async def list_rehearsal_sessions(
     ).offset(skip).limit(limit).all()
 
     return [RehearsalSessionResponse(**s.__dict__) for s in sessions]
+
+
+@router.get("/rehearse/sessions/{session_id}", response_model=RehearsalSessionResponse)
+async def get_rehearsal_session(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get a rehearsal session with the user's current line to deliver (for rehearsal UI)."""
+    session = db.query(RehearsalSession).filter_by(
+        id=session_id,
+        user_id=current_user.id
+    ).first()
+
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Rehearsal session not found"
+        )
+
+    out = {**session.__dict__}
+    out["first_line_for_user"] = None
+    out["current_line_for_user"] = None
+
+    if session.status == "in_progress" and session.scene:
+        ordered_lines = sorted(session.scene.lines, key=lambda l: l.line_order)
+        user_char = str(session.user_character) if session.user_character else ""
+        current_idx = int(session.current_line_index) if session.current_line_index is not None else 0
+        for i in range(current_idx, len(ordered_lines)):
+            if ordered_lines[i].character_name == user_char:
+                out["current_line_for_user"] = ordered_lines[i].text
+                if i == 0:
+                    out["first_line_for_user"] = ordered_lines[i].text
+                break
+
+    return RehearsalSessionResponse(**out)
 
 
 # ============================================================================

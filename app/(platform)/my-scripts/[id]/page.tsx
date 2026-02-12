@@ -56,6 +56,9 @@ export default function ScriptDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  /** Which character the user will play per scene (sceneId -> character name) */
+  const [selectedCharacter, setSelectedCharacter] = useState<Record<number, string>>({});
+  const [startingRehearsalFor, setStartingRehearsalFor] = useState<number | null>(null);
 
   useEffect(() => {
     fetchScript();
@@ -100,6 +103,25 @@ export default function ScriptDetailPage() {
     } catch (error) {
       console.error("Update error:", error);
       toast.error("Failed to update");
+    }
+  };
+
+  const handleStartRehearsal = async (scene: Scene) => {
+    const userCharacter = selectedCharacter[scene.id] ?? scene.character_1_name;
+    setStartingRehearsalFor(scene.id);
+    try {
+      const { data } = await api.post<{ id: number }>('/api/scenes/rehearse/start', {
+        scene_id: scene.id,
+        user_character: userCharacter,
+      });
+      router.push(`/scenes/${scene.id}/rehearse?session=${data.id}`);
+    } catch (err: unknown) {
+      const message = err && typeof err === 'object' && 'response' in err
+        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : 'Failed to start rehearsal';
+      toast.error(typeof message === 'string' ? message : 'Failed to start rehearsal');
+    } finally {
+      setStartingRehearsalFor(null);
     }
   };
 
@@ -374,7 +396,7 @@ export default function ScriptDetailPage() {
                       <div className="flex-1 space-y-3">
                         <h3 className="text-lg font-semibold">{scene.title}</h3>
 
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                           <div className="flex items-center gap-2">
                             <Users className="w-4 h-4" />
                             <span>
@@ -392,15 +414,49 @@ export default function ScriptDetailPage() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        <label className="flex items-center gap-2 text-sm whitespace-nowrap">
+                          <span className="text-muted-foreground">I play:</span>
+                          <select
+                            className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                            value={selectedCharacter[scene.id] ?? scene.character_1_name}
+                            onChange={(e) =>
+                              setSelectedCharacter((prev) => ({
+                                ...prev,
+                                [scene.id]: e.target.value,
+                              }))
+                            }
+                          >
+                            <option value={scene.character_1_name}>{scene.character_1_name}</option>
+                            <option value={scene.character_2_name}>{scene.character_2_name}</option>
+                          </select>
+                        </label>
                         <Button
                           variant="default"
                           size="sm"
-                          onClick={() => router.push(`/scenes/${scene.id}/rehearse`)}
+                          onClick={() => handleStartRehearsal(scene)}
+                          disabled={startingRehearsalFor === scene.id}
                           className="gap-2"
                         >
-                          <Play className="w-4 h-4" />
-                          Rehearse
+                          {startingRehearsalFor === scene.id ? (
+                            <>
+                              <span className="animate-pulse">Starting…</span>
+                            </>
+                          ) : (
+                            <>
+                              <Play className="w-4 h-4" />
+                              Rehearse
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => router.push(`/my-scripts/${scriptId}/scenes/${scene.id}/edit`)}
+                          className="gap-1"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                          Edit
                         </Button>
                         <Button
                           variant="ghost"

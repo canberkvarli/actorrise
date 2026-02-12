@@ -85,7 +85,7 @@ export default function PlatformLayout({
   const navItems = [
     { href: "/dashboard", label: "Home", icon: IconHome },
     { href: "/search", label: "MonologueMatch", icon: IconSearch },
-    { href: "/scenes", label: "ScenePartner", icon: IconMask },
+    { href: "/my-scripts", label: "ScenePartner", icon: IconMask },
     { href: "/audition", label: "Audition Mode", icon: IconVideo },
   ];
 
