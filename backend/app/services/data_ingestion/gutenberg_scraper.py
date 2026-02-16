@@ -74,6 +74,58 @@ CLASSICAL_PLAYWRIGHTS = {
         "Volpone", "The Alchemist", "Bartholomew Fair",
         "Sejanus His Fall", "Epicoene", "Every Man in His Humour",
         "Catiline His Conspiracy"
+    ],
+    # EXPANSION: Restoration & 18th Century (1660-1800)
+    "William Congreve": [
+        "The Way of the World", "Love for Love", "The Double Dealer",
+        "The Old Bachelor", "The Mourning Bride"
+    ],
+    "Richard Brinsley Sheridan": [
+        "The School for Scandal", "The Rivals", "The Critic",
+        "A Trip to Scarborough", "St. Patrick's Day"
+    ],
+    "Oliver Goldsmith": [
+        "She Stoops to Conquer", "The Good-Natured Man"
+    ],
+    "John Dryden": [
+        "All for Love", "The Indian Queen", "The Indian Emperor",
+        "Marriage à la Mode", "Aureng-Zebe"
+    ],
+    "William Wycherley": [
+        "The Country Wife", "The Plain Dealer", "Love in a Wood",
+        "The Gentleman Dancing-Master"
+    ],
+    # EXPANSION: 19th Century (1800-1900)
+    "Arthur Wing Pinero": [
+        "The Second Mrs. Tanqueray", "Trelawny of the Wells",
+        "The Magistrate", "Dandy Dick", "The Notorious Mrs. Ebbsmith"
+    ],
+    "Victorien Sardou": [
+        "La Tosca", "Fedora", "Madame Sans-Gêne", "Diplomacy"
+    ],
+    "Alexandre Dumas fils": [
+        "The Lady of the Camellias", "The Natural Son", "The Ideas of Madame Aubray"
+    ],
+    # EXPANSION: Early 20th Century (1900-1927 - PUBLIC DOMAIN)
+    "John Galsworthy": [
+        "The Silver Box", "Strife", "Justice", "The Pigeon",
+        "The Eldest Son", "The Fugitive", "The Mob", "Loyalties"
+    ],
+    "J.M. Barrie": [
+        "Peter Pan", "The Admirable Crichton", "Quality Street",
+        "What Every Woman Knows", "Dear Brutus", "Mary Rose"
+    ],
+    "John Millington Synge": [
+        "The Playboy of the Western World", "Riders to the Sea",
+        "The Shadow of the Glen", "The Well of the Saints", "Deirdre of the Sorrows"
+    ],
+    "Lady Gregory": [
+        "The Rising of the Moon", "Spreading the News", "The Workhouse Ward",
+        "The Gaol Gate", "Hyacinth Halvey"
+    ],
+    "W.B. Yeats": [
+        "The Countess Cathleen", "Cathleen ni Houlihan", "The Land of Heart's Desire",
+        "On Baile's Strand", "Deirdre", "The Green Helmet"
     ]
 }
 

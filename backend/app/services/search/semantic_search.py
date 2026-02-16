@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import re
+from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
@@ -17,12 +18,13 @@ from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session
 
 # Module-level in-memory caches (Level 0 hot cache shared across SemanticSearch instances).
+# Uses OrderedDict for LRU eviction - popular queries stay cached longer.
 # These are always available, even when Redis is not installed, and keep repeat
 # queries cheap within a single process. Keys use a *canonical* form of the query
 # so trivial variants like "Hamlet", "hamlet ", or "HAMLET!!!" all share entries.
-EMBEDDING_CACHE: Dict[str, List[float]] = {}
-QUERY_PARSE_CACHE: Dict[str, Dict] = {}
-SEARCH_RESULTS_CACHE: Dict[str, List[Any]] = {}
+EMBEDDING_CACHE: OrderedDict[str, List[float]] = OrderedDict()
+QUERY_PARSE_CACHE: OrderedDict[str, Dict] = OrderedDict()
+SEARCH_RESULTS_CACHE: OrderedDict[str, List[Any]] = OrderedDict()
 
 
 def _canonicalize_query_for_cache(raw_query: str) -> str:
@@ -229,6 +231,7 @@ class SemanticSearch:
                 if query_hash in QUERY_PARSE_CACHE:
                     logger.debug("Using in-memory cached query parse for: %s", query)
                     extracted_filters = QUERY_PARSE_CACHE[query_hash]
+                    QUERY_PARSE_CACHE.move_to_end(query_hash)  # Mark as recently used (LRU)
                 else:
                     # Level 1: Redis cache via CacheManager
                     cached_filters = self.cache.get_parsed_filters(canonical_query)
@@ -244,13 +247,13 @@ class SemanticSearch:
                         logger.debug("Query parsing took %.2fs", parse_time)
                         # Store in both in-memory and Redis caches
                         QUERY_PARSE_CACHE[query_hash] = extracted_filters
+                        QUERY_PARSE_CACHE.move_to_end(query_hash)  # Mark as recently used
                         self.cache.set_parsed_filters(canonical_query, extracted_filters)
 
                         # Limit in-memory cache size to prevent memory issues
+                        # LRU eviction: remove least recently used item
                         if len(QUERY_PARSE_CACHE) > 1000:
-                            # Remove oldest entry (simple FIFO)
-                            oldest_key = next(iter(QUERY_PARSE_CACHE))
-                            del QUERY_PARSE_CACHE[oldest_key]
+                            QUERY_PARSE_CACHE.popitem(last=False)  # Remove LRU item
 
         logger.debug("Extracted filters (AI): %s", extracted_filters)
 
@@ -309,6 +312,7 @@ class SemanticSearch:
         if query_hash in EMBEDDING_CACHE:
             logger.debug("Using cached embedding for: %s", query)
             query_embedding = EMBEDDING_CACHE[query_hash]
+            EMBEDDING_CACHE.move_to_end(query_hash)  # Mark as recently used (LRU)
         else:
             # Try Redis-backed embedding cache first
             cached_embedding = self.cache.get_embedding(canonical_query)
@@ -316,6 +320,7 @@ class SemanticSearch:
                 logger.debug("Using Redis cached embedding for: %s", query)
                 query_embedding = cached_embedding
                 EMBEDDING_CACHE[query_hash] = query_embedding
+                EMBEDDING_CACHE.move_to_end(query_hash)  # Mark as recently used
             else:
                 emb_start = time.time()
                 logger.debug("Generating embedding for query (AI): %s", query)
@@ -325,12 +330,12 @@ class SemanticSearch:
                 if query_embedding:
                     # Store in in-memory and Redis caches
                     EMBEDDING_CACHE[query_hash] = query_embedding
+                    EMBEDDING_CACHE.move_to_end(query_hash)  # Mark as recently used
                     self.cache.set_embedding(canonical_query, query_embedding)
                     # Limit in-memory cache size to prevent memory issues
+                    # LRU eviction: remove least recently used item
                     if len(EMBEDDING_CACHE) > 1000:
-                        # Remove oldest entry (simple FIFO)
-                        oldest_key = next(iter(EMBEDDING_CACHE))
-                        del EMBEDDING_CACHE[oldest_key]
+                        EMBEDDING_CACHE.popitem(last=False)  # Remove LRU item
 
         if not query_embedding:
             logger.info("Failed to generate embedding, falling back to text search")
@@ -435,12 +440,14 @@ class SemanticSearch:
                 )
 
         # Get user's bookmarked monologues if user_id provided
+        # NOTE: Fetches all bookmarks because boost is applied during scoring
+        # Capped at 1000 most recent to avoid pathological cases
         bookmarked_ids = set()
         if user_id:
             from app.models.actor import MonologueFavorite
             favorites = self.db.query(MonologueFavorite.monologue_id).filter(
                 MonologueFavorite.user_id == user_id
-            ).all()
+            ).order_by(MonologueFavorite.created_at.desc()).limit(1000).all()
             bookmarked_ids = {f[0] for f in favorites}
 
         # OPTIMIZATION: Prefer DB-side vector search via pgvector when available.
@@ -455,7 +462,8 @@ class SemanticSearch:
             # Primary path: pgvector-based similarity search in the database.
             # Order by cosine distance and take a modest multiple of `limit`
             # so we can still apply bookmark boosts and hybrid merging.
-            VECTOR_CANDIDATES = min(MAX_CANDIDATES, max(limit * 3, limit))
+            # OPTIMIZED: Reduced from 3x to 1.5x since HNSW indexes are now in place
+            VECTOR_CANDIDATES = min(MAX_CANDIDATES, max(int(limit * 1.5), limit))
             semantic_candidates = (
                 base_query.filter(Monologue.embedding_vector.isnot(None))
                 .order_by(Monologue.embedding_vector.cosine_distance(query_embedding))

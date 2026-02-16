@@ -36,4 +36,6 @@ dependencies = [
     # Payment Processing
     "stripe>=8.0.0",
     "python-multipart>=0.0.20",
+    # Content scraping (Phase 5)
+    "internetarchive>=3.5.0",
 ]

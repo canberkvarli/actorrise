@@ -221,9 +221,11 @@ async def search_monologues(
     results_with_scores = all_results_with_scores[offset:offset + limit]
     total = len(all_results_with_scores)
 
-    # Get user's favorites
+    # Get user's favorites - OPTIMIZED: only for result set (not all favorites)
+    result_ids = [m.id for m, _ in results_with_scores]
     favorites = db.query(MonologueFavorite.monologue_id).filter(
-        MonologueFavorite.user_id == current_user.id
+        MonologueFavorite.user_id == current_user.id,
+        MonologueFavorite.monologue_id.in_(result_ids)  # Only fetch for these results
     ).all()
     favorite_ids = {f[0] for f in favorites}
 
@@ -268,9 +270,11 @@ async def get_recommendations(
     recommender = Recommender(db)
     results = recommender.recommend_for_actor(actor_profile, limit=limit, fast=fast)
 
-    # Get favorites
+    # Get favorites - OPTIMIZED: only for result set
+    result_ids = [m.id for m in results]
     favorites = db.query(MonologueFavorite.monologue_id).filter(
-        MonologueFavorite.user_id == current_user.id
+        MonologueFavorite.user_id == current_user.id,
+        MonologueFavorite.monologue_id.in_(result_ids)
     ).all()
     favorite_ids = {f[0] for f in favorites}
 
@@ -300,9 +304,11 @@ async def discover_monologues(
     search_service = SemanticSearch(db)
     results = search_service.get_random_monologues(limit=limit, filters=filters)
 
-    # Get favorites
+    # Get favorites - OPTIMIZED: only for result set
+    result_ids = [m.id for m in results]
     favorites = db.query(MonologueFavorite.monologue_id).filter(
-        MonologueFavorite.user_id == current_user.id
+        MonologueFavorite.user_id == current_user.id,
+        MonologueFavorite.monologue_id.in_(result_ids)
     ).all()
     favorite_ids = {f[0] for f in favorites}
 
@@ -323,9 +329,11 @@ async def get_trending(
     recommender = Recommender(db)
     results = recommender.get_trending_monologues(limit=limit)
 
-    # Get favorites
+    # Get favorites - OPTIMIZED: only for result set
+    result_ids = [m.id for m in results]
     favorites = db.query(MonologueFavorite.monologue_id).filter(
-        MonologueFavorite.user_id == current_user.id
+        MonologueFavorite.user_id == current_user.id,
+        MonologueFavorite.monologue_id.in_(result_ids)
     ).all()
     favorite_ids = {f[0] for f in favorites}
 
@@ -466,9 +474,11 @@ async def get_similar_monologues(
     recommender = Recommender(db)
     results = recommender.get_similar_monologues(monologue_id, limit=limit)
 
-    # Get favorites
+    # Get favorites - OPTIMIZED: only for result set
+    result_ids = [m.id for m in results]
     favorites = db.query(MonologueFavorite.monologue_id).filter(
-        MonologueFavorite.user_id == current_user.id
+        MonologueFavorite.user_id == current_user.id,
+        MonologueFavorite.monologue_id.in_(result_ids)
     ).all()
     favorite_ids = {f[0] for f in favorites}
 
