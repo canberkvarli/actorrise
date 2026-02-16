@@ -98,10 +98,10 @@ export default function PlatformLayout({
         dedupingInterval: 60000, // 1 minute
       }}
     >
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Navigation */}
       <nav className="bg-background/95 backdrop-blur-sm border-b border-border/40 relative z-[9998]" style={{ position: 'relative' }}>
-        <div className="container mx-auto px-6">
+        <div className="container mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-20">
             {pathname === "/dashboard" ? (
               <span className="flex items-center gap-2.5 text-foreground cursor-default">

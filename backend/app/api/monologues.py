@@ -45,6 +45,7 @@ class MonologueResponse(BaseModel):
     scene: Optional[int] = None  # Scene number (for classical plays)
     relevance_score: Optional[float] = None  # Similarity score from search (0.0-1.0)
     match_type: Optional[str] = None  # "exact_quote" | "fuzzy_quote" when this monologue is the actual quote match
+    source_url: Optional[str] = None  # Link to original source (e.g. Project Gutenberg) for attribution
 
     class Config:
         from_attributes = True
@@ -112,6 +113,7 @@ def _monologue_to_response(
         scene=cast(Optional[int], m.scene),
         relevance_score=relevance_score,
         match_type=match_type,
+        source_url=cast(Optional[str], play.source_url),
     )
 
 

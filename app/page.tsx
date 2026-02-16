@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       <header className="sticky top-0 z-20 border-b border-border/40 bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-6 py-3">
+        <div className="container mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-3">
               <Link href="/" className="flex items-center gap-2.5 text-foreground hover:opacity-80 transition-opacity">
@@ -50,15 +50,15 @@ export default function LandingPage() {
 
       <main>
         {/* Hero */}
-        <section className="container mx-auto px-6 pt-24 pb-20 md:pt-36 md:pb-28">
+        <section className="container mx-auto px-4 sm:px-6 pt-24 pb-20 md:pt-36 md:pb-28">
           <div className="max-w-5xl">
-            <h1 className="text-5xl md:text-7xl leading-[1.02] tracking-[-0.04em]">
+            <h1 className="text-4xl sm:text-5xl md:text-7xl leading-[1.02] tracking-[-0.04em]">
               Find the monologue. In seconds.
             </h1>
             <p className="mt-4 text-lg text-muted-foreground">
               World&apos;s largest monologue database.
             </p>
-            <div className="mt-12 grid grid-cols-3 gap-4 max-w-2xl">
+            <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
               <div className="space-y-1 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3">
                 <div className="text-2xl">8,600+</div>
                 <div className="text-xs text-muted-foreground uppercase tracking-[0.16em]">
@@ -82,7 +82,7 @@ export default function LandingPage() {
         </section>
 
         {/* Features */}
-        <section id="suite" className="container mx-auto px-6 py-20 md:py-28 border-t border-border/60">
+        <section id="suite" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
           <div className="max-w-3xl">
             <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
               Search what you&apos;re looking for.
@@ -102,7 +102,7 @@ export default function LandingPage() {
         </section>
 
         {/* How it works */}
-        <section id="how" className="container mx-auto px-6 py-20 md:py-28 border-t border-border/60">
+        <section id="how" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
           <div className="max-w-5xl">
             <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
               Three steps.
@@ -134,7 +134,7 @@ export default function LandingPage() {
         </section>
 
         {/* Proof */}
-        <section id="proof" className="container mx-auto px-6 py-20 md:py-28 border-t border-border/60">
+        <section id="proof" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
           <div className="max-w-3xl">
             <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
               Get back to what matters: <span className="italic underline underline-offset-2 decoration-primary/60">performing.</span>
@@ -143,7 +143,7 @@ export default function LandingPage() {
         </section>
 
         {/* Pricing */}
-        <section id="pricing" className="container mx-auto px-6 py-20 md:py-28 border-t border-border/60">
+        <section id="pricing" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
           <div className="max-w-4xl">
             <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
               Simple pricing.
@@ -190,18 +190,30 @@ export default function LandingPage() {
       </main>
 
       <footer className="border-t border-border/60">
-        <div className="container mx-auto px-6 py-10 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-col gap-1">
-            <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} ActorRise</p>
-            <p className="text-xs text-muted-foreground/80">Built by an actor, for actors.</p>
-          </div>
-          <div className="text-sm text-muted-foreground flex items-center gap-4">
-            <Link href="/pricing" className="hover:text-foreground transition-colors">
-              Pricing
+        <div className="container mx-auto px-4 sm:px-6 py-10 flex flex-col gap-4">
+          <p className="text-xs text-muted-foreground/90 max-w-xl">
+            Monologues from public domain and licensed sources (e.g.{" "}
+            <Link href="/sources" className="underline hover:no-underline text-foreground/80">
+              Project Gutenberg
             </Link>
-            <Link href="/login" className="hover:text-foreground transition-colors">
-              Sign in
-            </Link>
+            ). We do not distribute copyrighted play text.
+          </p>
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-col gap-1">
+              <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} ActorRise</p>
+              <p className="text-xs text-muted-foreground/80">Built by an actor, for actors.</p>
+            </div>
+            <div className="text-sm text-muted-foreground flex items-center gap-4">
+              <Link href="/sources" className="hover:text-foreground transition-colors">
+                Sources & copyright
+              </Link>
+              <Link href="/pricing" className="hover:text-foreground transition-colors">
+                Pricing
+              </Link>
+              <Link href="/login" className="hover:text-foreground transition-colors">
+                Sign in
+              </Link>
+            </div>
           </div>
         </div>
       </footer>
