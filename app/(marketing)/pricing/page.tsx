@@ -93,7 +93,7 @@ const DEFAULT_TIERS: PricingTier[] = [
     id: 3,
     name: "unlimited",
     display_name: "Unlimited",
-    description: "Unlimited searches and more",
+    description: "For professionals and coaches",
     monthly_price_cents: 2400,
     annual_price_cents: 19900,
     features: {
@@ -102,6 +102,12 @@ const DEFAULT_TIERS: PricingTier[] = [
       recommendations: true,
       download_formats: ["txt", "pdf"],
       priority_support: true,
+      scene_partner_sessions: 10,
+      craft_coach_sessions: 5,
+      advanced_analytics: true,
+      collections: true,
+      collaboration: true,
+      white_label_export: true,
     },
     sort_order: 2,
   },
@@ -281,6 +287,17 @@ export default function PricingPage() {
       features.push("Advanced analytics & insights");
     }
 
+    // Collections & collaboration (Unlimited)
+    if (tier.features.collections) {
+      features.push("Collections & organization");
+    }
+    if (tier.features.collaboration) {
+      features.push("Collaboration & sharing");
+    }
+    if (tier.features.white_label_export) {
+      features.push("White-label export (no branding)");
+    }
+
     // Support
     if (tier.features.priority_support) {
       features.push("Priority email support");
@@ -374,6 +391,7 @@ export default function PricingPage() {
               : null;
 
           const isHighlighted = tier.name === "plus";
+          const isUnlimited = tier.name === "unlimited";
           const features = getFeaturesList(tier);
 
           return (
@@ -386,13 +404,20 @@ export default function PricingPage() {
             >
               <Card
                 className={`h-full flex flex-col relative border border-border/50 shadow-none ${
-                  isHighlighted ? "bg-muted/40" : "bg-muted/20"
+                  isUnlimited ? "bg-muted/20 opacity-75 grayscale-[0.4]" : isHighlighted ? "bg-muted/40" : "bg-muted/20"
                 }`}
               >
-                {isHighlighted && (
+                {isHighlighted && !isUnlimited && (
                   <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
                     <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                       Most popular
+                    </span>
+                  </div>
+                )}
+                {isUnlimited && (
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
+                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                      Coming soon
                     </span>
                   </div>
                 )}
@@ -434,22 +459,28 @@ export default function PricingPage() {
                 </CardContent>
 
                 <CardFooter className="mt-auto">
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="lg"
-                    className="w-full"
-                  >
-                    <Link
-                      href={
-                        tier.name === "free"
-                          ? "/signup"
-                          : `/checkout?tier=${tier.name}&period=${isAnnual ? "annual" : "monthly"}`
-                      }
+                  {isUnlimited ? (
+                    <Button variant="outline" size="lg" className="w-full" disabled>
+                      Coming soon
+                    </Button>
+                  ) : (
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="lg"
+                      className="w-full"
                     >
-                      {tier.name === "free" ? "Get Started" : "Subscribe"}
-                    </Link>
-                  </Button>
+                      <Link
+                        href={
+                          tier.name === "free"
+                            ? "/signup"
+                            : `/checkout?tier=${tier.name}&period=${isAnnual ? "annual" : "monthly"}`
+                        }
+                      >
+                        {tier.name === "free" ? "Get Started" : "Subscribe"}
+                      </Link>
+                    </Button>
+                  )}
                 </CardFooter>
               </Card>
             </motion.div>
