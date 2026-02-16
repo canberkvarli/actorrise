@@ -1,5 +1,4 @@
-import { SignupForm } from "@/components/auth/SignupForm";
-import { OAuthButtons, OAuthDivider } from "@/components/auth/OAuthButtons";
+import { AuthProgressiveDisclosure } from "@/components/auth/AuthProgressiveDisclosure";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -41,14 +40,8 @@ export default function SignupPage() {
             </div>
           </div>
 
-          {/* OAuth buttons */}
-          <OAuthButtons redirectTo="/dashboard" />
-
-          {/* Divider */}
-          <OAuthDivider />
-
-          {/* Email/password form */}
-          <SignupForm />
+          {/* Three options: Google, Apple, Continue with email (expandable) */}
+          <AuthProgressiveDisclosure mode="signup" redirectTo="/dashboard" />
 
           {/* Sign in link */}
           <div className="text-center text-sm text-muted-foreground pt-2">

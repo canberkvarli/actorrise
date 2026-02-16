@@ -9,6 +9,12 @@ type OAuthProvider = "google" | "apple" | "twitter";
 
 interface OAuthButtonsProps {
   redirectTo?: string;
+  /** Stack full-width buttons and show "Sign in with email" trigger */
+  variant?: "icons" | "stack";
+  /** Label for the email option (e.g. "Sign in with email", "Continue with email") */
+  emailButtonLabel?: string;
+  /** When user clicks the email option (progressive disclosure) */
+  onEmailClick?: () => void;
 }
 
 // Brand SVG icons (inline for reliability)
@@ -66,7 +72,12 @@ const providerConfig: Record<
   },
 };
 
-export function OAuthButtons({ redirectTo = "/dashboard" }: OAuthButtonsProps) {
+export function OAuthButtons({
+  redirectTo = "/dashboard",
+  variant = "icons",
+  emailButtonLabel,
+  onEmailClick,
+}: OAuthButtonsProps) {
   const [loadingProvider, setLoadingProvider] = useState<OAuthProvider | null>(null);
 
   const supabase = createBrowserClient(
@@ -98,6 +109,61 @@ export function OAuthButtons({ redirectTo = "/dashboard" }: OAuthButtonsProps) {
 
   // Only show providers enabled in Supabase (X/Twitter disabled until configured there)
   const providers: OAuthProvider[] = ["google", "apple"];
+
+  const isStack = variant === "stack";
+
+  if (isStack) {
+    return (
+      <div className="space-y-3">
+        {providers.map((provider) => {
+          const config = providerConfig[provider];
+          const Icon = config.icon;
+          const isLoading = loadingProvider === provider;
+
+          return (
+            <Button
+              key={provider}
+              type="button"
+              variant="outline"
+              className="w-full h-11 rounded-lg border-border hover:bg-muted hover:text-foreground hover:border-foreground/20 transition-all justify-center gap-3"
+              onClick={() => handleOAuthSignIn(provider)}
+              disabled={loadingProvider !== null}
+            >
+              {isLoading ? (
+                <IconLoader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <>
+                  <Icon />
+                  <span>Continue with {config.label}</span>
+                </>
+              )}
+            </Button>
+          );
+        })}
+        {emailButtonLabel && onEmailClick && (
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full h-11 rounded-lg border-border hover:bg-muted hover:text-foreground hover:border-foreground/20 transition-all justify-center gap-3"
+            onClick={onEmailClick}
+          >
+            <svg
+              viewBox="0 0 24 24"
+              className="h-5 w-5 shrink-0"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden
+            >
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+              <path d="m22 6-10 7L2 6" />
+            </svg>
+            <span>{emailButtonLabel}</span>
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex items-center justify-center gap-3">
