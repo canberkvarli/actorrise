@@ -124,3 +124,16 @@ class EmailTemplates:
             monologue_title=monologue_title,
             estimated_review_time=estimated_review_time
         )
+
+    def render_welcome(self, user_name: str) -> str:
+        """
+        Render welcome email for new signups.
+
+        Args:
+            user_name: User's display name (or "there" if empty)
+
+        Returns:
+            HTML email content
+        """
+        template = self.env.get_template('welcome.html')
+        return template.render(user_name=user_name or "there")
