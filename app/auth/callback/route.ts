@@ -3,9 +3,12 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const requestUrl = new URL(request.url);
+  const { searchParams } = requestUrl;
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/dashboard";
+  // Use the request's origin so redirect stays on same host (avoids www vs non-www mismatch)
+  const origin = requestUrl.origin;
 
   if (code) {
     const cookieStore = await cookies();

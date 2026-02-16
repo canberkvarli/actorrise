@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Montserrat, JetBrains_Mono, Cormorant_Garamond, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { AuthProviderWrapper } from "@/components/providers/AuthProviderWrapper";
@@ -6,6 +7,7 @@ import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/react";
 import { FontLoader } from "@/components/FontLoader";
+import { OAuthCallbackRedirect } from "@/components/auth/OAuthCallbackRedirect";
 
 const montserrat = Montserrat({
   variable: "--font-sans",
@@ -136,6 +138,9 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
+          <Suspense fallback={null}>
+            <OAuthCallbackRedirect />
+          </Suspense>
           <AuthProviderWrapper>{children}</AuthProviderWrapper>
           <Toaster position="top-center" richColors />
           <Analytics />

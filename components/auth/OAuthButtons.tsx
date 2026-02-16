@@ -96,7 +96,8 @@ export function OAuthButtons({ redirectTo = "/dashboard" }: OAuthButtonsProps) {
     }
   };
 
-  const providers: OAuthProvider[] = ["google", "apple", "twitter"];
+  // Only show providers enabled in Supabase (X/Twitter disabled until configured there)
+  const providers: OAuthProvider[] = ["google", "apple"];
 
   return (
     <div className="flex items-center justify-center gap-3">
