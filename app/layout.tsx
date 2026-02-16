@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProviderWrapper } from "@/components/providers/AuthProviderWrapper";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Toaster } from "sonner";
+import { Analytics } from "@vercel/analytics/react";
 import { FontLoader } from "@/components/FontLoader";
 
 const montserrat = Montserrat({
@@ -137,6 +138,7 @@ export default function RootLayout({
         >
           <AuthProviderWrapper>{children}</AuthProviderWrapper>
           <Toaster position="top-center" richColors />
+          <Analytics />
         </ThemeProvider>
       </body>
     </html>
