@@ -2,7 +2,7 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export default async function middleware(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
+  const supabaseResponse = NextResponse.next({
     request: {
       headers: request.headers,
     },
@@ -62,7 +62,7 @@ export default async function middleware(request: NextRequest) {
   if (pathname === '/' && searchParams.has('code')) {
     const callbackUrl = new URL('/auth/callback', request.url)
     searchParams.forEach((value, key) => callbackUrl.searchParams.set(key, value))
-    return NextResponse.redirect(callbackUrl)
+    return NextResponse.redirect(callbackUrl, 307)
   }
 
   // Redirect legacy onboarding URL to profile (complete your profile in one place)
