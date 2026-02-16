@@ -1,8 +1,8 @@
 """
-Helper functions for sending submission notification emails.
+Helper functions for sending notification emails.
 
 Integrates Resend client with email templates for
-submission workflow notifications.
+submission workflow and welcome emails.
 """
 
 import os
@@ -10,6 +10,32 @@ from typing import Optional
 
 from app.services.email.resend_client import ResendEmailClient
 from app.services.email.templates import EmailTemplates
+
+
+def send_welcome_email(user_email: str, user_name: Optional[str] = None) -> dict:
+    """
+    Send welcome email to new signups.
+
+    Args:
+        user_email: Recipient email
+        user_name: User's display name (optional)
+
+    Returns:
+        Resend response dict, or mock if RESEND_API_KEY not set
+    """
+    if not os.getenv("RESEND_API_KEY"):
+        print("Warning: RESEND_API_KEY not set. Welcome email disabled.")
+        return {"id": "mock_welcome_id", "status": "disabled"}
+
+    try:
+        client = ResendEmailClient()
+        templates = EmailTemplates()
+        subject = "Welcome to ActorRise"
+        html = templates.render_welcome(user_name=user_name or "there")
+        return client.send_email(to=user_email, subject=subject, html=html)
+    except Exception as e:
+        print(f"Error sending welcome email to {user_email}: {e}")
+        raise
 
 
 def send_submission_notification(

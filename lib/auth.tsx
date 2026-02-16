@@ -9,13 +9,14 @@ interface User {
   id: number;
   email: string;
   name?: string;
+  marketing_opt_in?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   login: (email: string, password: string, redirectTo?: string) => Promise<void>;
-  signup: (email: string, password: string, name?: string) => Promise<void>;
+  signup: (email: string, password: string, name?: string, marketingOptIn?: boolean) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -134,7 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [syncUserWithBackend]);
 
-  const signup = useCallback(async (email: string, password: string, name?: string) => {
+  const signup = useCallback(async (email: string, password: string, name?: string, marketingOptIn?: boolean) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -142,6 +143,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         options: {
           data: {
             name: name || null,
+            marketing_opt_in: marketingOptIn === true,
           },
         },
       });

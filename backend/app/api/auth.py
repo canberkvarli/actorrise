@@ -1,12 +1,19 @@
 from app.core.database import get_db
 from app.core.security import verify_supabase_token
 from app.models.user import User
+from app.services.email.notifications import send_welcome_email
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 security = HTTPBearer()
+
+
+class UpdateMeRequest(BaseModel):
+    name: str | None = None
+    marketing_opt_in: bool | None = None
 
 
 def get_current_user(
@@ -32,9 +39,10 @@ def get_current_user(
     supabase_id = token_data.get("sub")
     email = token_data.get("email")
 
-    # Extract name from token metadata if available
-    user_metadata = token_data.get("user_metadata", {})
+    # Extract name and marketing preference from token metadata
+    user_metadata = token_data.get("user_metadata", {}) or {}
     name = user_metadata.get("name") or user_metadata.get("full_name")
+    marketing_opt_in = user_metadata.get("marketing_opt_in") is True
 
     if not supabase_id:
         raise HTTPException(
@@ -66,15 +74,21 @@ def get_current_user(
             db.refresh(existing_user)
             return existing_user
 
-        # Create new user
+        # Create new user (marketing_opt_in: explicit opt-in only, never default True)
         user = User(
             email=email,
             supabase_id=supabase_id,
-            name=name
+            name=name,
+            marketing_opt_in=marketing_opt_in,
         )
         db.add(user)
         db.commit()
         db.refresh(user)
+        # Send welcome email (fire-and-forget; don't block auth response)
+        try:
+            send_welcome_email(user_email=user.email, user_name=user.name)
+        except Exception:
+            pass  # Logged inside send_welcome_email
     else:
         # Update name if it's in the token and different from stored value
         if name and user.name != name:
@@ -93,4 +107,27 @@ def get_me(current_user: User = Depends(get_current_user)):
         "email": current_user.email,
         "name": current_user.name,
         "supabase_id": current_user.supabase_id,
+        "marketing_opt_in": current_user.marketing_opt_in,
+    }
+
+
+@router.patch("/me")
+def update_me(
+    body: UpdateMeRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Update current user name and/or marketing preference."""
+    if body.name is not None:
+        current_user.name = body.name
+    if body.marketing_opt_in is not None:
+        current_user.marketing_opt_in = body.marketing_opt_in
+    db.commit()
+    db.refresh(current_user)
+    return {
+        "id": current_user.id,
+        "email": current_user.email,
+        "name": current_user.name,
+        "supabase_id": current_user.supabase_id,
+        "marketing_opt_in": current_user.marketing_opt_in,
     }

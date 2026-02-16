@@ -8,11 +8,13 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { IconLoader2 } from "@tabler/icons-react";
 
 const signupSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(6, "Password must be at least 6 characters"),
+  marketing_opt_in: z.boolean().optional(),
 });
 
 type SignupFormData = z.infer<typeof signupSchema>;
@@ -25,17 +27,21 @@ export function SignupForm() {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
+    defaultValues: { marketing_opt_in: true },
   });
+
+  const marketingOptIn = watch("marketing_opt_in");
 
   const onSubmit = async (data: SignupFormData) => {
     setError(null);
     setIsLoading(true);
     try {
-      // Pass empty string for name - can be set later in profile
-      await signup(data.email, data.password, "");
+      await signup(data.email, data.password, "", data.marketing_opt_in === true);
     } catch (err: unknown) {
       let errorMessage = "Failed to sign up";
       if (err instanceof Error) {
@@ -77,6 +83,20 @@ export function SignupForm() {
           {errors.password && (
             <p className="text-sm text-destructive">{errors.password.message}</p>
           )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="marketing_opt_in"
+            checked={!!marketingOptIn}
+            onChange={(e) => setValue("marketing_opt_in", e.target.checked)}
+          />
+          <Label
+            htmlFor="marketing_opt_in"
+            className="text-sm font-normal cursor-pointer text-muted-foreground"
+          >
+            Send me tips and product updates from ActorRise (optional)
+          </Label>
         </div>
 
         {error && <p className="text-sm text-destructive">{error}</p>}

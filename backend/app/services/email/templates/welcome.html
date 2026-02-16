@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to ActorRise</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+        .content {
+            background: #f9fafb;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+        }
+        .cta {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            margin: 16px 0;
+        }
+        .footer {
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+            margin-top: 30px;
+        }
+        a {
+            color: #667eea;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Welcome to ActorRise</h1>
+    </div>
+    <div class="content">
+        <p>Hi {{ user_name }},</p>
+
+        <p>Thanks for signing up. You're all set to explore monologues, build your profile, and get casting directors to notice you.</p>
+
+        <p><strong>Quick next steps:</strong></p>
+        <ul>
+            <li>Complete your actor profile so we can tailor monologue suggestions</li>
+            <li>Browse the library and save pieces you love</li>
+            <li>Submit your own monologues for review</li>
+        </ul>
+
+        <p>
+            <a href="https://actorrise.com/dashboard" class="cta">Go to your dashboard</a>
+        </p>
+
+        <p>If you have any questions, just reply to this email or use our contact form.</p>
+
+        <p>Best regards,<br>
+        The ActorRise Team</p>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2026 ActorRise. All rights reserved.</p>
+        <p><a href="https://actorrise.com">Visit ActorRise</a></p>
+    </div>
+</body>
+</html>
