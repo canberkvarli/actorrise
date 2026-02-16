@@ -70,10 +70,10 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/profile', request.url))
   }
 
-  // Protect platform (require auth)
-  if (pathname.startsWith('/dashboard') ||
-      pathname.startsWith('/profile') ||
-      pathname.startsWith('/search')) {
+  // Protect platform (require auth): dashboard, profile, search, checkout, billing
+  const protectedPaths = ['/dashboard', '/profile', '/search', '/checkout', '/billing']
+  const isProtected = protectedPaths.some((p) => pathname.startsWith(p))
+  if (isProtected) {
     if (!user) {
       // In dev, if Supabase was unreachable from middleware, allow the request through:
       // the client has the session and will render; avoids "login then redirect back" when
@@ -82,7 +82,9 @@ export default async function middleware(request: NextRequest) {
         return supabaseResponse
       }
       const redirectUrl = new URL('/login', request.url)
-      redirectUrl.searchParams.set('redirect', pathname)
+      // Preserve full path (including query, e.g. /checkout?tier=plus&period=monthly) so after login we land back on the same page
+      const fullPath = pathname + (request.nextUrl.search || '')
+      redirectUrl.searchParams.set('redirect', fullPath)
       return NextResponse.redirect(redirectUrl)
     }
   }

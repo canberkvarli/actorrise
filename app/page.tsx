@@ -161,7 +161,13 @@ export default function LandingPage() {
               <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} ActorRise</p>
               <p className="text-xs text-muted-foreground/80">Built by an actor, for actors.</p>
             </div>
-            <div className="text-sm text-muted-foreground flex items-center gap-4">
+            <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-4">
+              <Link href="/privacy" className="hover:text-foreground transition-colors">
+                Privacy
+              </Link>
+              <Link href="/terms" className="hover:text-foreground transition-colors">
+                Terms
+              </Link>
               <Link href="/sources" className="hover:text-foreground transition-colors">
                 Sources & copyright
               </Link>
