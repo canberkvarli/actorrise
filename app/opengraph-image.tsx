@@ -7,20 +7,11 @@ export const contentType = "image/png";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 const logoUrl = `${siteUrl}/logo.png`;
 
-// Google Fonts (latin) – same as landing: Playfair Display for brand, Montserrat for tagline
-const playfairUrl =
-  "https://fonts.gstatic.com/s/playfairdisplay/v40/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKebunDXbtPK-F2qC0s.woff2";
-const montserratUrl =
-  "https://fonts.gstatic.com/s/montserrat/v31/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCtZ6Hw5aXp-p7K4KLg.woff2";
+// Use system fonts only – OG image runtime (Satori) does not support WOFF2, so custom webfonts fail at build.
+const fontSerif = "Georgia, serif";
+const fontSans = "system-ui, sans-serif";
 
 export default async function Image() {
-  const [playfairRes, montserratRes] = await Promise.all([
-    fetch(playfairUrl),
-    fetch(montserratUrl),
-  ]);
-  const playfairData = await playfairRes.arrayBuffer();
-  const montserratData = await montserratRes.arrayBuffer();
-
   return new ImageResponse(
     (
       <div
@@ -44,7 +35,6 @@ export default async function Image() {
             textAlign: "center",
           }}
         >
-          {/* Logo + ActorRise (same as header) */}
           <div
             style={{
               display: "flex",
@@ -62,7 +52,7 @@ export default async function Image() {
             />
             <span
               style={{
-                fontFamily: "Playfair Display",
+                fontFamily: fontSerif,
                 fontWeight: 600,
                 fontSize: 56,
                 color: "#fafafa",
@@ -72,10 +62,9 @@ export default async function Image() {
               ActorRise
             </span>
           </div>
-          {/* Tagline – same font as landing hero "Find the monologue. In seconds." */}
           <div
             style={{
-              fontFamily: "Montserrat",
+              fontFamily: fontSans,
               fontWeight: 500,
               fontSize: 42,
               color: "#a1a1aa",
@@ -89,22 +78,6 @@ export default async function Image() {
         </div>
       </div>
     ),
-    {
-      ...size,
-      fonts: [
-        {
-          name: "Playfair Display",
-          data: playfairData,
-          style: "normal",
-          weight: 600,
-        },
-        {
-          name: "Montserrat",
-          data: montserratData,
-          style: "normal",
-          weight: 500,
-        },
-      ],
-    }
+    { ...size }
   );
 }
