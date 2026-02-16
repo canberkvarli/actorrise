@@ -6,11 +6,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconHome, IconSearch, IconUser, IconLogout, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText } from "@tabler/icons-react";
+import { IconHome, IconSearch, IconUser, IconLogout, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText, IconMail } from "@tabler/icons-react";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarkCount";
 import { useProfile } from "@/hooks/useDashboardData";
+import { ContactModal } from "@/components/contact/ContactModal";
 import { SWRConfig } from "swr";
 import { useSubscription } from "@/hooks/useSubscription";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -40,6 +41,7 @@ export default function PlatformLayout({
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
   const { count: bookmarkCount } = useBookmarkCount();
   const { data: profile } = useProfile();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -260,6 +262,18 @@ export default function PlatformLayout({
                         <span>Billing</span>
                       </Link>
 
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setProfileDropdownOpen(false);
+                          setContactOpen(true);
+                        }}
+                        className="mt-0.5 flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors w-full text-left"
+                      >
+                        <IconMail className="h-4 w-4 text-muted-foreground" />
+                        <span>Contact & feedback</span>
+                      </button>
+
                       <div className="my-2 h-px bg-border/40" />
 
                       <button
@@ -366,6 +380,20 @@ export default function PlatformLayout({
                   </Link>
                 </Button>
 
+                {/* Contact */}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    setContactOpen(true);
+                  }}
+                >
+                  <IconMail className="h-4 w-4" />
+                  Contact & feedback
+                </Button>
+
                 {/* Logout Button */}
                 <Button
                   variant="ghost"
@@ -389,6 +417,7 @@ export default function PlatformLayout({
       <main>
         {children}
       </main>
+      <ContactModal open={contactOpen} onOpenChange={setContactOpen} />
     </div>
     </SWRConfig>
     </QueryClientProvider>

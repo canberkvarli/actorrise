@@ -3,7 +3,6 @@
 import { useAuth } from "@/lib/auth";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,6 +27,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Monologue } from "@/types/actor";
 import RecentSearches from "@/components/search/RecentSearches";
 import BookmarksQuickAccess from "@/components/bookmarks/BookmarksQuickAccess";
+import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { useProfileStats, useProfile, useRecommendations, useDiscover } from "@/hooks/useDashboardData";
@@ -46,47 +46,6 @@ function getInitials(displayName: string) {
   const token = parts[0];
   const emailUser = token.includes("@") ? token.split("@")[0] : token;
   return emailUser.slice(0, 2).toUpperCase();
-}
-
-// Quick Actions Component - Only shows actionable items
-function QuickActions({ stats }: { stats: any }) {
-  const showProfilePrompt = stats && stats.completion_percentage < 100;
-  
-  if (!showProfilePrompt) {
-    return null;
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="mb-6"
-    >
-      <Card className="border-accent/20 bg-accent/5 rounded-lg">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-accent/20">
-                <IconUserCheck className="h-5 w-5 text-accent" />
-              </div>
-              <div>
-                <h3 className="font-semibold text-sm">Complete your profile</h3>
-                <p className="text-xs text-muted-foreground">
-                  {stats.completion_percentage}% complete - help our AI understand you for better monologue matches
-                </p>
-              </div>
-            </div>
-            <Button asChild size="sm">
-              <Link href="/profile">
-                Complete
-                <IconArrowRight className="h-4 w-4" />
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    </motion.div>
-  );
 }
 
 export default function DashboardPage() {
@@ -315,10 +274,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
       {!showFullPageLoader && (
         <div className="space-y-12">
-          {/* ========== SECTION 1: Hero Welcome ========== */}
+          {/* ========== SECTION 1: Hero Welcome + optional Complete profile ========== */}
           <motion.section
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
+            className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4"
           >
             {showWelcomeSkeleton ? (
               <div className="space-y-3">
@@ -335,6 +295,17 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 </h1>
               </div>
             )}
+            {!showWelcomeSkeleton && stats && stats.completion_percentage < 100 && (
+              <Link
+                href="/profile"
+                className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 dark:bg-amber-400/10 dark:border-amber-400/25 hover:bg-amber-500/15 dark:hover:bg-amber-400/15 transition-colors text-left max-w-[280px] sm:max-w-none"
+              >
+                <IconUserCheck className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="text-sm font-medium text-foreground">Complete your profile</span>
+                <span className="text-xs text-muted-foreground hidden sm:inline">({stats.completion_percentage}%)</span>
+                <IconArrowRight className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
+              </Link>
+            )}
           </motion.section>
 
           {/* ========== SECTION 2: Quick Search (primary CTA) ========== */}
@@ -343,7 +314,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.05 }}
           >
-            <Link href="/search" className="block group">
+            <Link href="/search" className="block group max-w-2xl">
               <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-md transition-all">
                 <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
                   <IconSearch className="h-6 w-6 text-primary" />
@@ -361,10 +332,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </Link>
           </motion.section>
 
-          {/* ========== SECTION 3: Profile Completion (if needed) ========== */}
-          <QuickActions stats={stats} />
-
-          {/* ========== SECTION 4: Recommendations ========== */}
+          {/* ========== SECTION 3: Recommendations ========== */}
           <motion.section
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -379,8 +347,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   {isProfileComplete ? "Personalized picks based on your profile" : "Explore our curated collection"}
                 </p>
               </div>
-              <Button asChild variant="ghost" className="text-muted-foreground hover:text-foreground">
-                <Link href="/search">
+              <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:text-foreground">
+                <Link href="/search" className="whitespace-nowrap">
                   View all
                   <IconArrowRight className="h-4 w-4 ml-1" />
                 </Link>
@@ -469,16 +437,16 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
           >
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid md:grid-cols-2 gap-8 max-w-4xl">
               {/* Bookmarks */}
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
                     <IconBookmark className="h-5 w-5 text-violet-500" />
                     Your Monologues
                   </h2>
-                  <Button asChild variant="ghost" size="sm" className="text-muted-foreground">
-                    <Link href="/my-monologues">
+                  <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground">
+                    <Link href="/my-monologues" className="whitespace-nowrap">
                       View all
                       <IconArrowRight className="h-4 w-4 ml-1" />
                     </Link>
@@ -488,7 +456,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </div>
 
               {/* Recent Searches */}
-              <div>
+              <div className="min-w-0">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
                     <IconHistory className="h-5 w-5 text-muted-foreground" />
@@ -509,6 +477,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 <IconSend className="h-4 w-4" />
                 Submit a monologue
               </Link>
+            </div>
+
+            {/* Contact — feedback, bugs, partnership */}
+            <div className="mt-4 pt-4 border-t border-border/40 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
+              <span>Questions, feedback, or want to collaborate?</span>
+              <ContactModalTrigger variant="ghost" className="inline-flex items-center gap-1.5 font-medium text-foreground hover:text-primary">
+                Get in touch
+              </ContactModalTrigger>
             </div>
           </motion.section>
         </div>

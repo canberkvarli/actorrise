@@ -130,7 +130,7 @@ export default function RecentSearches({ maxSearches = 3, compact = false }: Rec
                 variant="ghost"
                 size="sm"
                 onClick={() => router.push("/search")}
-                className="w-full text-xs mt-2"
+                className="w-fit shrink-0 text-xs mt-2"
               >
                 View all searches
               </Button>

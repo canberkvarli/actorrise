@@ -83,11 +83,11 @@ export default function BookmarksQuickAccess({ onSelectMonologue }: BookmarksQui
                 asChild
                 variant="outline"
                 size="sm"
-                className="w-full rounded-lg border-secondary/40 hover:bg-secondary/10 hover:border-secondary/50 hover:text-foreground text-foreground text-sm mt-1"
+                className="w-fit shrink-0 rounded-lg border-secondary/40 hover:bg-secondary/10 hover:border-secondary/50 hover:text-foreground text-foreground text-sm mt-1"
               >
-                <Link href="/my-monologues" className="cursor-pointer text-inherit hover:text-inherit">
+                <Link href="/my-monologues" className="cursor-pointer text-inherit hover:text-inherit whitespace-nowrap">
                   View all {count}
-                  <IconArrowRight className="h-3.5 w-3" />
+                  <IconArrowRight className="h-3.5 w-3 ml-1" />
                 </Link>
               </Button>
             )}

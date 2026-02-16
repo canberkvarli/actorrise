@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,6 +30,11 @@ export default function MonologueDetailPage() {
       setMonologue(response.data);
       setIsFavorited(response.data.is_favorited);
     } catch (error) {
+      const status = (error as Error & { response?: { status?: number } })?.response?.status;
+      if (status === 404) {
+        notFound();
+        return;
+      }
       console.error("Error fetching monologue:", error);
     } finally {
       setIsLoading(false);

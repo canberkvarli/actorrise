@@ -1,8 +1,10 @@
 import logging
 from contextlib import asynccontextmanager
 
-from app.api.auth import router as auth_router
+from app.api.admin.moderation import router as moderation_router
 from app.api.audition import router as audition_router
+from app.api.auth import router as auth_router
+from app.api.contact import router as contact_router
 from app.api.monologues import router as monologues_router
 from app.api.pricing import router as pricing_router
 from app.api.profile import router as profile_router
@@ -10,19 +12,26 @@ from app.api.scenes import router as scenes_router
 from app.api.scripts import router as scripts_router
 from app.api.subscriptions import router as subscriptions_router
 from app.api.webhooks import router as webhooks_router
-from app.api.admin.moderation import router as moderation_router
-from sqlalchemy import text
-
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.core.seed import ensure_pricing_tiers
-from app.models.moderation import MonologueSubmission, ModerationLog  # noqa: F401 — register with Base for create_all
+from app.models.moderation import (  # noqa: F401 — register with Base for create_all
+    ModerationLog, MonologueSubmission)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 
 logger = logging.getLogger("uvicorn.error")
+
+
+def _make_error_response(status_code: int, detail: str) -> JSONResponse:
+    return JSONResponse(
+        status_code=status_code,
+        content={"detail": detail},
+    )
 
 
 def _init_db() -> None:
@@ -54,6 +63,16 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="ActorRise API", version="1.0.0", lifespan=lifespan)
 
 
+@app.exception_handler(Exception)
+def uncaught_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Return consistent 500 JSON for uncaught exceptions. HTTPException uses FastAPI's handler."""
+    logger.exception("Unhandled exception: %s", exc)
+    return _make_error_response(
+        500,
+        "An internal error occurred. Please try again later.",
+    )
+
+
 class LogCORSOriginMiddleware(BaseHTTPMiddleware):
     """Log Origin on OPTIONS so we can see what the browser sends (for CORS debugging)."""
 
@@ -80,6 +99,7 @@ app.add_middleware(
 
 # Include routers
 app.include_router(auth_router)
+app.include_router(contact_router)
 app.include_router(profile_router)
 app.include_router(monologues_router)
 app.include_router(scenes_router)
