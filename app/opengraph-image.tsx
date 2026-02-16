@@ -8,19 +8,8 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 const logoUrl = `${siteUrl}/logo.png`;
 
 // Same fonts as landing: Playfair Display (brand), Cormorant Garamond (h1 / “Find the monologue. In seconds.”)
-const playfairLatin =
-  "https://fonts.gstatic.com/s/playfairdisplay/v40/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKebunDXbtM.woff2";
-const cormorantLatin =
-  "https://fonts.gstatic.com/s/cormorantgaramond/v21/co3umX5slCNuHLi8bLeY9MK7whWMhyjypVO7abI26QOD_iE9KnTOig.woff2";
-
+// System serif only: Satori does not support WOFF2; external TTF unreliable at build.
 export default async function Image() {
-  const [playfairRes, cormorantRes] = await Promise.all([
-    fetch(playfairLatin),
-    fetch(cormorantLatin),
-  ]);
-  const playfairData = await playfairRes.arrayBuffer();
-  const cormorantData = await cormorantRes.arrayBuffer();
-
   return new ImageResponse(
     (
       <div
@@ -61,7 +50,7 @@ export default async function Image() {
             />
             <span
               style={{
-                fontFamily: "Playfair Display",
+                fontFamily: "Georgia, serif",
                 fontWeight: 600,
                 fontSize: 56,
                 color: "#fafafa",
@@ -71,10 +60,9 @@ export default async function Image() {
               ActorRise
             </span>
           </div>
-          {/* Same font as landing h1: Cormorant Garamond (--font-serif) */}
           <div
             style={{
-              fontFamily: "Cormorant Garamond",
+              fontFamily: "Georgia, serif",
               fontWeight: 600,
               fontSize: 42,
               color: "#a1a1aa",
@@ -88,12 +76,6 @@ export default async function Image() {
         </div>
       </div>
     ),
-    {
-      ...size,
-      fonts: [
-        { name: "Playfair Display", data: playfairData, style: "normal", weight: 600 },
-        { name: "Cormorant Garamond", data: cormorantData, style: "normal", weight: 600 },
-      ],
-    }
+    { ...size }
   );
 }
