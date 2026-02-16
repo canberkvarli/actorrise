@@ -67,7 +67,7 @@ export default function LandingPage() {
         <section className="container mx-auto px-4 sm:px-6 pt-24 pb-20 md:pt-36 md:pb-28">
           <div className="max-w-5xl">
             <h1 className="text-4xl sm:text-5xl md:text-7xl leading-[1.02] tracking-[-0.04em]">
-              Find the monologue. In seconds.
+              Find the <span className="hero-keyword">monologue</span>. In seconds.
             </h1>
             <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
               <div className="space-y-1 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3">
@@ -83,9 +83,9 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="space-y-1 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3">
-                <div className="text-2xl">8,600+</div>
+                <div className="text-2xl">Right fit</div>
                 <div className="text-xs text-muted-foreground uppercase tracking-[0.16em]">
-                  monologues
+                  matched to you & the role
                 </div>
               </div>
             </div>
@@ -117,8 +117,9 @@ export default function LandingPage() {
         <section id="how" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
           <div className="max-w-5xl">
             <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
-              Three steps.
+              Get back to what matters: <span className="italic underline underline-offset-2 decoration-primary/60">performing.</span>
             </h2>
+            <p className="mt-2 text-muted-foreground text-lg">Three steps.</p>
             <div className="mt-12 grid md:grid-cols-3 gap-6">
               <div className="rounded-xl border border-border p-8">
                 <div className="text-base text-foreground/80">01</div>
@@ -145,12 +146,15 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Proof */}
-        <section id="proof" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
+        {/* Casting */}
+        <section className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
           <div className="max-w-3xl">
             <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
-              Get back to what matters: <span className="italic underline underline-offset-2 decoration-primary/60">performing.</span>
+              Give casting directors <span className="font-semibold text-primary">something different.</span>
             </h2>
+            <p className="mt-4 text-muted-foreground text-lg">
+              The Overdone filter helps you show up with pieces they haven’t seen a hundred times.
+            </p>
           </div>
         </section>
 
