@@ -13,7 +13,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
       <header className="sticky top-0 z-20 border-b border-border/40 bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container mx-auto px-6 py-3">
+        <div className="container mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-3">
               <Link href="/" className="flex items-center gap-2.5 text-foreground hover:opacity-80 transition-opacity">
@@ -53,8 +53,15 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
 
       {/* Footer */}
       <footer className="border-t border-border/60 bg-background py-8">
-        <div className="container mx-auto px-6">
-            <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+        <div className="container mx-auto px-4 sm:px-6">
+          <p className="text-xs text-muted-foreground/90 mb-4 max-w-xl">
+            Monologues are from public domain and licensed sources (e.g.{" "}
+            <Link href="/sources" className="underline hover:no-underline text-foreground/80">
+              Project Gutenberg
+            </Link>
+            ). We do not distribute copyrighted play text.
+          </p>
+          <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} ActorRise</p>
             <div className="flex items-center gap-4">
               <Link href="/for-teachers" className="hover:text-foreground transition-colors">
@@ -62,6 +69,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               </Link>
               <Link href="/pricing" className="hover:text-foreground transition-colors">
                 Pricing
+              </Link>
+              <Link href="/sources" className="hover:text-foreground transition-colors">
+                Sources & copyright
               </Link>
               <Link href="/terms" className="hover:text-foreground transition-colors">
                 Terms
