@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { LandingPricing } from "@/components/landing/LandingPricing";
 
 export default function LandingPage() {
   return (
@@ -142,51 +143,8 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Pricing */}
-        <section id="pricing" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
-          <div className="max-w-4xl">
-            <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
-              Simple pricing.
-            </h2>
-            <p className="mt-2 text-muted-foreground">
-              Free tier to explore. Upgrade when you&apos;re ready.
-            </p>
-            <div className="mt-12 grid md:grid-cols-3 gap-6">
-              <div className="rounded-xl border border-border/60 bg-card/40 p-6 flex flex-col">
-                <h3 className="text-xl font-semibold">Free</h3>
-                <p className="mt-1 text-2xl font-bold">$0</p>
-                <p className="mt-2 text-sm text-muted-foreground">10 AI searches, 5 bookmarks</p>
-                <div className="mt-6 flex-1" />
-                <Button asChild variant="outline" className="mt-4 w-full">
-                  <Link href="/signup">Get started</Link>
-                </Button>
-              </div>
-              <div className="rounded-xl border border-border/60 bg-card/40 p-6 flex flex-col">
-                <h3 className="text-xl font-semibold">Plus</h3>
-                <p className="mt-1 text-2xl font-bold">$12<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
-                <p className="mt-2 text-sm text-muted-foreground">150 searches, unlimited bookmarks</p>
-                <div className="mt-6 flex-1" />
-                <Button asChild variant="outline" className="mt-4 w-full">
-                  <Link href="/pricing">Subscribe</Link>
-                </Button>
-              </div>
-              <div className="rounded-xl border border-border/60 bg-card/40 p-6 flex flex-col">
-                <h3 className="text-xl font-semibold">Unlimited</h3>
-                <p className="mt-1 text-2xl font-bold">$24<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
-                <p className="mt-2 text-sm text-muted-foreground">Unlimited searches + more</p>
-                <div className="mt-6 flex-1" />
-                <Button asChild variant="outline" className="mt-4 w-full">
-                  <Link href="/pricing">See plans</Link>
-                </Button>
-              </div>
-            </div>
-            <p className="mt-6 text-center">
-              <Link href="/pricing" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                See all plans & features →
-              </Link>
-            </p>
-          </div>
-        </section>
+        {/* Pricing — benefits from API so visitors see what's included without leaving the page */}
+        <LandingPricing />
       </main>
 
       <footer className="border-t border-border/60">
