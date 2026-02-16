@@ -118,7 +118,8 @@ const faqs = [
   },
   {
     question: "Is there a student discount?",
-    answer: "The annual plan offers 31% savings, which is perfect for students on a budget. We're also exploring institutional plans for drama schools. Contact us for more info!"
+    answer:
+      "The annual plans include a built-in discount (up to 31% off monthly pricing), which is great for students and working actors on a budget. I also try to keep a genuinely useful free plan available.",
   },
   {
     question: "What payment methods do you accept?",
@@ -328,6 +329,17 @@ export default function PricingPage() {
         >
           Start free, upgrade when you're ready. All plans include access to our monologue
           database.
+        </motion.p>
+        <motion.p
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+          className="mt-4 text-sm text-muted-foreground max-w-2xl mx-auto"
+        >
+          ActorRise is powered by AI search and a growing database of monologues. Subscriptions
+          mainly go toward paying for those AI costs and hosting, and a small part pays me so I
+          can keep building, improving, and keeping a generous free plan for actors and students
+          who can&apos;t pay yet.
         </motion.p>
 
         {/* Annual/Monthly Toggle */}
