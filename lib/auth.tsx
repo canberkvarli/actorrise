@@ -31,7 +31,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const syncUserWithBackend = useCallback(async (shouldSetLoading = false) => {
     try {
       // Sync user with backend to get our User model
-      const response = await api.get<User>("/api/auth/me");
+      // Use a timeout so we don't get stuck on the loading screen if the backend is slow/unreachable in production.
+      const response = await api.get<User>("/api/auth/me", { timeoutMs: 8000 });
       setUser(response.data);
       if (shouldSetLoading) {
         setLoading(false);
