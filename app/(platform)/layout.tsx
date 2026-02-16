@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconHome, IconSearch, IconUser, IconLogout, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo } from "@tabler/icons-react";
+import { IconHome, IconSearch, IconUser, IconLogout, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText } from "@tabler/icons-react";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarkCount";
@@ -231,6 +231,24 @@ export default function PlatformLayout({
                             {bookmarkCount}
                           </Badge>
                         )}
+                      </Link>
+
+                      <Link
+                        href="/submit-monologue"
+                        onClick={() => setProfileDropdownOpen(false)}
+                        className="mt-0.5 flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                      >
+                        <IconSparkles className="h-4 w-4 text-muted-foreground" />
+                        <span>Submit monologue</span>
+                      </Link>
+
+                      <Link
+                        href="/my-submissions"
+                        onClick={() => setProfileDropdownOpen(false)}
+                        className="mt-0.5 flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                      >
+                        <IconFileText className="h-4 w-4 text-muted-foreground" />
+                        <span>My submissions</span>
                       </Link>
 
                       <Link

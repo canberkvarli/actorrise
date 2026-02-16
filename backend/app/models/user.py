@@ -1,5 +1,5 @@
 from app.core.database import Base
-from sqlalchemy import Column, DateTime, Integer, String, text
+from sqlalchemy import Boolean, Column, DateTime, Integer, String, text
 from sqlalchemy.orm import relationship
 
 
@@ -12,6 +12,13 @@ class User(Base):
     supabase_id = Column(String, unique=True, index=True, nullable=True)  # Supabase user UUID
     hashed_password = Column(String, nullable=True)  # Optional, auth handled by Supabase
     created_at = Column(DateTime(timezone=True), server_default=text('now()'))
+
+    # Moderation permissions
+    is_moderator = Column(Boolean, default=False, nullable=False)  # Can review submissions
+    can_approve_submissions = Column(Boolean, default=False, nullable=False)  # Can approve (subset of moderators)
+
+    # Email verification (for notifications)
+    email_verified = Column(Boolean, default=False, nullable=False)
 
     # Relationships
     actor_profile = relationship("ActorProfile", back_populates="user", uselist=False)

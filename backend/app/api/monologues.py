@@ -779,3 +779,227 @@ async def upload_monologue(
             status_code=500,
             detail=f"Failed to upload monologue: {str(e)}"
         ) from e
+
+
+# ========================================
+# User Submission Endpoints (with moderation)
+# ========================================
+
+class MonologueSubmissionRequest(BaseModel):
+    """Request model for submitting a monologue for moderation."""
+    title: str
+    character_name: str
+    text: str
+    play_title: str
+    author: str
+    notes: Optional[str] = None  # Optional context about source, rights, etc.
+
+
+class SubmissionStatusResponse(BaseModel):
+    """Response for submission status."""
+    id: int
+    title: str
+    status: str
+    submitted_at: str
+    processed_at: Optional[str]
+
+    # Rejection details (if rejected)
+    rejection_reason: Optional[str]
+    rejection_details: Optional[str]
+
+    # Monologue link (if approved)
+    monologue_id: Optional[int]
+
+    class Config:
+        from_attributes = True
+
+
+@router.post("/submit")
+async def submit_monologue_for_review(
+    submission: MonologueSubmissionRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Submit a monologue for moderation review.
+
+    User submissions go through:
+    1. AI quality assessment
+    2. Copyright detection
+    3. Duplicate checking
+    4. Decision: auto-approve, manual review, or auto-reject
+    5. Email notification
+
+    Returns submission status.
+    """
+    from app.models.moderation import MonologueSubmission, ModerationLog
+    from app.services.ai.content_moderation import ContentModerator
+
+    try:
+        # Create submission record
+        sub = MonologueSubmission(
+            user_id=current_user.id,
+            submitted_title=submission.title,
+            submitted_text=submission.text,
+            submitted_character=submission.character_name,
+            submitted_play_title=submission.play_title,
+            submitted_author=submission.author,
+            user_notes=submission.notes,
+            status='pending'
+        )
+        db.add(sub)
+        db.flush()  # Get submission ID
+
+        # Run AI moderation
+        moderator = ContentModerator()
+        moderation_result = await moderator.moderate_submission(
+            text=submission.text,
+            title=submission.title,
+            character=submission.character_name,
+            play_title=submission.play_title,
+            author=submission.author,
+            user_notes=submission.notes,
+            db=db
+        )
+
+        # Update submission with AI results
+        sub.status = 'ai_review'
+        sub.ai_quality_score = moderation_result['quality_score']
+        sub.ai_copyright_risk = moderation_result['copyright_risk']
+        sub.ai_flags = moderation_result['flags']
+        sub.ai_moderation_notes = moderation_result['notes']
+
+        # Create moderation log
+        log = ModerationLog(
+            submission_id=sub.id,
+            action='ai_analysis',
+            actor_type='ai',
+            actor_id=None,
+            previous_status='pending',
+            new_status='ai_review',
+            reason='AI moderation completed',
+            metadata=moderation_result
+        )
+        db.add(log)
+
+        recommendation = moderation_result['recommendation']
+
+        if recommendation == 'auto_approve':
+            # Import approval logic from admin/moderation
+            from app.api.admin.moderation import approve_submission as admin_approve
+
+            # Auto-approve (handled in separate function for consistency)
+            sub.status = 'approved'
+            sub.processed_at = datetime.utcnow()
+
+            # TODO Phase 4: Send approval email
+
+            db.commit()
+
+            return {
+                'success': True,
+                'status': 'approved',
+                'message': 'Your submission has been automatically approved!',
+                'submission_id': sub.id,
+                'moderation_notes': moderation_result['notes']
+            }
+
+        elif recommendation == 'auto_reject':
+            sub.status = 'rejected'
+            sub.rejection_reason = moderation_result.get('rejection_reason', 'quality')
+            sub.rejection_details = moderation_result['notes']
+            sub.processed_at = datetime.utcnow()
+
+            # Log rejection
+            reject_log = ModerationLog(
+                submission_id=sub.id,
+                action='auto_reject',
+                actor_type='ai',
+                actor_id=None,
+                previous_status='ai_review',
+                new_status='rejected',
+                reason=sub.rejection_details,
+                metadata={'auto_rejection': True}
+            )
+            db.add(reject_log)
+
+            # TODO Phase 4: Send rejection email
+
+            db.commit()
+
+            return {
+                'success': False,
+                'status': 'rejected',
+                'message': 'Your submission could not be accepted.',
+                'submission_id': sub.id,
+                'reason': sub.rejection_reason,
+                'details': sub.rejection_details
+            }
+
+        else:  # manual_review
+            sub.status = 'manual_review'
+
+            # Log manual review needed
+            review_log = ModerationLog(
+                submission_id=sub.id,
+                action='flag_for_manual_review',
+                actor_type='ai',
+                actor_id=None,
+                previous_status='ai_review',
+                new_status='manual_review',
+                reason='AI flagged for human moderator review',
+                metadata=moderation_result
+            )
+            db.add(review_log)
+
+            # TODO Phase 4: Send "under review" email
+
+            db.commit()
+
+            return {
+                'success': True,
+                'status': 'manual_review',
+                'message': 'Your submission is under review. You will receive an email when a decision is made.',
+                'submission_id': sub.id,
+                'estimated_review_time': '24-48 hours'
+            }
+
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error processing submission: {str(e)}"
+        ) from e
+
+
+@router.get("/my-submissions", response_model=List[SubmissionStatusResponse])
+async def get_my_submissions(
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get current user's submission history.
+
+    Returns all submissions with their status.
+    """
+    from app.models.moderation import MonologueSubmission
+    from sqlalchemy import desc
+
+    submissions = db.query(MonologueSubmission).filter(
+        MonologueSubmission.user_id == current_user.id
+    ).order_by(
+        desc(MonologueSubmission.submitted_at)
+    ).limit(limit).offset(offset).all()
+
+    return [{
+        'id': sub.id,
+        'title': sub.submitted_title,
+        'status': sub.status,
+        'submitted_at': sub.submitted_at.isoformat(),
+        'processed_at': sub.processed_at.isoformat() if sub.processed_at else None,
+        'rejection_reason': sub.rejection_reason,
+        'rejection_details': sub.rejection_details,
+        'monologue_id': sub.monologue_id
+    } for sub in submissions]

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submission Received</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px 8px 0 0;
+            text-align: center;
+        }
+        .content {
+            background: #f9fafb;
+            padding: 30px;
+            border-radius: 0 0 8px 8px;
+        }
+        .monologue-title {
+            background: white;
+            padding: 15px;
+            border-left: 4px solid #667eea;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .footer {
+            text-align: center;
+            color: #6b7280;
+            font-size: 14px;
+            margin-top: 30px;
+        }
+        a {
+            color: #667eea;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Submission Received</h1>
+    </div>
+    <div class="content">
+        <p>Hi {{ user_name }},</p>
+
+        <p>Thank you for submitting your monologue to ActorRise! We've received:</p>
+
+        <div class="monologue-title">
+            <strong>{{ monologue_title }}</strong>
+        </div>
+
+        <p>Your submission is now being reviewed by our moderation team. You'll receive an email notification once a decision has been made.</p>
+
+        <p><strong>What happens next?</strong></p>
+        <ul>
+            <li>Our AI system checks for quality and copyright compliance</li>
+            <li>If needed, a human moderator will review your submission</li>
+            <li>You'll receive an email within 24-48 hours with the decision</li>
+        </ul>
+
+        <p>Thank you for contributing to the ActorRise community!</p>
+
+        <p>Best regards,<br>
+        The ActorRise Team</p>
+    </div>
+
+    <div class="footer">
+        <p>&copy; 2025 ActorRise. All rights reserved.</p>
+        <p><a href="https://actorrise.com">Visit ActorRise</a></p>
+    </div>
+</body>
+</html>
