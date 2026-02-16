@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -13,6 +12,7 @@ import { Monologue } from "@/types/actor";
 import Link from "next/link";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
+import { MonologueResultCard } from "@/components/monologue/MonologueResultCard";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useBookmarks, useToggleFavorite } from "@/hooks/useBookmarks";
@@ -263,104 +263,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             ) : favorites.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {sortedFavorites.map((mono, idx) => (
-                  <motion.div
+                  <MonologueResultCard
                     key={mono.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05, duration: 0.3, ease: "easeOut" }}
-                  >
-                    <Card
-                      className="hover:shadow-xl transition-all cursor-pointer h-full flex flex-col hover:border-primary/50 group"
-                      onClick={() => openMonologue(mono)}
-                    >
-                      <CardContent className="pt-6 flex-1 flex flex-col">
-                        <div className="space-y-4 flex-1">
-                          {/* Header */}
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1">
-                              <h3 className="font-bold text-xl mb-1 group-hover:text-primary transition-colors">
-                                {mono.character_name}
-                              </h3>
-                              <p className="text-sm text-muted-foreground line-clamp-1">
-                                {mono.play_title}
-                              </p>
-                              <p className="text-xs text-muted-foreground">
-                                by {mono.author}
-                              </p>
-                            </div>
-                            <button
-                              onClick={(e) => toggleFavorite(e, mono)}
-                              className="p-2 rounded-full transition-colors bg-accent/10 hover:bg-accent/20 text-accent"
-                            >
-                              <IconBookmark className="h-5 w-5 fill-current" />
-                            </button>
-                          </div>
-
-                          {/* Tags */}
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant="default" className="font-normal capitalize">
-                              {mono.category}
-                            </Badge>
-                            {mono.character_gender && (
-                              <Badge variant="outline" className="font-normal capitalize">
-                                {mono.character_gender}
-                              </Badge>
-                            )}
-                            {mono.character_age_range && (
-                              <Badge variant="outline" className="font-normal">
-                                {mono.character_age_range}
-                              </Badge>
-                            )}
-                            {mono.primary_emotion && (
-                              <Badge variant="secondary" className="font-normal capitalize">
-                                {mono.primary_emotion}
-                              </Badge>
-                            )}
-                          </div>
-
-                          {/* Synopsis / Scene Description */}
-                          {mono.scene_description && (
-                            <div className="bg-muted/50 px-3 py-2 rounded-md border-l-2 border-primary/40">
-                              <p className="text-xs italic text-muted-foreground line-clamp-2">
-                                {mono.scene_description}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Themes */}
-                          {mono.themes && mono.themes.length > 0 && (
-                            <div className="flex flex-wrap gap-1.5">
-                              {mono.themes.slice(0, 3).map(theme => (
-                                <span
-                                  key={theme}
-                                  className="text-xs px-2.5 py-1 bg-primary/10 text-primary rounded-full font-medium capitalize"
-                                >
-                                  {theme}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Preview */}
-                          <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                            &quot;{mono.text.substring(0, 120)}...&quot;
-                          </p>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="mt-4 pt-4 border-t flex items-center justify-between text-xs text-muted-foreground">
-                          <span className="font-medium">
-                            {Math.floor(mono.estimated_duration_seconds / 60)}:{(mono.estimated_duration_seconds % 60).toString().padStart(2, '0')} min
-                          </span>
-                          <span>{mono.word_count} words</span>
-                          <span className="flex items-center gap-1">
-                            <IconBookmark className="h-3 w-3" />
-                            {mono.favorite_count}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
+                    mono={mono}
+                    onSelect={() => openMonologue(mono)}
+                    onToggleFavorite={toggleFavorite}
+                    variant="default"
+                    index={idx}
+                    showMatchBadge={false}
+                  />
                 ))}
               </div>
             ) : (

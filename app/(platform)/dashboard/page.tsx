@@ -20,7 +20,8 @@ import {
   IconInfoCircle,
   IconSearch,
   IconHistory,
-  IconChevronRight
+  IconChevronRight,
+  IconSend
 } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -336,7 +337,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             )}
           </motion.section>
 
-          {/* ========== SECTION 2: Quick Search Bar ========== */}
+          {/* ========== SECTION 2: Quick Search (primary CTA) ========== */}
           <motion.section
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -347,7 +348,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
                   <IconSearch className="h-6 w-6 text-primary" />
                 </div>
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <p className="text-lg font-medium text-foreground group-hover:text-primary transition-colors">
                     Find your next monologue
                   </p>
@@ -355,7 +356,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     Search by description, emotion, character type, or browse filters
                   </p>
                 </div>
-                <IconChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                <IconChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0" />
               </div>
             </Link>
           </motion.section>
@@ -496,6 +497,18 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 </div>
                 <RecentSearches maxSearches={4} compact />
               </div>
+            </div>
+
+            {/* Submit a monologue — secondary CTA below the grid */}
+            <div className="mt-6 pt-6 border-t border-border/50 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
+              <span>Have a monologue to share with the community?</span>
+              <Link
+                href="/submit-monologue"
+                className="inline-flex items-center gap-1.5 font-medium text-foreground hover:text-primary transition-colors"
+              >
+                <IconSend className="h-4 w-4" />
+                Submit a monologue
+              </Link>
             </div>
           </motion.section>
         </div>

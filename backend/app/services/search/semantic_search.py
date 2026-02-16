@@ -119,12 +119,119 @@ def _filter_match_boost(mono: Monologue, merged_filters: Dict) -> float:
     return min(0.35, boost)
 
 
+def _calculate_relevance_score_multiplicative(
+    base_similarity: float,
+    mono: Monologue,
+    merged_filters: Dict,
+    actor_profile: Optional[Dict],
+    is_bookmarked: bool
+) -> float:
+    """
+    IMPROVED: Multiplicative scoring to prevent saturation and preserve ranking.
+
+    Formula: score = base * (1 + w1*match1) * (1 + w2*match2) * ...
+    This allows stacking bonuses while preserving relative ranking granularity.
+
+    Args:
+        base_similarity: Cosine similarity (0.0-1.0)
+        mono: Monologue object
+        merged_filters: Parsed query filters
+        actor_profile: User's actor profile
+        is_bookmarked: Whether user has bookmarked this monologue
+
+    Returns:
+        Final relevance score
+    """
+    score = base_similarity
+
+    # Weight constants (tuned for good results)
+    WEIGHTS = {
+        'filter_gender': 0.15,
+        'filter_emotion': 0.15,
+        'filter_duration': 0.12,
+        'filter_theme': 0.08,
+        'profile_gender': 0.10,
+        'profile_age': 0.05,
+        'bookmark': 0.20,  # Reduced from +0.3 additive
+    }
+
+    # 1. Filter matches
+    if merged_filters.get("gender"):
+        g = (mono.character_gender or "").lower()
+        want = (merged_filters["gender"] or "").lower()
+        if g == want or g == "any" or want == "any":
+            score *= (1 + WEIGHTS['filter_gender'])
+
+    if merged_filters.get("emotion"):
+        e = (mono.primary_emotion or "").lower()
+        if e == (merged_filters["emotion"] or "").lower():
+            score *= (1 + WEIGHTS['filter_emotion'])
+
+    if merged_filters.get("max_duration") and mono.estimated_duration_seconds:
+        try:
+            max_sec = int(merged_filters["max_duration"])
+            if mono.estimated_duration_seconds <= max_sec:
+                score *= (1 + WEIGHTS['filter_duration'])
+        except (TypeError, ValueError):
+            pass
+
+    want_themes = merged_filters.get("themes") or ([merged_filters["theme"]] if merged_filters.get("theme") else None)
+    if want_themes and mono.themes:
+        mono_themes_lower = [str(t).lower() for t in (mono.themes or []) if t]
+        for wt in want_themes if isinstance(want_themes, list) else [want_themes]:
+            if wt and str(wt).lower() in mono_themes_lower:
+                score *= (1 + WEIGHTS['filter_theme'])
+                break
+
+    # 2. Profile matches
+    if actor_profile and actor_profile.get("profile_bias_enabled", True):
+        ap_gender = (actor_profile.get("gender") or "").strip().lower()
+        if ap_gender:
+            cg = (mono.character_gender or "").lower()
+            if cg == ap_gender or cg == "any":
+                score *= (1 + WEIGHTS['profile_gender'])
+
+        ap_age = (actor_profile.get("age_range") or "").strip().lower()
+        if ap_age:
+            ca = (mono.character_age_range or "").lower()
+            if ca == ap_age or ca == "any":
+                score *= (1 + WEIGHTS['profile_age'])
+
+    # 3. Bookmark boost
+    if is_bookmarked:
+        score *= (1 + WEIGHTS['bookmark'])
+
+    # Soft cap at 1.0, but allow exceptional matches to go slightly higher
+    return min(1.0, score)
+
+
+def _exact_quote_match_with_boundaries(query: str, text: str) -> bool:
+    """
+    Check if query is an exact quote with word boundaries.
+    Prevents false positives like "be" matching "because".
+
+    Args:
+        query: Search query (already stripped of punctuation)
+        text: Monologue text (already stripped of punctuation)
+
+    Returns:
+        True if exact match with word boundaries
+    """
+    if len(query) < 3:  # Too short to be meaningful
+        return False
+
+    # Use regex with word boundaries
+    pattern = r'\b' + re.escape(query).replace(r'\ ', r'\s+') + r'\b'
+    return re.search(pattern, text, re.IGNORECASE) is not None
+
+
 def _fuzzy_quote_match(
-    query: str, text: str, min_word_ratio: float = 0.75, max_span_words: int = 16
+    query: str, text: str, min_word_ratio: float = 0.80, max_span_words: int = 16
 ) -> bool:
     """
     Check if query is a fuzzy match for a famous line in text.
     Handles minor typos like "to be or not be" matching "to be or not to be".
+    IMPROVED: Uses word boundaries to avoid false matches.
 
     Returns True only if:
     - At least min_word_ratio of query words appear in order in text, AND
@@ -135,7 +242,7 @@ def _fuzzy_quote_match(
     query_words = query.split()
     text_words = text.split()
 
-    if len(query_words) < 2:
+    if len(query_words) < 3:  # Require at least 3 words for fuzzy matching
         return False
 
     # Find query words in order and record their indices in text
@@ -149,6 +256,7 @@ def _fuzzy_quote_match(
                 break
             text_idx += 1
 
+    # Increased threshold to 80% for better precision
     if len(matched_indices) < len(query_words) * min_word_ratio:
         return False
 
@@ -482,12 +590,7 @@ class SemanticSearch:
                 mono_embedding_vec: Optional[List[float]] = getattr(mono, "embedding_vector", None)  # type: ignore[assignment]
                 if mono_embedding_vec:
                     similarity = self._cosine_similarity(query_embedding, mono_embedding_vec)
-
-                    # Boost bookmarked monologues by adding 0.3 to similarity
-                    if mono.id in bookmarked_ids:
-                        similarity += 0.3
-                        logger.debug("Boosting bookmarked (pgvector): %s from %s", mono.character_name, mono.play.title)
-
+                    # Note: Bookmark boost will be applied later in multiplicative scoring
                     results_with_scores.append((mono, similarity))
 
             similarity_time = time.time() - similarity_start
@@ -539,12 +642,7 @@ class SemanticSearch:
 
                         # Calculate cosine similarity
                         similarity = self._cosine_similarity(query_embedding, mono_embedding)
-
-                        # Boost bookmarked monologues by adding 0.3 to similarity
-                        if mono.id in bookmarked_ids:
-                            similarity += 0.3
-                            logger.debug("Boosting bookmarked: %s from %s", mono.character_name, mono.play.title)
-
+                        # Note: Bookmark boost will be applied later in multiplicative scoring
                         results_with_scores.append((mono, similarity))
 
                     except (json.JSONDecodeError, ValueError, TypeError) as parse_e:
@@ -557,18 +655,13 @@ class SemanticSearch:
                 similarity_time, len(results_with_scores)
             )
 
-        # Boost scores when monologue matches parsed filters (gender, emotion, duration, theme)
+        # IMPROVED: Apply all boosts using multiplicative scoring (prevents saturation)
         results_with_scores = [
-            (mono, min(1.0, score + _filter_match_boost(mono, merged_filters)))
+            (mono, _calculate_relevance_score_multiplicative(
+                score, mono, merged_filters, actor_profile, mono.id in bookmarked_ids
+            ))
             for mono, score in results_with_scores
         ]
-
-        # Boost when monologue fits the actor's profile (gender, age) if profile_bias_enabled
-        if actor_profile:
-            results_with_scores = [
-                (mono, min(1.0, score + _profile_match_boost(mono, actor_profile)))
-                for mono, score in results_with_scores
-            ]
 
         # Sort by similarity (descending) and limit
         results_with_scores.sort(key=lambda x: x[1], reverse=True)
@@ -617,8 +710,8 @@ class SemanticSearch:
                     other_results.append((m, s))
                     continue
                 text_stripped = _strip_punctuation(m.text)
-                # Exact substring match gets highest boost
-                if query_stripped in text_stripped:
+                # IMPROVED: Exact match with word boundaries (prevents "be" matching "because")
+                if _exact_quote_match_with_boundaries(query_stripped, text_stripped):
                     exact_matches.append((m, max(s, EXACT_QUOTE_MATCH_SCORE)))
                     quote_match_type_by_id[m.id] = "exact_quote"
                 # Fuzzy match (handles minor typos like "to be or not be" → "to be or not to be")

@@ -18,6 +18,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
     { name = "internetarchive" },
+    { name = "jinja2" },
     { name = "langchain", version = "0.3.27", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "langchain", version = "1.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "langchain-core", version = "0.3.81", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
@@ -44,6 +45,7 @@ dependencies = [
     { name = "python-multipart", version = "0.0.20", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10'" },
     { name = "python-multipart", version = "0.0.21", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10'" },
     { name = "requests" },
+    { name = "resend" },
     { name = "spacy" },
     { name = "sqlalchemy" },
     { name = "stripe" },
@@ -58,6 +60,7 @@ requires-dist = [
     { name = "fastapi", specifier = "==0.128.0" },
     { name = "httpx", specifier = ">=0.27.0" },
     { name = "internetarchive", specifier = ">=3.5.0" },
+    { name = "jinja2", specifier = ">=3.1.0" },
     { name = "langchain", specifier = ">=0.3.0" },
     { name = "langchain-core", specifier = ">=0.3.0" },
     { name = "langchain-openai", specifier = ">=0.2.0" },
@@ -75,6 +78,7 @@ requires-dist = [
     { name = "python-jose", extras = ["cryptography"], specifier = "==3.3.0" },
     { name = "python-multipart", specifier = ">=0.0.20" },
     { name = "requests", specifier = ">=2.31.0" },
+    { name = "resend", specifier = ">=0.7.0" },
     { name = "spacy", specifier = ">=3.7.0" },
     { name = "sqlalchemy", specifier = "==2.0.36" },
     { name = "stripe", specifier = ">=8.0.0" },
@@ -3723,6 +3727,19 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f3/61/d7545dafb7ac2230c70d38d31cbfe4cc64f7144dc41f6e4e4b78ecd9f5bb/requests-toolbelt-1.0.0.tar.gz", hash = "sha256:7681a0a3d047012b5bdc0ee37d7f8f07ebe76ab08caeccfc3921ce23c88d5bc6", size = 206888, upload-time = "2023-05-01T04:11:33.229Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/3f/51/d4db610ef29373b879047326cbf6fa98b6c1969d6f6dc423279de2b1be2c/requests_toolbelt-1.0.0-py2.py3-none-any.whl", hash = "sha256:cccfdd665f0a24fcf4726e690f65639d272bb0637b9b92dfd91a5568ccf6bd06", size = 54481, upload-time = "2023-05-01T04:11:28.427Z" },
+]
+
+[[package]]
+name = "resend"
+version = "2.22.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "requests" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/2e/75/df5e247aa2398a3cafb3136a731fd99760781ce1e27f8afd0355c527319b/resend-2.22.0.tar.gz", hash = "sha256:4f084ea371494e4c811e0417529daeee5c6198b127d2f49a8b287fbc0bc04f97", size = 31056, upload-time = "2026-02-16T14:49:18.009Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8d/20/9f565a733ab147a3e549b00830efff18140946b5e5b6279b77afd668129f/resend-2.22.0-py2.py3-none-any.whl", hash = "sha256:f3c7c6f23492eaed012ff6ba046dc595a4420d4d614ba6abd2ddd62e0ba810b4", size = 51654, upload-time = "2026-02-16T14:49:16.825Z" },
 ]
 
 [[package]]

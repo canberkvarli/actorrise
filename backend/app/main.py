@@ -10,11 +10,13 @@ from app.api.scenes import router as scenes_router
 from app.api.scripts import router as scripts_router
 from app.api.subscriptions import router as subscriptions_router
 from app.api.webhooks import router as webhooks_router
+from app.api.admin.moderation import router as moderation_router
 from sqlalchemy import text
 
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.core.seed import ensure_pricing_tiers
+from app.models.moderation import MonologueSubmission, ModerationLog  # noqa: F401 — register with Base for create_all
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -86,6 +88,7 @@ app.include_router(audition_router)
 app.include_router(pricing_router)
 app.include_router(subscriptions_router)
 app.include_router(webhooks_router)
+app.include_router(moderation_router)
 
 
 @app.get("/")
