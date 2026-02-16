@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description:
     "Find the right monologue in less than 20 seconds. Free tier to try, Plus and Unlimited for serious actors. AI search, bookmarks, and more. No credit card for free.",
   openGraph: {
-    title: "Pricing | ActorRise - Find the Right Monologue in 20 Seconds",
+    title: "Pricing | ActorRise - Find the Right Monologue in Less Than 20 Seconds",
     description:
       "Find the right monologue in less than 20 seconds. Free tier, Plus, and Unlimited. AI search. Start free.",
   },
