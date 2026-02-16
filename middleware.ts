@@ -56,7 +56,14 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-  const { pathname } = request.nextUrl
+  const { pathname, searchParams } = request.nextUrl
+
+  // Supabase sometimes redirects OAuth to Site URL (/) with ?code=... instead of /auth/callback – fix it so the callback route can exchange the code
+  if (pathname === '/' && searchParams.has('code')) {
+    const callbackUrl = new URL('/auth/callback', request.url)
+    searchParams.forEach((value, key) => callbackUrl.searchParams.set(key, value))
+    return NextResponse.redirect(callbackUrl)
+  }
 
   // Redirect legacy onboarding URL to profile (complete your profile in one place)
   if (pathname === '/onboarding') {
