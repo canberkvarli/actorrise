@@ -281,21 +281,6 @@ export default function PricingPage() {
       features.push("Advanced analytics & insights");
     }
 
-    // Collections
-    if (tier.features.collections) {
-      features.push("Collections & organization");
-    }
-
-    // Collaboration
-    if (tier.features.collaboration) {
-      features.push("Share collections with others");
-    }
-
-    // White label
-    if (tier.features.white_label_export) {
-      features.push("White-label export (no branding)");
-    }
-
     // Support
     if (tier.features.priority_support) {
       features.push("Priority email support");
@@ -438,11 +423,11 @@ export default function PricingPage() {
                 </CardHeader>
 
                 <CardContent className="flex-1">
-                  <ul className="space-y-3">
+                  <ul className="space-y-4">
                     {features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start gap-2">
-                        <IconCheck className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
-                        <span className="text-sm">{feature}</span>
+                      <li key={idx} className="flex items-start gap-3">
+                        <IconCheck className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
+                        <span className="text-base md:text-lg text-muted-foreground">{feature}</span>
                       </li>
                     ))}
                   </ul>
