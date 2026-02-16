@@ -42,7 +42,7 @@ export default function SignupPage() {
           </div>
 
           {/* OAuth buttons */}
-          <OAuthButtons redirectTo="/onboarding" />
+          <OAuthButtons redirectTo="/dashboard" />
 
           {/* Divider */}
           <OAuthDivider />

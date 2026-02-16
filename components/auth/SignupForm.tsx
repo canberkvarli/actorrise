@@ -38,7 +38,7 @@ export function SignupForm() {
     setError(null);
     setIsLoading(true);
     try {
-      // Pass empty string for name - will be collected in onboarding
+      // Pass empty string for name - can be set later in profile
       await signup(data.email, data.password, "");
     } catch (err: unknown) {
       let errorMessage = "Failed to sign up";

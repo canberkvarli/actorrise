@@ -99,7 +99,7 @@ def create_or_update_profile(
 ):
     try:
         existing_profile = db.query(ActorProfile).filter(ActorProfile.user_id == current_user.id).first()
-        # PUT = full replace (e.g. onboarding completion) so all fields from body overwrite existing
+        # PUT = full replace so all fields from body overwrite existing
         use_full_replace = request.method == "PUT"
         if existing_profile:
             profile_dict = (

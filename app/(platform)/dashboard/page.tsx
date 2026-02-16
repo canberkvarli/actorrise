@@ -71,7 +71,7 @@ function QuickActions({ stats }: { stats: any }) {
               <div>
                 <h3 className="font-semibold text-sm">Complete your profile</h3>
                 <p className="text-xs text-muted-foreground">
-                  {stats.completion_percentage}% complete - get better recommendations
+                  {stats.completion_percentage}% complete - help our AI understand you for better monologue matches
                 </p>
               </div>
             </div>
