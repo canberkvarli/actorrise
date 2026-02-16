@@ -200,4 +200,24 @@
     font-family: var(--font-brand), var(--font-serif), serif;
     letter-spacing: 0.04em;
   }
+
+  /* Hero headline keyword – slick neon-style emphasis (gradient + soft glow) */
+  .hero-keyword {
+    background: linear-gradient(
+      135deg,
+      var(--primary) 0%,
+      color-mix(in oklab, var(--primary) 85%, white) 50%,
+      var(--primary) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: none;
+    filter: drop-shadow(0 0 12px color-mix(in oklab, var(--primary) 35%, transparent))
+            drop-shadow(0 0 24px color-mix(in oklab, var(--primary) 18%, transparent));
+  }
+  .hero-keyword::selection {
+    color: var(--primary-foreground);
+    background: var(--primary);
+  }
 }
