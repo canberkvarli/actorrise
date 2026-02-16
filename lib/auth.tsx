@@ -156,8 +156,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // If session exists, user is auto-confirmed (email confirmation disabled)
       if (data.session) {
         await syncUserWithBackend(false);
-        // Always send new users to onboarding to set up profile (no "profile created" yet)
-        router.push("/onboarding");
+        // Send new users straight to dashboard; profile completion is optional via /profile
+        router.push("/dashboard");
       } else {
         // Email confirmation required - show success message
         // User will need to confirm email before logging in

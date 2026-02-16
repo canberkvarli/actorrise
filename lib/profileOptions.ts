@@ -1,5 +1,5 @@
 /**
- * Shared profile option constants so onboarding and actor profile form stay in sync.
+ * Shared profile option constants for the actor profile form.
  * Use these for dropdowns, toggles, and multi-selects.
  */
 

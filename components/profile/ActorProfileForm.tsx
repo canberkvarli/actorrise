@@ -68,7 +68,7 @@ export function ActorProfileForm() {
   const [showPhotoViewer, setShowPhotoViewer] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
   const [hasInitialized, setHasInitialized] = useState(false);
-  /** Actor types (from onboarding) - multi-select; when non-empty we save type as array */
+  /** Actor types - multi-select; when non-empty we save type as array */
   const [actorTypes, setActorTypes] = useState<string[]>([]);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const saveStatusTimeoutRef = useRef<NodeJS.Timeout | null>(null);

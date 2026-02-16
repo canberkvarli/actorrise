@@ -6,7 +6,7 @@ export default function ProfilePage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Actor Profile</h1>
         <p className="text-muted-foreground">
-          Complete your profile to get personalized monologue recommendations
+          The more you share, the better our AI understands you and the more accurate your monologue matches and recommendations.
         </p>
       </div>
       <ActorProfileForm />

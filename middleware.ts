@@ -58,11 +58,15 @@ export default async function middleware(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // Protect platform and onboarding (require auth)
+  // Redirect legacy onboarding URL to profile (complete your profile in one place)
+  if (pathname === '/onboarding') {
+    return NextResponse.redirect(new URL('/profile', request.url))
+  }
+
+  // Protect platform (require auth)
   if (pathname.startsWith('/dashboard') ||
       pathname.startsWith('/profile') ||
-      pathname.startsWith('/search') ||
-      pathname === '/onboarding') {
+      pathname.startsWith('/search')) {
     if (!user) {
       // In dev, if Supabase was unreachable from middleware, allow the request through:
       // the client has the session and will render; avoids "login then redirect back" when
