@@ -1,10 +1,8 @@
-import { LoginForm } from "@/components/auth/LoginForm";
-import { OAuthButtons, OAuthDivider } from "@/components/auth/OAuthButtons";
+import { AuthProgressiveDisclosure } from "@/components/auth/AuthProgressiveDisclosure";
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { IconArrowLeft } from "@tabler/icons-react";
-import { Suspense } from "react";
 
 export default function LoginPage() {
   return (
@@ -42,16 +40,8 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* OAuth buttons */}
-          <OAuthButtons redirectTo="/dashboard" />
-
-          {/* Divider */}
-          <OAuthDivider />
-
-          {/* Email/password form */}
-          <Suspense fallback={<div className="h-10 animate-pulse rounded-lg bg-muted" />}>
-            <LoginForm />
-          </Suspense>
+          {/* Three options: Google, Apple, Sign in with email (expandable) */}
+          <AuthProgressiveDisclosure mode="login" redirectTo="/dashboard" />
 
           {/* Sign up link */}
           <div className="text-center text-sm text-muted-foreground pt-2">
