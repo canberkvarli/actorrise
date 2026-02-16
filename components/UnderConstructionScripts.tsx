@@ -25,7 +25,7 @@ export default function UnderConstructionScripts() {
             <p className="text-lg">Under construction</p>
           </div>
           <p className="text-muted-foreground max-w-md mb-8">
-            We&apos;re still building this. Upload scripts, extract scenes, and rehearse with an AI scene partner—coming soon.
+            We&apos;re still building this. Upload scripts, extract scenes, and rehearse with an AI scene partner. Coming soon.
           </p>
           <Button asChild variant="outline" size="lg">
             <Link href="/dashboard">Back to Home</Link>

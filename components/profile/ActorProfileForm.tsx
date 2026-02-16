@@ -1236,7 +1236,7 @@ export function ActorProfileForm() {
                             </TooltipTrigger>
                             <TooltipContent className="max-w-xs">
                               <p className="text-sm">
-                                Controls how sensitive the system is to flagging &quot;overdone&quot; monologues—pieces that are frequently used in auditions.<br/><br/>
+                                Controls how sensitive the system is to flagging &quot;overdone&quot; monologues (pieces that are frequently used in auditions).<br/><br/>
                                 <strong>Low (0.0-0.3):</strong> Only flags extremely overdone monologues<br/>
                                 <strong>Medium (0.4-0.6):</strong> Flags moderately overdone pieces<br/>
                                 <strong>High (0.7-1.0):</strong> Flags any monologue that might be overdone, helping you stand out with unique choices

@@ -282,7 +282,7 @@ class SemanticSearch:
         filters: Optional[Dict] = None,
         user_id: Optional[int] = None,
         actor_profile: Optional[Dict] = None,
-    ) -> List[tuple[Monologue, float]]:
+    ) -> Tuple[List[tuple[Monologue, float]], Dict[int, str]]:
         """
         Semantic search for monologues.
 
@@ -367,7 +367,7 @@ class SemanticSearch:
 
         # Merge filters in precedence order:
         # AI-parsed < keyword-derived (optimized) < explicit filters
-        merged_filters = {**(extracted_filters or {}), **(optimized_filters or {})}
+        merged_filters = {**(extracted_filters or {}), **(optimized_filters or {}), **(explicit_filters or {})}
         logger.debug("Merged filters (final): %s", merged_filters)
 
         # Optional: check cache for full search results for this (query, filters, user)
@@ -547,6 +547,15 @@ class SemanticSearch:
                     Monologue.scene == merged_filters['scene']
                 )
 
+            if merged_filters.get('max_overdone_score') is not None:
+                threshold = float(merged_filters['max_overdone_score'])
+                base_query = base_query.filter(
+                    or_(
+                        Monologue.overdone_score.is_(None),
+                        Monologue.overdone_score <= threshold,
+                    )
+                )
+
         # Get user's bookmarked monologues if user_id provided
         # NOTE: Fetches all bookmarks because boost is applied during scoring
         # Capped at 1000 most recent to avoid pathological cases
@@ -625,7 +634,8 @@ class SemanticSearch:
                     self.db.rollback()
                 except Exception:
                     pass
-                return self._fallback_text_search(query, limit, merged_filters)
+                fallback_monologues = self._fallback_text_search(query, limit, merged_filters)
+                return ([(m, 0.0) for m in fallback_monologues], {})
 
             logger.debug(
                 "Loaded %s monologues with legacy JSON embeddings (max: %s)",
@@ -894,6 +904,15 @@ class SemanticSearch:
                     Monologue.scene == filters['scene']
                 )
 
+            if filters.get('max_overdone_score') is not None:
+                threshold = float(filters['max_overdone_score'])
+                base_query = base_query.filter(
+                    or_(
+                        Monologue.overdone_score.is_(None),
+                        Monologue.overdone_score <= threshold,
+                    )
+                )
+
         # Simple keyword-friendly text search: play title, character, author, monologue title/text.
         # We search both the full query and important keywords so that
         # multi-word queries like "give me the hamlet monologue" still match "Hamlet".
@@ -1018,6 +1037,15 @@ class SemanticSearch:
 
             if filters.get('difficulty'):
                 base_query = base_query.filter(Monologue.difficulty_level == filters['difficulty'])
+
+            if filters.get('max_overdone_score') is not None:
+                threshold = float(filters['max_overdone_score'])
+                base_query = base_query.filter(
+                    or_(
+                        Monologue.overdone_score.is_(None),
+                        Monologue.overdone_score <= threshold,
+                    )
+                )
 
         # Order by random and limit. SQLAlchemy's func.random() is callable at runtime,
         # but static analysis (pylint) may flag it as not-callable, so we disable that check here.

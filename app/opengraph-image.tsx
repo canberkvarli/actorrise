@@ -1,8 +1,11 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "ActorRise - World's largest AI-powered monologue search";
+export const alt = "ActorRise - Find the right monologue in less than 20 seconds";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
+
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+const logoUrl = `${siteUrl}/logo.png`;
 
 export default async function Image() {
   return new ImageResponse(
@@ -29,44 +32,22 @@ export default async function Image() {
             textAlign: "center",
           }}
         >
-          <div
-            style={{
-              width: 8,
-              height: 48,
-              background: "#e85d04",
-              borderRadius: 4,
-              marginBottom: 40,
-            }}
+          <img
+            src={logoUrl}
+            alt=""
+            width={160}
+            height={160}
+            style={{ marginBottom: 32, borderRadius: 12 }}
           />
           <div
             style={{
-              fontSize: 88,
-              fontWeight: 600,
-              color: "#fafafa",
-              letterSpacing: "-0.02em",
-              marginBottom: 24,
-            }}
-          >
-            ActorRise
-          </div>
-          <div
-            style={{
-              fontSize: 32,
+              fontSize: 36,
               color: "#a1a1a1",
               maxWidth: 700,
               lineHeight: 1.4,
             }}
           >
-            World&apos;s largest AI-powered monologue search
-          </div>
-          <div
-            style={{
-              fontSize: 26,
-              color: "#737373",
-              marginTop: 12,
-            }}
-          >
-            8,600+ monologues · Find your next piece in seconds
+            Find the right monologue in less than 20 seconds
           </div>
         </div>
       </div>

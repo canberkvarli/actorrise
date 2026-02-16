@@ -5,7 +5,7 @@ import { ContactPageForm } from "@/components/contact/ContactPageForm";
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Get in touch with ActorRise. Questions, support, or feedback—we're here to help.",
+    "Get in touch with ActorRise. Questions, support, or feedback. We're here to help.",
   openGraph: {
     title: "Contact | ActorRise",
     description: "Get in touch with ActorRise for support and inquiries.",

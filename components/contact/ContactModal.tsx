@@ -77,7 +77,7 @@ export function ContactModal({ open, onOpenChange }: ContactModalProps) {
         <DialogHeader>
           <DialogTitle>Get in touch</DialogTitle>
           <DialogDescription>
-            Partnership, feedback, bugs, collaboration—I built ActorRise on my own and
+            Partnership, feedback, bugs, collaboration. I built ActorRise on my own and
             really appreciate your support. I&apos;ll reply as soon as I can.
           </DialogDescription>
         </DialogHeader>

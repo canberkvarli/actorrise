@@ -13,13 +13,24 @@ class Settings:
     # 3) Password in URL is the database password, not the anon key
     if not database_url or not database_url.startswith("postgresql"):
         raise ValueError("DATABASE_URL must be set to a PostgreSQL connection string")
-    jwt_secret: str = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
+    _jwt_secret_raw: str = os.getenv("JWT_SECRET", "your-secret-key-change-in-production")
     jwt_algorithm: str = os.getenv("JWT_ALGORITHM", "HS256")
     cors_origins: List[str] = [
         o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:3000").split(",") if o.strip()
     ]
     # When "development" or "local", feature limits (e.g. AI search) are not enforced.
     environment: str = os.getenv("ENVIRONMENT", "development").lower()
+
+    # In production, require a non-default JWT secret (for when JWT verification is enabled).
+    if environment == "production" and (
+        not _jwt_secret_raw or _jwt_secret_raw.strip() == "your-secret-key-change-in-production"
+    ):
+        raise ValueError(
+            "JWT_SECRET must be set to a non-default value in production. "
+            "Set JWT_SECRET in your production environment."
+        )
+    jwt_secret: str = _jwt_secret_raw
+
     # Comma-separated emails that bypass tier/usage limits (e.g. canberkvarli@gmail.com).
     superuser_emails: str = os.getenv("SUPERUSER_EMAILS", "canberkvarli@gmail.com").strip()
     # Supabase Storage settings

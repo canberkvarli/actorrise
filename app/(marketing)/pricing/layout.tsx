@@ -3,11 +3,11 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Pricing",
   description:
-    "ActorRise plans: free tier to explore 8,600+ monologues, Plus and Unlimited for serious actors. AI search, bookmarks, and more. No credit card for free.",
+    "Find the right monologue in less than 20 seconds. Free tier to try, Plus and Unlimited for serious actors. AI search, bookmarks, and more. No credit card for free.",
   openGraph: {
-    title: "Pricing | ActorRise - AI Monologue Search",
+    title: "Pricing | ActorRise - Find the Right Monologue in 20 Seconds",
     description:
-      "Free tier, Plus, and Unlimited plans. 8,600+ monologues, AI semantic search. Start free.",
+      "Find the right monologue in less than 20 seconds. Free tier, Plus, and Unlimited. AI search. Start free.",
   },
 };
 

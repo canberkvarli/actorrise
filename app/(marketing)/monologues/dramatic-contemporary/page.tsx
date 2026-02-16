@@ -23,7 +23,7 @@ export default function Page() {
       </h1>
       <p className="text-lg text-muted-foreground mb-8">
         Looking for something serious, modern, and not overdone? We have thousands of dramatic
-        monologues from contemporary plays. Search by emotion, relationship, or length—no keyword
+        monologues from contemporary plays. Search by emotion, relationship, or length. No keyword
         guessing.
       </p>
       <Button asChild size="lg" className="rounded-full px-6">
