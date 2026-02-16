@@ -7,6 +7,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
+import { MarketingFooter } from "@/components/contact/MarketingFooter";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -35,6 +36,13 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               >
                 Pricing
               </Link>
+              <span className="h-4 w-px bg-border/60" />
+              <Link
+                href="/contact"
+                className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
+              >
+                Contact
+              </Link>
             </nav>
             <div className="flex items-center gap-2">
               <Button asChild variant="ghost" size="sm">
@@ -52,40 +60,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       <main className="flex-1">{children}</main>
 
       {/* Footer */}
-      <footer className="border-t border-border/60 bg-background py-8">
-        <div className="container mx-auto px-4 sm:px-6">
-          <p className="text-xs text-muted-foreground/90 mb-4 max-w-xl">
-            Monologues are from public domain and licensed sources (e.g.{" "}
-            <Link href="/sources" className="underline hover:no-underline text-foreground/80">
-              Project Gutenberg
-            </Link>
-            ). We do not distribute copyrighted play text.
-          </p>
-          <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} ActorRise</p>
-            <div className="flex items-center gap-4">
-              <Link href="/for-teachers" className="hover:text-foreground transition-colors">
-                For teachers
-              </Link>
-              <Link href="/pricing" className="hover:text-foreground transition-colors">
-                Pricing
-              </Link>
-              <Link href="/sources" className="hover:text-foreground transition-colors">
-                Sources & copyright
-              </Link>
-              <Link href="/terms" className="hover:text-foreground transition-colors">
-                Terms
-              </Link>
-              <Link href="/privacy" className="hover:text-foreground transition-colors">
-                Privacy
-              </Link>
-              <Link href="/contact" className="hover:text-foreground transition-colors">
-                Contact
-              </Link>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <MarketingFooter />
     </div>
   );
 }

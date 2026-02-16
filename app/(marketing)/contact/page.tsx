@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ContactPageForm } from "@/components/contact/ContactPageForm";
 
 export const metadata: Metadata = {
   title: "Contact",
@@ -18,14 +19,17 @@ export default function ContactPage() {
         Contact
       </h1>
       <p className="text-muted-foreground mb-10">
-        Have a question, feedback, or need support? We&apos;d love to hear from you.
+        Have a question, feedback, or need support? I&apos;d love to hear from you.
       </p>
 
       <div className="space-y-8 text-muted-foreground">
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">Support & general inquiries</h2>
+          <ContactPageForm />
+        </section>
+        <section>
+          <h2 className="text-xl font-semibold text-foreground mb-3">Or email directly</h2>
           <p className="mb-3">
-            For account issues, billing questions, or technical support, email us at:
+            For account issues, billing questions, or technical support:
           </p>
           <p>
             <a
@@ -36,7 +40,7 @@ export default function ContactPage() {
             </a>
           </p>
           <p className="mt-4 text-sm">
-            We aim to respond within 1–2 business days.
+            I aim to respond within 1–2 business days.
           </p>
         </section>
 

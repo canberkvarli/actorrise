@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { LandingPricing } from "@/components/landing/LandingPricing";
+import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 
 export default function LandingPage() {
   return (
@@ -36,6 +37,10 @@ export default function LandingPage() {
               >
                 Pricing
               </Link>
+              <span className="h-4 w-px bg-border/60" />
+              <ContactModalTrigger className="px-3 py-1.5 text-sm text-foreground/90">
+                Contact
+              </ContactModalTrigger>
             </div>
             <div className="flex items-center gap-2">
               <Button asChild variant="ghost" size="sm">
@@ -174,6 +179,9 @@ export default function LandingPage() {
               <Link href="/pricing" className="hover:text-foreground transition-colors">
                 Pricing
               </Link>
+              <ContactModalTrigger className="hover:text-foreground">
+                Contact
+              </ContactModalTrigger>
               <Link href="/login" className="hover:text-foreground transition-colors">
                 Sign in
               </Link>
