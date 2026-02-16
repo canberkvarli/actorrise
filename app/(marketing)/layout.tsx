@@ -54,9 +54,12 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       {/* Footer */}
       <footer className="border-t border-border/60 bg-background py-8">
         <div className="container mx-auto px-6">
-          <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} ActorRise</p>
             <div className="flex items-center gap-4">
+              <Link href="/for-teachers" className="hover:text-foreground transition-colors">
+                For teachers
+              </Link>
               <Link href="/pricing" className="hover:text-foreground transition-colors">
                 Pricing
               </Link>
