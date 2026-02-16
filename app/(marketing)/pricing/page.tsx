@@ -204,7 +204,10 @@ export default function PricingPage() {
       return;
     }
 
-    fetch(url)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000); // 10s timeout so we never stick in loading
+
+    fetch(url, { signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -216,7 +219,13 @@ export default function PricingPage() {
       .catch(() => {
         setTiers(DEFAULT_TIERS);
         setIsLoading(false);
-      });
+      })
+      .finally(() => clearTimeout(timeoutId));
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
   }, []);
 
   const formatPrice = (cents: number) => {

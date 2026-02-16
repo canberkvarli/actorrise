@@ -16,12 +16,14 @@ interface ActorProfile {
   headshot_url?: string | null;
 }
 
+const DASHBOARD_REQUEST_TIMEOUT_MS = 12_000; // avoid stuck loading after sign-in if API is slow
+
 // Hook for profile stats
 export function useProfileStats() {
   return useQuery<ProfileStats>({
     queryKey: ["profile-stats"],
     queryFn: async () => {
-      const response = await api.get<ProfileStats>("/api/profile/stats");
+      const response = await api.get<ProfileStats>("/api/profile/stats", { timeoutMs: DASHBOARD_REQUEST_TIMEOUT_MS });
       return response.data;
     },
     staleTime: 5 * 60 * 1000, // 5 minutes
@@ -35,7 +37,7 @@ export function useProfile() {
   return useQuery<ActorProfile | null>({
     queryKey: ["profile"],
     queryFn: async () => {
-      const response = await api.get<ActorProfile & { id?: number }>("/api/profile");
+      const response = await api.get<ActorProfile & { id?: number }>("/api/profile", { timeoutMs: DASHBOARD_REQUEST_TIMEOUT_MS });
       const data = response.data;
       // Backend returns id=0 when no profile row exists; treat as null for display
       if (data && (data as { id?: number }).id === 0) {
@@ -54,7 +56,7 @@ export function useDiscover(enabled: boolean = true) {
   return useQuery<Monologue[]>({
     queryKey: ["discover"],
     queryFn: async () => {
-      const response = await api.get<Monologue[]>("/api/monologues/discover?limit=6");
+      const response = await api.get<Monologue[]>("/api/monologues/discover?limit=6", { timeoutMs: DASHBOARD_REQUEST_TIMEOUT_MS });
       return response.data;
     },
     enabled,
@@ -71,7 +73,7 @@ export function useRecommendations(enabled: boolean = true, fast: boolean = true
     queryFn: async () => {
       const params = new URLSearchParams({ limit: "4" });
       if (fast) params.set("fast", "true");
-      const response = await api.get<Monologue[]>(`/api/monologues/recommendations?${params}`);
+      const response = await api.get<Monologue[]>(`/api/monologues/recommendations?${params}`, { timeoutMs: DASHBOARD_REQUEST_TIMEOUT_MS });
       return response.data;
     },
     enabled, // Only fetch if profile is complete enough
