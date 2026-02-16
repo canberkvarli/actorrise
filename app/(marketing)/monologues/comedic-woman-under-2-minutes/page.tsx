@@ -23,7 +23,7 @@ export default function Page() {
       </h1>
       <p className="text-lg text-muted-foreground mb-8">
         One of the most common searches we see. ActorRise has thousands of comedic monologues for
-        women, and you can filter by length, tone, and style—or just describe what you need in
+        women, and you can filter by length, tone, and style. Or just describe what you need in
         plain English.
       </p>
       <Button asChild size="lg" className="rounded-full px-6">

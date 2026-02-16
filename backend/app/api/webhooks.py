@@ -11,20 +11,18 @@ Handles all Stripe webhook events for subscription management:
 All webhook handlers are idempotent to handle duplicate events.
 """
 
+import logging
 import os
 from datetime import datetime
 
 import stripe
 from app.core.database import get_db
-from app.models.billing import (
-    BillingHistory,
-    PricingTier,
-    UserSubscription,
-)
+from app.models.billing import BillingHistory, PricingTier, UserSubscription
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
+logger = logging.getLogger(__name__)
 
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
@@ -78,8 +76,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         return {"status": "success"}
 
     except Exception as e:
-        print(f"Error handling webhook: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.exception("Error handling webhook: %s", e)
+        raise HTTPException(
+            status_code=500,
+            detail="Webhook processing failed",
+        ) from e
 
 
 # ============================================================================

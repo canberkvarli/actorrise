@@ -623,7 +623,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
           {/* Action Row - Filters & Find for me & Submit monologue */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="ghost"
                 size="sm"

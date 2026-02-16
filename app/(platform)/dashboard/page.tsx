@@ -467,7 +467,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </div>
             </div>
 
-            {/* Submit a monologue — secondary CTA below the grid */}
+            {/* Submit a monologue: secondary CTA below the grid */}
             <div className="mt-6 pt-6 border-t border-border/50 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
               <span>Have a monologue to share with the community?</span>
               <Link
@@ -479,7 +479,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </Link>
             </div>
 
-            {/* Contact — feedback, bugs, partnership */}
+            {/* Contact: feedback, bugs, partnership */}
             <div className="mt-4 pt-4 border-t border-border/40 flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
               <span>Questions, feedback, or want to collaborate?</span>
               <ContactModalTrigger variant="ghost" className="inline-flex items-center gap-1.5 font-medium text-foreground hover:text-primary">

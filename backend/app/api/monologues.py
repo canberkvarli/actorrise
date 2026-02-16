@@ -1,5 +1,6 @@
 """API endpoints for monologue search and discovery."""
 
+from datetime import datetime
 from typing import List, Optional, cast
 
 from app.api.auth import get_current_user
@@ -58,6 +59,21 @@ class SearchResponse(BaseModel):
     total: int
     page: int
     page_size: int
+
+
+class LeadMagnetItem(BaseModel):
+    """Minimal monologue info for lead-magnet / 5-monologues page. No auth required."""
+
+    id: int
+    title: str
+    character_name: str
+    play_title: str
+    author: str
+    scene_description: Optional[str] = None
+    estimated_duration_seconds: int
+
+    class Config:
+        from_attributes = True
 
 
 class PlayResponse(BaseModel):
@@ -130,6 +146,45 @@ def _play_to_response(p: Play) -> PlayResponse:
     )
 
 
+@router.get("/lead-magnet", response_model=List[LeadMagnetItem])
+async def get_lead_magnet_monologues(
+    limit: int = Query(5, le=10, description="Number of monologues to return"),
+    db: Session = Depends(get_db),
+):
+    """
+    Curated list of monologues with low overdone_score for the lead magnet.
+    No authentication required. Used by the "5 Monologues Casting Directors Would Rather See" page.
+    """
+    from sqlalchemy import or_
+
+    # Prefer fresh pieces (low or null overdone_score), then by quality/favorites
+    query = (
+        db.query(Monologue)
+        .join(Play)
+        .filter(
+            or_(
+                Monologue.overdone_score.is_(None),
+                Monologue.overdone_score <= 0.3,
+            )
+        )
+        .order_by(Monologue.overdone_score.asc(), Monologue.favorite_count.desc())
+        .limit(limit)
+    )
+    results = query.all()
+    return [
+        LeadMagnetItem(
+            id=cast(int, m.id),
+            title=cast(str, m.title),
+            character_name=cast(str, m.character_name),
+            play_title=cast(str, m.play.title),
+            author=cast(str, m.play.author),
+            scene_description=cast(Optional[str], m.scene_description),
+            estimated_duration_seconds=cast(int, m.estimated_duration_seconds),
+        )
+        for m in results
+    ]
+
+
 @router.get("/search", response_model=SearchResponse)
 async def search_monologues(
     q: Optional[str] = Query(None, max_length=500, description="Search query (omit for discover/random)"),
@@ -143,6 +198,7 @@ async def search_monologues(
     act: Optional[int] = Query(None, ge=1, le=10, description="Act number (1-10)"),
     scene: Optional[int] = Query(None, ge=1, le=20, description="Scene number (1-20)"),
     max_duration: Optional[int] = None,
+    exclude_overdone: bool = Query(False, description="If true, only return monologues with low overdone_score (fresh pieces)"),
     limit: int = Query(20, le=100),
     page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
@@ -183,6 +239,8 @@ async def search_monologues(
         filters['scene'] = scene
     if max_duration:
         filters['max_duration'] = max_duration
+    if exclude_overdone:
+        filters['max_overdone_score'] = 0.3  # Only show "fresh" pieces (0.0 = fresh, 1.0 = extremely overdone)
 
     search_service = SemanticSearch(db)
     # Fetch more results than requested to get accurate total for pagination
@@ -235,7 +293,7 @@ async def search_monologues(
             m,
             is_favorited=(m.id in favorite_ids),
             relevance_score=score if has_scores else None,
-            match_type=quote_match_types.get(m.id) if has_scores else None,
+            match_type=quote_match_types.get(cast(int, m.id)) if has_scores else None,
         )
         for m, score in results_with_scores
     ]
@@ -600,65 +658,6 @@ async def get_performance_metrics(
     }
 
 
-@router.get("/debug/author-distribution")
-async def get_author_distribution(db: Session = Depends(get_db)):
-    """
-    Debug endpoint: Get distribution of monologues by author.
-    This helps diagnose if only certain authors are in the database.
-
-    Access via: http://localhost:8000/api/monologues/debug/author-distribution
-    """
-    from sqlalchemy import func as sql_func
-
-    # Get count of monologues by author (sql_func.count is SQLAlchemy's count generator)
-    author_counts = db.query(
-        Play.author,
-        sql_func.count(Monologue.id).label('monologue_count'),  # pylint: disable=not-callable
-        sql_func.count(Monologue.embedding).label('with_embedding'),  # pylint: disable=not-callable
-    ).join(
-        Monologue, Monologue.play_id == Play.id
-    ).group_by(
-        Play.author
-    ).order_by(
-        sql_func.count(Monologue.id).desc()  # pylint: disable=not-callable
-    ).all()
-
-    total_monologues = db.query(Monologue).count()
-    total_with_embeddings = db.query(Monologue).filter(
-        Monologue.embedding.isnot(None)
-    ).count()
-
-    result = {
-        "total_monologues": total_monologues,
-        "total_with_embeddings": total_with_embeddings,
-        "embedding_completion": round(total_with_embeddings / total_monologues * 100, 1) if total_monologues > 0 else 0,
-        "authors": [
-            {
-                "author": author,
-                "monologue_count": count,
-                "with_embedding": with_emb,
-                "embedding_percentage": round(with_emb / count * 100, 1) if count > 0 else 0
-            }
-            for author, count, with_emb in author_counts
-        ]
-    }
-
-    # Also print to console for easy debugging
-    print("\n" + "="*70)
-    print("DATABASE AUTHOR DISTRIBUTION")
-    print("="*70)
-    print(f"Total monologues: {result['total_monologues']}")
-    print(f"With embeddings: {result['total_with_embeddings']} ({result['embedding_completion']}%)")
-    print(f"\n{'Author':<30} {'Count':>8} {'w/Embed':>10} {'%':>6}")
-    print(f"{'-'*70}")
-    for author_data in result['authors']:
-        print(f"{author_data['author']:<30} {author_data['monologue_count']:>8} "
-              f"{author_data['with_embedding']:>10} {author_data['embedding_percentage']:>5.1f}%")
-    print(f"{'='*70}\n")
-
-    return result
-
-
 class MonologueUpload(BaseModel):
     """Schema for uploading a custom monologue"""
     title: str
@@ -832,7 +831,7 @@ async def submit_monologue_for_review(
 
     Returns submission status.
     """
-    from app.models.moderation import MonologueSubmission, ModerationLog
+    from app.models.moderation import ModerationLog, MonologueSubmission
     from app.services.ai.content_moderation import ContentModerator
 
     try:
@@ -863,7 +862,7 @@ async def submit_monologue_for_review(
         )
 
         # Update submission with AI results
-        sub.status = 'ai_review'
+        setattr(sub, 'status', 'ai_review')
         sub.ai_quality_score = moderation_result['quality_score']
         sub.ai_copyright_risk = moderation_result['copyright_risk']
         sub.ai_flags = moderation_result['flags']
@@ -885,12 +884,9 @@ async def submit_monologue_for_review(
         recommendation = moderation_result['recommendation']
 
         if recommendation == 'auto_approve':
-            # Import approval logic from admin/moderation
-            from app.api.admin.moderation import approve_submission as admin_approve
-
-            # Auto-approve (handled in separate function for consistency)
-            sub.status = 'approved'
-            sub.processed_at = datetime.utcnow()
+            # Auto-approve: update status and timestamp (full approval flow can be extended via admin)
+            setattr(sub, 'status', 'approved')
+            setattr(sub, 'processed_at', datetime.utcnow())
 
             # TODO Phase 4: Send approval email
 
@@ -905,10 +901,10 @@ async def submit_monologue_for_review(
             }
 
         elif recommendation == 'auto_reject':
-            sub.status = 'rejected'
+            setattr(sub, 'status', 'rejected')
             sub.rejection_reason = moderation_result.get('rejection_reason', 'quality')
             sub.rejection_details = moderation_result['notes']
-            sub.processed_at = datetime.utcnow()
+            setattr(sub, 'processed_at', datetime.utcnow())
 
             # Log rejection
             reject_log = ModerationLog(
@@ -937,7 +933,7 @@ async def submit_monologue_for_review(
             }
 
         else:  # manual_review
-            sub.status = 'manual_review'
+            setattr(sub, 'status', 'manual_review')
 
             # Log manual review needed
             review_log = ModerationLog(
@@ -993,13 +989,17 @@ async def get_my_submissions(
         desc(MonologueSubmission.submitted_at)
     ).limit(limit).offset(offset).all()
 
-    return [{
-        'id': sub.id,
-        'title': sub.submitted_title,
-        'status': sub.status,
-        'submitted_at': sub.submitted_at.isoformat(),
-        'processed_at': sub.processed_at.isoformat() if sub.processed_at else None,
-        'rejection_reason': sub.rejection_reason,
-        'rejection_details': sub.rejection_details,
-        'monologue_id': sub.monologue_id
-    } for sub in submissions]
+    def _row(sub: MonologueSubmission) -> dict:
+        processed = getattr(sub, "processed_at", None)
+        return {
+            "id": sub.id,
+            "title": sub.submitted_title,
+            "status": getattr(sub, "status", "pending"),
+            "submitted_at": sub.submitted_at.isoformat(),
+            "processed_at": processed.isoformat() if processed is not None else None,
+            "rejection_reason": sub.rejection_reason,
+            "rejection_details": sub.rejection_details,
+            "monologue_id": sub.monologue_id,
+        }
+
+    return [_row(sub) for sub in submissions]

@@ -28,7 +28,7 @@ export default function SourcesPage() {
         <li className="flex gap-2">
           <span className="text-primary">·</span>
           <span>
-            <strong className="text-foreground">Project Gutenberg</strong> — Public domain plays
+            <strong className="text-foreground">Project Gutenberg</strong>: Public domain plays
             (e.g. Shakespeare, Chekhov, Ibsen, Wilde) and public-domain play anthologies. Each
             monologue links back to the source on Gutenberg when available.
           </span>
@@ -36,7 +36,7 @@ export default function SourcesPage() {
         <li className="flex gap-2">
           <span className="text-primary">·</span>
           <span>
-            <strong className="text-foreground">Other public domain & licensed sources</strong> —
+            <strong className="text-foreground">Other public domain & licensed sources</strong>:
             We may include works that are clearly public domain or explicitly licensed (e.g.
             Creative Commons) with attribution and source links.
           </span>

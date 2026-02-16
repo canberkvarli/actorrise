@@ -22,7 +22,7 @@ export default function Page() {
         Classical monologues for auditions
       </h1>
       <p className="text-lg text-muted-foreground mb-8">
-        From Shakespeare to other classic texts—search by play, character type, or mood. Our
+        From Shakespeare to other classic texts. Search by play, character type, or mood. Our
         database includes thousands of classical pieces, and the AI understands what you mean, not
         just the words you type.
       </p>

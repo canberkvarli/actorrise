@@ -329,7 +329,7 @@ export function SearchInterface() {
                     AI-Powered Search
                   </Label>
                   <p className="text-sm text-muted-foreground">
-                    Enable semantic search with personalized recommendations based on your profile
+                    Results are tailored to your profile (gender, age) when enabled. Match to your type and to the casting scenario. Just describe the audition in plain English.
                   </p>
                 </div>
                 <Switch

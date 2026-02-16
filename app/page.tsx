@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { LandingPricing } from "@/components/landing/LandingPricing";
+import { LandingValueProps } from "@/components/landing/LandingValueProps";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 
 export default function LandingPage() {
@@ -38,6 +39,13 @@ export default function LandingPage() {
                 Pricing
               </Link>
               <span className="h-4 w-px bg-border/60" />
+              <Link
+                href="/for-teachers"
+                className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
+              >
+                For teachers
+              </Link>
+              <span className="h-4 w-px bg-border/60" />
               <ContactModalTrigger className="px-3 py-1.5 text-sm text-foreground/90">
                 Contact
               </ContactModalTrigger>
@@ -61,14 +69,11 @@ export default function LandingPage() {
             <h1 className="text-4xl sm:text-5xl md:text-7xl leading-[1.02] tracking-[-0.04em]">
               Find the monologue. In seconds.
             </h1>
-            <p className="mt-4 text-lg text-muted-foreground">
-              World&apos;s largest monologue database.
-            </p>
             <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
               <div className="space-y-1 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3">
-                <div className="text-2xl">8,600+</div>
+                <div className="text-2xl">&lt; 20 sec</div>
                 <div className="text-xs text-muted-foreground uppercase tracking-[0.16em]">
-                  monologues
+                  find what you need
                 </div>
               </div>
               <div className="space-y-1 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3">
@@ -78,9 +83,9 @@ export default function LandingPage() {
                 </div>
               </div>
               <div className="space-y-1 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3">
-                <div className="text-2xl">Save it</div>
+                <div className="text-2xl">8,600+</div>
                 <div className="text-xs text-muted-foreground uppercase tracking-[0.16em]">
-                  bookmark, take it with you
+                  monologues
                 </div>
               </div>
             </div>
@@ -89,19 +94,20 @@ export default function LandingPage() {
 
         {/* Features */}
         <section id="suite" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
-          <div className="max-w-3xl">
-            <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
+          <div className="max-w-3xl relative pl-6 md:pl-8 border-l-2 border-primary/30">
+            <h2 className="text-3xl md:text-4xl tracking-[-0.03em] font-semibold">
               Search what you&apos;re looking for.
             </h2>
-            <p className="mt-4 text-muted-foreground">
-              One search box. No filters to learn. Understands what you mean, not just what you type.
+            <p className="mt-5 text-lg text-foreground/90 leading-relaxed">
+              <span className="font-medium text-foreground">Get what you need in less than 20 seconds.</span>
+              {" "}One search box, no filters to learn. Understands what you mean, not just what you type.
             </p>
-            <div className="mt-6">
-              <Button asChild size="lg" className="px-8">
+            <div className="mt-8">
+              <Button asChild size="lg" className="rounded-full px-8 shadow-lg shadow-primary/10">
                 <Link href="/signup">Start free</Link>
               </Button>
             </div>
-            <p className="mt-8 text-sm text-muted-foreground">
+            <p className="mt-6 text-xs text-muted-foreground/80 tracking-wide uppercase">
               ScenePartner, CraftCoach & more coming soon.
             </p>
           </div>
@@ -148,7 +154,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Pricing — benefits from API so visitors see what's included without leaving the page */}
+        <LandingValueProps />
+
+        {/* Pricing: benefits from API so visitors see what's included without leaving the page */}
         <LandingPricing />
       </main>
 
@@ -178,6 +186,9 @@ export default function LandingPage() {
               </Link>
               <Link href="/pricing" className="hover:text-foreground transition-colors">
                 Pricing
+              </Link>
+              <Link href="/for-teachers" className="hover:text-foreground transition-colors">
+                For teachers
               </Link>
               <ContactModalTrigger className="hover:text-foreground">
                 Contact

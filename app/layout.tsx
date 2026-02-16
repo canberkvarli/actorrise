@@ -38,11 +38,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "ActorRise - World's Largest AI-Powered Monologue Search | 8,600+ Monologues",
+    default: "ActorRise - Find the Right Monologue in 20 Seconds | AI Search",
     template: "%s | ActorRise",
   },
   description:
-    "Find audition-ready monologues in seconds. 8,600+ searchable monologues (4–8x larger than Backstage), AI semantic search that understands what you need. Free tier available.",
+    "Find the right audition monologue in less than 20 seconds. One search, no keyword hunting. AI that understands what you need. 8,600+ monologues. Free tier available.",
   keywords: [
     "monologue search",
     "audition monologues",
@@ -66,16 +66,16 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: siteUrl,
     siteName: "ActorRise",
-    title: "ActorRise - World's Largest AI-Powered Monologue Search | 8,600+ Monologues",
+    title: "ActorRise - Find the Right Monologue in 20 Seconds | AI Search",
     description:
-      "Find audition-ready monologues in seconds. 8,600+ searchable monologues (4–8x larger than Backstage), AI semantic search that understands what you need.",
+      "Find the right audition monologue in less than 20 seconds. One search, no keyword hunting. AI that understands what you need. Free tier available.",
     // OG image from app/opengraph-image.tsx (1200×630) – sharp on Facebook, LinkedIn, Twitter
   },
   twitter: {
     card: "summary_large_image",
-    title: "ActorRise - World's Largest AI-Powered Monologue Search | 8,600+ Monologues",
+    title: "ActorRise - Find the Right Monologue in 20 Seconds | AI Search",
     description:
-      "Find audition-ready monologues in seconds. 8,600+ monologues, AI semantic search. Free tier available.",
+      "Find the right audition monologue in less than 20 seconds. One search, no keyword hunting. AI that understands what you need. Free tier available.",
   },
   robots: {
     index: true,
@@ -100,7 +100,7 @@ const jsonLd = {
       name: "ActorRise",
       url: siteUrl,
       description:
-        "World's largest AI-powered monologue discovery platform. 8,600+ searchable monologues with semantic search for actors.",
+        "Find the right audition monologue in less than 20 seconds. AI-powered monologue search for actors. 8,600+ searchable monologues.",
       logo: { "@type": "ImageObject", url: `${siteUrl}/logo.png` },
     },
     {
@@ -109,7 +109,7 @@ const jsonLd = {
       name: "ActorRise",
       url: siteUrl,
       description:
-        "Find audition-ready monologues in seconds. 8,600+ monologues (4–8x larger than competitors), AI semantic search that understands natural language.",
+        "Find the right audition monologue in less than 20 seconds. AI semantic search that understands what you need. 8,600+ monologues.",
       applicationCategory: "EntertainmentApplication",
       operatingSystem: "Any",
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },

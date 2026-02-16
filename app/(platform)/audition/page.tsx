@@ -25,7 +25,7 @@ export default function AuditionModePage() {
             <p className="text-lg">Under construction</p>
           </div>
           <p className="text-muted-foreground max-w-md mb-8">
-            We&apos;re still building this feature. Record yourself, get AI casting director feedback, and more—coming soon.
+            We&apos;re still building this feature. Record yourself, get AI casting director feedback, and more. Coming soon.
           </p>
           <Button asChild variant="outline" size="lg">
             <Link href="/dashboard">Back to Home</Link>

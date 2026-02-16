@@ -265,6 +265,8 @@ export default function PricingPage() {
     // Recommendations
     if (tier.features.recommendations) {
       features.push("Personalized recommendations");
+      features.push("AI fit to your type & casting scenario");
+      features.push("Overdone filter: fresh pieces casting directors want to see");
     } else {
       features.push("Basic browsing");
     }
@@ -338,8 +340,8 @@ export default function PricingPage() {
           transition={{ delay: 0.1 }}
           className="text-xl text-muted-foreground max-w-2xl mx-auto"
         >
-          Start free, upgrade when you're ready. All plans include access to our monologue
-          database.
+          Find the right audition monologue in less than 20 seconds. Start free, upgrade when
+          you&apos;re ready. All plans include access to our monologue database.
         </motion.p>
         <motion.p
           initial={{ opacity: 0, y: -10 }}

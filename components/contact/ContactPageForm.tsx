@@ -14,7 +14,7 @@ export function ContactPageForm() {
     <>
       <div className="rounded-xl border border-border/60 bg-card/60 p-6">
         <p className="text-foreground mb-4">
-          Partnership, feedback, bug reports, or collaboration—I built ActorRise on my own
+          Partnership, feedback, bug reports, or collaboration. I built ActorRise on my own
           and really appreciate your support.
         </p>
         <Button onClick={() => setOpen(true)}>Send a message</Button>
