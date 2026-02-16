@@ -66,21 +66,13 @@ export const metadata: Metadata = {
     title: "ActorRise - World's Largest AI-Powered Monologue Search | 8,600+ Monologues",
     description:
       "Find audition-ready monologues in seconds. 8,600+ searchable monologues (4–8x larger than Backstage), AI semantic search that understands what you need.",
-    images: [
-      {
-        url: "/logo.png",
-        width: 512,
-        height: 512,
-        alt: "ActorRise - AI-powered monologue discovery for actors",
-      },
-    ],
+    // OG image from app/opengraph-image.tsx (1200×630) – sharp on Facebook, LinkedIn, Twitter
   },
   twitter: {
     card: "summary_large_image",
     title: "ActorRise - World's Largest AI-Powered Monologue Search | 8,600+ Monologues",
     description:
       "Find audition-ready monologues in seconds. 8,600+ monologues, AI semantic search. Free tier available.",
-    images: ["/logo.png"],
   },
   robots: {
     index: true,
