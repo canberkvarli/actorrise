@@ -6,21 +6,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { IconSparkles, IconExternalLink, IconInfoCircle, IconBookmark } from "@tabler/icons-react";
-import Link from "next/link";
 import { Monologue } from "@/types/actor";
 import { MonologueText } from "@/components/monologue/MonologueText";
 
 export interface MonologueDetailContentProps {
   monologue: Monologue;
-  /** When true, show an "Open in new page" link (for slide-over context) */
-  showOpenInNewPage?: boolean;
   /** Optional actions to render in the header row (e.g. favorite button on full page) */
   headerActions?: React.ReactNode;
 }
 
 export function MonologueDetailContent({
   monologue,
-  showOpenInNewPage,
   headerActions,
 }: MonologueDetailContentProps) {
   const duration = Math.floor(monologue.estimated_duration_seconds / 60);
@@ -222,18 +218,6 @@ export function MonologueDetailContent({
           </Badge>
         )}
       </div>
-
-      {/* Open in new page (for slide-over) */}
-      {showOpenInNewPage && (
-        <div className="pt-2">
-          <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
-            <Link href={`/monologue/${monologue.id}`} target="_blank" rel="noopener noreferrer">
-              Open in new page
-              <IconExternalLink className="h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-      )}
 
       {/* Source Attribution */}
       <Card className="rounded-lg">

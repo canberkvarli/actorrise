@@ -638,7 +638,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 ) : (
                   <MonologueDetailContent
                     monologue={currentMonologue}
-                    showOpenInNewPage
                   />
                 )}
               </div>
