@@ -76,6 +76,7 @@ export function LandingDemoSearch() {
   type AutoDemoPhase = "idle" | "typing" | "loading" | "results";
   const [autoDemoPhase, setAutoDemoPhase] = useState<AutoDemoPhase>("idle");
   const userHasInteracted = useRef(false);
+  const autoDemoResultsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isLoading) return;
@@ -109,22 +110,29 @@ export function LandingDemoSearch() {
       for (let i = 1; i <= AUTO_DEMO_QUERY.length; i++) {
         if (cancelled.current || userHasInteracted.current) return;
         setQuery(AUTO_DEMO_QUERY.slice(0, i));
-        await new Promise((r) => setTimeout(r, 40));
+        await new Promise((r) => setTimeout(r, 70));
       }
 
       if (cancelled.current || userHasInteracted.current) return;
       setAutoDemoPhase("loading");
-      await new Promise((r) => setTimeout(r, 1400));
+      await new Promise((r) => setTimeout(r, 1800));
 
       if (cancelled.current || userHasInteracted.current) return;
       setAutoDemoPhase("results");
-    }, 600);
+    }, 800);
 
     return () => {
       cancelled.current = true;
       clearTimeout(startDelay);
     };
   }, []);
+
+  // Scroll results into view on mobile when they appear
+  useEffect(() => {
+    if (autoDemoPhase === "results" && autoDemoResultsRef.current) {
+      autoDemoResultsRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [autoDemoPhase]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -195,6 +203,10 @@ export function LandingDemoSearch() {
               userHasInteracted.current = true;
               if (autoDemoPhase !== "idle") setAutoDemoPhase("idle");
               setQuery(e.target.value);
+            }}
+            onFocus={() => {
+              userHasInteracted.current = true;
+              if (autoDemoPhase !== "idle") setAutoDemoPhase("idle");
             }}
             className="flex-1 min-w-0 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-12 text-base"
             disabled={isLoading}
@@ -302,10 +314,10 @@ export function LandingDemoSearch() {
       )}
 
       {autoDemoPhase === "results" && results.length === 0 && (
-        <div className="w-screen relative left-1/2 -ml-[50vw] mt-12">
+        <div ref={autoDemoResultsRef} className="w-screen relative left-1/2 -ml-[50vw] mt-12">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
             <p className="text-sm text-muted-foreground">
-              Example results — search for yours above.
+              Example results. Type your own search above.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {AUTO_DEMO_RESULTS.map((result) => (
