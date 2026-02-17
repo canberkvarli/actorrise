@@ -73,6 +73,8 @@ Edit `.env.local` with your configuration:
 NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
+# Optional: Google Analytics (GA4) – set to your Measurement ID (e.g. G-XXXXXXXXXX) for extra analytics alongside Vercel
+# NEXT_PUBLIC_GA_MEASUREMENT_ID=G-XXXXXXXXXX
 ```
 
 ```bash

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Suspense } from "react";
 import { Montserrat, JetBrains_Mono, Cormorant_Garamond, Playfair_Display } from "next/font/google";
 import "./globals.css";
@@ -6,8 +7,11 @@ import { AuthProviderWrapper } from "@/components/providers/AuthProviderWrapper"
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/react";
+import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { FontLoader } from "@/components/FontLoader";
 import { OAuthCallbackRedirect } from "@/components/auth/OAuthCallbackRedirect";
+
+const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
 const montserrat = Montserrat({
   variable: "--font-sans",
@@ -124,6 +128,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {gaId && (
+          <>
+            <Script
+              src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+              strategy="beforeInteractive"
+            />
+            <Script id="google-analytics" strategy="beforeInteractive">
+              {`window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', '${gaId}');`}
+            </Script>
+          </>
+        )}
+      </head>
       <body
         className={`${montserrat.variable} ${jetbrainsMono.variable} ${cormorantGaramond.variable} ${playfairDisplay.variable} font-sans antialiased`}
       >
@@ -144,6 +161,7 @@ export default function RootLayout({
           <AuthProviderWrapper>{children}</AuthProviderWrapper>
           <Toaster position="top-center" richColors />
           <Analytics />
+          <GoogleAnalytics />
         </ThemeProvider>
       </body>
     </html>
