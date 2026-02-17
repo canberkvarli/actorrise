@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { IconBookmark } from "@tabler/icons-react";
@@ -38,6 +39,7 @@ export function MonologueResultCard({
   showMatchBadge = true,
 }: MonologueResultCardProps) {
   const isBestMatch = variant === "bestMatch";
+  const [justBookmarked, setJustBookmarked] = useState(false);
   const displayMatchBadge = (m: Monologue) => {
     if (!showMatchBadge || !m.relevance_score || m.relevance_score <= 0.1) return null;
     const score = m.relevance_score;
@@ -90,10 +92,16 @@ export function MonologueResultCard({
                 <p className="text-sm text-muted-foreground line-clamp-1">{mono.play_title}</p>
                 <p className="text-xs text-muted-foreground">by {mono.author}</p>
               </div>
-              <button
+              <motion.button
                 type="button"
-                onClick={(e) => onToggleFavorite(e, mono)}
-                className={`min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-full transition-colors cursor-pointer ${
+                onClick={(e) => {
+                  onToggleFavorite(e, mono);
+                  setJustBookmarked(true);
+                  setTimeout(() => setJustBookmarked(false), 400);
+                }}
+                animate={justBookmarked ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className={`min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-lg transition-colors cursor-pointer ${
                   mono.is_favorited
                     ? "bg-violet-500/15 hover:bg-violet-500/25 text-violet-500 dark:text-violet-400"
                     : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground"
@@ -101,7 +109,7 @@ export function MonologueResultCard({
                 aria-label={mono.is_favorited ? "Remove bookmark" : "Add bookmark"}
               >
                 <IconBookmark className={`h-5 w-5 ${mono.is_favorited ? "fill-current" : ""}`} />
-              </button>
+              </motion.button>
             </div>
 
             <div className="flex flex-wrap gap-2">
