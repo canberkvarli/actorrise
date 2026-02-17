@@ -28,7 +28,7 @@ export function LandingDemoSearch() {
   const [error, setError] = useState<string | null>(null);
   const [rateLimited, setRateLimited] = useState(false);
   const [rateLimitedWhileLoggedIn, setRateLimitedWhileLoggedIn] = useState(false);
-  const [emptyHint, setEmptyHint] = useState(false);
+  const [jitter, setJitter] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
 
   useEffect(() => {
@@ -43,10 +43,9 @@ export function LandingDemoSearch() {
     e.preventDefault();
     const q = query.trim();
     if (!q) {
-      setEmptyHint(true);
+      setJitter(true);
       return;
     }
-    setEmptyHint(false);
     setError(null);
     setRateLimited(false);
     setRateLimitedWhileLoggedIn(false);
@@ -86,9 +85,12 @@ export function LandingDemoSearch() {
   const showResults = results.length > 0 && !isLoading;
 
   return (
-    <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="max-w-2xl">
-        <div className="flex items-center gap-2 p-2 bg-card border border-border rounded-xl shadow-sm">
+    <div className="space-y-6 w-full">
+      <form onSubmit={handleSubmit} className="w-full max-w-2xl mx-auto">
+        <div
+          className={`flex items-center gap-2 p-2 bg-card border border-border rounded-xl shadow-sm ${jitter ? "search-jitter" : ""}`}
+          onAnimationEnd={() => setJitter(false)}
+        >
           <IconSearch className="h-5 w-5 text-muted-foreground shrink-0 ml-2" />
           <Input
             type="text"
@@ -96,7 +98,6 @@ export function LandingDemoSearch() {
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
-              setEmptyHint(false);
             }}
             className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-12 text-base"
             disabled={isLoading}
@@ -110,32 +111,31 @@ export function LandingDemoSearch() {
             )}
           </Button>
         </div>
-        {emptyHint && (
-          <p className="mt-2 text-sm text-muted-foreground">Enter a search</p>
-        )}
       </form>
 
       {isLoading && (
-        <div className="space-y-4 max-w-4xl">
-          <p className="text-muted-foreground text-sm animate-pulse" key={loadingMessageIndex}>
-            {LOADING_MESSAGES[loadingMessageIndex]}
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="rounded-lg">
-                <CardContent className="pt-6 space-y-4">
-                  <Skeleton className="h-6 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
-                  <Skeleton className="h-12 w-full" />
-                </CardContent>
-              </Card>
-            ))}
+        <div className="w-screen relative left-1/2 -ml-[50vw] mt-12">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
+            <p className="text-muted-foreground text-sm animate-pulse" key={loadingMessageIndex}>
+              {LOADING_MESSAGES[loadingMessageIndex]}
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3].map((i) => (
+                <Card key={i} className="rounded-lg">
+                  <CardContent className="pt-6 space-y-4">
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                    <Skeleton className="h-12 w-full" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
       {rateLimited && !rateLimitedWhileLoggedIn && (
-        <Card className="border-primary/30 bg-primary/5 max-w-xl">
+        <Card className="border-primary/30 bg-primary/5 max-w-xl mx-auto mt-12">
           <CardContent className="pt-6 pb-6">
             <p className="text-foreground font-medium mb-4">
               You&apos;ve tried the demo. Sign up to search anytime.
@@ -147,7 +147,7 @@ export function LandingDemoSearch() {
         </Card>
       )}
       {rateLimited && rateLimitedWhileLoggedIn && (
-        <Card className="border-border bg-muted/30 max-w-xl">
+        <Card className="border-border bg-muted/30 max-w-xl mx-auto mt-12">
           <CardContent className="pt-6 pb-6">
             <p className="text-foreground font-medium mb-4">
               Demo limit reached. You&apos;re signed in — use the full search to keep going.
@@ -160,7 +160,7 @@ export function LandingDemoSearch() {
       )}
 
       {error && !rateLimited && (
-        <Card className="border-destructive/30 bg-destructive/5 max-w-xl">
+        <Card className="border-destructive/30 bg-destructive/5 max-w-xl mx-auto mt-12">
           <CardContent className="pt-6 pb-6">
             <p className="text-foreground font-medium mb-4">{error}</p>
             <Button asChild size="lg" className="rounded-full">
@@ -171,25 +171,27 @@ export function LandingDemoSearch() {
       )}
 
       {showResults && (
-        <div className="space-y-4 max-w-6xl">
-          <p className="text-sm text-muted-foreground">
-            We found {results.length} monologue{results.length !== 1 ? "s" : ""}. See the full text and search the full library.
-          </p>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            {results.map((result) => (
-              <LandingDemoResultCard
-                key={result.id}
-                result={result}
-                signupRedirectQuery={query.trim()}
-              />
-            ))}
-          </div>
-          <div className="pt-2">
+        <div className="w-screen relative left-1/2 -ml-[50vw] mt-12">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              We found {results.length} monologue{results.length !== 1 ? "s" : ""}. See the full text and search the full library.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {results.map((result) => (
+                <LandingDemoResultCard
+                  key={result.id}
+                  result={result}
+                  signupRedirectQuery={query.trim()}
+                />
+              ))}
+            </div>
+            <div className="pt-4">
             <Button asChild size="lg" className="rounded-full px-8 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground hover:border-muted-foreground/30">
               <Link href={`/signup?redirect=${encodeURIComponent(`/search?q=${encodeURIComponent(query.trim())}`)}`}>
                 Search 8,600+ monologues
               </Link>
             </Button>
+            </div>
           </div>
         </div>
       )}

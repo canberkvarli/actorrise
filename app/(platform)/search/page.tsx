@@ -65,6 +65,7 @@ export default function SearchPage() {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
+  const [jitter, setJitter] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Rotate loading messages every 2 seconds while searching
@@ -279,7 +280,10 @@ export default function SearchPage() {
 
   const handleSearch = async () => {
     const hasQueryOrFilters = query.trim() !== "" || Object.entries(filters).some(([, v]) => v !== "");
-    if (!hasQueryOrFilters) return;
+    if (!hasQueryOrFilters) {
+      setJitter(true);
+      return;
+    }
     await performSearch(query, filters);
   };
 
@@ -566,9 +570,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               />
             </div>
 
-            <div className={`relative flex items-center gap-2 p-2 bg-card border rounded-xl shadow-sm transition-all duration-300 ${
-              isTyping ? "border-primary/50 shadow-lg shadow-primary/5" : "border-border"
-            }`}>
+            <div
+              className={`relative flex items-center gap-2 p-2 bg-card border rounded-xl shadow-sm transition-all duration-300 ${
+                isTyping ? "border-primary/50 shadow-lg shadow-primary/5" : "border-border"
+              } ${jitter ? "search-jitter" : ""}`}
+              onAnimationEnd={() => setJitter(false)}
+            >
               <div className="flex-1 relative">
                 <IconSearch className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors duration-300 ${
                   isTyping ? "text-primary" : "text-muted-foreground"
@@ -606,7 +613,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </div>
               <Button
                 onClick={handleSearch}
-                disabled={isLoading || !canSearch}
+                disabled={isLoading}
                 size="lg"
                 className={`h-10 px-6 rounded-lg transition-all duration-300 ${
                   isTyping ? "shadow-md shadow-primary/20" : ""

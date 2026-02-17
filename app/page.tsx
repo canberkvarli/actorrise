@@ -64,51 +64,18 @@ export default function LandingPage() {
       </header>
 
       <main>
-        {/* Hero */}
-        <section className="container mx-auto px-4 sm:px-6 pt-24 pb-20 md:pt-36 md:pb-28">
-          <div className="max-w-5xl">
-            <h1 className="text-4xl sm:text-5xl md:text-7xl leading-[1.02] tracking-[-0.04em]">
+        {/* Hero: search bar as focal point — content top-aligned so title doesn't move when results appear */}
+        <section id="suite" className="container mx-auto px-4 sm:px-6 pt-16 pb-20 md:pt-24 md:pb-28 flex flex-col items-center">
+          <div className="max-w-2xl w-full mx-auto text-center">
+            <h1 className="text-5xl sm:text-6xl md:text-7xl leading-[1.02] tracking-[-0.04em]">
               Find the <span className="hero-keyword">monologue</span>. In seconds.
             </h1>
-            <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-2xl">
-              <div className="space-y-1 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3">
-                <div className="text-2xl">&lt; 20 sec</div>
-                <div className="text-xs text-muted-foreground uppercase tracking-[0.16em]">
-                  find what you need
-                </div>
-              </div>
-              <div className="space-y-1 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3">
-                <div className="text-2xl">AI search</div>
-                <div className="text-xs text-muted-foreground uppercase tracking-[0.16em]">
-                  type what you want
-                </div>
-              </div>
-              <div className="space-y-1 rounded-xl border border-secondary/40 bg-secondary/10 px-4 py-3">
-                <div className="text-2xl">Right fit</div>
-                <div className="text-xs text-muted-foreground uppercase tracking-[0.16em]">
-                  matched to you & the role
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Features */}
-        <section id="suite" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
-          <div className="max-w-6xl relative pl-6 md:pl-8 border-l-2 border-primary/30">
-            <h2 className="text-3xl md:text-4xl tracking-[-0.03em] font-semibold">
-              Search what you&apos;re looking for.
-            </h2>
-            <p className="mt-5 text-lg text-foreground/90 leading-relaxed max-w-2xl">
-              <span className="font-medium text-foreground">Get what you need in less than 20 seconds.</span>
-              {" "}One search box, no filters to learn. Understands what you mean, not just what you type.
+            <p className="mt-4 text-base sm:text-lg text-muted-foreground">
+              Get what you need in less than 20 seconds.
             </p>
             <div className="mt-8">
               <LandingDemoSearch />
             </div>
-            <p className="mt-6 text-xs text-muted-foreground/80 tracking-wide uppercase">
-              ScenePartner, CraftCoach & more coming soon.
-            </p>
           </div>
         </section>
 
