@@ -99,7 +99,7 @@ export default function LandingPage() {
             <h2 className="text-3xl md:text-4xl tracking-[-0.03em] font-semibold">
               Search what you&apos;re looking for.
             </h2>
-            <p className="mt-5 text-lg text-foreground/90 leading-relaxed">
+            <p className="mt-5 text-lg text-foreground/90 leading-relaxed max-w-2xl">
               <span className="font-medium text-foreground">Get what you need in less than 20 seconds.</span>
               {" "}One search box, no filters to learn. Understands what you mean, not just what you type.
             </p>

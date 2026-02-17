@@ -27,6 +27,7 @@ export function LandingDemoSearch() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rateLimited, setRateLimited] = useState(false);
+  const [rateLimitedWhileLoggedIn, setRateLimitedWhileLoggedIn] = useState(false);
   const [emptyHint, setEmptyHint] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
 
@@ -48,6 +49,7 @@ export function LandingDemoSearch() {
     setEmptyHint(false);
     setError(null);
     setRateLimited(false);
+    setRateLimitedWhileLoggedIn(false);
     setIsLoading(true);
     setResults([]);
 
@@ -62,6 +64,7 @@ export function LandingDemoSearch() {
 
       if (res.status === 429) {
         setRateLimited(true);
+        setRateLimitedWhileLoggedIn(!!session?.access_token);
         return;
       }
 
@@ -131,7 +134,7 @@ export function LandingDemoSearch() {
         </div>
       )}
 
-      {rateLimited && (
+      {rateLimited && !rateLimitedWhileLoggedIn && (
         <Card className="border-primary/30 bg-primary/5 max-w-xl">
           <CardContent className="pt-6 pb-6">
             <p className="text-foreground font-medium mb-4">
@@ -139,6 +142,18 @@ export function LandingDemoSearch() {
             </p>
             <Button asChild size="lg" className="rounded-full">
               <Link href="/signup">Sign up free</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+      {rateLimited && rateLimitedWhileLoggedIn && (
+        <Card className="border-border bg-muted/30 max-w-xl">
+          <CardContent className="pt-6 pb-6">
+            <p className="text-foreground font-medium mb-4">
+              Demo limit reached. You&apos;re signed in — use the full search to keep going.
+            </p>
+            <Button asChild size="lg" className="rounded-full" variant="outline">
+              <Link href="/search">Go to search</Link>
             </Button>
           </CardContent>
         </Card>
