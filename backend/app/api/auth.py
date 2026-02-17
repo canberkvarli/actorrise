@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 security = HTTPBearer()
+security_optional = HTTPBearer(auto_error=False)
 
 
 class UpdateMeRequest(BaseModel):
@@ -96,6 +97,36 @@ def get_current_user(
             db.commit()
             db.refresh(user)
     
+    return user
+
+
+def get_current_user_optional(
+    credentials: HTTPAuthorizationCredentials | None = Depends(security_optional),
+    db: Session = Depends(get_db),
+) -> User | None:
+    """Same as get_current_user but returns None when no token or invalid token (for optional auth)."""
+    if not credentials:
+        return None
+    token = credentials.credentials
+    token_data = verify_supabase_token(token)
+    if not token_data:
+        return None
+    supabase_id = token_data.get("sub")
+    email = token_data.get("email")
+    user_metadata = token_data.get("user_metadata", {}) or {}
+    name = user_metadata.get("name") or user_metadata.get("full_name")
+    if not supabase_id:
+        return None
+    user = db.query(User).filter(User.supabase_id == supabase_id).first()
+    if not user and email:
+        existing_user = db.query(User).filter(User.email == email).first()
+        if existing_user:
+            existing_user.supabase_id = supabase_id
+            if name:
+                existing_user.name = name
+            db.commit()
+            db.refresh(existing_user)
+            return existing_user
     return user
 
 
