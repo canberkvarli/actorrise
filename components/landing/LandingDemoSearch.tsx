@@ -94,12 +94,12 @@ export function LandingDemoSearch() {
           <IconSearch className="h-5 w-5 text-muted-foreground shrink-0 ml-2" />
           <Input
             type="text"
-            placeholder="e.g. funny piece for young woman, 2 minutes..."
+            placeholder="e.g. funny piece, 2 min..."
             value={query}
             onChange={(e) => {
               setQuery(e.target.value);
             }}
-            className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-12 text-base"
+            className="flex-1 min-w-0 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-12 text-base"
             disabled={isLoading}
             aria-label="Search monologues"
           />

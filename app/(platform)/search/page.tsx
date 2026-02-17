@@ -576,13 +576,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               } ${jitter ? "search-jitter" : ""}`}
               onAnimationEnd={() => setJitter(false)}
             >
-              <div className="flex-1 relative">
+              <div className="flex-1 relative min-w-0">
                 <IconSearch className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors duration-300 ${
                   isTyping ? "text-primary" : "text-muted-foreground"
                 }`} />
                 <Input
                   id="search"
-                  placeholder="e.g. funny piece for young woman, 2 minutes..."
+                  placeholder="e.g. funny piece, 2 min..."
                   value={query}
                   onChange={(e) => {
                     setQuery(e.target.value);
