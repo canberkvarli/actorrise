@@ -1,16 +1,18 @@
 """API endpoints for monologue search and discovery."""
 
+import time
 from datetime import datetime
 from typing import List, Optional, cast
 
-from app.api.auth import get_current_user
+from app.api.auth import get_current_user, get_current_user_optional
+from app.core.config import settings
 from app.core.database import get_db
 from app.middleware.rate_limiting import require_ai_search_when_query
 from app.models.actor import Monologue, MonologueFavorite, Play
 from app.models.user import User
 from app.services.search.recommender import Recommender
 from app.services.search.semantic_search import SemanticSearch
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -74,6 +76,44 @@ class LeadMagnetItem(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class DemoSearchResult(BaseModel):
+    """Teaser-only fields for landing page demo search. No full text, no auth required."""
+
+    id: int
+    character_name: str
+    play_title: str
+    author: str
+    scene_description: Optional[str] = None
+    estimated_duration_seconds: int
+    relevance_score: Optional[float] = None
+    match_type: Optional[str] = None
+    text_excerpt: Optional[str] = None  # First ~220 chars for card preview
+
+    class Config:
+        from_attributes = True
+
+
+class DemoSearchResponse(BaseModel):
+    """Response for GET /search-demo (unauthenticated)."""
+
+    results: List[DemoSearchResult]
+
+
+# Rate limit for demo search: 1 request per IP per 5 minutes (in-memory).
+DEMO_SEARCH_RATE_LIMIT_SECONDS = 300
+_demo_search_last_request: dict[str, float] = {}
+
+
+def _get_client_ip(request: Request) -> str:
+    """Client IP for rate limiting; respect X-Forwarded-For when behind a proxy."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    if request.client:
+        return request.client.host or "unknown"
+    return "unknown"
 
 
 class PlayResponse(BaseModel):
@@ -304,6 +344,77 @@ async def search_monologues(
         page=page,
         page_size=limit,
     )
+
+
+@router.get("/search-demo", response_model=DemoSearchResponse)
+async def search_demo(
+    request: Request,
+    q: Optional[str] = Query(None, max_length=500, description="Search query"),
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+):
+    """
+    Unauthenticated demo search for the landing page. Returns up to 3 teaser results.
+    Rate limited: 1 request per IP per 5 minutes. Superusers (SUPERUSER_EMAILS) bypass the limit.
+    In development/local, any logged-in user bypasses the limit (so developers can test freely).
+    """
+    if not q or not q.strip():
+        raise HTTPException(status_code=400, detail="Search query is required.")
+
+    is_superuser = False
+    if settings.superuser_emails and current_user and current_user.email:
+        emails = [e.strip().lower() for e in settings.superuser_emails.split(",") if e.strip()]
+        is_superuser = current_user.email.lower() in emails
+    # In development, any authenticated user can bypass (developer testing)
+    dev_bypass = settings.environment in ("development", "local") and current_user is not None
+
+    if not is_superuser and not dev_bypass:
+        client_ip = _get_client_ip(request)
+        now = time.time()
+        if client_ip in _demo_search_last_request:
+            last = _demo_search_last_request[client_ip]
+            if now - last < DEMO_SEARCH_RATE_LIMIT_SECONDS:
+                raise HTTPException(
+                    status_code=429,
+                    detail="Demo limit reached. Sign up to search anytime.",
+                )
+        _demo_search_last_request[client_ip] = now
+
+    search_service = SemanticSearch(db)
+    all_results_with_scores, quote_match_types = search_service.search(
+        q.strip(),
+        limit=3,
+        filters={},
+        user_id=None,
+        actor_profile=None,
+    )
+
+    def _excerpt(text: Optional[str], max_len: int = 220) -> Optional[str]:
+        if not text or not text.strip():
+            return None
+        cleaned = text.strip().replace("\n", " ")[: max_len + 20]
+        if len(cleaned) > max_len:
+            last_space = cleaned.rfind(" ", 0, max_len)
+            cut = last_space if last_space > max_len // 2 else max_len
+            return cleaned[:cut].strip() + "…"
+        return cleaned.strip() or None
+
+    results = [
+        DemoSearchResult(
+            id=cast(int, m.id),
+            character_name=cast(str, m.character_name),
+            play_title=cast(str, m.play.title),
+            author=cast(str, m.play.author),
+            scene_description=cast(Optional[str], m.scene_description),
+            estimated_duration_seconds=cast(int, m.estimated_duration_seconds),
+            relevance_score=score if score > 0 else None,
+            match_type=quote_match_types.get(cast(int, m.id)),
+            text_excerpt=_excerpt(m.text),
+        )
+        for m, score in all_results_with_scores
+    ]
+
+    return DemoSearchResponse(results=results)
 
 
 @router.get("/recommendations", response_model=List[MonologueResponse])

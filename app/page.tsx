@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { LandingPricing } from "@/components/landing/LandingPricing";
 import { LandingValueProps } from "@/components/landing/LandingValueProps";
+import { LandingDemoSearch } from "@/components/landing/LandingDemoSearch";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 
 export default function LandingPage() {
@@ -94,7 +95,7 @@ export default function LandingPage() {
 
         {/* Features */}
         <section id="suite" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
-          <div className="max-w-3xl relative pl-6 md:pl-8 border-l-2 border-primary/30">
+          <div className="max-w-6xl relative pl-6 md:pl-8 border-l-2 border-primary/30">
             <h2 className="text-3xl md:text-4xl tracking-[-0.03em] font-semibold">
               Search what you&apos;re looking for.
             </h2>
@@ -103,9 +104,7 @@ export default function LandingPage() {
               {" "}One search box, no filters to learn. Understands what you mean, not just what you type.
             </p>
             <div className="mt-8">
-              <Button asChild size="lg" className="rounded-full px-8 shadow-lg shadow-primary/10">
-                <Link href="/signup">Start free</Link>
-              </Button>
+              <LandingDemoSearch />
             </div>
             <p className="mt-6 text-xs text-muted-foreground/80 tracking-wide uppercase">
               ScenePartner, CraftCoach & more coming soon.
