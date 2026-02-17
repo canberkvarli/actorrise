@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 
@@ -99,12 +100,17 @@ export function useToggleFavorite() {
 
       return { previous };
     },
+    onSuccess: (_data, variables) => {
+      const nextFavorited = !variables.isFavorited;
+      toast.success(nextFavorited ? "Added to bookmarks" : "Removed from bookmarks");
+    },
     onError: (_err, _variables, context) => {
       if (context?.previous) {
         for (const { key, data } of context.previous) {
           queryClient.setQueryData(key, data);
         }
       }
+      toast.error("Couldn't update bookmark. Please try again.");
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["bookmarks"] });

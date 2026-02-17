@@ -24,18 +24,14 @@ type MonologueSearchResponse = {
 };
 
 const LOADING_MESSAGES = [
-  "Rehearsing...",
-  "Blocking...",
-  "Cueing...",
-  "Projecting...",
-  "Emoting...",
-  "Monologuing...",
-  "Soliloquizing...",
-  "Improvising...",
-  "Dramatizing...",
-  "Stage-whispering...",
-  "Method acting...",
-  "Breaking legs...",
+  "Clanking through the archives...",
+  "Working our magic...",
+  "Squeezing the monologue database...",
+  "Asking Shakespeare for advice...",
+  "Consulting the drama gods...",
+  "Searching backstage...",
+  "Finding your perfect piece...",
+  "Digging through the classics...",
 ];
 
 export function SearchInterface() {
@@ -622,14 +618,17 @@ export function SearchInterface() {
             className="space-y-4"
           >
             <div className="flex items-center justify-center p-12">
-              <div className="text-center space-y-4">
-                <IconLoader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+              <div className="text-center space-y-6">
+                <div className="relative mx-auto w-16 h-16">
+                  <div className="h-16 w-16 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                  <IconSparkles className="h-7 w-7 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                </div>
                 <motion.p
                   key={loadingMessageIndex}
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -10 }}
-                  className="text-sm text-muted-foreground"
+                  className="text-lg font-medium text-foreground"
                 >
                   {LOADING_MESSAGES[loadingMessageIndex]}
                 </motion.p>

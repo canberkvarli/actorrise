@@ -93,7 +93,7 @@ export function MonologueResultCard({
               <button
                 type="button"
                 onClick={(e) => onToggleFavorite(e, mono)}
-                className={`p-2 rounded-full transition-colors cursor-pointer ${
+                className={`min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-full transition-colors cursor-pointer ${
                   mono.is_favorited
                     ? "bg-violet-500/15 hover:bg-violet-500/25 text-violet-500 dark:text-violet-400"
                     : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground"

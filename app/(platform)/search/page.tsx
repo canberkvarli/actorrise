@@ -10,6 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import { toast } from "sonner";
 import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow, IconSend } from "@tabler/icons-react";
 
 // Fun loading messages for AI search
@@ -31,6 +32,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueResultCard } from "@/components/monologue/MonologueResultCard";
+import { SearchFiltersSheet } from "@/components/search/SearchFiltersSheet";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -47,6 +49,7 @@ export default function SearchPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showFiltersSheet, setShowFiltersSheet] = useState(false);
   const [selectedMonologue, setSelectedMonologue] = useState<Monologue | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isReadingMode, setIsReadingMode] = useState(false);
@@ -485,21 +488,22 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         if (selectedMonologue?.id === mono.id) {
           setSelectedMonologue({ ...selectedMonologue, is_favorited: false, favorite_count: selectedMonologue.favorite_count - 1 });
         }
-        // Then make the API call
         await api.delete(`/api/monologues/${mono.id}/favorite`);
+        toast.success("Removed from bookmarks");
       } else {
         // Optimistic update: immediately favorite in UI
         setResults(results.map(m => m.id === mono.id ? { ...m, is_favorited: true, favorite_count: m.favorite_count + 1 } : m));
         if (selectedMonologue?.id === mono.id) {
           setSelectedMonologue({ ...selectedMonologue, is_favorited: true, favorite_count: selectedMonologue.favorite_count + 1 });
         }
-        // Then make the API call
         await api.post(`/api/monologues/${mono.id}/favorite`);
+        toast.success("Added to bookmarks");
       }
     } catch (error) {
       // Rollback on error
       setResults(previousResults);
       setSelectedMonologue(previousSelected);
+      toast.error("Couldn't update bookmark. Please try again.");
       console.error("Error toggling favorite:", error);
     }
   };
@@ -537,21 +541,21 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   }, [results]);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
-      {/* Hero Search Section */}
-      <div className="mb-10">
-        <div className="text-center mb-8">
-          <p className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-primary mb-4">
+    <div className="container mx-auto px-4 py-6 md:py-8 max-w-7xl">
+      {/* Hero Search Section - compact on mobile */}
+      <div className="mb-6 md:mb-10">
+        <div className="text-center mb-4 md:mb-8">
+          <p className="hidden md:inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-primary mb-4">
             <IconSparkles className="h-3 w-3" />
             AI-Powered Search
           </p>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-3">Find your next piece</h1>
-          <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+          <h1 className="text-2xl md:text-5xl font-bold tracking-tight mb-1 md:mb-3">Find your next piece</h1>
+          <p className="hidden md:block text-muted-foreground text-lg max-w-xl mx-auto">
             Describe what you&apos;re looking for in plain English; filters narrow results or let you browse by criteria.
           </p>
         </div>
 
-        {/* Search Bar - Hero Style with Spotlight Effect */}
+        {/* Search Bar - stacked on mobile for easier tap targets */}
         <div className="max-w-3xl mx-auto">
           <div className="relative group">
             {/* Ambient glow effect - subtle background */}
@@ -571,12 +575,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </div>
 
             <div
-              className={`relative flex items-center gap-2 p-2 bg-card border rounded-xl shadow-sm transition-all duration-300 ${
+              className={`relative flex flex-col md:flex-row md:items-center gap-2 p-2 bg-card border rounded-xl shadow-sm transition-all duration-300 ${
                 isTyping ? "border-primary/50 shadow-lg shadow-primary/5" : "border-border"
               } ${jitter ? "search-jitter" : ""}`}
               onAnimationEnd={() => setJitter(false)}
             >
-              <div className="flex-1 relative min-w-0">
+              <div className="flex-1 relative min-w-0 w-full">
                 <IconSearch className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors duration-300 ${
                   isTyping ? "text-primary" : "text-muted-foreground"
                 }`} />
@@ -586,7 +590,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   value={query}
                   onChange={(e) => {
                     setQuery(e.target.value);
-                    // Trigger typing animation
                     setIsTyping(true);
                     if (typingTimeoutRef.current) {
                       clearTimeout(typingTimeoutRef.current);
@@ -598,13 +601,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                   onFocus={() => query && setIsTyping(true)}
                   onBlur={() => setTimeout(() => setIsTyping(false), 200)}
-                  className="pl-12 pr-10 h-12 text-base border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                  className="pl-12 pr-10 min-h-[48px] md:h-12 text-base border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
                 {query && (
                   <button
                     type="button"
                     onClick={() => setQuery("")}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted/50 transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-2 min-h-[44px] min-w-[44px] flex items-center justify-center text-muted-foreground hover:text-foreground rounded-md hover:bg-muted/50 transition-colors"
                     aria-label="Clear search"
                   >
                     <IconX className="h-4 w-4" />
@@ -615,7 +618,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 onClick={handleSearch}
                 disabled={isLoading}
                 size="lg"
-                className={`h-10 px-6 rounded-lg transition-all duration-300 ${
+                className={`w-full md:w-auto min-h-[48px] md:min-h-[2.5rem] px-6 rounded-lg transition-all duration-300 ${
                   isTyping ? "shadow-md shadow-primary/20" : ""
                 }`}
               >
@@ -628,14 +631,30 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </div>
           </div>
 
-          {/* Action Row - Filters & Find for me & Submit monologue */}
+          {/* Action Row - Filters + Find for me; Submit monologue hidden on mobile (in Account/hamburger) */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Mobile: Filters open bottom sheet */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFiltersSheet(true)}
+                className="md:hidden gap-2 text-muted-foreground hover:text-foreground min-h-[44px]"
+              >
+                <IconAdjustments className="h-4 w-4" />
+                Filters
+                {activeFilters.length > 0 && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                    {activeFilters.length}
+                  </Badge>
+                )}
+              </Button>
+              {/* Desktop: Filters toggle inline panel */}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setShowFilters(!showFilters)}
-                className={`gap-2 text-muted-foreground hover:text-foreground ${showFilters ? "text-foreground bg-muted" : ""}`}
+                className={`hidden md:flex gap-2 text-muted-foreground hover:text-foreground ${showFilters ? "text-foreground bg-muted" : ""}`}
               >
                 <IconAdjustments className="h-4 w-4" />
                 Filters
@@ -647,7 +666,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </Button>
               <Link
                 href="/submit-monologue"
-                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
+                className="hidden md:inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
               >
                 <IconSend className="h-4 w-4" />
                 Submit monologue
@@ -662,7 +681,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     disabled={isLoading}
                     variant="outline"
                     size="sm"
-                    className="gap-2"
+                    className="gap-2 min-h-[44px] md:min-h-0"
                   >
                     <IconSparkles className="h-4 w-4 text-primary" />
                     Find for me
@@ -677,15 +696,23 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </TooltipProvider>
           </div>
 
-          {/* Expandable Filters */}
+          {/* Mobile: filters in sheet (SearchFiltersSheet). Desktop: expandable inline filters */}
+          <SearchFiltersSheet
+            open={showFiltersSheet}
+            onOpenChange={setShowFiltersSheet}
+            filters={filters}
+            setFilters={setFilters}
+          />
+
+          {/* Expandable Filters - desktop only */}
           {showFilters && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="mt-4 p-4 bg-card border border-border rounded-lg"
+              className="hidden md:block mt-4 p-4 bg-card border border-border rounded-lg"
             >
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 {[
                   { key: "gender", label: "Gender", options: ["male", "female", "any"] },
                   { key: "age_range", label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
@@ -958,18 +985,20 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   {!isReadingMode && <h2 className="text-2xl font-bold">Monologue Details</h2>}
                   {isReadingMode && <div className="flex-1" />}
                   <div className="flex items-center gap-2">
-                    {/* Download button - show in both modes */}
+                    {/* Download button - show in both modes; 44px touch target on mobile */}
                     <div className="relative z-[10002]">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
                           setShowDownloadMenu(!showDownloadMenu);
                         }}
-                        className="p-2 rounded-full transition-colors hover:bg-muted text-muted-foreground hover:text-foreground relative z-[10002]"
+                        className="hover:bg-muted relative z-[10002] min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
                         title="Download monologue"
                       >
                         <IconDownload className="h-5 w-5" />
-                      </button>
+                      </Button>
                       {showDownloadMenu && (
                         <>
                           <div
@@ -1005,13 +1034,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       )}
                     </div>
                     {!isReadingMode && (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         type="button"
                         onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation();
                           toggleFavorite(e, selectedMonologue);
                         }}
-                        className={`p-2 rounded-full transition-colors cursor-pointer relative z-[10002] ${
+                        className={`relative z-[10002] active:scale-95 transition-transform min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 ${
                           selectedMonologue.is_favorited
                             ? "bg-violet-500/15 hover:bg-violet-500/25 text-violet-500 dark:text-violet-400"
                             : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground"
@@ -1021,7 +1052,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <IconBookmark
                           className={`h-5 w-5 ${selectedMonologue.is_favorited ? "fill-current" : ""}`}
                         />
-                      </button>
+                      </Button>
                     )}
                     <Button
                       variant="ghost"
@@ -1030,7 +1061,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         e.stopPropagation();
                         setIsReadingMode(!isReadingMode);
                       }}
-                      className="hover:bg-muted relative z-[10002]"
+                      className="hover:bg-muted relative z-[10002] min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
                     >
                       {isReadingMode ? (
                         <IconEyeOff className="h-5 w-5" />
@@ -1038,7 +1069,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <IconEye className="h-5 w-5" />
                       )}
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={closeMonologue} className="relative z-[10002]">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={closeMonologue}
+                      className="relative z-[10002] min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
+                    >
                       <IconX className="h-5 w-5" />
                     </Button>
                   </div>

@@ -233,3 +233,16 @@
 .search-jitter {
   animation: search-jitter 0.45s ease-in-out;
 }
+
+/* Mobile: minimum touch target 44px for primary actions (accessibility) */
+@layer utilities {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Safe area for notched devices (e.g. bottom nav) */
+.safe-area-bottom {
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
+}
