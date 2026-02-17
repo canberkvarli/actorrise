@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IconSearch, IconLoader2 } from "@tabler/icons-react";
+import { IconSearch, IconLoader2, IconSparkles } from "@tabler/icons-react";
+import { motion } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { API_URL } from "@/lib/api";
 import type { DemoSearchResultItem } from "./LandingDemoResultCard";
@@ -14,17 +15,20 @@ import { LandingDemoResultCard } from "./LandingDemoResultCard";
 
 const LOADING_MESSAGES = [
   "Clanking through the archives...",
+  "Working our magic...",
+  "Squeezing the monologue database...",
   "Asking Shakespeare for advice...",
   "Consulting the drama gods...",
-  "Digging through the classics...",
-  "Finding your perfect piece...",
   "Searching backstage...",
+  "Finding your perfect piece...",
+  "Digging through the classics...",
 ];
 
 export function LandingDemoSearch() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<DemoSearchResultItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [showLoadingUI, setShowLoadingUI] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [rateLimited, setRateLimited] = useState(false);
   const [rateLimitedWhileLoggedIn, setRateLimitedWhileLoggedIn] = useState(false);
@@ -39,6 +43,19 @@ export function LandingDemoSearch() {
     return () => clearInterval(interval);
   }, [isLoading]);
 
+  // Avoid quick flicker: only show the loading UI if the request
+  // has been in the loading state for at least 150ms.
+  useEffect(() => {
+    if (!isLoading) {
+      setShowLoadingUI(false);
+      return;
+    }
+    const timeout = setTimeout(() => {
+      setShowLoadingUI(true);
+    }, 150);
+    return () => clearTimeout(timeout);
+  }, [isLoading]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const q = query.trim();
@@ -46,11 +63,16 @@ export function LandingDemoSearch() {
       setJitter(true);
       return;
     }
+    // Demo limit already reached: only jitter the input, don't trigger loading or change bottom sections
+    if (rateLimited) {
+      setError(null);
+      setJitter(true);
+      return;
+    }
     setError(null);
-    setRateLimited(false);
     setRateLimitedWhileLoggedIn(false);
     setIsLoading(true);
-    setResults([]);
+    // Don't clear results here — only set on success. Avoids bottom section collapsing when we get 429.
 
     try {
       const url = `${API_URL}/api/monologues/search-demo?q=${encodeURIComponent(q)}`;
@@ -64,6 +86,7 @@ export function LandingDemoSearch() {
       if (res.status === 429) {
         setRateLimited(true);
         setRateLimitedWhileLoggedIn(!!session?.access_token);
+        setError(null);
         return;
       }
 
@@ -113,12 +136,24 @@ export function LandingDemoSearch() {
         </div>
       </form>
 
-      {isLoading && (
+      {isLoading && showLoadingUI && (
         <div className="w-screen relative left-1/2 -ml-[50vw] mt-12">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
-            <p className="text-muted-foreground text-sm animate-pulse" key={loadingMessageIndex}>
-              {LOADING_MESSAGES[loadingMessageIndex]}
-            </p>
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-6">
+            <div className="flex flex-col items-center justify-center gap-6 mb-6">
+              <div className="relative">
+                <div className="h-16 w-16 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                <IconSparkles className="h-7 w-7 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+              </div>
+              <motion.p
+                key={loadingMessageIndex}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="text-lg font-medium text-foreground"
+              >
+                {LOADING_MESSAGES[loadingMessageIndex]}
+              </motion.p>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {[1, 2, 3].map((i) => (
                 <Card key={i} className="rounded-lg">

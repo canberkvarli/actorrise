@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { LandingPricing } from "@/components/landing/LandingPricing";
 import { LandingValueProps } from "@/components/landing/LandingValueProps";
 import { LandingDemoSearch } from "@/components/landing/LandingDemoSearch";
+import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 
 export default function LandingPage() {
@@ -52,6 +53,7 @@ export default function LandingPage() {
               </ContactModalTrigger>
             </div>
             <div className="flex items-center gap-2">
+              <LandingMobileNav />
               <Button asChild variant="ghost" size="sm">
                 <Link href="/login">Sign in</Link>
               </Button>

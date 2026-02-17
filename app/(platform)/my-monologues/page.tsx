@@ -329,16 +329,18 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   <div className="flex items-center gap-2">
                     {/* Download button */}
                     <div className="relative">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
                           setShowDownloadMenu(!showDownloadMenu);
                         }}
-                        className="p-2 rounded-full transition-colors hover:bg-muted text-muted-foreground hover:text-primary"
+                        className="hover:bg-muted text-muted-foreground hover:text-primary"
                         title="Download monologue"
                       >
                         <IconDownload className="h-5 w-5" />
-                      </button>
+                      </Button>
                       {showDownloadMenu && (
                         <>
                           <div
@@ -374,15 +376,22 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       )}
                     </div>
                     {!isReadingMode && (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleFavorite(e as any, selectedMonologue);
                         }}
-                        className="p-2 rounded-full transition-colors bg-accent/10 hover:bg-accent/20 text-accent"
+                        className={`active:scale-95 transition-transform ${
+                          selectedMonologue.is_favorited
+                            ? "bg-violet-500/15 hover:bg-violet-500/25 text-violet-500 dark:text-violet-400"
+                            : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground"
+                        }`}
+                        aria-label={selectedMonologue.is_favorited ? "Remove bookmark" : "Add bookmark"}
                       >
-                        <IconBookmark className="h-5 w-5 fill-current" />
-                      </button>
+                        <IconBookmark className={`h-5 w-5 ${selectedMonologue.is_favorited ? "fill-current" : ""}`} />
+                      </Button>
                     )}
                     <Button
                       variant="ghost"

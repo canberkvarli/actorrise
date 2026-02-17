@@ -53,6 +53,15 @@ export default function DashboardPage() {
   const [headshotFailed, setHeadshotFailed] = useState(false);
   const [selectedMonologue, setSelectedMonologue] = useState<Monologue | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    setIsMobile(mq.matches);
+    const fn = () => setIsMobile(mq.matches);
+    mq.addEventListener("change", fn);
+    return () => mq.removeEventListener("change", fn);
+  }, []);
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
 
@@ -255,7 +264,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     (isLoadingStats && stats === undefined) || (isLoadingProfile && profile === undefined);
 
   return (
-    <div className="container mx-auto px-4 lg:px-8 py-8 max-w-7xl">
+    <div className="container mx-auto px-4 lg:px-8 py-6 md:py-8 max-w-7xl">
       {/* Full dashboard loading state only on true initial load (no cached profile/stats) */}
       {showFullPageLoader && (
         <motion.div
@@ -290,7 +299,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 <p className="text-sm font-medium text-primary mb-2">
                   {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 </p>
-                <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-foreground">
+                <h1 className="text-2xl md:text-5xl font-bold tracking-tight text-foreground">
                   Welcome back{greetingName ? `, ${greetingName}` : ''}
                 </h1>
               </div>
@@ -298,7 +307,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             {!showWelcomeSkeleton && stats && stats.completion_percentage < 100 && (
               <Link
                 href="/profile"
-                className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-amber-500/30 bg-amber-500/10 dark:bg-amber-400/10 dark:border-amber-400/25 hover:bg-amber-500/15 dark:hover:bg-amber-400/15 transition-colors text-left max-w-[280px] sm:max-w-none"
+                className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg border border-amber-500/30 bg-amber-500/10 dark:bg-amber-400/10 dark:border-amber-400/25 hover:bg-amber-500/15 dark:hover:bg-amber-400/15 transition-colors text-left max-w-[280px] sm:max-w-none"
               >
                 <IconUserCheck className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
                 <span className="text-sm font-medium text-foreground">Complete your profile</span>
@@ -394,7 +403,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <button
                           type="button"
                           onClick={(e) => toggleFavorite(e, mono)}
-                          className={`p-2 rounded-full transition-colors flex-shrink-0 ${
+                          className={`min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-full transition-colors flex-shrink-0 ${
                             mono.is_favorited
                               ? "bg-violet-500/15 text-violet-500 dark:text-violet-400"
                               : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground/50"
@@ -463,7 +472,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     Recent Searches
                   </h2>
                 </div>
-                <RecentSearches maxSearches={4} compact />
+                <RecentSearches maxSearches={isMobile ? 2 : 4} compact />
               </div>
             </div>
 
@@ -525,18 +534,20 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   {!isReadingMode && <h2 className="text-2xl font-bold">Monologue Details</h2>}
                   {isReadingMode && <div className="flex-1" />}
                   <div className="flex items-center gap-2">
-                    {/* Download button */}
+                    {/* Download button - 44px touch target on mobile */}
                     <div className="relative">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={(e) => {
                           e.stopPropagation();
                           setShowDownloadMenu(!showDownloadMenu);
                         }}
-                        className="p-2 rounded-full transition-colors hover:bg-muted text-muted-foreground hover:text-primary"
+                        className="hover:bg-muted text-muted-foreground hover:text-primary min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
                         title="Download monologue"
                       >
                         <IconDownload className="h-5 w-5" />
-                      </button>
+                      </Button>
                       {showDownloadMenu && (
                         <>
                           <div
@@ -572,13 +583,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       )}
                     </div>
                     {!isReadingMode && (
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           toggleFavorite(e as any, currentMonologue);
                         }}
-                        className={`p-2 rounded-full transition-colors cursor-pointer relative z-[10002] ${
+                        className={`relative z-[10002] active:scale-95 transition-transform min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 ${
                           currentMonologue.is_favorited
                             ? "bg-violet-500/15 hover:bg-violet-500/25 text-violet-500 dark:text-violet-400"
                             : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground"
@@ -588,7 +601,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <IconBookmark
                           className={`h-5 w-5 ${currentMonologue.is_favorited ? "fill-current" : ""}`}
                         />
-                      </button>
+                      </Button>
                     )}
                     <Button
                       variant="ghost"
@@ -597,7 +610,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         e.stopPropagation();
                         setIsReadingMode(!isReadingMode);
                       }}
-                      className="hover:bg-muted"
+                      className="hover:bg-muted min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
                     >
                       {isReadingMode ? (
                         <IconEyeOff className="h-5 w-5" />
@@ -605,7 +618,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <IconEye className="h-5 w-5" />
                       )}
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={closeMonologue}>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={closeMonologue}
+                      className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
+                    >
                       <IconX className="h-5 w-5" />
                     </Button>
                   </div>

@@ -292,11 +292,11 @@ export default function PlatformLayout({
               </div>
             </div>
 
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - 44px touch target */}
             <Button
               variant="ghost"
               size="icon"
-              className="md:hidden"
+              className="md:hidden min-h-[44px] min-w-[44px]"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
               <IconMenu className="h-5 w-5" />
@@ -334,19 +334,7 @@ export default function PlatformLayout({
                   );
                 })}
 
-                {/* Profile Link */}
-                <Button
-                  asChild
-                  variant={pathname === "/profile" ? "default" : "ghost"}
-                  size="sm"
-                  className="w-full justify-start gap-2"
-                >
-                  <Link href="/profile" onClick={() => setMobileMenuOpen(false)}>
-                    <IconUser className="h-4 w-4" />
-                    Edit Profile
-                  </Link>
-                </Button>
-
+                {/* Secondary links only in hamburger; Account is in bottom nav */}
                 {/* Bookmarks Link */}
                 <Button
                   asChild
@@ -413,10 +401,67 @@ export default function PlatformLayout({
         </div>
       </nav>
 
-      {/* Main Content */}
-      <main>
+      {/* Main Content - extra padding on mobile so content scrolls above bottom nav */}
+      <main className="pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
         {children}
       </main>
+
+      {/* Mobile Bottom Navigation - one-thumb access to primary actions */}
+      <nav
+        className="md:hidden fixed bottom-0 left-0 right-0 z-[9998] bg-background/95 backdrop-blur-sm border-t border-border/40 safe-area-bottom"
+      >
+        <div className="flex items-stretch justify-around min-h-[48px]">
+          <Link
+            href="/dashboard"
+            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
+              pathname === "/dashboard" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <IconHome className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] font-medium">Home</span>
+          </Link>
+          <Link
+            href="/search"
+            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
+              pathname === "/search" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <IconSearch className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] font-medium">Search</span>
+          </Link>
+          <Link
+            href="/my-scripts"
+            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
+              pathname === "/my-scripts" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <IconMask className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] font-medium">Scenes</span>
+          </Link>
+          <Link
+            href="/profile"
+            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
+              pathname === "/profile" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {headshotUrl ? (
+              <Image
+                src={headshotUrl}
+                alt=""
+                width={24}
+                height={24}
+                className="rounded-full object-cover h-6 w-6 shrink-0"
+              />
+            ) : (
+              <span className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background text-[10px] font-medium shrink-0">
+                {profileInitial}
+              </span>
+            )}
+            <span className="text-[10px] font-medium">Account</span>
+          </Link>
+        </div>
+      </nav>
+
       <ContactModal open={contactOpen} onOpenChange={setContactOpen} />
     </div>
     </SWRConfig>

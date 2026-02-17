@@ -1,20 +1,10 @@
 from app.core.database import Base
-from sqlalchemy import (
-    JSON,
-    Boolean,
-    Column,
-    DateTime,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-    text as sql_text,
-    ARRAY,
-)
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import (ARRAY, JSON, Boolean, Column, DateTime, Float,
+                        ForeignKey, Integer, String, Text)
+from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import deferred, relationship
-from pgvector.sqlalchemy import Vector
 
 
 class ActorProfile(Base):
@@ -141,6 +131,7 @@ class Monologue(Base):
     view_count = Column(Integer, default=0)
     favorite_count = Column(Integer, default=0)
     overdone_score = Column(Float, default=0.0)  # 0.0 = fresh, 1.0 = extremely overdone
+    used_in_recent_major_production = Column(Boolean, default=False)  # True if used in major film/TV/theatre (e.g. last 10y)
 
     # Quality Control
     is_verified = Column(Boolean, default=False)  # Manual verification
