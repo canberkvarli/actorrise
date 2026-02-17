@@ -135,16 +135,12 @@ export function LandingDemoSearch() {
       )}
 
       {rateLimited && !rateLimitedWhileLoggedIn && (
-        <Card className="border-primary/30 bg-primary/5 max-w-xl mx-auto mt-12">
-          <CardContent className="pt-6 pb-6">
-            <p className="text-foreground font-medium mb-4">
-              You&apos;ve tried the demo. Sign up to search anytime.
-            </p>
-            <Button asChild size="lg" className="rounded-full">
-              <Link href="/signup">Sign up free</Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <p className="mt-8 text-center text-sm text-muted-foreground">
+          Like what you see?{" "}
+          <Link href="/signup" className="font-medium text-primary hover:underline">
+            Get started free
+          </Link>
+        </p>
       )}
       {rateLimited && rateLimitedWhileLoggedIn && (
         <Card className="border-border bg-muted/30 max-w-xl mx-auto mt-12">
