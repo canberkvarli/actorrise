@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,44 @@ import { supabase } from "@/lib/supabase";
 import { API_URL } from "@/lib/api";
 import type { DemoSearchResultItem } from "./LandingDemoResultCard";
 import { LandingDemoResultCard } from "./LandingDemoResultCard";
+
+const AUTO_DEMO_QUERY = "funny piece for drama school, male";
+
+const AUTO_DEMO_RESULTS: DemoSearchResultItem[] = [
+  {
+    id: -1,
+    character_name: "Malvolio",
+    play_title: "Twelfth Night",
+    author: "William Shakespeare",
+    scene_description: "Malvolio discovers what he believes is a love letter from Olivia, convinced of his own greatness.",
+    estimated_duration_seconds: 110,
+    relevance_score: 0.91,
+    match_type: null,
+    text_excerpt: "I have limed her; but it is Jove's doing, and Jove make me thankful!",
+  },
+  {
+    id: -2,
+    character_name: "Bottom",
+    play_title: "A Midsummer Night's Dream",
+    author: "William Shakespeare",
+    scene_description: "Bottom wakes from his enchanted sleep and attempts to recall his remarkable dream.",
+    estimated_duration_seconds: 90,
+    relevance_score: 0.87,
+    match_type: null,
+    text_excerpt: "I have had a most rare vision. I have had a dream, past the wit of man to say what dream it was.",
+  },
+  {
+    id: -3,
+    character_name: "Frank",
+    play_title: "Educating Rita",
+    author: "Willy Russell",
+    scene_description: "Frank, a disillusioned university tutor, reflects on the absurdity of his situation.",
+    estimated_duration_seconds: 120,
+    relevance_score: 0.82,
+    match_type: null,
+    text_excerpt: "I'm an appalling teacher. Most of the time, you see, I don't want to talk about literature at all.",
+  },
+];
 
 const LOADING_MESSAGES = [
   "Clanking through the archives...",
@@ -35,6 +73,10 @@ export function LandingDemoSearch() {
   const [jitter, setJitter] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
 
+  type AutoDemoPhase = "idle" | "typing" | "loading" | "results";
+  const [autoDemoPhase, setAutoDemoPhase] = useState<AutoDemoPhase>("idle");
+  const userHasInteracted = useRef(false);
+
   useEffect(() => {
     if (!isLoading) return;
     const interval = setInterval(() => {
@@ -56,8 +98,38 @@ export function LandingDemoSearch() {
     return () => clearTimeout(timeout);
   }, [isLoading]);
 
+  // Auto-demo: typewriter + fake loading + pre-baked results on page load
+  useEffect(() => {
+    const cancelled = { current: false };
+
+    const startDelay = setTimeout(async () => {
+      if (cancelled.current || userHasInteracted.current) return;
+
+      setAutoDemoPhase("typing");
+      for (let i = 1; i <= AUTO_DEMO_QUERY.length; i++) {
+        if (cancelled.current || userHasInteracted.current) return;
+        setQuery(AUTO_DEMO_QUERY.slice(0, i));
+        await new Promise((r) => setTimeout(r, 40));
+      }
+
+      if (cancelled.current || userHasInteracted.current) return;
+      setAutoDemoPhase("loading");
+      await new Promise((r) => setTimeout(r, 1400));
+
+      if (cancelled.current || userHasInteracted.current) return;
+      setAutoDemoPhase("results");
+    }, 600);
+
+    return () => {
+      cancelled.current = true;
+      clearTimeout(startDelay);
+    };
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    userHasInteracted.current = true;
+    if (autoDemoPhase !== "idle") setAutoDemoPhase("idle");
     const q = query.trim();
     if (!q) {
       setJitter(true);
@@ -120,6 +192,8 @@ export function LandingDemoSearch() {
             placeholder="e.g. funny piece, 2 min..."
             value={query}
             onChange={(e) => {
+              userHasInteracted.current = true;
+              if (autoDemoPhase !== "idle") setAutoDemoPhase("idle");
               setQuery(e.target.value);
             }}
             className="flex-1 min-w-0 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-12 text-base"
@@ -136,7 +210,7 @@ export function LandingDemoSearch() {
         </div>
       </form>
 
-      {isLoading && showLoadingUI && (
+      {((isLoading && showLoadingUI) || autoDemoPhase === "loading") && (
         <div className="w-screen relative left-1/2 -ml-[50vw] mt-12">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-6">
             <div className="flex flex-col items-center justify-center gap-6 mb-6">
@@ -222,6 +296,30 @@ export function LandingDemoSearch() {
                 Search 8,600+ monologues
               </Link>
             </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {autoDemoPhase === "results" && results.length === 0 && (
+        <div className="w-screen relative left-1/2 -ml-[50vw] mt-12">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Example results — search for yours above.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {AUTO_DEMO_RESULTS.map((result) => (
+                <LandingDemoResultCard
+                  key={result.id}
+                  result={result}
+                  signupRedirectQuery={AUTO_DEMO_QUERY}
+                />
+              ))}
+            </div>
+            <div className="pt-4">
+              <Button asChild size="lg" className="rounded-full px-8 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground hover:border-muted-foreground/30">
+                <Link href="/signup">Search 8,600+ monologues</Link>
+              </Button>
             </div>
           </div>
         </div>
