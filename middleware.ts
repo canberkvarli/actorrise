@@ -1,4 +1,5 @@
 import { createServerClient } from '@supabase/ssr'
+import type { User } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export default async function middleware(request: NextRequest) {
@@ -30,7 +31,7 @@ export default async function middleware(request: NextRequest) {
   )
 
   // Single auth call per request to reduce Supabase egress (getSession is enough for redirect logic).
-  let user: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']['user'] | null = null
+  let user: User | null = null
   let supabaseUnreachable = false
   try {
     const { data: sessionData } = await supabase.auth.getSession()
