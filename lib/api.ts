@@ -9,6 +9,38 @@ export const API_URL =
 // Extended options: RequestInit + optional timeout (for slow endpoints like search)
 export type RequestOptions = RequestInit & { timeoutMs?: number };
 
+// In-memory session cache to reduce Supabase Auth egress (one getSession per TTL instead of per request).
+const SESSION_CACHE_TTL_MS = 60_000; // 60 seconds
+let cachedSession: { access_token: string; expires_at: number } | null = null;
+
+function isSessionCacheValid(): boolean {
+  if (!cachedSession) return false;
+  return Date.now() < cachedSession.expires_at;
+}
+
+async function getAuthToken(): Promise<string | undefined> {
+  if (typeof window === "undefined") return undefined;
+  if (isSessionCacheValid() && cachedSession) return cachedSession.access_token;
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  const expiresAt = session?.expires_at;
+  if (token != null && expiresAt != null) {
+    // Cache until TTL or session expiry, whichever is sooner
+    const expiryMs = Math.min(
+      Date.now() + SESSION_CACHE_TTL_MS,
+      expiresAt * 1000
+    );
+    cachedSession = { access_token: token, expires_at: expiryMs };
+  } else {
+    cachedSession = null;
+  }
+  return token;
+}
+
+function clearSessionCache(): void {
+  cachedSession = null;
+}
+
 // Fetch wrapper that mimics axios API for easy migration
 async function request<T = unknown>(
   method: string,
@@ -16,12 +48,7 @@ async function request<T = unknown>(
   data?: unknown,
   options?: RequestOptions
 ): Promise<{ data: T; status: number; statusText: string }> {
-  // Get auth token
-  let authToken: string | undefined;
-  if (typeof window !== "undefined") {
-    const { data: { session } } = await supabase.auth.getSession();
-    authToken = session?.access_token;
-  }
+  const authToken = await getAuthToken();
 
   // Build full URL
   const fullUrl = url.startsWith("http") ? url : `${API_URL}${url}`;
@@ -82,9 +109,10 @@ async function request<T = unknown>(
     if (timeoutId != null) clearTimeout(timeoutId);
   }
 
-  // Handle 401 errors
+  // Handle 401 errors (clear session cache so next request fetches fresh session)
   if (response.status === 401) {
     if (typeof window !== "undefined") {
+      clearSessionCache();
       await supabase.auth.signOut();
       window.location.href = "/login";
     }

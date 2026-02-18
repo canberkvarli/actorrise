@@ -29,30 +29,18 @@ export default async function middleware(request: NextRequest) {
     }
   )
 
-  // Refresh session if expired (can fail if Supabase is unreachable from Edge)
-  let user: Awaited<ReturnType<typeof supabase.auth.getUser>>['data']['user'] = null
+  // Single auth call per request to reduce Supabase egress (getSession is enough for redirect logic).
+  let user: Awaited<ReturnType<typeof supabase.auth.getSession>>['data']['session']['user'] | null = null
   let supabaseUnreachable = false
   try {
-    const { data } = await supabase.auth.getUser()
-    user = data.user
+    const { data: sessionData } = await supabase.auth.getSession()
+    if (sessionData?.session != null) {
+      user = sessionData.session.user
+    }
   } catch (err) {
-    // Supabase unreachable (e.g. network, wrong URL) – continue without auth for this request.
     if (process.env.NODE_ENV === 'development') {
       supabaseUnreachable = true
       console.warn('[middleware] Supabase auth unavailable:', (err as Error).message)
-    }
-  }
-
-  // If getUser() returned no user (e.g. timeout, edge cold start), check for session in cookies.
-  // This avoids redirecting logged-in users to login when Supabase is slow or briefly unreachable.
-  if (!user) {
-    try {
-      const { data: sessionData } = await supabase.auth.getSession()
-      if (sessionData?.session != null) {
-        user = sessionData.session.user
-      }
-    } catch {
-      // ignore
     }
   }
 
