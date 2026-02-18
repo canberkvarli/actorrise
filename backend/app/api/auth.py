@@ -17,6 +17,11 @@ class UpdateMeRequest(BaseModel):
     marketing_opt_in: bool | None = None
 
 
+class UpdateOnboardingRequest(BaseModel):
+    has_seen_welcome: bool | None = None
+    has_seen_search_tour: bool | None = None
+
+
 def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
@@ -139,6 +144,8 @@ def get_me(current_user: User = Depends(get_current_user)):
         "name": current_user.name,
         "supabase_id": current_user.supabase_id,
         "marketing_opt_in": current_user.marketing_opt_in,
+        "has_seen_welcome": current_user.has_seen_welcome,
+        "has_seen_search_tour": current_user.has_seen_search_tour,
     }
 
 
@@ -161,4 +168,23 @@ def update_me(
         "name": current_user.name,
         "supabase_id": current_user.supabase_id,
         "marketing_opt_in": current_user.marketing_opt_in,
+    }
+
+
+@router.patch("/onboarding")
+def update_onboarding(
+    body: UpdateOnboardingRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Mark onboarding steps as seen."""
+    if body.has_seen_welcome is not None:
+        current_user.has_seen_welcome = body.has_seen_welcome
+    if body.has_seen_search_tour is not None:
+        current_user.has_seen_search_tour = body.has_seen_search_tour
+    db.commit()
+    db.refresh(current_user)
+    return {
+        "has_seen_welcome": current_user.has_seen_welcome,
+        "has_seen_search_tour": current_user.has_seen_search_tour,
     }

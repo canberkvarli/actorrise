@@ -23,6 +23,10 @@ class User(Base):
     # Marketing: explicit opt-in only (GDPR/CAN-SPAM compliant)
     marketing_opt_in = Column(Boolean, default=False, nullable=False)
 
+    # Onboarding state
+    has_seen_welcome = Column(Boolean, default=False, nullable=False)
+    has_seen_search_tour = Column(Boolean, default=False, nullable=False)
+
     # Relationships
     actor_profile = relationship("ActorProfile", back_populates="user", uselist=False)
     subscription = relationship("UserSubscription", back_populates="user", uselist=False)
