@@ -1,0 +1,182 @@
+"use client";
+
+import { useState, useEffect, useCallback, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import api from "@/lib/api";
+
+interface TourStep {
+  targetId: string;
+  title: string;
+  body: string;
+  placement: "bottom" | "top";
+}
+
+const TOUR_STEPS: TourStep[] = [
+  {
+    targetId: "search-input",
+    title: "Search in plain English.",
+    body: "Type anything — \"a Chekhov monologue for a woman in her 30s\" — and we'll understand.",
+    placement: "bottom",
+  },
+  {
+    targetId: "search-filters",
+    title: "Narrow it down.",
+    body: "Filter by gender, age range, emotion, or theme. Mix and match to find exactly what you need.",
+    placement: "bottom",
+  },
+  {
+    targetId: "search-results",
+    title: "Your matches.",
+    body: "Results are ranked by how well they fit your profile and your search. Best matches come first.",
+    placement: "top",
+  },
+  {
+    targetId: "search-find-for-me",
+    title: "Let AI choose for you.",
+    body: "\"Find for me\" uses your profile to recommend monologues you haven't considered yet.",
+    placement: "bottom",
+  },
+];
+
+const SPOTLIGHT_PADDING = 8;
+const TOOLTIP_OFFSET = 12;
+const TOOLTIP_WIDTH = 320;
+
+async function markSearchTourSeen() {
+  try {
+    await api.patch("/api/auth/onboarding", { has_seen_search_tour: true });
+  } catch {
+    // Non-blocking
+  }
+}
+
+interface SearchTourProps {
+  onDismiss: () => void;
+}
+
+export function SearchTour({ onDismiss }: SearchTourProps) {
+  const [step, setStep] = useState(0);
+  const [rect, setRect] = useState<DOMRect | null>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
+  const currentStep = TOUR_STEPS[step];
+  const isLast = step === TOUR_STEPS.length - 1;
+
+  // Find the target element; retry a few times if not mounted yet
+  useEffect(() => {
+    setRect(null);
+    let attempts = 0;
+    const tryFind = () => {
+      const el = document.getElementById(currentStep.targetId);
+      if (el) {
+        setRect(el.getBoundingClientRect());
+      } else if (attempts < 8) {
+        attempts++;
+        setTimeout(tryFind, 150);
+      }
+    };
+    tryFind();
+  }, [currentStep.targetId]);
+
+  // Re-measure on window resize
+  useEffect(() => {
+    const onResize = () => {
+      const el = document.getElementById(currentStep.targetId);
+      if (el) setRect(el.getBoundingClientRect());
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [currentStep.targetId]);
+
+  const dismiss = useCallback(async () => {
+    await markSearchTourSeen();
+    onDismiss();
+  }, [onDismiss]);
+
+  const next = useCallback(() => {
+    if (isLast) {
+      dismiss();
+    } else {
+      setStep((s) => s + 1);
+    }
+  }, [isLast, dismiss]);
+
+  // Spotlight position
+  const spotlightStyle: React.CSSProperties = rect
+    ? {
+        position: "fixed",
+        top: rect.top - SPOTLIGHT_PADDING,
+        left: rect.left - SPOTLIGHT_PADDING,
+        width: rect.width + SPOTLIGHT_PADDING * 2,
+        height: rect.height + SPOTLIGHT_PADDING * 2,
+        borderRadius: 12,
+        boxShadow: "0 0 0 9999px rgba(0,0,0,0.65)",
+        pointerEvents: "none",
+        zIndex: 10001,
+        transition: "top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease",
+      }
+    : { display: "none" };
+
+  // Tooltip position
+  const tooltipStyle: React.CSSProperties = (() => {
+    if (!rect) return { display: "none" };
+    if (typeof window === "undefined") return { display: "none" };
+    const { placement } = currentStep;
+    const style: React.CSSProperties = { position: "fixed", width: TOOLTIP_WIDTH, zIndex: 10002 };
+    const centerX = rect.left + rect.width / 2 - TOOLTIP_WIDTH / 2;
+    const clampedX = Math.max(16, Math.min(centerX, window.innerWidth - TOOLTIP_WIDTH - 16));
+    style.left = clampedX;
+    if (placement === "bottom") {
+      style.top = rect.bottom + TOOLTIP_OFFSET;
+    } else {
+      style.bottom = window.innerHeight - rect.top + TOOLTIP_OFFSET;
+    }
+    return style;
+  })();
+
+  return (
+    <div className="fixed inset-0 z-[10000]" style={{ pointerEvents: "none" }}>
+      {/* Spotlight */}
+      <div style={spotlightStyle} />
+
+      {/* Tooltip */}
+      <AnimatePresence mode="wait">
+        {rect && (
+          <motion.div
+            key={step}
+            ref={tooltipRef}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.25 }}
+            style={{ ...tooltipStyle, pointerEvents: "auto" }}
+            className="rounded-2xl border border-border/50 bg-card/95 backdrop-blur-md shadow-xl shadow-black/40 p-5"
+          >
+            <p className="text-[10px] font-medium uppercase tracking-widest text-primary/70 mb-2">
+              {step + 1} of {TOUR_STEPS.length}
+            </p>
+            <h3 className="font-brand text-lg font-semibold text-foreground mb-1.5">
+              {currentStep.title}
+            </h3>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-4">
+              {currentStep.body}
+            </p>
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={dismiss}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Skip tour
+              </button>
+              <Button size="sm" onClick={next} className="rounded-full px-5">
+                {isLast ? "Got it" : "Next"}
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
