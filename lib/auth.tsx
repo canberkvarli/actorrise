@@ -20,6 +20,7 @@ interface AuthContextType {
   login: (email: string, password: string, redirectTo?: string) => Promise<void>;
   signup: (email: string, password: string, name?: string, marketingOptIn?: boolean) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
@@ -199,6 +200,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.href = "/";
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    await syncUserWithBackend(false);
+  }, [syncUserWithBackend]);
+
   // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo<AuthContextType>(
     () => ({
@@ -207,9 +212,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       signup,
       logout,
+      refreshUser,
       isAuthenticated: !!user,
     }),
-    [user, loading, login, signup, logout]
+    [user, loading, login, signup, logout, refreshUser]
   );
 
   return (

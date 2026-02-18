@@ -40,7 +40,7 @@ import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModa
 export default function SearchPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [showSearchTour, setShowSearchTour] = useState(false);
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState({
@@ -49,8 +49,9 @@ export default function SearchPage() {
     emotion: "",
     theme: "",
     category: "",
-    exclude_overdone: "",
   });
+  /** 0 = freshest only, 0.3 = fresh, 0.5 = some overdone OK, 1 = show all. Separate from filters for clearer UX. */
+  const [maxOverdoneScore, setMaxOverdoneScore] = useState(1);
   const [results, setResults] = useState<Monologue[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
@@ -121,8 +122,9 @@ export default function SearchPage() {
           emotion: historyEntry.filters.emotion || "",
           theme: historyEntry.filters.theme || "",
           category: historyEntry.filters.category || "",
-          exclude_overdone: (historyEntry.filters as { exclude_overdone?: string }).exclude_overdone || "",
         });
+        const h = historyEntry.filters as { exclude_overdone?: string; max_overdone_score?: number };
+        setMaxOverdoneScore(typeof h.max_overdone_score === "number" ? h.max_overdone_score : h.exclude_overdone === "true" ? 0.3 : 1);
         setResults(historyEntry.resultPreviews);
         setHasSearched(true);
         return;
@@ -136,14 +138,17 @@ export default function SearchPage() {
       emotion: "",
       theme: "",
       category: "",
-      exclude_overdone: "",
     };
-    ["gender", "age_range", "emotion", "theme", "category", "exclude_overdone"].forEach((key) => {
+    ["gender", "age_range", "emotion", "theme", "category"].forEach((key) => {
       const value = searchParams.get(key);
       if (value) {
         urlFilters[key as keyof typeof filters] = value;
       }
     });
+    const urlMaxOverdone = searchParams.get("max_overdone_score");
+    const parsedMax = urlMaxOverdone ? parseFloat(urlMaxOverdone) : NaN;
+    const initialMaxOverdone = !Number.isNaN(parsedMax) && parsedMax >= 0 && parsedMax <= 1 ? parsedMax : 1;
+    setMaxOverdoneScore(initialMaxOverdone);
 
     setRestoredFromLastSearch(false);
 
@@ -153,7 +158,7 @@ export default function SearchPage() {
       setFilters(urlFilters);
 
       // Try to restore results from sessionStorage (fast, no API call)
-      const storageKey = `search_results_${urlQuery}_${JSON.stringify(urlFilters)}`;
+      const storageKey = `search_results_${urlQuery}_${JSON.stringify(urlFilters)}_${initialMaxOverdone}`;
       const cachedResults = sessionStorage.getItem(storageKey);
 
       if (cachedResults) {
@@ -167,12 +172,12 @@ export default function SearchPage() {
         } catch (e) {
           console.error("Error parsing cached results:", e);
           // If cache is corrupted, perform fresh search
-          performSearch(urlQuery, urlFilters);
+          performSearch(urlQuery, urlFilters, 1, false, initialMaxOverdone);
           return;
         }
       } else {
         // If no cache but URL has query, perform fresh search
-        performSearch(urlQuery, urlFilters);
+        performSearch(urlQuery, urlFilters, 1, false, initialMaxOverdone);
         return;
       }
     }
@@ -185,11 +190,19 @@ export default function SearchPage() {
       if (lastSearchRaw) {
         const last = JSON.parse(lastSearchRaw) as {
           query: string;
-          filters: typeof filters;
+          filters: typeof filters & { exclude_overdone?: string; max_overdone_score?: number };
           results: Monologue[];
         };
         setQuery(last.query);
-        setFilters(last.filters);
+        setFilters({
+          gender: last.filters.gender ?? "",
+          age_range: last.filters.age_range ?? "",
+          emotion: last.filters.emotion ?? "",
+          theme: last.filters.theme ?? "",
+          category: last.filters.category ?? "",
+        });
+        const m = last.filters.max_overdone_score;
+        setMaxOverdoneScore(typeof m === "number" && m >= 0 && m <= 1 ? m : last.filters.exclude_overdone === "true" ? 0.3 : 1);
         setResults(last.results);
         setTotal(last.results.length);
         setHasSearched(last.results.length > 0);
@@ -226,8 +239,10 @@ export default function SearchPage() {
     searchQuery: string,
     searchFilters: typeof filters,
     pageNum: number = 1,
-    append: boolean = false
+    append: boolean = false,
+    maxOverdoneScoreOverride?: number
   ) => {
+    const effectiveMaxOverdone = maxOverdoneScoreOverride ?? maxOverdoneScore;
     if (!append) {
       setIsLoading(true);
       setSearchError(null);
@@ -241,10 +256,9 @@ export default function SearchPage() {
       const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: String(pageNum) });
       if (searchQuery.trim()) params.set("q", searchQuery);
       Object.entries(searchFilters).forEach(([key, value]) => {
-        if (!value) return;
-        if (key === "exclude_overdone") params.append(key, "true");
-        else params.append(key, value);
+        if (value) params.append(key, value);
       });
+      if (effectiveMaxOverdone < 1) params.set("max_overdone_score", String(effectiveMaxOverdone));
 
       const response = await api.get<SearchResponseShape>(
         `/api/monologues/search?${params.toString()}`,
@@ -264,19 +278,20 @@ export default function SearchPage() {
 
       // Cache results (first page only) in sessionStorage keyed by query+filters
       if (pageNum === 1) {
-        const storageKey = `search_results_${searchQuery}_${JSON.stringify(searchFilters)}`;
+        const storageKey = `search_results_${searchQuery}_${JSON.stringify(searchFilters)}_${effectiveMaxOverdone}`;
         sessionStorage.setItem(storageKey, JSON.stringify(newResults));
+        const savedFilters = { ...searchFilters, max_overdone_score: effectiveMaxOverdone };
         sessionStorage.setItem(
           LAST_SEARCH_KEY,
           JSON.stringify({
             query: searchQuery,
-            filters: searchFilters,
+            filters: savedFilters,
             results: newResults,
           })
         );
         addSearchToHistory({
           query: searchQuery,
-          filters: searchFilters,
+          filters: savedFilters,
           resultPreviews: newResults.slice(0, 3),
           resultCount: data.total,
         });
@@ -285,6 +300,7 @@ export default function SearchPage() {
         Object.entries(searchFilters).forEach(([key, value]) => {
           if (value) newParams.set(key, value);
         });
+        if (effectiveMaxOverdone < 1) newParams.set("max_overdone_score", String(effectiveMaxOverdone));
         router.replace(`/search?${newParams.toString()}`, { scroll: false });
       }
     } catch (error: unknown) {
@@ -309,13 +325,13 @@ export default function SearchPage() {
   };
 
   const loadMore = () => {
-    const hasQueryOrFilters = query.trim() !== "" || Object.entries(filters).some(([, v]) => v !== "");
+    const hasQueryOrFilters = query.trim() !== "" || Object.entries(filters).some(([, v]) => v !== "") || maxOverdoneScore < 1;
     if (!hasQueryOrFilters || isLoadingMore || !hasMore) return;
     performSearch(query, filters, page + 1, true);
   };
 
   const handleSearch = async () => {
-    const hasQueryOrFilters = query.trim() !== "" || Object.entries(filters).some(([, v]) => v !== "");
+    const hasQueryOrFilters = query.trim() !== "" || Object.entries(filters).some(([, v]) => v !== "") || maxOverdoneScore < 1;
     if (!hasQueryOrFilters) {
       setJitter(true);
       return;
@@ -327,7 +343,7 @@ export default function SearchPage() {
     setIsLoading(true);
     setHasSearched(true);
     setQuery(""); // Clear query to show it's AI-based
-    setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", exclude_overdone: "" }); // Clear filters
+    setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "" }); // Clear filters
 
     try {
       const response = await api.get<Monologue[]>("/api/monologues/recommendations?limit=20");
@@ -551,9 +567,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   };
 
   const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
-  const getFilterDisplay = (key: string, value: string) =>
-    key === "exclude_overdone" && value === "true" ? "Overdone: Fresh only" : `${key.replace(/_/g, " ")}: ${value}`;
-  const canSearch = query.trim() !== "" || activeFilters.length > 0;
+  const hasFreshnessFilter = maxOverdoneScore < 1;
+  const getFilterDisplay = (key: string, value: string) => `${key.replace(/_/g, " ")}: ${value}`;
+  const getFreshnessLabel = (score: number) =>
+    score <= 0 ? "Freshest only" : score <= 0.3 ? "Fresh" : score <= 0.5 ? "Some overdone OK" : score <= 0.7 ? "More OK" : "Show all";
+  const canSearch = query.trim() !== "" || activeFilters.length > 0 || hasFreshnessFilter;
 
   // Sort by confidence score (desc). Best match = only actual quote matches (exact_quote/fuzzy_quote); rest are related.
   const HIGH_SCORE_CAP_FOR_CONFIDENCE = 5; // If more than this many have score >= 0.70, treat as broad query and hide confidence
@@ -687,9 +705,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               >
                 <IconAdjustments className="h-4 w-4" />
                 Filters
-                {activeFilters.length > 0 && (
+                {(activeFilters.length > 0 || hasFreshnessFilter) && (
                   <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                    {activeFilters.length}
+                    {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
                   </Badge>
                 )}
               </Button>
@@ -702,9 +720,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               >
                 <IconAdjustments className="h-4 w-4" />
                 Filters
-                {activeFilters.length > 0 && (
+                {(activeFilters.length > 0 || hasFreshnessFilter) && (
                   <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                    {activeFilters.length}
+                    {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
                   </Badge>
                 )}
               </Button>
@@ -747,6 +765,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             onOpenChange={setShowFiltersSheet}
             filters={filters}
             setFilters={setFilters}
+            maxOverdoneScore={maxOverdoneScore}
+            setMaxOverdoneScore={setMaxOverdoneScore}
           />
 
           {selectedMonologue && (
@@ -767,7 +787,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               exit={{ opacity: 0, height: 0 }}
               className="hidden md:block mt-4 p-4 bg-card border border-border rounded-lg"
             >
-              <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
                 {[
                   { key: "gender", label: "Gender", options: ["male", "female", "any"] },
                   { key: "age_range", label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
@@ -789,19 +809,40 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     </select>
                   </div>
                 ))}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Overdone</Label>
-                  <select
-                    value={filters.exclude_overdone}
-                    onChange={(e) => setFilters({ ...filters, exclude_overdone: e.target.value })}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-input bg-background"
-                  >
-                    <option value="">Any</option>
-                    <option value="true">Fresh only</option>
-                  </select>
+              </div>
+
+              {/* Freshness – separate from category filters, aligned with actor profile UX */}
+              <div className="mt-4 pt-4 border-t border-border/80">
+                <div className="flex items-center gap-2 mb-2">
+                  <Label className="text-xs text-muted-foreground font-medium">Freshness</Label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button type="button" className="inline-flex cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm" aria-label="Freshness filter info">
+                        <IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="text-sm">
+                        Filter by how &quot;overdone&quot; a piece is (often used in auditions). Lower = only fresher, less common pieces; higher = include well-known ones.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={0}
+                    max={1}
+                    step={0.1}
+                    value={maxOverdoneScore}
+                    onChange={(e) => setMaxOverdoneScore(parseFloat(e.target.value))}
+                    className="flex-1 h-2 rounded-lg appearance-none bg-muted accent-primary"
+                  />
+                  <span className="text-xs text-muted-foreground w-24 shrink-0">{getFreshnessLabel(maxOverdoneScore)}</span>
                 </div>
               </div>
-              {activeFilters.length > 0 && (
+
+              {(activeFilters.length > 0 || hasFreshnessFilter) && (
                 <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                   {activeFilters.map(([key, value]) => (
                     <Badge key={key} variant="secondary" className="gap-1 capitalize">
@@ -814,8 +855,19 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       </button>
                     </Badge>
                   ))}
+                  {hasFreshnessFilter && (
+                    <Badge variant="secondary" className="gap-1">
+                      Freshness: {getFreshnessLabel(maxOverdoneScore)}
+                      <button
+                        onClick={() => setMaxOverdoneScore(1)}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <IconX className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  )}
                   <button
-                    onClick={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", exclude_overdone: "" })}
+                    onClick={() => { setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "" }); setMaxOverdoneScore(1); }}
                     className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
                   >
                     Clear all
@@ -907,11 +959,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </p>
                 </div>
               )}
-              {query.trim() && activeFilters.length > 0 && (
-                <p className="text-sm text-muted-foreground">
-                  Showing monologues matching <span className="font-semibold text-foreground">&ldquo;{query}&rdquo;</span> in {activeFilters.map(([k, v]) => getFilterDisplay(k, v)).join(", ")}. Filters narrow the set; search ranks by meaning.
-                </p>
-              )}
+              {query.trim() && (activeFilters.length > 0 || hasFreshnessFilter) && (
+                  <p className="text-sm text-muted-foreground">
+                  Showing monologues matching <span className="font-semibold text-foreground">&ldquo;{query}&rdquo;</span>
+                  {" in "}
+                  {[...activeFilters.map(([k, v]) => getFilterDisplay(k, v)), ...(hasFreshnessFilter ? [`Freshness: ${getFreshnessLabel(maxOverdoneScore)}`] : [])].join("; ")}. Filters narrow the set; search ranks by meaning.
+                  </p>
+                )}
               <div className="flex items-center justify-between">
                 <p className="text-sm text-muted-foreground">
                   {showBookmarkedOnly ? (
@@ -1202,7 +1256,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
       <AnimatePresence>
         {showSearchTour && (
-          <SearchTour onDismiss={() => setShowSearchTour(false)} />
+          <SearchTour onDismiss={async () => { setShowSearchTour(false); await refreshUser(); }} />
         )}
       </AnimatePresence>
     </div>

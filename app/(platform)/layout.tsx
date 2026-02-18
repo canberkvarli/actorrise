@@ -39,7 +39,7 @@ export default function PlatformLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading, logout } = useAuth();
+  const { user, loading, logout, refreshUser } = useAuth();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -513,7 +513,7 @@ export default function PlatformLayout({
 
       <AnimatePresence>
         {showWelcome && (
-          <WelcomeFlow onDismiss={() => setShowWelcome(false)} />
+          <WelcomeFlow onDismiss={async () => { setShowWelcome(false); await refreshUser(); }} />
         )}
       </AnimatePresence>
       <ContactModal open={contactOpen} onOpenChange={setContactOpen} />

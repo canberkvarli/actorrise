@@ -9,7 +9,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconX } from "@tabler/icons-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { IconX, IconInfoCircle } from "@tabler/icons-react";
 
 export type SearchFiltersState = {
   gender: string;
@@ -27,11 +28,16 @@ const FILTER_CONFIG = [
   { key: "category" as const, label: "Category", options: ["classical", "contemporary"] },
 ];
 
+const getFreshnessLabel = (score: number) =>
+  score <= 0 ? "Freshest only" : score <= 0.3 ? "Fresh" : score <= 0.5 ? "Some overdone OK" : score <= 0.7 ? "More OK" : "Show all";
+
 export interface SearchFiltersSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   filters: SearchFiltersState;
   setFilters: (f: SearchFiltersState | ((prev: SearchFiltersState) => SearchFiltersState)) => void;
+  maxOverdoneScore: number;
+  setMaxOverdoneScore: (v: number) => void;
 }
 
 export function SearchFiltersSheet({
@@ -39,10 +45,15 @@ export function SearchFiltersSheet({
   onOpenChange,
   filters,
   setFilters,
+  maxOverdoneScore,
+  setMaxOverdoneScore,
 }: SearchFiltersSheetProps) {
   const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
-  const clearAll = () =>
+  const hasFreshnessFilter = maxOverdoneScore < 1;
+  const clearAll = () => {
     setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "" });
+    setMaxOverdoneScore(1);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -53,9 +64,9 @@ export function SearchFiltersSheet({
         <DialogHeader className="p-4 pb-2 md:p-0 md:pb-4">
           <div className="flex items-center justify-between">
             <DialogTitle className="text-lg font-semibold">Filters</DialogTitle>
-            {activeFilters.length > 0 && (
+            {(activeFilters.length > 0 || hasFreshnessFilter) && (
               <Badge variant="secondary" className="text-xs">
-                {activeFilters.length}
+                {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
               </Badge>
             )}
           </div>
@@ -80,11 +91,43 @@ export function SearchFiltersSheet({
             </div>
           ))}
 
-          {activeFilters.length > 0 && (
+          <div className="pt-4 border-t border-border/80 space-y-2">
+            <div className="flex items-center gap-2">
+              <Label className="text-sm text-muted-foreground font-medium">Freshness</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button type="button" className="inline-flex cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm" aria-label="Freshness filter info">
+                      <IconInfoCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="text-sm">
+                      Filter by how &quot;overdone&quot; a piece is. Lower = only fresher pieces; higher = include well-known ones.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className="flex items-center gap-3">
+              <input
+                type="range"
+                min={0}
+                max={1}
+                step={0.1}
+                value={maxOverdoneScore}
+                onChange={(e) => setMaxOverdoneScore(parseFloat(e.target.value))}
+                className="flex-1 h-2 rounded-lg appearance-none bg-muted accent-primary"
+              />
+              <span className="text-sm text-muted-foreground w-28 shrink-0">{getFreshnessLabel(maxOverdoneScore)}</span>
+            </div>
+          </div>
+
+          {(activeFilters.length > 0 || hasFreshnessFilter) && (
             <div className="flex flex-wrap gap-2 pt-2 border-t">
               {activeFilters.map(([key, value]) => (
                 <Badge key={key} variant="secondary" className="gap-1 capitalize">
-                  {key.replace("_", " ")}: {value}
+                  {key.replace(/_/g, " ")}: {value}
                   <button
                     type="button"
                     onClick={() => setFilters({ ...filters, [key]: "" })}
@@ -94,6 +137,18 @@ export function SearchFiltersSheet({
                   </button>
                 </Badge>
               ))}
+              {hasFreshnessFilter && (
+                <Badge variant="secondary" className="gap-1">
+                  Freshness: {getFreshnessLabel(maxOverdoneScore)}
+                  <button
+                    type="button"
+                    onClick={() => setMaxOverdoneScore(1)}
+                    className="ml-1 hover:text-destructive min-w-[28px] min-h-[28px] flex items-center justify-center rounded"
+                  >
+                    <IconX className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
               <button
                 type="button"
                 onClick={clearAll}
