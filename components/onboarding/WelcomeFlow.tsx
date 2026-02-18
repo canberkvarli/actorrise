@@ -89,9 +89,16 @@ export function WelcomeFlow({ onDismiss }: WelcomeFlowProps) {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
       className="fixed inset-0 z-[10000] flex items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Welcome to Actorrise"
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" />
+      <div
+        className="absolute inset-0 bg-black/75 backdrop-blur-sm"
+        onClick={dismiss}
+        aria-hidden="true"
+      />
 
       {/* Card */}
       <motion.div
@@ -107,8 +114,10 @@ export function WelcomeFlow({ onDismiss }: WelcomeFlowProps) {
         <div className="relative px-8 pt-10 pb-8">
           {/* Skip */}
           <button
+            type="button"
             onClick={dismiss}
-            className="absolute top-5 right-5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1"
+            aria-label="Skip welcome tour"
+            className="absolute top-5 right-5 text-xs text-muted-foreground hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary transition-colors px-3 py-2"
           >
             Skip
           </button>
