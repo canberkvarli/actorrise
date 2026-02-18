@@ -242,6 +242,7 @@ async def search_monologues(
     scene: Optional[int] = Query(None, ge=1, le=20, description="Scene number (1-20)"),
     max_duration: Optional[int] = None,
     exclude_overdone: bool = Query(False, description="If true, only return monologues with low overdone_score (fresh pieces)"),
+    max_overdone_score: Optional[float] = Query(None, ge=0.0, le=1.0, description="Max overdone_score to include (0=freshest only, 1=all). Overrides exclude_overdone when set."),
     limit: int = Query(20, le=100),
     page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
@@ -282,7 +283,9 @@ async def search_monologues(
         filters['scene'] = scene
     if max_duration:
         filters['max_duration'] = max_duration
-    if exclude_overdone:
+    if max_overdone_score is not None:
+        filters['max_overdone_score'] = max_overdone_score
+    elif exclude_overdone:
         filters['max_overdone_score'] = 0.3  # Only show "fresh" pieces (0.0 = fresh, 1.0 = extremely overdone)
 
     search_service = SemanticSearch(db)

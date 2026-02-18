@@ -17,6 +17,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AnimatePresence } from "framer-motion";
 import { WelcomeFlow } from "@/components/onboarding/WelcomeFlow";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -111,6 +112,7 @@ export default function PlatformLayout({
         dedupingInterval: 60000, // 1 minute
       }}
     >
+    <TooltipProvider>
     <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Navigation */}
       <nav className="bg-background/95 backdrop-blur-sm border-b border-border/40 relative z-[9998]" style={{ position: 'relative' }}>
@@ -518,6 +520,7 @@ export default function PlatformLayout({
       </AnimatePresence>
       <ContactModal open={contactOpen} onOpenChange={setContactOpen} />
     </div>
+    </TooltipProvider>
     </SWRConfig>
     </QueryClientProvider>
   );

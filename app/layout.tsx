@@ -73,13 +73,21 @@ export const metadata: Metadata = {
     title: "ActorRise - Find the Right Monologue in Less Than 20 Seconds | AI Search",
     description:
       "Find the right audition monologue in less than 20 seconds. One search, no keyword hunting. AI that understands what you need. Free tier available.",
-    // OG image from app/opengraph-image.tsx (1200×630) – sharp on Facebook, LinkedIn, Twitter
+    images: [
+      {
+        url: "/opengraph-image",
+        width: 1200,
+        height: 630,
+        alt: "ActorRise - Find the monologue. In seconds.",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "ActorRise - Find the Right Monologue in Less Than 20 Seconds | AI Search",
     description:
       "Find the right audition monologue in less than 20 seconds. One search, no keyword hunting. AI that understands what you need. Free tier available.",
+    images: ["/opengraph-image"],
   },
   robots: {
     index: true,

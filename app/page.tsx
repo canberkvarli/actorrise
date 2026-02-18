@@ -1,10 +1,11 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
 import { LandingPricing } from "@/components/landing/LandingPricing";
 import { LandingValueProps } from "@/components/landing/LandingValueProps";
 import { LandingDemoSearch } from "@/components/landing/LandingDemoSearch";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
+import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions";
+import { LandingFooterAuthLink } from "@/components/landing/LandingFooterAuthLink";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 
 export default function LandingPage() {
@@ -54,12 +55,7 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-2">
               <LandingMobileNav />
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/login">Sign in</Link>
-              </Button>
-              <Button asChild size="sm" className="rounded-full px-5">
-                <Link href="/signup">Get started</Link>
-              </Button>
+              <LandingHeaderActions />
             </div>
           </div>
         </div>
@@ -169,9 +165,7 @@ export default function LandingPage() {
               <ContactModalTrigger className="hover:text-foreground">
                 Contact
               </ContactModalTrigger>
-              <Link href="/login" className="hover:text-foreground transition-colors">
-                Sign in
-              </Link>
+              <LandingFooterAuthLink />
             </div>
           </div>
         </div>
