@@ -1,10 +1,13 @@
 """API endpoints for monologue search and discovery."""
 
+import html as html_module
+import os
 import time
 from datetime import datetime
 from typing import List, Optional, cast
 
 from app.api.auth import get_current_user, get_current_user_optional
+from app.services.email.resend_client import ResendEmailClient
 from app.core.config import settings
 from app.core.database import get_db
 from app.middleware.rate_limiting import require_ai_search_when_query
@@ -512,7 +515,7 @@ async def get_trending(
     ]
 
 
-@router.get("/{monologue_id}", response_model=MonologueResponse)
+@router.get("/{monologue_id:int}", response_model=MonologueResponse)
 async def get_monologue(
     monologue_id: int,
     db: Session = Depends(get_db),
@@ -538,7 +541,7 @@ async def get_monologue(
     return _monologue_to_response(monologue, is_favorited=is_favorited)
 
 
-@router.post("/{monologue_id}/favorite")
+@router.post("/{monologue_id:int}/favorite")
 async def favorite_monologue(
     monologue_id: int,
     db: Session = Depends(get_db),
@@ -575,7 +578,7 @@ async def favorite_monologue(
     return {"message": "Favorited successfully", "id": favorite.id}
 
 
-@router.delete("/{monologue_id}/favorite")
+@router.delete("/{monologue_id:int}/favorite")
 async def unfavorite_monologue(
     monologue_id: int,
     db: Session = Depends(get_db),
@@ -603,7 +606,7 @@ async def unfavorite_monologue(
     return {"message": "Unfavorited successfully"}
 
 
-@router.patch("/{monologue_id}/favorite/notes")
+@router.patch("/{monologue_id:int}/favorite/notes")
 async def update_favorite_notes(
     monologue_id: int,
     data: FavoriteNoteUpdate,
@@ -626,7 +629,7 @@ async def update_favorite_notes(
     return {"message": "Notes updated successfully"}
 
 
-@router.get("/{monologue_id}/similar", response_model=List[MonologueResponse])
+@router.get("/{monologue_id:int}/similar", response_model=List[MonologueResponse])
 async def get_similar_monologues(
     monologue_id: int,
     limit: int = Query(10, le=50),
@@ -1114,3 +1117,87 @@ async def get_my_submissions(
         }
 
     return [_row(sub) for sub in submissions]
+
+
+# ---------------------------------------------------------------------------
+# Monologue report
+# ---------------------------------------------------------------------------
+
+REPORT_ISSUE_TYPES = [
+    "format_wrong",
+    "wrong_language",
+    "text_incomplete",
+    "wrong_info",
+    "copyright_issue",
+    "other",
+]
+
+
+class ReportMonologueRequest(BaseModel):
+    issue_type: str
+    notes: Optional[str] = None
+
+
+@router.post("/{monologue_id:int}/report")
+def report_monologue(
+    monologue_id: int,
+    body: ReportMonologueRequest,
+    db: Session = Depends(get_db),
+    current_user: Optional[User] = Depends(get_current_user_optional),
+) -> dict:
+    """Report an issue with a monologue. Sends an email to the ActorRise team."""
+    if body.issue_type not in REPORT_ISSUE_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid issue_type. Must be one of: {', '.join(REPORT_ISSUE_TYPES)}",
+        )
+
+    mono = db.query(Monologue).filter(Monologue.id == monologue_id).first()
+    if not mono:
+        raise HTTPException(status_code=404, detail="Monologue not found")
+
+    play = db.query(Play).filter(Play.id == mono.play_id).first()
+
+    reporter_email = current_user.email if current_user else "Anonymous"
+    issue_label = body.issue_type.replace("_", " ").title()
+    character = html_module.escape(mono.character_name or "")
+    play_title = html_module.escape(play.title if play else "Unknown")
+    author = html_module.escape(play.author if play else "Unknown")
+    safe_issue = html_module.escape(issue_label)
+    safe_reporter = html_module.escape(reporter_email)
+    safe_notes = html_module.escape(body.notes or "") if body.notes else None
+
+    notes_html = (
+        f'<h3 style="margin-bottom:8px;">Notes from reporter</h3>'
+        f'<div style="white-space:pre-wrap;background:#f5f5f5;padding:12px;border-radius:8px;">{safe_notes}</div>'
+        if safe_notes else ""
+    )
+
+    email_html = f"""
+    <div style="font-family:system-ui,sans-serif;max-width:560px;">
+        <h2 style="margin-top:0;">Monologue report</h2>
+        <table style="border-collapse:collapse;width:100%;">
+            <tr><td style="padding:6px 0;border-bottom:1px solid #eee;"><strong>Monologue ID</strong></td><td style="padding:6px 0;border-bottom:1px solid #eee;">#{monologue_id}</td></tr>
+            <tr><td style="padding:6px 0;border-bottom:1px solid #eee;"><strong>Character</strong></td><td style="padding:6px 0;border-bottom:1px solid #eee;">{character}</td></tr>
+            <tr><td style="padding:6px 0;border-bottom:1px solid #eee;"><strong>Play</strong></td><td style="padding:6px 0;border-bottom:1px solid #eee;">{play_title}</td></tr>
+            <tr><td style="padding:6px 0;border-bottom:1px solid #eee;"><strong>Author</strong></td><td style="padding:6px 0;border-bottom:1px solid #eee;">{author}</td></tr>
+            <tr><td style="padding:6px 0;border-bottom:1px solid #eee;"><strong>Issue</strong></td><td style="padding:6px 0;border-bottom:1px solid #eee;">{safe_issue}</td></tr>
+            <tr><td style="padding:6px 0;border-bottom:1px solid #eee;"><strong>Reported by</strong></td><td style="padding:6px 0;border-bottom:1px solid #eee;">{safe_reporter}</td></tr>
+        </table>
+        {notes_html}
+        <p style="margin-top:24px;color:#666;font-size:12px;">Sent via ActorRise monologue report.</p>
+    </div>
+    """
+
+    if os.getenv("RESEND_API_KEY"):
+        try:
+            client = ResendEmailClient()
+            client.send_email(
+                to="canberkvarli@gmail.com",
+                subject=f"[Report] Monologue #{monologue_id} - {mono.character_name or 'Unknown'} ({issue_label})",
+                html=email_html,
+            )
+        except Exception as e:
+            print(f"Report email failed: {e}")
+
+    return {"ok": True}

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow, IconSend } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow, IconSend, IconFlag } from "@tabler/icons-react";
 
 // Fun loading messages for AI search
 const LOADING_MESSAGES = [
@@ -33,6 +33,7 @@ import { MonologueDetailContent } from "@/components/monologue/MonologueDetailCo
 import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueResultCard } from "@/components/monologue/MonologueResultCard";
 import { SearchFiltersSheet } from "@/components/search/SearchFiltersSheet";
+import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -54,6 +55,7 @@ export default function SearchPage() {
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [showBookmarkedOnly, setShowBookmarkedOnly] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -183,6 +185,20 @@ export default function SearchPage() {
       console.error("Error restoring last search state:", e);
     }
   }, [searchParams]);
+
+  // Auto-open monologue from URL on mount (e.g. shared link /search?m=123)
+  const didAutoOpenRef = useRef(false);
+  useEffect(() => {
+    if (didAutoOpenRef.current) return;
+    const mId = searchParams.get("m");
+    if (!mId) return;
+    const id = parseInt(mId, 10);
+    if (isNaN(id)) return;
+    didAutoOpenRef.current = true;
+    api.get<Monologue>(`/api/monologues/${id}`)
+      .then((res) => setSelectedMonologue(res.data))
+      .catch(() => {});
+  }, []);
 
   type SearchResponseShape = {
     results: Monologue[];
@@ -328,6 +344,10 @@ export default function SearchPage() {
   const openMonologue = async (mono: Monologue) => {
     setSelectedMonologue(mono);
     setIsLoadingDetail(true);
+    // Reflect the open monologue in the URL so it's shareable
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("m", mono.id.toString());
+    router.replace(`/search?${params.toString()}`, { scroll: false });
     try {
       // Fetch full details
       const response = await api.get<Monologue>(`/api/monologues/${mono.id}`);
@@ -343,6 +363,11 @@ export default function SearchPage() {
     setSelectedMonologue(null);
     setIsReadingMode(false);
     setShowDownloadMenu(false);
+    // Remove ?m from URL
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("m");
+    const newUrl = params.toString() ? `/search?${params.toString()}` : "/search";
+    router.replace(newUrl, { scroll: false });
   };
 
   const downloadMonologue = (mono: Monologue, format: 'text' | 'pdf' = 'text') => {
@@ -704,6 +729,16 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             setFilters={setFilters}
           />
 
+          {selectedMonologue && (
+            <ReportMonologueModal
+              open={reportOpen}
+              onOpenChange={setReportOpen}
+              monologueId={selectedMonologue.id}
+              characterName={selectedMonologue.character_name}
+              playTitle={selectedMonologue.play_title}
+            />
+          )}
+
           {/* Expandable Filters - desktop only */}
           {showFilters && (
             <motion.div
@@ -982,8 +1017,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 isReadingMode ? "border-b-0" : ""
               }`}>
                 <div className="flex items-center justify-between p-6">
-                  {!isReadingMode && <h2 className="text-2xl font-bold">Monologue Details</h2>}
-                  {isReadingMode && <div className="flex-1" />}
+                  {!isReadingMode && <h2 className="hidden sm:block text-2xl font-bold">Monologue Details</h2>}
+                  {(!isReadingMode || isReadingMode) && <div className="flex-1 sm:hidden" />}
                   <div className="flex items-center gap-2">
                     {/* Download button - show in both modes; 44px touch target on mobile */}
                     <div className="relative z-[10002]">
@@ -1052,6 +1087,21 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <IconBookmark
                           className={`h-5 w-5 ${selectedMonologue.is_favorited ? "fill-current" : ""}`}
                         />
+                      </Button>
+                    )}
+                    {!isReadingMode && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReportOpen(true);
+                        }}
+                        className="hover:bg-muted relative z-[10002] min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 text-muted-foreground hover:text-foreground"
+                        title="Report an issue"
+                        aria-label="Report an issue with this monologue"
+                      >
+                        <IconFlag className="h-5 w-5" />
                       </Button>
                     )}
                     <Button

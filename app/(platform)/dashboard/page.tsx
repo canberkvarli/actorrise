@@ -20,7 +20,8 @@ import {
   IconSearch,
   IconHistory,
   IconChevronRight,
-  IconSend
+  IconSend,
+  IconFlag
 } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -30,6 +31,7 @@ import BookmarksQuickAccess from "@/components/bookmarks/BookmarksQuickAccess";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
+import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
 import { useProfileStats, useProfile, useRecommendations, useDiscover } from "@/hooks/useDashboardData";
 import { useBookmarkCount, useToggleFavorite } from "@/hooks/useBookmarks";
 import { useQuery } from "@tanstack/react-query";
@@ -64,6 +66,7 @@ export default function DashboardPage() {
   }, []);
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   // React Query hooks
   const { data: stats, isLoading: isLoadingStats } = useProfileStats();
@@ -531,23 +534,28 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 isReadingMode ? "border-b-0" : ""
               }`}>
                 <div className="flex items-center justify-between p-6">
-                  {!isReadingMode && <h2 className="text-2xl font-bold">Monologue Details</h2>}
-                  {isReadingMode && <div className="flex-1" />}
+                  {!isReadingMode && <h2 className="hidden sm:block text-2xl font-bold">Monologue Details</h2>}
+                  <div className="flex-1 sm:hidden" />
                   <div className="flex items-center gap-2">
                     {/* Download button - 44px touch target on mobile */}
+                    <TooltipProvider delayDuration={300}>
                     <div className="relative">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowDownloadMenu(!showDownloadMenu);
-                        }}
-                        className="hover:bg-muted text-muted-foreground hover:text-primary min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
-                        title="Download monologue"
-                      >
-                        <IconDownload className="h-5 w-5" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowDownloadMenu(!showDownloadMenu);
+                            }}
+                            className="hover:bg-muted text-muted-foreground hover:text-primary min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
+                          >
+                            <IconDownload className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Download TXT or PDF</TooltipContent>
+                      </Tooltip>
                       {showDownloadMenu && (
                         <>
                           <div
@@ -603,21 +611,45 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         />
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsReadingMode(!isReadingMode);
-                      }}
-                      className="hover:bg-muted min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
-                    >
-                      {isReadingMode ? (
-                        <IconEyeOff className="h-5 w-5" />
-                      ) : (
-                        <IconEye className="h-5 w-5" />
-                      )}
-                    </Button>
+                    {!isReadingMode && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setReportOpen(true);
+                            }}
+                            className="hover:bg-muted text-muted-foreground hover:text-foreground min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
+                            aria-label="Report an issue"
+                          >
+                            <IconFlag className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Report an issue with this monologue</TooltipContent>
+                      </Tooltip>
+                    )}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsReadingMode(!isReadingMode);
+                          }}
+                          className="hover:bg-muted min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
+                        >
+                          {isReadingMode ? (
+                            <IconEyeOff className="h-5 w-5" />
+                          ) : (
+                            <IconEye className="h-5 w-5" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{isReadingMode ? "Exit reading mode" : "Reading mode"}</TooltipContent>
+                    </Tooltip>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -626,6 +658,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     >
                       <IconX className="h-5 w-5" />
                     </Button>
+                  </TooltipProvider>
                   </div>
                 </div>
               </div>
@@ -663,6 +696,16 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </>
         )}
       </AnimatePresence>
+
+      {currentMonologue && (
+        <ReportMonologueModal
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          monologueId={currentMonologue.id}
+          characterName={currentMonologue.character_name}
+          playTitle={currentMonologue.play_title}
+        />
+      )}
     </div>
   );
 }
