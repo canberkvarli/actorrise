@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { IconBookmark, IconX, IconEye, IconEyeOff, IconDownload, IconSparkles, IconArrowsSort } from "@tabler/icons-react";
+import { IconBookmark, IconX, IconEye, IconEyeOff, IconDownload, IconSparkles, IconArrowsSort, IconFlag } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { Monologue } from "@/types/actor";
@@ -13,6 +13,8 @@ import Link from "next/link";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueResultCard } from "@/components/monologue/MonologueResultCard";
+import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useBookmarks, useToggleFavorite } from "@/hooks/useBookmarks";
@@ -26,6 +28,7 @@ export default function MyMonologuesPage() {
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [sort, setSort] = useState<MyMonologuesSort>("last_added");
 
   const sortedFavorites = useMemo(() => {
@@ -324,23 +327,28 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 isReadingMode ? "border-b-0" : ""
               }`}>
                 <div className="flex items-center justify-between p-6">
-                  {!isReadingMode && <h2 className="text-2xl font-bold">Monologue Details</h2>}
-                  {isReadingMode && <div className="flex-1" />}
+                  {!isReadingMode && <h2 className="hidden sm:block text-2xl font-bold">Monologue Details</h2>}
+                  <div className="flex-1 sm:hidden" />
                   <div className="flex items-center gap-2">
+                    <TooltipProvider delayDuration={300}>
                     {/* Download button */}
                     <div className="relative">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setShowDownloadMenu(!showDownloadMenu);
-                        }}
-                        className="hover:bg-muted text-muted-foreground hover:text-primary"
-                        title="Download monologue"
-                      >
-                        <IconDownload className="h-5 w-5" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowDownloadMenu(!showDownloadMenu);
+                            }}
+                            className="hover:bg-muted text-muted-foreground hover:text-primary"
+                          >
+                            <IconDownload className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Download TXT or PDF</TooltipContent>
+                      </Tooltip>
                       {showDownloadMenu && (
                         <>
                           <div
@@ -393,24 +401,49 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <IconBookmark className={`h-5 w-5 ${selectedMonologue.is_favorited ? "fill-current" : ""}`} />
                       </Button>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsReadingMode(!isReadingMode);
-                      }}
-                      className="hover:bg-muted"
-                    >
-                      {isReadingMode ? (
-                        <IconEyeOff className="h-5 w-5" />
-                      ) : (
-                        <IconEye className="h-5 w-5" />
-                      )}
-                    </Button>
+                    {!isReadingMode && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setReportOpen(true);
+                            }}
+                            className="hover:bg-muted text-muted-foreground hover:text-foreground"
+                            aria-label="Report an issue"
+                          >
+                            <IconFlag className="h-5 w-5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Report an issue with this monologue</TooltipContent>
+                      </Tooltip>
+                    )}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsReadingMode(!isReadingMode);
+                          }}
+                          className="hover:bg-muted"
+                        >
+                          {isReadingMode ? (
+                            <IconEyeOff className="h-5 w-5" />
+                          ) : (
+                            <IconEye className="h-5 w-5" />
+                          )}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>{isReadingMode ? "Exit reading mode" : "Reading mode"}</TooltipContent>
+                    </Tooltip>
                     <Button variant="ghost" size="icon" onClick={closeMonologue}>
                       <IconX className="h-5 w-5" />
                     </Button>
+                    </TooltipProvider>
                   </div>
                 </div>
               </div>
@@ -451,6 +484,16 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </>
         )}
       </AnimatePresence>
+
+      {selectedMonologue && (
+        <ReportMonologueModal
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          monologueId={selectedMonologue.id}
+          characterName={selectedMonologue.character_name}
+          playTitle={selectedMonologue.play_title}
+        />
+      )}
     </div>
   );
 }

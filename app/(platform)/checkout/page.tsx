@@ -12,8 +12,9 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IconRocket, IconCrown, IconArrowLeft } from "@tabler/icons-react";
+import { IconRocket, IconCrown, IconArrowLeft, IconTag, IconX } from "@tabler/icons-react";
 import api, { API_URL } from "@/lib/api";
 import Link from "next/link";
 
@@ -33,6 +34,8 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoApplied, setPromoApplied] = useState<string | null>(null);
 
   const tierName = searchParams.get("tier");
   const period = searchParams.get("period") || "monthly";
@@ -57,6 +60,26 @@ export default function CheckoutPage() {
       });
   }, [tierName, router]);
 
+  const applyPromo = () => {
+    const code = promoCode.trim().toUpperCase();
+    if (code === "FOUNDER") {
+      setPromoApplied("FOUNDER");
+      setError(null);
+    } else if (code) {
+      setPromoApplied(null);
+      setError("Invalid promo code.");
+    } else {
+      setPromoApplied(null);
+      setError(null);
+    }
+  };
+
+  const removePromo = () => {
+    setPromoCode("");
+    setPromoApplied(null);
+    setError(null);
+  };
+
   const handleCheckout = async () => {
     if (!tier) return;
 
@@ -71,6 +94,7 @@ export default function CheckoutPage() {
           billing_period: period,
           success_url: `${window.location.origin}/billing/success`,
           cancel_url: `${window.location.origin}/pricing`,
+          promo_code: promoApplied || undefined,
         }
       );
 
@@ -85,6 +109,7 @@ export default function CheckoutPage() {
 
   const getPrice = () => {
     if (!tier) return 0;
+    if (promoApplied === "FOUNDER") return 0;
     return period === "annual" && tier.annual_price_cents
       ? tier.annual_price_cents
       : tier.monthly_price_cents;
@@ -177,16 +202,18 @@ export default function CheckoutPage() {
                   <span className="text-muted-foreground">Billed today</span>
                   <span className="text-2xl font-bold">{formatPrice(getPrice())}</span>
                 </div>
-                <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
-                  <p className="text-sm font-medium text-accent mb-1">Annual Savings</p>
-                  <p className="text-xs text-muted-foreground">
-                    Save{" "}
-                    {formatPrice(
-                      tier.monthly_price_cents * 12 - (tier.annual_price_cents || 0)
-                    )}{" "}
-                    per year (31% discount)
-                  </p>
-                </div>
+                {promoApplied !== "FOUNDER" && (
+                  <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
+                    <p className="text-sm font-medium text-accent mb-1">Annual Savings</p>
+                    <p className="text-xs text-muted-foreground">
+                      Save{" "}
+                      {formatPrice(
+                        tier.monthly_price_cents * 12 - (tier.annual_price_cents || 0)
+                      )}{" "}
+                      per year (31% discount)
+                    </p>
+                  </div>
+                )}
               </>
             )}
 
@@ -196,6 +223,34 @@ export default function CheckoutPage() {
                 <span className="text-2xl font-bold">{formatPrice(getPrice())}</span>
               </div>
             )}
+
+            {/* Promo code */}
+            <div className="flex flex-col gap-2 pt-2 border-t">
+              {promoApplied ? (
+                <div className="flex items-center justify-between rounded-lg bg-accent/10 border border-accent/20 px-3 py-2">
+                  <span className="text-sm font-medium text-accent flex items-center gap-2">
+                    <IconTag className="h-4 w-4" />
+                    {promoApplied} applied — free for 1 year
+                  </span>
+                  <Button type="button" variant="ghost" size="sm" onClick={removePromo}>
+                    <IconX className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Promo code"
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), applyPromo())}
+                    className="flex-1"
+                  />
+                  <Button type="button" variant="outline" onClick={applyPromo}>
+                    Apply
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
 
           {error && (

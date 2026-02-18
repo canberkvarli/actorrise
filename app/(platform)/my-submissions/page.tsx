@@ -98,12 +98,14 @@ export default function MySubmissionsPage() {
               Track the status of your submitted monologues
             </p>
           </div>
-          <Button asChild>
-            <Link href="/submit-monologue">
-              <IconSparkles className="h-4 w-4 mr-2" />
-              Submit New
-            </Link>
-          </Button>
+          {submissions.length > 0 && (
+            <Button asChild>
+              <Link href="/submit-monologue">
+                <IconSparkles className="h-4 w-4 mr-2" />
+                Submit New
+              </Link>
+            </Button>
+          )}
         </div>
       </motion.div>
 

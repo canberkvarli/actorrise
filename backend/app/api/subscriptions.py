@@ -57,6 +57,7 @@ class CreateCheckoutSessionRequest(BaseModel):
     billing_period: str  # "monthly" or "annual"
     success_url: str
     cancel_url: str
+    promo_code: str | None = None  # e.g. "FOUNDER" for founding user discount
 
 
 class CreateCheckoutSessionResponse(BaseModel):
@@ -201,26 +202,46 @@ async def create_checkout_session(
             detail=f"Stripe price ID not configured for {tier.display_name} {request.billing_period} plan",
         )
 
+    # Resolve promo code to Stripe coupon (e.g. FOUNDER -> 100% off for 1 year)
+    discounts = []
+    if request.promo_code:
+        promo = request.promo_code.strip().upper()
+        if promo == "FOUNDER":
+            founder_coupon_id = os.getenv("STRIPE_FOUNDER_COUPON_ID")
+            if founder_coupon_id:
+                discounts = [{"coupon": founder_coupon_id}]
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Promo code FOUNDER is not configured. Please contact support.",
+                )
+        else:
+            raise HTTPException(status_code=400, detail=f"Invalid promo code: {request.promo_code}")
+
     # Create checkout session
+    create_params: dict[str, Any] = {
+        "customer": customer_id,
+        "payment_method_types": ["card"],
+        "line_items": [
+            {
+                "price": price_id,
+                "quantity": 1,
+            }
+        ],
+        "mode": "subscription",
+        "success_url": request.success_url,
+        "cancel_url": request.cancel_url,
+        "metadata": {
+            "user_id": current_user.id,
+            "tier_id": tier.id,
+            "billing_period": request.billing_period,
+        },
+    }
+    if discounts:
+        create_params["discounts"] = discounts
+
     try:
-        checkout_session = stripe.checkout.Session.create(
-            customer=customer_id,
-            payment_method_types=["card"],
-            line_items=[
-                {
-                    "price": price_id,
-                    "quantity": 1,
-                }
-            ],
-            mode="subscription",
-            success_url=request.success_url,
-            cancel_url=request.cancel_url,
-            metadata={
-                "user_id": current_user.id,
-                "tier_id": tier.id,
-                "billing_period": request.billing_period,
-            },
-        )
+        checkout_session = stripe.checkout.Session.create(**create_params)
 
         return CreateCheckoutSessionResponse(checkout_url=checkout_session.url)
 

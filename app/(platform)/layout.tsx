@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconHome, IconSearch, IconUser, IconLogout, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText, IconMail } from "@tabler/icons-react";
+import { IconHome, IconSearch, IconUser, IconLogout, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText, IconMail, IconSettings } from "@tabler/icons-react";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarkCount";
@@ -45,7 +45,7 @@ export default function PlatformLayout({
   const { count: bookmarkCount } = useBookmarkCount();
   const { data: profile } = useProfile();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const displayName = profile?.name?.trim() || user?.name?.trim() || user?.email?.trim() || "";
+  const displayName = profile?.name?.trim() || user?.name?.trim() || "";
   const profileLabel = displayName || "Account";
   const profileInitial = displayName
     ? displayName.trim().split(/\s+/).length >= 2
@@ -205,7 +205,7 @@ export default function PlatformLayout({
                             planName={userTier}
                             variant="secondary"
                             showIcon={false}
-                            className="h-5 px-2 text-[10px] font-medium uppercase tracking-wide"
+                            className="h-5 px-2 text-[10px] font-medium uppercase tracking-wide self-start w-fit"
                           />
                         </div>
                       </div>
@@ -260,6 +260,15 @@ export default function PlatformLayout({
                       >
                         <IconCreditCard className="h-4 w-4 text-muted-foreground" />
                         <span>Billing</span>
+                      </Link>
+
+                      <Link
+                        href="/settings"
+                        onClick={() => setProfileDropdownOpen(false)}
+                        className="mt-0.5 flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                      >
+                        <IconSettings className="h-4 w-4 text-muted-foreground" />
+                        <span>Account settings</span>
                       </Link>
 
                       <button
@@ -365,6 +374,19 @@ export default function PlatformLayout({
                   <Link href="/billing" onClick={() => setMobileMenuOpen(false)}>
                     <IconCreditCard className="h-4 w-4" />
                     Billing
+                  </Link>
+                </Button>
+
+                {/* Account settings */}
+                <Button
+                  asChild
+                  variant={pathname === "/settings" ? "default" : "ghost"}
+                  size="sm"
+                  className="w-full justify-start gap-2"
+                >
+                  <Link href="/settings" onClick={() => setMobileMenuOpen(false)}>
+                    <IconSettings className="h-4 w-4" />
+                    Account settings
                   </Link>
                 </Button>
 
