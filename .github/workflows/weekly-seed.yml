@@ -1,0 +1,78 @@
+name: Weekly monologue seed
+
+# Runs every Sunday at 02:00 UTC — adds newly scraped public-domain monologues
+# and picks up any fresh IMDb titles that just crossed the 10k-vote threshold.
+#
+# Required repository secrets (Settings → Secrets → Actions):
+#   DATABASE_URL       – production Supabase connection string
+#   OPENAI_API_KEY     – for embedding + analysis
+#   OMDB_API_KEY       – for film/TV metadata enrichment
+#
+# Cost estimate per run:
+#   scrape_all_sources: ~100 new monologues × $0.002 = ~$0.20 OpenAI
+#   seed_film_tv_references --incremental: only processes titles not yet in DB
+
+on:
+  schedule:
+    - cron: "0 2 * * 0"   # every Sunday at 02:00 UTC
+
+  # Allow triggering manually from the Actions tab for testing
+  workflow_dispatch:
+    inputs:
+      monologue_limit:
+        description: "Max new monologues to scrape (default 100)"
+        required: false
+        default: "100"
+      film_tv_limit:
+        description: "Max new film/TV titles to seed (default 200)"
+        required: false
+        default: "200"
+
+jobs:
+  seed:
+    name: Seed database
+    runs-on: ubuntu-latest
+    timeout-minutes: 60          # hard cap — never runs more than 1 hour
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: pip install uv
+
+      - name: Install dependencies
+        run: uv sync
+
+      # ── Step 1: Scrape new public-domain play monologues ─────────────────────
+      - name: Scrape new play monologues
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          LIMIT="${{ github.event.inputs.monologue_limit || '100' }}"
+          echo "Scraping up to $LIMIT new monologues…"
+          uv run python scripts/scrape_all_sources.py --limit "$LIMIT" || true
+          # '|| true' so a partial failure doesn't block film/TV step
+
+      # ── Step 2: Seed new film/TV titles from IMDb/OMDb ───────────────────────
+      - name: Seed new film/TV references
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
+        run: |
+          LIMIT="${{ github.event.inputs.film_tv_limit || '200' }}"
+          echo "Seeding up to $LIMIT new film/TV titles…"
+          # --limit here caps total titles processed from the IMDb download.
+          # Existing titles (matched by imdb_id) are skipped automatically.
+          uv run python scripts/seed_film_tv_references.py --limit "$LIMIT" || true
