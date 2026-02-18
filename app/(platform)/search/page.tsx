@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { SearchTour } from "@/components/onboarding/SearchTour";
+import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -38,6 +40,8 @@ import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModa
 export default function SearchPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const [showSearchTour, setShowSearchTour] = useState(false);
   const [query, setQuery] = useState("");
   const [filters, setFilters] = useState({
     gender: "",
@@ -45,6 +49,7 @@ export default function SearchPage() {
     emotion: "",
     theme: "",
     category: "",
+    exclude_overdone: "",
   });
   const [results, setResults] = useState<Monologue[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -72,6 +77,14 @@ export default function SearchPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [jitter, setJitter] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Show search tour for first-time visitors
+  useEffect(() => {
+    if (user && user.has_seen_search_tour === false) {
+      const timer = setTimeout(() => setShowSearchTour(true), 800);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
 
   // Rotate loading messages every 2 seconds while searching
   useEffect(() => {
@@ -108,6 +121,7 @@ export default function SearchPage() {
           emotion: historyEntry.filters.emotion || "",
           theme: historyEntry.filters.theme || "",
           category: historyEntry.filters.category || "",
+          exclude_overdone: (historyEntry.filters as { exclude_overdone?: string }).exclude_overdone || "",
         });
         setResults(historyEntry.resultPreviews);
         setHasSearched(true);
@@ -122,8 +136,9 @@ export default function SearchPage() {
       emotion: "",
       theme: "",
       category: "",
+      exclude_overdone: "",
     };
-    ["gender", "age_range", "emotion", "theme", "category"].forEach((key) => {
+    ["gender", "age_range", "emotion", "theme", "category", "exclude_overdone"].forEach((key) => {
       const value = searchParams.get(key);
       if (value) {
         urlFilters[key as keyof typeof filters] = value;
@@ -226,7 +241,9 @@ export default function SearchPage() {
       const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: String(pageNum) });
       if (searchQuery.trim()) params.set("q", searchQuery);
       Object.entries(searchFilters).forEach(([key, value]) => {
-        if (value) params.append(key, value);
+        if (!value) return;
+        if (key === "exclude_overdone") params.append(key, "true");
+        else params.append(key, value);
       });
 
       const response = await api.get<SearchResponseShape>(
@@ -310,7 +327,7 @@ export default function SearchPage() {
     setIsLoading(true);
     setHasSearched(true);
     setQuery(""); // Clear query to show it's AI-based
-    setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "" }); // Clear filters
+    setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", exclude_overdone: "" }); // Clear filters
 
     try {
       const response = await api.get<Monologue[]>("/api/monologues/recommendations?limit=20");
@@ -534,6 +551,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   };
 
   const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
+  const getFilterDisplay = (key: string, value: string) =>
+    key === "exclude_overdone" && value === "true" ? "Overdone: Fresh only" : `${key.replace(/_/g, " ")}: ${value}`;
   const canSearch = query.trim() !== "" || activeFilters.length > 0;
 
   // Sort by confidence score (desc). Best match = only actual quote matches (exact_quote/fuzzy_quote); rest are related.
@@ -610,7 +629,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   isTyping ? "text-primary" : "text-muted-foreground"
                 }`} />
                 <Input
-                  id="search"
+                  id="search-input"
                   placeholder="e.g. funny piece, 2 min..."
                   value={query}
                   onChange={(e) => {
@@ -657,7 +676,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </div>
 
           {/* Action Row - Filters + Find for me; Submit monologue hidden on mobile (in Account/hamburger) */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
+          <div id="search-filters" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
             <div className="flex items-center gap-2 flex-wrap">
               {/* Mobile: Filters open bottom sheet */}
               <Button
@@ -702,6 +721,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
+                    id="search-find-for-me"
                     onClick={handleFindForMe}
                     disabled={isLoading}
                     variant="outline"
@@ -747,7 +767,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               exit={{ opacity: 0, height: 0 }}
               className="hidden md:block mt-4 p-4 bg-card border border-border rounded-lg"
             >
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
                 {[
                   { key: "gender", label: "Gender", options: ["male", "female", "any"] },
                   { key: "age_range", label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
@@ -769,12 +789,23 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     </select>
                   </div>
                 ))}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Overdone</Label>
+                  <select
+                    value={filters.exclude_overdone}
+                    onChange={(e) => setFilters({ ...filters, exclude_overdone: e.target.value })}
+                    className="w-full px-3 py-2 text-sm rounded-lg border border-input bg-background"
+                  >
+                    <option value="">Any</option>
+                    <option value="true">Fresh only</option>
+                  </select>
+                </div>
               </div>
               {activeFilters.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
                   {activeFilters.map(([key, value]) => (
                     <Badge key={key} variant="secondary" className="gap-1 capitalize">
-                      {key.replace("_", " ")}: {value}
+                      {getFilterDisplay(key, value)}
                       <button
                         onClick={() => setFilters({ ...filters, [key]: "" })}
                         className="ml-1 hover:text-destructive"
@@ -784,7 +815,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     </Badge>
                   ))}
                   <button
-                    onClick={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "" })}
+                    onClick={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", exclude_overdone: "" })}
                     className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
                   >
                     Clear all
@@ -867,7 +898,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </CardContent>
             </Card>
           ) : results.length > 0 ? (
-            <div className="space-y-4">
+            <div id="search-results" className="space-y-4">
               {searchParams.get("ai") === "true" && (
                 <div className="flex items-center gap-2 p-4 bg-secondary/10 border border-secondary/30 rounded-lg">
                   <IconSparkles className="h-5 w-5 text-accent flex-shrink-0" />
@@ -878,7 +909,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               )}
               {query.trim() && activeFilters.length > 0 && (
                 <p className="text-sm text-muted-foreground">
-                  Showing monologues matching <span className="font-semibold text-foreground">&ldquo;{query}&rdquo;</span> in {activeFilters.map(([k, v]) => `${k.replace("_", " ")}: ${v}`).join(", ")}. Filters narrow the set; search ranks by meaning.
+                  Showing monologues matching <span className="font-semibold text-foreground">&ldquo;{query}&rdquo;</span> in {activeFilters.map(([k, v]) => getFilterDisplay(k, v)).join(", ")}. Filters narrow the set; search ranks by meaning.
                 </p>
               )}
               <div className="flex items-center justify-between">
@@ -1166,6 +1197,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showSearchTour && (
+          <SearchTour onDismiss={() => setShowSearchTour(false)} />
         )}
       </AnimatePresence>
     </div>
