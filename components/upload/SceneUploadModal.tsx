@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { uploadScene, type SceneUploadData, type SceneLineUploadData } from "@/lib/api";
 import { toast } from "sonner";
 import { Upload, Loader2, Plus, Trash2 } from "lucide-react";
@@ -218,15 +218,19 @@ export function SceneUploadModal({
                 <div className="space-y-2">
                   <Label htmlFor="char1_gender">Gender</Label>
                   <Select
-                    id="char1_gender"
-                    value={formData.character_1_gender || ""}
-                    onChange={(e) => setFormData({ ...formData, character_1_gender: e.target.value || undefined })}
+                    value={formData.character_1_gender || "__none__"}
+                    onValueChange={(v) => setFormData({ ...formData, character_1_gender: v === "__none__" ? undefined : v })}
                   >
-                    <option value="">Select</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="non-binary">Non-binary</option>
-                    <option value="any">Any</option>
+                    <SelectTrigger id="char1_gender">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Select</SelectItem>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="non-binary">Non-binary</SelectItem>
+                      <SelectItem value="any">Any</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -258,15 +262,19 @@ export function SceneUploadModal({
                 <div className="space-y-2">
                   <Label htmlFor="char2_gender">Gender</Label>
                   <Select
-                    id="char2_gender"
-                    value={formData.character_2_gender || ""}
-                    onChange={(e) => setFormData({ ...formData, character_2_gender: e.target.value || undefined })}
+                    value={formData.character_2_gender || "__none__"}
+                    onValueChange={(v) => setFormData({ ...formData, character_2_gender: v === "__none__" ? undefined : v })}
                   >
-                    <option value="">Select</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="non-binary">Non-binary</option>
-                    <option value="any">Any</option>
+                    <SelectTrigger id="char2_gender">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Select</SelectItem>
+                      <SelectItem value="male">Male</SelectItem>
+                      <SelectItem value="female">Female</SelectItem>
+                      <SelectItem value="non-binary">Non-binary</SelectItem>
+                      <SelectItem value="any">Any</SelectItem>
+                    </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
@@ -313,16 +321,20 @@ export function SceneUploadModal({
                     <div className="space-y-2">
                       <Label>Character</Label>
                       <Select
-                        value={line.character_name}
-                        onChange={(e) => updateLine(index, "character_name", e.target.value)}
+                        value={line.character_name || undefined}
+                        onValueChange={(v) => updateLine(index, "character_name", v)}
                       >
-                        <option value="">Select</option>
-                        <option value={formData.character_1_name || "Character 1"}>
-                          {formData.character_1_name || "Character 1"}
-                        </option>
-                        <option value={formData.character_2_name || "Character 2"}>
-                          {formData.character_2_name || "Character 2"}
-                        </option>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={formData.character_1_name || "Character 1"}>
+                            {formData.character_1_name || "Character 1"}
+                          </SelectItem>
+                          <SelectItem value={formData.character_2_name || "Character 2"}>
+                            {formData.character_2_name || "Character 2"}
+                          </SelectItem>
+                        </SelectContent>
                       </Select>
                     </div>
 

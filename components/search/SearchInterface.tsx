@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -467,99 +467,118 @@ export function SearchInterface() {
                         <div className="space-y-2">
                           <Label htmlFor="age-range">Age Range</Label>
                           <Select
-                            id="age-range"
-                            value={filters.age_range}
-                            onChange={(e) =>
-                              setFilters({ ...filters, age_range: e.target.value })
+                            value={filters.age_range || "__none__"}
+                            onValueChange={(v) =>
+                              setFilters({ ...filters, age_range: v === "__none__" ? "" : v })
                             }
                           >
-                            <option value="">All</option>
-                            <option value="18-25">18-25</option>
-                            <option value="25-35">25-35</option>
-                            <option value="35-45">35-45</option>
-                            <option value="45-55">45-55</option>
-                            <option value="55+">55+</option>
+                            <SelectTrigger id="age-range">
+                              <SelectValue placeholder="All" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">All</SelectItem>
+                              <SelectItem value="18-25">18-25</SelectItem>
+                              <SelectItem value="25-35">25-35</SelectItem>
+                              <SelectItem value="35-45">35-45</SelectItem>
+                              <SelectItem value="45-55">45-55</SelectItem>
+                              <SelectItem value="55+">55+</SelectItem>
+                            </SelectContent>
                           </Select>
                         </div>
 
                         <div className="space-y-2">
                           <Label htmlFor="gender">Gender</Label>
                           <Select
-                            id="gender"
-                            value={filters.gender}
-                            onChange={(e) =>
-                              setFilters({ ...filters, gender: e.target.value })
+                            value={filters.gender || "__none__"}
+                            onValueChange={(v) =>
+                              setFilters({ ...filters, gender: v === "__none__" ? "" : v })
                             }
                           >
-                            <option value="">All</option>
-                            <option value="Male">Male</option>
-                            <option value="Female">Female</option>
-                            <option value="Non-binary">Non-binary</option>
+                            <SelectTrigger id="gender">
+                              <SelectValue placeholder="All" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">All</SelectItem>
+                              <SelectItem value="Male">Male</SelectItem>
+                              <SelectItem value="Female">Female</SelectItem>
+                              <SelectItem value="Non-binary">Non-binary</SelectItem>
+                            </SelectContent>
                           </Select>
                         </div>
 
                         <div className="space-y-2">
                           <Label htmlFor="genre">Genre</Label>
                           <Select
-                            id="genre"
-                            value={filters.genre}
-                            onChange={(e) =>
-                              setFilters({ ...filters, genre: e.target.value })
+                            value={filters.genre || "__none__"}
+                            onValueChange={(v) =>
+                              setFilters({ ...filters, genre: v === "__none__" ? "" : v })
                             }
                           >
-                            <option value="">All</option>
-                            <option value="Drama">Drama</option>
-                            <option value="Comedy">Comedy</option>
-                            <option value="Classical">Classical</option>
-                            <option value="Shakespeare">Shakespeare</option>
+                            <SelectTrigger id="genre">
+                              <SelectValue placeholder="All" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">All</SelectItem>
+                              <SelectItem value="Drama">Drama</SelectItem>
+                              <SelectItem value="Comedy">Comedy</SelectItem>
+                              <SelectItem value="Classical">Classical</SelectItem>
+                              <SelectItem value="Shakespeare">Shakespeare</SelectItem>
+                            </SelectContent>
                           </Select>
                         </div>
 
                         <div className="space-y-2">
                           <Label htmlFor="theme">Theme</Label>
                           <Select
-                            id="theme"
-                            value={filters.theme}
-                            onChange={(e) =>
-                              setFilters({ ...filters, theme: e.target.value })
+                            value={filters.theme || "__none__"}
+                            onValueChange={(v) =>
+                              setFilters({ ...filters, theme: v === "__none__" ? "" : v })
                             }
                           >
-                            <option value="">All Themes</option>
-                            <option value="Love">Love</option>
-                            <option value="Loss">Loss</option>
-                            <option value="Desire">Desire</option>
-                            <option value="Broken Promises">Broken Promises</option>
-                            <option value="Rejection">Rejection</option>
-                            <option value="Change">Change</option>
-                            <option value="Identity">Identity</option>
-                            <option value="Conflict">Conflict</option>
-                            <option value="Redemption">Redemption</option>
-                            <option value="Ambition">Ambition</option>
-                            <option value="Revenge">Revenge</option>
+                            <SelectTrigger id="theme">
+                              <SelectValue placeholder="All Themes" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">All Themes</SelectItem>
+                              <SelectItem value="Love">Love</SelectItem>
+                              <SelectItem value="Loss">Loss</SelectItem>
+                              <SelectItem value="Desire">Desire</SelectItem>
+                              <SelectItem value="Broken Promises">Broken Promises</SelectItem>
+                              <SelectItem value="Rejection">Rejection</SelectItem>
+                              <SelectItem value="Change">Change</SelectItem>
+                              <SelectItem value="Identity">Identity</SelectItem>
+                              <SelectItem value="Conflict">Conflict</SelectItem>
+                              <SelectItem value="Redemption">Redemption</SelectItem>
+                              <SelectItem value="Ambition">Ambition</SelectItem>
+                              <SelectItem value="Revenge">Revenge</SelectItem>
+                            </SelectContent>
                           </Select>
                         </div>
 
                         <div className="space-y-2">
                           <Label htmlFor="category">Category</Label>
                           <Select
-                            id="category"
-                            value={filters.category}
-                            onChange={(e) => {
-                              const value = e.target.value;
-                              setFilters({ ...filters, category: value });
-                              // Keep era in sync with manual category selection
-                              if (value === "Contemporary") {
+                            value={filters.category || "__none__"}
+                            onValueChange={(value) => {
+                              const categoryValue = value === "__none__" ? "" : value;
+                              setFilters({ ...filters, category: categoryValue });
+                              if (categoryValue === "Contemporary") {
                                 setEra("contemporary");
-                              } else if (value === "Classical") {
+                              } else if (categoryValue === "Classical") {
                                 setEra("classical");
                               } else {
                                 setEra("");
                               }
                             }}
                           >
-                            <option value="">All Categories</option>
-                            <option value="Contemporary">Contemporary</option>
-                            <option value="Classical">Classical</option>
+                            <SelectTrigger id="category">
+                              <SelectValue placeholder="All Categories" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">All Categories</SelectItem>
+                              <SelectItem value="Contemporary">Contemporary</SelectItem>
+                              <SelectItem value="Classical">Classical</SelectItem>
+                            </SelectContent>
                           </Select>
                         </div>
                       </div>

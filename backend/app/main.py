@@ -5,6 +5,7 @@ from app.api.admin.moderation import router as moderation_router
 from app.api.audition import router as audition_router
 from app.api.auth import router as auth_router
 from app.api.contact import router as contact_router
+from app.api.feedback import router as feedback_router
 from app.api.monologues import router as monologues_router
 from app.api.pricing import router as pricing_router
 from app.api.profile import router as profile_router
@@ -15,6 +16,7 @@ from app.api.webhooks import router as webhooks_router
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.core.seed import ensure_pricing_tiers
+from app.models.feedback import ResultFeedback  # noqa: F401 — register with Base for create_all
 from app.models.moderation import (  # noqa: F401 — register with Base for create_all
     ModerationLog, MonologueSubmission)
 from fastapi import FastAPI
@@ -100,6 +102,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth_router)
 app.include_router(contact_router)
+app.include_router(feedback_router)
 app.include_router(profile_router)
 app.include_router(monologues_router)
 app.include_router(scenes_router)

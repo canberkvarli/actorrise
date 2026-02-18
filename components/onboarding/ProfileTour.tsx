@@ -14,48 +14,50 @@ interface TourStep {
 
 const TOUR_STEPS: TourStep[] = [
   {
-    targetId: "search-input",
-    title: "Search in plain English.",
-    body: "Type anything — \"a Chekhov monologue for a woman in her 30s\" — and we'll understand.",
+    targetId: "profile-progress",
+    title: "Your completion",
+    body: "Fill in the sections below to reach 100%. More details mean better matches.",
     placement: "bottom",
   },
   {
-    targetId: "search-filters",
-    title: "Narrow it down.",
-    body: "Filter by gender, age range, emotion, or theme. Mix and match to find exactly what you need.",
+    targetId: "profile-headshot",
+    title: "Headshot",
+    body: "Add a photo so your profile stands out. JPG or PNG, max 5MB.",
     placement: "bottom",
   },
   {
-    targetId: "search-results",
-    title: "Your matches.",
-    body: "Results are ranked by how well they fit your profile and your search. Best matches come first.",
+    targetId: "profile-tabs",
+    title: "Basic & acting info",
+    body: "Name, age range, location, experience, and more. We use this to match you to roles.",
+    placement: "bottom",
+  },
+  {
+    targetId: "profile-preferences",
+    title: "You're all set",
+    body: "Use the Preferences tab to tune search and recommendations. Changes save automatically.",
     placement: "top",
-  },
-  {
-    targetId: "search-find-for-me",
-    title: "Let AI choose for you.",
-    body: "\"Find for me\" uses your profile to recommend monologues you haven't considered yet.",
-    placement: "bottom",
   },
 ];
 
 const SPOTLIGHT_PADDING = 8;
 const TOOLTIP_OFFSET = 12;
 const TOOLTIP_WIDTH = 320;
+const TOOLTIP_APPROX_HEIGHT = 220;
+const VIEWPORT_PADDING = 24;
 
-async function markSearchTourSeen() {
+async function markProfileTourSeen() {
   try {
-    await api.patch("/api/auth/onboarding", { has_seen_search_tour: true });
+    await api.patch("/api/auth/onboarding", { has_seen_profile_tour: true });
   } catch {
     // Non-blocking
   }
 }
 
-interface SearchTourProps {
+interface ProfileTourProps {
   onDismiss: () => void;
 }
 
-export function SearchTour({ onDismiss }: SearchTourProps) {
+export function ProfileTour({ onDismiss }: ProfileTourProps) {
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [isFallback, setIsFallback] = useState(false);
@@ -64,20 +66,31 @@ export function SearchTour({ onDismiss }: SearchTourProps) {
   const currentStep = TOUR_STEPS[step];
   const isLast = step === TOUR_STEPS.length - 1;
 
-  // Find the target element; 1 quick retry then fallback so transitions feel instant (no 1s+ wait).
-  // When target is missing (e.g. search-results before any search), we use fallback and show tooltip-only UI.
+  // Lock body scroll while tour is open
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
   useEffect(() => {
     setRect(null);
     setIsFallback(false);
     const tryFind = (attempt = 0) => {
       const el = document.getElementById(currentStep.targetId);
       if (el) {
-        setRect(el.getBoundingClientRect());
+        el.scrollIntoView({ block: "center", behavior: "instant" });
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            setRect(el.getBoundingClientRect());
+          });
+        });
       } else if (attempt < 2) {
         setTimeout(() => tryFind(attempt + 1), 50);
       } else {
         setIsFallback(true);
-        // Dummy rect only for tooltip positioning; we won't draw spotlight
         const W = typeof window !== "undefined" ? window.innerWidth : 400;
         const H = typeof window !== "undefined" ? window.innerHeight : 300;
         setRect(new DOMRect(0, 0, W, H));
@@ -86,7 +99,6 @@ export function SearchTour({ onDismiss }: SearchTourProps) {
     tryFind(0);
   }, [currentStep.targetId]);
 
-  // Re-measure on window resize (real element or fallback)
   useEffect(() => {
     const onResize = () => {
       const el = document.getElementById(currentStep.targetId);
@@ -103,7 +115,7 @@ export function SearchTour({ onDismiss }: SearchTourProps) {
   }, [currentStep.targetId]);
 
   const dismiss = useCallback(async () => {
-    await markSearchTourSeen();
+    await markProfileTourSeen();
     onDismiss();
   }, [onDismiss]);
 
@@ -115,7 +127,6 @@ export function SearchTour({ onDismiss }: SearchTourProps) {
     }
   }, [isLast, dismiss]);
 
-  // Spotlight: only when we have a real target; skip for fallback so we don't show a random box
   const spotlightRect =
     rect && !isFallback
       ? {
@@ -126,32 +137,43 @@ export function SearchTour({ onDismiss }: SearchTourProps) {
         }
       : null;
 
-  // Tooltip position: real target = next to element; fallback = centered card (no fake pointer)
   const tooltipStyle: React.CSSProperties = (() => {
     if (!rect) return { display: "none" };
     if (typeof window === "undefined") return { display: "none" };
-    const tooltipWidth = typeof window !== "undefined" ? Math.min(TOOLTIP_WIDTH, window.innerWidth - 32) : TOOLTIP_WIDTH;
+    const tooltipWidth = Math.min(TOOLTIP_WIDTH, window.innerWidth - 32);
     const style: React.CSSProperties = { position: "fixed", width: tooltipWidth, maxWidth: "calc(100vw - 32px)", zIndex: 10002 };
     if (isFallback) {
       style.left = Math.max(16, (window.innerWidth - tooltipWidth) / 2);
-      style.top = Math.max(24, (window.innerHeight - 220) / 2);
+      style.top = Math.max(VIEWPORT_PADDING, (window.innerHeight - TOOLTIP_APPROX_HEIGHT) / 2);
       return style;
     }
     const { placement } = currentStep;
     const centerX = rect.left + rect.width / 2 - tooltipWidth / 2;
     const clampedX = Math.max(16, Math.min(centerX, window.innerWidth - tooltipWidth - 16));
     style.left = clampedX;
-    if (placement === "bottom") {
-      style.top = rect.bottom + TOOLTIP_OFFSET;
+
+    const spaceBelow = window.innerHeight - (rect.bottom + TOOLTIP_OFFSET);
+    const spaceAbove = rect.top - TOOLTIP_OFFSET;
+    const useBottom = placement === "bottom"
+      ? spaceBelow >= TOOLTIP_APPROX_HEIGHT || spaceBelow >= spaceAbove
+      : spaceAbove < TOOLTIP_APPROX_HEIGHT && spaceBelow >= TOOLTIP_APPROX_HEIGHT;
+
+    if (useBottom) {
+      const top = rect.bottom + TOOLTIP_OFFSET;
+      style.top = Math.max(VIEWPORT_PADDING, Math.min(top, window.innerHeight - TOOLTIP_APPROX_HEIGHT - VIEWPORT_PADDING));
     } else {
-      style.bottom = window.innerHeight - rect.top + TOOLTIP_OFFSET;
+      const bottom = window.innerHeight - rect.top + TOOLTIP_OFFSET;
+      style.bottom = Math.max(VIEWPORT_PADDING, Math.min(bottom, window.innerHeight - TOOLTIP_APPROX_HEIGHT - VIEWPORT_PADDING));
     }
     return style;
   })();
 
   return (
-    <div className="fixed inset-0 z-[10000]" style={{ pointerEvents: "none" }}>
-      {/* Fallback: soft dim only (no spotlight cutout) */}
+    <div
+      className="fixed inset-0 z-[10000] overflow-hidden"
+      style={{ pointerEvents: "auto" }}
+      aria-modal="true"
+    >
       {isFallback && (
         <div
           className="absolute inset-0 bg-black/50"
@@ -159,7 +181,7 @@ export function SearchTour({ onDismiss }: SearchTourProps) {
           aria-hidden
         />
       )}
-      {/* Spotlight (real target only) – white outline + animated */}
+      {/* Spotlight – white outline + animated between steps */}
       {spotlightRect && (
         <motion.div
           className="pointer-events-none rounded-xl"
@@ -183,7 +205,6 @@ export function SearchTour({ onDismiss }: SearchTourProps) {
         />
       )}
 
-      {/* Tooltip */}
       <AnimatePresence mode="wait">
         {rect && (
           <motion.div

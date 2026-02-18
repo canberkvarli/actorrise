@@ -12,6 +12,7 @@ interface User {
   marketing_opt_in?: boolean;
   has_seen_welcome?: boolean;
   has_seen_search_tour?: boolean;
+  has_seen_profile_tour?: boolean;
 }
 
 interface AuthContextType {

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { uploadMonologue, type MonologueUploadData } from "@/lib/api";
 import { toast } from "sonner";
 import { Upload, Loader2 } from "lucide-react";
@@ -136,15 +136,19 @@ export function MonologueUploadModal({
             <div className="space-y-2">
               <Label htmlFor="character_gender">Character Gender (Optional)</Label>
               <Select
-                id="character_gender"
-                value={formData.character_gender || ""}
-                onChange={(e) => setFormData({ ...formData, character_gender: e.target.value || undefined })}
+                value={formData.character_gender || "__none__"}
+                onValueChange={(v) => setFormData({ ...formData, character_gender: v === "__none__" ? undefined : v })}
               >
-                <option value="">Select gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="non-binary">Non-binary</option>
-                <option value="any">Any</option>
+                <SelectTrigger id="character_gender">
+                  <SelectValue placeholder="Select gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Select gender</SelectItem>
+                  <SelectItem value="male">Male</SelectItem>
+                  <SelectItem value="female">Female</SelectItem>
+                  <SelectItem value="non-binary">Non-binary</SelectItem>
+                  <SelectItem value="any">Any</SelectItem>
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
