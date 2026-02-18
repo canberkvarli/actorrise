@@ -6,8 +6,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
 import { MarketingFooter } from "@/components/contact/MarketingFooter";
+import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -45,12 +45,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               </Link>
             </nav>
             <div className="flex items-center gap-2">
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/login">Sign in</Link>
-              </Button>
-              <Button asChild size="sm" className="rounded-full px-5">
-                <Link href="/signup">Get started</Link>
-              </Button>
+              <LandingHeaderActions />
             </div>
           </div>
         </div>

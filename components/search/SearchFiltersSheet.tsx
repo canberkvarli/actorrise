@@ -9,8 +9,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { IconX, IconInfoCircle } from "@tabler/icons-react";
+import { Slider } from "@/components/ui/slider";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export type SearchFiltersState = {
   gender: string;
@@ -91,35 +92,36 @@ export function SearchFiltersSheet({
             </div>
           ))}
 
-          <div className="pt-4 border-t border-border/80 space-y-2">
+          <div className="pt-4 border-t border-border/80 space-y-3">
             <div className="flex items-center gap-2">
-              <Label className="text-sm text-muted-foreground font-medium">Freshness</Label>
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button type="button" className="inline-flex cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm" aria-label="Freshness filter info">
-                      <IconInfoCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p className="text-sm">
-                      Filter by how &quot;overdone&quot; a piece is. Lower = only fresher pieces; higher = include well-known ones.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Label className="text-sm font-medium text-muted-foreground shrink-0">Freshness</Label>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm"
+                    aria-label="Freshness filter info"
+                  >
+                    <IconInfoCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="max-w-[260px]">
+                  Filter by how &quot;overdone&quot; a piece is. Lower = only fresher pieces; higher = include well-known ones.
+                </TooltipContent>
+              </Tooltip>
             </div>
-            <div className="flex items-center gap-3">
-              <input
-                type="range"
+            <div className="flex items-center gap-4 min-h-[32px]">
+              <Slider
                 min={0}
                 max={1}
                 step={0.1}
                 value={maxOverdoneScore}
-                onChange={(e) => setMaxOverdoneScore(parseFloat(e.target.value))}
-                className="flex-1 h-2 rounded-lg appearance-none bg-muted accent-primary"
+                onValueChange={setMaxOverdoneScore}
+                className="flex-1 min-w-0"
               />
-              <span className="text-sm text-muted-foreground w-28 shrink-0">{getFreshnessLabel(maxOverdoneScore)}</span>
+              <span className="text-sm text-muted-foreground shrink-0 w-[8.5rem] text-right tabular-nums">
+                {getFreshnessLabel(maxOverdoneScore)}
+              </span>
             </div>
           </div>
 

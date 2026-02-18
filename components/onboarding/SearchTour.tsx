@@ -58,32 +58,45 @@ interface SearchTourProps {
 export function SearchTour({ onDismiss }: SearchTourProps) {
   const [step, setStep] = useState(0);
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const [isFallback, setIsFallback] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   const currentStep = TOUR_STEPS[step];
   const isLast = step === TOUR_STEPS.length - 1;
 
-  // Find the target element; retry a few times if not mounted yet
+  // Find the target element; 1 quick retry then fallback so transitions feel instant (no 1s+ wait).
+  // When target is missing (e.g. search-results before any search), we use fallback and show tooltip-only UI.
   useEffect(() => {
     setRect(null);
-    let attempts = 0;
-    const tryFind = () => {
+    setIsFallback(false);
+    const tryFind = (attempt = 0) => {
       const el = document.getElementById(currentStep.targetId);
       if (el) {
         setRect(el.getBoundingClientRect());
-      } else if (attempts < 8) {
-        attempts++;
-        setTimeout(tryFind, 150);
+      } else if (attempt < 2) {
+        setTimeout(() => tryFind(attempt + 1), 50);
+      } else {
+        setIsFallback(true);
+        // Dummy rect only for tooltip positioning; we won't draw spotlight
+        const W = typeof window !== "undefined" ? window.innerWidth : 400;
+        const H = typeof window !== "undefined" ? window.innerHeight : 300;
+        setRect(new DOMRect(0, 0, W, H));
       }
     };
-    tryFind();
+    tryFind(0);
   }, [currentStep.targetId]);
 
-  // Re-measure on window resize
+  // Re-measure on window resize (real element or fallback)
   useEffect(() => {
     const onResize = () => {
       const el = document.getElementById(currentStep.targetId);
-      if (el) setRect(el.getBoundingClientRect());
+      if (el) {
+        setRect(el.getBoundingClientRect());
+        setIsFallback(false);
+      } else if (typeof window !== "undefined") {
+        setIsFallback(true);
+        setRect(new DOMRect(0, 0, window.innerWidth, window.innerHeight));
+      }
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
@@ -102,28 +115,34 @@ export function SearchTour({ onDismiss }: SearchTourProps) {
     }
   }, [isLast, dismiss]);
 
-  // Spotlight position
-  const spotlightStyle: React.CSSProperties = rect
-    ? {
-        position: "fixed",
-        top: rect.top - SPOTLIGHT_PADDING,
-        left: rect.left - SPOTLIGHT_PADDING,
-        width: rect.width + SPOTLIGHT_PADDING * 2,
-        height: rect.height + SPOTLIGHT_PADDING * 2,
-        borderRadius: 12,
-        boxShadow: "0 0 0 9999px rgba(0,0,0,0.65)",
-        pointerEvents: "none",
-        zIndex: 10001,
-        transition: "top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease",
-      }
-    : { display: "none" };
+  // Spotlight: only when we have a real target; skip for fallback so we don't show a random box
+  const spotlightStyle: React.CSSProperties =
+    rect && !isFallback
+      ? {
+          position: "fixed",
+          top: rect.top - SPOTLIGHT_PADDING,
+          left: rect.left - SPOTLIGHT_PADDING,
+          width: rect.width + SPOTLIGHT_PADDING * 2,
+          height: rect.height + SPOTLIGHT_PADDING * 2,
+          borderRadius: 12,
+          boxShadow: "0 0 0 9999px rgba(0,0,0,0.65)",
+          pointerEvents: "none",
+          zIndex: 10001,
+          transition: "top 0.25s ease, left 0.25s ease, width 0.25s ease, height 0.25s ease",
+        }
+      : { display: "none" };
 
-  // Tooltip position
+  // Tooltip position: real target = next to element; fallback = centered card (no fake pointer)
   const tooltipStyle: React.CSSProperties = (() => {
     if (!rect) return { display: "none" };
     if (typeof window === "undefined") return { display: "none" };
-    const { placement } = currentStep;
     const style: React.CSSProperties = { position: "fixed", width: TOOLTIP_WIDTH, zIndex: 10002 };
+    if (isFallback) {
+      style.left = Math.max(16, (window.innerWidth - TOOLTIP_WIDTH) / 2);
+      style.top = Math.max(24, (window.innerHeight - 220) / 2);
+      return style;
+    }
+    const { placement } = currentStep;
     const centerX = rect.left + rect.width / 2 - TOOLTIP_WIDTH / 2;
     const clampedX = Math.max(16, Math.min(centerX, window.innerWidth - TOOLTIP_WIDTH - 16));
     style.left = clampedX;
@@ -137,7 +156,15 @@ export function SearchTour({ onDismiss }: SearchTourProps) {
 
   return (
     <div className="fixed inset-0 z-[10000]" style={{ pointerEvents: "none" }}>
-      {/* Spotlight */}
+      {/* Fallback: soft dim only (no spotlight cutout) */}
+      {isFallback && (
+        <div
+          className="absolute inset-0 bg-black/50"
+          style={{ zIndex: 10000, pointerEvents: "none" }}
+          aria-hidden
+        />
+      )}
+      {/* Spotlight (real target only) */}
       <div style={spotlightStyle} />
 
       {/* Tooltip */}

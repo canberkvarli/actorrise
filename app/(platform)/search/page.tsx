@@ -36,6 +36,7 @@ import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueResultCard } from "@/components/monologue/MonologueResultCard";
 import { SearchFiltersSheet } from "@/components/search/SearchFiltersSheet";
 import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
+import { Slider } from "@/components/ui/slider";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -811,34 +812,37 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 ))}
               </div>
 
-              {/* Freshness – separate from category filters, aligned with actor profile UX */}
-              <div className="mt-4 pt-4 border-t border-border/80">
-                <div className="flex items-center gap-2 mb-2">
-                  <Label className="text-xs text-muted-foreground font-medium">Freshness</Label>
+              {/* Freshness – separate from category filters, stable layout so nothing shifts */}
+              <div className="mt-4 pt-4 border-t border-border/80 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs font-medium text-muted-foreground shrink-0">Freshness</Label>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button type="button" className="inline-flex cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm" aria-label="Freshness filter info">
+                      <button
+                        type="button"
+                        className="inline-flex shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm"
+                        aria-label="Freshness filter info"
+                      >
                         <IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
                       </button>
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p className="text-sm">
-                        Filter by how &quot;overdone&quot; a piece is (often used in auditions). Lower = only fresher, less common pieces; higher = include well-known ones.
-                      </p>
+                    <TooltipContent side="top" className="max-w-[260px]">
+                      Filter by how &quot;overdone&quot; a piece is (often used in auditions). Lower = only fresher, less common pieces; higher = include well-known ones.
                     </TooltipContent>
                   </Tooltip>
                 </div>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
+                <div className="flex items-center gap-4 min-h-[28px]">
+                  <Slider
                     min={0}
                     max={1}
                     step={0.1}
                     value={maxOverdoneScore}
-                    onChange={(e) => setMaxOverdoneScore(parseFloat(e.target.value))}
-                    className="flex-1 h-2 rounded-lg appearance-none bg-muted accent-primary"
+                    onValueChange={setMaxOverdoneScore}
+                    className="flex-1 min-w-0"
                   />
-                  <span className="text-xs text-muted-foreground w-24 shrink-0">{getFreshnessLabel(maxOverdoneScore)}</span>
+                  <span className="text-xs text-muted-foreground shrink-0 w-[8.5rem] text-right tabular-nums">
+                    {getFreshnessLabel(maxOverdoneScore)}
+                  </span>
                 </div>
               </div>
 
