@@ -10,6 +10,8 @@ interface User {
   email: string;
   name?: string;
   marketing_opt_in?: boolean;
+  has_seen_welcome?: boolean;
+  has_seen_search_tour?: boolean;
 }
 
 interface AuthContextType {
