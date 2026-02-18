@@ -188,6 +188,15 @@
     @apply transition-colors duration-150;
   }
 
+  /* Pointer cursor for all clickable elements */
+  button,
+  a[href],
+  select,
+  [role="button"],
+  label[for] {
+    cursor: pointer;
+  }
+
   /* Typewriter font for monologue content */
   .font-typewriter {
     font-family: var(--font-typewriter);
