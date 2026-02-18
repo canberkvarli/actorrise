@@ -34,6 +34,9 @@ export const GENDERS = ["Male", "Female", "Non-binary", "Other"] as const;
 
 export const AGE_RANGES = ["18-25", "25-35", "35-45", "45-55", "55+"] as const;
 
+export const HEIGHT_FEET = [4, 5, 6, 7, 8] as const;
+export const HEIGHT_INCHES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const;
+
 export const BUILD_OPTIONS = [
   "Slender",
   "Average",

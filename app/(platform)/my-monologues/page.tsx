@@ -15,7 +15,7 @@ import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueResultCard } from "@/components/monologue/MonologueResultCard";
 import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { useBookmarks, useToggleFavorite } from "@/hooks/useBookmarks";
 
@@ -241,17 +241,20 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   Sort
                 </Label>
                 <Select
-                  id="my-monologues-sort"
                   value={sort}
-                  onChange={(e) => setSort(e.target.value as MyMonologuesSort)}
-                  className="w-[180px] rounded-lg"
+                  onValueChange={(v) => setSort(v as MyMonologuesSort)}
                 >
-                  <option value="last_added">Last added</option>
-                  <option value="character_az">Character A–Z</option>
-                  <option value="character_za">Character Z–A</option>
-                  <option value="play_az">Play A–Z</option>
-                  <option value="play_za">Play Z–A</option>
-                  <option value="author_az">Author A–Z</option>
+                  <SelectTrigger id="my-monologues-sort" className="w-[180px] rounded-lg">
+                    <SelectValue placeholder="Sort" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="last_added">Last added</SelectItem>
+                    <SelectItem value="character_az">Character A–Z</SelectItem>
+                    <SelectItem value="character_za">Character Z–A</SelectItem>
+                    <SelectItem value="play_az">Play A–Z</SelectItem>
+                    <SelectItem value="play_za">Play Z–A</SelectItem>
+                    <SelectItem value="author_az">Author A–Z</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
             )}

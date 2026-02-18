@@ -20,6 +20,7 @@ class UpdateMeRequest(BaseModel):
 class UpdateOnboardingRequest(BaseModel):
     has_seen_welcome: bool | None = None
     has_seen_search_tour: bool | None = None
+    has_seen_profile_tour: bool | None = None
 
 
 def get_current_user(
@@ -146,6 +147,7 @@ def get_me(current_user: User = Depends(get_current_user)):
         "marketing_opt_in": current_user.marketing_opt_in,
         "has_seen_welcome": current_user.has_seen_welcome,
         "has_seen_search_tour": current_user.has_seen_search_tour,
+        "has_seen_profile_tour": current_user.has_seen_profile_tour,
     }
 
 
@@ -182,9 +184,12 @@ def update_onboarding(
         current_user.has_seen_welcome = body.has_seen_welcome
     if body.has_seen_search_tour is not None:
         current_user.has_seen_search_tour = body.has_seen_search_tour
+    if body.has_seen_profile_tour is not None:
+        current_user.has_seen_profile_tour = body.has_seen_profile_tour
     db.commit()
     db.refresh(current_user)
     return {
         "has_seen_welcome": current_user.has_seen_welcome,
         "has_seen_search_tour": current_user.has_seen_search_tour,
+        "has_seen_profile_tour": current_user.has_seen_profile_tour,
     }

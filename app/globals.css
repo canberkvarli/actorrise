@@ -246,3 +246,42 @@
 .safe-area-bottom {
   padding-bottom: max(0.5rem, env(safe-area-inset-bottom, 0px));
 }
+
+/* Sonner toasts – use platform colors instead of default green/red */
+[data-sonner-toast] {
+  border-radius: var(--radius-lg);
+}
+[data-sonner-toast][data-type="success"] {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: var(--primary-foreground) !important;
+}
+[data-sonner-toast][data-type="success"] [data-icon] {
+  color: var(--primary-foreground) !important;
+}
+[data-sonner-toast][data-type="error"] {
+  background: var(--destructive) !important;
+  border-color: var(--destructive) !important;
+  color: oklch(0.99 0 0) !important;
+}
+[data-sonner-toast][data-type="error"] [data-icon] {
+  color: oklch(0.99 0 0) !important;
+}
+[data-sonner-toast][data-type="warning"] {
+  background: var(--secondary) !important;
+  border-color: var(--border) !important;
+  color: var(--secondary-foreground) !important;
+}
+[data-sonner-toast][data-type="warning"] [data-icon] {
+  color: var(--secondary-foreground) !important;
+}
+[data-sonner-toast][data-type="info"],
+[data-sonner-toast][data-type="default"] {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--card-foreground) !important;
+}
+[data-sonner-toast][data-type="info"] [data-icon],
+[data-sonner-toast][data-type="default"] [data-icon] {
+  color: var(--primary) !important;
+}

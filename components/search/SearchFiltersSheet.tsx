@@ -9,6 +9,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { IconX, IconInfoCircle } from "@tabler/icons-react";
 import { Slider } from "@/components/ui/slider";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -77,18 +78,22 @@ export function SearchFiltersSheet({
           {FILTER_CONFIG.map(({ key, label, options }) => (
             <div key={key} className="space-y-2">
               <Label className="text-sm text-muted-foreground">{label}</Label>
-              <select
-                value={filters[key]}
-                onChange={(e) => setFilters({ ...filters, [key]: e.target.value })}
-                className="w-full min-h-[48px] px-4 py-3 text-base rounded-lg border border-input bg-background"
+              <Select
+                value={filters[key] || "__none__"}
+                onValueChange={(v) => setFilters({ ...filters, [key]: v === "__none__" ? "" : v })}
               >
-                <option value="">Any</option>
-                {options.map((opt) => (
-                  <option key={opt} value={opt} className="capitalize">
-                    {opt}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="min-h-[48px] px-4 py-3 text-base">
+                  <SelectValue placeholder="Any" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Any</SelectItem>
+                  {options.map((opt) => (
+                    <SelectItem key={opt} value={opt} className="capitalize">
+                      {opt}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           ))}
 

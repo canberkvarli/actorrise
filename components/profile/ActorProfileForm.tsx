@@ -9,7 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,7 +35,16 @@ import {
   ACTOR_TYPE_LABELS,
   TRAINING_BACKGROUND_OPTIONS,
   ETHNICITY_OPTIONS,
+  HEIGHT_FEET,
+  HEIGHT_INCHES,
 } from "@/lib/profileOptions";
+
+function parseHeight(h: string | undefined): { feet: string; inches: string } {
+  if (!h || !h.trim()) return { feet: "__none__", inches: "__none__" };
+  const m = h.trim().match(/^(\d+)'(\d+)"?$/);
+  if (!m) return { feet: "__none__", inches: "__none__" };
+  return { feet: m[1], inches: m[2] };
+}
 
 const profileSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -187,6 +196,24 @@ export function ActorProfileForm() {
     trainingBackground,
     headshotUrl,
   ]);
+
+  // Next-step nudge: which required fields are missing (for progress card when <100%)
+  const requiredChecklist = useMemo(() => {
+    const hasType = type || actorTypes.length > 0;
+    const items: { key: string; label: string; filled: boolean }[] = [
+      { key: "name", label: "Name", filled: Boolean(name?.trim()) },
+      { key: "age_range", label: "Age range", filled: Boolean(ageRange) },
+      { key: "gender", label: "Gender", filled: Boolean(gender) },
+      { key: "location", label: "Location", filled: Boolean(location) },
+      { key: "experience_level", label: "Experience level", filled: Boolean(experienceLevel) },
+      { key: "type", label: "Actor type(s)", filled: Boolean(hasType) },
+      { key: "union_status", label: "Union status", filled: Boolean(unionStatus) },
+    ];
+    const missing = items.filter((i) => !i.filled);
+    return { items, missing, count: missing.length };
+  }, [name, ageRange, gender, location, experienceLevel, type, actorTypes, unionStatus]);
+
+  const heightParsed = useMemo(() => parseHeight(height), [height]);
 
   const fetchProfile = useCallback(async () => {
     try {
@@ -747,6 +774,7 @@ export function ActorProfileForm() {
         {/* Progress Bar - Only show if profile is not 100% complete */}
         {completionPercentage < 100 && (
           <motion.div
+            id="profile-progress"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
           >
@@ -761,8 +789,25 @@ export function ActorProfileForm() {
                   </div>
                   <Progress value={completionPercentage} className="h-2" />
                   <p className="text-xs text-muted-foreground">
-                    Changes are automatically saved
+                    We save as you go — no button to click.
                   </p>
+                  {requiredChecklist.count > 0 && (
+                    <>
+                      <p className="text-xs text-muted-foreground font-medium">
+                        {requiredChecklist.count} to go
+                      </p>
+                      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-1" aria-label="Required fields">
+                        {requiredChecklist.items.map((item) => (
+                          <li key={item.key} className="flex items-center gap-1.5">
+                            <span className={item.filled ? "text-primary" : "text-muted-foreground"} aria-hidden>
+                              {item.filled ? "✓" : "○"}
+                            </span>
+                            <span className={item.filled ? "line-through decoration-muted-foreground" : ""}>{item.label}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -771,6 +816,7 @@ export function ActorProfileForm() {
 
         {/* Headshot Section - Compact */}
         <motion.div
+          id="profile-headshot"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
@@ -830,8 +876,8 @@ export function ActorProfileForm() {
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {headshotPreview 
-                      ? "Your professional headshot will appear on your profile and in search results. Click the image to view, edit, or replace it." 
-                      : "Upload a high-quality professional headshot. Recommended: JPG, PNG, or WEBP format, maximum 5MB. Standard resume size (2:3 aspect ratio)."}
+                      ? "Shown on profile and in search. Click to view or replace." 
+                      : "Upload a headshot. JPG/PNG, max 5MB. +6% completion."}
                   </p>
                 </div>
               </div>
@@ -840,6 +886,7 @@ export function ActorProfileForm() {
         </motion.div>
 
         {/* Tabs for organized sections */}
+        <div id="profile-tabs">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="basic" className="flex items-center gap-2 font-mono">
@@ -850,7 +897,7 @@ export function ActorProfileForm() {
               <IconBriefcase className="h-4 w-4" />
               Acting Info
             </TabsTrigger>
-            <TabsTrigger value="preferences" className="flex items-center gap-2 font-mono">
+            <TabsTrigger value="preferences" id="profile-preferences" className="flex items-center gap-2 font-mono">
               <IconSettings className="h-4 w-4" />
               Preferences
             </TabsTrigger>
@@ -866,10 +913,11 @@ export function ActorProfileForm() {
                   <Card>
                     <CardHeader>
                       <CardTitle>Basic Information</CardTitle>
-                      <CardDescription>Tell us about yourself</CardDescription>
+                      <CardDescription>Used for matching you to roles.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
-                      <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required for matching</p>
+                      <div className="space-y-2 max-w-xs">
                         <Label htmlFor="name" className="font-mono">Name *</Label>
                         <Input 
                           id="name" 
@@ -886,18 +934,21 @@ export function ActorProfileForm() {
                         )}
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="age_range" className="font-mono">Age Range *</Label>
-                        <Select 
-                          id="age_range" 
-                          value={watch("age_range") || ""}
-                          onChange={(e) => setValue("age_range", e.target.value)}
+                        <Select
+                          value={watch("age_range") || undefined}
+                          onValueChange={(v) => setValue("age_range", v)}
                         >
-                          <option value="">Select age range</option>
-                          {AGE_RANGES.map((r) => (
-                            <option key={r} value={r}>{r}</option>
-                          ))}
+                          <SelectTrigger id="age_range">
+                            <SelectValue placeholder="Select age range" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {AGE_RANGES.map((r) => (
+                              <SelectItem key={r} value={r}>{r}</SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
                           {errors.age_range && (
                             <motion.p
@@ -912,15 +963,18 @@ export function ActorProfileForm() {
 
                         <div className="space-y-2">
                           <Label htmlFor="gender" className="font-mono">Gender Identity *</Label>
-                        <Select 
-                          id="gender" 
-                          value={watch("gender") || ""}
-                          onChange={(e) => setValue("gender", e.target.value)}
+                        <Select
+                          value={watch("gender") || undefined}
+                          onValueChange={(v) => setValue("gender", v)}
                         >
-                          <option value="">Select gender</option>
-                          {GENDERS.map((g) => (
-                            <option key={g} value={g}>{g}</option>
-                          ))}
+                          <SelectTrigger id="gender">
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {GENDERS.map((g) => (
+                              <SelectItem key={g} value={g}>{g}</SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
                           {errors.gender && (
                             <motion.p
@@ -934,56 +988,112 @@ export function ActorProfileForm() {
                         </div>
                       </div>
 
+                      <Separator className="my-6" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Optional — improves recommendations</p>
                       <div className="space-y-2">
-                        <Label htmlFor="ethnicity" className="font-mono">Ethnicity (optional)</Label>
+                        <Label htmlFor="ethnicity" className="font-mono">Ethnicity</Label>
                         <Select
-                          id="ethnicity"
-                          value={watch("ethnicity") || ""}
-                          onChange={(e) => setValue("ethnicity", e.target.value)}
+                          value={watch("ethnicity") || "__none__"}
+                          onValueChange={(v) => setValue("ethnicity", v === "__none__" ? "" : v)}
                         >
-                          <option value="">Select</option>
-                          {ETHNICITY_OPTIONS.map((e) => (
-                            <option key={e} value={e}>{e}</option>
-                          ))}
+                          <SelectTrigger id="ethnicity">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Select</SelectItem>
+                            {ETHNICITY_OPTIONS.map((e) => (
+                              <SelectItem key={e} value={e}>{e}</SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="height" className="font-mono">Height (optional)</Label>
-                          <Input 
-                            id="height" 
-                            placeholder="5'10&quot;" 
-                            {...register("height")}
-                          />
+                          <Label className="font-mono">Height</Label>
+                          <div className="flex gap-2">
+                            <Select
+                              value={heightParsed.feet === "__none__" ? "__none__" : heightParsed.feet}
+                              onValueChange={(v) => {
+                                if (v === "__none__") {
+                                  setValue("height", "");
+                                } else {
+                                  const inVal = heightParsed.inches === "__none__" ? "0" : heightParsed.inches;
+                                  setValue("height", `${v}'${inVal}"`);
+                                }
+                              }}
+                            >
+                              <SelectTrigger id="height-feet" className="flex-1 min-w-0">
+                                <SelectValue placeholder="Ft" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">—</SelectItem>
+                                {HEIGHT_FEET.map((ft) => (
+                                  <SelectItem key={ft} value={String(ft)}>{ft}'</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Select
+                              value={heightParsed.inches === "__none__" ? "__none__" : heightParsed.inches}
+                              onValueChange={(v) => {
+                                if (v === "__none__") {
+                                  if (heightParsed.feet === "__none__") {
+                                    setValue("height", "");
+                                  } else {
+                                    setValue("height", `${heightParsed.feet}'0"`);
+                                  }
+                                } else {
+                                  const ftVal = heightParsed.feet === "__none__" ? "5" : heightParsed.feet;
+                                  setValue("height", `${ftVal}'${v}"`);
+                                }
+                              }}
+                            >
+                              <SelectTrigger id="height-inches" className="flex-1 min-w-0">
+                                <SelectValue placeholder="In" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="__none__">—</SelectItem>
+                                {HEIGHT_INCHES.map((inVal) => (
+                                  <SelectItem key={inVal} value={String(inVal)}>{inVal}"</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="build" className="font-mono">Build (optional)</Label>
+                          <Label htmlFor="build" className="font-mono">Build</Label>
                           <Select
-                            id="build"
-                            value={watch("build") || ""}
-                            onChange={(e) => setValue("build", e.target.value)}
+                            value={watch("build") || "__none__"}
+                            onValueChange={(v) => setValue("build", v === "__none__" ? "" : v)}
                           >
-                            <option value="">Select build</option>
-                            {BUILD_OPTIONS.map((b) => (
-                              <option key={b} value={b}>{b}</option>
-                            ))}
+                            <SelectTrigger id="build">
+                              <SelectValue placeholder="Select build" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Select build</SelectItem>
+                              {BUILD_OPTIONS.map((b) => (
+                                <SelectItem key={b} value={b}>{b}</SelectItem>
+                              ))}
+                            </SelectContent>
                           </Select>
                         </div>
                       </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="location" className="font-mono">Location / market</Label>
-                        <Select 
-                          id="location" 
-                          value={watch("location") || ""}
-                          onChange={(e) => setValue("location", e.target.value)}
+                        <Select
+                          value={watch("location") || undefined}
+                          onValueChange={(v) => setValue("location", v)}
                         >
-                          <option value="">Select location</option>
-                          {LOCATIONS.map((loc) => (
-                            <option key={loc} value={loc}>{loc}</option>
-                          ))}
+                          <SelectTrigger id="location">
+                            <SelectValue placeholder="Select location" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LOCATIONS.map((loc) => (
+                              <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
                         {errors.location && (
                           <motion.p
@@ -1009,9 +1119,10 @@ export function ActorProfileForm() {
                   <Card>
                     <CardHeader>
                       <CardTitle>Acting Background</CardTitle>
-                      <CardDescription>Your acting experience and training</CardDescription>
+                      <CardDescription>Used to tailor recommendations.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required for matching</p>
                       <div className="space-y-2">
                         <Label className="font-mono">Actor types</Label>
                         <p className="text-xs text-muted-foreground mb-2">Select all that apply (e.g. Theater, Film & TV)</p>
@@ -1059,15 +1170,18 @@ export function ActorProfileForm() {
                             </TooltipContent>
                           </Tooltip>
                         </div>
-                        <Select 
-                          id="experience_level" 
-                          value={watch("experience_level") || ""}
-                          onChange={(e) => setValue("experience_level", e.target.value)}
+                        <Select
+                          value={watch("experience_level") || undefined}
+                          onValueChange={(v) => setValue("experience_level", v)}
                         >
-                          <option value="">Select experience level</option>
-                          {EXPERIENCE_LEVELS.map((l) => (
-                            <option key={l.id} value={l.id}>{l.label}</option>
-                          ))}
+                          <SelectTrigger id="experience_level">
+                            <SelectValue placeholder="Select experience level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {EXPERIENCE_LEVELS.map((l) => (
+                              <SelectItem key={l.id} value={l.id}>{l.label}</SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
                         {errors.experience_level && (
                           <motion.p
@@ -1082,15 +1196,19 @@ export function ActorProfileForm() {
 
                       <div className="space-y-2">
                         <Label htmlFor="type" className="font-mono">Type *</Label>
-                        <Select 
-                          id="type" 
-                          value={watch("type") || ""}
-                          onChange={(e) => setValue("type", e.target.value)}
+                        <Select
+                          value={watch("type") || "__none__"}
+                          onValueChange={(v) => setValue("type", v === "__none__" ? "" : v)}
                         >
-                          <option value="">Character type (optional)</option>
-                          {CHARACTER_TYPES.map((t) => (
-                            <option key={t} value={t}>{t}</option>
-                          ))}
+                          <SelectTrigger id="type">
+                            <SelectValue placeholder="Character type (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Character type (optional)</SelectItem>
+                            {CHARACTER_TYPES.map((t) => (
+                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
                         {errors.type && (
                           <motion.p
@@ -1103,17 +1221,23 @@ export function ActorProfileForm() {
                         )}
                       </div>
 
+                      <Separator className="my-6" />
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Optional — improves recommendations</p>
                       <div className="space-y-2">
-                        <Label htmlFor="training_background" className="font-mono">Training background (optional)</Label>
+                        <Label htmlFor="training_background" className="font-mono">Training background</Label>
                         <Select
-                          id="training_background"
-                          value={watch("training_background") || ""}
-                          onChange={(e) => setValue("training_background", e.target.value)}
+                          value={watch("training_background") || "__none__"}
+                          onValueChange={(v) => setValue("training_background", v === "__none__" ? "" : v)}
                         >
-                          <option value="">Select</option>
-                          {TRAINING_BACKGROUND_OPTIONS.map((t) => (
-                            <option key={t} value={t}>{t}</option>
-                          ))}
+                          <SelectTrigger id="training_background">
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="__none__">Select</SelectItem>
+                            {TRAINING_BACKGROUND_OPTIONS.map((t) => (
+                              <SelectItem key={t} value={t}>{t}</SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
                       </div>
 
@@ -1139,15 +1263,18 @@ export function ActorProfileForm() {
                             </TooltipContent>
                           </Tooltip>
                         </div>
-                        <Select 
-                          id="union_status" 
-                          value={watch("union_status") || ""}
-                          onChange={(e) => setValue("union_status", e.target.value)}
+                        <Select
+                          value={watch("union_status") || undefined}
+                          onValueChange={(v) => setValue("union_status", v)}
                         >
-                          <option value="">Select union status</option>
-                          {UNION_STATUSES.map((s) => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
+                          <SelectTrigger id="union_status">
+                            <SelectValue placeholder="Select union status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {UNION_STATUSES.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
                         </Select>
                         {errors.union_status && (
                           <motion.p
@@ -1176,7 +1303,7 @@ export function ActorProfileForm() {
                         <IconSparkles className="h-5 w-5" />
                         Search Preferences
                       </CardTitle>
-                      <CardDescription>Customize your monologue search experience</CardDescription>
+                      <CardDescription>Customize search.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
                       <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
@@ -1199,7 +1326,7 @@ export function ActorProfileForm() {
 
                       <div className="space-y-2">
                         <Label className="font-mono">Preferred genres</Label>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {PREFERRED_GENRES.map((genre) => (
                             <motion.label
                               key={genre}
@@ -1259,6 +1386,7 @@ export function ActorProfileForm() {
               </TabsContent>
           </div>
         </Tabs>
+        </div>
       </div>
       {/* Photo Viewer Modal */}
       {showPhotoViewer && headshotPreview && (

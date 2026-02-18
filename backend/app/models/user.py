@@ -26,6 +26,7 @@ class User(Base):
     # Onboarding state
     has_seen_welcome = Column(Boolean, default=False, nullable=False)
     has_seen_search_tour = Column(Boolean, default=False, nullable=False)
+    has_seen_profile_tour = Column(Boolean, default=False, nullable=False)
 
     # Relationships
     actor_profile = relationship("ActorProfile", back_populates="user", uselist=False)

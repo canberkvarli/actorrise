@@ -37,6 +37,8 @@ import { MonologueResultCard } from "@/components/monologue/MonologueResultCard"
 import { SearchFiltersSheet } from "@/components/search/SearchFiltersSheet";
 import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
 import { Slider } from "@/components/ui/slider";
+import { ContactModal } from "@/components/contact/ContactModal";
+import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackPrompt";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -63,10 +65,13 @@ export default function SearchPage() {
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [contactOpen, setContactOpen] = useState(false);
   const [showBookmarkedOnly, setShowBookmarkedOnly] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const LAST_SEARCH_KEY = "monologue_search_last_results_v1";
+  const RESULTS_VIEW_COUNT_KEY = "search_results_view_count_v1";
+  const [resultsViewCount, setResultsViewCount] = useState(0);
   const [restoredFromLastSearch, setRestoredFromLastSearch] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchUpgradeUrl, setSearchUpgradeUrl] = useState<string | null>(null);
@@ -105,6 +110,29 @@ export default function SearchPage() {
       panelRef.current.scrollTop = 0;
     }
   }, [selectedMonologue]);
+
+  // Initialize results view count from sessionStorage (for feedback prompt).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = sessionStorage.getItem(RESULTS_VIEW_COUNT_KEY);
+      const n = raw ? parseInt(raw, 10) : 0;
+      if (!Number.isNaN(n) && n >= 0) setResultsViewCount(n);
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // When we have results but count is still 0 (e.g. restored from last search), set to 1 so feedback prompt shows.
+  useEffect(() => {
+    if (typeof window === "undefined" || !hasSearched || results.length === 0 || resultsViewCount !== 0) return;
+    try {
+      sessionStorage.setItem(RESULTS_VIEW_COUNT_KEY, "1");
+      setResultsViewCount(1);
+    } catch {
+      // ignore
+    }
+  }, [hasSearched, results.length, resultsViewCount]);
 
   // Restore search state from URL and sessionStorage whenever this page is (re)visited.
   // This allows search results to persist across refreshes AND when navigating away
@@ -303,6 +331,15 @@ export default function SearchPage() {
         });
         if (effectiveMaxOverdone < 1) newParams.set("max_overdone_score", String(effectiveMaxOverdone));
         router.replace(`/search?${newParams.toString()}`, { scroll: false });
+        // Increment results view count for "every other search" feedback prompt
+        try {
+          const prev = parseInt(sessionStorage.getItem(RESULTS_VIEW_COUNT_KEY) || "0", 10);
+          const next = (Number.isNaN(prev) ? 0 : prev) + 1;
+          sessionStorage.setItem(RESULTS_VIEW_COUNT_KEY, String(next));
+          setResultsViewCount(next);
+        } catch {
+          // ignore
+        }
       }
     } catch (error: unknown) {
       const res = (error as { response?: { data?: { detail?: string | { message?: string; upgrade_url?: string } } } })?.response;
@@ -363,6 +400,16 @@ export default function SearchPage() {
 
       // Update URL to reflect AI search
       router.replace("/search?ai=true", { scroll: false });
+
+      // Increment results view count for "every other search" feedback prompt
+      try {
+        const prev = parseInt(sessionStorage.getItem(RESULTS_VIEW_COUNT_KEY) || "0", 10);
+        const next = (Number.isNaN(prev) ? 0 : prev) + 1;
+        sessionStorage.setItem(RESULTS_VIEW_COUNT_KEY, String(next));
+        setResultsViewCount(next);
+      } catch {
+        // ignore
+      }
     } catch (error: any) {
       console.error("Find For Me error:", error);
       if (error.response?.status === 400) {
@@ -970,35 +1017,38 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   {[...activeFilters.map(([k, v]) => getFilterDisplay(k, v)), ...(hasFreshnessFilter ? [`Freshness: ${getFreshnessLabel(maxOverdoneScore)}`] : [])].join("; ")}. Filters narrow the set; search ranks by meaning.
                   </p>
                 )}
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  {showBookmarkedOnly ? (
-                    <>
-                      Showing <span className="font-semibold">
-                        {results.filter((m) => m.is_favorited).length}
-                      </span> bookmarked monologues
-                    </>
-                  ) : (
-                    <>
-                      Found <span className="font-semibold">{total > 0 ? total : results.length}</span> monologues
-                    </>
-                  )}
-                </p>
+              {/* Results header: compact count + pill + bookmarked filter, not full width */}
+              <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1.5 text-sm">
+                  <span className="font-semibold text-foreground tabular-nums">
+                    {showBookmarkedOnly
+                      ? results.filter((m) => m.is_favorited).length
+                      : total > 0 ? total : results.length}
+                  </span>
+                  <span className="text-muted-foreground">
+                    {showBookmarkedOnly ? "bookmarked" : "monologues"}
+                  </span>
+                </div>
+                {!showBookmarkedOnly && !showConfidence && relatedResults.length > 0 && (
+                  <span className="inline-flex items-center rounded-full bg-muted/60 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                    Sorted by relevance
+                  </span>
+                )}
+                {restoredFromLastSearch && searchParams.get("q") === null && (
+                  <span className="text-[11px] text-muted-foreground/80">
+                    From your last search
+                  </span>
+                )}
                 <Button
                   variant={showBookmarkedOnly ? "secondary" : "outline"}
                   size="sm"
                   onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
-                  className="gap-2 rounded-full"
+                  className="gap-2 rounded-full shrink-0 ml-auto sm:ml-0"
                 >
                   <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
                   Bookmarked only
                 </Button>
               </div>
-              {restoredFromLastSearch && searchParams.get("q") === null && (
-                <p className="text-[11px] text-muted-foreground/80">
-                  Showing results from your last search. New searches will update this list.
-                </p>
-              )}
 
               {/* Unified results grid: Best Match + Related use same card layout; hide confidence for broad queries */}
               {(() => {
@@ -1019,9 +1069,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         </div>
                       </div>
                     )}
-                    {!showBookmarkedOnly && !showConfidence && relatedOrBookmarked.length > 0 && (
-                      <p className="text-sm text-muted-foreground mb-4">Sorted by relevance</p>
-                    )}
+                    <ResultsFeedbackPrompt
+                      context="search"
+                      resultsViewCount={resultsViewCount}
+                      onOpenContact={() => setContactOpen(true)}
+                    />
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {!showBookmarkedOnly && bestMatches.map((mono, idx) => (
                         <MonologueResultCard
@@ -1263,6 +1315,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           <SearchTour onDismiss={async () => { setShowSearchTour(false); await refreshUser(); }} />
         )}
       </AnimatePresence>
+      <ContactModal
+        open={contactOpen}
+        onOpenChange={setContactOpen}
+        initialCategory="feedback"
+      />
     </div>
   );
 }

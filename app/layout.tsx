@@ -167,7 +167,19 @@ export default function RootLayout({
             <OAuthCallbackRedirect />
           </Suspense>
           <AuthProviderWrapper>{children}</AuthProviderWrapper>
-          <Toaster position="top-center" richColors />
+          <Toaster
+            position="top-center"
+            richColors={false}
+            toastOptions={{
+              classNames: {
+                toast: "actorrise-toast",
+                success: "actorrise-toast-success",
+                error: "actorrise-toast-error",
+                warning: "actorrise-toast-warning",
+                info: "actorrise-toast-info",
+              },
+            }}
+          />
           <Analytics />
           <GoogleAnalytics />
         </ThemeProvider>

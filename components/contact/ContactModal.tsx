@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Select } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -28,14 +28,22 @@ const CATEGORIES = [
 export interface ContactModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** When set, the form opens with this category pre-selected (e.g. "feedback"). */
+  initialCategory?: string;
 }
 
-export function ContactModal({ open, onOpenChange }: ContactModalProps) {
+export function ContactModal({ open, onOpenChange, initialCategory }: ContactModalProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [category, setCategory] = useState<string>("other");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+
+  useEffect(() => {
+    if (open && initialCategory && CATEGORIES.some((c) => c.value === initialCategory)) {
+      setCategory(initialCategory);
+    }
+  }, [open, initialCategory]);
 
   const reset = () => {
     setName("");
@@ -107,16 +115,20 @@ export function ContactModal({ open, onOpenChange }: ContactModalProps) {
           <div className="grid gap-2">
             <Label htmlFor="contact-category">What&apos;s this about?</Label>
             <Select
-              id="contact-category"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onValueChange={setCategory}
               disabled={sending}
             >
-              {CATEGORIES.map((c) => (
-                <option key={c.value} value={c.value}>
-                  {c.label}
-                </option>
-              ))}
+              <SelectTrigger id="contact-category">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
           <div className="grid gap-2">
