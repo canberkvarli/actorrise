@@ -100,9 +100,13 @@ export default function CheckoutPage() {
 
       // Redirect to Stripe Checkout
       window.location.href = response.data.checkout_url;
-    } catch (error: any) {
-      console.error("Failed to create checkout session:", error);
-      setError(error.response?.data?.detail || "Failed to start checkout. Please try again.");
+    } catch (err: unknown) {
+      console.error("Failed to create checkout session:", err);
+      const detail =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : undefined;
+      setError(detail || "Failed to start checkout. Please try again.");
       setIsCheckingOut(false);
     }
   };
@@ -121,9 +125,9 @@ export default function CheckoutPage() {
     if (!tier) return "$0";
     const price = getPrice();
     if (period === "annual" && tier.annual_price_cents) {
-      return `$${(tier.annual_price_cents / 12 / 100).toFixed(2)}/month`;
+      return `$${(price / 12 / 100).toFixed(2)}/month`;
     }
-    return `$${(tier.monthly_price_cents / 100).toFixed(2)}/month`;
+    return `$${(price / 100).toFixed(2)}/month`;
   };
 
   const getTierIcon = () => {
@@ -228,8 +232,8 @@ export default function CheckoutPage() {
             <div className="flex flex-col gap-2 pt-2 border-t">
               {promoApplied ? (
                 <div className="flex items-center justify-between rounded-lg bg-accent/10 border border-accent/20 px-3 py-2">
-                  <span className="text-sm font-medium text-accent flex items-center gap-2">
-                    <IconTag className="h-4 w-4" />
+                  <span className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <IconTag className="h-4 w-4 shrink-0 text-accent" />
                     {promoApplied} applied — free for 1 year
                   </span>
                   <Button type="button" variant="ghost" size="sm" onClick={removePromo}>
