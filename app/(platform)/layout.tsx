@@ -15,6 +15,8 @@ import { ContactModal } from "@/components/contact/ContactModal";
 import { SWRConfig } from "swr";
 import { useSubscription } from "@/hooks/useSubscription";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { AnimatePresence } from "framer-motion";
+import { WelcomeFlow } from "@/components/onboarding/WelcomeFlow";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -42,6 +44,7 @@ export default function PlatformLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(false);
   const { count: bookmarkCount } = useBookmarkCount();
   const { data: profile } = useProfile();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -71,6 +74,14 @@ export default function PlatformLayout({
       return () => document.removeEventListener("mousedown", handleClickOutside);
     }
   }, [profileDropdownOpen]);
+
+  // Show welcome flow for new users who haven't seen it
+  useEffect(() => {
+    if (!loading && user && user.has_seen_welcome === false) {
+      const timer = setTimeout(() => setShowWelcome(true), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, user]);
 
   // Note: Route protection is handled by middleware
   // This check is just for UI state while loading
@@ -167,11 +178,9 @@ export default function PlatformLayout({
                       {profileInitial}
                     </span>
                   )}
-                  {displayName && (
-                    <span className="hidden lg:inline text-sm font-medium text-foreground truncate max-w-[8rem]">
-                      {displayName}
-                    </span>
-                  )}
+                  <span className="hidden lg:inline text-sm font-medium text-foreground truncate max-w-[8rem]">
+                    {displayName || "Account"}
+                  </span>
                   <IconChevronDown
                     className={`h-3.5 w-3.5 text-muted-foreground transition-transform flex-shrink-0 ${
                       profileDropdownOpen ? "rotate-180" : ""
@@ -183,7 +192,7 @@ export default function PlatformLayout({
                 {profileDropdownOpen && (
                   <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-border/50 bg-card/95 backdrop-blur-sm shadow-lg shadow-black/40 z-[9999]">
                     <div className="p-3">
-                      <div className="flex items-center gap-4 rounded-lg bg-muted/60 px-4 py-4 mb-3">
+                      <div className="flex items-center gap-4 rounded-xl bg-muted/60 px-4 py-4 mb-3">
                         {headshotUrl ? (
                           <Image
                             src={headshotUrl}
@@ -197,10 +206,19 @@ export default function PlatformLayout({
                             {profileInitial}
                           </div>
                         )}
-                        <div className="min-w-0 flex flex-col gap-1">
+                        <div className="min-w-0 flex flex-col gap-1.5">
                           <p className="text-sm font-semibold leading-tight truncate text-foreground">
-                            {profileLabel}
+                            {displayName ? profileLabel : "Your account"}
                           </p>
+                          {!displayName && (
+                            <Link
+                              href="/profile"
+                              onClick={() => setProfileDropdownOpen(false)}
+                              className="text-xs text-primary hover:underline"
+                            >
+                              Add your name & photo →
+                            </Link>
+                          )}
                           <PlanBadge
                             planName={userTier}
                             variant="secondary"
@@ -210,19 +228,25 @@ export default function PlatformLayout({
                         </div>
                       </div>
 
+                      <p className="px-2 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                        Profile
+                      </p>
                       <Link
                         href="/profile"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
                       >
                         <IconUser className="h-4 w-4 text-muted-foreground" />
                         <span>Edit profile</span>
                       </Link>
 
+                      <p className="px-2 py-1.5 mt-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                        Content
+                      </p>
                       <Link
                         href="/my-monologues"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="mt-0.5 flex items-center justify-between gap-2 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                        className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
                       >
                         <div className="flex items-center gap-3">
                           <IconBookmark className="h-4 w-4 text-muted-foreground" />
@@ -234,50 +258,53 @@ export default function PlatformLayout({
                           </Badge>
                         )}
                       </Link>
-
                       <Link
                         href="/submit-monologue"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="mt-0.5 flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
                       >
                         <IconSparkles className="h-4 w-4 text-muted-foreground" />
                         <span>Submit monologue</span>
                       </Link>
-
                       <Link
                         href="/my-submissions"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="mt-0.5 flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
                       >
                         <IconFileText className="h-4 w-4 text-muted-foreground" />
                         <span>My submissions</span>
                       </Link>
 
+                      <p className="px-2 py-1.5 mt-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                        Billing & settings
+                      </p>
                       <Link
                         href="/billing"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="mt-0.5 flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
                       >
                         <IconCreditCard className="h-4 w-4 text-muted-foreground" />
                         <span>Billing</span>
                       </Link>
-
                       <Link
                         href="/settings"
                         onClick={() => setProfileDropdownOpen(false)}
-                        className="mt-0.5 flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
                       >
                         <IconSettings className="h-4 w-4 text-muted-foreground" />
                         <span>Account settings</span>
                       </Link>
 
+                      <p className="px-2 py-1.5 mt-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                        Support
+                      </p>
                       <button
                         type="button"
                         onClick={() => {
                           setProfileDropdownOpen(false);
                           setContactOpen(true);
                         }}
-                        className="mt-0.5 flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors w-full text-left"
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors w-full text-left"
                       >
                         <IconMail className="h-4 w-4 text-muted-foreground" />
                         <span>Contact & feedback</span>
@@ -484,6 +511,11 @@ export default function PlatformLayout({
         </div>
       </nav>
 
+      <AnimatePresence>
+        {showWelcome && (
+          <WelcomeFlow onDismiss={() => setShowWelcome(false)} />
+        )}
+      </AnimatePresence>
       <ContactModal open={contactOpen} onOpenChange={setContactOpen} />
     </div>
     </SWRConfig>
