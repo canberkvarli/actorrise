@@ -286,8 +286,8 @@ async def search_monologues(
         filters['max_overdone_score'] = 0.3  # Only show "fresh" pieces (0.0 = fresh, 1.0 = extremely overdone)
 
     search_service = SemanticSearch(db)
-    # Fetch more results than requested to get accurate total for pagination
-    fetch_limit = max(limit * 3, 100)  # Fetch 3x or at least 100 to get better total estimate
+    # Fetch more results than requested to get accurate total for pagination (capped to reduce DB egress)
+    fetch_limit = min(max(limit * 2, 50), 60)
 
     # Track whether we have relevance scores (semantic search vs random/discover)
     has_scores = False
