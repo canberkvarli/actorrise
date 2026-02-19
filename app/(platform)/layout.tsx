@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconHome, IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText, IconMail, IconSettings, IconShieldCheck } from "@tabler/icons-react";
+import { IconHome, IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket } from "@tabler/icons-react";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarkCount";
@@ -17,8 +17,15 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { WelcomeFlow } from "@/components/onboarding/WelcomeFlow";
+import { ChangelogModal } from "@/components/ChangelogModal";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageTransition } from "@/components/transition/PageTransition";
+import {
+  getLatestModalEntry,
+  getLastSeenId,
+  markAsSeen,
+  type ChangelogEntry,
+} from "@/lib/changelog";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -47,6 +54,8 @@ export default function PlatformLayout({
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [showChangelogModal, setShowChangelogModal] = useState(false);
+  const [changelogModalEntry, setChangelogModalEntry] = useState<ChangelogEntry | null>(null);
   const { count: bookmarkCount } = useBookmarkCount();
   const { data: profile } = useProfile();
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -84,6 +93,31 @@ export default function PlatformLayout({
       return () => clearTimeout(timer);
     }
   }, [loading, user]);
+
+  // Show changelog modal when user has not seen the latest feature (after welcome, 1s delay)
+  useEffect(() => {
+    if (loading || !user || showWelcome) return;
+
+    let cancelled = false;
+    const timeoutId = setTimeout(() => {
+      fetch("/changelog.json")
+        .then((res) => res.ok ? res.json() : null)
+        .then((data: { updates?: ChangelogEntry[] } | null) => {
+          if (cancelled || !data?.updates?.length) return;
+          const latest = getLatestModalEntry(data.updates);
+          if (latest && latest.id !== getLastSeenId()) {
+            setChangelogModalEntry(latest);
+            setShowChangelogModal(true);
+          }
+        })
+        .catch(() => {});
+    }, 1000);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [loading, user, showWelcome]);
 
   // Note: Route protection is handled by middleware
   // Single branded loading state so post–sign-in feels like one flow (no "Loading..." then "Loading your dashboard...")
@@ -344,6 +378,14 @@ export default function PlatformLayout({
                       <p className="px-2 py-1.5 mt-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                         Support
                       </p>
+                      <Link
+                        href="/changelog"
+                        onClick={() => setProfileDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                      >
+                        <IconRocket className="h-4 w-4 text-muted-foreground" />
+                        <span>What&apos;s New</span>
+                      </Link>
                       <button
                         type="button"
                         onClick={() => {
@@ -481,6 +523,18 @@ export default function PlatformLayout({
                   </Link>
                 </Button>
 
+                {/* What's New */}
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start gap-2"
+                >
+                  <Link href="/changelog" onClick={() => setMobileMenuOpen(false)}>
+                    <IconRocket className="h-4 w-4" />
+                    What&apos;s New
+                  </Link>
+                </Button>
                 {/* Contact */}
                 <Button
                   variant="ghost"
@@ -585,6 +639,17 @@ export default function PlatformLayout({
           <WelcomeFlow onDismiss={async () => { setShowWelcome(false); await refreshUser(); }} />
         )}
       </AnimatePresence>
+      {changelogModalEntry && (
+        <ChangelogModal
+          open={showChangelogModal}
+          onOpenChange={setShowChangelogModal}
+          entry={changelogModalEntry}
+          onDismiss={() => {
+            markAsSeen(changelogModalEntry.id);
+            setShowChangelogModal(false);
+          }}
+        />
+      )}
       <ContactModal open={contactOpen} onOpenChange={setContactOpen} />
     </div>
     </TooltipProvider>

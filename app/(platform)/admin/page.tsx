@@ -22,7 +22,10 @@ import {
   IconAlertTriangle,
   IconCircleCheckFilled,
   IconSearch,
+  IconRocket,
 } from "@tabler/icons-react";
+import { getLatestModalEntry, clearLastSeen } from "@/lib/changelog";
+import type { ChangelogEntry } from "@/lib/changelog";
 import {
   LineChart,
   Line,
@@ -117,6 +120,19 @@ function useSystemHealth(enabled: boolean) {
   });
 }
 
+function useChangelogModalEntry() {
+  return useQuery({
+    queryKey: ["changelog"],
+    queryFn: async () => {
+      const res = await fetch("/changelog.json");
+      if (!res.ok) return null;
+      const data = (await res.json()) as { updates?: ChangelogEntry[] };
+      return getLatestModalEntry(data.updates ?? []) ?? null;
+    },
+    staleTime: 60 * 1000,
+  });
+}
+
 const chartTooltipStyle = {
   borderRadius: "8px",
   backgroundColor: "var(--card)",
@@ -196,6 +212,7 @@ export default function AdminOverviewPage() {
     isLoading: healthLoading,
     refetch: refetchHealth,
   } = useSystemHealth(healthEnabled);
+  const { data: changelogModalEntry } = useChangelogModalEntry();
 
   if (isLoading) {
     return (
@@ -683,6 +700,57 @@ export default function AdminOverviewPage() {
               </div>
 
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Changelog modal preview (dev) */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-4 pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <IconRocket className="h-4 w-4" />
+            Changelog modal
+          </CardTitle>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={() => {
+              clearLastSeen();
+              window.location.href = "/dashboard";
+            }}
+          >
+            Show modal (test)
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground mb-4">
+            Preview of the &quot;What&apos;s new&quot; modal users see when they haven&apos;t seen the latest feature. Button above clears last seen and opens dashboard so the modal appears.
+          </p>
+          {changelogModalEntry ? (
+            <div className="max-w-[400px] rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold leading-tight flex items-center gap-2">
+                  {changelogModalEntry.emoji && <span aria-hidden>{changelogModalEntry.emoji}</span>}
+                  {changelogModalEntry.title}
+                </h3>
+                <p className="text-sm text-muted-foreground leading-relaxed mt-2 line-clamp-3">
+                  {changelogModalEntry.description}
+                </p>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <span className="text-xs text-muted-foreground border rounded-lg px-3 py-1.5">
+                  Dismiss
+                </span>
+                {changelogModalEntry.cta_link && (
+                  <span className="text-xs text-primary border border-primary rounded-lg px-3 py-1.5">
+                    {changelogModalEntry.cta_text ?? "Try it now"}
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No entry with show_modal in changelog.json.</p>
           )}
         </CardContent>
       </Card>

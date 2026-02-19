@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "changelog:from-git": "node scripts/changelog-from-git.mjs",
+    "changelog:dry-run": "node scripts/changelog-from-git.mjs --dry-run"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",

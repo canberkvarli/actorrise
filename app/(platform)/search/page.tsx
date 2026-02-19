@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow, IconSend, IconFlag } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow, IconSend, IconFlag, IconDeviceTv } from "@tabler/icons-react";
 
 // Fun loading messages for AI search
 const LOADING_MESSAGES = [
@@ -1451,20 +1451,29 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             ) : !filmTvHasSearched ? (
               <motion.div
                 key="film-tv-empty"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0 }}
+                transition={{ duration: 0.2 }}
               >
-                <Card className="border-dashed bg-muted/20">
-                  <CardContent className="pt-12 pb-12 text-center max-w-md mx-auto">
-                    <p className="text-muted-foreground text-sm leading-relaxed">
+                <Card className="border border-border/60 bg-gradient-to-b from-muted/30 to-muted/10 shadow-sm overflow-hidden">
+                  <CardContent className="pt-14 pb-14 px-6 text-center max-w-lg mx-auto">
+                    <div className="flex justify-center mb-5">
+                      <div className="rounded-full bg-primary/10 p-4">
+                        <IconDeviceTv className="h-8 w-8 text-primary" aria-hidden />
+                      </div>
+                    </div>
+                    <h3 className="text-base font-semibold text-foreground mb-2">
+                      Film & TV references
+                    </h3>
+                    <p className="text-muted-foreground text-sm leading-relaxed mb-6">
                       Search by mood or scene, same as plays. Or browse all references.
                     </p>
                     <Button
-                      variant="secondary"
+                      variant="default"
                       size="sm"
                       onClick={() => handleSearch()}
-                      className="mt-5 rounded-full"
+                      className="rounded-full px-6 font-medium"
                       disabled={isLoading}
                     >
                       Browse all
