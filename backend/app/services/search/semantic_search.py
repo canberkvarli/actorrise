@@ -61,6 +61,28 @@ def _strip_punctuation(text: str) -> str:
     return text
 
 
+def _keyword_match_score_and_type(mono: Monologue, query: str) -> Tuple[float, str]:
+    """
+    When a monologue was found via text search (title/character/play), return a high
+    score and match_type so it ranks at the top and shows an "Exact match" / "Title match"
+    style badge. Prefer title > character > play.
+    """
+    q = query.strip().lower()
+    if not q:
+        return (0.0, "")
+    title_lower = (mono.title or "").lower()
+    char_lower = (mono.character_name or "").lower()
+    play_title_lower = (mono.play.title or "").lower() if mono.play else ""
+    play_author_lower = (mono.play.author or "").lower() if mono.play else ""
+    if q in title_lower or title_lower in q:
+        return (0.95, "title_match")
+    if q in char_lower or char_lower in q:
+        return (0.90, "character_match")
+    if q in play_title_lower or play_title_lower in q or q in play_author_lower or play_author_lower in q:
+        return (0.85, "play_match")
+    return (0.0, "")
+
+
 def _profile_match_boost(mono: Monologue, actor_profile: Optional[Dict]) -> float:
     """
     Return a small score boost when the monologue matches the actor's profile
@@ -571,7 +593,7 @@ class SemanticSearch:
         # We first try to use the `embedding_vector` pgvector column, and only
         # fall back to legacy JSON embeddings + Python cosine similarity when
         # pgvector is not available or no vectors exist yet.
-        MAX_CANDIDATES = 500  # Upper bound for candidate pool size
+        MAX_CANDIDATES = 150  # Upper bound for candidate pool size
 
         results_with_scores: List[tuple[Monologue, float]] = []
 
@@ -593,20 +615,15 @@ class SemanticSearch:
                 len(semantic_candidates), VECTOR_CANDIDATES
             )
 
-            similarity_start = time.time()
-            for mono in semantic_candidates:
-                # The pgvector column is exposed as a Python sequence of floats.
-                mono_embedding_vec: Optional[List[float]] = getattr(mono, "embedding_vector", None)  # type: ignore[assignment]
-                if mono_embedding_vec:
-                    similarity = self._cosine_similarity(query_embedding, mono_embedding_vec)
-                    # Note: Bookmark boost will be applied later in multiplicative scoring
-                    results_with_scores.append((mono, similarity))
+            # pgvector already returned candidates sorted best-first by cosine distance.
+            # Recomputing cosine similarity in Python is redundant — derive a score
+            # from rank position instead (rank 0 = best match → 1.0, decreasing).
+            total = len(semantic_candidates)
+            for rank, mono in enumerate(semantic_candidates):
+                similarity = max(0.0, 1.0 - (rank / max(total, 1)) * 0.4)
+                results_with_scores.append((mono, similarity))
 
-            similarity_time = time.time() - similarity_start
-            logger.debug(
-                "Similarity (pgvector) took %.2fs for %s candidates",
-                similarity_time, len(semantic_candidates)
-            )
+            logger.debug("pgvector returned %s candidates (rank-based scoring)", total)
 
         except Exception as e:
             # If pgvector is unavailable or misconfigured, fall back to legacy
@@ -677,17 +694,23 @@ class SemanticSearch:
         results_with_scores.sort(key=lambda x: x[1], reverse=True)
         top_semantic = [(mono, score) for mono, score in results_with_scores[:limit]]
 
+        # Match types for frontend badges (exact quote, title match, character match, play match)
+        query_lower = query.strip().lower()
+        query_stripped = _strip_punctuation(query)
+        quote_match_type_by_id: Dict[int, str] = {}
+
         # Merge hybrid: text matches (play/character/title) first, then semantic results not already in text matches
         if text_match_results:
             existing_ids = {m.id for m in text_match_results}
             semantic_only = [(mono, score) for mono, score in top_semantic if mono.id not in existing_ids]
-            # Build combined list preserving scores: text matches get 0.0, semantic keep their scores
-            # But check if any text match also appears in semantic results to preserve its score
             semantic_scores_by_id = {mono.id: score for mono, score in top_semantic}
             combined_with_scores: list[tuple[Monologue, float]] = []
             for m in text_match_results:
-                # Use semantic score if available, otherwise 0.0
-                score = semantic_scores_by_id.get(m.id, 0.0)
+                kw_score, kw_type = _keyword_match_score_and_type(m, query)
+                # Use best of semantic score or keyword score so title/character/play matches rank at top
+                score = max(semantic_scores_by_id.get(m.id, 0.0), kw_score if kw_score > 0 else 0.0)
+                if kw_type:
+                    quote_match_type_by_id[m.id] = kw_type
                 combined_with_scores.append((m, score))
             for mono, score in semantic_only:
                 if len(combined_with_scores) >= limit:
@@ -704,11 +727,8 @@ class SemanticSearch:
         # Famous-line boost: if the query looks like a quote (multi-word), put monologues whose
         # text contains the query at the very top AND boost their score. Track match_type so the
         # frontend can show "Exact quote" / "This is the one" only for the actual quote monologue(s).
-        query_lower = query.strip().lower()
-        query_stripped = _strip_punctuation(query)
         EXACT_QUOTE_MATCH_SCORE = 0.98  # Very high score for exact text matches
         FUZZY_QUOTE_MATCH_SCORE = 0.90  # High score for fuzzy matches (handles typos)
-        quote_match_type_by_id: Dict[int, str] = {}
         if len(query_lower.split()) >= 2:
             monologues_with_scores = list(top_results)
             exact_matches: list[tuple[Monologue, float]] = []
@@ -998,7 +1018,10 @@ class SemanticSearch:
             ).bindparams(pattern=f"%{normalized_for_punctuation}%")
         )
 
-        # Priority 2: Opening line matches query pattern
+        # Priority 2: Title match — when user searches by monologue title (e.g. "sadf"), put exact/contains match first
+        ordering_clauses.append(Monologue.title.ilike(f"%{normalized_query}%").desc())
+
+        # Priority 3: Opening line matches query pattern
         # Check if the normalized start of text contains most words from query
         # Uses word boundaries to avoid matching common word fragments
         query_words_for_match = [w for w in re.findall(r"\w+", normalized_for_punctuation.lower())]
@@ -1011,7 +1034,7 @@ class SemanticSearch:
             ])
             ordering_clauses.append(text(f"({word_boundary_clauses}) DESC"))
 
-        # Priority 3: Exact match with punctuation
+        # Priority 4: Exact match with punctuation (text, play title, character)
         ordering_clauses.extend([
             Monologue.text.ilike(f"%{normalized_query}%").desc(),
             Play.title.ilike(f'%{normalized_query}%').desc(),
