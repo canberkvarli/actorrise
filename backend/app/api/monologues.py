@@ -7,6 +7,8 @@ from datetime import datetime
 from typing import List, Optional, cast
 
 from app.api.auth import get_current_user, get_current_user_optional
+from app.api.public import record_demo_search
+from app.middleware.rate_limiting import record_total_search
 from app.services.email.resend_client import ResendEmailClient
 from app.core.config import settings
 from app.core.database import get_db
@@ -344,6 +346,9 @@ async def search_monologues(
         for m, score in results_with_scores
     ]
 
+    if monologue_responses:
+        record_total_search(current_user.id, db)
+
     return SearchResponse(
         results=monologue_responses,
         total=total,
@@ -420,6 +425,8 @@ async def search_demo(
         for m, score in all_results_with_scores
     ]
 
+    if results:
+        record_demo_search()
     return DemoSearchResponse(results=results)
 
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -11,13 +11,13 @@ const slides = [
     id: 0,
     eyebrow: "Welcome to Actorrise",
     headline: "The stage is yours.",
-    body: "Actorrise helps you find the perfect monologue for every audition — powered by AI, built for actors.",
+    body: "Actorrise helps you find the perfect monologue for every audition. Powered by AI, built for actors.",
   },
   {
     id: 1,
     eyebrow: "Your profile",
     headline: "Your profile is your casting director.",
-    body: "The more we know about you — your age range, experience, type — the sharper our recommendations. It takes two minutes.",
+    body: "The more we know about you (your age range, experience, type), the sharper our recommendations. It takes two minutes.",
   },
   {
     id: 2,
@@ -82,21 +82,42 @@ export function WelcomeFlow({ onDismiss }: WelcomeFlowProps) {
   const slide = slides[currentSlide];
   const isLast = currentSlide === slides.length - 1;
 
+  // Lock body scroll and prevent pull-to-refresh / swipe gestures while modal is open (mobile + web)
+  useEffect(() => {
+    const prevOverflow = document.body.style.overflow;
+    const prevTouchAction = document.body.style.touchAction;
+    const prevOverscrollBehavior = document.body.style.overscrollBehavior;
+    document.body.style.overflow = "hidden";
+    document.body.style.touchAction = "none";
+    document.body.style.overscrollBehavior = "none";
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.body.style.touchAction = prevTouchAction;
+      document.body.style.overscrollBehavior = prevOverscrollBehavior;
+    };
+  }, []);
+
+  // Prevent touch move from scrolling or triggering browser back (keep slides static)
+  const preventTouchMove = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+  }, []);
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
-      className="fixed inset-0 z-[10000] flex items-center justify-center"
+      className="fixed inset-0 z-[10000] flex items-center justify-center touch-none overflow-hidden"
+      style={{ touchAction: "none" }}
+      onTouchMove={preventTouchMove}
       role="dialog"
       aria-modal="true"
       aria-label="Welcome to Actorrise"
     >
-      {/* Backdrop */}
+      {/* Backdrop: no click/tap dismiss — only Skip / Continue / Complete / Start exploring close the flow */}
       <div
         className="absolute inset-0 bg-black/75 backdrop-blur-sm"
-        onClick={dismiss}
         aria-hidden="true"
       />
 

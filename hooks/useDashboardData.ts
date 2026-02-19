@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
+import type { FilmTvReference } from "@/types/filmTv";
 
 interface ProfileStats {
   completion_percentage: number;
@@ -79,6 +80,25 @@ export function useRecommendations(enabled: boolean = true, fast: boolean = true
     enabled, // Only fetch if profile is complete enough
     staleTime: 2 * 60 * 1000, // 2 minutes
     gcTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+  });
+}
+
+// Hook for discover Film & TV. Not profile-based: no query returns top by IMDb rating.
+// For profile-based film/TV recommendations we’d need a dedicated backend endpoint (e.g. by preferred genres).
+export function useDiscoverFilmTv(enabled: boolean = true) {
+  return useQuery<FilmTvReference[]>({
+    queryKey: ["discover-film-tv"],
+    queryFn: async () => {
+      const response = await api.get<{ results: FilmTvReference[]; total: number }>(
+        "/api/film-tv/search?limit=6",
+        { timeoutMs: DASHBOARD_REQUEST_TIMEOUT_MS }
+      );
+      return response.data.results;
+    },
+    enabled,
+    staleTime: 2 * 60 * 1000,
+    gcTime: 5 * 60 * 1000,
     retry: 1,
   });
 }

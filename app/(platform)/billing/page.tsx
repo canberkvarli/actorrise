@@ -29,15 +29,18 @@ import {
   IconArrowUpRight,
   IconRocket,
   IconCrown,
+  IconGift,
 } from "@tabler/icons-react";
 import api from "@/lib/api";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useSubscription, useUsageLimits, useBillingHistory } from "@/hooks/useSubscription";
+import { RequestPromoCodeModal } from "@/components/contact/RequestPromoCodeModal";
 
 export default function BillingPage() {
   const { user } = useAuth();
   const [isManagingSubscription, setIsManagingSubscription] = useState(false);
+  const [promoModalOpen, setPromoModalOpen] = useState(false);
 
   // Use SWR hooks for cached data - no more manual fetching!
   const { subscription, isLoading: subLoading, isError: subError } = useSubscription();
@@ -286,6 +289,35 @@ export default function BillingPage() {
           </Card>
         </motion.div>
       </div>
+
+      {/* Get a discount code */}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.25 }}
+        className="mb-8"
+      >
+        <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-5">
+          <p className="text-base font-semibold text-foreground mb-1">
+            Business or student? Get a code for 100% off.
+          </p>
+          <p className="text-sm text-muted-foreground mb-4">
+            Businesses: 3 months free. Students: 6 months free. We&apos;ll send you a code after you reach out.
+          </p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            className="gap-2"
+            onClick={() => setPromoModalOpen(true)}
+          >
+            <IconGift className="h-4 w-4" />
+            Get my code
+          </Button>
+        </div>
+      </motion.div>
+
+      <RequestPromoCodeModal open={promoModalOpen} onOpenChange={setPromoModalOpen} />
 
       {/* Billing History */}
       {billingHistory.length > 0 && (

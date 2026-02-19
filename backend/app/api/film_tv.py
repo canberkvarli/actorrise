@@ -5,6 +5,7 @@ from typing import List, Optional, cast
 
 from app.api.auth import get_current_user
 from app.core.database import get_db
+from app.middleware.rate_limiting import record_total_search
 from app.models.actor import FilmTvReference
 from app.models.user import User
 from app.services.ai.content_analyzer import ContentAnalyzer
@@ -244,12 +245,16 @@ async def search_film_tv_references(
                 best_assigned = True
             results.append(_to_result(ref, score=score, is_best_match=is_best))
 
+        if results:
+            record_total_search(current_user.id, db)
         return FilmTvSearchResponse(results=results, total=total, page=page, page_size=limit)
 
     # No query — filter-only, ordered by IMDb rating
     total = base.count()
     offset = (page - 1) * limit
     rows = base.order_by(FilmTvReference.imdb_rating.desc().nullslast()).offset(offset).limit(limit).all()
+    if rows:
+        record_total_search(current_user.id, db)
     return FilmTvSearchResponse(
         results=[_to_result(r) for r in rows],
         total=total,

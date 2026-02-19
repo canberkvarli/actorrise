@@ -224,6 +224,26 @@ async def create_checkout_session(
                     status_code=400,
                     detail="Promo code is not configured. Please contact support.",
                 )
+        elif promo in ("BUSINESS", "ACTINGTEACHER26"):
+            # 100% off for 3 months — teachers/coaches (Render: ACTINGTEACHER26=coupon_id)
+            business_coupon_id = os.getenv("STRIPE_BUSINESS_COUPON_ID") or os.getenv("ACTINGTEACHER26")
+            if business_coupon_id:
+                discounts = [{"coupon": business_coupon_id}]
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Promo code is not configured. Please contact support.",
+                )
+        elif promo in ("STUDENT", "STUDENTACTOR26"):
+            # 100% off for 6 months — students (Render: STUDENTACTOR26=coupon_id)
+            student_coupon_id = os.getenv("STRIPE_STUDENT_COUPON_ID") or os.getenv("STUDENTACTOR26")
+            if student_coupon_id:
+                discounts = [{"coupon": student_coupon_id}]
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Promo code is not configured. Please contact support.",
+                )
         else:
             raise HTTPException(status_code=400, detail=f"Invalid promo code: {request.promo_code}")
 

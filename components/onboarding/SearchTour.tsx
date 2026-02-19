@@ -16,7 +16,7 @@ const TOUR_STEPS: TourStep[] = [
   {
     targetId: "search-input",
     title: "Search in plain English.",
-    body: "Type anything — \"a Chekhov monologue for a woman in her 30s\" — and we'll understand.",
+    body: "Type anything (e.g. \"a Chekhov monologue for a woman in her 30s\") and we'll understand.",
     placement: "bottom",
   },
   {

@@ -1458,7 +1458,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 <Card className="border-dashed bg-muted/20">
                   <CardContent className="pt-12 pb-12 text-center max-w-md mx-auto">
                     <p className="text-muted-foreground text-sm leading-relaxed">
-                      Search by mood or scene—same as plays. Or browse all references.
+                      Search by mood or scene, same as plays. Or browse all references.
                     </p>
                     <Button
                       variant="secondary"
@@ -2042,7 +2042,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Try IMSDb first — if the script isn&apos;t there, use Search Google.
+                  Try IMSDb first. If the script isn&apos;t there, use Search Google.
                 </p>
               </div>
             </motion.div>

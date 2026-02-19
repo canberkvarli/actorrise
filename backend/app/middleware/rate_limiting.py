@@ -203,7 +203,7 @@ class FeatureGate:
                 },
             )
 
-        # Increment usage if requested
+        # Increment usage if requested (total_searches_count is incremented in endpoints only when there are results)
         if self.increment:
             self._increment_usage(user_id, usage_field, db)
 
@@ -243,6 +243,25 @@ class FeatureGate:
         setattr(usage, field, current_value + 1)
 
         db.commit()
+
+
+def record_total_search(user_id: int, db: Session) -> None:
+    """
+    Increment the total search count for today (for public "live count").
+    Call from any search endpoint (e.g. film/TV search) so monologue + film/TV + etc. all count.
+    """
+    today = date.today()
+    usage = (
+        db.query(UsageMetrics)
+        .filter(UsageMetrics.user_id == user_id, UsageMetrics.date == today)
+        .first()
+    )
+    if not usage:
+        usage = UsageMetrics(user_id=user_id, date=today)
+        db.add(usage)
+    current = getattr(usage, "total_searches_count", 0) or 0
+    setattr(usage, "total_searches_count", current + 1)
+    db.commit()
 
 
 # Convenience functions for common features

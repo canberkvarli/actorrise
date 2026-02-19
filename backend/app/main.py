@@ -12,6 +12,7 @@ from app.api.film_tv import router as film_tv_router
 from app.api.monologues import router as monologues_router
 from app.api.pricing import router as pricing_router
 from app.api.profile import router as profile_router
+from app.api.public import router as public_router
 from app.api.scenes import router as scenes_router
 from app.api.scripts import router as scripts_router
 from app.api.subscriptions import router as subscriptions_router
@@ -112,6 +113,7 @@ app.include_router(film_tv_router)
 app.include_router(scenes_router)
 app.include_router(scripts_router)
 app.include_router(audition_router)
+app.include_router(public_router)
 app.include_router(pricing_router)
 app.include_router(subscriptions_router)
 app.include_router(webhooks_router)

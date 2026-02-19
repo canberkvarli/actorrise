@@ -9,7 +9,9 @@ import { LandingValueProps } from "@/components/landing/LandingValueProps";
 import { LandingDemoSearch } from "@/components/landing/LandingDemoSearch";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions";
+import { LandingFaq } from "@/components/landing/LandingFaq";
 import { LandingFooterAuthLink } from "@/components/landing/LandingFooterAuthLink";
+import { LandingLiveCount } from "@/components/landing/LandingLiveCount";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 
 const easing = [0.25, 0.1, 0.25, 1] as const;
@@ -105,6 +107,9 @@ export function LandingPageAnimated() {
             <p className="mt-4 text-sm text-muted-foreground">
               Free tier · No credit card required
             </p>
+            <div className="mt-8 w-full">
+              <LandingLiveCount variant="inline" />
+            </div>
           </div>
         </motion.section>
 
@@ -120,20 +125,20 @@ export function LandingPageAnimated() {
               </p>
               <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4 sm:gap-8">
                 <p className="text-center sm:text-left text-sm md:text-base text-muted-foreground border-l-2 border-primary/30 pl-4 py-1">
-                  &ldquo;I had a shortlist in under a minute.&rdquo; — Actor, drama school audition
+                  &ldquo;I had a shortlist in under a minute.&rdquo; <span className="text-muted-foreground/80">Actor, drama school audition</span>
                 </p>
                 <p className="text-center sm:text-left text-sm md:text-base text-muted-foreground border-l-2 border-primary/30 pl-4 py-1">
-                  &ldquo;Found a scene for a film callback in seconds.&rdquo; — Actor, screen
+                  &ldquo;Found a scene for a film callback in seconds.&rdquo; <span className="text-muted-foreground/80">Actor, screen</span>
                 </p>
               </div>
-              <p className="mt-4 text-center">
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
                 <Link
                   href="#testimonials"
                   className="text-sm font-medium text-primary hover:underline"
                 >
                   See what actors are saying →
                 </Link>
-              </p>
+              </div>
             </div>
           </div>
         </motion.section>
@@ -197,6 +202,10 @@ export function LandingPageAnimated() {
         </motion.section>
 
         <motion.div variants={item}>
+          <LandingFaq />
+        </motion.div>
+
+        <motion.div variants={item}>
           <LandingPricing />
         </motion.div>
       </main>
@@ -204,11 +213,14 @@ export function LandingPageAnimated() {
       <motion.footer variants={item} className="border-t border-border/60">
         <div className="container mx-auto px-4 sm:px-6 py-10 flex flex-col gap-4">
           <p className="text-xs text-muted-foreground/90 max-w-xl">
-            Monologues from public domain and licensed sources (e.g.{" "}
+            All text from public domain and licensed sources (e.g.{" "}
             <Link href="/sources" className="underline hover:no-underline text-foreground/80">
               Project Gutenberg
             </Link>
-            ). We do not distribute copyrighted play text.
+            ); we don&apos;t distribute copyrighted play text.
+          </p>
+          <p className="text-xs text-muted-foreground/90 max-w-xl">
+            We don&apos;t sell your data. Your searches are private.
           </p>
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex flex-col gap-1">
@@ -216,6 +228,9 @@ export function LandingPageAnimated() {
               <p className="text-xs text-muted-foreground/80">Built by an actor, for actors.</p>
             </div>
             <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-4">
+              <Link href="/about" className="hover:text-foreground transition-colors">
+                About
+              </Link>
               <Link href="/privacy" className="hover:text-foreground transition-colors">
                 Privacy
               </Link>
@@ -236,6 +251,23 @@ export function LandingPageAnimated() {
               </ContactModalTrigger>
               <LandingFooterAuthLink />
             </div>
+          </div>
+          <div className="mt-6 pt-4 border-t border-border/40 flex flex-wrap items-center justify-center gap-4">
+            <a
+              href="https://www.producthunt.com/products/actorrise?utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-actorrise"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block opacity-80 hover:opacity-100 transition-opacity"
+              aria-label="ActorRise on Product Hunt"
+            >
+              <img
+                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1078076&theme=neutral&t=1771519524232"
+                alt="ActorRise on Product Hunt"
+                width={200}
+                height={43}
+                className="h-[43px] w-auto"
+              />
+            </a>
           </div>
         </div>
       </motion.footer>

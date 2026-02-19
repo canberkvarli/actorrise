@@ -125,7 +125,12 @@ const faqs = [
   {
     question: "Is there a student discount?",
     answer:
-      "The annual plans include a built-in discount (up to 31% off monthly pricing), which is great for students and working actors on a budget. I also try to keep a genuinely useful free plan available.",
+      "Yes. Students can get 6 months free (100% off). Reach out via the contact form, choose “Student discount (6 months free, request code)”, and I’ll send you a code. The annual plans also include a built-in discount (up to 31% off), and there’s a useful free plan.",
+  },
+  {
+    question: "Do you offer a business or studio discount?",
+    answer:
+      "Yes. Businesses, studios, and teams can get 3 months free (100% off). Reach out via the contact form, choose “Business discount (3 months free, request code)”, tell me a bit about your business, and I’ll send you a code.",
   },
   {
     question: "What payment methods do you accept?",
@@ -353,6 +358,15 @@ export default function PricingPage() {
           mainly go toward paying for those AI costs and hosting, and a small part pays me so I
           can keep building, improving, and keeping a generous free plan for actors and students
           who can&apos;t pay yet.
+        </motion.p>
+        <motion.p
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.18 }}
+          className="mt-2 text-sm text-muted-foreground max-w-2xl mx-auto"
+        >
+          Cancel anytime. Upgrade only if you need more. Founding member offer: 100% off for 12
+          months. Apply your code at checkout.
         </motion.p>
 
         {/* Annual/Monthly Toggle */}

@@ -789,7 +789,7 @@ export function ActorProfileForm() {
                   </div>
                   <Progress value={completionPercentage} className="h-2" />
                   <p className="text-xs text-muted-foreground">
-                    We save as you go — no button to click.
+                    We save as you go. No button to click.
                   </p>
                   {requiredChecklist.count > 0 && (
                     <>
@@ -989,7 +989,7 @@ export function ActorProfileForm() {
                       </div>
 
                       <Separator className="my-6" />
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Optional — improves recommendations</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Optional: improves recommendations</p>
                       <div className="space-y-2">
                         <Label htmlFor="ethnicity" className="font-mono">Ethnicity</Label>
                         <Select
@@ -1027,7 +1027,7 @@ export function ActorProfileForm() {
                                 <SelectValue placeholder="Ft" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="__none__">—</SelectItem>
+                                <SelectItem value="__none__">-</SelectItem>
                                 {HEIGHT_FEET.map((ft) => (
                                   <SelectItem key={ft} value={String(ft)}>{ft}'</SelectItem>
                                 ))}
@@ -1052,7 +1052,7 @@ export function ActorProfileForm() {
                                 <SelectValue placeholder="In" />
                               </SelectTrigger>
                               <SelectContent>
-                                <SelectItem value="__none__">—</SelectItem>
+                                <SelectItem value="__none__">-</SelectItem>
                                 {HEIGHT_INCHES.map((inVal) => (
                                   <SelectItem key={inVal} value={String(inVal)}>{inVal}"</SelectItem>
                                 ))}
@@ -1222,7 +1222,7 @@ export function ActorProfileForm() {
                       </div>
 
                       <Separator className="my-6" />
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Optional — improves recommendations</p>
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Optional: improves recommendations</p>
                       <div className="space-y-2">
                         <Label htmlFor="training_background" className="font-mono">Training background</Label>
                         <Select
