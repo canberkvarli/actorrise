@@ -198,12 +198,14 @@ export default function MySubmissionsPage() {
               Track and edit your submitted monologues
             </p>
           </div>
-          <Button asChild className="w-fit">
-            <Link href="/submit-monologue">
-              <IconSparkles className="h-4 w-4 mr-2" />
-              Submit New
-            </Link>
-          </Button>
+          {submissions.length > 0 && (
+            <Button asChild className="w-fit">
+              <Link href="/submit-monologue">
+                <IconSparkles className="h-4 w-4 mr-2" />
+                Submit New
+              </Link>
+            </Button>
+          )}
         </div>
       </motion.div>
 

@@ -18,6 +18,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { WelcomeFlow } from "@/components/onboarding/WelcomeFlow";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { PageTransition } from "@/components/transition/PageTransition";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -520,7 +521,7 @@ export default function PlatformLayout({
 
       {/* Main Content - extra padding on mobile so content scrolls above bottom nav */}
       <main className="pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
-        {children}
+        <PageTransition transitionKey={pathname}>{children}</PageTransition>
       </main>
 
       {/* Mobile Bottom Navigation - one-thumb access to primary actions */}
