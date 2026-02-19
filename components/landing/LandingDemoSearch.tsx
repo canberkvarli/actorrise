@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconSearch, IconLoader2, IconSparkles } from "@tabler/icons-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { API_URL } from "@/lib/api";
 import type { DemoSearchResultItem } from "./LandingDemoResultCard";
@@ -72,11 +72,12 @@ export function LandingDemoSearch() {
   const [rateLimitedWhileLoggedIn, setRateLimitedWhileLoggedIn] = useState(false);
   const [jitter, setJitter] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  /** True after we got a successful search response (used to show "No match" when results are empty). */
+  const [searchCompleted, setSearchCompleted] = useState(false);
 
   type AutoDemoPhase = "idle" | "typing" | "loading" | "results";
   const [autoDemoPhase, setAutoDemoPhase] = useState<AutoDemoPhase>("idle");
   const userHasInteracted = useRef(false);
-  const autoDemoResultsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isLoading) return;
@@ -127,13 +128,6 @@ export function LandingDemoSearch() {
     };
   }, []);
 
-  // Scroll results into view on mobile when they appear
-  useEffect(() => {
-    if (autoDemoPhase === "results" && autoDemoResultsRef.current) {
-      autoDemoResultsRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    }
-  }, [autoDemoPhase]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     userHasInteracted.current = true;
@@ -151,6 +145,7 @@ export function LandingDemoSearch() {
     }
     setError(null);
     setRateLimitedWhileLoggedIn(false);
+    setSearchCompleted(false);
     setIsLoading(true);
     // Don't clear results here — only set on success. Avoids bottom section collapsing when we get 429.
 
@@ -177,6 +172,7 @@ export function LandingDemoSearch() {
 
       const data = (await res.json()) as { results: DemoSearchResultItem[] };
       setResults(data.results ?? []);
+      setSearchCompleted(true);
     } catch {
       setError("Something went wrong. Sign up to try full search.");
     } finally {
@@ -184,8 +180,12 @@ export function LandingDemoSearch() {
     }
   };
 
-  const hasSearched = results.length > 0 || error !== null || rateLimited;
+  const hasSearched = results.length > 0 || error !== null || rateLimited || searchCompleted;
   const showResults = results.length > 0 && !isLoading;
+  const showNoMatch = searchCompleted && results.length === 0 && !error && !rateLimited && !isLoading;
+
+  const [isInputFocused, setIsInputFocused] = useState(false);
+  const showPlaceholder = !isInputFocused && !query.trim();
 
   return (
     <div className="space-y-6 w-full">
@@ -195,23 +195,40 @@ export function LandingDemoSearch() {
           onAnimationEnd={() => setJitter(false)}
         >
           <IconSearch className="h-5 w-5 text-muted-foreground shrink-0 ml-2" />
-          <Input
-            type="text"
-            placeholder="e.g. funny piece, 2 min..."
-            value={query}
-            onChange={(e) => {
-              userHasInteracted.current = true;
-              if (autoDemoPhase !== "idle") setAutoDemoPhase("idle");
-              setQuery(e.target.value);
-            }}
-            onFocus={() => {
-              userHasInteracted.current = true;
-              if (autoDemoPhase !== "idle") setAutoDemoPhase("idle");
-            }}
-            className="flex-1 min-w-0 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-12 text-base"
-            disabled={isLoading}
-            aria-label="Search monologues"
-          />
+          <div className="flex-1 min-w-0 relative">
+            <AnimatePresence mode="wait">
+              {showPlaceholder && (
+                <motion.span
+                  key="placeholder"
+                  initial={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
+                  className="absolute inset-0 flex items-center pl-4 text-base text-muted-foreground pointer-events-none"
+                  aria-hidden
+                >
+                  e.g. funny piece, 2 min...
+                </motion.span>
+              )}
+            </AnimatePresence>
+            <Input
+              type="text"
+              value={query}
+              onChange={(e) => {
+                userHasInteracted.current = true;
+                if (autoDemoPhase !== "idle") setAutoDemoPhase("idle");
+                setQuery(e.target.value);
+              }}
+              onFocus={() => {
+                userHasInteracted.current = true;
+                if (autoDemoPhase !== "idle") setAutoDemoPhase("idle");
+                setIsInputFocused(true);
+              }}
+              onBlur={() => setIsInputFocused(false)}
+              className="w-full border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-12 text-base relative z-[1]"
+              disabled={isLoading}
+              aria-label="Search monologues"
+            />
+          </div>
           <Button type="submit" size="lg" disabled={isLoading} className="h-10 px-6 rounded-lg shrink-0">
             {isLoading ? (
               <IconLoader2 className="h-4 w-4 animate-spin" />
@@ -287,6 +304,20 @@ export function LandingDemoSearch() {
         </Card>
       )}
 
+      {showNoMatch && (
+        <Card className="border-border bg-muted/30 max-w-xl mx-auto mt-12">
+          <CardContent className="pt-6 pb-6 text-center">
+            <p className="text-foreground font-medium">No match</p>
+            <p className="text-sm text-muted-foreground mt-1">
+              We didn&apos;t find any monologues for that search. Try different words or browse the full library.
+            </p>
+            <Button asChild size="lg" variant="outline" className="rounded-full mt-4">
+              <Link href="/signup">Search 8,600+ monologues</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {showResults && (
         <div className="w-screen relative left-1/2 -ml-[50vw] mt-12">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
@@ -314,7 +345,7 @@ export function LandingDemoSearch() {
       )}
 
       {autoDemoPhase === "results" && results.length === 0 && (
-        <div ref={autoDemoResultsRef} className="w-screen relative left-1/2 -ml-[50vw] mt-12">
+        <div className="w-screen relative left-1/2 -ml-[50vw] mt-12">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
             <p className="text-sm text-muted-foreground">
               Example results. Type your own search above.

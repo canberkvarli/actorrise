@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -23,6 +23,18 @@ type MonologueSearchResponse = {
   page_size: number;
 };
 
+type SearchFilters = {
+  age_range: string;
+  gender: string;
+  genre: string;
+  theme: string;
+  category: string;
+  emotion?: string;
+  difficulty?: string;
+  author?: string;
+  max_duration?: number;
+};
+
 const LOADING_MESSAGES = [
   "Clanking through the archives...",
   "Working our magic...",
@@ -38,7 +50,7 @@ export function SearchInterface() {
   const [profileBias, setProfileBias] = useState(true);
   const [query, setQuery] = useState("");
   // Shared filter state (manual filters + era/category)
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<SearchFilters>({
     age_range: "",
     gender: "",
     genre: "",
@@ -85,7 +97,7 @@ export function SearchInterface() {
     }
   }, []);
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     if (!query.trim() && !profileBias) return;
 
     setIsLoading(true);
@@ -93,22 +105,20 @@ export function SearchInterface() {
     setHasSearched(true);
     try {
       // Build effective filters, including era/category, in a single place
-      const baseFilters = {
-        ...(profileBias ? {} : filters),
-      };
+      const baseFilters: Partial<SearchFilters> = profileBias ? {} : filters;
 
-      // Era override for category (matches acting-world \"classical\" vs \"contemporary\")
+      // Era override for category (matches acting-world "classical" vs "contemporary")
       const effectiveCategory =
         era === "classical"
           ? "Classical"
           : era === "contemporary"
           ? "Contemporary"
-          : (baseFilters as any).category || "";
+          : baseFilters.category ?? "";
 
-      const effectiveFilters =
+      const effectiveFilters: Partial<SearchFilters> | undefined =
         effectiveCategory || !profileBias
           ? {
-              ...(baseFilters as any),
+              ...baseFilters,
               ...(effectiveCategory ? { category: effectiveCategory } : {}),
             }
           : undefined;
@@ -119,16 +129,17 @@ export function SearchInterface() {
         params.set("q", query);
       }
 
-      const effective = effectiveFilters || {};
-      if ((effective as any).gender) params.set("gender", (effective as any).gender);
-      if ((effective as any).age_range) params.set("age_range", (effective as any).age_range);
-      if ((effective as any).emotion) params.set("emotion", (effective as any).emotion);
-      if ((effective as any).theme) params.set("theme", (effective as any).theme);
-      if ((effective as any).difficulty) params.set("difficulty", (effective as any).difficulty);
-      if ((effective as any).category) params.set("category", (effective as any).category);
-      if ((effective as any).author) params.set("author", (effective as any).author);
-      if ((effective as any).max_duration)
-        params.set("max_duration", String((effective as any).max_duration));
+      const effective: Partial<SearchFilters> = effectiveFilters ?? {};
+      if (effective.gender) params.set("gender", effective.gender);
+      if (effective.age_range) params.set("age_range", effective.age_range);
+      if (effective.emotion) params.set("emotion", effective.emotion);
+      if (effective.theme) params.set("theme", effective.theme);
+      if (effective.difficulty) params.set("difficulty", effective.difficulty);
+      if (effective.category) params.set("category", effective.category);
+      if (effective.author) params.set("author", effective.author);
+      if (typeof effective.max_duration === "number") {
+        params.set("max_duration", String(effective.max_duration));
+      }
 
       params.set("limit", "20");
 
@@ -165,13 +176,15 @@ export function SearchInterface() {
       const historyCategory = effectiveCategory || "";
       addSearchToHistory({
         query: query || "",
-        filters: profileBias ? {} : {
-          gender: filters.gender,
-          age_range: filters.age_range,
-          emotion: "",
-          theme: filters.theme,
-          category: historyCategory,
-        },
+        filters: profileBias
+          ? {}
+          : {
+              gender: filters.gender,
+              age_range: filters.age_range,
+              emotion: "",
+              theme: filters.theme,
+              category: historyCategory,
+            },
         resultPreviews: response.data.results.slice(0, 3),
         resultCount: response.data.results.length,
       });
@@ -191,7 +204,7 @@ export function SearchInterface() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [query, profileBias, filters, era, searchHistory, PERSIST_KEY]);
 
   useEffect(() => {
     // Auto-search when filters change (if profile bias is off)
@@ -201,7 +214,7 @@ export function SearchInterface() {
       }, 500);
       return () => clearTimeout(timeoutId);
     }
-  }, [filters, profileBias]);
+  }, [filters, profileBias, hasSearched, handleSearch]);
 
   // Rotate loading messages
   useEffect(() => {
@@ -215,7 +228,7 @@ export function SearchInterface() {
     return () => clearInterval(interval);
   }, [isLoading]);
 
-  const activeFilters = Object.entries(filters).filter(([_, value]) => value !== "");
+  const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
   const hasActiveFilters = activeFilters.length > 0;
 
   const clearFilter = (key: string) => {
@@ -233,7 +246,7 @@ export function SearchInterface() {
     setEra("");
   };
 
-  const useHistoryItem = (item: string) => {
+  const applyHistoryItem = (item: string) => {
     setQuery(item);
     setTimeout(() => handleSearch(), 100);
   };
@@ -394,7 +407,7 @@ export function SearchInterface() {
                             animate={{ opacity: 1, scale: 1 }}
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            onClick={() => useHistoryItem(item)}
+                            onClick={() => applyHistoryItem(item)}
                             className="text-xs px-2 py-1 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
                           >
                             {item}

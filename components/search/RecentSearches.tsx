@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -25,11 +25,9 @@ interface RecentSearchesProps {
 
 export default function RecentSearches({ maxSearches = 3, compact = false }: RecentSearchesProps) {
   const router = useRouter();
-  const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
-
-  useEffect(() => {
-    loadHistory();
-  }, []);
+  const [history, setHistory] = useState<SearchHistoryEntry[]>(() =>
+    getSearchHistory().slice(0, maxSearches)
+  );
 
   const loadHistory = () => {
     const allHistory = getSearchHistory();
@@ -178,7 +176,7 @@ export default function RecentSearches({ maxSearches = 3, compact = false }: Rec
                   </div>
 
                   {/* Filter badges */}
-                  {Object.entries(entry.filters).some(([_, value]) => value) && (
+                  {Object.entries(entry.filters).some(([, value]) => value) && (
                     <div className="flex flex-wrap gap-1">
                       {Object.entries(entry.filters).map(
                         ([key, value]) =>

@@ -23,8 +23,8 @@ export function FilmTvInfoModal({ open, onOpenChange }: FilmTvInfoModalProps) {
         <div className="space-y-3 text-sm text-muted-foreground">
           <p>
             Search 14,000+ films and TV series to find the right piece for your audition.
-            Use natural language — <em>"dark psychological thriller"</em>, <em>"villain monologue"</em>,
-            or just a title like <em>"The Godfather"</em>.
+            Use natural language — <em>&ldquo;dark psychological thriller&rdquo;</em>, <em>&ldquo;villain monologue&rdquo;</em>,
+            or just a title like <em>&ldquo;The Godfather&rdquo;</em>.
           </p>
           <p>
             After you search, click a result to see details, then use the <strong>Script</strong> link

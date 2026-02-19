@@ -204,7 +204,7 @@ export function LandingPricing() {
           Simple pricing.
         </h2>
         <p className="mt-2 text-muted-foreground">
-          Free tier to explore. Upgrade when you&apos;re ready.
+          Free tier to explore. Upgrade when you&apos;re ready. Start free — no credit card required.
         </p>
         <div className="mt-12 grid md:grid-cols-3 gap-8">
           {tiers.map((tier) => {

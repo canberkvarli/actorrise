@@ -26,6 +26,11 @@ EMBEDDING_CACHE: OrderedDict[str, List[float]] = OrderedDict()
 QUERY_PARSE_CACHE: OrderedDict[str, Dict] = OrderedDict()
 SEARCH_RESULTS_CACHE: OrderedDict[str, List[Any]] = OrderedDict()
 
+# Minimum relevance (0–1) to show any results. Below this, the query is treated as no match
+# (e.g. unrelated language, gibberish) and we return empty instead of weak semantic hits.
+# Tuned so queries like "at hirsizi" (unrelated to corpus) return no results.
+MIN_RELEVANCE_TO_SHOW = 0.48
+
 
 def _canonicalize_query_for_cache(raw_query: str) -> str:
     """
@@ -758,6 +763,14 @@ class SemanticSearch:
                     len(exact_matches), EXACT_QUOTE_MATCH_SCORE,
                     len(fuzzy_matches), FUZZY_QUOTE_MATCH_SCORE
                 )
+
+        # No real match: if best score is below threshold (e.g. unrelated language / gibberish), return empty
+        if top_results:
+            best_score = max(s for _, s in top_results)
+            if best_score < MIN_RELEVANCE_TO_SHOW:
+                logger.debug("Best relevance %.3f below threshold %.2f; returning no results", best_score, MIN_RELEVANCE_TO_SHOW)
+                return ([], {})
+            top_results = [(m, s) for m, s in top_results if s >= MIN_RELEVANCE_TO_SHOW]
 
         # FALLBACK: If we don't have enough semantic results, supplement with text search
         # This ensures users get results even when embeddings aren't available
