@@ -2,6 +2,7 @@
 
 import { Monologue } from "@/types/actor";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { isMeaningfulMonologueTitle } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { IconExternalLink, IconSparkles } from "@tabler/icons-react";
@@ -34,7 +35,11 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <CardTitle className="text-xl mb-2">{monologue.title}</CardTitle>
+                <CardTitle className="text-xl mb-2">
+                {isMeaningfulMonologueTitle(monologue.title, monologue.character_name)
+                  ? monologue.title
+                  : monologue.character_name}
+              </CardTitle>
                 <CardDescription className="text-base">by {monologue.author}</CardDescription>
               </div>
               {monologue.relevance_score !== undefined && (

@@ -7,7 +7,7 @@ import { IconStar, IconExternalLink, IconPhoto } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import type { FilmTvReference } from "@/types/filmTv";
-import { getImsdbSearchUrl } from "@/lib/utils";
+import { getFilmTvScriptUrl } from "@/lib/utils";
 
 export interface FilmTvReferenceCardProps {
   ref_item: FilmTvReference;
@@ -83,7 +83,7 @@ export function FilmTvReferenceCard({
             {typeLabel && <span className="font-medium">{typeLabel}</span>}
             <span className="text-border">•</span>
             <a
-              href={getImsdbSearchUrl(ref_item.title)}
+              href={getFilmTvScriptUrl(ref_item)}
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
@@ -200,7 +200,7 @@ export function FilmTvReferenceCard({
             </div>
             <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
               <a
-                href={getImsdbSearchUrl(ref_item.title)}
+                href={getFilmTvScriptUrl(ref_item)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 px-2 py-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-xs font-medium"

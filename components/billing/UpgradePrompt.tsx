@@ -48,9 +48,9 @@ export function UpgradePrompt({
           annualPrice: "$199/year",
           benefits: [
             "Unlimited AI searches",
-            "ScenePartner AI sessions",
-            "CraftCoach feedback",
-            "Advanced analytics",
+            "10 ScenePartner AI sessions/month",
+            "Advanced analytics & insights",
+            "Collections & white-label export",
           ],
         };
       case "pro":

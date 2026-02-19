@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useCallback, useMemo, R
 import { useRouter } from "next/navigation";
 import { supabase } from "./supabase";
 import api from "./api";
+import { setStoredLastAuthMethod } from "./last-auth-method";
 
 interface User {
   id: number;
@@ -133,7 +134,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Sync with backend (don't set loading to prevent flickering)
       await syncUserWithBackend(false);
-      
+
+      setStoredLastAuthMethod("email");
+
       // Full page redirect so session cookies are sent on the next request (e.g. /search).
       // router.push() is client-only and can leave middleware without cookies on first nav.
       const redirectPath = redirectTo || "/dashboard";
@@ -169,6 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // If session exists, user is auto-confirmed (email confirmation disabled)
       if (data.session) {
         await syncUserWithBackend(false);
+        setStoredLastAuthMethod("email");
         // Send new users straight to dashboard; profile completion is optional via /profile
         router.push("/dashboard");
       } else {

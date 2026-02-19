@@ -48,6 +48,7 @@ const DEFAULT_TIERS: PricingTier[] = [
       recommendations: false,
       download_formats: ["txt"],
       priority_support: false,
+      scene_partner_sessions: 1,
     },
     sort_order: 0,
   },
@@ -64,6 +65,7 @@ const DEFAULT_TIERS: PricingTier[] = [
       recommendations: true,
       download_formats: ["txt", "pdf"],
       priority_support: true,
+      scene_partner_sessions: 1,
     },
     sort_order: 1,
   },
@@ -81,7 +83,6 @@ const DEFAULT_TIERS: PricingTier[] = [
       download_formats: ["txt", "pdf"],
       priority_support: true,
       scene_partner_sessions: 10,
-      craft_coach_sessions: 5,
       advanced_analytics: true,
       collections: true,
       collaboration: true,
@@ -114,11 +115,13 @@ function getFeaturesList(tier: PricingTier): string[] {
 
   features.push(`Download as ${tier.features.download_formats.join(", ").toUpperCase()}`);
 
-  if (tier.features.scene_partner_sessions) {
-    features.push(`${tier.features.scene_partner_sessions} ScenePartner AI sessions/month`);
-  }
-  if (tier.features.craft_coach_sessions) {
-    features.push(`${tier.features.craft_coach_sessions} CraftCoach feedback sessions/month`);
+  const sp = tier.features.scene_partner_sessions;
+  if (sp) {
+    if (sp === 1) {
+      features.push("1 ScenePartner AI session (one-time)");
+    } else {
+      features.push(`${sp} ScenePartner AI sessions/month`);
+    }
   }
   if (tier.features.advanced_analytics) {
     features.push("Advanced analytics & insights");

@@ -1,6 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 
+from app.api.admin.film_tv import router as admin_film_tv_router
 from app.api.admin.moderation import router as moderation_router
 from app.api.admin.monologues import router as admin_monologues_router
 from app.api.admin.stats import router as admin_stats_router
@@ -119,6 +120,7 @@ app.include_router(subscriptions_router)
 app.include_router(webhooks_router)
 app.include_router(moderation_router)
 app.include_router(admin_monologues_router)
+app.include_router(admin_film_tv_router)
 app.include_router(admin_stats_router)
 
 

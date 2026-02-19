@@ -3,9 +3,11 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { IconBookmark } from "@tabler/icons-react";
+import { Button } from "@/components/ui/button";
+import { IconBookmark, IconEdit } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { Monologue } from "@/types/actor";
+import { isMeaningfulMonologueTitle } from "@/lib/utils";
 
 function getScoreBadgeClass(score: number, isBestMatch: boolean) {
   /* Solid, high-contrast badges so match labels are clearly readable */
@@ -29,6 +31,9 @@ export interface MonologueResultCardProps {
   variant?: "default" | "bestMatch";
   index?: number;
   showMatchBadge?: boolean;
+  /** When true and onEdit is provided, show an Edit button (moderator only). */
+  isModerator?: boolean;
+  onEdit?: (id: number) => void;
 }
 
 export function MonologueResultCard({
@@ -38,6 +43,8 @@ export function MonologueResultCard({
   variant = "default",
   index = 0,
   showMatchBadge = true,
+  isModerator = false,
+  onEdit,
 }: MonologueResultCardProps) {
   const isBestMatch = variant === "bestMatch";
   const [justBookmarked, setJustBookmarked] = useState(false);
@@ -98,16 +105,34 @@ export function MonologueResultCard({
                     </span>
                   )}
                 </div>
+                {isMeaningfulMonologueTitle(mono.title, mono.character_name) && (
+                  <p className="text-sm font-medium text-foreground/90 line-clamp-1">{mono.title}</p>
+                )}
                 <p className="text-sm text-muted-foreground line-clamp-1">{mono.play_title}</p>
                 <p className="text-xs text-muted-foreground">by {mono.author}</p>
               </div>
-              <motion.button
-                type="button"
-                onClick={(e) => {
-                  onToggleFavorite(e, mono);
-                  setJustBookmarked(true);
-                  setTimeout(() => setJustBookmarked(false), 400);
-                }}
+              <div className="flex items-center gap-1">
+                {isModerator && onEdit && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 shrink-0 text-muted-foreground hover:text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(mono.id);
+                    }}
+                    aria-label="Edit monologue"
+                  >
+                    <IconEdit className="h-4 w-4" />
+                  </Button>
+                )}
+                <motion.button
+                  type="button"
+                  onClick={(e) => {
+                    onToggleFavorite(e, mono);
+                    setJustBookmarked(true);
+                    setTimeout(() => setJustBookmarked(false), 400);
+                  }}
                 animate={justBookmarked ? { scale: [1, 1.3, 1] } : { scale: 1 }}
                 transition={{ duration: 0.3 }}
                 className={`min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-lg transition-colors cursor-pointer ${
@@ -116,9 +141,10 @@ export function MonologueResultCard({
                     : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground"
                 }`}
                 aria-label={mono.is_favorited ? "Remove bookmark" : "Add bookmark"}
-              >
-                <IconBookmark className={`h-5 w-5 ${mono.is_favorited ? "fill-current" : ""}`} />
-              </motion.button>
+                >
+                  <IconBookmark className={`h-5 w-5 ${mono.is_favorited ? "fill-current" : ""}`} />
+                </motion.button>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2">

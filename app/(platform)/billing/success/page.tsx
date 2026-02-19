@@ -117,7 +117,7 @@ export default function SuccessPage() {
                   <IconCheck className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
                   <span>Download monologues in PDF and TXT formats</span>
                 </li>
-                {subscription?.tier_name === "elite" && (
+                {(subscription?.tier_name === "elite" || subscription?.tier_name === "unlimited") && (
                   <>
                     <li className="flex items-start gap-2">
                       <IconCheck className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
@@ -126,7 +126,7 @@ export default function SuccessPage() {
                     <li className="flex items-start gap-2">
                       <IconCheck className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
                       <span>
-                        Get early access to ScenePartner and CraftCoach AI (coming soon!)
+                        Get early access to ScenePartner AI (coming soon!)
                       </span>
                     </li>
                   </>

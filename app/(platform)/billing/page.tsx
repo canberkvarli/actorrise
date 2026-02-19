@@ -249,22 +249,6 @@ export default function BillingPage() {
                 </div>
               )}
 
-              {/* CraftCoach (if applicable) */}
-              {usage && usage.craft_coach_limit > 0 && (
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">CraftCoach Sessions</span>
-                    <span className="text-sm text-muted-foreground">
-                      {usage.craft_coach_used} / {usage.craft_coach_limit}
-                    </span>
-                  </div>
-                  <Progress
-                    value={getUsagePercentage(usage.craft_coach_used, usage.craft_coach_limit)}
-                    className="h-2"
-                  />
-                </div>
-              )}
-
               {/* Upgrade prompt if usage is high */}
               {usage &&
                 usage.ai_searches_limit !== -1 &&

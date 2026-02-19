@@ -30,8 +30,7 @@ class PricingTier(Base):
         "ai_searches_per_month": 150,  # -1 = unlimited
         "bookmarks_limit": -1,  # -1 = unlimited
         "recommendations": true,
-        "scene_partner_sessions": 10,
-        "craft_coach_sessions": 5,
+        "scene_partner_sessions": 10,  # 1 = one-time for Free/Plus; 10 = per month for Unlimited
         "download_formats": ["txt", "pdf"],
         "priority_support": true,
         "advanced_analytics": false

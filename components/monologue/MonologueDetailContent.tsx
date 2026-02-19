@@ -5,19 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { IconSparkles, IconExternalLink, IconInfoCircle, IconBookmark } from "@tabler/icons-react";
+import { IconSparkles, IconExternalLink, IconInfoCircle, IconBookmark, IconEdit } from "@tabler/icons-react";
 import { Monologue } from "@/types/actor";
+import { isMeaningfulMonologueTitle } from "@/lib/utils";
 import { MonologueText } from "@/components/monologue/MonologueText";
 
 export interface MonologueDetailContentProps {
   monologue: Monologue;
   /** Optional actions to render in the header row (e.g. favorite button on full page) */
   headerActions?: React.ReactNode;
+  /** When provided (e.g. for moderators), show an Edit button inside the detail content */
+  onEdit?: (monologueId: number) => void;
 }
 
 export function MonologueDetailContent({
   monologue,
   headerActions,
+  onEdit,
 }: MonologueDetailContentProps) {
   const duration = Math.floor(monologue.estimated_duration_seconds / 60);
   const seconds = monologue.estimated_duration_seconds % 60;
@@ -29,7 +33,10 @@ export function MonologueDetailContent({
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold font-typewriter">{monologue.character_name}</h1>
-            <p className="text-lg text-muted-foreground font-typewriter">
+            {isMeaningfulMonologueTitle(monologue.title, monologue.character_name) && (
+              <p className="text-lg text-foreground/90 font-typewriter mt-0.5">{monologue.title}</p>
+            )}
+            <p className="text-lg text-muted-foreground font-typewriter mt-1">
               From <span className="font-semibold">{monologue.play_title}</span> by {monologue.author}
             </p>
           </div>
@@ -51,7 +58,21 @@ export function MonologueDetailContent({
 
       {/* Details */}
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-foreground">Details</h3>
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="text-sm font-semibold text-foreground">Details</h3>
+          {onEdit && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 shrink-0"
+              onClick={() => onEdit(monologue.id)}
+              aria-label="Edit monologue"
+            >
+              <IconEdit className="h-4 w-4" />
+              Edit monologue
+            </Button>
+          )}
+        </div>
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2 items-center">
             <span className="text-xs text-muted-foreground mr-1">Character:</span>
