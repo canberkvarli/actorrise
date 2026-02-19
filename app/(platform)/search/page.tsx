@@ -1861,12 +1861,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </div>
               <div className="p-6 space-y-6">
                 {/* Poster + title */}
-                <div className="flex flex-col gap-4">
+                <div className="flex items-start gap-4">
                   {selectedFilmTvRef.poster_url && (
                     <img
                       src={selectedFilmTvRef.poster_url}
                       alt={selectedFilmTvRef.title}
-                      className="w-full max-w-[280px] self-center rounded-lg object-cover shadow-md"
+                      className="w-28 rounded-md object-cover shadow-sm shrink-0"
                     />
                   )}
                   <div className="flex-1 min-w-0">
