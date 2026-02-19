@@ -8,6 +8,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { MarketingFooter } from "@/components/contact/MarketingFooter";
 import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions";
+import { PageTransitionWithKey } from "@/components/transition/PageTransition";
 
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -52,7 +53,9 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
       </header>
 
       {/* Main Content */}
-      <main className="flex-1">{children}</main>
+      <main className="flex-1">
+        <PageTransitionWithKey>{children}</PageTransitionWithKey>
+      </main>
 
       {/* Footer */}
       <MarketingFooter />

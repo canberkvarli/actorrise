@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * Value props (Speed, Odds, Scale). Editorial strip with light structure.
  */
