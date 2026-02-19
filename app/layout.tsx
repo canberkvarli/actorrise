@@ -153,6 +153,12 @@ export default function RootLayout({
       <body
         className={`${montserrat.variable} ${jetbrainsMono.variable} ${cormorantGaramond.variable} ${playfairDisplay.variable} font-sans antialiased`}
       >
+        {/* Persist OAuth "last used" from URL before React so login page shows correct badge after logout */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var s=window.location.search;if(!s)return;var p=new URLSearchParams(s).get("provider");if(p==="google"||p==="apple"){try{localStorage.setItem("actorrise_last_auth_method",p);var q=new URLSearchParams(s);q.delete("provider");var n=q.toString();var path=window.location.pathname+(n?"?"+n:"");if(window.history.replaceState)window.history.replaceState({},"",path);}catch(e){}})();`,
+          }}
+        />
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

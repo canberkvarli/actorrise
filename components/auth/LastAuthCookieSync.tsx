@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useSearchParams } from "next/navigation";
 import { setStoredLastAuthMethod, type LastAuthMethod } from "@/lib/last-auth-method";
 
 const COOKIE_NAME = "actorrise_last_auth_method";
@@ -16,22 +15,29 @@ function readAndClearLastAuthCookie(): LastAuthMethod | null {
   return value as LastAuthMethod;
 }
 
+function getProviderFromUrl(): LastAuthMethod | null {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  const p = params.get("provider");
+  return p === "google" || p === "apple" ? (p as LastAuthMethod) : null;
+}
+
 /**
  * Runs in root layout so it runs on every page (including /dashboard after OAuth).
  * Persists "last used" from (1) URL ?provider= or (2) cookie so the badge shows
- * for Google/Apple on the sign-in page after logout.
+ * for Google/Apple on the sign-in page after logout. Uses window.location so we
+ * don't depend on useSearchParams() in the root layout.
  */
 export function LastAuthCookieSync() {
-  const searchParams = useSearchParams();
   const done = useRef(false);
 
   useEffect(() => {
     if (done.current) return;
 
-    // 1) Prefer URL param (reliable after OAuth redirect to /dashboard?provider=google)
-    const urlProvider = searchParams.get("provider");
-    if (urlProvider === "google" || urlProvider === "apple") {
-      setStoredLastAuthMethod(urlProvider as LastAuthMethod);
+    // 1) URL param (after OAuth redirect to /dashboard?provider=google)
+    const urlProvider = getProviderFromUrl();
+    if (urlProvider) {
+      setStoredLastAuthMethod(urlProvider);
       done.current = true;
       try {
         const url = new URL(window.location.href);
@@ -43,13 +49,13 @@ export function LastAuthCookieSync() {
       return;
     }
 
-    // 2) Fallback: cookie (in case URL was stripped)
+    // 2) Fallback: cookie
     const cookieMethod = readAndClearLastAuthCookie();
     if (cookieMethod) {
       setStoredLastAuthMethod(cookieMethod);
       done.current = true;
     }
-  }, [searchParams]);
+  }, []);
 
   return null;
 }
