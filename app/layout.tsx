@@ -153,10 +153,10 @@ export default function RootLayout({
       <body
         className={`${montserrat.variable} ${jetbrainsMono.variable} ${cormorantGaramond.variable} ${playfairDisplay.variable} font-sans antialiased`}
       >
-        {/* Persist OAuth "last used" from URL before React so login page shows correct badge after logout */}
+        {/* Persist OAuth "last used" before React: from sessionStorage (set when user clicked Google/Apple) or URL */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var s=window.location.search;if(!s)return;var p=new URLSearchParams(s).get("provider");if(p==="google"||p==="apple"){try{localStorage.setItem("actorrise_last_auth_method",p);var q=new URLSearchParams(s);q.delete("provider");var n=q.toString();var path=window.location.pathname+(n?"?"+n:"");if(window.history.replaceState)window.history.replaceState({},"",path);}catch(e){}})();`,
+            __html: `(function(){var p=null;try{var pending=sessionStorage.getItem("actorrise_pending_oauth_provider");if(pending==="google"||pending==="apple"){p=pending;sessionStorage.removeItem("actorrise_pending_oauth_provider");}}catch(e){}if(!p&&window.location.search){var q=new URLSearchParams(window.location.search).get("provider");if(q==="google"||q==="apple")p=q;}if(p){try{localStorage.setItem("actorrise_last_auth_method",p);if(window.location.search){var u=new URLSearchParams(window.location.search);u.delete("provider");var path=window.location.pathname+(u.toString()?"?"+u.toString():"");if(window.history.replaceState)window.history.replaceState({},"",path);}}catch(e){}}})();`,
           }}
         />
         <script

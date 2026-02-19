@@ -4,6 +4,8 @@
  */
 
 export const LAST_AUTH_METHOD_KEY = "actorrise_last_auth_method";
+/** Set before OAuth redirect so we can persist "last used" when user lands back (survives same-tab redirect). */
+export const PENDING_OAUTH_PROVIDER_KEY = "actorrise_pending_oauth_provider";
 
 export type LastAuthMethod = "google" | "apple" | "twitter" | "email";
 

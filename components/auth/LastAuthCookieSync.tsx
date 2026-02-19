@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { setStoredLastAuthMethod, type LastAuthMethod } from "@/lib/last-auth-method";
+import {
+  setStoredLastAuthMethod,
+  PENDING_OAUTH_PROVIDER_KEY,
+  type LastAuthMethod,
+} from "@/lib/last-auth-method";
 
 const COOKIE_NAME = "actorrise_last_auth_method";
 const VALID_OAUTH: LastAuthMethod[] = ["google", "apple"];
@@ -22,11 +26,21 @@ function getProviderFromUrl(): LastAuthMethod | null {
   return p === "google" || p === "apple" ? (p as LastAuthMethod) : null;
 }
 
+function readAndClearPendingProvider(): LastAuthMethod | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const p = window.sessionStorage.getItem(PENDING_OAUTH_PROVIDER_KEY);
+    if (p !== "google" && p !== "apple") return null;
+    window.sessionStorage.removeItem(PENDING_OAUTH_PROVIDER_KEY);
+    return p as LastAuthMethod;
+  } catch {
+    return null;
+  }
+}
+
 /**
- * Runs in root layout so it runs on every page (including /dashboard after OAuth).
- * Persists "last used" from (1) URL ?provider= or (2) cookie so the badge shows
- * for Google/Apple on the sign-in page after logout. Uses window.location so we
- * don't depend on useSearchParams() in the root layout.
+ * Fallback: persist "last used" from sessionStorage (set when user clicked OAuth), URL, or cookie.
+ * Inline script in root layout runs first; this handles any case the script missed.
  */
 export function LastAuthCookieSync() {
   const done = useRef(false);
@@ -34,7 +48,15 @@ export function LastAuthCookieSync() {
   useEffect(() => {
     if (done.current) return;
 
-    // 1) URL param (after OAuth redirect to /dashboard?provider=google)
+    // 1) sessionStorage (set when user clicked "Continue with Google/Apple")
+    const pending = readAndClearPendingProvider();
+    if (pending) {
+      setStoredLastAuthMethod(pending);
+      done.current = true;
+      return;
+    }
+
+    // 2) URL param
     const urlProvider = getProviderFromUrl();
     if (urlProvider) {
       setStoredLastAuthMethod(urlProvider);
@@ -49,7 +71,7 @@ export function LastAuthCookieSync() {
       return;
     }
 
-    // 2) Fallback: cookie
+    // 3) Cookie
     const cookieMethod = readAndClearLastAuthCookie();
     if (cookieMethod) {
       setStoredLastAuthMethod(cookieMethod);

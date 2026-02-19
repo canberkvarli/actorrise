@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { IconLoader2 } from "@tabler/icons-react";
 import { createBrowserClient } from "@supabase/ssr";
 import { motion, AnimatePresence } from "framer-motion";
-import { getStoredLastAuthMethod, type LastAuthMethod } from "@/lib/last-auth-method";
+import { getStoredLastAuthMethod, PENDING_OAUTH_PROVIDER_KEY, type LastAuthMethod } from "@/lib/last-auth-method";
 
 type OAuthProvider = "google" | "apple" | "twitter";
 
@@ -100,8 +100,14 @@ export function OAuthButtons({
 
   const handleOAuthSignIn = async (provider: OAuthProvider) => {
     setLoadingProvider(provider);
-    // "Last used" is set only after successful OAuth (in auth callback → LastAuthProviderSync)
-
+    // Store provider so when user lands back after OAuth we can persist "last used" (callback URL params may not be preserved)
+    try {
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem(PENDING_OAUTH_PROVIDER_KEY, provider);
+      }
+    } catch {
+      // ignore
+    }
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
