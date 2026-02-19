@@ -262,35 +262,16 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
   const greetingName = profile?.name?.trim().split(/\s+/)[0] || null;
   const showWelcomeSkeleton = isLoadingProfile;
-  // Only show full-page loader when we have no cached data (initial load); otherwise show content immediately
-  const showFullPageLoader =
-    (isLoadingStats && stats === undefined) || (isLoadingProfile && profile === undefined);
+  const showStatsSkeleton = isLoadingStats && stats === undefined;
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-6 md:py-8 max-w-7xl">
-      {/* Full dashboard loading state only on true initial load (no cached profile/stats) */}
-      {showFullPageLoader && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex flex-col items-center justify-center py-24 gap-6"
-        >
-          <div className="relative">
-            <div className="h-12 w-12 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-            <IconSparkles className="h-6 w-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-          </div>
-          <p className="text-muted-foreground font-medium">Loading your dashboard...</p>
-          <p className="text-sm text-muted-foreground/80">Fetching your profile and stats</p>
-        </motion.div>
-      )}
-
-      {!showFullPageLoader && (
-        <div className="space-y-12">
+      <div className="space-y-12">
           {/* ========== SECTION 1: Hero Welcome + optional Complete profile ========== */}
           <motion.section
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4"
+            className="flex flex-col gap-4"
           >
             {showWelcomeSkeleton ? (
               <div className="space-y-3">
@@ -307,14 +288,17 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 </h1>
               </div>
             )}
-            {!showWelcomeSkeleton && stats && stats.completion_percentage < 100 && (
+            {showStatsSkeleton && (
+              <Skeleton className="h-12 w-64 rounded-lg" />
+            )}
+            {!showWelcomeSkeleton && !showStatsSkeleton && stats && stats.completion_percentage < 100 && (
               <Link
                 href="/profile"
-                className="shrink-0 inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg border border-amber-500/30 bg-amber-500/10 dark:bg-amber-400/10 dark:border-amber-400/25 hover:bg-amber-500/15 dark:hover:bg-amber-400/15 transition-colors text-left max-w-[280px] sm:max-w-none"
+                className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg border border-amber-500/30 bg-amber-500/10 dark:bg-amber-400/10 dark:border-amber-400/25 hover:bg-amber-500/15 dark:hover:bg-amber-400/15 transition-colors text-left w-fit max-w-[280px] sm:max-w-none"
               >
                 <IconUserCheck className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
                 <span className="text-sm font-medium text-foreground">Complete your profile</span>
-                <span className="text-xs text-muted-foreground hidden sm:inline">({stats.completion_percentage}%)</span>
+                <span className="text-xs text-muted-foreground">({stats.completion_percentage}%)</span>
                 <IconArrowRight className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
               </Link>
             )}
@@ -499,8 +483,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </ContactModalTrigger>
             </div>
           </motion.section>
-        </div>
-      )}
+      </div>
 
       {/* Slide-over Detail Panel */}
       <AnimatePresence>

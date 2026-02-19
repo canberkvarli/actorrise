@@ -13,23 +13,29 @@ interface User {
   has_seen_welcome?: boolean;
   has_seen_search_tour?: boolean;
   has_seen_profile_tour?: boolean;
+  is_moderator?: boolean;
+  can_approve_submissions?: boolean;
 }
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  isLoggingOut: boolean;
   login: (email: string, password: string, redirectTo?: string) => Promise<void>;
   signup: (email: string, password: string, name?: string, marketingOptIn?: boolean) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const LOGOUT_TRANSITION_MS = 420;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -178,45 +184,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [syncUserWithBackend, router]);
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
 
-    // Clear search-related session storage on logout
-    // Keep storage for page navigation, but clear on explicit logout
+    // Clear search-related session storage
     try {
       const keysToRemove: string[] = [];
       for (let i = 0; i < sessionStorage.length; i++) {
         const key = sessionStorage.key(i);
-        if (key && (key.startsWith('search_results_') || key.startsWith('monologue_search_'))) {
+        if (key && (key.startsWith('search_results_') || key.startsWith('monologue_search_') || key.startsWith('film_tv_') || key === 'search_last_mode_v1')) {
           keysToRemove.push(key);
         }
       }
       keysToRemove.forEach(key => sessionStorage.removeItem(key));
     } catch (e) {
-      // Session storage might be unavailable
       console.error('Failed to clear session storage:', e);
     }
 
-    // Use window.location to force full page navigation and bypass platform layout redirect
-    window.location.href = "/";
-  }, []);
+    await supabase.auth.signOut();
+    setUser(null);
+
+    // Brief delay so UI can play fade-out animation before redirect
+    await new Promise((r) => setTimeout(r, LOGOUT_TRANSITION_MS));
+    window.location.href = "/auth/signout?redirect=/";
+  }, [isLoggingOut]);
 
   const refreshUser = useCallback(async () => {
     await syncUserWithBackend(false);
   }, [syncUserWithBackend]);
 
-  // Memoize context value to prevent unnecessary re-renders
   const contextValue = useMemo<AuthContextType>(
     () => ({
       user,
       loading,
+      isLoggingOut,
       login,
       signup,
       logout,
       refreshUser,
       isAuthenticated: !!user,
     }),
-    [user, loading, login, signup, logout, refreshUser]
+    [user, loading, isLoggingOut, login, signup, logout, refreshUser]
   );
 
   return (

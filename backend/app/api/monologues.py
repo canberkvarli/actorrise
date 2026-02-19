@@ -926,6 +926,13 @@ class SubmissionStatusResponse(BaseModel):
     # Monologue link (if approved)
     monologue_id: Optional[int]
 
+    # Full content for display and edit (when status is pending/ai_review/manual_review)
+    character_name: Optional[str] = None
+    play_title: Optional[str] = None
+    author: Optional[str] = None
+    text: Optional[str] = None
+    notes: Optional[str] = None
+
     class Config:
         from_attributes = True
 
@@ -1117,9 +1124,76 @@ async def get_my_submissions(
             "rejection_reason": sub.rejection_reason,
             "rejection_details": sub.rejection_details,
             "monologue_id": sub.monologue_id,
+            "character_name": sub.submitted_character,
+            "play_title": sub.submitted_play_title,
+            "author": sub.submitted_author,
+            "text": sub.submitted_text,
+            "notes": sub.user_notes,
         }
 
     return [_row(sub) for sub in submissions]
+
+
+USER_EDITABLE_STATUSES = ("pending", "ai_review", "manual_review")
+
+
+@router.patch("/my-submissions/{submission_id}")
+async def update_my_submission(
+    submission_id: int,
+    body: MonologueSubmissionRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    Update your own submission. Only allowed when status is pending, ai_review, or manual_review.
+    """
+    from app.models.moderation import MonologueSubmission
+
+    # Lock row so it can't be approved concurrently while editing.
+    sub = (
+        db.query(MonologueSubmission)
+        .filter(
+            MonologueSubmission.id == submission_id,
+            MonologueSubmission.user_id == current_user.id,
+        )
+        .with_for_update()
+        .first()
+    )
+    if not sub:
+        raise HTTPException(status_code=404, detail="Submission not found")
+
+    if sub.status not in USER_EDITABLE_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot edit submission with status '{sub.status}'.",
+        )
+
+    sub.submitted_title = body.title
+    sub.submitted_text = body.text
+    sub.submitted_character = body.character_name
+    sub.submitted_play_title = body.play_title
+    sub.submitted_author = body.author
+    sub.user_notes = body.notes
+
+    db.commit()
+    db.refresh(sub)
+
+    processed = getattr(sub, "processed_at", None)
+    return {
+        "id": sub.id,
+        "title": sub.submitted_title,
+        "status": sub.status,
+        "submitted_at": sub.submitted_at.isoformat(),
+        "processed_at": processed.isoformat() if processed is not None else None,
+        "rejection_reason": sub.rejection_reason,
+        "rejection_details": sub.rejection_details,
+        "monologue_id": sub.monologue_id,
+        "character_name": sub.submitted_character,
+        "play_title": sub.submitted_play_title,
+        "author": sub.submitted_author,
+        "text": sub.submitted_text,
+        "notes": sub.user_notes,
+    }
 
 
 # ---------------------------------------------------------------------------

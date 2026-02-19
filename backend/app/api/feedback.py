@@ -16,7 +16,7 @@ from app.models.user import User
 router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 security_optional = HTTPBearer(auto_error=False)
 
-ALLOWED_CONTEXTS = {"search"}
+ALLOWED_CONTEXTS = {"search", "film_tv_search"}
 ALLOWED_RATINGS = {"positive", "negative"}
 
 

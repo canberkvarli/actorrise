@@ -215,6 +215,15 @@ async def create_checkout_session(
                     status_code=400,
                     detail="Promo code FOUNDER is not configured. Please contact support.",
                 )
+        elif promo in ("STARTUPS", "STARTUPS24"):
+            startups_coupon_id = os.getenv("STRIPE_STARTUPS_COUPON_ID")
+            if startups_coupon_id:
+                discounts = [{"coupon": startups_coupon_id}]
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Promo code is not configured. Please contact support.",
+                )
         else:
             raise HTTPException(status_code=400, detail=f"Invalid promo code: {request.promo_code}")
 

@@ -41,6 +41,16 @@ export default function SourcesPage() {
             Creative Commons) with attribution and source links.
           </span>
         </li>
+        <li className="flex gap-2">
+          <span className="text-primary">·</span>
+          <span>
+            <strong className="text-foreground">Film &amp; TV reference</strong>: We offer
+            metadata-only reference entries (character, source title, thematic descriptions, and
+            links to scripts and clips). We do not host any film or television script text; links
+            point to third-party sites (e.g. IMSDB) for your convenience. ActorRise is not
+            responsible for third-party content.
+          </span>
+        </li>
       </ul>
 
       <h2 className="text-xl font-semibold text-foreground mt-8 mb-3">What we don’t do</h2>

@@ -1,21 +1,24 @@
 # ActorRise Platform
 
-A modern acting platform built with Next.js and FastAPI. Currently featuring authentication and profile management, with AI-powered features coming soon.
+A modern acting platform built with Next.js and FastAPI — the world's largest AI-powered monologue discovery for **theater and film/TV**. Find the right audition material in under 20 seconds.
 
 ## 🎭 Current Features
 
+- **AI Monologue Search**: Semantic search that understands what you're looking for
+  - **Theater**: 8,600+ monologues from 172 plays (4–8x larger than competitors). Full script text, filters (gender, age, duration, emotion, overdone), and profile-biased results
+  - **Film/TV**: Search film and TV scene references by character, emotion, tone, difficulty. After search, click a result — then use the **Script** link to open the scene (e.g. IMSDB) and **Watch** for YouTube when available. Same search bar — switch between Plays and Film/TV
 - **Authentication**: Secure Supabase authentication with JWT token verification
 - **Actor Profiles**: Comprehensive profile system for actors
   - Basic info (name, age range, gender, ethnicity, height, build, location)
   - Acting info (experience level, type, training background, union status)
   - Preferences (preferred genres, profile bias settings)
   - Headshot upload with image processing
-- **Dashboard**: User dashboard with profile completion tracking
+- **Dashboard**: User dashboard with profile completion tracking and quick actions
+- **My Submissions**: Track and manage your monologue submissions
 - **Modern UI**: Beautiful design with shadcn/ui components and dark theme
 
 ## 🚀 Coming Soon
 
-- **MonologueMatch**: AI-powered monologue discovery and recommendations
 - **ScenePartner**: AI scene reader
 - **CraftCoach**: AI feedback on performances
 - **AuditionTracker**: Track your auditions
@@ -135,11 +138,12 @@ actorrise/
 │   └── (platform)/        # Protected platform pages
 │       ├── dashboard/
 │       ├── profile/
-│       └── search/         # Coming soon
+│       ├── search/         # AI monologue search (theater + film/TV)
+│       └── admin/          # Admin moderation & content
 ├── components/             # React components
 │   ├── auth/              # Authentication components
 │   ├── profile/           # Profile components
-│   ├── search/           # Search components (for future)
+│   ├── search/           # Search (MonologueResultCard, FilmTvMonologueCard, etc.)
 │   └── ui/               # shadcn/ui components
 ├── lib/                   # Utilities
 │   ├── api.ts            # API client (fetch-based)
@@ -151,7 +155,9 @@ actorrise/
 │   ├── app/
 │   │   ├── api/          # API endpoints
 │   │   │   ├── auth.py   # Authentication endpoints
-│   │   │   └── profile.py # Profile endpoints
+│   │   │   ├── profile.py # Profile endpoints
+│   │   │   ├── monologues.py # Theater monologue search
+│   │   │   └── film_tv.py   # Film/TV scene search
 │   │   ├── core/         # Core utilities
 │   │   │   ├── config.py      # Configuration
 │   │   │   ├── database.py    # Database setup
@@ -204,7 +210,7 @@ SUPABASE_STORAGE_BUCKET=headshots
    - Set your preferences
    - Enable profile bias for future recommendations
 4. **Dashboard**: View your profile completion and stats at `/dashboard`
-5. **Search**: Coming soon - AI-powered monologue search
+5. **Search**: AI-powered monologue search at `/search` — switch between **Plays** (8,600+ theater monologues) and **Film/TV** (scene references) and search in plain English
 
 ## 🧪 Development
 
@@ -236,7 +242,8 @@ The application uses PostgreSQL. Tables are automatically created via SQLAlchemy
 
 - `users` - User accounts (synced with Supabase)
 - `actor_profiles` - Actor profile information
-- `monologues` - Monologue database (for future AI search)
+- `monologues` - Theater monologue database (AI semantic search)
+- `film_tv_sources` / `film_tv_references` - Film & TV metadata and scene references (AI search)
 
 ## 🔒 Authentication Flow
 
@@ -268,12 +275,13 @@ Built with [shadcn/ui](https://ui.shadcn.com/) components:
 
 ## 🚧 Roadmap
 
-- [ ] AI-powered monologue search (MonologueMatch)
-- [ ] Semantic search with embeddings
+- [x] AI-powered monologue search (theater + film/TV)
+- [x] Semantic search with embeddings (theater & film/TV)
 - [ ] ScenePartner - AI scene reader
 - [ ] CraftCoach - AI performance feedback
 - [ ] AuditionTracker
 - [ ] Advanced analytics dashboard
+- [ ] More film/TV titles and scene coverage
 
 ## 📄 License
 

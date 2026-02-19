@@ -105,6 +105,16 @@ class RejectionRequest(BaseModel):
     details: str
 
 
+class UpdateSubmissionRequest(BaseModel):
+    """Request to update submission content (admin edit before approve)."""
+    submitted_title: Optional[str] = None
+    submitted_text: Optional[str] = None
+    submitted_character: Optional[str] = None
+    submitted_play_title: Optional[str] = None
+    submitted_author: Optional[str] = None
+    user_notes: Optional[str] = None
+
+
 class QueueStatsResponse(BaseModel):
     """Statistics about the moderation queue."""
     pending: int
@@ -181,6 +191,79 @@ async def get_moderation_queue(
     return results
 
 
+EDITABLE_STATUSES = ('pending', 'ai_review', 'manual_review')
+
+
+@router.patch("/{submission_id}")
+async def update_submission(
+    submission_id: int,
+    body: UpdateSubmissionRequest,
+    current_user: User = Depends(require_moderator),
+    db: Session = Depends(get_db)
+):
+    """
+    Update submission content (title, text, character, play, author, notes).
+    Only allowed when status is pending, ai_review, or manual_review.
+    """
+    submission = db.query(MonologueSubmission).filter(
+        MonologueSubmission.id == submission_id
+    ).first()
+
+    if not submission:
+        raise HTTPException(status_code=404, detail="Submission not found")
+
+    if submission.status not in EDITABLE_STATUSES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot edit submission with status '{submission.status}'. Only pending, ai_review, or manual_review can be edited."
+        )
+
+    if body.submitted_title is not None:
+        submission.submitted_title = body.submitted_title
+    if body.submitted_text is not None:
+        submission.submitted_text = body.submitted_text
+    if body.submitted_character is not None:
+        submission.submitted_character = body.submitted_character
+    if body.submitted_play_title is not None:
+        submission.submitted_play_title = body.submitted_play_title
+    if body.submitted_author is not None:
+        submission.submitted_author = body.submitted_author
+    if body.user_notes is not None:
+        submission.user_notes = body.user_notes
+
+    db.commit()
+    db.refresh(submission)
+
+    submitter = db.query(User).filter(User.id == submission.user_id).first()
+    reviewer = db.query(User).filter(User.id == submission.reviewer_id).first() if submission.reviewer_id else None
+
+    return {
+        'id': submission.id,
+        'user_id': submission.user_id,
+        'submitter_email': submitter.email if submitter else 'Unknown',
+        'submitter_name': submitter.name if submitter else None,
+        'submitted_title': submission.submitted_title,
+        'submitted_text': submission.submitted_text,
+        'submitted_character': submission.submitted_character,
+        'submitted_play_title': submission.submitted_play_title,
+        'submitted_author': submission.submitted_author,
+        'user_notes': submission.user_notes,
+        'status': submission.status,
+        'submitted_at': submission.submitted_at,
+        'processed_at': submission.processed_at,
+        'ai_quality_score': submission.ai_quality_score,
+        'ai_copyright_risk': submission.ai_copyright_risk,
+        'ai_flags': submission.ai_flags,
+        'ai_moderation_notes': submission.ai_moderation_notes,
+        'reviewer_id': submission.reviewer_id,
+        'reviewer_email': reviewer.email if reviewer else None,
+        'reviewer_notes': submission.reviewer_notes,
+        'reviewed_at': submission.reviewed_at,
+        'rejection_reason': submission.rejection_reason,
+        'rejection_details': submission.rejection_details
+    }
+
+
 @router.get("/queue/stats", response_model=QueueStatsResponse)
 async def get_queue_stats(
     current_user: User = Depends(require_moderator),
@@ -239,9 +322,13 @@ async def approve_submission(
     4. Email notification (TODO: implement in Phase 4)
     """
     # Get submission
-    submission = db.query(MonologueSubmission).filter(
-        MonologueSubmission.id == submission_id
-    ).first()
+    # Lock the submission row so it can't be edited concurrently while approving.
+    submission = (
+        db.query(MonologueSubmission)
+        .filter(MonologueSubmission.id == submission_id)
+        .with_for_update()
+        .first()
+    )
 
     if not submission:
         raise HTTPException(status_code=404, detail="Submission not found")
@@ -253,6 +340,8 @@ async def approve_submission(
         raise HTTPException(status_code=400, detail="Cannot approve rejected submission")
 
     try:
+        previous_status = submission.status
+
         # 1. Get or create play
         play = db.query(Play).filter(
             Play.title == submission.submitted_play_title,
@@ -340,7 +429,7 @@ async def approve_submission(
             action='manual_approve',
             actor_type='moderator',
             actor_id=current_user.id,
-            previous_status=submission.status,
+            previous_status=previous_status,
             new_status='approved',
             reason=request.notes,
             extra_data={'monologue_id': monologue.id}

@@ -67,43 +67,50 @@ export default async function Image() {
                 backgroundColor: primary,
               }}
             />
-            Search engine · 8,600+ real scripts · not AI-generated
+            Search engine · 8,600+ real scripts
           </div>
 
-          {/* Headline: "Find the monologue. In seconds." with "monologue" in primary */}
+          {/* Headline: "Find the monologue." / "In seconds." on two lines */}
           <div
             style={{
               display: "flex",
-              flexWrap: "wrap",
+              flexDirection: "column",
+              alignItems: "center",
               justifyContent: "center",
-              alignItems: "baseline",
-              gap: 0,
               lineHeight: 1.02,
               letterSpacing: "-0.04em",
-              marginBottom: 20,
-            }}
-          >
-            <span style={{ fontFamily: "Georgia, serif", fontWeight: 600, fontSize: 64, color: "#fafafa" }}>
-              Find the{" "}
-            </span>
-            <span style={{ fontFamily: "Georgia, serif", fontWeight: 600, fontSize: 64, color: primary }}>
-              monologue
-            </span>
-            <span style={{ fontFamily: "Georgia, serif", fontWeight: 600, fontSize: 64, color: "#fafafa" }}>
-              . In seconds.
-            </span>
-          </div>
-
-          {/* Tagline */}
-          <div
-            style={{
-              fontFamily: "Georgia, serif",
-              fontSize: 28,
-              color: muted,
               marginBottom: 48,
             }}
           >
-            Real monologues by playwrights. Not AI-generated.
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                justifyContent: "center",
+                alignItems: "baseline",
+                gap: 0,
+              }}
+            >
+              <span style={{ fontFamily: "Georgia, serif", fontWeight: 600, fontSize: 64, color: "#fafafa" }}>
+                Find the{" "}
+              </span>
+              <span style={{ fontFamily: "Georgia, serif", fontWeight: 600, fontSize: 64, color: primary }}>
+                monologue
+              </span>
+              <span style={{ fontFamily: "Georgia, serif", fontWeight: 600, fontSize: 64, color: "#fafafa" }}>
+                .
+              </span>
+            </div>
+            <div
+              style={{
+                fontFamily: "Georgia, serif",
+                fontWeight: 600,
+                fontSize: 64,
+                color: "#fafafa",
+              }}
+            >
+              In seconds.
+            </div>
           </div>
 
           {/* Logo + wordmark */}

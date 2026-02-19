@@ -372,3 +372,28 @@ class UserScript(Base):
     scenes = relationship("Scene", back_populates="user_script", foreign_keys="Scene.user_script_id")
 
 
+# ============================================================================
+# Film/TV Monologue Reference (metadata-only, no script text stored)
+# ============================================================================
+
+
+
+class FilmTvReference(Base):
+    """Film/TV title metadata seeded from IMDb + OMDb. Used for semantic film/TV search."""
+    __tablename__ = "film_tv_references"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, nullable=False, index=True)
+    year = Column(Integer, nullable=True, index=True)
+    type = Column(String, nullable=True, index=True)  # "movie" or "tvSeries"
+    genre = Column(ARRAY(String), nullable=True)
+    plot = Column(Text, nullable=True)
+    director = Column(String, nullable=True, index=True)
+    actors = Column(ARRAY(String), nullable=True)
+    runtime_minutes = Column(Integer, nullable=True)
+    imdb_id = Column(String, nullable=False, unique=True, index=True)
+    imdb_rating = Column(Float, nullable=True, index=True)
+    poster_url = Column(String, nullable=True)
+    imsdb_url = Column(String, nullable=True)
+    embedding = Column(Vector(1536), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))

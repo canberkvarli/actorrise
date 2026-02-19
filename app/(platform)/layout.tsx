@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconHome, IconSearch, IconUser, IconLogout, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText, IconMail, IconSettings } from "@tabler/icons-react";
+import { IconHome, IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText, IconMail, IconSettings, IconShieldCheck } from "@tabler/icons-react";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarkCount";
@@ -15,7 +15,7 @@ import { ContactModal } from "@/components/contact/ContactModal";
 import { SWRConfig } from "swr";
 import { useSubscription } from "@/hooks/useSubscription";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { WelcomeFlow } from "@/components/onboarding/WelcomeFlow";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -40,7 +40,7 @@ export default function PlatformLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading, logout, refreshUser } = useAuth();
+  const { user, loading, isLoggingOut, logout, refreshUser } = useAuth();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -85,13 +85,15 @@ export default function PlatformLayout({
   }, [loading, user]);
 
   // Note: Route protection is handled by middleware
-  // This check is just for UI state while loading
+  // Single branded loading state so post–sign-in feels like one flow (no "Loading..." then "Loading your dashboard...")
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-muted-foreground">Loading...</p>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-background">
+        <div className="relative">
+          <div className="h-12 w-12 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+          <IconSparkles className="h-6 w-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
         </div>
+        <p className="text-muted-foreground font-medium">Loading your dashboard…</p>
       </div>
     );
   }
@@ -113,22 +115,40 @@ export default function PlatformLayout({
       }}
     >
     <TooltipProvider>
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background overflow-x-hidden relative">
+      {/* Logout transition overlay */}
+      <AnimatePresence>
+        {isLoggingOut && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-background/80 backdrop-blur-sm"
+            aria-live="polite"
+            aria-label="Logging out"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.98 }}
+              transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+              className="flex flex-col items-center gap-4 rounded-2xl bg-card/90 px-8 py-6 shadow-lg border border-border/50"
+            >
+              <div className="h-10 w-10 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+              <p className="text-sm font-medium text-foreground">Logging out…</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* Navigation */}
       <nav className="bg-background/95 backdrop-blur-sm border-b border-border/40 relative z-[9998]" style={{ position: 'relative' }}>
         <div className="container mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-20">
-            {pathname === "/dashboard" ? (
-              <span className="flex items-center gap-2.5 text-foreground cursor-default">
-                <Image src="/logo.png" alt="ActorRise" width={32} height={32} className="rounded-md" />
-                <span className="font-brand text-2xl font-semibold text-foreground">ActorRise</span>
-              </span>
-            ) : (
-              <Link href="/dashboard" className="flex items-center gap-2.5 text-foreground hover:opacity-80 transition-opacity">
-                <Image src="/logo.png" alt="ActorRise" width={32} height={32} className="rounded-md" />
-                <span className="font-brand text-2xl font-semibold text-foreground">ActorRise</span>
-              </Link>
-            )}
+            <Link href="/dashboard" className="flex items-center gap-2.5 text-foreground hover:opacity-80 transition-opacity">
+              <Image src="/logo.png" alt="ActorRise" width={32} height={32} className="rounded-md" />
+              <span className="font-brand text-2xl font-semibold text-foreground">ActorRise</span>
+            </Link>
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-2">
@@ -158,6 +178,19 @@ export default function PlatformLayout({
                   </Button>
                 );
               })}
+              {user?.is_moderator && (
+                <Button
+                  asChild
+                  variant={pathname.startsWith("/admin") ? "outline" : "ghost"}
+                  size="sm"
+                  className="gap-2 rounded-full px-4 text-sm"
+                >
+                  <Link href="/admin">
+                    <IconShieldCheck className="h-4 w-4" />
+                    Admin
+                  </Link>
+                </Button>
+              )}
 
               {/* Profile Dropdown */}
               <div className="relative" ref={dropdownRef}>
@@ -276,6 +309,16 @@ export default function PlatformLayout({
                         <IconFileText className="h-4 w-4 text-muted-foreground" />
                         <span>My submissions</span>
                       </Link>
+                      {user?.is_moderator && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setProfileDropdownOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                        >
+                          <IconShieldCheck className="h-4 w-4 text-muted-foreground" />
+                          <span>Admin</span>
+                        </Link>
+                      )}
 
                       <p className="px-2 py-1.5 mt-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                         Billing & settings
@@ -317,12 +360,17 @@ export default function PlatformLayout({
                       <button
                         onClick={() => {
                           setProfileDropdownOpen(false);
-                          logout();
+                          void logout();
                         }}
-                        className="w-full flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors text-left text-destructive"
+                        disabled={isLoggingOut}
+                        className="w-full flex items-center gap-3 px-4 py-3 text-sm rounded-lg hover:bg-muted/60 transition-colors text-left text-destructive disabled:opacity-70 disabled:pointer-events-none"
                       >
-                        <IconLogout className="h-4 w-4" />
-                        <span>Log out</span>
+                        {isLoggingOut ? (
+                          <IconLoader2 className="h-4 w-4 animate-spin shrink-0" />
+                        ) : (
+                          <IconLogout className="h-4 w-4 shrink-0" />
+                        )}
+                        <span>{isLoggingOut ? "Logging out…" : "Log out"}</span>
                       </button>
                     </div>
                   </div>
@@ -371,6 +419,19 @@ export default function PlatformLayout({
                     </Button>
                   );
                 })}
+                {user?.is_moderator && (
+                  <Button
+                    asChild
+                    variant={pathname.startsWith("/admin") ? "default" : "ghost"}
+                    size="sm"
+                    className="w-full justify-start gap-2"
+                  >
+                    <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
+                      <IconShieldCheck className="h-4 w-4" />
+                      Admin
+                    </Link>
+                  </Button>
+                )}
 
                 {/* Secondary links only in hamburger; Account is in bottom nav */}
                 {/* Bookmarks Link */}
@@ -438,13 +499,18 @@ export default function PlatformLayout({
                   variant="ghost"
                   size="sm"
                   onClick={() => {
-                    logout();
+                    void logout();
                     setMobileMenuOpen(false);
                   }}
+                  disabled={isLoggingOut}
                   className="w-full justify-start gap-2"
                 >
-                  <IconLogout className="h-4 w-4" />
-                  Logout
+                  {isLoggingOut ? (
+                    <IconLoader2 className="h-4 w-4 animate-spin shrink-0" />
+                  ) : (
+                    <IconLogout className="h-4 w-4 shrink-0" />
+                  )}
+                  {isLoggingOut ? "Logging out…" : "Logout"}
                 </Button>
               </div>
             </div>

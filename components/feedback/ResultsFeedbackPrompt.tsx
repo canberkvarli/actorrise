@@ -6,15 +6,19 @@ import { Button } from "@/components/ui/button";
 import { IconThumbUp, IconThumbDown } from "@tabler/icons-react";
 import api from "@/lib/api";
 
-const STORAGE_KEY_PREFIX = "feedback_dismissed_";
+const VOTE_STORAGE_PREFIX = "feedback_voted_";
 
 export interface ResultsFeedbackPromptProps {
-  /** Context for sessionStorage so we don't re-ask in the same session (e.g. "search"). */
+  /** Context for the feedback API (e.g. "search"). */
   context?: string;
-  /** When >= 1, prompt is shown (every search). Pass the current results view count from the search page. */
+  /** When >= 1, prompt is shown. New count = new search = show question; same count after refresh = show Thanks if already voted. */
   resultsViewCount?: number;
   /** Called when user clicks "Tell us more" to open the contact/feedback modal. */
   onOpenContact?: () => void;
+}
+
+function getVoteStorageKey(context: string, count: number): string {
+  return `${VOTE_STORAGE_PREFIX}${context}_${count}`;
 }
 
 export function ResultsFeedbackPrompt({
@@ -22,19 +26,18 @@ export function ResultsFeedbackPrompt({
   resultsViewCount = 0,
   onOpenContact,
 }: ResultsFeedbackPromptProps) {
-  const [submitted, setSubmitted] = useState<boolean | null>(null);
+  const [submitted, setSubmitted] = useState(false);
 
-  const storageKey = `${STORAGE_KEY_PREFIX}${context}`;
-
+  // For this result set (resultsViewCount): if we already voted for this count, show Thanks; else show question
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || resultsViewCount < 1) return;
+    const key = getVoteStorageKey(context, resultsViewCount);
     try {
-      const dismissed = sessionStorage.getItem(storageKey);
-      if (dismissed === "true") setSubmitted(true);
+      setSubmitted(sessionStorage.getItem(key) === "true");
     } catch {
-      // ignore
+      setSubmitted(false);
     }
-  }, [storageKey]);
+  }, [context, resultsViewCount]);
 
   const handleVote = (positive: boolean) => {
     const rating = positive ? "positive" : "negative";
@@ -42,19 +45,19 @@ export function ResultsFeedbackPrompt({
       .post("/api/feedback", { context, rating })
       .catch(() => { /* fire-and-forget; don't block UX */ });
     try {
-      sessionStorage.setItem(storageKey, "true");
+      sessionStorage.setItem(getVoteStorageKey(context, resultsViewCount), "true");
     } catch {
       // ignore
     }
     setSubmitted(true);
   };
 
-  // Show feedback whenever we have a results view (count >= 1); after vote we show thanks
+  // Show feedback whenever we have a results view (count >= 1)
   const showPrompt = resultsViewCount >= 1;
   if (!showPrompt) return null;
 
-  // Already voted this session: show brief thanks
-  if (submitted === true) {
+  // Just voted for this result set: show brief thanks until next search
+  if (submitted) {
     return (
       <motion.p
         initial={{ opacity: 0 }}
@@ -72,7 +75,7 @@ export function ResultsFeedbackPrompt({
       initial={{ opacity: 0, scale: 0.96, y: -4 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="flex flex-wrap items-center justify-center gap-2 py-2 px-3 rounded-lg border border-border/50 bg-muted/20 w-fit mx-auto mb-2"
+      className="flex flex-wrap items-center justify-center gap-2 py-2 px-3 rounded-lg border border-border/50 bg-muted/20 w-fit"
     >
       <p className="text-xs font-medium text-muted-foreground whitespace-nowrap">
         Were these results what you expected?
