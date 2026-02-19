@@ -22,6 +22,8 @@ const CATEGORIES = [
   { value: "bug", label: "Bug report" },
   { value: "collaboration", label: "Collaboration" },
   { value: "support", label: "Support" },
+  { value: "business_discount", label: "Business discount (3 mo free)" },
+  { value: "student_discount", label: "Student discount (6 mo free)" },
   { value: "other", label: "Other" },
 ] as const;
 
@@ -122,9 +124,9 @@ export function ContactModal({ open, onOpenChange, initialCategory }: ContactMod
               <SelectTrigger id="contact-category">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="min-w-[var(--radix-select-trigger-width)] max-w-[min(calc(100vw-2rem),20rem)]">
                 {CATEGORIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
+                  <SelectItem key={c.value} value={c.value} className="py-2.5">
                     {c.label}
                   </SelectItem>
                 ))}

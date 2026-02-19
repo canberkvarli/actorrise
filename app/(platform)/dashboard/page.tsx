@@ -21,7 +21,9 @@ import {
   IconHistory,
   IconChevronRight,
   IconSend,
-  IconFlag
+  IconFlag,
+  IconDeviceTv,
+  IconExternalLink
 } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,9 +34,14 @@ import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
-import { useProfileStats, useProfile, useRecommendations, useDiscover } from "@/hooks/useDashboardData";
+import { useProfileStats, useProfile, useRecommendations, useDiscover, useDiscoverFilmTv } from "@/hooks/useDashboardData";
 import { useBookmarkCount, useToggleFavorite } from "@/hooks/useBookmarks";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { FilmTvReferenceCard } from "@/components/search/FilmTvReferenceCard";
+import type { FilmTvReference } from "@/types/filmTv";
+import { getImsdbSearchUrl, getScriptSearchUrl } from "@/lib/utils";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -50,8 +57,11 @@ function getInitials(displayName: string) {
   return emailUser.slice(0, 2).toUpperCase();
 }
 
+const FILM_TV_LAST_SEARCH_KEY = "film_tv_search_last_results_v1";
+
 export default function DashboardPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [headshotFailed, setHeadshotFailed] = useState(false);
   const [selectedMonologue, setSelectedMonologue] = useState<Monologue | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
@@ -67,6 +77,13 @@ export default function DashboardPage() {
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [selectedFilmTvRef, setSelectedFilmTvRef] = useState<FilmTvReference | null>(null);
+  const [filmTvPosterError, setFilmTvPosterError] = useState(false);
+
+  // Reset poster error when opening a different Film/TV so the image loads again
+  useEffect(() => {
+    if (selectedFilmTvRef) setFilmTvPosterError(false);
+  }, [selectedFilmTvRef?.id]);
 
   // React Query hooks
   const { data: stats, isLoading: isLoadingStats } = useProfileStats();
@@ -77,7 +94,23 @@ export default function DashboardPage() {
   const { data: discoverMonologues = [], isLoading: isLoadingDiscover } = useDiscover(!(isProfileComplete ?? false));
   const mainMonologues = isProfileComplete ? recommendations : discoverMonologues;
   const isLoadingMain = isProfileComplete ? isLoadingRecommendations : isLoadingDiscover;
+  const { data: discoverFilmTv = [], isLoading: isLoadingFilmTv } = useDiscoverFilmTv();
   const toggleFavoriteMutation = useToggleFavorite();
+
+  // Optional: last Film & TV search for "Continue" chip (sessionStorage, client-only)
+  const [lastFilmTvSearch, setLastFilmTvSearch] = useState<{ query: string } | null>(null);
+  useEffect(() => {
+    try {
+      const raw = typeof window !== "undefined" ? sessionStorage.getItem(FILM_TV_LAST_SEARCH_KEY) : null;
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { query?: string };
+      if (parsed?.query != null && String(parsed.query).trim() !== "") {
+        setLastFilmTvSearch({ query: String(parsed.query).trim() });
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // Fetch monologue detail
   const { data: monologueDetail } = useQuery<Monologue | null>({
@@ -427,6 +460,84 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             )}
           </motion.section>
 
+          {/* ========== SECTION 4: Film & TV ========== */}
+          <motion.section
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="space-y-6"
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+              <div className="min-w-0">
+                <h2 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2">
+                  <IconDeviceTv className="h-7 w-7 shrink-0 text-primary" />
+                  <span className="truncate">Film & TV</span>
+                </h2>
+                <p className="text-muted-foreground mt-1">
+                  Top picks by IMDb rating · Search for more by scene or title
+                </p>
+              </div>
+              <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:text-foreground w-fit">
+                <Link href="/search?mode=film_tv" className="whitespace-nowrap">
+                  View all
+                  <IconArrowRight className="h-4 w-4 ml-1" />
+                </Link>
+              </Button>
+            </div>
+
+            {lastFilmTvSearch && (
+              <div className="min-w-0 max-w-full">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full sm:w-auto max-w-full text-muted-foreground hover:text-foreground justify-start sm:justify-center"
+                  onClick={() => router.push("/search?mode=film_tv")}
+                >
+                  <IconHistory className="h-4 w-4 shrink-0 mr-2" />
+                  <span className="truncate">
+                    Continue: &quot;{lastFilmTvSearch.query.length > 35 ? lastFilmTvSearch.query.slice(0, 35) + "…" : lastFilmTvSearch.query}&quot;
+                  </span>
+                </Button>
+              </div>
+            )}
+
+            {isLoadingFilmTv ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {[1, 2, 3, 4].map((i) => (
+                  <div key={i} className="p-6 bg-card border border-border rounded-xl">
+                    <Skeleton className="h-6 w-3/4 mb-3 rounded-md" />
+                    <Skeleton className="h-4 w-1/2 mb-2 rounded-md" />
+                    <Skeleton className="h-4 w-1/3 mb-4 rounded-md" />
+                    <Skeleton className="h-20 w-full rounded-md" />
+                  </div>
+                ))}
+              </div>
+            ) : discoverFilmTv.length > 0 ? (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                {discoverFilmTv.slice(0, 4).map((ref, idx) => (
+                  <FilmTvReferenceCard
+                    key={ref.id}
+                    ref_item={ref}
+                    index={idx}
+                    compact
+                    onSelect={() => setSelectedFilmTvRef(ref)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-14 px-6 bg-card border border-border rounded-xl">
+                <IconDeviceTv className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
+                <p className="text-lg font-medium text-foreground mb-2">Explore Film & TV</p>
+                <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                  Search for film and TV references by scene, theme, or title
+                </p>
+                <Button asChild>
+                  <Link href="/search?mode=film_tv">Search Film & TV</Link>
+                </Button>
+              </div>
+            )}
+          </motion.section>
+
           {/* ========== SECTION 5: Bookmarks & Recent Searches ========== */}
           <motion.section
             initial={{ opacity: 0, y: 10 }}
@@ -674,6 +785,154 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     monologue={currentMonologue}
                   />
                 )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Film & TV slide-over detail panel */}
+      <AnimatePresence>
+        {selectedFilmTvRef && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                setSelectedFilmTvRef(null);
+                setFilmTvPosterError(false);
+              }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="fixed inset-0 z-[10000] bg-black/50"
+            />
+            <motion.div
+              initial={{ x: "100%", opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: "100%", opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeOut", opacity: { duration: 0.25 } }}
+              className="fixed right-0 top-0 bottom-0 z-[10001] w-full md:w-[600px] lg:w-[700px] bg-background border-l shadow-2xl overflow-y-auto"
+            >
+              <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-[10002]">
+                <div className="flex items-center justify-between gap-2 p-6">
+                  <h2 className="text-2xl font-bold truncate">
+                    {selectedFilmTvRef.type === "tvSeries" ? "TV details" : "Movie details"}
+                  </h2>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setSelectedFilmTvRef(null);
+                      setFilmTvPosterError(false);
+                    }}
+                    className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
+                  >
+                    <IconX className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+              <div className="p-6 space-y-6">
+                <div className="flex items-start gap-4">
+                  {selectedFilmTvRef.poster_url && !filmTvPosterError ? (
+                    <Image
+                      key={`film-tv-poster-${selectedFilmTvRef.id}`}
+                      src={selectedFilmTvRef.poster_url}
+                      alt={selectedFilmTvRef.title}
+                      width={160}
+                      height={240}
+                      className="w-40 rounded-md object-cover shadow-sm shrink-0 aspect-[2/3]"
+                      unoptimized
+                      onError={() => setFilmTvPosterError(true)}
+                    />
+                  ) : (
+                    <div className="w-40 shrink-0 rounded-md bg-muted flex items-center justify-center aspect-[2/3] text-muted-foreground/40">
+                      <IconDeviceTv className="h-10 w-10" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap gap-2">
+                      <h1 className="text-2xl font-bold text-foreground leading-tight">{selectedFilmTvRef.title}</h1>
+                      {selectedFilmTvRef.is_best_match && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-primary text-primary-foreground">
+                          Best Match
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground mt-1 text-sm">
+                      {selectedFilmTvRef.year ?? ""}
+                      {selectedFilmTvRef.director ? ` · Directed by ${selectedFilmTvRef.director}` : ""}
+                    </p>
+                    {selectedFilmTvRef.imdb_rating != null && (
+                      <p className="text-sm font-semibold text-amber-500 mt-1">
+                        ★ {selectedFilmTvRef.imdb_rating.toFixed(1)} IMDb
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {selectedFilmTvRef.type && (
+                    <Badge variant="secondary" className="capitalize">
+                      {selectedFilmTvRef.type === "tvSeries" ? "TV Series" : "Movie"}
+                    </Badge>
+                  )}
+                  {selectedFilmTvRef.genre?.map((g) => (
+                    <Badge key={g} variant="outline" className="capitalize">{g}</Badge>
+                  ))}
+                </div>
+
+                {selectedFilmTvRef.actors && selectedFilmTvRef.actors.length > 0 && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Cast</p>
+                    <p className="text-sm text-foreground">{selectedFilmTvRef.actors.join(", ")}</p>
+                  </div>
+                )}
+
+                {selectedFilmTvRef.plot && (
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Plot</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{selectedFilmTvRef.plot}</p>
+                  </div>
+                )}
+
+                {selectedFilmTvRef.confidence_score != null && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full tabular-nums bg-muted text-muted-foreground">
+                    {Math.round(selectedFilmTvRef.confidence_score * 100)}% match
+                  </span>
+                )}
+
+                <div className="flex flex-wrap gap-2 pt-2 border-t">
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => window.open(getImsdbSearchUrl(selectedFilmTvRef.title), "_blank", "noopener,noreferrer")}
+                  >
+                    <IconExternalLink className="h-4 w-4" />
+                    Script on IMSDb
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => window.open(getScriptSearchUrl(selectedFilmTvRef.title), "_blank", "noopener,noreferrer")}
+                  >
+                    <IconExternalLink className="h-4 w-4" />
+                    Search Google
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => window.open(`https://www.imdb.com/title/${selectedFilmTvRef.imdb_id}/`, "_blank", "noopener,noreferrer")}
+                  >
+                    <IconExternalLink className="h-4 w-4" />
+                    IMDb page
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Try IMSDb first. If the script isn&apos;t there, use Search Google.
+                </p>
               </div>
             </motion.div>
           </>

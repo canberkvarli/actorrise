@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -31,7 +32,12 @@ export function LandingDemoResultCard({ result, signupRedirectQuery }: LandingDe
   const redirectUrl = `/signup?redirect=${encodeURIComponent(`/search?q=${encodeURIComponent(signupRedirectQuery)}`)}`;
 
   return (
-    <Card className="h-full flex flex-col rounded-lg border-border hover:border-primary/40 hover:shadow-xl transition-all">
+    <motion.div
+      className="h-full"
+      whileHover={{ y: -2 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+    >
+      <Card className="h-full flex flex-col rounded-lg border-border hover:border-primary/40 hover:shadow-xl transition-all duration-300">
       <CardContent className="pt-6 flex-1 flex flex-col">
         <div className="space-y-4 flex-1">
           <div className="flex items-start justify-between gap-2">
@@ -68,5 +74,6 @@ export function LandingDemoResultCard({ result, signupRedirectQuery }: LandingDe
         </Button>
       </CardContent>
     </Card>
+    </motion.div>
   );
 }

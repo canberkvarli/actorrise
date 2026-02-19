@@ -14,9 +14,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IconRocket, IconCrown, IconArrowLeft, IconTag, IconX } from "@tabler/icons-react";
+import { IconRocket, IconCrown, IconArrowLeft, IconTag, IconX, IconGift } from "@tabler/icons-react";
 import api, { API_URL } from "@/lib/api";
 import Link from "next/link";
+import { RequestPromoCodeModal } from "@/components/contact/RequestPromoCodeModal";
 
 interface PricingTier {
   id: number;
@@ -36,6 +37,7 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState<string | null>(null);
+  const [promoModalOpen, setPromoModalOpen] = useState(false);
 
   const tierName = searchParams.get("tier");
   const period = searchParams.get("period") || "monthly";
@@ -67,6 +69,12 @@ export default function CheckoutPage() {
       setError(null);
     } else if (code === "STARTUPS" || code === "STARTUPS24") {
       setPromoApplied("STARTUPS");
+      setError(null);
+    } else if (code === "BUSINESS" || code === "ACTINGTEACHER26") {
+      setPromoApplied("BUSINESS");
+      setError(null);
+    } else if (code === "STUDENT" || code === "STUDENTACTOR26") {
+      setPromoApplied("STUDENT");
       setError(null);
     } else if (code) {
       setPromoApplied(null);
@@ -116,7 +124,7 @@ export default function CheckoutPage() {
 
   const getPrice = () => {
     if (!tier) return 0;
-    if (promoApplied === "FOUNDER") return 0;
+    if (promoApplied === "FOUNDER" || promoApplied === "BUSINESS" || promoApplied === "STUDENT") return 0;
     const base =
       period === "annual" && tier.annual_price_cents
         ? tier.annual_price_cents
@@ -212,7 +220,7 @@ export default function CheckoutPage() {
                   <span className="text-muted-foreground">Billed today</span>
                   <span className="text-2xl font-bold">{formatPrice(getPrice())}</span>
                 </div>
-                {promoApplied !== "FOUNDER" && (
+                {(promoApplied !== "FOUNDER" && promoApplied !== "BUSINESS" && promoApplied !== "STUDENT") && (
                   <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
                     <p className="text-sm font-medium text-accent mb-1">Annual Savings</p>
                     <p className="text-xs text-muted-foreground">
@@ -241,26 +249,50 @@ export default function CheckoutPage() {
                   <span className="text-sm font-medium text-foreground flex items-center gap-2">
                     <IconTag className="h-4 w-4 shrink-0 text-accent" />
                     {promoApplied === "FOUNDER"
-                      ? "FOUNDER applied — free for 1 year"
-                      : "STARTUPS applied — 50% off"}
+                      ? "FOUNDER applied. Free for 1 year."
+                      : promoApplied === "BUSINESS"
+                        ? "BUSINESS applied. 100% off for 3 months."
+                        : promoApplied === "STUDENT"
+                          ? "STUDENT applied. 100% off for 6 months."
+                          : "STARTUPS applied. 50% off."}
                   </span>
                   <Button type="button" variant="ghost" size="sm" onClick={removePromo}>
                     <IconX className="h-4 w-4" />
                   </Button>
                 </div>
               ) : (
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Promo code"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                    onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), applyPromo())}
-                    className="flex-1"
-                  />
-                  <Button type="button" variant="outline" onClick={applyPromo}>
-                    Apply
-                  </Button>
-                </div>
+                <>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Promo code"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), applyPromo())}
+                      className="flex-1"
+                    />
+                    <Button type="button" variant="outline" onClick={applyPromo}>
+                      Apply
+                    </Button>
+                  </div>
+                  <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4">
+                    <p className="text-base font-semibold text-foreground mb-1">
+                      Business or student? Get a code for 100% off.
+                    </p>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Businesses: 3 months free. Students: 6 months free. We&apos;ll send you a code after you reach out.
+                    </p>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="gap-2"
+                      onClick={() => setPromoModalOpen(true)}
+                    >
+                      <IconGift className="h-4 w-4" />
+                      Get my code
+                    </Button>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -301,6 +333,8 @@ export default function CheckoutPage() {
         </Link>
         .
       </p>
+
+      <RequestPromoCodeModal open={promoModalOpen} onOpenChange={setPromoModalOpen} />
     </div>
   );
 }

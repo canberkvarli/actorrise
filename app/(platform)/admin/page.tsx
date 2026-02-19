@@ -21,6 +21,7 @@ import {
   IconRefresh,
   IconAlertTriangle,
   IconCircleCheckFilled,
+  IconSearch,
 } from "@tabler/icons-react";
 import {
   LineChart,
@@ -57,6 +58,7 @@ export interface AdminStats {
     ai_searches: number;
     scene_partner_sessions: number;
     craft_coach_sessions: number;
+    alltime_searches: number;
   };
 }
 
@@ -250,6 +252,11 @@ export default function AdminOverviewPage() {
       title: "Rejected today",
       value: stats.submissions.rejected_today,
       icon: IconCircleX,
+    },
+    {
+      title: "All-time AI searches",
+      value: stats.usage.alltime_searches ?? 0,
+      icon: IconSearch,
     },
   ];
 

@@ -171,8 +171,13 @@ export function LandingDemoSearch() {
       }
 
       const data = (await res.json()) as { results: DemoSearchResultItem[] };
-      setResults(data.results ?? []);
+      const resultList = data.results ?? [];
+      setResults(resultList);
       setSearchCompleted(true);
+      // Only refresh live count when we got results (backend increments only then)
+      if (resultList.length > 0 && typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("actorrise:stats-refresh"));
+      }
     } catch {
       setError("Something went wrong. Sign up to try full search.");
     } finally {
@@ -187,10 +192,24 @@ export function LandingDemoSearch() {
   const [isInputFocused, setIsInputFocused] = useState(false);
   const showPlaceholder = !isInputFocused && !query.trim();
 
+  const containerTransition = { type: "spring" as const, stiffness: 300, damping: 30 };
+  const itemTransition = { type: "spring" as const, stiffness: 400, damping: 28 };
+
   return (
-    <div className="space-y-6 w-full">
-      <form onSubmit={handleSubmit} className="w-full max-w-2xl mx-auto">
-        <div
+    <motion.div
+      className="space-y-6 w-full"
+      layout
+      transition={containerTransition}
+    >
+      <motion.form
+        onSubmit={handleSubmit}
+        className="w-full max-w-2xl mx-auto"
+        layout
+        transition={containerTransition}
+      >
+        <motion.div
+          layout
+          transition={containerTransition}
           className={`flex items-center gap-2 p-2 bg-card border border-border rounded-xl shadow-sm ${jitter ? "search-jitter" : ""}`}
           onAnimationEnd={() => setJitter(false)}
         >
@@ -236,138 +255,264 @@ export function LandingDemoSearch() {
               "Search"
             )}
           </Button>
-        </div>
-      </form>
+        </motion.div>
+      </motion.form>
 
-      {((isLoading && showLoadingUI) || autoDemoPhase === "loading") && (
-        <div className="w-screen relative left-1/2 -ml-[50vw] mt-12">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-6">
-            <div className="flex flex-col items-center justify-center gap-6 mb-6">
-              <div className="relative">
-                <div className="h-16 w-16 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-                <IconSparkles className="h-7 w-7 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+      <AnimatePresence mode="wait">
+        {((isLoading && showLoadingUI) || autoDemoPhase === "loading") && (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+            className="w-screen relative left-1/2 -ml-[50vw] mt-12 overflow-hidden"
+          >
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-6">
+              <div className="flex flex-col items-center justify-center gap-6 mb-6">
+                <div className="relative">
+                  <div className="h-16 w-16 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+                  <IconSparkles className="h-7 w-7 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                </div>
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={loadingMessageIndex}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.25 }}
+                    className="text-lg font-medium text-foreground"
+                  >
+                    {LOADING_MESSAGES[loadingMessageIndex]}
+                  </motion.p>
+                </AnimatePresence>
               </div>
-              <motion.p
-                key={loadingMessageIndex}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="text-lg font-medium text-foreground"
+              <motion.div
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
+                  hidden: {},
+                }}
               >
-                {LOADING_MESSAGES[loadingMessageIndex]}
-              </motion.p>
+                {[1, 2, 3].map((i) => (
+                  <motion.div
+                    key={i}
+                    variants={{
+                      hidden: { opacity: 0, y: 20 },
+                      visible: { opacity: 1, y: 0 },
+                    }}
+                    transition={itemTransition}
+                  >
+                    <Card className="rounded-lg">
+                      <CardContent className="pt-6 space-y-4">
+                        <Skeleton className="h-6 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-12 w-full" />
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                ))}
+              </motion.div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1, 2, 3].map((i) => (
-                <Card key={i} className="rounded-lg">
-                  <CardContent className="pt-6 space-y-4">
-                    <Skeleton className="h-6 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                    <Skeleton className="h-12 w-full" />
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {rateLimited && !rateLimitedWhileLoggedIn && (
-        <p className="mt-8 text-center text-sm text-muted-foreground">
+        <motion.p
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="mt-8 text-center text-sm text-muted-foreground"
+        >
           Like what you see?{" "}
           <Link href="/signup" className="font-medium text-primary hover:underline">
             Get started free
           </Link>
-        </p>
+        </motion.p>
       )}
-      {rateLimited && rateLimitedWhileLoggedIn && (
-        <Card className="border-border bg-muted/30 max-w-xl mx-auto mt-12">
-          <CardContent className="pt-6 pb-6">
-            <p className="text-foreground font-medium mb-4">
-              Demo limit reached. You&apos;re signed in — use the full search to keep going.
-            </p>
-            <Button asChild size="lg" className="rounded-full" variant="outline">
-              <Link href="/search">Go to search</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      <AnimatePresence mode="wait">
+        {rateLimited && rateLimitedWhileLoggedIn && (
+          <motion.div
+            key="rateLimitSignedIn"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+          >
+            <Card className="border-border bg-muted/30 max-w-xl mx-auto mt-12">
+              <CardContent className="pt-6 pb-6">
+                <p className="text-foreground font-medium mb-4">
+                  Demo limit reached. You&apos;re signed in. Use the full search to keep going.
+                </p>
+                <Button asChild size="lg" className="rounded-full" variant="outline">
+                  <Link href="/search">Go to search</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
-      {error && !rateLimited && (
-        <Card className="border-destructive/30 bg-destructive/5 max-w-xl mx-auto mt-12">
-          <CardContent className="pt-6 pb-6">
-            <p className="text-foreground font-medium mb-4">{error}</p>
-            <Button asChild size="lg" className="rounded-full">
-              <Link href="/signup">Sign up to try full search</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+        {error && !rateLimited && (
+          <motion.div
+            key="error"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+          >
+            <Card className="border-destructive/30 bg-destructive/5 max-w-xl mx-auto mt-12">
+              <CardContent className="pt-6 pb-6">
+                <p className="text-foreground font-medium mb-4">{error}</p>
+                <Button asChild size="lg" className="rounded-full">
+                  <Link href="/signup">Sign up to try full search</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
-      {showNoMatch && (
-        <Card className="border-border bg-muted/30 max-w-xl mx-auto mt-12">
-          <CardContent className="pt-6 pb-6 text-center">
-            <p className="text-foreground font-medium">No match</p>
-            <p className="text-sm text-muted-foreground mt-1">
-              We didn&apos;t find any monologues for that search. Try different words or browse the full library.
-            </p>
-            <Button asChild size="lg" variant="outline" className="rounded-full mt-4">
-              <Link href="/signup">Search 8,600+ monologues</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+        {showNoMatch && (
+          <motion.div
+            key="noMatch"
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+          >
+            <Card className="border-border bg-muted/30 max-w-xl mx-auto mt-12">
+              <CardContent className="pt-6 pb-6 text-center">
+                <p className="text-foreground font-medium">No match</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  We didn&apos;t find any monologues for that search. Try different words or browse the full library.
+                </p>
+                <Button asChild size="lg" variant="outline" className="rounded-full mt-4">
+                  <Link href="/signup">Search 8,600+ monologues</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
-      {showResults && (
-        <div className="w-screen relative left-1/2 -ml-[50vw] mt-12">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
-            <p className="text-sm text-muted-foreground">
-              We found {results.length} monologue{results.length !== 1 ? "s" : ""}. See the full text and search the full library.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {results.map((result) => (
-                <LandingDemoResultCard
-                  key={result.id}
-                  result={result}
-                  signupRedirectQuery={query.trim()}
-                />
-              ))}
+        {showResults && (
+          <motion.div
+            key="results"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+            className="w-screen relative left-1/2 -ml-[50vw] mt-12 overflow-hidden"
+          >
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
+                className="text-sm text-muted-foreground"
+              >
+                We found {results.length} monologue{results.length !== 1 ? "s" : ""}. See the full text and search the full library.
+              </motion.p>
+              <motion.div
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.12 } },
+                  hidden: {},
+                }}
+              >
+                {results.map((result) => (
+                  <motion.div
+                    key={result.id}
+                    variants={{
+                      hidden: { opacity: 0, y: 24 },
+                      visible: { opacity: 1, y: 0 },
+                    }}
+                    transition={itemTransition}
+                  >
+                    <LandingDemoResultCard
+                      result={result}
+                      signupRedirectQuery={query.trim()}
+                    />
+                  </motion.div>
+                ))}
+              </motion.div>
+              <motion.div
+                className="pt-4"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45, duration: 0.35 }}
+              >
+                <Button asChild size="lg" className="rounded-full px-8 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground hover:border-muted-foreground/30">
+                  <Link href={`/signup?redirect=${encodeURIComponent(`/search?q=${encodeURIComponent(query.trim())}`)}`}>
+                    Search 8,600+ monologues
+                  </Link>
+                </Button>
+              </motion.div>
             </div>
-            <div className="pt-4">
-            <Button asChild size="lg" className="rounded-full px-8 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground hover:border-muted-foreground/30">
-              <Link href={`/signup?redirect=${encodeURIComponent(`/search?q=${encodeURIComponent(query.trim())}`)}`}>
-                Search 8,600+ monologues
-              </Link>
-            </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
 
-      {autoDemoPhase === "results" && results.length === 0 && (
-        <div className="w-screen relative left-1/2 -ml-[50vw] mt-12">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Example results. Type your own search above.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {AUTO_DEMO_RESULTS.map((result) => (
-                <LandingDemoResultCard
-                  key={result.id}
-                  result={result}
-                  signupRedirectQuery={AUTO_DEMO_QUERY}
-                />
-              ))}
+        {autoDemoPhase === "results" && results.length === 0 && (
+          <motion.div
+            key="autoDemoResults"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -16 }}
+            transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+            className="w-screen relative left-1/2 -ml-[50vw] mt-12 overflow-hidden"
+          >
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1, duration: 0.3 }}
+                className="text-sm text-muted-foreground"
+              >
+                Example results. Type your own search above.
+              </motion.p>
+              <motion.div
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+                initial="hidden"
+                animate="visible"
+                variants={{
+                  visible: { transition: { staggerChildren: 0.1, delayChildren: 0.12 } },
+                  hidden: {},
+                }}
+              >
+                {AUTO_DEMO_RESULTS.map((result) => (
+                  <motion.div
+                    key={result.id}
+                    variants={{
+                      hidden: { opacity: 0, y: 24 },
+                      visible: { opacity: 1, y: 0 },
+                    }}
+                    transition={itemTransition}
+                  >
+                    <LandingDemoResultCard
+                      result={result}
+                      signupRedirectQuery={AUTO_DEMO_QUERY}
+                    />
+                  </motion.div>
+                ))}
+              </motion.div>
+              <motion.div
+                className="pt-4"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.45, duration: 0.35 }}
+              >
+                <Button asChild size="lg" className="rounded-full px-8 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground hover:border-muted-foreground/30">
+                  <Link href="/signup">Search 8,600+ monologues</Link>
+                </Button>
+              </motion.div>
             </div>
-            <div className="pt-4">
-              <Button asChild size="lg" className="rounded-full px-8 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground hover:border-muted-foreground/30">
-                <Link href="/signup">Search 8,600+ monologues</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-    </div>
+    </motion.div>
   );
 }

@@ -283,7 +283,7 @@ export default function AdminModerationPage() {
                           </div>
                         </td>
                         <td className="py-2 text-muted-foreground">
-                          {sub.submitted_play_title} — {sub.submitted_author}
+                          {sub.submitted_play_title} · {sub.submitted_author}
                         </td>
                         <td className="py-2">
                           <Badge variant="secondary">{sub.status}</Badge>
@@ -510,7 +510,7 @@ function DetailEditModal({
     <Dialog open={!!submission} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Submission #{submission.id} — View / Edit</DialogTitle>
+          <DialogTitle>Submission #{submission.id}: View / Edit</DialogTitle>
         </DialogHeader>
 
         {/* Metadata */}
@@ -568,7 +568,7 @@ function DetailEditModal({
                 <span>Rejection reason</span>
                 <span className="text-foreground">
                   {submission.rejection_reason}
-                  {submission.rejection_details && ` — ${submission.rejection_details}`}
+                  {submission.rejection_details && ` (${submission.rejection_details})`}
                 </span>
               </>
             )}
@@ -686,7 +686,7 @@ function ApproveModal({
         {submission && (
           <>
             <p className="text-sm text-muted-foreground">
-              {submission.submitted_title} — {submission.submitted_character}
+              {submission.submitted_title} · {submission.submitted_character}
             </p>
             <div>
               <Label htmlFor="approve-notes">Notes (optional)</Label>
@@ -748,7 +748,7 @@ function RejectModal({
         {submission && (
           <>
             <p className="text-sm text-muted-foreground">
-              {submission.submitted_title} — {submission.submitted_character}
+              {submission.submitted_title} · {submission.submitted_character}
             </p>
             <div>
               <Label htmlFor="reject-reason">Reason</Label>
@@ -828,7 +828,7 @@ function LogsModal({
         </DialogHeader>
         {submission && (
           <p className="text-sm text-muted-foreground">
-            Submission #{submission.id} — {submission.submitted_title}
+            Submission #{submission.id}: {submission.submitted_title}
           </p>
         )}
         {isLoading ? (

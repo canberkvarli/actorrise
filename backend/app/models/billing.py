@@ -153,6 +153,8 @@ class UsageMetrics(Base):
 
     # Usage counters (incremented throughout the day)
     ai_searches_count = Column(Integer, default=0, nullable=False)
+    # All searches (monologue + film/TV + etc.) for public "live count" and analytics
+    total_searches_count = Column(Integer, default=0, nullable=False)
     scene_partner_sessions = Column(Integer, default=0, nullable=False)
     craft_coach_sessions = Column(Integer, default=0, nullable=False)
 

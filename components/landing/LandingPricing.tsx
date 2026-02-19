@@ -204,7 +204,13 @@ export function LandingPricing() {
           Simple pricing.
         </h2>
         <p className="mt-2 text-muted-foreground">
-          Free tier to explore. Upgrade when you&apos;re ready. Start free — no credit card required.
+          Free tier to explore. Upgrade when you&apos;re ready. Start free; no credit card required.
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Cancel anytime. Upgrade only if you need more.
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Founding member offer: 100% off for 12 months. Apply your code at checkout.
         </p>
         <div className="mt-12 grid md:grid-cols-3 gap-8">
           {tiers.map((tier) => {

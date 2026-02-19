@@ -20,6 +20,8 @@ CATEGORIES = [
     "bug",
     "collaboration",
     "support",
+    "business_discount",
+    "student_discount",
     "other",
 ]
 
@@ -29,7 +31,7 @@ class ContactRequest(BaseModel):
     email: EmailStr
     category: str = Field(
         default="other",
-        description="partnership, feedback, bug, collaboration, support, other",
+        description="partnership, feedback, bug, collaboration, support, business_discount, student_discount, other",
     )
     message: str = Field(..., min_length=1, max_length=5000)
 

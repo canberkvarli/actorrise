@@ -178,6 +178,17 @@ def get_admin_stats(
             "craft_coach_sessions": int(usage_row.craft_coach or 0),
         }
 
+    # All-time searches (monologue + film/TV + …) for admin overview; fallback to ai_searches if column not migrated
+    try:
+        alltime_searches = int(
+            db.query(func.coalesce(func.sum(UsageMetrics.total_searches_count), 0)).scalar() or 0
+        )
+    except Exception:
+        alltime_searches = int(
+            db.query(func.coalesce(func.sum(UsageMetrics.ai_searches_count), 0)).scalar() or 0
+        )
+    usage["alltime_searches"] = alltime_searches
+
     return {
         "from": from_d.isoformat(),
         "to": to_d.isoformat(),

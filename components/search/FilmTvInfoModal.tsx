@@ -23,13 +23,13 @@ export function FilmTvInfoModal({ open, onOpenChange }: FilmTvInfoModalProps) {
         <div className="space-y-3 text-sm text-muted-foreground">
           <p>
             Search 14,000+ films and TV series to find the right piece for your audition.
-            Use natural language — <em>&ldquo;dark psychological thriller&rdquo;</em>, <em>&ldquo;villain monologue&rdquo;</em>,
+            Use natural language: <em>&ldquo;dark psychological thriller&rdquo;</em>, <em>&ldquo;villain monologue&rdquo;</em>,
             or just a title like <em>&ldquo;The Godfather&rdquo;</em>.
           </p>
           <p>
             After you search, click a result to see details, then use the <strong>Script</strong> link
             to search for the script online (e.g. IMSDb or other sources). When available, <strong>Watch</strong> opens
-            the clip on YouTube. We don&apos;t store script text — you open the original source.
+            the clip on YouTube. We don&apos;t store script text. You open the original source.
           </p>
         </div>
         <div className="flex justify-end pt-2">
