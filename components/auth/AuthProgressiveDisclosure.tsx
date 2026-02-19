@@ -5,6 +5,7 @@ import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { SignupForm } from "@/components/auth/SignupForm";
 import { Suspense } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 type AuthMode = "login" | "signup";
 
@@ -12,6 +13,12 @@ interface AuthProgressiveDisclosureProps {
   mode: AuthMode;
   redirectTo?: string;
 }
+
+const emailFormVariants = {
+  hidden: { opacity: 0, y: -12 },
+  visible: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -6 },
+};
 
 export function AuthProgressiveDisclosure({
   mode,
@@ -31,21 +38,30 @@ export function AuthProgressiveDisclosure({
         onEmailClick={() => setShowEmailForm(true)}
       />
 
-      {showEmailForm && (
-        <div className="pt-2 animate-in fade-in duration-200">
-          {mode === "login" ? (
-            <Suspense
-              fallback={
-                <div className="h-10 animate-pulse rounded-lg bg-muted" />
-              }
-            >
-              <LoginForm />
-            </Suspense>
-          ) : (
-            <SignupForm />
-          )}
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {showEmailForm && (
+          <motion.div
+            className="pt-2"
+            variants={emailFormVariants}
+            initial="hidden"
+            animate="visible"
+            exit="exit"
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          >
+            {mode === "login" ? (
+              <Suspense
+                fallback={
+                  <div className="h-10 animate-pulse rounded-lg bg-muted" />
+                }
+              >
+                <LoginForm />
+              </Suspense>
+            ) : (
+              <SignupForm />
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

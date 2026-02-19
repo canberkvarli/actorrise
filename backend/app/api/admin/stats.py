@@ -151,34 +151,29 @@ def get_admin_stats(
         cast(MonologueSubmission.processed_at, Date) == today,
     ).count()
 
-    # --- Usage (optional aggregates in range) ---
-    usage_q = (
-        db.query(
-            func.coalesce(func.sum(UsageMetrics.ai_searches_count), 0).label("ai_searches"),
-            func.coalesce(func.sum(UsageMetrics.scene_partner_sessions), 0).label("scene_partner"),
-            func.coalesce(func.sum(UsageMetrics.craft_coach_sessions), 0).label("craft_coach"),
-        )
-        .filter(
-            UsageMetrics.date >= from_d,
-            UsageMetrics.date <= to_d,
-        )
-    )
+    # --- Usage: all users in date range ---
+    usage_q = db.query(
+        func.coalesce(func.sum(UsageMetrics.ai_searches_count), 0).label("ai_searches"),
+        func.coalesce(func.sum(UsageMetrics.scene_partner_sessions), 0).label("scene_partner"),
+        func.coalesce(func.sum(UsageMetrics.craft_coach_sessions), 0).label("craft_coach"),
+    ).filter(UsageMetrics.date >= from_d, UsageMetrics.date <= to_d)
     usage_row = usage_q.first()
-    usage: dict[str, int]
-    if usage_row is None:
-        usage = {
-            "ai_searches": 0,
-            "scene_partner_sessions": 0,
-            "craft_coach_sessions": 0,
-        }
-    else:
-        usage = {
-            "ai_searches": int(usage_row.ai_searches or 0),
-            "scene_partner_sessions": int(usage_row.scene_partner or 0),
-            "craft_coach_sessions": int(usage_row.craft_coach or 0),
-        }
+    usage: dict[str, Any] = {
+        "ai_searches": int(usage_row.ai_searches or 0) if usage_row else 0,
+        "scene_partner_sessions": int(usage_row.scene_partner or 0) if usage_row else 0,
+        "craft_coach_sessions": int(usage_row.craft_coach or 0) if usage_row else 0,
+    }
+    try:
+        usage["total_searches"] = int(
+            db.query(func.coalesce(func.sum(UsageMetrics.total_searches_count), 0))
+            .filter(UsageMetrics.date >= from_d, UsageMetrics.date <= to_d)
+            .scalar()
+            or 0
+        )
+    except Exception:
+        usage["total_searches"] = usage["ai_searches"]
 
-    # All-time searches (monologue + film/TV + …) for admin overview; fallback to ai_searches if column not migrated
+    # All-time searches (all users); fallback if total_searches_count not migrated
     try:
         alltime_searches = int(
             db.query(func.coalesce(func.sum(UsageMetrics.total_searches_count), 0)).scalar() or 0
@@ -188,6 +183,36 @@ def get_admin_stats(
             db.query(func.coalesce(func.sum(UsageMetrics.ai_searches_count), 0)).scalar() or 0
         )
     usage["alltime_searches"] = alltime_searches
+
+    # --- Current user usage in same period (so admin sees "you" vs "all") ---
+    my_q = db.query(
+        func.coalesce(func.sum(UsageMetrics.ai_searches_count), 0).label("ai_searches"),
+        func.coalesce(func.sum(UsageMetrics.scene_partner_sessions), 0).label("scene_partner"),
+        func.coalesce(func.sum(UsageMetrics.craft_coach_sessions), 0).label("craft_coach"),
+    ).filter(
+        UsageMetrics.user_id == current_user.id,
+        UsageMetrics.date >= from_d,
+        UsageMetrics.date <= to_d,
+    )
+    my_row = my_q.first()
+    usage["current_user"] = {
+        "ai_searches": int(my_row.ai_searches or 0) if my_row else 0,
+        "scene_partner_sessions": int(my_row.scene_partner or 0) if my_row else 0,
+        "craft_coach_sessions": int(my_row.craft_coach or 0) if my_row else 0,
+    }
+    try:
+        usage["current_user"]["total_searches"] = int(
+            db.query(func.coalesce(func.sum(UsageMetrics.total_searches_count), 0))
+            .filter(
+                UsageMetrics.user_id == current_user.id,
+                UsageMetrics.date >= from_d,
+                UsageMetrics.date <= to_d,
+            )
+            .scalar()
+            or 0
+        )
+    except Exception:
+        usage["current_user"]["total_searches"] = usage["current_user"]["ai_searches"]
 
     return {
         "from": from_d.isoformat(),
@@ -252,21 +277,34 @@ def get_system_health(
         for r in size_rows
     ]
 
-    # ── AI cost estimate ────────────────────────────────────────────────────────
-    # Each AI search = 1 embedding call (text-embedding-3-small) ≈ $0.00002
-    # Pull total ai_searches from UsageMetrics for current calendar month
+    # ── Search usage & AI cost estimate ─────────────────────────────────────────
+    # AI search = 1 embedding call (text-embedding-3-small) ≈ $0.00002
+    # total_searches_count = all search types (monologue + film/TV + …) for live stats
     today = date.today()
     month_start = today.replace(day=1)
-    monthly_ai = db.query(
-        func.coalesce(func.sum(UsageMetrics.ai_searches_count), 0)
-    ).filter(UsageMetrics.date >= month_start).scalar() or 0
-    monthly_ai = int(monthly_ai)
+    monthly_ai = int(
+        db.query(func.coalesce(func.sum(UsageMetrics.ai_searches_count), 0))
+        .filter(UsageMetrics.date >= month_start)
+        .scalar()
+        or 0
+    )
     estimated_cost_usd = round(monthly_ai * 0.00002, 4)
-
-    # All-time total
-    alltime_ai = int(db.query(
-        func.coalesce(func.sum(UsageMetrics.ai_searches_count), 0)
-    ).scalar() or 0)
+    alltime_ai = int(
+        db.query(func.coalesce(func.sum(UsageMetrics.ai_searches_count), 0)).scalar() or 0
+    )
+    try:
+        monthly_total = int(
+            db.query(func.coalesce(func.sum(UsageMetrics.total_searches_count), 0))
+            .filter(UsageMetrics.date >= month_start)
+            .scalar()
+            or 0
+        )
+        alltime_total = int(
+            db.query(func.coalesce(func.sum(UsageMetrics.total_searches_count), 0)).scalar() or 0
+        )
+    except Exception:
+        monthly_total = monthly_ai
+        alltime_total = alltime_ai
 
     # ── Row counts for key tables ───────────────────────────────────────────────
     from app.models.actor import FilmTvReference, Monologue  # local import to avoid circular
@@ -283,9 +321,11 @@ def get_system_health(
         },
         "ai_cost": {
             "monthly_searches": monthly_ai,
+            "monthly_total_searches": monthly_total,
             "estimated_usd_this_month": estimated_cost_usd,
             "cost_per_search_usd": 0.00002,
             "alltime_searches": alltime_ai,
+            "alltime_total_searches": alltime_total,
         },
         "content": {
             "monologue_rows": int(monologue_count),

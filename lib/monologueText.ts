@@ -2,11 +2,12 @@
  * Parses monologue text into segments for display: plain text, stage directions,
  * and quoted dialogue. Used to style these differently in the UI.
  *
- * Supports multiple conventions:
+ * Supports:
  * - ( ... ) or [ ... ] → stage direction (italic, muted)
- * - " ... " or ' ... ' → dialogue (italic, subtle border)
+ * - " ... " → dialogue (italic, subtle border)
  *
- * Works for any language; patterns are punctuation-based.
+ * Single quotes are NOT used for dialogue so that apostrophes in contractions
+ * (don't, it's, we're) don't get misread and cause a visible "pipe" border.
  */
 
 export type MonologueSegment =
@@ -16,10 +17,10 @@ export type MonologueSegment =
 
 /**
  * Matches:
- * - ( ... ) or [ ... ] → stage direction (parentheses or square brackets)
- * - " ... " or ' ... ' → quoted dialogue
+ * - ( ... ) or [ ... ] → stage direction
+ * - " ... " → quoted dialogue (double quotes only; single quotes stay plain text)
  */
-const SEGMENT_RE = /(\([^)]*\)|\[[^\]]*\]|"[^"]*"|'[^']*')/g;
+const SEGMENT_RE = /(\([^)]*\)|\[[^\]]*\]|"[^"]*")/g;
 
 function isStageDirection(raw: string): boolean {
   return raw.startsWith("(") || raw.startsWith("[");

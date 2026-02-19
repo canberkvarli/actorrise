@@ -7,6 +7,7 @@ export async function GET(request: Request) {
   const { searchParams } = requestUrl;
   const code = searchParams.get("code");
   const next = searchParams.get("next") ?? "/dashboard";
+  const provider = searchParams.get("provider"); // google | apple — for "last used" on login/signup
   // Use the request's origin so redirect stays on same host (avoids www vs non-www mismatch)
   const origin = requestUrl.origin;
 
@@ -38,8 +39,12 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Redirect to the dashboard or specified next page
-      return NextResponse.redirect(`${origin}${next}`);
+      // Redirect to the dashboard or specified next page; append provider so client can set "last used"
+      const redirectUrl = new URL(next, origin);
+      if (provider && ["google", "apple"].includes(provider)) {
+        redirectUrl.searchParams.set("provider", provider);
+      }
+      return NextResponse.redirect(redirectUrl.toString());
     }
   }
 

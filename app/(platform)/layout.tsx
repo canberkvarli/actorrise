@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { IconHome, IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket } from "@tabler/icons-react";
 import { PlanBadge } from "@/components/billing/PlanBadge";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarkCount";
 import { useProfile } from "@/hooks/useDashboardData";
 import { ContactModal } from "@/components/contact/ContactModal";
@@ -26,6 +26,7 @@ import {
   markAsSeen,
   type ChangelogEntry,
 } from "@/lib/changelog";
+import { LastAuthProviderSync } from "@/components/auth/LastAuthProviderSync";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -142,6 +143,9 @@ export default function PlatformLayout({
 
   return (
     <QueryClientProvider client={queryClient}>
+    <Suspense fallback={null}>
+      <LastAuthProviderSync />
+    </Suspense>
     <SWRConfig
       value={{
         revalidateOnFocus: false,

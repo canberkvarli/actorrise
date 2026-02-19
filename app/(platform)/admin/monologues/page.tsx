@@ -7,35 +7,10 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { IconSearch, IconEdit, IconLoader2 } from "@tabler/icons-react";
+import { EditMonologueModal, type AdminMonologueItem, type EditMonologueBody } from "@/components/admin/EditMonologueModal";
 
-export interface AdminMonologueItem {
-  id: number;
-  title: string;
-  character_name: string;
-  text: string;
-  stage_directions: string | null;
-  play_title: string;
-  play_id: number;
-  author: string;
-  category: string;
-  character_gender: string | null;
-  character_age_range: string | null;
-  primary_emotion: string | null;
-  themes: string[] | null;
-  word_count: number;
-  estimated_duration_seconds: number;
-  scene_description: string | null;
-}
+export type { AdminMonologueItem };
 
 export default function AdminMonologuesPage() {
   const queryClient = useQueryClient();
@@ -78,17 +53,7 @@ export default function AdminMonologuesPage() {
       body,
     }: {
       id: number;
-      body: Partial<{
-        title: string;
-        text: string;
-        character_name: string;
-        stage_directions: string | null;
-        character_gender: string | null;
-        character_age_range: string | null;
-        primary_emotion: string | null;
-        themes: string[] | null;
-        scene_description: string | null;
-      }>;
+      body: EditMonologueBody;
     }) => {
       const res = await api.patch<AdminMonologueItem>(
         `/api/admin/monologues/${id}`,
@@ -181,185 +146,15 @@ export default function AdminMonologuesPage() {
         </Card>
       )}
 
-      {editModal && (
-        <EditMonologueModal
-          monologue={editModal}
-          onClose={() => setEditModal(null)}
-          onSave={(body) => {
-            updateMutation.mutate({ id: editModal.id, body });
-          }}
-          isSaving={updateMutation.isPending}
-        />
-      )}
+      <EditMonologueModal
+        monologue={editModal}
+        onClose={() => setEditModal(null)}
+        onSave={(body) => {
+          if (editModal) updateMutation.mutate({ id: editModal.id, body });
+        }}
+        isSaving={updateMutation.isPending}
+      />
     </div>
   );
 }
 
-type EditBody = {
-  title?: string;
-  text?: string;
-  character_name?: string;
-  stage_directions?: string | null;
-  character_gender?: string | null;
-  character_age_range?: string | null;
-  primary_emotion?: string | null;
-  themes?: string[] | null;
-  scene_description?: string | null;
-};
-
-function EditMonologueModal({
-  monologue,
-  onClose,
-  onSave,
-  isSaving,
-}: {
-  monologue: AdminMonologueItem;
-  onClose: () => void;
-  onSave: (body: EditBody) => void;
-  isSaving: boolean;
-}) {
-  const [title, setTitle] = useState(monologue.title);
-  const [text, setText] = useState(monologue.text);
-  const [characterName, setCharacterName] = useState(monologue.character_name);
-  const [stageDirections, setStageDirections] = useState(
-    monologue.stage_directions ?? ""
-  );
-  const [characterGender, setCharacterGender] = useState(
-    monologue.character_gender ?? ""
-  );
-  const [characterAgeRange, setCharacterAgeRange] = useState(
-    monologue.character_age_range ?? ""
-  );
-  const [primaryEmotion, setPrimaryEmotion] = useState(
-    monologue.primary_emotion ?? ""
-  );
-  const [themesStr, setThemesStr] = useState(
-    (monologue.themes ?? []).join(", ")
-  );
-  const [sceneDescription, setSceneDescription] = useState(
-    monologue.scene_description ?? ""
-  );
-
-  const handleSave = () => {
-    const themes = themesStr
-      .split(/[,;]/)
-      .map((t) => t.trim())
-      .filter(Boolean);
-    onSave({
-      title: title || undefined,
-      text: text || undefined,
-      character_name: characterName || undefined,
-      stage_directions: stageDirections || null,
-      character_gender: characterGender || null,
-      character_age_range: characterAgeRange || null,
-      primary_emotion: primaryEmotion || null,
-      themes: themes.length ? themes : null,
-      scene_description: sceneDescription || null,
-    });
-  };
-
-  return (
-    <Dialog open onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Edit monologue (ID: {monologue.id})</DialogTitle>
-        </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="edit-title">Title</Label>
-            <Input
-              id="edit-title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="edit-character">Character name</Label>
-            <Input
-              id="edit-character"
-              value={characterName}
-              onChange={(e) => setCharacterName(e.target.value)}
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="edit-text">Text</Label>
-            <Textarea
-              id="edit-text"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={8}
-              className="font-mono text-sm"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="edit-stage">Stage directions</Label>
-            <Textarea
-              id="edit-stage"
-              value={stageDirections}
-              onChange={(e) => setStageDirections(e.target.value)}
-              rows={2}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="edit-gender">Character gender</Label>
-              <Input
-                id="edit-gender"
-                value={characterGender}
-                onChange={(e) => setCharacterGender(e.target.value)}
-                placeholder="male, female, any"
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-age">Character age range</Label>
-              <Input
-                id="edit-age"
-                value={characterAgeRange}
-                onChange={(e) => setCharacterAgeRange(e.target.value)}
-                placeholder="20s, 30-40, 50+"
-              />
-            </div>
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="edit-emotion">Primary emotion</Label>
-            <Input
-              id="edit-emotion"
-              value={primaryEmotion}
-              onChange={(e) => setPrimaryEmotion(e.target.value)}
-              placeholder="e.g. sadness, anger"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="edit-themes">Themes (comma-separated)</Label>
-            <Input
-              id="edit-themes"
-              value={themesStr}
-              onChange={(e) => setThemesStr(e.target.value)}
-              placeholder="love, death, identity"
-            />
-          </div>
-          <div className="grid gap-2">
-            <Label htmlFor="edit-scene">Scene description</Label>
-            <Textarea
-              id="edit-scene"
-              value={sceneDescription}
-              onChange={(e) => setSceneDescription(e.target.value)}
-              rows={2}
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isSaving}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? (
-              <IconLoader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : null}
-            Save
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}

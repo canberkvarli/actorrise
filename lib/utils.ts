@@ -24,3 +24,27 @@ export function getScriptSearchUrl(title: string): string {
   const query = `${title.trim()} screenplay script`
   return `https://www.google.com/search?q=${encodeURIComponent(query)}`
 }
+
+/**
+ * Script URL for a Film/TV reference. Uses stored imsdb_url override when set,
+ * otherwise builds IMSDb URL from title (e.g. for "The Godfather" → Godfather on IMSDb, admin can set override).
+ */
+export function getFilmTvScriptUrl(ref: { imsdb_url?: string | null; title: string }): string {
+  if (ref.imsdb_url?.trim()) return ref.imsdb_url.trim()
+  return getImsdbSearchUrl(ref.title)
+}
+
+/**
+ * Whether to show the monologue title in the UI. Hides generic noise like "Dr's Monologue" or "Someone's Monologue".
+ */
+export function isMeaningfulMonologueTitle(
+  title: string | null | undefined,
+  characterName?: string
+): boolean {
+  const t = title?.trim()
+  if (!t) return false
+  if (/^monologue$/i.test(t)) return false
+  if (/'s\s+monologue$/i.test(t)) return false
+  if (characterName && t.toLowerCase() === `${characterName.trim().toLowerCase()}'s monologue`) return false
+  return true
+}

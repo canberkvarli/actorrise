@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { IconLoader2 } from "@tabler/icons-react";
 import { createBrowserClient } from "@supabase/ssr";
+import { motion, AnimatePresence } from "framer-motion";
+import { getStoredLastAuthMethod, type LastAuthMethod } from "@/lib/last-auth-method";
 
 type OAuthProvider = "google" | "apple" | "twitter";
+
+const lastUsedBadgeVariants = {
+  hidden: { opacity: 0, scale: 0.85, y: 4 },
+  visible: { opacity: 1, scale: 1, y: 0 },
+  exit: { opacity: 0, scale: 0.9, y: 2 },
+};
 
 interface OAuthButtonsProps {
   redirectTo?: string;
@@ -79,6 +87,11 @@ export function OAuthButtons({
   onEmailClick,
 }: OAuthButtonsProps) {
   const [loadingProvider, setLoadingProvider] = useState<OAuthProvider | null>(null);
+  const [lastUsed, setLastUsed] = useState<LastAuthMethod | null>(null);
+
+  useEffect(() => {
+    setLastUsed(getStoredLastAuthMethod());
+  }, []);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -87,12 +100,13 @@ export function OAuthButtons({
 
   const handleOAuthSignIn = async (provider: OAuthProvider) => {
     setLoadingProvider(provider);
+    // "Last used" is set only after successful OAuth (in auth callback → LastAuthProviderSync)
 
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}&provider=${provider}`,
         },
       });
 
@@ -119,47 +133,81 @@ export function OAuthButtons({
           const config = providerConfig[provider];
           const Icon = config.icon;
           const isLoading = loadingProvider === provider;
+          const isLastUsed = lastUsed === provider;
 
           return (
-            <Button
-              key={provider}
-              type="button"
-              variant="outline"
-              className="w-full h-11 rounded-lg border-border hover:bg-muted hover:text-foreground hover:border-foreground/20 transition-all justify-center gap-3"
-              onClick={() => handleOAuthSignIn(provider)}
-              disabled={loadingProvider !== null}
-            >
-              {isLoading ? (
-                <IconLoader2 className="h-5 w-5 animate-spin" />
-              ) : (
-                <>
-                  <Icon />
-                  <span>Continue with {config.label}</span>
-                </>
-              )}
-            </Button>
+            <div key={provider} className="relative">
+              <AnimatePresence mode="wait">
+                {isLastUsed && (
+                  <motion.span
+                    key="badge"
+                    className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 rounded-full bg-background px-2 py-0.5 text-[10px] font-medium tracking-wide text-emerald-600 shadow-sm ring-1 ring-border"
+                    variants={lastUsedBadgeVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                  >
+                    Last used
+                  </motion.span>
+                )}
+              </AnimatePresence>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full h-11 rounded-lg border-border hover:bg-muted hover:text-foreground hover:border-foreground/20 transition-all justify-center gap-3"
+                onClick={() => handleOAuthSignIn(provider)}
+                disabled={loadingProvider !== null}
+              >
+                {isLoading ? (
+                  <IconLoader2 className="h-5 w-5 animate-spin" />
+                ) : (
+                  <>
+                    <Icon />
+                    <span>Continue with {config.label}</span>
+                  </>
+                )}
+              </Button>
+            </div>
           );
         })}
         {emailButtonLabel && onEmailClick && (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full h-11 rounded-lg border-border hover:bg-muted hover:text-foreground hover:border-foreground/20 transition-all justify-center gap-3"
-            onClick={onEmailClick}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="h-5 w-5 shrink-0"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              aria-hidden
+          <div className="relative">
+            <AnimatePresence mode="wait">
+              {lastUsed === "email" && (
+                <motion.span
+                  key="badge-email"
+                  className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 z-10 rounded-full bg-background px-2 py-0.5 text-[10px] font-medium tracking-wide text-emerald-600 shadow-sm ring-1 ring-border"
+                  variants={lastUsedBadgeVariants}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  transition={{ type: "spring", stiffness: 400, damping: 25 }}
+                >
+                  Last used
+                </motion.span>
+              )}
+            </AnimatePresence>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-11 rounded-lg border-border hover:bg-muted hover:text-foreground hover:border-foreground/20 transition-all justify-center gap-3"
+              onClick={onEmailClick}
             >
-              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-              <path d="m22 6-10 7L2 6" />
-            </svg>
-            <span>{emailButtonLabel}</span>
-          </Button>
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                aria-hidden
+              >
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                <path d="m22 6-10 7L2 6" />
+              </svg>
+              <span>{emailButtonLabel}</span>
+            </Button>
+          </div>
         )}
       </div>
     );

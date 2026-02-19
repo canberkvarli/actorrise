@@ -1,5 +1,6 @@
 import { Monologue } from "@/types/actor";
 import { Badge } from "@/components/ui/badge";
+import { isMeaningfulMonologueTitle } from "@/lib/utils";
 
 interface MiniMonologueCardProps {
   monologue: Monologue;
@@ -12,6 +13,11 @@ export default function MiniMonologueCard({ monologue }: MiniMonologueCardProps)
         <div className="font-medium truncate">
           {monologue.character_name}
         </div>
+        {isMeaningfulMonologueTitle(monologue.title, monologue.character_name) && (
+          <div className="text-foreground/80 truncate text-[10px]">
+            {monologue.title}
+          </div>
+        )}
         <div className="text-muted-foreground truncate text-[10px]">
           {monologue.play_title}
         </div>

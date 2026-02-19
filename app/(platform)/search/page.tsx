@@ -13,7 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow, IconSend, IconFlag, IconDeviceTv } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow, IconSend, IconFlag, IconDeviceTv, IconEdit } from "@tabler/icons-react";
 
 // Fun loading messages for AI search
 const LOADING_MESSAGES = [
@@ -38,11 +38,20 @@ import { SearchFiltersSheet } from "@/components/search/SearchFiltersSheet";
 import { FilmTvReferenceCard } from "@/components/search/FilmTvReferenceCard";
 import { FilmTvInfoModal } from "@/components/search/FilmTvInfoModal";
 import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
+import { EditMonologueModal } from "@/components/admin/EditMonologueModal";
+import type { EditMonologueBody } from "@/components/admin/EditMonologueModal";
 import { Slider } from "@/components/ui/slider";
 import { ContactModal } from "@/components/contact/ContactModal";
 import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackPrompt";
 import type { FilmTvReference } from "@/types/filmTv";
-import { getImsdbSearchUrl, getScriptSearchUrl } from "@/lib/utils";
+import { getFilmTvScriptUrl, getScriptSearchUrl } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -101,6 +110,11 @@ export default function SearchPage() {
   const [showFilmTvFilters, setShowFilmTvFilters] = useState(false);
   const [selectedFilmTvRef, setSelectedFilmTvRef] = useState<FilmTvReference | null>(null);
   const [filmTvPosterError, setFilmTvPosterError] = useState(false);
+  const [filmTvEditScriptOpen, setFilmTvEditScriptOpen] = useState(false);
+  const [filmTvEditScriptValue, setFilmTvEditScriptValue] = useState("");
+  const [filmTvEditScriptSaving, setFilmTvEditScriptSaving] = useState(false);
+  const [editMonologueId, setEditMonologueId] = useState<number | null>(null);
+  const [editMonologueSaving, setEditMonologueSaving] = useState(false);
 
   const LAST_SEARCH_KEY = "monologue_search_last_results_v1";
   const FILM_TV_LAST_SEARCH_KEY = "film_tv_search_last_results_v1";
@@ -1660,6 +1674,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           variant="bestMatch"
                           index={idx}
                           showMatchBadge={showBadges}
+                          isModerator={!!user?.is_moderator}
+                          onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
                         />
                       ))}
                       {relatedOrBookmarked.map((mono, idx) => (
@@ -1671,6 +1687,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           variant="default"
                           index={(!showBookmarkedOnly ? bestMatches.length : 0) + idx}
                           showMatchBadge={showBadges}
+                          isModerator={!!user?.is_moderator}
+                          onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
                         />
                       ))}
                     </div>
@@ -1878,6 +1896,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 ) : (
                   <MonologueDetailContent
                     monologue={selectedMonologue}
+                    onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
                   />
                 )}
               </div>
@@ -2020,13 +2039,34 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   );
                 })()}
 
+                {user?.is_moderator && (
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <span>ID: {selectedFilmTvRef.id}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1.5 h-8 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFilmTvEditScriptValue(
+                          selectedFilmTvRef.imsdb_url?.trim() ?? getFilmTvScriptUrl(selectedFilmTvRef)
+                        );
+                        setFilmTvEditScriptOpen(true);
+                      }}
+                    >
+                      <IconEdit className="h-3.5 w-3.5" />
+                      Edit script link
+                    </Button>
+                  </div>
+                )}
+
                 {/* Actions */}
                 <div className="flex flex-wrap gap-2 pt-2 border-t">
                   <Button
                     variant="default"
                     size="sm"
                     className="gap-2"
-                    onClick={() => window.open(getImsdbSearchUrl(selectedFilmTvRef.title), "_blank", "noopener,noreferrer")}
+                    onClick={() => window.open(getFilmTvScriptUrl(selectedFilmTvRef), "_blank", "noopener,noreferrer")}
                   >
                     <IconExternalLink className="h-4 w-4" />
                     Script on IMSDb
@@ -2058,6 +2098,81 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </>
         )}
       </AnimatePresence>
+
+      <Dialog open={filmTvEditScriptOpen} onOpenChange={setFilmTvEditScriptOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit script link</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Override the IMSDb script URL for this title (e.g. IMSDb uses &quot;Godfather&quot; but we show &quot;The Godfather&quot;). Leave empty to use the auto-generated URL from the title.
+          </p>
+          <div className="grid gap-2">
+            <Label htmlFor="film-tv-script-url">Script URL</Label>
+            <Input
+              id="film-tv-script-url"
+              value={filmTvEditScriptValue}
+              onChange={(e) => setFilmTvEditScriptValue(e.target.value)}
+              placeholder="https://imsdb.com/scripts/Godfather.html"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setFilmTvEditScriptOpen(false)}
+              disabled={filmTvEditScriptSaving}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={filmTvEditScriptSaving}
+              onClick={async () => {
+                if (!selectedFilmTvRef) return;
+                setFilmTvEditScriptSaving(true);
+                try {
+                  const res = await api.patch<{ imsdb_url: string | null }>(
+                    `/api/admin/film-tv/${selectedFilmTvRef.id}`,
+                    { imsdb_url: filmTvEditScriptValue.trim() || null }
+                  );
+                  setSelectedFilmTvRef((prev) =>
+                    prev ? { ...prev, imsdb_url: res.data.imsdb_url } : null
+                  );
+                  setFilmTvEditScriptOpen(false);
+                  toast.success("Script link updated");
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : "Update failed");
+                } finally {
+                  setFilmTvEditScriptSaving(false);
+                }
+              }}
+            >
+              {filmTvEditScriptSaving ? (
+                <IconLoader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : null}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <EditMonologueModal
+        monologueId={editMonologueId}
+        onClose={() => setEditMonologueId(null)}
+        onSave={async (body: EditMonologueBody) => {
+          if (editMonologueId == null) return;
+          setEditMonologueSaving(true);
+          try {
+            await api.patch(`/api/admin/monologues/${editMonologueId}`, body);
+            toast.success("Monologue updated");
+            setEditMonologueId(null);
+          } catch (err) {
+            toast.error(err instanceof Error ? err.message : "Update failed");
+          } finally {
+            setEditMonologueSaving(false);
+          }
+        }}
+        isSaving={editMonologueSaving}
+      />
 
       <AnimatePresence>
         {showSearchTour && (

@@ -59,9 +59,16 @@ export interface AdminStats {
   };
   usage: {
     ai_searches: number;
+    total_searches: number;
     scene_partner_sessions: number;
     craft_coach_sessions: number;
     alltime_searches: number;
+    current_user: {
+      ai_searches: number;
+      total_searches: number;
+      scene_partner_sessions: number;
+      craft_coach_sessions: number;
+    };
   };
 }
 
@@ -97,9 +104,11 @@ interface SystemHealth {
   };
   ai_cost: {
     monthly_searches: number;
+    monthly_total_searches: number;
     estimated_usd_this_month: number;
     cost_per_search_usd: number;
     alltime_searches: number;
+    alltime_total_searches: number;
   };
   content: {
     monologue_rows: number;
@@ -117,6 +126,8 @@ function useSystemHealth(enabled: boolean) {
     enabled,
     staleTime: 0,
     gcTime: 0,
+    refetchInterval: enabled ? 30_000 : false, // refresh every 30s when diagnostic is open so search/cost stats stay live
+    refetchOnWindowFocus: enabled, // refetch when returning to tab
   });
 }
 
@@ -518,25 +529,46 @@ export default function AdminOverviewPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Usage (period)</CardTitle>
+          <CardTitle className="text-base">
+            Usage — all users ({stats.from} → {stats.to})
+          </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-6">
-          <div>
-            <p className="text-sm text-muted-foreground">AI searches</p>
-            <p className="text-xl font-semibold">{stats.usage.ai_searches}</p>
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-6">
+            <div>
+              <p className="text-sm text-muted-foreground">Total searches (period)</p>
+              <p className="text-xl font-semibold">
+                {(stats.usage.total_searches ?? stats.usage.ai_searches).toLocaleString()}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">AI searches (period)</p>
+              <p className="text-xl font-semibold">{stats.usage.ai_searches}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Scene partner sessions</p>
+              <p className="text-xl font-semibold">
+                {stats.usage.scene_partner_sessions}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Craft coach sessions</p>
+              <p className="text-xl font-semibold">
+                {stats.usage.craft_coach_sessions}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Scene partner sessions</p>
-            <p className="text-xl font-semibold">
-              {stats.usage.scene_partner_sessions}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Craft coach sessions</p>
-            <p className="text-xl font-semibold">
-              {stats.usage.craft_coach_sessions}
-            </p>
-          </div>
+          {stats.usage.current_user && (
+            <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2">
+              <p className="text-xs font-medium text-muted-foreground mb-2">Your usage (same period)</p>
+              <div className="flex flex-wrap gap-4 text-sm">
+                <span>Total: <strong>{(stats.usage.current_user.total_searches ?? stats.usage.current_user.ai_searches).toLocaleString()}</strong></span>
+                <span>AI: <strong>{stats.usage.current_user.ai_searches}</strong></span>
+                <span>Scene partner: <strong>{stats.usage.current_user.scene_partner_sessions}</strong></span>
+                <span>Craft coach: <strong>{stats.usage.current_user.craft_coach_sessions}</strong></span>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -658,30 +690,41 @@ export default function AdminOverviewPage() {
                 </div>
               </div>
 
-              {/* AI cost */}
+              {/* Searches & AI cost — total (all types) + AI (embeddings/cost), live */}
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <IconBrain className="h-4 w-4" />
-                  AI cost estimate (OpenAI embeddings)
+                  Searches &amp; AI cost (OpenAI embeddings)
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-2">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-2">
                   <div>
-                    <p className="text-xs text-muted-foreground">This month searches</p>
+                    <p className="text-xs text-muted-foreground">Total this month</p>
+                    <p className="text-lg font-semibold">{(health.ai_cost.monthly_total_searches ?? health.ai_cost.monthly_searches).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Total all-time</p>
+                    <p className="text-lg font-semibold">{(health.ai_cost.alltime_total_searches ?? health.ai_cost.alltime_searches).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">AI this month</p>
                     <p className="text-lg font-semibold">{health.ai_cost.monthly_searches.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">AI all-time</p>
+                    <p className="text-lg font-semibold">{health.ai_cost.alltime_searches.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Est. cost this month</p>
                     <p className="text-lg font-semibold">${health.ai_cost.estimated_usd_this_month.toFixed(4)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Cost per search</p>
-                    <p className="text-lg font-semibold">$0.00002</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">All-time searches</p>
-                    <p className="text-lg font-semibold">{health.ai_cost.alltime_searches.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">Cost per search (AI)</p>
+                    <p className="text-lg font-semibold">${health.ai_cost.cost_per_search_usd.toFixed(5)}</p>
                   </div>
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Cost is based on AI searches only (OpenAI text-embedding-3-small). Total searches include filter-only and non-embedding searches, so Total ≥ AI.
+                </p>
               </div>
 
               {/* Content counts */}

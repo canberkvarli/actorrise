@@ -48,6 +48,7 @@ def seed_pricing_tiers():
                     "priority_support": False,
                     "search_history_limit": 5,
                     "advanced_analytics": False,
+                    "scene_partner_sessions": 1,  # One-time for Free
                 },
                 is_active=True,
                 sort_order=0,
@@ -69,7 +70,8 @@ def seed_pricing_tiers():
                     "priority_support": True,
                     "search_history_limit": -1,  # -1 = unlimited
                     "advanced_analytics": False,
-                    "early_access": True,  # Beta access to new features
+                    "early_access": True,
+                    "scene_partner_sessions": 1,  # One-time for Plus
                 },
                 is_active=True,
                 sort_order=1,
@@ -87,15 +89,14 @@ def seed_pricing_tiers():
                     "ai_searches_per_month": -1,  # -1 = unlimited
                     "bookmarks_limit": -1,  # -1 = unlimited
                     "recommendations": True,
-                    "scene_partner_sessions": 10,  # Future feature
-                    "craft_coach_sessions": 5,  # Future feature
+                    "scene_partner_sessions": 10,  # Per month for Unlimited (ScenePartner AI)
                     "download_formats": ["txt", "pdf"],
                     "priority_support": True,
                     "search_history_limit": -1,  # -1 = unlimited
                     "advanced_analytics": True,
-                    "collections": True,  # Organize monologues into custom sets
-                    "collaboration": True,  # Share collections with others
-                    "white_label_export": True,  # Remove ActorRise branding from downloads
+                    "collections": True,
+                    "collaboration": True,
+                    "white_label_export": True,
                     "early_access": True,
                 },
                 is_active=True,
