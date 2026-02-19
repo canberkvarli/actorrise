@@ -148,6 +148,8 @@ def get_me(current_user: User = Depends(get_current_user)):
         "has_seen_welcome": current_user.has_seen_welcome,
         "has_seen_search_tour": current_user.has_seen_search_tour,
         "has_seen_profile_tour": current_user.has_seen_profile_tour,
+        "is_moderator": current_user.is_moderator,
+        "can_approve_submissions": current_user.can_approve_submissions,
     }
 
 
@@ -170,6 +172,8 @@ def update_me(
         "name": current_user.name,
         "supabase_id": current_user.supabase_id,
         "marketing_opt_in": current_user.marketing_opt_in,
+        "is_moderator": current_user.is_moderator,
+        "can_approve_submissions": current_user.can_approve_submissions,
     }
 
 

@@ -73,6 +73,8 @@ export default function SearchPage() {
   const [contactOpen, setContactOpen] = useState(false);
   const [showBookmarkedOnly, setShowBookmarkedOnly] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
+  /** When set, restore effect skips Film & TV block to avoid acting on stale URL after a Plays action. */
+  const playsActionAtRef = useRef<number>(0);
 
   /** "plays" = classic monologues; "film_tv" = film/TV reference (metadata-only). Init from URL or last mode to avoid flash. */
   const [searchMode, setSearchMode] = useState<"plays" | "film_tv">(() => {
@@ -211,6 +213,12 @@ export default function SearchPage() {
     }
 
     const mode = searchParams.get("mode");
+
+    // Skip Film & TV restore if user just switched to Plays or ran a plays search (URL may not have updated yet).
+    if (mode === "film_tv" && playsActionAtRef.current && Date.now() - playsActionAtRef.current < 1500) {
+      playsActionAtRef.current = 0;
+      return;
+    }
 
     // Film & TV: restore from URL + cache or last film_tv search
     if (mode === "film_tv") {
@@ -486,6 +494,7 @@ export default function SearchPage() {
 
       // Cache results (first page only) in sessionStorage keyed by query+filters
       if (pageNum === 1) {
+        playsActionAtRef.current = Date.now();
         const storageKey = `search_results_${searchQuery}_${JSON.stringify(searchFilters)}_${effectiveMaxOverdone}`;
         sessionStorage.setItem(storageKey, JSON.stringify(newResults));
         const savedFilters = { ...searchFilters, max_overdone_score: effectiveMaxOverdone };
@@ -552,14 +561,7 @@ export default function SearchPage() {
   const handleSearch = async () => {
     if (searchMode === "film_tv") {
       const hasQueryOrFilters = filmTvQuery.trim() !== "" || Object.values(filmTvFilters).some((v) => v !== "");
-      if (!hasQueryOrFilters) {
-        setFilmTvHasSearched(true);
-        setFilmTvResults([]);
-        setFilmTvTotal(0);
-        setSearchError(null);
-        router.replace("/search?mode=film_tv", { scroll: false });
-        return;
-      }
+      // Only set filmTvHasSearched and results when we actually run a fetch (query/filters or explicit "Browse all").
       setFilmTvHasSearched(true);
       setIsLoading(true);
       setSearchError(null);
@@ -949,6 +951,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             <button
               type="button"
               onClick={() => {
+                playsActionAtRef.current = Date.now();
                 setSearchMode("plays");
                 setOutlineFlash("plays");
                 const params = new URLSearchParams();
@@ -1477,16 +1480,26 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </Card>
             ) : (
               <div id="search-results" className="space-y-4">
-                <ResultsFeedbackPrompt
-                  context="film_tv_search"
-                  resultsViewCount={filmTvResultsViewCount}
-                  onOpenContact={() => setContactOpen(true)}
-                />
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1.5 text-sm">
-                    <span className="font-semibold text-foreground tabular-nums">{filmTvTotal}</span>
-                    <span className="text-muted-foreground">references</span>
+                {/* Results header: count left, feedback center (same layout as plays) */}
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex flex-col gap-0.5 min-w-0 shrink-0">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="text-2xl font-semibold tabular-nums text-foreground">
+                        {filmTvTotal}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        references
+                      </span>
+                    </div>
                   </div>
+                  <div className="flex-1 flex justify-center min-w-0">
+                    <ResultsFeedbackPrompt
+                      context="film_tv_search"
+                      resultsViewCount={filmTvResultsViewCount}
+                      onOpenContact={() => setContactOpen(true)}
+                    />
+                  </div>
+                  <div className="w-[98px] shrink-0" aria-hidden />
                 </div>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {filmTvResults.map((ref, idx) => (
@@ -1885,7 +1898,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             >
               <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-[10002]">
                 <div className="flex items-center justify-between gap-2 p-6">
-                  <h2 className="text-xl font-bold truncate">
+                  <h2 className="text-2xl font-bold truncate">
                     {selectedFilmTvRef.type === "tvSeries" ? "TV details" : "Movie details"}
                   </h2>
                   <div className="flex items-center gap-1 shrink-0">

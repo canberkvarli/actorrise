@@ -80,6 +80,9 @@ export default function TermsPage() {
             <Link href="/sources" className="text-foreground underline hover:no-underline">Sources &amp; copyright</Link>
             {" "}page for more information.
           </p>
+          <p className="mb-3">
+            <strong className="text-foreground">Film and television reference:</strong> Film and television reference entries contain only factual metadata (character name, source title, thematic descriptions, and links) and do not include copyrighted script text. Links to third-party script sources are provided for convenience only; ActorRise is not responsible for third-party content.
+          </p>
           <p>
             <strong className="text-foreground">Your content:</strong> You retain ownership of content you upload (e.g., headshots, profile text). You grant us a non-exclusive, royalty-free, worldwide license to use, store, display, and process that content as needed to provide and improve the Service and as described in our Privacy Policy. You represent that you have the rights to grant this license and that your content does not violate these Terms or any third-party rights.
           </p>
@@ -145,6 +148,15 @@ export default function TermsPage() {
               Contact page
             </Link>
             .
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-foreground mb-3">14. DMCA Notice</h2>
+          <p>
+            If you believe content on ActorRise infringes your copyright, contact us at{" "}
+            <a href="mailto:canberkvarli@gmail.com" className="text-foreground underline hover:no-underline">canberkvarli@gmail.com</a>
+            {" "}with: (1) identification of the copyrighted work; (2) identification of the allegedly infringing material and its URL; (3) your contact information; (4) a statement of good faith belief that the use is not authorized by the copyright owner; and (5) your electronic or physical signature. We will investigate and remove infringing content where appropriate.
           </p>
         </section>
       </div>

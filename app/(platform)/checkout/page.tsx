@@ -65,6 +65,9 @@ export default function CheckoutPage() {
     if (code === "FOUNDER") {
       setPromoApplied("FOUNDER");
       setError(null);
+    } else if (code === "STARTUPS" || code === "STARTUPS24") {
+      setPromoApplied("STARTUPS");
+      setError(null);
     } else if (code) {
       setPromoApplied(null);
       setError("Invalid promo code.");
@@ -114,9 +117,12 @@ export default function CheckoutPage() {
   const getPrice = () => {
     if (!tier) return 0;
     if (promoApplied === "FOUNDER") return 0;
-    return period === "annual" && tier.annual_price_cents
-      ? tier.annual_price_cents
-      : tier.monthly_price_cents;
+    const base =
+      period === "annual" && tier.annual_price_cents
+        ? tier.annual_price_cents
+        : tier.monthly_price_cents;
+    if (promoApplied === "STARTUPS") return Math.round(base * 0.5);
+    return base;
   };
 
   const formatPrice = (cents: number) => `$${(cents / 100).toFixed(2)}`;
@@ -234,7 +240,9 @@ export default function CheckoutPage() {
                 <div className="flex items-center justify-between rounded-lg bg-accent/10 border border-accent/20 px-3 py-2">
                   <span className="text-sm font-medium text-foreground flex items-center gap-2">
                     <IconTag className="h-4 w-4 shrink-0 text-accent" />
-                    {promoApplied} applied — free for 1 year
+                    {promoApplied === "FOUNDER"
+                      ? "FOUNDER applied — free for 1 year"
+                      : "STARTUPS applied — 50% off"}
                   </span>
                   <Button type="button" variant="ghost" size="sm" onClick={removePromo}>
                     <IconX className="h-4 w-4" />

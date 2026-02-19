@@ -2,10 +2,13 @@ import logging
 from contextlib import asynccontextmanager
 
 from app.api.admin.moderation import router as moderation_router
+from app.api.admin.monologues import router as admin_monologues_router
+from app.api.admin.stats import router as admin_stats_router
 from app.api.audition import router as audition_router
 from app.api.auth import router as auth_router
 from app.api.contact import router as contact_router
 from app.api.feedback import router as feedback_router
+from app.api.film_tv import router as film_tv_router
 from app.api.monologues import router as monologues_router
 from app.api.pricing import router as pricing_router
 from app.api.profile import router as profile_router
@@ -105,6 +108,7 @@ app.include_router(contact_router)
 app.include_router(feedback_router)
 app.include_router(profile_router)
 app.include_router(monologues_router)
+app.include_router(film_tv_router)
 app.include_router(scenes_router)
 app.include_router(scripts_router)
 app.include_router(audition_router)
@@ -112,6 +116,8 @@ app.include_router(pricing_router)
 app.include_router(subscriptions_router)
 app.include_router(webhooks_router)
 app.include_router(moderation_router)
+app.include_router(admin_monologues_router)
+app.include_router(admin_stats_router)
 
 
 @app.get("/")

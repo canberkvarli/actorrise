@@ -59,8 +59,8 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/profile', request.url))
   }
 
-  // Protect platform (require auth): dashboard, profile, search, checkout, billing
-  const protectedPaths = ['/dashboard', '/profile', '/search', '/checkout', '/billing']
+  // Protect platform (require auth): dashboard, profile, search, checkout, billing, admin
+  const protectedPaths = ['/dashboard', '/profile', '/search', '/checkout', '/billing', '/admin']
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p))
   if (isProtected) {
     if (!user) {

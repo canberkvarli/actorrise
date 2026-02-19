@@ -8,10 +8,11 @@ import { motion } from "framer-motion";
 import { Monologue } from "@/types/actor";
 
 function getScoreBadgeClass(score: number, isBestMatch: boolean) {
-  if (isBestMatch || score >= 0.65) return "bg-primary/15 text-primary";
-  if (score >= 0.5) return "bg-secondary/20 text-secondary-foreground";
-  if (score >= 0.35) return "bg-primary/10 text-primary/90";
-  return "bg-muted/80 text-muted-foreground";
+  /* Solid, high-contrast badges so match labels are clearly readable */
+  if (isBestMatch || score >= 0.65) return "bg-primary text-primary-foreground";
+  if (score >= 0.5) return "bg-secondary text-secondary-foreground";
+  if (score >= 0.35) return "bg-primary/25 text-primary border border-primary/40";
+  return "bg-muted text-muted-foreground";
 }
 
 function getMatchLabel(score: number): string {
@@ -41,23 +42,31 @@ export function MonologueResultCard({
   const isBestMatch = variant === "bestMatch";
   const [justBookmarked, setJustBookmarked] = useState(false);
   const displayMatchBadge = (m: Monologue) => {
-    if (!showMatchBadge || !m.relevance_score || m.relevance_score <= 0.1) return null;
-    const score = m.relevance_score;
+    const score = m.relevance_score ?? 0;
+    const hasScore = showMatchBadge && score > 0.1;
     const pct = Math.round(score * 100);
     const label =
       m.match_type === "exact_quote"
         ? "Exact quote"
         : m.match_type === "fuzzy_quote"
           ? "This is the one"
-          : getMatchLabel(score);
+          : m.match_type === "title_match"
+            ? "Exact match"
+            : m.match_type === "character_match"
+              ? "Character match"
+              : m.match_type === "play_match"
+                ? "Play match"
+                : getMatchLabel(score);
+    if (!hasScore && !m.match_type) return null;
     return (
       <span
         className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${getScoreBadgeClass(
-          score,
+          score || 0.9,
           isBestMatch
         )}`}
       >
-        {label} · {pct}%
+        {label}
+        {pct > 0 ? ` · ${pct}%` : ""}
       </span>
     );
   };
