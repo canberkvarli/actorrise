@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { LandingPricing } from "@/components/landing/LandingPricing";
+import { LandingTestimonials } from "@/components/landing/LandingTestimonials";
 import { LandingValueProps } from "@/components/landing/LandingValueProps";
 import { LandingDemoSearch } from "@/components/landing/LandingDemoSearch";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
@@ -101,6 +102,39 @@ export function LandingPageAnimated() {
             <div className="mt-8">
               <LandingDemoSearch />
             </div>
+            <p className="mt-4 text-sm text-muted-foreground">
+              Free tier · No credit card required
+            </p>
+          </div>
+        </motion.section>
+
+        <motion.section
+          variants={item}
+          className="border-t border-border/40 bg-muted/20 py-10 md:py-12"
+          aria-label="Social proof"
+        >
+          <div className="container mx-auto px-4 sm:px-6">
+            <div className="max-w-4xl mx-auto">
+              <p className="text-center font-medium text-foreground text-lg md:text-xl">
+                Actors are already using ActorRise to find audition pieces in seconds.
+              </p>
+              <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4 sm:gap-8">
+                <p className="text-center sm:text-left text-sm md:text-base text-muted-foreground border-l-2 border-primary/30 pl-4 py-1">
+                  &ldquo;I had a shortlist in under a minute.&rdquo; — Actor, drama school audition
+                </p>
+                <p className="text-center sm:text-left text-sm md:text-base text-muted-foreground border-l-2 border-primary/30 pl-4 py-1">
+                  &ldquo;Found a scene for a film callback in seconds.&rdquo; — Actor, screen
+                </p>
+              </div>
+              <p className="mt-4 text-center">
+                <Link
+                  href="#testimonials"
+                  className="text-sm font-medium text-primary hover:underline"
+                >
+                  See what actors are saying →
+                </Link>
+              </p>
+            </div>
           </div>
         </motion.section>
 
@@ -157,6 +191,10 @@ export function LandingPageAnimated() {
         <motion.div variants={item}>
           <LandingValueProps />
         </motion.div>
+
+        <motion.section variants={item} id="testimonials">
+          <LandingTestimonials />
+        </motion.section>
 
         <motion.div variants={item}>
           <LandingPricing />
