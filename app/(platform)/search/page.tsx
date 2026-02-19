@@ -43,7 +43,7 @@ import { Slider } from "@/components/ui/slider";
 import { ContactModal } from "@/components/contact/ContactModal";
 import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackPrompt";
 import type { FilmTvReference } from "@/types/filmTv";
-import { getScriptSearchUrl } from "@/lib/utils";
+import { getImsdbSearchUrl, getScriptSearchUrl } from "@/lib/utils";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -1939,20 +1939,24 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
                 {/* Actions */}
                 <div className="flex flex-wrap gap-2 pt-2 border-t">
-                  {(() => {
-                    const scriptHref = getScriptSearchUrl(selectedFilmTvRef.title);
-                    return (
-                      <Button
-                        variant="default"
-                        size="sm"
-                        className="gap-2"
-                        onClick={() => window.open(scriptHref, "_blank", "noopener,noreferrer")}
-                      >
-                        <IconExternalLink className="h-4 w-4" />
-                        Find script
-                      </Button>
-                    );
-                  })()}
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => window.open(getImsdbSearchUrl(selectedFilmTvRef.title), "_blank", "noopener,noreferrer")}
+                  >
+                    <IconExternalLink className="h-4 w-4" />
+                    Script on IMSDb
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => window.open(getScriptSearchUrl(selectedFilmTvRef.title), "_blank", "noopener,noreferrer")}
+                  >
+                    <IconExternalLink className="h-4 w-4" />
+                    Search Google
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -1964,7 +1968,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Opens a search to find the script. ActorRise does not store script text.
+                  Try IMSDb first — if the script isn&apos;t there, use Search Google.
                 </p>
               </div>
             </motion.div>
