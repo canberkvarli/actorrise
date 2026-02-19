@@ -39,19 +39,21 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // Redirect to the dashboard or specified next page
+      // Redirect to the dashboard or specified next page; keep provider in URL so client can persist "last used"
       const redirectUrl = new URL(next, origin);
-      const res = NextResponse.redirect(redirectUrl.toString());
-      // Set cookie so "last used" works for Google/Apple even when client reads it on /login (cookie is sent on every request)
       if (provider && (provider === "google" || provider === "apple")) {
+        redirectUrl.searchParams.set("provider", provider);
+        // Also set cookie as fallback (in case URL is stripped or client reads before nav)
+        const res = NextResponse.redirect(redirectUrl.toString());
         res.cookies.set("actorrise_last_auth_method", provider, {
           path: "/",
-          maxAge: 60 * 60, // 1 hour
+          maxAge: 60 * 60,
           sameSite: "lax",
           secure: process.env.NODE_ENV === "production",
         });
+        return res;
       }
-      return res;
+      return NextResponse.redirect(redirectUrl.toString());
     }
   }
 
