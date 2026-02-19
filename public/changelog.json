@@ -1,0 +1,36 @@
+{
+  "updates": [
+    {
+      "id": "film-tv-search-feb-2026",
+      "date": "2026-02-20",
+      "title": "Film & TV Search",
+      "emoji": "🎬",
+      "description": "Search 14,000+ film and TV references. We'll point you directly to the script.",
+      "category": "feature",
+      "show_modal": true,
+      "cta_text": "Try it now",
+      "cta_link": "/search?type=film",
+      "image_url": null
+    },
+    {
+      "id": "search-filters-improvement-feb-2026",
+      "date": "2026-02-15",
+      "title": "Smarter search filters",
+      "emoji": "🔍",
+      "description": "Filter by length, genre, and era from the search sheet. Results update as you refine.",
+      "category": "improvement",
+      "show_modal": false,
+      "image_url": null
+    },
+    {
+      "id": "bookmark-sync-fix-feb-2026",
+      "date": "2026-02-10",
+      "title": "Bookmark sync fix",
+      "emoji": "📌",
+      "description": "Fixed an issue where bookmarked monologues could disappear after refresh. Your list now stays in sync.",
+      "category": "fix",
+      "show_modal": false,
+      "image_url": null
+    }
+  ]
+}

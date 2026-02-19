@@ -1,8 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ContactModal } from "./ContactModal";
+import { getLatestModalEntry, getLastSeenId } from "@/lib/changelog";
+import type { ChangelogEntry } from "@/lib/changelog";
+
+function WhatsNewLink() {
+  const [hasUnseen, setHasUnseen] = useState(false);
+
+  useEffect(() => {
+    fetch("/changelog.json")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { updates?: ChangelogEntry[] } | null) => {
+        if (!data?.updates?.length) return;
+        const latest = getLatestModalEntry(data.updates);
+        if (latest && latest.id !== getLastSeenId()) {
+          setHasUnseen(true);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  return (
+    <Link
+      href="/changelog"
+      className="hover:text-foreground transition-colors inline-flex items-center gap-1.5"
+    >
+      What&apos;s New
+      {hasUnseen && (
+        <span
+          className="h-2 w-2 rounded-full bg-destructive shrink-0"
+          aria-label="New updates"
+        />
+      )}
+    </Link>
+  );
+}
 
 export function MarketingFooter() {
   const [contactOpen, setContactOpen] = useState(false);
@@ -24,6 +58,7 @@ export function MarketingFooter() {
           <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} ActorRise</p>
             <div className="flex items-center gap-4">
+              <WhatsNewLink />
               <Link href="/about" className="hover:text-foreground transition-colors">
                 About
               </Link>
