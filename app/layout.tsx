@@ -10,6 +10,7 @@ import { Analytics } from "@vercel/analytics/react";
 import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { FontLoader } from "@/components/FontLoader";
 import { OAuthCallbackRedirect } from "@/components/auth/OAuthCallbackRedirect";
+import { LastAuthCookieSync } from "@/components/auth/LastAuthCookieSync";
 
 const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
@@ -165,6 +166,7 @@ export default function RootLayout({
         >
           <Suspense fallback={null}>
             <OAuthCallbackRedirect />
+            <LastAuthCookieSync />
           </Suspense>
           <AuthProviderWrapper>{children}</AuthProviderWrapper>
           <Toaster
