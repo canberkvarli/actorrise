@@ -12,9 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow, IconSend, IconFlag } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow, IconSend, IconFlag } from "@tabler/icons-react";
 
 // Fun loading messages for AI search
 const LOADING_MESSAGES = [
@@ -535,6 +534,15 @@ export default function SearchPage() {
 
   const handleSearch = async () => {
     if (searchMode === "film_tv") {
+      const hasQueryOrFilters = filmTvQuery.trim() !== "" || Object.values(filmTvFilters).some((v) => v !== "");
+      if (!hasQueryOrFilters) {
+        setFilmTvHasSearched(true);
+        setFilmTvResults([]);
+        setFilmTvTotal(0);
+        setSearchError(null);
+        router.replace("/search?mode=film_tv", { scroll: false });
+        return;
+      }
       setFilmTvHasSearched(true);
       setIsLoading(true);
       setSearchError(null);
@@ -831,10 +839,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   const getFilterDisplay = (key: string, value: string) => `${key.replace(/_/g, " ")}: ${value}`;
   const getFreshnessLabel = (score: number) =>
     score <= 0 ? "Freshest only" : score <= 0.3 ? "Fresh" : score <= 0.5 ? "Some overdone OK" : score <= 0.7 ? "More OK" : "Show all";
-  const canSearch =
-    searchMode === "plays"
-      ? playsQuery.trim() !== "" || activeFilters.length > 0 || hasFreshnessFilter
-      : filmTvQuery.trim() !== "" || Object.values(filmTvFilters).some((v) => v !== "");
 
   // Sort by confidence score (desc). Best match = only actual quote matches (exact_quote/fuzzy_quote); rest are related.
   const HIGH_SCORE_CAP_FOR_CONFIDENCE = 5; // If more than this many have score >= 0.70, treat as broad query and hide confidence
@@ -1866,7 +1870,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     <img
                       src={selectedFilmTvRef.poster_url}
                       alt={selectedFilmTvRef.title}
-                      className="w-28 rounded-md object-cover shadow-sm shrink-0"
+                      className="w-40 rounded-md object-cover shadow-sm shrink-0"
                     />
                   )}
                   <div className="flex-1 min-w-0">
