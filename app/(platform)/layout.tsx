@@ -14,7 +14,6 @@ import { useProfile } from "@/hooks/useDashboardData";
 import { ContactModal } from "@/components/contact/ContactModal";
 import { SWRConfig } from "swr";
 import { useSubscription } from "@/hooks/useSubscription";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { WelcomeFlow } from "@/components/onboarding/WelcomeFlow";
 import { ChangelogModal } from "@/components/ChangelogModal";
@@ -32,18 +31,6 @@ function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
 }
 
-// Create a client instance
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 2 * 60 * 1000, // 2 minutes
-      gcTime: 5 * 60 * 1000, // 5 minutes (formerly cacheTime)
-      refetchOnWindowFocus: true,
-      retry: 1,
-    },
-  },
-});
-
 export default function PlatformLayout({
   children,
 }: {
@@ -57,7 +44,7 @@ export default function PlatformLayout({
   const [showWelcome, setShowWelcome] = useState(false);
   const [showChangelogModal, setShowChangelogModal] = useState(false);
   const [changelogModalEntry, setChangelogModalEntry] = useState<ChangelogEntry | null>(null);
-  const { count: bookmarkCount } = useBookmarkCount();
+  const { count: bookmarkCount, isLoading: isLoadingBookmarks } = useBookmarkCount();
   const { data: profile } = useProfile();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const displayName = profile?.name?.trim() || user?.name?.trim() || "";
@@ -142,7 +129,7 @@ export default function PlatformLayout({
   ];
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <>
     <Suspense fallback={null}>
       <LastAuthProviderSync />
     </Suspense>
@@ -237,22 +224,22 @@ export default function PlatformLayout({
                   variant="ghost"
                   size="sm"
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="gap-2.5 rounded-full border border-border/60 bg-card/60 px-4 py-2 h-10 min-w-[2.5rem]"
+                  className="gap-2.5 rounded-full border border-border/60 bg-card/60 px-4 py-2 h-10 min-w-[2.5rem] min-h-10"
                 >
-                  {headshotUrl ? (
-                    <Image
-                      src={headshotUrl}
-                      alt=""
-                      width={28}
-                      height={28}
-                      className="rounded-full object-cover h-7 w-7"
-                    />
-                  ) : (
-                    <span className="flex items-center justify-center h-7 w-7 rounded-full bg-foreground text-background text-xs font-medium">
-                      {profileInitial}
-                    </span>
-                  )}
-                  <span className="hidden lg:inline text-sm font-medium text-foreground truncate max-w-[8rem]">
+                  <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full overflow-hidden bg-foreground text-background text-xs font-medium">
+                    {headshotUrl ? (
+                      <Image
+                        src={headshotUrl}
+                        alt=""
+                        width={28}
+                        height={28}
+                        className="rounded-full object-cover h-full w-full"
+                      />
+                    ) : (
+                      profileInitial
+                    )}
+                  </span>
+                  <span className="hidden lg:inline text-sm font-medium text-foreground truncate max-w-[8rem] min-w-[5rem]">
                     {displayName || "Account"}
                   </span>
                   <IconChevronDown
@@ -326,11 +313,13 @@ export default function PlatformLayout({
                           <IconBookmark className="h-4 w-4 text-muted-foreground" />
                           <span>Your monologues</span>
                         </div>
-                        {bookmarkCount > 0 && (
-                          <Badge variant="secondary" className="text-xs">
-                            {bookmarkCount}
-                          </Badge>
-                        )}
+                        <span className="min-w-[1.75rem] flex justify-end">
+                          {isLoadingBookmarks ? null : bookmarkCount > 0 ? (
+                            <Badge variant="secondary" className="text-xs">
+                              {bookmarkCount}
+                            </Badge>
+                          ) : null}
+                        </span>
                       </Link>
                       <Link
                         href="/submit-monologue"
@@ -488,16 +477,18 @@ export default function PlatformLayout({
                   size="sm"
                   className="w-full justify-between gap-2"
                 >
-                  <Link href="/my-monologues" onClick={() => setMobileMenuOpen(false)}>
+                  <Link href="/my-monologues" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2">
                       <IconBookmark className="h-4 w-4" />
                       Your Monologues
                     </div>
-                    {bookmarkCount > 0 && (
-                      <Badge variant="secondary" className="text-xs">
-                        {bookmarkCount}
-                      </Badge>
-                    )}
+                    <span className="min-w-[1.75rem] flex justify-end">
+                      {!isLoadingBookmarks && bookmarkCount > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          {bookmarkCount}
+                        </Badge>
+                      )}
+                    </span>
                   </Link>
                 </Button>
 
@@ -658,7 +649,7 @@ export default function PlatformLayout({
     </div>
     </TooltipProvider>
     </SWRConfig>
-    </QueryClientProvider>
+    </>
   );
 }
 

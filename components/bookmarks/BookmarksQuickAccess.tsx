@@ -23,8 +23,8 @@ export default function BookmarksQuickAccess({ onSelectMonologue }: BookmarksQui
   const recentBookmarks = allBookmarks.slice(0, 3);
 
   return (
-    <Card className="rounded-lg border-border/50">
-      <CardContent className="pt-4">
+    <Card className="rounded-lg border-border/50 min-h-[220px]">
+      <CardContent className="pt-4 min-h-[200px]">
         {isLoading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
