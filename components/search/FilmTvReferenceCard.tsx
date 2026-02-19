@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { IconStar, IconExternalLink } from "@tabler/icons-react";
+import { IconStar, IconExternalLink, IconPhoto } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import type { FilmTvReference } from "@/types/filmTv";
@@ -19,6 +20,7 @@ export function FilmTvReferenceCard({
   onSelect,
   index = 0,
 }: FilmTvReferenceCardProps) {
+  const [posterError, setPosterError] = useState(false);
   const typeLabel = ref_item.type === "tvSeries" ? "TV Series" : ref_item.type === "movie" ? "Movie" : null;
   const genres = ref_item.genre?.slice(0, 3) ?? [];
   const actorList = ref_item.actors?.slice(0, 3) ?? [];
@@ -38,8 +40,8 @@ export function FilmTvReferenceCard({
 
             {/* Top row: poster thumbnail + title/meta */}
             <div className="flex items-start gap-3">
-              {ref_item.poster_url && (
-                <div className="shrink-0 w-12 h-16 rounded overflow-hidden bg-muted">
+              <div className="shrink-0 w-12 h-16 rounded overflow-hidden bg-muted flex items-center justify-center">
+                {ref_item.poster_url && !posterError ? (
                   <Image
                     src={ref_item.poster_url}
                     alt={ref_item.title}
@@ -47,9 +49,12 @@ export function FilmTvReferenceCard({
                     height={64}
                     className="object-cover w-full h-full"
                     unoptimized
+                    onError={() => setPosterError(true)}
                   />
-                </div>
-              )}
+                ) : (
+                  <IconPhoto className="h-5 w-5 text-muted-foreground/50" />
+                )}
+              </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
