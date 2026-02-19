@@ -28,12 +28,14 @@ export function FilmTvReferenceCard({
   const genres = ref_item.genre?.slice(0, 3) ?? [];
   const actorList = ref_item.actors?.slice(0, 3) ?? [];
 
+  const cardEase = [0.25, 0.1, 0.25, 1] as const;
+
   if (compact) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: index * 0.05, duration: 0.3 }}
+        transition={{ delay: index * 0.04, duration: 0.35, ease: cardEase }}
       >
         <div
           className="group p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col min-h-[200px]"

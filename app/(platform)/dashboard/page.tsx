@@ -317,13 +317,18 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   const showWelcomeSkeleton = isLoadingProfile;
   const showStatsSkeleton = isLoadingStats && stats === undefined;
 
+  const sectionEase = [0.25, 0.1, 0.25, 1] as const;
+  const sectionDuration = 0.4;
+  const sectionStagger = 0.06;
+
   return (
     <div className="container mx-auto px-4 lg:px-8 py-6 md:py-8 max-w-7xl">
       <div className="space-y-12">
           {/* ========== SECTION 1: Hero Welcome + optional Complete profile ========== */}
           <motion.section
-            initial={{ opacity: 0, y: -10 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: sectionDuration, ease: sectionEase }}
             className="flex flex-col gap-4"
           >
             {showWelcomeSkeleton ? (
@@ -341,27 +346,30 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 </h1>
               </div>
             )}
-            {showStatsSkeleton && (
-              <Skeleton className="h-12 w-64 rounded-lg" />
-            )}
-            {!showWelcomeSkeleton && !showStatsSkeleton && stats && stats.completion_percentage < 100 && (
-              <Link
-                href="/profile"
-                className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg border border-amber-500/30 bg-amber-500/10 dark:bg-amber-400/10 dark:border-amber-400/25 hover:bg-amber-500/15 dark:hover:bg-amber-400/15 transition-colors text-left w-fit max-w-[280px] sm:max-w-none"
-              >
-                <IconUserCheck className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                <span className="text-sm font-medium text-foreground">Complete your profile</span>
-                <span className="text-xs text-muted-foreground">({stats.completion_percentage}%)</span>
-                <IconArrowRight className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
-              </Link>
-            )}
+            {/* Reserved slot for "Complete your profile" CTA to prevent layout shift when stats load */}
+            <div className="min-h-[44px] flex items-center">
+              {showStatsSkeleton && (
+                <Skeleton className="h-11 w-64 rounded-lg" />
+              )}
+              {!showStatsSkeleton && stats && stats.completion_percentage < 100 && (
+                <Link
+                  href="/profile"
+                  className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg border border-amber-500/30 bg-amber-500/10 dark:bg-amber-400/10 dark:border-amber-400/25 hover:bg-amber-500/15 dark:hover:bg-amber-400/15 transition-colors text-left w-fit max-w-[280px] sm:max-w-none"
+                >
+                  <IconUserCheck className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                  <span className="text-sm font-medium text-foreground">Complete your profile</span>
+                  <span className="text-xs text-muted-foreground">({stats.completion_percentage}%)</span>
+                  <IconArrowRight className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
+                </Link>
+              )}
+            </div>
           </motion.section>
 
           {/* ========== SECTION 2: Quick Search (primary CTA) ========== */}
           <motion.section
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.05 }}
+            transition={{ duration: sectionDuration, delay: sectionStagger, ease: sectionEase }}
           >
             <Link href="/search" className="block group max-w-2xl">
               <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-md transition-all">
@@ -383,9 +391,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
           {/* ========== SECTION 3: Recommendations ========== */}
           <motion.section
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            transition={{ duration: sectionDuration, delay: sectionStagger * 2, ease: sectionEase }}
           >
             <div className="flex items-end justify-between mb-6">
               <div>
@@ -405,9 +413,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </div>
 
             {isLoadingMain ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[280px]">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="p-6 bg-card border border-border rounded-xl">
+                  <div key={i} className="p-6 bg-card border border-border rounded-xl min-h-[260px]">
                     <Skeleton className="h-6 w-3/4 mb-3 rounded-md" />
                     <Skeleton className="h-4 w-1/2 mb-2 rounded-md" />
                     <Skeleton className="h-4 w-1/3 mb-4 rounded-md" />
@@ -416,18 +424,16 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 ))}
               </div>
             ) : mainMonologues.length > 0 ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[280px]">
                 {mainMonologues.slice(0, 4).map((mono, idx) => (
                   <motion.div
                     key={mono.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.05, duration: 0.3 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.3, delay: idx * 0.04, ease: sectionEase }}
+                    className="group p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col min-h-[260px]"
+                    onClick={() => openMonologue(mono)}
                   >
-                    <div
-                      className="group p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col"
-                      onClick={() => openMonologue(mono)}
-                    >
                       <div className="flex items-start justify-between gap-2 mb-4">
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-1">
@@ -480,12 +486,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <span className="text-border">•</span>
                         <span>{mono.word_count} words</span>
                       </div>
-                    </div>
                   </motion.div>
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16 bg-card border border-border rounded-xl">
+              <div className="text-center py-16 bg-card border border-border rounded-xl min-h-[280px] flex flex-col items-center justify-center">
                 <IconSparkles className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
                 <p className="text-lg font-medium text-foreground mb-2">No recommendations yet</p>
                 <p className="text-muted-foreground mb-6">Complete your profile or search to discover monologues</p>
@@ -498,9 +503,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
           {/* ========== SECTION 4: Film & TV ========== */}
           <motion.section
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
+            transition={{ duration: sectionDuration, delay: sectionStagger * 3, ease: sectionEase }}
             className="space-y-6"
           >
             <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -538,9 +543,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             )}
 
             {isLoadingFilmTv ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[240px]">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="p-6 bg-card border border-border rounded-xl">
+                  <div key={i} className="p-6 bg-card border border-border rounded-xl min-h-[200px]">
                     <Skeleton className="h-6 w-3/4 mb-3 rounded-md" />
                     <Skeleton className="h-4 w-1/2 mb-2 rounded-md" />
                     <Skeleton className="h-4 w-1/3 mb-4 rounded-md" />
@@ -549,7 +554,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 ))}
               </div>
             ) : discoverFilmTv.length > 0 ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[240px]">
                 {discoverFilmTv.slice(0, 4).map((ref, idx) => (
                   <FilmTvReferenceCard
                     key={ref.id}
@@ -561,7 +566,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 ))}
               </div>
             ) : (
-              <div className="text-center py-14 px-6 bg-card border border-border rounded-xl">
+              <div className="text-center py-14 px-6 bg-card border border-border rounded-xl min-h-[240px] flex flex-col items-center justify-center">
                 <IconDeviceTv className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
                 <p className="text-lg font-medium text-foreground mb-2">Explore Film & TV</p>
                 <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
@@ -576,9 +581,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
           {/* ========== SECTION 5: Bookmarks & Recent Searches ========== */}
           <motion.section
-            initial={{ opacity: 0, y: 10 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
+            transition={{ duration: sectionDuration, delay: sectionStagger * 4, ease: sectionEase }}
           >
             <div className="grid md:grid-cols-2 gap-8 max-w-4xl">
               {/* Bookmarks */}
