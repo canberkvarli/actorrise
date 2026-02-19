@@ -98,12 +98,15 @@ export default function SearchPage() {
   const [outlineFlash, setOutlineFlash] = useState<"plays" | "film_tv" | null>(null);
   const [showFilmTvFilters, setShowFilmTvFilters] = useState(false);
   const [selectedFilmTvRef, setSelectedFilmTvRef] = useState<FilmTvReference | null>(null);
+  const [filmTvPosterError, setFilmTvPosterError] = useState(false);
 
   const LAST_SEARCH_KEY = "monologue_search_last_results_v1";
   const FILM_TV_LAST_SEARCH_KEY = "film_tv_search_last_results_v1";
   const SEARCH_LAST_MODE_KEY = "search_last_mode_v1";
   const RESULTS_VIEW_COUNT_KEY = "search_results_view_count_v1";
+  const FILM_TV_RESULTS_VIEW_COUNT_KEY = "film_tv_results_view_count_v1";
   const [resultsViewCount, setResultsViewCount] = useState(0);
+  const [filmTvResultsViewCount, setFilmTvResultsViewCount] = useState(0);
   const [restoredFromLastSearch, setRestoredFromLastSearch] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchUpgradeUrl, setSearchUpgradeUrl] = useState<string | null>(null);
@@ -150,6 +153,9 @@ export default function SearchPage() {
       const raw = sessionStorage.getItem(RESULTS_VIEW_COUNT_KEY);
       const n = raw ? parseInt(raw, 10) : 0;
       if (!Number.isNaN(n) && n >= 0) setResultsViewCount(n);
+      const filmTvRaw = sessionStorage.getItem(FILM_TV_RESULTS_VIEW_COUNT_KEY);
+      const filmTvN = filmTvRaw ? parseInt(filmTvRaw, 10) : 0;
+      if (!Number.isNaN(filmTvN) && filmTvN >= 0) setFilmTvResultsViewCount(filmTvN);
     } catch {
       // ignore
     }
@@ -165,6 +171,17 @@ export default function SearchPage() {
       // ignore
     }
   }, [hasSearched, results.length, resultsViewCount]);
+
+  // Same for Film & TV: when we have results but count is still 0 (e.g. restored from last search), set to 1 so feedback prompt shows.
+  useEffect(() => {
+    if (typeof window === "undefined" || !filmTvHasSearched || filmTvResults.length === 0 || filmTvResultsViewCount !== 0) return;
+    try {
+      sessionStorage.setItem(FILM_TV_RESULTS_VIEW_COUNT_KEY, "1");
+      setFilmTvResultsViewCount(1);
+    } catch {
+      // ignore
+    }
+  }, [filmTvHasSearched, filmTvResults.length, filmTvResultsViewCount]);
 
   // Restore search state from URL and sessionStorage whenever this page is (re)visited.
   // This allows search results to persist across refreshes AND when navigating away
@@ -568,6 +585,15 @@ export default function SearchPage() {
           sessionStorage.setItem(SEARCH_LAST_MODE_KEY, "film_tv");
         } catch (e) {
           console.error("Error persisting film_tv search:", e);
+        }
+        // Increment results view count for feedback prompt ("Were these results what you expected?")
+        try {
+          const prev = parseInt(sessionStorage.getItem(FILM_TV_RESULTS_VIEW_COUNT_KEY) || "0", 10);
+          const next = (Number.isNaN(prev) ? 0 : prev) + 1;
+          sessionStorage.setItem(FILM_TV_RESULTS_VIEW_COUNT_KEY, String(next));
+          setFilmTvResultsViewCount(next);
+        } catch {
+          // ignore
         }
         // Update URL so refresh / back keeps Film & TV section and state.
         const urlParams = new URLSearchParams();
@@ -1451,6 +1477,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </Card>
             ) : (
               <div id="search-results" className="space-y-4">
+                <ResultsFeedbackPrompt
+                  context="film_tv_search"
+                  resultsViewCount={filmTvResultsViewCount}
+                  onOpenContact={() => setContactOpen(true)}
+                />
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-muted/40 px-3 py-1.5 text-sm">
                     <span className="font-semibold text-foreground tabular-nums">{filmTvTotal}</span>
@@ -1533,9 +1564,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   {[...activeFilters.map(([k, v]) => getFilterDisplay(k, v)), ...(hasFreshnessFilter ? [`Freshness: ${getFreshnessLabel(maxOverdoneScore)}`] : [])].join("; ")}. Filters narrow the set; search ranks by meaning.
                   </p>
                 )}
-              {/* Results header: info block left, Bookmarked only right */}
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex flex-col gap-0.5 min-w-0">
+              {/* Results header: count left, feedback center, Bookmarked only right */}
+              <div className="flex flex-wrap items-center gap-4">
+                <div className="flex flex-col gap-0.5 min-w-0 shrink-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
                     <span className="text-2xl font-semibold tabular-nums text-foreground">
                       {showBookmarkedOnly
@@ -1559,6 +1590,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       </>
                     )}
                   </div>
+                </div>
+                <div className="flex-1 flex justify-center min-w-0">
+                  <ResultsFeedbackPrompt
+                    context="search"
+                    resultsViewCount={resultsViewCount}
+                    onOpenContact={() => setContactOpen(true)}
+                  />
                 </div>
                 <Button
                   variant={showBookmarkedOnly ? "secondary" : "outline"}
@@ -1590,11 +1628,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         </div>
                       </div>
                     )}
-                    <ResultsFeedbackPrompt
-                      context="search"
-                      resultsViewCount={resultsViewCount}
-                      onOpenContact={() => setContactOpen(true)}
-                    />
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {!showBookmarkedOnly && bestMatches.map((mono, idx) => (
                         <MonologueResultCard
@@ -1851,27 +1884,51 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               className="fixed right-0 top-0 bottom-0 z-[10001] w-full md:w-[600px] lg:w-[700px] bg-background border-l shadow-2xl overflow-y-auto"
             >
               <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-[10002]">
-                <div className="flex items-center justify-between p-6">
-                  <h2 className="text-xl font-bold">Film &amp; TV details</h2>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSelectedFilmTvRef(null)}
-                    className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
-                  >
-                    <IconX className="h-5 w-5" />
-                  </Button>
+                <div className="flex items-center justify-between gap-2 p-6">
+                  <h2 className="text-xl font-bold truncate">
+                    {selectedFilmTvRef.type === "tvSeries" ? "TV details" : "Movie details"}
+                  </h2>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setContactOpen(true);
+                      }}
+                      className="hover:bg-muted min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 text-muted-foreground hover:text-foreground"
+                      title="Report an issue"
+                      aria-label="Report an issue with this reference"
+                    >
+                      <IconFlag className="h-5 w-5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setSelectedFilmTvRef(null)}
+                      className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
+                    >
+                      <IconX className="h-5 w-5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
               <div className="p-6 space-y-6">
                 {/* Poster + title */}
                 <div className="flex items-start gap-4">
-                  {selectedFilmTvRef.poster_url && (
+                  {selectedFilmTvRef.poster_url && !filmTvPosterError ? (
                     <img
                       src={selectedFilmTvRef.poster_url}
                       alt={selectedFilmTvRef.title}
                       className="w-40 rounded-md object-cover shadow-sm shrink-0"
+                      onError={() => setFilmTvPosterError(true)}
                     />
+                  ) : (
+                    <div className="w-40 shrink-0 rounded-md bg-muted flex items-center justify-center aspect-[2/3] text-muted-foreground/40">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                      </svg>
+                    </div>
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start gap-2 flex-wrap">
