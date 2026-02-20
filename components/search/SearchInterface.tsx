@@ -408,7 +408,7 @@ export function SearchInterface() {
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
                             onClick={() => applyHistoryItem(item)}
-                            className="text-xs px-2 py-1 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors"
+                            className="text-xs min-h-[44px] px-3 py-2 rounded-md bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
                           >
                             {item}
                           </motion.button>
@@ -417,7 +417,7 @@ export function SearchInterface() {
                         {/* X icon button - top right corner */}
                         <button
                           onClick={clearSearchHistory}
-                          className="absolute top-2 right-2 p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                          className="absolute top-2 right-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
                           aria-label="Clear search history"
                         >
                           <IconX className="h-4 w-4" />
@@ -476,7 +476,7 @@ export function SearchInterface() {
                           </Button>
                         )}
                       </div>
-                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="age-range">Age Range</Label>
                           <Select
@@ -485,7 +485,7 @@ export function SearchInterface() {
                               setFilters({ ...filters, age_range: v === "__none__" ? "" : v })
                             }
                           >
-                            <SelectTrigger id="age-range">
+                            <SelectTrigger id="age-range" className="min-h-[44px]">
                               <SelectValue placeholder="All" />
                             </SelectTrigger>
                             <SelectContent>
@@ -507,7 +507,7 @@ export function SearchInterface() {
                               setFilters({ ...filters, gender: v === "__none__" ? "" : v })
                             }
                           >
-                            <SelectTrigger id="gender">
+                            <SelectTrigger id="gender" className="min-h-[44px]">
                               <SelectValue placeholder="All" />
                             </SelectTrigger>
                             <SelectContent>
@@ -527,7 +527,7 @@ export function SearchInterface() {
                               setFilters({ ...filters, genre: v === "__none__" ? "" : v })
                             }
                           >
-                            <SelectTrigger id="genre">
+                            <SelectTrigger id="genre" className="min-h-[44px]">
                               <SelectValue placeholder="All" />
                             </SelectTrigger>
                             <SelectContent>
@@ -548,7 +548,7 @@ export function SearchInterface() {
                               setFilters({ ...filters, theme: v === "__none__" ? "" : v })
                             }
                           >
-                            <SelectTrigger id="theme">
+                            <SelectTrigger id="theme" className="min-h-[44px]">
                               <SelectValue placeholder="All Themes" />
                             </SelectTrigger>
                             <SelectContent>
@@ -584,7 +584,7 @@ export function SearchInterface() {
                               }
                             }}
                           >
-                            <SelectTrigger id="category">
+                            <SelectTrigger id="category" className="min-h-[44px]">
                               <SelectValue placeholder="All Categories" />
                             </SelectTrigger>
                             <SelectContent>

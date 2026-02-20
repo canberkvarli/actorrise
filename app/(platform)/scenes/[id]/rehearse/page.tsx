@@ -10,6 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   ArrowLeft,
   Send,
@@ -28,6 +31,11 @@ import {
 } from 'lucide-react';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
+import {
+  getRehearsalSettings,
+  setRehearsalSettings,
+  type RehearsalSettings,
+} from '@/lib/scenepartnerStorage';
 
 interface RehearsalSession {
   id: number;
@@ -49,6 +57,23 @@ interface Message {
   feedback?: string;
 }
 
+interface SceneLineRow {
+  id: number;
+  line_order: number;
+  character_name: string;
+  text: string;
+  stage_direction: string | null;
+  word_count: number;
+}
+
+interface SceneWithLines {
+  id: number;
+  title: string;
+  play_title: string;
+  play_author: string;
+  lines: SceneLineRow[];
+}
+
 export default function RehearsalPage() {
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
@@ -59,8 +84,11 @@ export default function RehearsalPage() {
   const sessionId = searchParams.get('session');
 
   const [session, setSession] = useState<RehearsalSession | null>(null);
+  /** Full scene with lines for script-style display. */
+  const [sceneWithLines, setSceneWithLines] = useState<SceneWithLines | null>(null);
   /** The line the user should deliver next (from script). Updated from session fetch and deliver response next_line_preview. */
   const [currentLineForUser, setCurrentLineForUser] = useState<string | null>(null);
+  const currentLineRef = useRef<HTMLDivElement>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [userInput, setUserInput] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
@@ -68,6 +96,20 @@ export default function RehearsalPage() {
   const [sessionFeedback, setSessionFeedback] = useState<any>(null);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  /** Focus mode: dark room, single prominent line. Default true. */
+  const [focusMode, setFocusMode] = useState(true);
+  /** Last AI line shown in focus mode (so we can highlight it briefly). */
+  const [lastAiLine, setLastAiLine] = useState<string | null>(null);
+  /** Countdown before scene starts (3, 2, 1). Null when not running, 0 when done. */
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const [focusInitialized, setFocusInitialized] = useState(false);
+  const [autoListenLineKey, setAutoListenLineKey] = useState<string | null>(null);
+  /** Rehearsal settings (from localStorage). */
+  const [rehearsalSettings, setRehearsalSettingsState] = useState<RehearsalSettings>(() =>
+    typeof window !== 'undefined' ? getRehearsalSettings() : { pauseBetweenLinesSeconds: 3, skipMyLineIfSilent: false, skipAfterSeconds: 10, countdownSeconds: 3 }
+  );
+  const skipSilentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Voice settings
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -88,10 +130,13 @@ export default function RehearsalPage() {
     onResult: (text) => {
       setUserInput(text);
       stopListening();
+      // Voice-only focus mode: auto-submit recognized line
+      handleDeliverLine(text);
+      resetTranscript();
     },
   });
 
-  // Speech synthesis hook
+  // Speech synthesis hook; after TTS ends, wait pauseBetweenLines then clear AI line
   const {
     speak,
     cancel: cancelSpeech,
@@ -104,6 +149,14 @@ export default function RehearsalPage() {
     rate: 1.0,
     pitch: 1.0,
     volume: 1.0,
+    onEnd: () => {
+      const pauseMs = getRehearsalSettings().pauseBetweenLinesSeconds * 1000;
+      if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+      pauseTimerRef.current = setTimeout(() => {
+        setLastAiLine(null);
+        pauseTimerRef.current = null;
+      }, pauseMs);
+    },
   });
 
   useEffect(() => {
@@ -114,9 +167,82 @@ export default function RehearsalPage() {
     }
   }, [sessionId]);
 
+  // Countdown tick
+  useEffect(() => {
+    if (countdown === null || countdown < 0) return;
+    if (countdown === 0) {
+      const t = setTimeout(() => setCountdown(null), 400);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(() => setCountdown((c) => (c == null ? null : c - 1)), 1000);
+    return () => clearTimeout(t);
+  }, [countdown]);
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const activeUserLineKey = session ? `${session.id}:${currentLineForUser ?? ''}` : null;
+
+  // Auto-listen once per active user line in focus mode
+  useEffect(() => {
+    const isUserTurn = currentLineForUser != null && lastAiLine == null;
+    const canAutoListen =
+      focusMode &&
+      !showFeedback &&
+      isUserTurn &&
+      isSpeechRecognitionSupported &&
+      !isListening &&
+      !isSpeaking &&
+      !isProcessing &&
+      (countdown === null || countdown <= 0) &&
+      activeUserLineKey !== null &&
+      autoListenLineKey !== activeUserLineKey;
+    if (!canAutoListen) return;
+    setAutoListenLineKey(activeUserLineKey);
+    startListening();
+  }, [
+    focusMode,
+    showFeedback,
+    currentLineForUser,
+    lastAiLine,
+    isSpeechRecognitionSupported,
+    isListening,
+    isSpeaking,
+    isProcessing,
+    countdown,
+    activeUserLineKey,
+    autoListenLineKey,
+    startListening,
+  ]);
+
+  // Scroll script to current line when highlight changes (focus mode)
+  useEffect(() => {
+    if (focusMode && session && sceneWithLines?.lines && (currentLineForUser != null || lastAiLine != null)) {
+      const t = setTimeout(() => {
+        currentLineRef.current?.scrollIntoView({ behavior: 'auto', block: 'center' });
+      }, 100);
+      return () => clearTimeout(t);
+    }
+  }, [focusMode, session?.id, currentLineForUser, lastAiLine, sceneWithLines?.lines?.length]);
+
+  // Skip-if-silent timer: when it's user's turn and setting is on, auto-deliver after N seconds
+  useEffect(() => {
+    if (!session || !rehearsalSettings.skipMyLineIfSilent || !currentLineForUser || isProcessing || lastAiLine != null) return;
+    if (userInput.trim().length > 0) return;
+    if (focusMode && countdown !== null && countdown > 0) return;
+    const sec = rehearsalSettings.skipAfterSeconds * 1000;
+    skipSilentTimerRef.current = setTimeout(() => {
+      skipSilentTimerRef.current = null;
+      handleDeliverLine(currentLineForUser);
+    }, sec);
+    return () => {
+      if (skipSilentTimerRef.current) {
+        clearTimeout(skipSilentTimerRef.current);
+        skipSilentTimerRef.current = null;
+      }
+    };
+  }, [session?.id, rehearsalSettings.skipMyLineIfSilent, rehearsalSettings.skipAfterSeconds, currentLineForUser, focusMode, countdown, isProcessing, lastAiLine, userInput]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -136,16 +262,33 @@ export default function RehearsalPage() {
         character: 'Director',
         content: `You're playing ${data.user_character}. I'll be your scene partner as ${data.ai_character}. Deliver your lines when ready.`
       }]);
+      // Fetch full scene with lines for script-style view
+      try {
+        const sceneRes = await api.get<SceneWithLines>(`/api/scenes/${data.scene_id}`);
+        setSceneWithLines(sceneRes.data);
+      } catch {
+        // Non-fatal; script view will show loading
+      }
+      // Start countdown only after initial session + scene request settle (prevents instant/jumpy start)
+      const settings = getRehearsalSettings();
+      if (settings.countdownSeconds > 0) setCountdown(settings.countdownSeconds);
+      else setCountdown(null);
+      setFocusInitialized(true);
     } catch {
       setError('Session not found. Start rehearsal from your script.');
     }
   };
 
-  const handleDeliverLine = async () => {
-    if (!userInput.trim() || isProcessing || !session) return;
+  const handleDeliverLine = async (overrideInput?: string) => {
+    const toSend = (overrideInput ?? userInput).trim();
+    if (!toSend || isProcessing || !session) return;
+    if (skipSilentTimerRef.current) {
+      clearTimeout(skipSilentTimerRef.current);
+      skipSilentTimerRef.current = null;
+    }
 
     // Save input before clearing
-    const inputToSend = userInput.trim();
+    const inputToSend = toSend;
 
     const userMessage: Message = {
       type: 'user',
@@ -182,6 +325,7 @@ export default function RehearsalPage() {
       };
 
       setMessages(prev => [...prev, aiMessage]);
+      setLastAiLine(data.ai_response);
 
       // Auto-speak AI response if voice enabled
       if (autoSpeak && voiceEnabled && isSpeechSynthesisSupported) {
@@ -195,6 +339,7 @@ export default function RehearsalPage() {
         total_lines_delivered: session.total_lines_delivered + 1
       });
       setCurrentLineForUser(data.next_line_preview ?? null);
+      setAutoListenLineKey(null);
 
       // Check if scene complete
       if (data.session_status === 'completed') {
@@ -267,6 +412,218 @@ export default function RehearsalPage() {
     );
   }
 
+  // Focus mode: script-only stage, no header, no text input
+  if (focusMode && !showFeedback) {
+    const showCountdown = countdown !== null;
+    const orderedLines = sceneWithLines?.lines?.slice().sort((a, b) => a.line_order - b.line_order) ?? [];
+    const currentLineMatchId = (() => {
+      if (lastAiLine != null) {
+        const ai = orderedLines.find(
+          (l) => l.character_name === session.ai_character && l.text === lastAiLine
+        );
+        return ai?.id ?? null;
+      }
+      if (currentLineForUser != null) {
+        const user = orderedLines.find(
+          (l) => l.character_name === session.user_character && l.text === currentLineForUser
+        );
+        return user?.id ?? null;
+      }
+      return null;
+    })();
+    const isCurrentLine = (line: SceneLineRow) => line.id === currentLineMatchId;
+    const isUserTurn = currentLineForUser != null && lastAiLine == null;
+
+    return (
+      <div className="fixed inset-0 bg-neutral-950 text-neutral-100 flex flex-col z-[10050]">
+        {!focusInitialized && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-neutral-950">
+            <div className="h-10 w-10 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+          </div>
+        )}
+        {showCountdown && (
+          <div className="fixed inset-0 flex items-center justify-center bg-neutral-950 z-30">
+            <motion.span
+              key={countdown}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="text-8xl font-bold text-neutral-100"
+            >
+              {countdown === 0 ? 'Go' : countdown}
+            </motion.span>
+          </div>
+        )}
+
+        {/* Script page: traditional script look, all lines visible */}
+        <div className="flex-1 overflow-auto flex justify-center px-4 py-6">
+          <div
+            className="w-full max-w-2xl bg-[#f4ecd8] text-neutral-900 rounded-sm shadow-2xl border border-amber-200/50"
+            style={{ fontFamily: 'Courier, \"Courier New\", monospace' }}
+          >
+            <div className="px-10 py-8 sm:px-14 sm:py-10">
+              {sceneWithLines ? (
+                <>
+                  <div className="text-center mb-8">
+                    <h1 className="text-lg font-bold uppercase tracking-wider text-neutral-800">
+                      {sceneWithLines.title}
+                    </h1>
+                    <p className="text-sm text-neutral-600 mt-1">
+                      {sceneWithLines.play_title}
+                      {sceneWithLines.play_author && ` by ${sceneWithLines.play_author}`}
+                    </p>
+                  </div>
+                  <div className="space-y-4">
+                    {orderedLines.map((line) => {
+                      const current = isCurrentLine(line);
+                      const isUser = line.character_name === session.user_character;
+                      return (
+                        <div
+                          key={line.id}
+                          ref={current ? currentLineRef : undefined}
+                          className={current
+                            ? 'ring-2 ring-primary ring-offset-2 ring-offset-[#f4ecd8] bg-amber-100/80 -m-1 p-3 rounded'
+                            : 'opacity-90'
+                          }
+                        >
+                          <div className="flex items-center gap-2 mb-0.5">
+                            {current && (
+                              <span
+                                className={`text-[10px] px-1.5 py-0.5 rounded font-semibold tracking-wider ${
+                                  isUser ? 'bg-primary/15 text-primary' : 'bg-amber-200 text-amber-900'
+                                }`}
+                              >
+                                {isUser ? 'YOUR LINE' : 'AI LINE'}
+                              </span>
+                            )}
+                            <p className="text-xs font-bold uppercase tracking-widest text-neutral-700">
+                              {line.character_name}
+                              {line.stage_direction && (
+                                <span className="normal-case tracking-normal font-normal italic text-neutral-600">
+                                  {' '}[{line.stage_direction}]
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <p className="text-[15px] leading-relaxed pl-0">
+                            {line.text}
+                          </p>
+                          {current && isSpeaking && !isUser && (
+                            <p className="text-xs text-amber-800 mt-1 flex items-center gap-1">
+                              <Volume2 className="h-3 w-3" />
+                              AI speaking…
+                            </p>
+                          )}
+                          {current && isListening && isUser && (
+                            <p className="text-xs text-primary mt-1 flex items-center gap-1">
+                              <Mic className="h-3 w-3" />
+                              Listening for your delivery…
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : (
+                <p className="text-neutral-600 text-sm">Loading script…</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Voice-only control strip */}
+        <div className="shrink-0 border-t border-neutral-800 bg-neutral-950/98 px-4 py-3 safe-area-bottom">
+          <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
+            <div className="text-xs text-neutral-300">
+              {isSpeaking
+                ? 'AI speaking'
+                : isListening
+                ? 'Listening for your line'
+                : isUserTurn
+                ? 'Your turn'
+                : 'AI turn'}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-neutral-700 text-neutral-200 min-h-[44px] sm:min-h-0"
+                onClick={() => router.push(`/scenes/${sceneId}`)}
+              >
+                Back
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-neutral-700 text-neutral-200 min-h-[44px] sm:min-h-0"
+                onClick={() => router.push(`/scenes/${sceneId}`)}
+              >
+                Stop
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-neutral-700 text-neutral-200 min-h-[44px] sm:min-h-0"
+                onClick={() => router.push(`/my-scripts`)}
+              >
+                Edit script
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-neutral-700 text-neutral-200 min-h-[44px] sm:min-h-0"
+                onClick={() => setVoiceEnabled((v) => !v)}
+              >
+                {voiceEnabled ? <Volume2 className="h-4 w-4 mr-1" /> : <VolumeX className="h-4 w-4 mr-1" />}
+                {voiceEnabled ? 'Voice on' : 'Voice off'}
+              </Button>
+              {isSpeechRecognitionSupported && (
+                <Button
+                  variant={isListening ? 'destructive' : 'outline'}
+                  size="sm"
+                  className="border-neutral-700 text-neutral-200 min-h-[44px] sm:min-h-0"
+                  onClick={isListening ? stopListening : startListening}
+                  disabled={isProcessing || isSpeaking || !isUserTurn}
+                >
+                  {isListening ? <MicOff className="h-4 w-4 mr-1" /> : <Mic className="h-4 w-4 mr-1" />}
+                  {isListening ? 'Stop' : 'Listen'}
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-neutral-700 text-neutral-200 min-h-[44px] sm:min-h-0"
+                onClick={() => {
+                  setError(null);
+                  resetTranscript();
+                  if (isListening) stopListening();
+                  if (isSpeechRecognitionSupported && isUserTurn && !isSpeaking && !isProcessing) {
+                    startListening();
+                  }
+                }}
+                disabled={!isUserTurn || isProcessing}
+              >
+                Retry
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-neutral-400 hover:text-neutral-100 min-h-[44px] sm:min-h-0"
+                onClick={() => setFocusMode(false)}
+              >
+                <Settings className="h-4 w-4 mr-1" />
+                Settings
+              </Button>
+            </div>
+          </div>
+          {error && (
+            <p className="max-w-2xl mx-auto text-xs text-red-400 mt-2">{error}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <motion.div
@@ -274,15 +631,91 @@ export default function RehearsalPage() {
         animate={{ opacity: 1, y: 0 }}
         className="space-y-6"
       >
-        {/* Back Button */}
-        <Button
-          variant="ghost"
-          onClick={() => router.push(`/scenes/${sceneId}`)}
-          className="mb-2 hover:text-primary"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Scene
-        </Button>
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <Button
+            variant="ghost"
+            onClick={() => router.push(`/scenes/${sceneId}`)}
+            className="hover:text-primary"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Scene
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setFocusMode(true)}>
+            Focus mode
+          </Button>
+        </div>
+
+        <Card className="mb-4">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Settings className="h-4 w-4" />
+              Rehearsal settings
+            </CardTitle>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div>
+                <Label className="text-xs">Pause between lines (sec)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={30}
+                  value={rehearsalSettings.pauseBetweenLinesSeconds}
+                  onChange={(e) => {
+                    const v = Math.max(0, Math.min(30, parseInt(e.target.value, 10) || 0));
+                    setRehearsalSettings({ pauseBetweenLinesSeconds: v });
+                    setRehearsalSettingsState((s) => ({ ...s, pauseBetweenLinesSeconds: v }));
+                  }}
+                  className="mt-1 h-8"
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Countdown before scene (sec)</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={rehearsalSettings.countdownSeconds}
+                  onChange={(e) => {
+                    const v = Math.max(0, Math.min(10, parseInt(e.target.value, 10) || 0));
+                    setRehearsalSettings({ countdownSeconds: v });
+                    setRehearsalSettingsState((s) => ({ ...s, countdownSeconds: v }));
+                  }}
+                  className="mt-1 h-8"
+                />
+              </div>
+              <div className="flex items-center gap-2 sm:col-span-2">
+                <Checkbox
+                  id="skip-silent"
+                  checked={rehearsalSettings.skipMyLineIfSilent}
+                  onChange={(e) => {
+                    const v = (e.target as HTMLInputElement).checked;
+                    setRehearsalSettings({ skipMyLineIfSilent: v });
+                    setRehearsalSettingsState((s) => ({ ...s, skipMyLineIfSilent: v }));
+                  }}
+                />
+                <Label htmlFor="skip-silent" className="text-xs cursor-pointer">
+                  Skip my line if I stay silent
+                </Label>
+              </div>
+              {rehearsalSettings.skipMyLineIfSilent && (
+                <div>
+                  <Label className="text-xs">Skip after (sec)</Label>
+                  <Input
+                    type="number"
+                    min={3}
+                    max={60}
+                    value={rehearsalSettings.skipAfterSeconds}
+                    onChange={(e) => {
+                      const v = Math.max(3, Math.min(60, parseInt(e.target.value, 10) || 10));
+                      setRehearsalSettings({ skipAfterSeconds: v });
+                      setRehearsalSettingsState((s) => ({ ...s, skipAfterSeconds: v }));
+                    }}
+                    className="mt-1 h-8"
+                  />
+                </div>
+              )}
+            </div>
+          </CardHeader>
+        </Card>
 
         <Card>
           <CardHeader className="space-y-3">
@@ -461,7 +894,7 @@ export default function RehearsalPage() {
                       type="button"
                       variant="outline"
                       size="icon"
-                      className="h-7 w-7"
+                      className="h-7 w-7 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:h-7 sm:w-7"
                       onClick={() => setAutoSpeak(!autoSpeak)}
                       title={autoSpeak ? 'Disable AI voice' : 'Enable AI voice'}
                     >
@@ -487,6 +920,7 @@ export default function RehearsalPage() {
                       type="button"
                       variant={isListening ? 'destructive' : 'outline'}
                       size="icon"
+                      className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:h-9 sm:w-9"
                       onClick={isListening ? stopListening : startListening}
                       disabled={isProcessing || isSpeaking}
                       title={isListening ? 'Stop recording' : 'Record voice'}
@@ -499,6 +933,7 @@ export default function RehearsalPage() {
                     type="button"
                     variant="outline"
                     size="icon"
+                    className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:h-9 sm:w-9"
                     onClick={handleRetry}
                     title="Clear input"
                   >
@@ -507,9 +942,9 @@ export default function RehearsalPage() {
 
                   <Button
                     type="button"
-                    onClick={handleDeliverLine}
+                    onClick={() => handleDeliverLine()}
                     disabled={!userInput.trim() || isProcessing}
-                    className="gap-2"
+                    className="gap-2 min-h-[44px] sm:min-h-0"
                   >
                     {isProcessing ? (
                       <>

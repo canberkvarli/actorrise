@@ -44,7 +44,7 @@ import { Slider } from "@/components/ui/slider";
 import { ContactModal } from "@/components/contact/ContactModal";
 import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackPrompt";
 import type { FilmTvReference } from "@/types/filmTv";
-import { getFilmTvScriptUrl, getScriptSearchUrl } from "@/lib/utils";
+import { getFilmTvScriptUrl, getScriptSearchUrl, getScriptSlugUrl } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -1099,7 +1099,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 onClick={handleSearch}
                 disabled={isLoading}
                 size="lg"
-                className={`w-full md:w-auto min-h-[48px] md:min-h-[2.5rem] px-6 rounded-lg transition-all duration-300 ${
+                className={`w-auto shrink-0 min-h-[44px] md:min-h-[2.5rem] px-5 md:px-6 rounded-lg transition-all duration-300 ${
                   isTyping ? "shadow-md shadow-primary/20" : ""
                 }`}
               >
@@ -1239,13 +1239,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               exit={{ opacity: 0, height: 0 }}
               className="mt-4 p-4 bg-card border border-border rounded-lg"
             >
-              <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Type</Label>
                   <select
                     value={filmTvFilters.type}
                     onChange={(e) => setFilmTvFilters((f) => ({ ...f, type: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-input bg-background"
+                    className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
                   >
                     <option value="">Any</option>
                     <option value="movie">Movie</option>
@@ -1257,7 +1257,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   <select
                     value={filmTvFilters.genre}
                     onChange={(e) => setFilmTvFilters((f) => ({ ...f, genre: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-input bg-background"
+                    className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
                   >
                     <option value="">Any</option>
                     <option value="drama">Drama</option>
@@ -1277,7 +1277,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     placeholder="e.g. 1990"
                     value={filmTvFilters.year_min}
                     onChange={(e) => setFilmTvFilters((f) => ({ ...f, year_min: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-input bg-background"
+                    className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
                     min={1950}
                     max={2025}
                   />
@@ -1289,7 +1289,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     placeholder="e.g. 2010"
                     value={filmTvFilters.year_max}
                     onChange={(e) => setFilmTvFilters((f) => ({ ...f, year_max: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-input bg-background"
+                    className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
                     min={1950}
                     max={2025}
                   />
@@ -1299,7 +1299,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   <select
                     value={filmTvFilters.imdb_rating_min}
                     onChange={(e) => setFilmTvFilters((f) => ({ ...f, imdb_rating_min: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-input bg-background"
+                    className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
                   >
                     <option value="">Any</option>
                     <option value="6">6+</option>
@@ -1316,7 +1316,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     placeholder="e.g. Nolan"
                     value={filmTvFilters.director}
                     onChange={(e) => setFilmTvFilters((f) => ({ ...f, director: e.target.value }))}
-                    className="w-full px-3 py-2 text-sm rounded-lg border border-input bg-background"
+                    className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
                   />
                 </div>
               </div>
@@ -1344,7 +1344,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     <select
                       value={filters[key as keyof typeof filters]}
                       onChange={(e) => setFilters({ ...filters, [key]: e.target.value })}
-                      className="w-full px-3 py-2 text-sm rounded-lg border border-input bg-background"
+                      className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
                     >
                       <option value="">Any</option>
                       {options.map(opt => (
@@ -2075,6 +2075,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     variant="outline"
                     size="sm"
                     className="gap-2"
+                    onClick={() => window.open(getScriptSlugUrl(selectedFilmTvRef.title, selectedFilmTvRef.year), "_blank", "noopener,noreferrer")}
+                  >
+                    <IconExternalLink className="h-4 w-4" />
+                    Script on Script Slug
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
                     onClick={() => window.open(getScriptSearchUrl(selectedFilmTvRef.title), "_blank", "noopener,noreferrer")}
                   >
                     <IconExternalLink className="h-4 w-4" />
@@ -2091,7 +2100,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Try IMSDb first. If the script isn&apos;t there, use Search Google.
+                  Try IMSDb first, then Script Slug. If the script isn&apos;t there, use Search Google.
                 </p>
               </div>
             </motion.div>

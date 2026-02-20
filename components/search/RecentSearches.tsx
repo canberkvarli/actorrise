@@ -108,7 +108,7 @@ export default function RecentSearches({ maxSearches = 3, compact = false }: Rec
               <div
                 key={entry.id}
                 onClick={() => handleSearchClick(entry)}
-                className="p-2 rounded-md hover:bg-muted/50 cursor-pointer transition-colors group"
+                className="min-h-[44px] p-3 rounded-md hover:bg-muted/50 cursor-pointer transition-colors group flex items-center"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex-1 min-w-0">
@@ -163,7 +163,7 @@ export default function RecentSearches({ maxSearches = 3, compact = false }: Rec
                 {/* Delete button */}
                 <button
                   onClick={(e) => handleRemove(e, entry)}
-                  className="absolute top-2 right-2 p-1 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors z-10"
+                  className="absolute top-2 right-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors z-10"
                   aria-label="Remove search"
                 >
                   <IconX className="h-4 w-4" />
