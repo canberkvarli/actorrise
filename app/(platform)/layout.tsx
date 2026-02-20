@@ -127,6 +127,7 @@ export default function PlatformLayout({
     { href: "/my-scripts", label: "ScenePartner", icon: IconMask },
     { href: "/audition", label: "Audition Mode", icon: IconVideo },
   ];
+  const isImmersiveRehearsal = /^\/scenes\/[^/]+\/rehearse$/.test(pathname || "");
 
   return (
     <>
@@ -168,6 +169,7 @@ export default function PlatformLayout({
         )}
       </AnimatePresence>
       {/* Navigation */}
+      {!isImmersiveRehearsal && (
       <nav className="bg-background/95 backdrop-blur-sm border-b border-border/40 relative z-[9998]" style={{ position: 'relative' }}>
         <div className="container mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-20">
@@ -320,6 +322,14 @@ export default function PlatformLayout({
                             </Badge>
                           ) : null}
                         </span>
+                      </Link>
+                      <Link
+                        href="/my-scripts"
+                        onClick={() => setProfileDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                      >
+                        <IconFileText className="h-4 w-4 text-muted-foreground" />
+                        <span>Your scripts</span>
                       </Link>
                       <Link
                         href="/submit-monologue"
@@ -492,6 +502,19 @@ export default function PlatformLayout({
                   </Link>
                 </Button>
 
+                {/* Your Scripts Link */}
+                <Button
+                  asChild
+                  variant={pathname === "/my-scripts" ? "default" : "ghost"}
+                  size="sm"
+                  className="w-full justify-start gap-2"
+                >
+                  <Link href="/my-scripts" onClick={() => setMobileMenuOpen(false)}>
+                    <IconFileText className="h-4 w-4" />
+                    Your Scripts
+                  </Link>
+                </Button>
+
                 {/* Billing Link */}
                 <Button
                   asChild
@@ -567,13 +590,15 @@ export default function PlatformLayout({
           )}
         </div>
       </nav>
+      )}
 
       {/* Main Content - extra padding on mobile so content scrolls above bottom nav */}
-      <main className="pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0">
-        <PageTransition transitionKey={pathname}>{children}</PageTransition>
+      <main className={isImmersiveRehearsal ? "" : "pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0"}>
+        {isImmersiveRehearsal ? children : <PageTransition transitionKey={pathname}>{children}</PageTransition>}
       </main>
 
       {/* Mobile Bottom Navigation - one-thumb access to primary actions */}
+      {!isImmersiveRehearsal && (
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-[9998] bg-background/95 backdrop-blur-sm border-t border-border/40 safe-area-bottom"
       >
@@ -628,6 +653,7 @@ export default function PlatformLayout({
           </Link>
         </div>
       </nav>
+      )}
 
       <AnimatePresence>
         {showWelcome && (

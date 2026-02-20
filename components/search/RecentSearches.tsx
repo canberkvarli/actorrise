@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { IconSearch, IconClock, IconX, IconArrowRight } from "@tabler/icons-react";
+import { IconSearch, IconClock, IconX, IconArrowRight, IconDeviceTv } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -63,17 +64,43 @@ export default function RecentSearches({ maxSearches = 3, compact = false }: Rec
     });
   };
 
+  const compactCardClass = "rounded-lg border border-border/50 min-h-[280px] flex flex-col";
+  const compactContentClass = "pt-4 pb-4 flex flex-col flex-1 min-h-[252px]";
+
   if (history.length === 0) {
     if (compact) {
       return (
-        <div className="text-center py-6 text-muted-foreground">
-          <IconSearch className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p className="text-xs">No recent searches</p>
-        </div>
+        <Card className={compactCardClass}>
+          <CardContent className={compactContentClass}>
+            <div className="flex flex-col items-center justify-center flex-1 py-8 px-4 text-center">
+              <div className="rounded-full bg-muted/80 p-4 mb-3 text-muted-foreground">
+                <IconSearch className="h-8 w-8" strokeWidth={1.5} />
+              </div>
+              <p className="text-sm font-medium text-foreground">No recent searches</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Your last searches will show up here
+              </p>
+              <div className="flex flex-wrap justify-center gap-2 mt-4">
+                <Button asChild size="sm" variant="default" className="gap-1.5 rounded-lg">
+                  <Link href="/search">
+                    <IconSearch className="h-3.5 w-3.5" />
+                    Search monologues
+                  </Link>
+                </Button>
+                <Button asChild size="sm" variant="outline" className="gap-1.5 rounded-lg">
+                  <Link href="/search?mode=film_tv">
+                    <IconDeviceTv className="h-3.5 w-3.5" />
+                    Film & TV
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       );
     }
     return (
-      <Card>
+      <Card className="rounded-lg border-border/50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg text-foreground">
             <IconClock className="h-5 w-5" />
@@ -81,10 +108,28 @@ export default function RecentSearches({ maxSearches = 3, compact = false }: Rec
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <IconSearch className="h-12 w-12 mx-auto mb-3 opacity-50" />
-            <p className="text-sm">No recent searches yet.</p>
-            <p className="text-xs mt-1">Try searching for monologues!</p>
+          <div className="flex flex-col items-center justify-center py-10 px-4 text-center rounded-xl bg-muted/30 border border-dashed border-border/60">
+            <div className="rounded-full bg-background border border-border/80 shadow-sm p-5 mb-4">
+              <IconSearch className="h-10 w-10 text-muted-foreground" strokeWidth={1.25} />
+            </div>
+            <p className="text-base font-semibold text-foreground">No recent searches yet</p>
+            <p className="text-sm text-muted-foreground mt-1 max-w-[240px]">
+              Search for monologues or film & TV scenes — they&apos;ll appear here for quick access.
+            </p>
+            <div className="flex flex-wrap justify-center gap-2 mt-5">
+              <Button asChild size="sm" variant="default" className="gap-2 rounded-lg">
+                <Link href="/search">
+                  <IconSearch className="h-4 w-4" />
+                  Search monologues
+                </Link>
+              </Button>
+              <Button asChild size="sm" variant="outline" className="gap-2 rounded-lg">
+                <Link href="/search?mode=film_tv">
+                  <IconDeviceTv className="h-4 w-4" />
+                  Film & TV
+                </Link>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -92,45 +137,44 @@ export default function RecentSearches({ maxSearches = 3, compact = false }: Rec
   }
 
   if (compact) {
-    if (history.length === 0) {
-      return (
-        <div className="text-center py-6 text-muted-foreground">
-          <IconSearch className="h-8 w-8 mx-auto mb-2 opacity-50" />
-          <p className="text-xs">No recent searches</p>
-        </div>
-      );
-    }
+    const searchRowBase =
+      "flex items-center gap-3 w-full text-left p-4 rounded-lg border border-border/60 transition-all duration-200 group " +
+      "hover:shadow-md hover:border-secondary/50 hover:bg-secondary/5 cursor-pointer";
     return (
-      <Card>
-        <CardContent className="pt-4">
-          <div className="space-y-2">
+      <Card className={compactCardClass}>
+        <CardContent className={compactContentClass}>
+          <div className="space-y-3">
             {history.map((entry) => (
               <div
                 key={entry.id}
                 onClick={() => handleSearchClick(entry)}
-                className="min-h-[44px] p-3 rounded-md hover:bg-muted/50 cursor-pointer transition-colors group flex items-center"
+                className={searchRowBase}
               >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate group-hover:text-foreground transition-colors">
-                      {entry.query || "Browse all"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatRelativeTime(entry.timestamp)}
-                    </p>
-                  </div>
-                  <IconArrowRight className="h-3 w-3 text-muted-foreground/50 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                <div className="p-2 rounded-full bg-muted/80 text-muted-foreground flex-shrink-0" aria-hidden>
+                  <IconSearch className="h-4 w-4" />
                 </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">
+                    {entry.query || "Browse all"}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {formatRelativeTime(entry.timestamp)}
+                  </p>
+                </div>
+                <IconArrowRight className="h-4 w-4 text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
               </div>
             ))}
             {history.length >= maxSearches && (
               <Button
-                variant="ghost"
+                asChild
+                variant="outline"
                 size="sm"
-                onClick={() => router.push("/search")}
-                className="w-fit shrink-0 text-xs mt-2"
+                className="w-fit shrink-0 rounded-lg border-border hover:bg-muted/50 text-foreground text-sm mt-1"
               >
-                View all searches
+                <Link href="/search" className="cursor-pointer text-inherit hover:text-inherit whitespace-nowrap">
+                  View all searches
+                  <IconArrowRight className="h-3.5 w-3.5 ml-1" />
+                </Link>
               </Button>
             )}
           </div>
