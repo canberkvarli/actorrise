@@ -59,6 +59,15 @@ export function MarketingFooter() {
             <p>&copy; {new Date().getFullYear()} ActorRise</p>
             <div className="flex items-center gap-4">
               <WhatsNewLink />
+              <Link href="/monologue-finder" className="hover:text-foreground transition-colors">
+                Monologue finder
+              </Link>
+              <Link href="/audition-monologues" className="hover:text-foreground transition-colors">
+                Audition monologues
+              </Link>
+              <Link href="/audition-ai" className="hover:text-foreground transition-colors">
+                Audition AI
+              </Link>
               <Link href="/about" className="hover:text-foreground transition-colors">
                 About
               </Link>

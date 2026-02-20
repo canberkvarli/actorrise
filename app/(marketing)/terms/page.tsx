@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
@@ -8,7 +10,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Terms of Service | ActorRise",
     description: "Rules and conditions for using ActorRise.",
+    url: `${siteUrl}/terms`,
   },
+  alternates: { canonical: `${siteUrl}/terms` },
 };
 
 export default function TermsPage() {

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+
 export const metadata: Metadata = {
   title: "Comedic Monologue for Woman Under 2 Minutes",
   description:
@@ -10,7 +12,9 @@ export const metadata: Metadata = {
     title: "Comedic Monologue for Woman Under 2 Minutes | ActorRise",
     description:
       "Search 8,600+ monologues for comedic pieces for women under 2 minutes. AI-powered, natural language search.",
+    url: `${siteUrl}/monologues/comedic-woman-under-2-minutes`,
   },
+  alternates: { canonical: `${siteUrl}/monologues/comedic-woman-under-2-minutes` },
 };
 
 const SEARCH_QUERY = "comedic monologue woman under 2 minutes";

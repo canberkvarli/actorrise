@@ -101,12 +101,19 @@ export const metadata: Metadata = {
       "max-video-preview": -1,
     },
   },
-  alternates: { canonical: siteUrl },
 };
 
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": `${siteUrl}/#website`,
+      name: "ActorRise",
+      url: siteUrl,
+      description: "AI-powered monologue finder and audition monologue database for actors. 8,600+ real scripts.",
+      publisher: { "@id": `${siteUrl}/#organization` },
+    },
     {
       "@type": "Organization",
       "@id": `${siteUrl}/#organization`,

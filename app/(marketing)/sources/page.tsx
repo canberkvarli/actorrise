@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+
 export const metadata: Metadata = {
   title: "Sources & Copyright",
   description:
@@ -9,7 +11,9 @@ export const metadata: Metadata = {
     title: "Sources & Copyright | ActorRise",
     description:
       "Our content is from public domain and licensed sources. We don't distribute copyrighted play text.",
+    url: `${siteUrl}/sources`,
   },
+  alternates: { canonical: `${siteUrl}/sources` },
 };
 
 export default function SourcesPage() {

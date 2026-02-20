@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
@@ -8,7 +10,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Privacy Policy | ActorRise",
     description: "How we collect, use, and protect your personal data.",
+    url: `${siteUrl}/privacy`,
   },
+  alternates: { canonical: `${siteUrl}/privacy` },
 };
 
 export default function PrivacyPage() {

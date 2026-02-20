@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+
 export const metadata: Metadata = {
   title: "For Teachers & Coaches",
   description:
@@ -10,7 +12,9 @@ export const metadata: Metadata = {
     title: "For Teachers & Coaches | ActorRise",
     description:
       "Find the right audition monologue in less than 20 seconds. 8,600+ pieces, AI fit to type and casting, Overdone filter. We're starting with teachers and coaches; students spread it.",
+    url: `${siteUrl}/for-teachers`,
   },
+  alternates: { canonical: `${siteUrl}/for-teachers` },
 };
 
 export default function ForTeachersPage() {
