@@ -22,20 +22,29 @@ export default function BookmarksQuickAccess({ onSelectMonologue }: BookmarksQui
 
   const recentBookmarks = allBookmarks.slice(0, 3);
 
+  const cardContentMin = "min-h-[252px]";
   return (
-    <Card className="rounded-lg border-border/50 min-h-[220px]">
-      <CardContent className="pt-4 min-h-[200px]">
+    <Card className="rounded-lg border border-border/50 min-h-[280px] flex flex-col">
+      <CardContent className={`pt-4 pb-4 flex flex-col flex-1 ${cardContentMin}`}>
         {isLoading ? (
-          <div className="space-y-2">
+          <div className="space-y-3 flex-1">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-14 bg-muted/50 animate-pulse rounded-lg" />
             ))}
           </div>
         ) : recentBookmarks.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <IconBookmark className="h-10 w-10 mx-auto mb-2 opacity-40" />
-            <p className="text-sm font-medium">No bookmarks yet.</p>
-            <p className="text-xs mt-1">Start exploring!</p>
+          <div className="flex flex-col items-center justify-center flex-1 py-8 px-4 text-center">
+            <div className="rounded-full bg-violet-500/15 p-4 mb-3 text-violet-500 dark:text-violet-400">
+              <IconBookmark className="h-8 w-8 fill-current" />
+            </div>
+            <p className="text-sm font-medium text-foreground">No bookmarks yet</p>
+            <p className="text-xs text-muted-foreground mt-1">Start exploring and bookmark your favorites.</p>
+            <Button asChild size="sm" variant="default" className="mt-4 gap-1.5 rounded-lg">
+              <Link href="/search">
+                Search monologues
+                <IconArrowRight className="h-3.5 w-3.5" />
+              </Link>
+            </Button>
           </div>
         ) : (
           <div className="space-y-3">
@@ -83,11 +92,11 @@ export default function BookmarksQuickAccess({ onSelectMonologue }: BookmarksQui
                 asChild
                 variant="outline"
                 size="sm"
-                className="w-fit shrink-0 rounded-lg border-secondary/40 hover:bg-secondary/10 hover:border-secondary/50 hover:text-foreground text-foreground text-sm mt-1"
+                className="w-fit shrink-0 rounded-lg border-border hover:bg-muted/50 text-foreground text-sm mt-1"
               >
                 <Link href="/my-monologues" className="cursor-pointer text-inherit hover:text-inherit whitespace-nowrap">
                   View all {count}
-                  <IconArrowRight className="h-3.5 w-3 ml-1" />
+                  <IconArrowRight className="h-3.5 w-3.5 ml-1" />
                 </Link>
               </Button>
             )}

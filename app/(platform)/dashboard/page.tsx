@@ -25,13 +25,15 @@ import {
   IconDeviceTv,
   IconExternalLink,
   IconEdit,
-  IconLoader2
+  IconLoader2,
+  IconFileText,
 } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { Monologue } from "@/types/actor";
 import RecentSearches from "@/components/search/RecentSearches";
 import BookmarksQuickAccess from "@/components/bookmarks/BookmarksQuickAccess";
+import ScriptsQuickAccess from "@/components/scripts/ScriptsQuickAccess";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
@@ -43,7 +45,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { FilmTvReferenceCard } from "@/components/search/FilmTvReferenceCard";
 import type { FilmTvReference } from "@/types/filmTv";
-import { getFilmTvScriptUrl, getScriptSearchUrl } from "@/lib/utils";
+import { getFilmTvScriptUrl, getScriptSearchUrl, getScriptSlugUrl } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -579,18 +581,18 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             )}
           </motion.section>
 
-          {/* ========== SECTION 5: Bookmarks & Recent Searches ========== */}
+          {/* ========== SECTION 5: Your Monologues, Your Scripts, Recent Searches ========== */}
           <motion.section
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: sectionDuration, delay: sectionStagger * 4, ease: sectionEase }}
           >
-            <div className="grid md:grid-cols-2 gap-8 max-w-4xl">
-              {/* Bookmarks */}
-              <div className="min-w-0">
+            <div className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[repeat(3,minmax(0,1fr))] gap-8 items-stretch">
+              {/* Your Monologues */}
+              <div className="min-w-0 flex flex-col w-full">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-                    <IconBookmark className="h-5 w-5 text-violet-500" />
+                    <IconBookmark className="h-5 w-5 text-violet-500 shrink-0" />
                     Your Monologues
                   </h2>
                   <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground">
@@ -600,18 +602,41 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     </Link>
                   </Button>
                 </div>
-                <BookmarksQuickAccess onSelectMonologue={openMonologue} />
+                <div className="flex-1 min-w-0 flex flex-col">
+                  <BookmarksQuickAccess onSelectMonologue={openMonologue} />
+                </div>
+              </div>
+
+              {/* Your Scripts */}
+              <div className="min-w-0 flex flex-col w-full">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                    <IconFileText className="h-5 w-5 text-amber-500 shrink-0" />
+                    Your Scripts
+                  </h2>
+                  <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground">
+                    <Link href="/my-scripts" className="whitespace-nowrap">
+                      View all
+                      <IconArrowRight className="h-4 w-4 ml-1" />
+                    </Link>
+                  </Button>
+                </div>
+                <div className="flex-1 min-w-0 flex flex-col">
+                  <ScriptsQuickAccess />
+                </div>
               </div>
 
               {/* Recent Searches */}
-              <div className="min-w-0">
+              <div className="min-w-0 flex flex-col w-full">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-                    <IconHistory className="h-5 w-5 text-muted-foreground" />
+                    <IconHistory className="h-5 w-5 text-muted-foreground shrink-0" />
                     Recent Searches
                   </h2>
                 </div>
-                <RecentSearches maxSearches={isMobile ? 2 : 4} compact />
+                <div className="flex-1 min-w-0 flex flex-col">
+                  <RecentSearches maxSearches={isMobile ? 2 : 4} compact />
+                </div>
               </div>
             </div>
 
@@ -978,6 +1003,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     variant="outline"
                     size="sm"
                     className="gap-2"
+                    onClick={() => window.open(getScriptSlugUrl(selectedFilmTvRef.title, selectedFilmTvRef.year), "_blank", "noopener,noreferrer")}
+                  >
+                    <IconExternalLink className="h-4 w-4" />
+                    Script on Script Slug
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
                     onClick={() => window.open(getScriptSearchUrl(selectedFilmTvRef.title), "_blank", "noopener,noreferrer")}
                   >
                     <IconExternalLink className="h-4 w-4" />
@@ -994,7 +1028,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </Button>
                 </div>
                 <p className="text-xs text-muted-foreground mt-2">
-                  Try IMSDb first. If the script isn&apos;t there, use Search Google.
+                  Try IMSDb first, then Script Slug. If the script isn&apos;t there, use Search Google.
                 </p>
               </div>
             </motion.div>
