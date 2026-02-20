@@ -19,6 +19,24 @@ export function getImsdbSearchUrl(title: string): string {
   return `https://imsdb.com/scripts/${slug}.html`
 }
 
+/**
+ * Script Slug script URL: https://www.scriptslug.com/script/[title-slug]-[year]
+ * Format: lowercase title with spaces → hyphens, then -year (e.g. "Blue Moon" 2025 → blue-moon-2025).
+ */
+export function getScriptSlugUrl(title: string, year: number | null): string {
+  const slug = title
+    .trim()
+    .toLowerCase()
+    .replace(/['']/g, "")
+    .replace(/\s*&\s*/g, "-and-")
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+  const path = year != null ? `${slug}-${year}` : slug
+  return `https://www.scriptslug.com/script/${path}`
+}
+
 /** Google fallback — use when IMSDb search returns nothing. */
 export function getScriptSearchUrl(title: string): string {
   const query = `${title.trim()} screenplay script`
