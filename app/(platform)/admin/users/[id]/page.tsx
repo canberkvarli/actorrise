@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -75,19 +75,21 @@ export default function AdminUserDetailPage() {
       return res.data;
     },
     enabled: Number.isFinite(userId),
-    onSuccess: (result) => {
-      setDisplayName(result.user.name || "");
-      setMarketingOptIn(Boolean(result.user.marketing_opt_in));
-      setLocation((result.profile?.location as string) || "");
-      setExperienceLevel((result.profile?.experience_level as string) || "");
-      setUnionStatus((result.profile?.union_status as string) || "");
-
-      setTierId(result.subscription?.tier_id ?? null);
-      setSubscriptionStatus(result.subscription?.status ?? "active");
-      setBillingPeriod((result.subscription?.billing_period as "monthly" | "annual") ?? "monthly");
-      setCancelAtPeriodEnd(Boolean(result.subscription?.cancel_at_period_end));
-    },
   });
+
+  // Sync form state when query data loads (React Query v5 has no onSuccess on useQuery)
+  useEffect(() => {
+    if (!data) return;
+    setDisplayName(data.user.name || "");
+    setMarketingOptIn(Boolean(data.user.marketing_opt_in));
+    setLocation((data.profile?.location as string) || "");
+    setExperienceLevel((data.profile?.experience_level as string) || "");
+    setUnionStatus((data.profile?.union_status as string) || "");
+    setTierId(data.subscription?.tier_id ?? null);
+    setSubscriptionStatus(data.subscription?.status ?? "active");
+    setBillingPeriod((data.subscription?.billing_period as "monthly" | "annual") ?? "monthly");
+    setCancelAtPeriodEnd(Boolean(data.subscription?.cancel_at_period_end));
+  }, [data]);
 
   const { data: tiers = [] } = useQuery({
     queryKey: ["pricing-tiers-admin"],
@@ -283,15 +285,15 @@ export default function AdminUserDetailPage() {
     <div className="space-y-4">
       <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
-          <h2 className="text-2xl font-semibold tracking-tight">{summary?.label}</h2>
+          <h2 className="text-2xl font-semibold tracking-tight">{summary?.label != null ? String(summary.label) : ""}</h2>
           <p className="text-sm text-muted-foreground">{data.user.email}</p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <Badge variant="secondary" className="gap-1">
               <IconShield className="h-3 w-3" />
-              {summary?.roleLabel}
+              {summary?.roleLabel != null ? String(summary.roleLabel) : ""}
             </Badge>
             <Badge variant="outline" className={getTierBadgeClass(summary?.subscriptionTierName ?? "free")}>
-              {summary?.subscriptionTierDisplay}
+              {summary?.subscriptionTierDisplay != null ? String(summary.subscriptionTierDisplay) : ""}
             </Badge>
             <Badge variant="outline">Joined {formattedCreatedAt}</Badge>
           </div>
