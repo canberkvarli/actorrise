@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ContactPageForm } from "@/components/contact/ContactPageForm";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+
 export const metadata: Metadata = {
   title: "Contact",
   description:
@@ -9,7 +11,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Contact | ActorRise",
     description: "Get in touch with ActorRise for support and inquiries.",
+    url: `${siteUrl}/contact`,
   },
+  alternates: { canonical: `${siteUrl}/contact` },
 };
 
 export default function ContactPage() {

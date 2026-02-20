@@ -107,6 +107,13 @@ export function LandingPageAnimated() {
             <p className="mt-4 text-sm text-muted-foreground">
               Free tier · No credit card required
             </p>
+            <p className="mt-3 text-sm text-muted-foreground">
+              <Link href="/monologue-finder" className="text-foreground/90 hover:text-foreground underline hover:no-underline transition-colors">Monologue finder</Link>
+              {" · "}
+              <Link href="/audition-monologues" className="text-foreground/90 hover:text-foreground underline hover:no-underline transition-colors">Audition monologues</Link>
+              {" · "}
+              <Link href="/audition-ai" className="text-foreground/90 hover:text-foreground underline hover:no-underline transition-colors">Audition AI</Link>
+            </p>
             <div className="mt-8 w-full">
               <LandingLiveCount variant="inline" />
             </div>
@@ -228,6 +235,15 @@ export function LandingPageAnimated() {
               <p className="text-xs text-muted-foreground/80">Built by an actor, for actors.</p>
             </div>
             <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-4">
+              <Link href="/monologue-finder" className="hover:text-foreground transition-colors">
+                Monologue finder
+              </Link>
+              <Link href="/audition-monologues" className="hover:text-foreground transition-colors">
+                Audition monologues
+              </Link>
+              <Link href="/audition-ai" className="hover:text-foreground transition-colors">
+                Audition AI
+              </Link>
               <Link href="/about" className="hover:text-foreground transition-colors">
                 About
               </Link>

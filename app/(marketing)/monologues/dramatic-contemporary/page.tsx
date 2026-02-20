@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+
 export const metadata: Metadata = {
   title: "Dramatic Monologue from Contemporary Play",
   description:
@@ -10,7 +12,9 @@ export const metadata: Metadata = {
     title: "Dramatic Monologue from Contemporary Play | ActorRise",
     description:
       "Search 8,600+ monologues for dramatic pieces from contemporary plays. AI-powered discovery.",
+    url: `${siteUrl}/monologues/dramatic-contemporary`,
   },
+  alternates: { canonical: `${siteUrl}/monologues/dramatic-contemporary` },
 };
 
 const SEARCH_QUERY = "dramatic monologue contemporary play";

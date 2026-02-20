@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+
 export const metadata: Metadata = {
   title: "About",
   description:
@@ -8,7 +10,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: "About | ActorRise",
     description: "Built by an actor who believes technology should support the art, not get in the way of it.",
+    url: `${siteUrl}/about`,
   },
+  alternates: { canonical: `${siteUrl}/about` },
 };
 
 export default function AboutPage() {

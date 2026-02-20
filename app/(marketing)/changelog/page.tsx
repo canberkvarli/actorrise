@@ -5,6 +5,8 @@ import type { ChangelogData, ChangelogEntry, ChangelogCategory } from "@/lib/cha
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
+
 export const metadata: Metadata = {
   title: "Changelog",
   description:
@@ -12,7 +14,9 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Changelog | ActorRise",
     description: "Latest updates to ActorRise: new features, improvements, and fixes.",
+    url: `${siteUrl}/changelog`,
   },
+  alternates: { canonical: `${siteUrl}/changelog` },
 };
 
 function formatDate(dateStr: string): string {
