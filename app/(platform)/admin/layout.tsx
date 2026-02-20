@@ -5,7 +5,13 @@ import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { IconChartBar, IconShieldCheck, IconFileSearch, IconDeviceTv } from "@tabler/icons-react";
+import {
+  IconChartBar,
+  IconShieldCheck,
+  IconFileSearch,
+  IconDeviceTv,
+  IconUsers,
+} from "@tabler/icons-react";
 
 export default function AdminLayout({
   children,
@@ -45,6 +51,7 @@ export default function AdminLayout({
 
   const tabs = [
     { href: "/admin", label: "Overview", icon: IconChartBar },
+    { href: "/admin/users", label: "Users", icon: IconUsers },
     { href: "/admin/moderation", label: "Moderation", icon: IconShieldCheck },
     { href: "/admin/monologues", label: "Monologues", icon: IconFileSearch },
     { href: "/admin/film-tv", label: "Film/TV", icon: IconDeviceTv },
