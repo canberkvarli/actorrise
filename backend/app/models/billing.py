@@ -8,13 +8,13 @@ This module contains models for:
 - BillingHistory: Payment and invoice history
 """
 
-from datetime import date, datetime
+from datetime import date
 
 from app.core.database import Base
 from sqlalchemy import (Boolean, Column, Date, DateTime, ForeignKey, Index,
-                        Integer, String)
+                        Integer, String, Text)
 from sqlalchemy import text as sql_text
-from sqlalchemy.dialects.postgresql import JSON, JSONB
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship
 
 
@@ -208,3 +208,50 @@ class BillingHistory(Base):
     def amount_dollars(self) -> float:
         """Get amount in dollars (for display)."""
         return self.amount_cents / 100.0
+
+
+class UserBenefitOverride(Base):
+    """
+    Admin-managed per-user feature overrides.
+
+    Used for temporary/manual grants and revocations that take precedence
+    over tier defaults.
+    """
+
+    __tablename__ = "user_benefit_overrides"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    feature_key = Column(String, nullable=False, index=True)
+    override_type = Column(String, nullable=False)  # "set" or "revoke"
+    value = Column(JSONB, nullable=True)  # bool/int/string/list based on feature
+    expires_at = Column(DateTime(timezone=True), nullable=True, index=True)
+    note = Column(Text, nullable=True)
+    created_by_admin_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))
+    updated_at = Column(DateTime(timezone=True), onupdate=sql_text("now()"))
+
+    __table_args__ = (
+        Index("ix_user_benefit_override_lookup", "user_id", "feature_key"),
+    )
+
+    user = relationship("User", foreign_keys=[user_id])
+    created_by_admin = relationship("User", foreign_keys=[created_by_admin_id])
+
+
+class AdminAuditLog(Base):
+    """Audit trail for sensitive admin actions."""
+
+    __tablename__ = "admin_audit_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    actor_admin_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    target_user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    action_type = Column(String, nullable=False, index=True)
+    before_json = Column(JSONB, nullable=True)
+    after_json = Column(JSONB, nullable=True)
+    note = Column(Text, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"), index=True)
+
+    actor_admin = relationship("User", foreign_keys=[actor_admin_id])
+    target_user = relationship("User", foreign_keys=[target_user_id])

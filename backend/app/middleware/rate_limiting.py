@@ -22,6 +22,7 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.models.billing import PricingTier, UsageMetrics, UserSubscription
 from app.models.user import User
+from app.services.benefits import get_effective_benefits
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -70,17 +71,17 @@ class FeatureGate:
             db.query(UserSubscription).filter(UserSubscription.user_id == current_user.id).first()
         )
 
-        if subscription and subscription.status == "active":
+        if subscription and subscription.status in ("active", "trialing"):
             tier = db.query(PricingTier).get(subscription.tier_id)
         else:
             # Default to Free tier
             tier = db.query(PricingTier).filter(PricingTier.name == "free").first()
 
-        if not tier:
+        if tier is None:
             raise HTTPException(status_code=500, detail="Pricing tier not found")
 
-        # Get feature limits from tier
-        features = tier.features
+        # Apply per-user overrides on top of tier defaults.
+        features = get_effective_benefits(db, current_user.id, subscription)
 
         # Handle different feature types
         if self.feature == "ai_search":

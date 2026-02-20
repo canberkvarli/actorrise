@@ -5,6 +5,7 @@ from app.api.admin.film_tv import router as admin_film_tv_router
 from app.api.admin.moderation import router as moderation_router
 from app.api.admin.monologues import router as admin_monologues_router
 from app.api.admin.stats import router as admin_stats_router
+from app.api.admin.users import router as admin_users_router
 from app.api.audition import router as audition_router
 from app.api.auth import router as auth_router
 from app.api.contact import router as contact_router
@@ -122,6 +123,7 @@ app.include_router(moderation_router)
 app.include_router(admin_monologues_router)
 app.include_router(admin_film_tv_router)
 app.include_router(admin_stats_router)
+app.include_router(admin_users_router)
 
 
 @app.get("/")
