@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import UnderConstructionScripts from "@/components/UnderConstructionScripts";
+import { ScenePartnerTutorial } from "@/components/scenepartner/ScenePartnerTutorial";
+import { ScenePartnerAudioCheck } from "@/components/scenepartner/ScenePartnerAudioCheck";
+import { getScenePartnerTutorialSeen, getScenePartnerAudioCheckDone } from "@/lib/scenepartnerStorage";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -69,6 +72,8 @@ export default function MyScriptsPage() {
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
   const router = useRouter();
+  const [showTutorial, setShowTutorial] = useState<boolean | null>(null);
+  const [showAudioCheck, setShowAudioCheck] = useState<boolean | null>(null);
   const [scripts, setScripts] = useState<UserScript[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -80,6 +85,11 @@ export default function MyScriptsPage() {
   const [pasteDescription, setPasteDescription] = useState("");
   const [pasting, setPasting] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
+  useEffect(() => {
+    setShowTutorial(!getScenePartnerTutorialSeen());
+    setShowAudioCheck(!getScenePartnerAudioCheckDone());
+  }, []);
 
   useEffect(() => {
     fetchScripts();
@@ -102,7 +112,13 @@ export default function MyScriptsPage() {
     try {
       setIsLoading(true);
       const response = await api.get<UserScript[]>("/api/scripts/");
-      setScripts(response.data);
+      let list = response.data;
+      if (list.length === 0) {
+        await api.post<unknown>("/api/scripts/ensure-example");
+        const retry = await api.get<UserScript[]>("/api/scripts/");
+        list = retry.data;
+      }
+      setScripts(list);
     } catch (error) {
       console.error("Error fetching scripts:", error);
       toast.error("Failed to load scripts");
@@ -255,6 +271,24 @@ export default function MyScriptsPage() {
   const isProcessing = uploadingFile || pasting;
   const currentLoadingMessage = SCRIPT_LOADING_MESSAGES[loadingMessageIndex];
 
+  if (showTutorial === null) {
+    return <div className="min-h-[60vh] flex items-center justify-center" aria-hidden="true" />;
+  }
+  if (showTutorial === true) {
+    return (
+      <ScenePartnerTutorial
+        onComplete={() => setShowTutorial(false)}
+      />
+    );
+  }
+  if (showAudioCheck === true) {
+    return (
+      <ScenePartnerAudioCheck
+        onComplete={() => setShowAudioCheck(false)}
+      />
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 sm:px-6 py-8 max-w-5xl">
       <input
@@ -390,6 +424,9 @@ export default function MyScriptsPage() {
                             <h3 className="text-xl font-semibold truncate group-hover:text-primary transition-colors">
                               {script.title}
                             </h3>
+                            {script.title.startsWith("Example:") && (
+                              <Badge variant="outline" className="font-normal text-xs">Example</Badge>
+                            )}
                             {getStatusBadge(script.processing_status)}
                           </div>
                           <p className="text-base text-muted-foreground mt-1">
@@ -425,7 +462,7 @@ export default function MyScriptsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            className="h-8 w-8 min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteScript(script.id);
@@ -445,7 +482,7 @@ export default function MyScriptsPage() {
       )}
 
       <Dialog open={showPasteModal} onOpenChange={setShowPasteModal}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Paste script</DialogTitle>
           </DialogHeader>

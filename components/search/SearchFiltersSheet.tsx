@@ -104,7 +104,7 @@ export function SearchFiltersSheet({
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    className="inline-flex shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm"
+                    className="inline-flex shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm min-h-[44px] min-w-[44px] items-center justify-center -m-1"
                     aria-label="Freshness filter info"
                   >
                     <IconInfoCircle className="h-4 w-4 text-muted-foreground hover:text-foreground" />
@@ -138,7 +138,7 @@ export function SearchFiltersSheet({
                   <button
                     type="button"
                     onClick={() => setFilters({ ...filters, [key]: "" })}
-                    className="ml-1 hover:text-destructive min-w-[28px] min-h-[28px] flex items-center justify-center rounded"
+                    className="ml-1 hover:text-destructive min-w-[44px] min-h-[44px] flex items-center justify-center rounded -m-1"
                   >
                     <IconX className="h-3 w-3" />
                   </button>
@@ -150,7 +150,7 @@ export function SearchFiltersSheet({
                   <button
                     type="button"
                     onClick={() => setMaxOverdoneScore(1)}
-                    className="ml-1 hover:text-destructive min-w-[28px] min-h-[28px] flex items-center justify-center rounded"
+                    className="ml-1 hover:text-destructive min-w-[44px] min-h-[44px] flex items-center justify-center rounded -m-1"
                   >
                     <IconX className="h-3 w-3" />
                   </button>

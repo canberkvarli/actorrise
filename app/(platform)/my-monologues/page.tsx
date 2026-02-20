@@ -345,7 +345,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                               e.stopPropagation();
                               setShowDownloadMenu(!showDownloadMenu);
                             }}
-                            className="hover:bg-muted text-muted-foreground hover:text-primary"
+                            className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 hover:bg-muted text-muted-foreground hover:text-primary"
                           >
                             <IconDownload className="h-5 w-5" />
                           </Button>
@@ -394,7 +394,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           e.stopPropagation();
                           toggleFavorite(e as any, selectedMonologue);
                         }}
-                        className={`active:scale-95 transition-transform ${
+                        className={`min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 active:scale-95 transition-transform ${
                           selectedMonologue.is_favorited
                             ? "bg-violet-500/15 hover:bg-violet-500/25 text-violet-500 dark:text-violet-400"
                             : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground"
@@ -414,7 +414,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                               e.stopPropagation();
                               setReportOpen(true);
                             }}
-                            className="hover:bg-muted text-muted-foreground hover:text-foreground"
+                            className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 hover:bg-muted text-muted-foreground hover:text-foreground"
                             aria-label="Report an issue"
                           >
                             <IconFlag className="h-5 w-5" />
@@ -432,7 +432,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                             e.stopPropagation();
                             setIsReadingMode(!isReadingMode);
                           }}
-                          className="hover:bg-muted"
+                          className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 hover:bg-muted"
                         >
                           {isReadingMode ? (
                             <IconEyeOff className="h-5 w-5" />
@@ -443,7 +443,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       </TooltipTrigger>
                       <TooltipContent>{isReadingMode ? "Exit reading mode" : "Reading mode"}</TooltipContent>
                     </Tooltip>
-                    <Button variant="ghost" size="icon" onClick={closeMonologue}>
+                    <Button variant="ghost" size="icon" onClick={closeMonologue} className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0">
                       <IconX className="h-5 w-5" />
                     </Button>
                     </TooltipProvider>
