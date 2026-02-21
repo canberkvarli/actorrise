@@ -8,7 +8,7 @@ Usage:
     Or with custom email:
         SUPERUSER_EMAIL=you@example.com cd backend && uv run python scripts/wipe_users_make_superuser.py
 
-The superuser email defaults to canberkvarli@gmail.com.
+The superuser email defaults to canberk@actorrise.com.
 If that user does not exist in the DB yet, log in once with that email so the user is created, then run this script again.
 """
 
@@ -34,7 +34,7 @@ from app.models.actor import (
     Scene,
 )
 
-SUPERUSER_EMAIL = os.getenv("SUPERUSER_EMAIL", "canberkvarli@gmail.com").strip().lower()
+SUPERUSER_EMAIL = os.getenv("SUPERUSER_EMAIL", "canberk@actorrise.com").strip().lower()
 
 
 def wipe_other_users_and_set_superuser(db: Session) -> None:

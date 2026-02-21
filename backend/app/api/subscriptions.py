@@ -30,6 +30,23 @@ router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
 # Configure Stripe
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
+# Educational email domain suffixes (lowercase) — used for auto student 50% discount
+SCHOOL_EMAIL_SUFFIXES = (
+    ".edu", ".ac.uk", ".edu.au", ".ac.nz", ".edu.sg", ".ac.in", ".edu.in",
+    ".edu.tr", ".ac.jp", ".edu.mx", ".edu.br", ".ac.za", ".ac.kr", ".edu.ph",
+    ".edu.my", ".edu.pk", ".edu.cn", ".edu.tw", ".edu.hk", ".edu.sa", ".edu.eg",
+    ".edu.nz", ".ac.th", ".edu.vn", ".edu.id", ".ac.be", ".edu.ar", ".edu.co",
+    ".edu.ng", ".edu.gh", ".ac.ug", ".edu.et", ".ac.ke",
+)
+
+
+def _is_school_email(email: str | None) -> bool:
+    """True if email is from a known educational domain (e.g. .edu, .ac.uk)."""
+    if not email or "@" not in email:
+        return False
+    domain = email.strip().lower().split("@")[-1]
+    return any(domain.endswith(s) for s in SCHOOL_EMAIL_SUFFIXES)
+
 
 # ============================================================================
 # Request/Response Models
@@ -70,6 +87,12 @@ class CreatePortalSessionResponse(BaseModel):
     """Response with Stripe Customer Portal URL."""
 
     portal_url: str
+
+
+class StudentDiscountEligibleResponse(BaseModel):
+    """Whether the current user's email qualifies for auto student 50% discount."""
+
+    eligible: bool
 
 
 class UsageLimitsResponse(BaseModel):
@@ -147,6 +170,17 @@ async def get_my_subscription(current_user: User = Depends(get_current_user), db
         current_period_end=subscription.current_period_end,
         cancel_at_period_end=subscription.cancel_at_period_end,
     )
+
+
+@router.get("/student-discount-eligible", response_model=StudentDiscountEligibleResponse)
+async def student_discount_eligible(current_user: User = Depends(get_current_user)):
+    """
+    Whether the current user gets the student 50% discount automatically (school email).
+
+    If true, checkout will apply the discount without entering a promo code.
+    """
+    eligible = _is_school_email(current_user.email) and bool(os.getenv("STRIPE_STUDENT_50_COUPON_ID"))
+    return StudentDiscountEligibleResponse(eligible=eligible)
 
 
 @router.post("/create-checkout-session", response_model=CreateCheckoutSessionResponse)
@@ -244,8 +278,20 @@ async def create_checkout_session(
                     status_code=400,
                     detail="Promo code is not configured. Please contact support.",
                 )
+        elif promo in ("STXQ5NU4", "STUDENT50"):
+            # 50% off — Student discount (promo code StxQ5Nu4, name: Student discount)
+            student_50_coupon_id = os.getenv("STRIPE_STUDENT_50_COUPON_ID")
+            if student_50_coupon_id:
+                discounts = [{"coupon": student_50_coupon_id}]
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Student discount is not configured. Please contact support.",
+                )
         else:
             raise HTTPException(status_code=400, detail=f"Invalid promo code: {request.promo_code}")
+
+    # No auto-apply: student/teacher discounts are manual review only (you send codes after approval).
 
     # Create checkout session
     create_params: dict[str, Any] = {

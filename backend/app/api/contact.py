@@ -1,5 +1,5 @@
 """
-Public contact form API. Sends messages to canberkvarli@gmail.com via Resend.
+Public contact form API. Sends messages to canberk@actorrise.com via Resend.
 No authentication required — for partnership, feedback, bugs, collaboration, etc.
 """
 
@@ -12,7 +12,7 @@ from pydantic import BaseModel, EmailStr, Field
 
 router = APIRouter(prefix="/api/contact", tags=["contact"])
 
-CONTACT_EMAIL = "canberkvarli@gmail.com"
+CONTACT_EMAIL = "canberk@actorrise.com"
 
 CATEGORIES = [
     "partnership",
@@ -21,6 +21,7 @@ CATEGORIES = [
     "collaboration",
     "support",
     "business_discount",
+    "teacher_school_coach_discount",
     "student_discount",
     "other",
 ]
@@ -31,7 +32,7 @@ class ContactRequest(BaseModel):
     email: EmailStr
     category: str = Field(
         default="other",
-        description="partnership, feedback, bug, collaboration, support, business_discount, student_discount, other",
+        description="partnership, feedback, bug, collaboration, support, business_discount, teacher_school_coach_discount, student_discount, other",
     )
     message: str = Field(..., min_length=1, max_length=5000)
 
@@ -59,7 +60,7 @@ def _build_contact_html(name: str, email: str, category: str, message: str) -> s
 @router.post("")
 def send_contact_message(body: ContactRequest) -> dict:
     """
-    Send a contact form message to ActorRise. Delivered to canberkvarli@gmail.com via Resend.
+    Send a contact form message to ActorRise. Delivered to canberk@actorrise.com via Resend.
     """
     if body.category not in CATEGORIES:
         raise HTTPException(
@@ -70,7 +71,7 @@ def send_contact_message(body: ContactRequest) -> dict:
     if not os.getenv("RESEND_API_KEY"):
         raise HTTPException(
             status_code=503,
-            detail="Contact form is temporarily unavailable. Please email canberkvarli@gmail.com directly.",
+            detail="Contact form is temporarily unavailable. Please email canberk@actorrise.com directly.",
         )
 
     try:
@@ -92,5 +93,5 @@ def send_contact_message(body: ContactRequest) -> dict:
         print(f"Contact form send failed: {e}")
         raise HTTPException(
             status_code=500,
-            detail="Failed to send message. Please try again or email canberkvarli@gmail.com directly.",
+            detail="Failed to send message. Please try again or email canberk@actorrise.com directly.",
         )

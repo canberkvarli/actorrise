@@ -31,8 +31,8 @@ class Settings:
         )
     jwt_secret: str = _jwt_secret_raw
 
-    # Comma-separated emails that bypass tier/usage limits (e.g. canberkvarli@gmail.com).
-    superuser_emails: str = os.getenv("SUPERUSER_EMAILS", "canberkvarli@gmail.com").strip()
+    # Comma-separated emails that bypass tier/usage limits (e.g. canberk@actorrise.com).
+    superuser_emails: str = os.getenv("SUPERUSER_EMAILS", "canberk@actorrise.com").strip()
     # Supabase Storage settings
     supabase_url: str | None = os.getenv("SUPABASE_URL")
     supabase_service_role_key: str | None = os.getenv("SUPABASE_SERVICE_ROLE_KEY")

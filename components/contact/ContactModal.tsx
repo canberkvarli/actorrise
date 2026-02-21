@@ -22,8 +22,9 @@ const CATEGORIES = [
   { value: "bug", label: "Bug report" },
   { value: "collaboration", label: "Collaboration" },
   { value: "support", label: "Support" },
-  { value: "business_discount", label: "Business discount (3 mo free)" },
-  { value: "student_discount", label: "Student discount (6 mo free)" },
+  { value: "business_discount", label: "Business discount" },
+  { value: "teacher_school_coach_discount", label: "Teacher / school / coach discount" },
+  { value: "student_discount", label: "Student discount" },
   { value: "other", label: "Other" },
 ] as const;
 
@@ -74,7 +75,7 @@ export function ContactModal({ open, onOpenChange, initialCategory }: ContactMod
         err instanceof Error
           ? err.message
           : (err as { response?: { data?: { detail?: string } } })?.response?.data
-              ?.detail ?? "Failed to send. You can email canberkvarli@gmail.com directly.";
+              ?.detail ?? "Failed to send. You can email canberk@actorrise.com directly.";
       toast.error(message);
     } finally {
       setSending(false);
