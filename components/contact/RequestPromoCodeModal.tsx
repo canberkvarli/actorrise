@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -14,26 +14,40 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { IconBuildingStore, IconSchool } from "@tabler/icons-react";
+import { IconSchool, IconUsers } from "@tabler/icons-react";
 
 export type PromoRequestType = "business" | "student" | null;
+
+export type RequestPromoContext = "review" | null;
 
 export interface RequestPromoCodeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Pre-select type when opening (e.g. "student" for "Request a review" link). */
+  initialType?: PromoRequestType;
+  /** "review" = student didn't qualify by email, requesting manual review. */
+  initialContext?: RequestPromoContext;
 }
 
-export function RequestPromoCodeModal({ open, onOpenChange }: RequestPromoCodeModalProps) {
+export function RequestPromoCodeModal({ open, onOpenChange, initialType = null, initialContext = null }: RequestPromoCodeModalProps) {
   const [type, setType] = useState<PromoRequestType>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [schoolEmail, setSchoolEmail] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+
+  const isReview = initialContext === "review" && type === "student";
+
+  useEffect(() => {
+    if (open && initialType) setType(initialType);
+  }, [open, initialType]);
 
   const reset = () => {
     setType(null);
     setName("");
     setEmail("");
+    setSchoolEmail("");
     setMessage("");
   };
 
@@ -47,16 +61,23 @@ export function RequestPromoCodeModal({ open, onOpenChange }: RequestPromoCodeMo
       toast.error("Please fill in name and email.");
       return;
     }
-    const category = type === "business" ? "business_discount" : "student_discount";
+    const category = type === "business" ? "teacher_school_coach_discount" : "student_discount";
+    let bodyMessage = message.trim() || (type === "business" ? "Discount request (teachers, schools, acting coaches)." : "Student discount request.");
+    if (type === "student" && schoolEmail.trim()) {
+      bodyMessage += `\n\nSchool email provided: ${schoolEmail.trim()}`;
+    }
+    if (isReview) {
+      bodyMessage = "[Student discount review request]\n\n" + bodyMessage;
+    }
     setSending(true);
     try {
       const { data } = await api.post<{ ok: boolean; message: string }>("/api/contact", {
         name: name.trim(),
         email: email.trim(),
         category,
-        message: message.trim() || (type === "business" ? "Business discount code request." : "Student discount code request."),
+        message: bodyMessage,
       });
-      toast.success(data?.message ?? "Request sent! I'll send you a code soon.");
+      toast.success(data?.message ?? "Request sent! We'll review and email you a code.");
       reset();
       onOpenChange(false);
     } catch (err: unknown) {
@@ -64,7 +85,7 @@ export function RequestPromoCodeModal({ open, onOpenChange }: RequestPromoCodeMo
         err instanceof Error
           ? err.message
           : (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-            "Failed to send. You can email canberkvarli@gmail.com directly.";
+            "Failed to send. You can email canberk@actorrise.com directly.";
       toast.error(msg);
     } finally {
       setSending(false);
@@ -75,9 +96,11 @@ export function RequestPromoCodeModal({ open, onOpenChange }: RequestPromoCodeMo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-xl">Get a free discount code</DialogTitle>
+          <DialogTitle className="text-xl">
+            Request a discount
+          </DialogTitle>
           <DialogDescription className="text-base">
-            Tell us who you are and we&apos;ll email you a code. No code is shown on the site; you have to reach out.
+            We’ll review your request and email you a code. No codes are shown on the site — you’ll get yours by email after approval.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="grid gap-5">
@@ -94,9 +117,9 @@ export function RequestPromoCodeModal({ open, onOpenChange }: RequestPromoCodeMo
                     : "border-border bg-muted/30 text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground"
                 }`}
               >
-                <IconBuildingStore className="h-8 w-8" />
-                <span className="font-semibold text-sm">Business / Studio</span>
-                <span className="text-xs">3 months free</span>
+                <IconUsers className="h-8 w-8" />
+                <span className="font-semibold text-sm">Teacher / School / Coach</span>
+                <span className="text-xs">Discounted rate</span>
               </button>
               <button
                 type="button"
@@ -110,7 +133,7 @@ export function RequestPromoCodeModal({ open, onOpenChange }: RequestPromoCodeMo
               >
                 <IconSchool className="h-8 w-8" />
                 <span className="font-semibold text-sm">Student</span>
-                <span className="text-xs">6 months free</span>
+                <span className="text-xs">50% off</span>
               </button>
             </div>
           </div>
@@ -136,13 +159,29 @@ export function RequestPromoCodeModal({ open, onOpenChange }: RequestPromoCodeMo
               disabled={sending}
             />
           </div>
+          {type === "student" && (
+            <div className="grid gap-2">
+              <Label htmlFor="promo-school-email" className="text-sm">School email (optional)</Label>
+              <Input
+                id="promo-school-email"
+                type="email"
+                placeholder="you@school.edu"
+                value={schoolEmail}
+                onChange={(e) => setSchoolEmail(e.target.value)}
+                disabled={sending}
+              />
+              <p className="text-xs text-muted-foreground">
+                For current students. We may verify eligibility.
+              </p>
+            </div>
+          )}
           <div className="grid gap-2">
             <Label htmlFor="promo-message" className="text-sm">
-              {type === "business" ? "Your business or studio (optional)" : type === "student" ? "School or program (optional)" : "Message (optional)"}
+              {type === "business" ? "School, studio, or program (optional)" : type === "student" ? "School or program (optional)" : "Message (optional)"}
             </Label>
             <Textarea
               id="promo-message"
-              placeholder={type === "business" ? "e.g. Acting studio, production company…" : type === "student" ? "e.g. Drama school, university…" : "Anything you want to add"}
+              placeholder={type === "business" ? "e.g. Acting studio, drama school, coaching…" : type === "student" ? "e.g. Drama school, university…" : "Anything you want to add"}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={2}

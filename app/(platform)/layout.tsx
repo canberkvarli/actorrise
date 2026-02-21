@@ -662,7 +662,12 @@ export default function PlatformLayout({
       {changelogModalEntry && (
         <ChangelogModal
           open={showChangelogModal}
-          onOpenChange={setShowChangelogModal}
+          onOpenChange={(open) => {
+            if (!open) {
+              markAsSeen(changelogModalEntry.id);
+            }
+            setShowChangelogModal(open);
+          }}
           entry={changelogModalEntry}
           onDismiss={() => {
             markAsSeen(changelogModalEntry.id);

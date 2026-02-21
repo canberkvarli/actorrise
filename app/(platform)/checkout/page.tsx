@@ -38,6 +38,7 @@ export default function CheckoutPage() {
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState<string | null>(null);
   const [promoModalOpen, setPromoModalOpen] = useState(false);
+  const [promoModalContext, setPromoModalContext] = useState<"review" | null>(null);
 
   const tierName = searchParams.get("tier");
   const period = searchParams.get("period") || "monthly";
@@ -48,15 +49,14 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Fetch tier details
     fetch(`${API_URL}/api/pricing/tiers/${tierName}`)
       .then((res) => res.json())
       .then((data) => {
         setTier(data);
         setIsLoading(false);
       })
-      .catch((error) => {
-        console.error("Failed to fetch tier:", error);
+      .catch((err) => {
+        console.error("Failed to fetch tier:", err);
         setError("Failed to load pricing information. Please try again.");
         setIsLoading(false);
       });
@@ -75,6 +75,9 @@ export default function CheckoutPage() {
       setError(null);
     } else if (code === "STUDENT" || code === "STUDENTACTOR26") {
       setPromoApplied("STUDENT");
+      setError(null);
+    } else if (code === "STXQ5NU4" || code === "STUDENT50") {
+      setPromoApplied("STUDENT50");
       setError(null);
     } else if (code) {
       setPromoApplied(null);
@@ -105,7 +108,7 @@ export default function CheckoutPage() {
           billing_period: period,
           success_url: `${window.location.origin}/billing/success`,
           cancel_url: `${window.location.origin}/pricing`,
-          promo_code: promoApplied || undefined,
+          promo_code: promoApplied === "STUDENT50" ? "STXQ5NU4" : promoApplied || undefined,
         }
       );
 
@@ -129,7 +132,7 @@ export default function CheckoutPage() {
       period === "annual" && tier.annual_price_cents
         ? tier.annual_price_cents
         : tier.monthly_price_cents;
-    if (promoApplied === "STARTUPS") return Math.round(base * 0.5);
+    if (promoApplied === "STARTUPS" || promoApplied === "STUDENT50") return Math.round(base * 0.5);
     return base;
   };
 
@@ -254,7 +257,9 @@ export default function CheckoutPage() {
                         ? "BUSINESS applied. 100% off for 3 months."
                         : promoApplied === "STUDENT"
                           ? "STUDENT applied. 100% off for 6 months."
-                          : "STARTUPS applied. 50% off."}
+                          : promoApplied === "STUDENT50"
+                            ? "Student discount applied. 50% off."
+                            : "STARTUPS applied. 50% off."}
                   </span>
                   <Button type="button" variant="ghost" size="sm" onClick={removePromo}>
                     <IconX className="h-4 w-4" />
@@ -276,22 +281,33 @@ export default function CheckoutPage() {
                   </div>
                   <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4">
                     <p className="text-base font-semibold text-foreground mb-1">
-                      Business or student? Get a code for 100% off.
+                      Student or teacher / school / acting coach?
                     </p>
                     <p className="text-sm text-muted-foreground mb-3">
-                      Businesses: 3 months free. Students: 6 months free. We&apos;ll send you a code after you reach out.
+                      Request a discount — we&apos;ll review and email you a code. Students get a lower discount; teachers and schools get a discounted rate.
                     </p>
                     <Button
                       type="button"
                       variant="secondary"
                       size="sm"
                       className="gap-2"
-                      onClick={() => setPromoModalOpen(true)}
+                      onClick={() => { setPromoModalContext(null); setPromoModalOpen(true); }}
                     >
                       <IconGift className="h-4 w-4" />
-                      Get my code
+                      Request a discount
                     </Button>
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    Don&apos;t have a code yet?{" "}
+                    <button
+                      type="button"
+                      onClick={() => { setPromoModalContext("review"); setPromoModalOpen(true); }}
+                      className="underline hover:text-foreground"
+                    >
+                      Request a review
+                    </button>
+                    — we&apos;ll get back to you.
+                  </p>
                 </>
               )}
             </div>
@@ -334,7 +350,12 @@ export default function CheckoutPage() {
         .
       </p>
 
-      <RequestPromoCodeModal open={promoModalOpen} onOpenChange={setPromoModalOpen} />
+      <RequestPromoCodeModal
+        open={promoModalOpen}
+        onOpenChange={(open) => { setPromoModalOpen(open); if (!open) setPromoModalContext(null); }}
+        initialType={promoModalContext === "review" ? "student" : undefined}
+        initialContext={promoModalContext === "review" ? "review" : undefined}
+      />
     </div>
   );
 }

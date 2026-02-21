@@ -41,7 +41,7 @@ export default async function Image() {
             maxWidth: 900,
           }}
         >
-          {/* Pill badge – matches landing "Search engine · 8,600+ real scripts" */}
+          {/* Pill badge – matches landing hero pill */}
           <div
             style={{
               display: "flex",
@@ -67,7 +67,7 @@ export default async function Image() {
                 backgroundColor: primary,
               }}
             />
-            Search engine · 8,600+ real scripts
+            Search engine · Monologues, scenes & TV/film
           </div>
 
           {/* Headline: "Find the monologue." / "In seconds." on two lines */}

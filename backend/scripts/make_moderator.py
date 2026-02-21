@@ -3,7 +3,7 @@
 Make a user a moderator with approval permissions.
 
 Usage:
-    uv run python scripts/make_moderator.py canberkvarli@gmail.com
+    uv run python scripts/make_moderator.py canberk@actorrise.com
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from app.models.user import User
 
 
 def main():
-    email = sys.argv[1] if len(sys.argv) > 1 else "canberkvarli@gmail.com"
+    email = sys.argv[1] if len(sys.argv) > 1 else "canberk@actorrise.com"
 
     db = SessionLocal()
 

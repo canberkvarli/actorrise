@@ -126,12 +126,12 @@ const faqs = [
   {
     question: "Is there a student discount?",
     answer:
-      "Yes. Students can get 6 months free (100% off). Reach out via the contact form, choose “Student discount (6 months free, request code)”, and I’ll send you a code. The annual plans also include a built-in discount (up to 31% off), and there’s a useful free plan.",
+      "Yes. Students get a discounted rate (lower than teachers/schools). Request a discount at checkout or via the contact form; we’ll review and email you a code. No codes are shown on the site — you’ll get yours by email after approval.",
   },
   {
-    question: "Do you offer a business or studio discount?",
+    question: "Do you offer discounts for teachers, schools, or acting coaches?",
     answer:
-      "Yes. Businesses, studios, and teams can get 3 months free (100% off). Reach out via the contact form, choose “Business discount (3 months free, request code)”, tell me a bit about your business, and I’ll send you a code.",
+      "Yes. Teachers, drama schools, and acting coaches get a discounted rate. Request a discount at checkout or via the contact form; we’ll review and email you a code. No codes are shown on the site — you’ll get yours by email after approval.",
   },
   {
     question: "What payment methods do you accept?",

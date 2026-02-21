@@ -37,10 +37,10 @@ export default function ContactPage() {
           </p>
           <p>
             <a
-              href="mailto:canberkvarli@gmail.com"
+              href="mailto:canberk@actorrise.com"
               className="text-foreground underline hover:no-underline font-medium"
             >
-              canberkvarli@gmail.com
+              canberk@actorrise.com
             </a>
           </p>
           <p className="mt-4 text-sm">

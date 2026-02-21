@@ -1277,7 +1277,7 @@ def report_monologue(
         try:
             client = ResendEmailClient()
             client.send_email(
-                to="canberkvarli@gmail.com",
+                to="canberk@actorrise.com",
                 subject=f"[Report] Monologue #{monologue_id} - {mono.character_name or 'Unknown'} ({issue_label})",
                 html=email_html,
             )

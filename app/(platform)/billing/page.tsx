@@ -94,13 +94,13 @@ export default function BillingPage() {
   // Show error state if subscription fetch fails
   if (subError) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
-        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-6 text-center">
-          <p className="text-lg font-semibold mb-2">Unable to load billing information</p>
-          <p className="text-muted-foreground mb-4">
+      <div className="container mx-auto px-4 py-8 max-w-lg">
+        <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-5 text-center">
+          <p className="font-semibold mb-2">Unable to load billing information</p>
+          <p className="text-sm text-muted-foreground mb-4">
             There was an error loading your subscription data. Please try refreshing the page.
           </p>
-          <Button onClick={() => window.location.reload()} variant="outline">
+          <Button onClick={() => window.location.reload()} variant="outline" size="sm">
             Refresh Page
           </Button>
         </div>
@@ -110,64 +110,62 @@ export default function BillingPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
-        <Skeleton className="h-12 w-64 mb-8" />
-        <div className="grid md:grid-cols-2 gap-6">
-          <Skeleton className="h-64" />
-          <Skeleton className="h-64" />
-        </div>
+      <div className="container mx-auto px-4 py-8 max-w-lg">
+        <Skeleton className="h-8 w-48 mb-6" />
+        <Skeleton className="h-44 mb-5" />
+        <Skeleton className="h-40" />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-5xl">
-      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-10">
-        <h1 className="text-3xl font-bold mb-2 text-foreground">Billing</h1>
-        <p className="text-muted-foreground text-sm">
-          Manage your plan and see usage.
+    <div className="container mx-auto px-4 py-6 max-w-lg">
+      <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
+        <h1 className="text-2xl font-bold text-foreground">Billing</h1>
+        <p className="text-muted-foreground text-sm mt-0.5">
+          Manage your plan and usage.
         </p>
       </motion.div>
 
-      <div className="grid md:grid-cols-2 gap-6 mb-8">
+      <div className="space-y-5">
         {/* Current Plan Card */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.05 }}
         >
-          <Card className="rounded-lg">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle>Current Plan</CardTitle>
+          <Card className="rounded-xl overflow-hidden">
+            <CardHeader className="py-4 px-5">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-lg">Current Plan</CardTitle>
                 <Badge
                   variant={subscription?.tier_name === "free" ? "outline" : "default"}
-                  className="gap-1"
+                  className="gap-1.5 shrink-0 text-xs"
                 >
                   {getTierIcon(subscription?.tier_name || "free")}
                   {subscription?.tier_display_name}
                 </Badge>
               </div>
             </CardHeader>
-            <CardContent className="space-y-5">
+            <CardContent className="px-5 pb-4 pt-0 space-y-3">
               {subscription?.tier_name !== "free" && (
                 <>
-                  <div>
-                    <p className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5">Billing period</p>
-                    <p className="font-medium capitalize text-foreground">{subscription?.billing_period}</p>
-                  </div>
-
-                  {subscription?.current_period_end && (
+                  <div className="flex gap-6 text-sm">
                     <div>
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5">
-                        {subscription.cancel_at_period_end ? "Ends" : "Renews"}
-                      </p>
-                      <p className="font-medium text-foreground">{formatDate(subscription.current_period_end)}</p>
+                      <p className="text-xs text-muted-foreground uppercase tracking-wider">Billing</p>
+                      <p className="font-medium capitalize">{subscription?.billing_period}</p>
                     </div>
-                  )}
-
+                    {subscription?.current_period_end && (
+                      <div>
+                        <p className="text-xs text-muted-foreground uppercase tracking-wider">
+                          {subscription.cancel_at_period_end ? "Ends" : "Renews"}
+                        </p>
+                        <p className="font-medium">{formatDate(subscription.current_period_end)}</p>
+                      </div>
+                    )}
+                  </div>
                   {subscription?.cancel_at_period_end && (
-                    <Badge variant="secondary" className="rounded-lg">
+                    <Badge variant="secondary" className="rounded-md text-xs">
                       Cancels at period end
                     </Badge>
                   )}
@@ -180,9 +178,9 @@ export default function BillingPage() {
                 </p>
               )}
             </CardContent>
-            <CardFooter className="flex gap-2 pt-2">
+            <CardFooter className="px-5 py-4 pt-0 border-t-0">
               {subscription?.tier_name === "free" ? (
-                <Button asChild className="w-full">
+                <Button asChild size="sm" className="gap-2 w-fit">
                   <Link href="/pricing">
                     <IconSparkles className="h-4 w-4" />
                     Upgrade Plan
@@ -193,7 +191,8 @@ export default function BillingPage() {
                   onClick={handleManageSubscription}
                   disabled={isManagingSubscription}
                   variant="outline"
-                  className="w-full"
+                  size="sm"
+                  className="gap-2 w-fit"
                 >
                   <IconCreditCard className="h-4 w-4" />
                   Manage Subscription
@@ -205,23 +204,21 @@ export default function BillingPage() {
 
         {/* Usage Card */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.1 }}
         >
-          <Card className="rounded-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-foreground">Usage this month</CardTitle>
+          <Card className="rounded-xl overflow-hidden">
+            <CardHeader className="py-4 px-5">
+              <CardTitle className="text-lg text-foreground">Usage this month</CardTitle>
               <CardDescription className="text-xs">Resets on the 1st</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* AI Searches */}
+            <CardContent className="px-5 pb-5 pt-0 space-y-5">
               <div>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">AI Searches</span>
-                  <span className="text-sm text-muted-foreground">
-                    {usage?.ai_searches_used} /{" "}
-                    {usage?.ai_searches_limit === -1 ? "∞" : usage?.ai_searches_limit}
+                <div className="flex items-center justify-between mb-2 text-sm">
+                  <span className="font-medium">AI Searches</span>
+                  <span className="text-muted-foreground tabular-nums">
+                    {usage?.ai_searches_used} / {usage?.ai_searches_limit === -1 ? "∞" : usage?.ai_searches_limit}
                   </span>
                 </div>
                 <Progress
@@ -233,12 +230,11 @@ export default function BillingPage() {
                 />
               </div>
 
-              {/* Scene Partner (if applicable) */}
               {usage && usage.scene_partner_limit > 0 && (
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm font-medium">ScenePartner Sessions</span>
-                    <span className="text-sm text-muted-foreground">
+                  <div className="flex items-center justify-between mb-2 text-sm">
+                    <span className="font-medium">ScenePartner</span>
+                    <span className="text-muted-foreground tabular-nums">
                       {usage.scene_partner_used} / {usage.scene_partner_limit}
                     </span>
                   </div>
@@ -249,19 +245,34 @@ export default function BillingPage() {
                 </div>
               )}
 
-              {/* Upgrade prompt if usage is high */}
+              {usage && usage.craft_coach_limit > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2 text-sm">
+                    <span className="font-medium">Craft Coach</span>
+                    <span className="text-muted-foreground tabular-nums">
+                      {usage.craft_coach_used} / {usage.craft_coach_limit}
+                    </span>
+                  </div>
+                  <Progress
+                    value={getUsagePercentage(usage.craft_coach_used, usage.craft_coach_limit)}
+                    className="h-2"
+                  />
+                </div>
+              )}
+
               {usage &&
                 usage.ai_searches_limit !== -1 &&
                 getUsagePercentage(usage.ai_searches_used, usage.ai_searches_limit) > 80 && (
-                  <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
-                    <p className="text-sm font-medium text-foreground mb-1">Running low on searches</p>
-                    <p className="text-xs text-muted-foreground mb-3">
-                      {Math.round(
-                        getUsagePercentage(usage.ai_searches_used, usage.ai_searches_limit)
-                      )}
-                      % used this month.
-                    </p>
-                    <Button asChild size="sm" variant="outline" className="rounded-full">
+                  <div className="bg-accent/10 border border-accent/20 rounded-lg p-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium">Running low on searches</p>
+                      <p className="text-xs text-muted-foreground">
+                        {Math.round(
+                          getUsagePercentage(usage.ai_searches_used, usage.ai_searches_limit)
+                        )}% used
+                      </p>
+                    </div>
+                    <Button asChild size="sm" variant="outline" className="rounded-full shrink-0">
                       <Link href="/pricing">
                         Upgrade
                         <IconArrowUpRight className="h-3 w-3" />
@@ -272,60 +283,60 @@ export default function BillingPage() {
             </CardContent>
           </Card>
         </motion.div>
-      </div>
 
-      {/* Get a discount code */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25 }}
-        className="mb-8"
-      >
-        <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-5">
-          <p className="text-base font-semibold text-foreground mb-1">
-            Business or student? Get a code for 100% off.
-          </p>
-          <p className="text-sm text-muted-foreground mb-4">
-            Businesses: 3 months free. Students: 6 months free. We&apos;ll send you a code after you reach out.
-          </p>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className="gap-2"
-            onClick={() => setPromoModalOpen(true)}
-          >
-            <IconGift className="h-4 w-4" />
-            Get my code
-          </Button>
-        </div>
-      </motion.div>
-
-      <RequestPromoCodeModal open={promoModalOpen} onOpenChange={setPromoModalOpen} />
-
-      {/* Billing History */}
-      {billingHistory.length > 0 && (
+        {/* Request a discount */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.15 }}
         >
-          <Card className="rounded-lg">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-foreground">Billing history</CardTitle>
-              <CardDescription className="text-xs">Invoices and payments</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-1">
-                {billingHistory.map((item, index) => (
-                  <div key={item.id}>
-                    <div className="flex items-center justify-between py-3">
-                      <div>
-                        <p className="font-medium text-foreground text-sm">{item.description || "Payment"}</p>
+          <div className="rounded-xl border border-border/60 bg-muted/30 px-4 py-3 flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground leading-tight">
+                Student or teacher / school / coach?
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-tight">
+                Request a discount — we&apos;ll email you a code.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              className="gap-1.5 shrink-0"
+              onClick={() => setPromoModalOpen(true)}
+            >
+              <IconGift className="h-4 w-4" />
+              Request a discount
+            </Button>
+          </div>
+        </motion.div>
+
+        {/* Billing History */}
+        {billingHistory.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+          >
+            <Card className="rounded-xl overflow-hidden">
+              <CardHeader className="py-4 px-5">
+                <CardTitle className="text-lg text-foreground">Billing history</CardTitle>
+                <CardDescription className="text-xs">Invoices and payments</CardDescription>
+              </CardHeader>
+              <CardContent className="px-5 pb-5 pt-0">
+                <div className="divide-y divide-border/60">
+                  {billingHistory.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center justify-between gap-2 py-3 first:pt-0 last:pb-0"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium truncate">{item.description || "Payment"}</p>
                         <p className="text-xs text-muted-foreground">{formatDate(item.created_at)}</p>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <p className="font-semibold text-foreground tabular-nums">{formatPrice(item.amount_cents)}</p>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <p className="text-sm font-semibold tabular-nums">{formatPrice(item.amount_cents)}</p>
                         <Badge
                           variant={
                             item.status === "succeeded"
@@ -334,7 +345,7 @@ export default function BillingPage() {
                               ? "destructive"
                               : "secondary"
                           }
-                          className="rounded-md text-[10px] uppercase"
+                          className="rounded-md text-xs uppercase px-2"
                         >
                           {item.status}
                         </Badge>
@@ -347,14 +358,15 @@ export default function BillingPage() {
                         )}
                       </div>
                     </div>
-                    {index < billingHistory.length - 1 && <Separator />}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </div>
+
+      <RequestPromoCodeModal open={promoModalOpen} onOpenChange={setPromoModalOpen} />
     </div>
   );
 }

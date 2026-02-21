@@ -159,7 +159,7 @@ export default function TermsPage() {
           <h2 className="text-xl font-semibold text-foreground mb-3">14. DMCA Notice</h2>
           <p>
             If you believe content on ActorRise infringes your copyright, contact us at{" "}
-            <a href="mailto:canberkvarli@gmail.com" className="text-foreground underline hover:no-underline">canberkvarli@gmail.com</a>
+            <a href="mailto:canberk@actorrise.com" className="text-foreground underline hover:no-underline">canberk@actorrise.com</a>
             {" "}with: (1) identification of the copyrighted work; (2) identification of the allegedly infringing material and its URL; (3) your contact information; (4) a statement of good faith belief that the use is not authorized by the copyright owner; and (5) your electronic or physical signature. We will investigate and remove infringing content where appropriate.
           </p>
         </section>

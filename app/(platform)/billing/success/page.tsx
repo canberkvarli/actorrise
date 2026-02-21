@@ -137,7 +137,7 @@ export default function SuccessPage() {
             <div className="text-xs text-muted-foreground space-y-1">
               <p>• Receipt has been sent to your email</p>
               <p>• You can manage your subscription anytime from billing settings</p>
-              <p>• Need help? Contact us at canberkvarli@gmail.com</p>
+              <p>• Need help? Contact us at canberk@actorrise.com</p>
             </div>
           </CardContent>
           <CardFooter className="flex gap-2">
