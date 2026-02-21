@@ -121,7 +121,7 @@ const jsonLd = {
       url: siteUrl,
       description:
         "Find the right audition monologue in less than 20 seconds. AI-powered monologue search for actors. 8,600+ searchable monologues.",
-      logo: { "@type": "ImageObject", url: `${siteUrl}/logo.png` },
+      logo: { "@type": "ImageObject", url: `${siteUrl}/TextLogo.png` },
     },
     {
       "@type": "WebApplication",

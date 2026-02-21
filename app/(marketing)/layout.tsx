@@ -5,7 +5,7 @@
  */
 
 import Link from "next/link";
-import Image from "next/image";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { MarketingFooter } from "@/components/contact/MarketingFooter";
 import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions";
 import { PageTransitionWithKey } from "@/components/transition/PageTransition";
@@ -18,9 +18,8 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
         <div className="container mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <Link href="/" className="flex items-center gap-2.5 text-foreground hover:opacity-80 transition-opacity">
-                <Image src="/logo.png" alt="ActorRise" width={32} height={32} className="rounded-md" />
-                <span className="font-brand text-2xl font-semibold text-foreground">ActorRise</span>
+              <Link href="/" className="flex items-center text-foreground hover:opacity-80 transition-opacity">
+                <BrandLogo size="header" />
               </Link>
             </div>
             <nav className="hidden md:flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2 py-1">
