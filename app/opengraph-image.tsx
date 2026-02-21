@@ -4,9 +4,9 @@ export const alt = "ActorRise - Find the monologue. In seconds.";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
-// Logo: use your deployed origin so the OG generator can fetch it. Ensure public/logo.png exists.
+// Logo: use your deployed origin so the OG generator can fetch it. Ensure public/TextLogo.png exists.
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
-const logoUrl = `${siteUrl}/logo.png`;
+const logoUrl = `${siteUrl}/TextLogo.png`;
 
 // Optional: drop a pre-made 1200×630 image at public/og-image.png and we can serve that instead.
 // Primary (landing hero keyword): oklch(0.58 0.18 45) ≈ #e07a0d
@@ -114,31 +114,14 @@ export default async function Image() {
           </div>
 
           {/* Logo + wordmark */}
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 14,
-            }}
-          >
+          <div style={{ display: "flex", alignItems: "center" }}>
             <img
               src={logoUrl}
-              alt=""
-              width={56}
-              height={56}
-              style={{ borderRadius: 10 }}
+              alt="ActorRise"
+              width={200}
+              height={48}
+              style={{ display: "block" }}
             />
-            <span
-              style={{
-                fontFamily: "Georgia, serif",
-                fontWeight: 600,
-                fontSize: 32,
-                color: "#fafafa",
-                letterSpacing: "0.02em",
-              }}
-            >
-              ActorRise
-            </span>
           </div>
         </div>
       </div>

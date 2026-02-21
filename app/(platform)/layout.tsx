@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { IconHome, IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket } from "@tabler/icons-react";
@@ -50,6 +51,7 @@ export default function PlatformLayout({
   const savedCount = bookmarkCount + filmTvFavoriteCount;
   const { data: profile } = useProfile();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
   const displayName = profile?.name?.trim() || user?.name?.trim() || "";
   const profileLabel = displayName || "Account";
   const profileInitial = displayName
@@ -63,19 +65,33 @@ export default function PlatformLayout({
   const { subscription } = useSubscription();
   const userTier = subscription?.tier_name || "free";
 
-  // Close dropdown when clicking outside
+  // Close profile dropdown when clicking/tapping outside (mobile + desktop)
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handlePointerDownOutside = (event: PointerEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setProfileDropdownOpen(false);
       }
     };
 
     if (profileDropdownOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
+      document.addEventListener("pointerdown", handlePointerDownOutside);
+      return () => document.removeEventListener("pointerdown", handlePointerDownOutside);
     }
   }, [profileDropdownOpen]);
+
+  // Close mobile menu when clicking/tapping outside (mobile + desktop)
+  useEffect(() => {
+    const handlePointerDownOutside = (event: PointerEvent) => {
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(event.target as Node)) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    if (mobileMenuOpen) {
+      document.addEventListener("pointerdown", handlePointerDownOutside);
+      return () => document.removeEventListener("pointerdown", handlePointerDownOutside);
+    }
+  }, [mobileMenuOpen]);
 
   // Show welcome flow for new users who haven't seen it
   useEffect(() => {
@@ -178,11 +194,10 @@ export default function PlatformLayout({
           <div className="flex items-center justify-between h-20 gap-3">
             <Link
               href="/dashboard"
-              className="flex items-center gap-2.5 min-w-0 shrink text-foreground hover:opacity-80 transition-opacity"
+              className="flex items-center min-w-0 shrink text-foreground hover:opacity-80 transition-opacity"
               aria-label="ActorRise Home"
             >
-              <Image src="/logo.png" alt="" width={32} height={32} className="rounded-md shrink-0" />
-              <span className="font-brand text-2xl font-semibold text-foreground truncate hidden sm:inline">ActorRise</span>
+              <BrandLogo size="header" />
             </Link>
 
             {/* Desktop Navigation */}
@@ -423,20 +438,20 @@ export default function PlatformLayout({
               </div>
             </div>
 
-            {/* Mobile Menu Button - 44px touch target */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="md:hidden min-h-[44px] min-w-[44px]"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              <IconMenu className="h-5 w-5" />
-            </Button>
-          </div>
+            {/* Mobile menu: button + dropdown (click outside to close) */}
+            <div ref={mobileMenuRef} className="md:hidden flex flex-col flex-1 min-w-0">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="min-h-[44px] min-w-[44px]"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              >
+                <IconMenu className="h-5 w-5" />
+              </Button>
 
-          {/* Mobile Navigation */}
-          {mobileMenuOpen && (
-            <div className="md:hidden border-t border-border/40 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+              {/* Mobile Navigation */}
+              {mobileMenuOpen && (
+            <div className="border-t border-border/40 overflow-hidden animate-in slide-in-from-top-2 duration-200">
               <div className="py-3 space-y-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;
@@ -586,7 +601,9 @@ export default function PlatformLayout({
                 </Button>
               </div>
             </div>
-          )}
+              )}
+            </div>
+        </div>
         </div>
       </nav>
       )}

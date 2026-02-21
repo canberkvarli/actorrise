@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { motion } from "framer-motion";
 import { LandingPricing } from "@/components/landing/LandingPricing";
 import { LandingTestimonials } from "@/components/landing/LandingTestimonials";
@@ -50,9 +50,8 @@ export function LandingPageAnimated() {
         <div className="container mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <Link href="/" className="flex items-center gap-2.5 text-foreground hover:opacity-80 transition-opacity">
-                <Image src="/logo.png" alt="ActorRise" width={32} height={32} className="rounded-md" />
-                <span className="font-brand text-2xl font-semibold text-foreground">ActorRise</span>
+              <Link href="/" className="flex items-center text-foreground hover:opacity-80 transition-opacity">
+                <BrandLogo size="header" />
               </Link>
             </div>
             <div className="hidden md:flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2 py-1">
@@ -91,30 +90,24 @@ export function LandingPageAnimated() {
           className="container mx-auto px-4 sm:px-6 pt-16 pb-20 md:pt-24 md:pb-28 flex flex-col items-center"
         >
           <div className="max-w-2xl w-full mx-auto text-center">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 px-3 py-1.5 text-xs text-muted-foreground">
+            <div className="mb-4 sm:mb-6 hidden sm:inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 px-3 py-1.5 text-xs text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              Search engine · Monologues, scenes & TV/film · Real scripts, not AI-generated
+              Monologues, scenes & film/TV
             </div>
             <h1 className="text-5xl sm:text-6xl md:text-7xl leading-[1.02] tracking-[-0.04em]">
               Find the <span className="hero-keyword">monologue</span>. In seconds.
             </h1>
-            <p className="mt-4 text-base sm:text-lg text-muted-foreground">
+            <p className="mt-3 sm:mt-4 text-sm sm:text-base md:text-lg text-muted-foreground max-w-md mx-auto">
               Real monologues by playwrights. Not AI-generated.
             </p>
-            <div className="mt-8">
+            <div className="mt-6 sm:mt-8">
               <LandingDemoSearch />
             </div>
-            <p className="mt-4 text-sm text-muted-foreground">
-              Free tier · No credit card required
+            <p className="mt-3 sm:mt-4 text-sm text-muted-foreground">
+              <span className="sm:hidden">Free to try</span>
+              <span className="hidden sm:inline">Free tier · No credit card required</span>
             </p>
-            <p className="mt-3 text-sm text-muted-foreground">
-              <Link href="/monologue-finder" className="text-foreground/90 hover:text-foreground underline hover:no-underline transition-colors">Monologue finder</Link>
-              {" · "}
-              <Link href="/audition-monologues" className="text-foreground/90 hover:text-foreground underline hover:no-underline transition-colors">Audition monologues</Link>
-              {" · "}
-              <Link href="/audition-ai" className="text-foreground/90 hover:text-foreground underline hover:no-underline transition-colors">Audition AI</Link>
-            </p>
-            <div className="mt-8 w-full">
+            <div className="mt-6 sm:mt-8 w-full">
               <LandingLiveCount variant="inline" />
             </div>
           </div>
