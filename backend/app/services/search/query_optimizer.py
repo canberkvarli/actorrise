@@ -118,9 +118,10 @@ class KeywordExtractor:
         },
 
         'age_range': {
-            # Teens
+            # Teens (include numeric ranges that imply teens/young)
             'teen': 'teens', 'teenager': 'teens', 'youth': 'teens', 'young': 'teens',
             'adolescent': 'teens', 'teenage': 'teens',
+            '18-21': 'teens', '16-21': 'teens', '13-19': 'teens',
 
             # 20s
             '20s': '20s', 'twenties': '20s', 'young adult': '20s',
@@ -135,7 +136,7 @@ class KeywordExtractor:
             # 50s
             '50s': '50s', 'fifties': '50s', 'older': '50s',
 
-            # 60+
+            # 60+ ('old' applied only when not in "years old" - see extract() logic)
             'elderly': '60+', 'senior': '60+', 'old': '60+', '60+': '60+',
         },
 
@@ -238,6 +239,30 @@ class KeywordExtractor:
         filters = {}
         themes_found = []
 
+        # Age range from "X-Y years old" / "18-21 years old" – avoid treating "old" as elderly
+        age_range_match = re.search(r'\b(\d+)\s*-\s*(\d+)\s*(?:years?\s*old)?|\b(?:years?\s*old)\s*(\d+)\s*-\s*(\d+)', query_lower)
+        if age_range_match and 'age_range' not in filters:
+            low, high = None, None
+            for g in age_range_match.groups():
+                if g is not None:
+                    n = int(g)
+                    if low is None:
+                        low = n
+                    else:
+                        high = n
+                        break
+            if low is not None and high is not None:
+                if high <= 21:
+                    filters['age_range'] = 'teens'
+                elif low >= 20 and high <= 29:
+                    filters['age_range'] = '20s'
+                elif low >= 30 and high <= 39:
+                    filters['age_range'] = '30s'
+                elif low >= 40 and high <= 59:
+                    filters['age_range'] = '40s' if high < 50 else '50s'
+                elif low >= 60:
+                    filters['age_range'] = '60+'
+
         # Extract each filter type
         for word in words:
             # Check author first (highest priority)
@@ -252,8 +277,10 @@ class KeywordExtractor:
             if 'gender' not in filters and word in cls.KEYWORD_MAPPINGS['gender']:
                 filters['gender'] = cls.KEYWORD_MAPPINGS['gender'][word]
 
-            # Check age_range
+            # Check age_range (skip "old" when part of "years old" so it doesn't become 60+)
             if 'age_range' not in filters and word in cls.KEYWORD_MAPPINGS['age_range']:
+                if word == 'old' and 'years' in query_lower:
+                    continue  # "18-21 years old" = young, not elderly
                 filters['age_range'] = cls.KEYWORD_MAPPINGS['age_range'][word]
 
             # Check category
