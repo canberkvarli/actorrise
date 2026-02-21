@@ -254,17 +254,16 @@ export default function MyScriptsPage() {
   };
 
   const getStatusBadge = (status: UserScript["processing_status"]) => {
-    const config = {
-      pending: { variant: "secondary" as const, text: "Pending" },
-      processing: { variant: "default" as const, text: "Processing…" },
-      completed: { variant: "default" as const, text: "Ready" },
-      failed: { variant: "destructive" as const, text: "Failed" },
-    }[status];
+    const tagClass = "inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-muted/90 text-foreground border border-border";
+    if (status === "failed") {
+      return <Badge variant="destructive" className="font-normal">Failed</Badge>;
+    }
+    const text = { pending: "Pending", processing: "Processing…", completed: "Ready" }[status];
     return (
-      <Badge variant={config.variant} className="font-normal">
-        {status === "processing" && <Loader2 className="w-3 h-3 animate-spin mr-1 inline" />}
-        {config.text}
-      </Badge>
+      <span className={tagClass}>
+        {status === "processing" && <Loader2 className="w-3 h-3 animate-spin shrink-0" />}
+        {text}
+      </span>
     );
   };
 
@@ -309,8 +308,8 @@ export default function MyScriptsPage() {
           className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-background/95 backdrop-blur-sm"
         >
           <div className="relative">
-            <div className="h-16 w-16 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-            <Sparkles className="h-7 w-7 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+            <div className="h-16 w-16 rounded-full border-2 border-muted-foreground/30 border-t-foreground animate-spin" />
+            <Sparkles className="h-7 w-7 text-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
           </div>
           <motion.p
             key={loadingMessageIndex}
@@ -421,7 +420,7 @@ export default function MyScriptsPage() {
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <h3 className="text-xl font-semibold truncate group-hover:text-primary transition-colors">
+                            <h3 className="text-xl font-semibold truncate group-hover:text-foreground transition-colors">
                               {script.title}
                             </h3>
                             {script.title.startsWith("Example:") && (

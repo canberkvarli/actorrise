@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { IconBookmark, IconArrowRight } from "@tabler/icons-react";
 import { Monologue } from "@/types/actor";
 import { useBookmarkCount, useBookmarks } from "@/hooks/useBookmarks";
+import { accentTeal } from "@/components/search/MatchIndicatorTag";
 
 export interface BookmarksQuickAccessProps {
   /** When provided, clicking a bookmark opens the slide-over instead of navigating to full page */
@@ -34,7 +35,7 @@ export default function BookmarksQuickAccess({ onSelectMonologue }: BookmarksQui
           </div>
         ) : recentBookmarks.length === 0 ? (
           <div className="flex flex-col items-center justify-center flex-1 py-8 px-4 text-center">
-            <div className="rounded-full bg-violet-500/15 p-4 mb-3 text-violet-500 dark:text-violet-400">
+            <div className={`rounded-full ${accentTeal.bg} p-4 mb-3 ${accentTeal.text}`}>
               <IconBookmark className="h-8 w-8 fill-current" />
             </div>
             <p className="text-sm font-medium text-foreground">No bookmarks yet</p>
@@ -56,7 +57,7 @@ export default function BookmarksQuickAccess({ onSelectMonologue }: BookmarksQui
                   onClick={() => onSelectMonologue(mono)}
                   className={bookmarkRowBase}
                 >
-                  <div className="p-2 rounded-full bg-violet-500/15 text-violet-500 dark:text-violet-400 flex-shrink-0" aria-hidden>
+                  <div className={`p-2 rounded-full ${accentTeal.bg} ${accentTeal.text} flex-shrink-0`} aria-hidden>
                     <IconBookmark className="h-4 w-4 fill-current" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -71,7 +72,7 @@ export default function BookmarksQuickAccess({ onSelectMonologue }: BookmarksQui
                 </button>
               ) : (
                 <Link key={mono.id} href={`/monologue/${mono.id}`} className={bookmarkRowBase}>
-                  <div className="p-2 rounded-full bg-violet-500/15 text-violet-500 dark:text-violet-400 flex-shrink-0" aria-hidden>
+                  <div className={`p-2 rounded-full ${accentTeal.bg} ${accentTeal.text} flex-shrink-0`} aria-hidden>
                     <IconBookmark className="h-4 w-4 fill-current" />
                   </div>
                   <div className="flex-1 min-w-0">

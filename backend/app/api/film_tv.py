@@ -6,10 +6,10 @@ from typing import List, Optional, cast
 from app.api.auth import get_current_user
 from app.core.database import get_db
 from app.middleware.rate_limiting import record_total_search
-from app.models.actor import FilmTvReference
+from app.models.actor import FilmTvFavorite, FilmTvReference
 from app.models.user import User
 from app.services.ai.content_analyzer import ContentAnalyzer
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
@@ -261,3 +261,72 @@ async def search_film_tv_references(
         page=page,
         page_size=limit,
     )
+
+
+# ── Favorites ───────────────────────────────────────────────────────────────────
+
+@router.post("/references/{reference_id:int}/favorite")
+async def favorite_film_tv_reference(
+    reference_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Add film/TV reference to user's saved list."""
+    ref = db.query(FilmTvReference).filter(FilmTvReference.id == reference_id).first()
+    if not ref:
+        raise HTTPException(status_code=404, detail="Film/TV reference not found")
+    existing = db.query(FilmTvFavorite).filter(
+        FilmTvFavorite.user_id == current_user.id,
+        FilmTvFavorite.film_tv_reference_id == reference_id,
+    ).first()
+    if existing:
+        return {"message": "Already favorited", "id": existing.id}
+    favorite = FilmTvFavorite(
+        user_id=current_user.id,
+        film_tv_reference_id=reference_id,
+    )
+    db.add(favorite)
+    db.commit()
+    return {"message": "Favorited successfully", "id": favorite.id}
+
+
+@router.delete("/references/{reference_id:int}/favorite")
+async def unfavorite_film_tv_reference(
+    reference_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Remove film/TV reference from user's saved list."""
+    favorite = db.query(FilmTvFavorite).filter(
+        FilmTvFavorite.user_id == current_user.id,
+        FilmTvFavorite.film_tv_reference_id == reference_id,
+    ).first()
+    if not favorite:
+        raise HTTPException(status_code=404, detail="Favorite not found")
+    db.delete(favorite)
+    db.commit()
+    return {"message": "Unfavorited successfully"}
+
+
+@router.get("/favorites/my", response_model=List[FilmTvReferenceResult])
+async def get_my_film_tv_favorites(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get user's saved film/TV references, ordered by last added first."""
+    favorites = (
+        db.query(FilmTvFavorite)
+        .filter(FilmTvFavorite.user_id == current_user.id)
+        .order_by(FilmTvFavorite.created_at.desc())
+        .all()
+    )
+    if not favorites:
+        return []
+    ref_ids = [f.film_tv_reference_id for f in favorites]
+    refs = db.query(FilmTvReference).filter(FilmTvReference.id.in_(ref_ids)).all()
+    ref_by_id = {r.id: r for r in refs}
+    return [
+        _to_result(ref_by_id[fid])
+        for fid in ref_ids
+        if fid in ref_by_id
+    ]

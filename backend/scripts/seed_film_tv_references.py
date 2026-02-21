@@ -17,7 +17,10 @@ Reads DATABASE_URL and OPENAI_API_KEY from the same .env
 Usage (from backend directory):
     uv run python scripts/seed_film_tv_references.py [--limit N] [--dry-run]
 
---limit N   : process only the first N matching IMDb titles (for testing)
+--limit N   : process only the first N matching IMDb titles (default 3000).
+             When not dry-run, we first exclude titles already in the DB,
+             then take the next N missing titles (by popularity). So each run
+             progresses through the list without re-processing duplicates.
 --dry-run   : fetch and parse but do not write to the database
 """
 
@@ -37,13 +40,16 @@ import requests
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
-# Load .env so DATABASE_URL, OPENAI_API_KEY, OMDB_API_KEY are available
+# Load .env then app imports (C0413 wrong-import-position by design).
+# pylint: disable=wrong-import-position
 from dotenv import load_dotenv
+
 load_dotenv(backend_dir / ".env")
 
 from app.core.database import SessionLocal
 from app.models.actor import FilmTvReference
 from app.services.ai.content_analyzer import ContentAnalyzer
+# pylint: enable=wrong-import-position
 
 # ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -184,7 +190,7 @@ def fetch_omdb(imdb_id: str, api_key: str) -> Optional[dict]:
         if data.get("Response") == "False":
             return None
         return data
-    except Exception as e:
+    except (requests.RequestException, ValueError) as e:
         print(f"    OMDb error for {imdb_id}: {e}")
         return None
 
@@ -251,10 +257,18 @@ def _embedding_text(title: str, year: Optional[int], genre: list[str],
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 
+def get_existing_imdb_ids(db) -> set[str]:
+    """Return set of imdb_id already in film_tv_references."""
+    from sqlalchemy import select
+    rows = db.execute(select(FilmTvReference.imdb_id)).fetchall()
+    return {r[0] for r in rows if r[0]}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Seed film_tv_references from IMDb + OMDb")
-    parser.add_argument("--limit", type=int, default=None,
-                        help="Cap the number of titles processed (for testing)")
+    parser.add_argument("--limit", type=int, default=3000,
+                        help="Max new titles to process per run (default 3000). "
+                             "Only titles not already in DB are counted.")
     parser.add_argument("--dry-run", action="store_true",
                         help="Fetch and parse data but do not write to the database")
     args = parser.parse_args()
@@ -271,20 +285,36 @@ def main() -> None:
         print("DRY RUN — no data will be written to the database.")
     print()
 
-    # Step 1 — Load IMDb candidates
-    candidates = load_imdb_candidates(limit=args.limit)
-    total = len(candidates)
-    if total == 0:
+    # Step 1 — Load IMDb candidates (no cap here; we filter and cap below)
+    all_candidates = load_imdb_candidates(limit=None)
+    if not all_candidates:
         print("No candidates found. Exiting.")
         return
 
-    # Step 2-5 — Enrich + embed + save
+    # Step 2 — When writing to DB, exclude titles already in DB so we only process "next" N
     analyzer = ContentAnalyzer()
     db = None if args.dry_run else SessionLocal()
+    if db:
+        existing_ids = get_existing_imdb_ids(db)
+        candidates = [c for c in all_candidates if c["tconst"] not in existing_ids]
+        print(f"  {len(existing_ids):,} titles already in DB; {len(candidates):,} remaining to consider.")
+        candidates = candidates[: args.limit]
+        print(f"  Processing next {len(candidates)} new titles (--limit={args.limit}).")
+    else:
+        candidates = all_candidates[: args.limit]
+        print(f"  DRY RUN: processing first {len(candidates)} candidates (no DB filter).")
+
+    total = len(candidates)
+    if total == 0:
+        print("No new titles to process (DB is up to date for this list). Exiting.")
+        return
+
+    # Step 3–6 — Enrich + embed + save
 
     saved = 0
     skipped_omdb = 0
     skipped_duplicate = 0
+    idx = -1  # defined so final summary is valid if loop exits early (e.g. KeyboardInterrupt)
 
     try:
         for idx, cand in enumerate(candidates):

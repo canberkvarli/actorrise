@@ -13,6 +13,9 @@ import {
   IconArrowRight,
   IconBookmark,
   IconX,
+} from "@tabler/icons-react";
+import { BookmarkIcon } from "@/components/ui/bookmark-icon";
+import {
   IconEye,
   IconEyeOff,
   IconDownload,
@@ -40,10 +43,12 @@ import { MonologueDetailContent } from "@/components/monologue/MonologueDetailCo
 import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
 import { useProfileStats, useProfile, useRecommendations, useDiscover, useDiscoverFilmTv } from "@/hooks/useDashboardData";
 import { useBookmarkCount, useToggleFavorite } from "@/hooks/useBookmarks";
+import { useFilmTvFavorites, useToggleFilmTvFavorite } from "@/hooks/useFilmTvFavorites";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { FilmTvReferenceCard } from "@/components/search/FilmTvReferenceCard";
+import { accentTeal } from "@/components/search/MatchIndicatorTag";
 import type { FilmTvReference } from "@/types/filmTv";
 import { getFilmTvScriptUrl, getScriptSearchUrl, getScriptSlugUrl } from "@/lib/utils";
 import {
@@ -118,6 +123,9 @@ export default function DashboardPage() {
   const isLoadingMain = isProfileComplete ? isLoadingRecommendations : isLoadingDiscover;
   const { data: discoverFilmTv = [], isLoading: isLoadingFilmTv } = useDiscoverFilmTv();
   const toggleFavoriteMutation = useToggleFavorite();
+  const { data: filmTvFavorites = [] } = useFilmTvFavorites();
+  const toggleFilmTvFavoriteMutation = useToggleFilmTvFavorite();
+  const savedFilmTvIds = new Set(filmTvFavorites.map((r) => r.id));
 
   // Optional: last Film & TV search for "Continue" chip (sessionStorage, client-only)
   const [lastFilmTvSearch, setLastFilmTvSearch] = useState<{ query: string } | null>(null);
@@ -466,13 +474,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           <button
                             type="button"
                             onClick={(e) => toggleFavorite(e, mono)}
-                            className={`min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-full transition-colors ${
+                            className={`min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-full transition-colors duration-200 ease-out ${
                               mono.is_favorited
-                                ? "bg-violet-500/15 text-violet-500 dark:text-violet-400"
-                                : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground/50"
+                                ? `${accentTeal.bg} ${accentTeal.text}`
+                                : `${accentTeal.hoverBg} ${accentTeal.textHover} text-muted-foreground/50`
                             }`}
                           >
-                            <IconBookmark className={`h-5 w-5 ${mono.is_favorited ? "fill-current" : ""}`} />
+                            <BookmarkIcon filled={!!mono.is_favorited} size="md" />
                           </button>
                         </div>
                       </div>
@@ -533,7 +541,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full sm:w-auto max-w-full text-muted-foreground hover:text-foreground justify-start sm:justify-center"
+                  className="w-full sm:w-auto max-w-full text-muted-foreground hover:bg-muted hover:text-foreground justify-start sm:justify-center border-border"
                   onClick={() => router.push("/search?mode=film_tv")}
                 >
                   <IconHistory className="h-4 w-4 shrink-0 mr-2" />
@@ -564,6 +572,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     index={idx}
                     compact
                     onSelect={() => setSelectedFilmTvRef(ref)}
+                    isFavorited={savedFilmTvIds.has(ref.id)}
+                    onToggleFavorite={() => {
+                      toggleFilmTvFavoriteMutation.mutate({
+                        referenceId: ref.id,
+                        isFavorited: savedFilmTvIds.has(ref.id),
+                        refForOptimistic: ref,
+                      });
+                    }}
                   />
                 ))}
               </div>
@@ -587,12 +603,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: sectionDuration, delay: sectionStagger * 4, ease: sectionEase }}
           >
-            <div className="w-full max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-[repeat(3,minmax(0,1fr))] gap-8 items-stretch">
+            <div className="w-full grid grid-cols-1 md:grid-cols-[repeat(3,minmax(0,1fr))] gap-8 items-stretch">
               {/* Your Monologues */}
               <div className="min-w-0 flex flex-col w-full">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
-                    <IconBookmark className="h-5 w-5 text-violet-500 shrink-0" />
+                    <IconBookmark className={`h-5 w-5 shrink-0 ${accentTeal.text}`} />
                     Your Monologues
                   </h2>
                   <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground">
@@ -759,16 +775,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           e.stopPropagation();
                           toggleFavorite(e as any, currentMonologue);
                         }}
-                        className={`relative z-[10002] active:scale-95 transition-transform min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 ${
+                        className={`relative z-[10002] active:scale-95 transition-all duration-200 ease-out min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 ${
                           currentMonologue.is_favorited
-                            ? "bg-violet-500/15 hover:bg-violet-500/25 text-violet-500 dark:text-violet-400"
-                            : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground"
+                            ? `${accentTeal.bg} ${accentTeal.bgHover} ${accentTeal.text}`
+                            : `${accentTeal.hoverBg} ${accentTeal.textHover} text-muted-foreground`
                         }`}
                         aria-label={currentMonologue.is_favorited ? "Remove bookmark" : "Add bookmark"}
                       >
-                        <IconBookmark
-                          className={`h-5 w-5 ${currentMonologue.is_favorited ? "fill-current" : ""}`}
-                        />
+                        <BookmarkIcon filled={!!currentMonologue.is_favorited} size="md" />
                       </Button>
                     )}
                     {!isReadingMode && (
@@ -885,17 +899,36 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   <h2 className="text-2xl font-bold truncate">
                     {selectedFilmTvRef.type === "tvSeries" ? "TV details" : "Movie details"}
                   </h2>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setSelectedFilmTvRef(null);
-                      setFilmTvPosterError(false);
-                    }}
-                    className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
-                  >
-                    <IconX className="h-5 w-5" />
-                  </Button>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        if (selectedFilmTvRef)
+                          toggleFilmTvFavoriteMutation.mutate({
+                            referenceId: selectedFilmTvRef.id,
+                            isFavorited: savedFilmTvIds.has(selectedFilmTvRef.id),
+                            refForOptimistic: selectedFilmTvRef,
+                          });
+                      }}
+                      className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 transition-colors duration-200 ease-out"
+                      title={savedFilmTvIds.has(selectedFilmTvRef.id) ? "Remove from saved" : "Add to saved"}
+                      aria-label={savedFilmTvIds.has(selectedFilmTvRef.id) ? "Remove from saved" : "Add to saved"}
+                    >
+                      <BookmarkIcon filled={savedFilmTvIds.has(selectedFilmTvRef.id)} size="md" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => {
+                        setSelectedFilmTvRef(null);
+                        setFilmTvPosterError(false);
+                      }}
+                      className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
+                    >
+                      <IconX className="h-5 w-5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
               <div className="p-6 space-y-6">
@@ -920,7 +953,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     <div className="flex flex-wrap gap-2">
                       <h1 className="text-2xl font-bold text-foreground leading-tight">{selectedFilmTvRef.title}</h1>
                       {selectedFilmTvRef.is_best_match && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-primary text-primary-foreground">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-muted/90 text-foreground border border-border">
                           Best Match
                         </span>
                       )}

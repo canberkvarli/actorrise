@@ -5,17 +5,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { IconBookmark, IconEdit } from "@tabler/icons-react";
+import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 import { motion } from "framer-motion";
 import { Monologue } from "@/types/actor";
 import { isMeaningfulMonologueTitle } from "@/lib/utils";
-
-function getScoreBadgeClass(score: number, isBestMatch: boolean) {
-  /* Solid, high-contrast badges so match labels are clearly readable */
-  if (isBestMatch || score >= 0.65) return "bg-primary text-primary-foreground";
-  if (score >= 0.5) return "bg-secondary text-secondary-foreground";
-  if (score >= 0.35) return "bg-primary/25 text-primary border border-primary/40";
-  return "bg-muted text-muted-foreground";
-}
+import { MatchIndicatorTag, accentTeal } from "@/components/search/MatchIndicatorTag";
 
 function getMatchLabel(score: number): string {
   if (score >= 0.65) return "Great match";
@@ -48,45 +42,36 @@ export function MonologueResultCard({
 }: MonologueResultCardProps) {
   const isBestMatch = variant === "bestMatch";
   const [justBookmarked, setJustBookmarked] = useState(false);
-  const displayMatchBadge = (m: Monologue) => {
-    const score = m.relevance_score ?? 0;
-    const hasScore = showMatchBadge && score > 0.1;
-    const pct = Math.round(score * 100);
-    const label =
-      m.match_type === "exact_quote"
-        ? "Exact quote"
-        : m.match_type === "fuzzy_quote"
-          ? "This is the one"
-          : m.match_type === "title_match"
-            ? "Exact match"
-            : m.match_type === "character_match"
-              ? "Character match"
-              : m.match_type === "play_match"
-                ? "Play match"
-                : getMatchLabel(score);
-    if (!hasScore && !m.match_type) return null;
-    return (
-      <span
-        className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${getScoreBadgeClass(
-          score || 0.9,
-          isBestMatch
-        )}`}
-      >
-        {label}
-        {pct > 0 ? ` · ${pct}%` : ""}
-      </span>
-    );
-  };
+
+  const score = mono.relevance_score ?? 0;
+  const hasScore = showMatchBadge && score > 0.1;
+  const pct = Math.round(score * 100);
+  const matchLabel =
+    mono.match_type === "exact_quote"
+      ? "Exact quote"
+      : mono.match_type === "fuzzy_quote"
+        ? "This is the one"
+        : mono.match_type === "title_match"
+          ? "Exact match"
+          : mono.match_type === "character_match"
+            ? "Character match"
+            : mono.match_type === "play_match"
+              ? "Play match"
+              : getMatchLabel(score);
+  const showIndicator = (hasScore || mono.match_type) && matchLabel;
+  const indicatorLabel = showIndicator ? `${matchLabel}${pct > 0 ? ` · ${pct}%` : ""}` : null;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05, duration: 0.3, ease: "easeOut" }}
+      className="relative overflow-visible"
     >
+      {indicatorLabel && <MatchIndicatorTag label={indicatorLabel} />}
       <Card
         className={`hover:shadow-xl transition-all cursor-pointer h-full flex flex-col group rounded-lg ${
-          isBestMatch ? "border-l-4 border-primary hover:border-primary/70" : "hover:border-secondary/50"
+          isBestMatch ? "border-l-4 border-border hover:border-muted-foreground/40" : "hover:border-secondary/50"
         }`}
         onClick={onSelect}
       >
@@ -98,10 +83,9 @@ export function MonologueResultCard({
                   <h3 className="font-bold text-xl mb-1 group-hover:text-foreground transition-colors">
                     {mono.character_name}
                   </h3>
-                  {displayMatchBadge(mono)}
                   {mono.is_favorited && (
-                    <span className="px-2 py-0.5 bg-accent/20 text-accent-foreground text-xs font-semibold rounded-full">
-                      Bookmarked
+                    <span className="px-2 py-0.5 bg-muted/90 text-foreground border border-border text-xs font-semibold rounded-full">
+                      Saved
                     </span>
                   )}
                 </div>
@@ -135,14 +119,14 @@ export function MonologueResultCard({
                   }}
                 animate={justBookmarked ? { scale: [1, 1.3, 1] } : { scale: 1 }}
                 transition={{ duration: 0.3 }}
-                className={`min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-lg transition-colors cursor-pointer ${
+                className={`min-h-[44px] min-w-[44px] flex items-center justify-center p-2 rounded-lg transition-colors duration-200 ease-out cursor-pointer ${
                   mono.is_favorited
-                    ? "bg-violet-500/15 hover:bg-violet-500/25 text-violet-500 dark:text-violet-400"
-                    : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground"
+                    ? `${accentTeal.bg} ${accentTeal.bgHover} ${accentTeal.text}`
+                    : `${accentTeal.hoverBg} ${accentTeal.textHover} text-muted-foreground`
                 }`}
                 aria-label={mono.is_favorited ? "Remove bookmark" : "Add bookmark"}
                 >
-                  <IconBookmark className={`h-5 w-5 ${mono.is_favorited ? "fill-current" : ""}`} />
+                  <BookmarkIcon filled={!!mono.is_favorited} size="md" />
                 </motion.button>
               </div>
             </div>

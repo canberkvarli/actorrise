@@ -37,6 +37,12 @@ const TOUR_STEPS: TourStep[] = [
     body: "\"Find for me\" uses your profile to recommend monologues you haven't considered yet.",
     placement: "bottom",
   },
+  {
+    targetId: "search-results",
+    title: "Find the full script.",
+    body: "When you open a movie or TV title, use Script on IMSDb, then Script on Script Slug, or Search Google to open the screenplay.",
+    placement: "top",
+  },
 ];
 
 const SPOTLIGHT_PADDING = 8;
