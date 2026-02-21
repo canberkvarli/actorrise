@@ -10,6 +10,7 @@ import { IconHome, IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, Icon
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarkCount";
+import { useFilmTvFavoriteCount } from "@/hooks/useFilmTvFavorites";
 import { useProfile } from "@/hooks/useDashboardData";
 import { ContactModal } from "@/components/contact/ContactModal";
 import { SWRConfig } from "swr";
@@ -45,6 +46,8 @@ export default function PlatformLayout({
   const [showChangelogModal, setShowChangelogModal] = useState(false);
   const [changelogModalEntry, setChangelogModalEntry] = useState<ChangelogEntry | null>(null);
   const { count: bookmarkCount, isLoading: isLoadingBookmarks } = useBookmarkCount();
+  const { count: filmTvFavoriteCount, isLoading: isLoadingFilmTvFavorites } = useFilmTvFavoriteCount();
+  const savedCount = bookmarkCount + filmTvFavoriteCount;
   const { data: profile } = useProfile();
   const dropdownRef = useRef<HTMLDivElement>(null);
   const displayName = profile?.name?.trim() || user?.name?.trim() || "";
@@ -313,12 +316,12 @@ export default function PlatformLayout({
                       >
                         <div className="flex items-center gap-3">
                           <IconBookmark className="h-4 w-4 text-muted-foreground" />
-                          <span>Your monologues</span>
+                          <span>Saved</span>
                         </div>
                         <span className="min-w-[1.75rem] flex justify-end">
-                          {isLoadingBookmarks ? null : bookmarkCount > 0 ? (
+                          {isLoadingBookmarks || isLoadingFilmTvFavorites ? null : savedCount > 0 ? (
                             <Badge variant="secondary" className="text-xs">
-                              {bookmarkCount}
+                              {savedCount}
                             </Badge>
                           ) : null}
                         </span>
@@ -330,14 +333,6 @@ export default function PlatformLayout({
                       >
                         <IconFileText className="h-4 w-4 text-muted-foreground" />
                         <span>Your scripts</span>
-                      </Link>
-                      <Link
-                        href="/submit-monologue"
-                        onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
-                      >
-                        <IconSparkles className="h-4 w-4 text-muted-foreground" />
-                        <span>Submit monologue</span>
                       </Link>
                       <Link
                         href="/my-submissions"
@@ -490,12 +485,12 @@ export default function PlatformLayout({
                   <Link href="/my-monologues" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2">
                       <IconBookmark className="h-4 w-4" />
-                      Your Monologues
+                      Saved
                     </div>
                     <span className="min-w-[1.75rem] flex justify-end">
-                      {!isLoadingBookmarks && bookmarkCount > 0 && (
+                      {!isLoadingBookmarks && !isLoadingFilmTvFavorites && savedCount > 0 && (
                         <Badge variant="secondary" className="text-xs">
-                          {bookmarkCount}
+                          {savedCount}
                         </Badge>
                       )}
                     </span>

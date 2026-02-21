@@ -49,14 +49,14 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
                   transition={{ delay: index * 0.1 + 0.2, type: "spring" }}
                   className="flex flex-col items-end gap-2"
                 >
-                  <div className="flex items-center gap-1 text-accent">
+                  <div className="flex items-center gap-1 text-foreground">
                     <motion.div
                       animate={{ rotate: [0, 10, -10, 0] }}
                       transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
                     >
                       <IconSparkles className="h-4 w-4" />
                     </motion.div>
-                    <span className="text-sm font-medium">
+                    <span className="text-sm font-medium tabular-nums">
                       {Math.round(monologue.relevance_score * 100)}% match
                     </span>
                   </div>

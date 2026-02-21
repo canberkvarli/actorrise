@@ -47,7 +47,7 @@ export function MonologueDetailContent({
         {monologue.scene_description && (
           <div className="bg-muted/50 p-4 rounded-lg border border-border">
             <p className="text-sm italic text-muted-foreground flex items-start gap-2">
-              <IconSparkles className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
+              <IconSparkles className="h-4 w-4 mt-0.5 flex-shrink-0 text-foreground" />
               {monologue.scene_description}
             </p>
           </div>
@@ -133,7 +133,7 @@ export function MonologueDetailContent({
                   <p className="text-xs text-muted-foreground mb-1">Primary Emotion:</p>
                   <Badge
                     variant="outline"
-                    className="font-normal capitalize border-primary/60 bg-primary/10 text-foreground"
+                    className="font-normal capitalize border-border bg-muted/90 text-foreground"
                   >
                     {monologue.primary_emotion}
                   </Badge>
@@ -186,7 +186,7 @@ export function MonologueDetailContent({
                         <span className="capitalize text-muted-foreground">{emotion}:</span>
                         <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-primary"
+                            className="h-full bg-foreground/80"
                             style={{ width: `${score * 100}%` }}
                           />
                         </div>

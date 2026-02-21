@@ -1,7 +1,7 @@
 from app.core.database import Base
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (ARRAY, JSON, Boolean, Column, DateTime, Float,
-                        ForeignKey, Integer, String, Text)
+                        ForeignKey, Integer, String, Text, UniqueConstraint)
 from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import deferred, relationship
@@ -397,3 +397,20 @@ class FilmTvReference(Base):
     imsdb_url = Column(String, nullable=True)
     embedding = Column(Vector(1536), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))
+
+    # Relationships
+    favorites = relationship("FilmTvFavorite", back_populates="film_tv_reference")
+
+
+class FilmTvFavorite(Base):
+    """User favorites for film/TV references (saved scripts)."""
+    __tablename__ = "film_tv_favorites"
+    __table_args__ = (UniqueConstraint("user_id", "film_tv_reference_id", name="uq_film_tv_favorites_user_reference"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    film_tv_reference_id = Column(Integer, ForeignKey("film_tv_references.id", ondelete="CASCADE"), nullable=False, index=True)
+    created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))
+
+    # Relationships
+    film_tv_reference = relationship("FilmTvReference", back_populates="favorites")

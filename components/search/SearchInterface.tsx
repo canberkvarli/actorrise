@@ -333,8 +333,8 @@ export function SearchInterface() {
                 className="flex items-center justify-between pb-4 border-b"
               >
                 <div className="space-y-0.5">
-                  <Label htmlFor="profile-bias" className="text-base font-semibold flex items-center gap-2">
-                    <IconSparkles className="h-4 w-4 text-accent" />
+                  <Label htmlFor="profile-bias" className="text-base font-semibold flex items-center gap-2 text-foreground">
+                    <IconSparkles className="h-4 w-4 text-primary" />
                     AI-Powered Search
                   </Label>
                   <p className="text-sm text-muted-foreground">
@@ -360,7 +360,7 @@ export function SearchInterface() {
                     className="space-y-2"
                   >
                       <Label htmlFor="smart-search" className="flex items-center gap-2">
-                        <IconSparkles className="h-4 w-4 text-accent animate-pulse" />
+                        <IconSparkles className="h-4 w-4 text-foreground animate-pulse" />
                       Smart Search
                     </Label>
                     <div className="flex items-center gap-2">
@@ -652,8 +652,8 @@ export function SearchInterface() {
             <div className="flex items-center justify-center p-12">
               <div className="text-center space-y-6">
                 <div className="relative mx-auto w-16 h-16">
-                  <div className="h-16 w-16 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-                  <IconSparkles className="h-7 w-7 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                  <div className="h-16 w-16 rounded-full border-2 border-muted-foreground/30 border-t-foreground animate-spin" />
+                  <IconSparkles className="h-7 w-7 text-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 </div>
                 <motion.p
                   key={loadingMessageIndex}

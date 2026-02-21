@@ -260,13 +260,14 @@
 [data-sonner-toast] {
   border-radius: var(--radius-lg);
 }
+/* Success toast: neutral (not orange) so it doesn't look clickable */
 [data-sonner-toast][data-type="success"] {
-  background: var(--primary) !important;
-  border-color: var(--primary) !important;
-  color: var(--primary-foreground) !important;
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--card-foreground) !important;
 }
 [data-sonner-toast][data-type="success"] [data-icon] {
-  color: var(--primary-foreground) !important;
+  color: var(--muted-foreground) !important;
 }
 [data-sonner-toast][data-type="error"] {
   background: var(--destructive) !important;
@@ -293,4 +294,31 @@
 [data-sonner-toast][data-type="info"] [data-icon],
 [data-sonner-toast][data-type="default"] [data-icon] {
   color: var(--primary) !important;
+}
+
+/* Bookmark toast: distinct saved-state style (teal accent, compact). Text must match card for light/dark. */
+[data-sonner-toast].actorrise-toast-bookmark {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: 0 4px 12px oklch(0 0 0 / 0.08);
+  padding: 0.75rem 1rem !important;
+  gap: 0.75rem !important;
+  color: var(--card-foreground) !important;
+}
+[data-sonner-toast].actorrise-toast-bookmark [data-icon] {
+  color: oklch(0.55 0.12 175) !important; /* teal */
+}
+.dark [data-sonner-toast].actorrise-toast-bookmark [data-icon] {
+  color: oklch(0.7 0.1 175) !important;
+}
+[data-sonner-toast].actorrise-toast-bookmark [data-title] {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: var(--card-foreground) !important;
+}
+[data-sonner-toast].actorrise-toast-bookmark [data-description] {
+  font-size: 0.75rem;
+  color: var(--card-foreground) !important;
+  opacity: 0.9;
+  margin-top: 0.125rem;
 }

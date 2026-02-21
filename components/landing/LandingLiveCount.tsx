@@ -105,7 +105,8 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
     };
   }, [totalSearches]);
 
-  // Always show the block (even 0+) so the number is never "gone"; it updates when data loads or polls
+  // Don't show "0+" before first fetch — use loading state so we never flash 0 or a broken "0>"
+  const isLoading = totalSearches === null;
   const valueToShow = totalSearches === null ? 0 : displayValue;
   const formatted = valueToShow.toLocaleString("en-US", { maximumFractionDigits: 0 });
   const isInline = variant === "inline";
@@ -131,46 +132,55 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
                 : "text-4xl sm:text-5xl md:text-5xl font-semibold tabular-nums tracking-tight text-foreground"
             }
           >
-            <motion.span
-              key={totalSearches ?? 0}
-              initial={false}
-              animate={{ scale: isPulsing ? 1.12 : 1 }}
-              transition={{
-                type: "spring",
-                stiffness: 400,
-                damping: 25,
-              }}
-              className={`inline-block origin-center ${isPulsing ? "text-primary" : "text-foreground"}`}
-            >
-              {formatted}
-            </motion.span>
-            <span className="text-primary">+</span>
+            {isLoading ? (
+              <span className="inline-block min-w-[4ch] animate-pulse text-muted-foreground">—</span>
+            ) : (
+              <motion.span
+                key={totalSearches ?? 0}
+                initial={false}
+                animate={{ scale: isPulsing ? 1.12 : 1 }}
+                transition={{
+                  type: "spring",
+                  stiffness: 400,
+                  damping: 25,
+                }}
+                className={`inline-block origin-center ${isPulsing ? "text-primary" : "text-foreground"}`}
+              >
+                {formatted}+
+              </motion.span>
+            )}
           </p>
           <p className={isInline ? "mt-1 text-muted-foreground text-sm" : "mt-1.5 text-muted-foreground text-base"}>
             monologues found by actors
           </p>
         </div>
 
-        {/* Secondary: library size (value-prop style, smaller) */}
-        {libraryStats && (
-          <div
-            className={
-              isInline
-                ? "pl-0 sm:pl-6 sm:border-l border-border/50 flex-1 min-w-0"
-                : "pl-0 sm:pl-8 sm:border-l border-border/50 flex-1 min-w-0"
-            }
-          >
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1.5">
-              Library
-            </p>
-            <p className={isInline ? "text-xl sm:text-2xl font-semibold tabular-nums text-foreground" : "text-2xl sm:text-3xl font-semibold tabular-nums text-foreground"}>
-              {libraryStats.monologues.toLocaleString("en-US")}+ monologues
-            </p>
-            <p className={isInline ? "mt-0.5 text-muted-foreground text-sm" : "mt-1 text-muted-foreground text-sm"}>
-              {libraryStats.filmTv.toLocaleString("en-US")}+ film & TV
-            </p>
-          </div>
-        )}
+        {/* Secondary: library size (monologues + film & TV). Show block while loading with placeholders. */}
+        <div
+          className={
+            isInline
+              ? "pl-0 sm:pl-6 sm:border-l border-border/50 flex-1 min-w-0"
+              : "pl-0 sm:pl-8 sm:border-l border-border/50 flex-1 min-w-0"
+          }
+        >
+          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1.5">
+            Library
+          </p>
+          <p className={isInline ? "text-xl sm:text-2xl font-semibold tabular-nums text-foreground" : "text-2xl sm:text-3xl font-semibold tabular-nums text-foreground"}>
+            {libraryStats ? (
+              <>{libraryStats.monologues.toLocaleString("en-US")}+ monologues</>
+            ) : (
+              <span className="animate-pulse text-muted-foreground">—</span>
+            )}
+          </p>
+          <p className={isInline ? "mt-0.5 text-muted-foreground text-sm" : "mt-1 text-muted-foreground text-sm"}>
+            {libraryStats ? (
+              <>{libraryStats.filmTv.toLocaleString("en-US")}+ film & TV</>
+            ) : (
+              <span className="animate-pulse text-muted-foreground">—</span>
+            )}
+          </p>
+        </div>
       </div>
     </div>
   );

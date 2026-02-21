@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
   DialogContent,
@@ -22,12 +23,14 @@ import {
   IconSparkles,
   IconExternalLink,
   IconEdit,
+  IconFileText,
 } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 
 interface Submission {
   id: number;
@@ -43,6 +46,17 @@ interface Submission {
   author?: string | null;
   text?: string | null;
   notes?: string | null;
+}
+
+interface UserScriptSummary {
+  id: number;
+  title: string;
+  author: string;
+  original_filename: string;
+  processing_status: string;
+  num_characters: number;
+  num_scenes_extracted: number;
+  created_at: string;
 }
 
 const STATUS_CONFIG = {
@@ -171,8 +185,19 @@ function SubmissionCard({
   );
 }
 
+function formatScriptDate(dateString: string) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 export default function MySubmissionsPage() {
   const queryClient = useQueryClient();
+  const [submissionsTab, setSubmissionsTab] = useState<"monologues" | "scripts">("monologues");
+
   const { data: submissions = [], isLoading } = useQuery({
     queryKey: ["my-submissions"],
     queryFn: async () => {
@@ -182,6 +207,16 @@ export default function MySubmissionsPage() {
     staleTime: 0,
   });
 
+  const { data: scripts = [], isLoading: isLoadingScripts } = useQuery({
+    queryKey: ["user-scripts"],
+    queryFn: async () => {
+      const response = await api.get<UserScriptSummary[]>("/api/scripts/");
+      return response.data;
+    },
+    enabled: SCRIPTS_FEATURE_ENABLED,
+    staleTime: 60 * 1000,
+  });
+
   const [editModal, setEditModal] = useState<Submission | null>(null);
 
   return (
@@ -189,73 +224,179 @@ export default function MySubmissionsPage() {
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-6"
       >
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl lg:text-4xl font-bold mb-2">My Submissions</h1>
             <p className="text-muted-foreground text-sm">
-              Track and edit your submitted monologues
+              Monologues and scripts you&apos;ve submitted or uploaded
             </p>
           </div>
-          {submissions.length > 0 && (
-            <Button asChild className="w-fit">
+          <div className="flex gap-2">
+            <Button asChild variant="outline" size="sm" className="w-fit">
               <Link href="/submit-monologue">
                 <IconSparkles className="h-4 w-4 mr-2" />
-                Submit New
+                Submit monologue
               </Link>
             </Button>
-          )}
+            {SCRIPTS_FEATURE_ENABLED && (
+              <Button asChild className="w-fit" size="sm">
+                <Link href="/my-scripts">
+                  <IconFileText className="h-4 w-4 mr-2" />
+                  Your scripts
+                </Link>
+              </Button>
+            )}
+          </div>
         </div>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        {isLoading && (
-          <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-28 rounded-lg" />
-            ))}
-          </div>
-        )}
-        {!isLoading && submissions.length > 0 && (
-          <ul className="space-y-3">
-            {submissions.map((submission, idx) => (
-              <motion.li
-                key={submission.id}
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.04 }}
-              >
-                <SubmissionCard
-                  submission={submission}
-                  onEdit={setEditModal}
-                />
-              </motion.li>
-            ))}
-          </ul>
-        )}
-        {!isLoading && submissions.length === 0 && (
-          <Card>
-            <CardContent className="py-12 text-center">
-              <IconSparkles className="h-14 w-14 mx-auto text-muted-foreground/40 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No submissions yet</h3>
-              <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
-                Share your favorite monologues with the ActorRise community.
-              </p>
-              <Button asChild>
-                <Link href="/submit-monologue">
-                  <IconSparkles className="h-4 w-4 mr-2" />
-                  Submit a Monologue
-                </Link>
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </motion.div>
+      <Tabs value={submissionsTab} onValueChange={(v) => setSubmissionsTab(v as "monologues" | "scripts")} className="space-y-4">
+        <TabsList className="grid w-full max-w-md grid-cols-2 h-11 rounded-lg">
+          <TabsTrigger value="monologues" className="gap-2">
+            <IconSparkles className="h-4 w-4" />
+            Monologues
+            {!isLoading && submissions.length > 0 && (
+              <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums">
+                {submissions.length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="scripts" className="gap-2">
+            <IconFileText className="h-4 w-4" />
+            Scripts
+            {SCRIPTS_FEATURE_ENABLED && !isLoadingScripts && scripts.length > 0 && (
+              <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums">
+                {scripts.length}
+              </span>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="monologues" className="mt-4">
+          {isLoading && (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-28 rounded-lg" />
+              ))}
+            </div>
+          )}
+          {!isLoading && submissions.length > 0 && (
+            <ul className="space-y-3">
+              {submissions.map((submission, idx) => (
+                <motion.li
+                  key={submission.id}
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.04 }}
+                >
+                  <SubmissionCard
+                    submission={submission}
+                    onEdit={setEditModal}
+                  />
+                </motion.li>
+              ))}
+            </ul>
+          )}
+          {!isLoading && submissions.length === 0 && (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <IconSparkles className="h-14 w-14 mx-auto text-muted-foreground/40 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No monologue submissions yet</h3>
+                <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+                  Share your favorite monologues with the ActorRise community.
+                </p>
+                <Button asChild>
+                  <Link href="/submit-monologue">
+                    <IconSparkles className="h-4 w-4 mr-2" />
+                    Submit a monologue
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="scripts" className="mt-4">
+          {!SCRIPTS_FEATURE_ENABLED ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <IconFileText className="h-14 w-14 mx-auto text-muted-foreground/40 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">Scripts</h3>
+                <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+                  Upload and manage scripts for scene practice in Your scripts.
+                </p>
+                <Button asChild variant="outline">
+                  <Link href="/my-scripts">Go to Your scripts</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ) : isLoadingScripts ? (
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-20 rounded-lg" />
+              ))}
+            </div>
+          ) : scripts.length > 0 ? (
+            <ul className="space-y-3">
+              {scripts.map((script) => (
+                <li key={script.id}>
+                  <Link href={`/my-scripts/${script.id}`}>
+                    <Card className="hover:bg-muted/50 transition-colors">
+                      <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div className="min-w-0">
+                          <h3 className="font-semibold truncate">{script.title}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {script.author}
+                            {script.num_scenes_extracted > 0 && (
+                              <> · {script.num_scenes_extracted} scene{script.num_scenes_extracted !== 1 ? "s" : ""}</>
+                            )}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <Badge
+                            variant={
+                              script.processing_status === "completed"
+                                ? "default"
+                                : script.processing_status === "failed"
+                                  ? "destructive"
+                                  : "secondary"
+                            }
+                            className="capitalize"
+                          >
+                            {script.processing_status}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {formatScriptDate(script.created_at)}
+                          </span>
+                          <IconExternalLink className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <IconFileText className="h-14 w-14 mx-auto text-muted-foreground/40 mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No scripts yet</h3>
+                <p className="text-sm text-muted-foreground mb-6 max-w-sm mx-auto">
+                  Upload PDF or TXT scripts for scene partner practice.
+                </p>
+                <Button asChild>
+                  <Link href="/my-scripts">
+                    <IconFileText className="h-4 w-4 mr-2" />
+                    Go to Your scripts
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
 
       <EditSubmissionModal
         submission={editModal}

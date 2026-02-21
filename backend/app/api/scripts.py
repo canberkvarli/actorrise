@@ -400,6 +400,125 @@ async def create_script_from_text(
         )
 
 
+# Example script content for first-time users (minimal two-person scene)
+EXAMPLE_SCRIPT = {
+    "title": "Example: The Proposal",
+    "author": "ScenePartner",
+    "characters": [
+        {"name": "Alex", "gender": None, "age_range": None, "description": None},
+        {"name": "Jordan", "gender": None, "age_range": None, "description": None},
+    ],
+    "scenes": [
+        {
+            "title": "The Proposal",
+            "character_1": "Alex",
+            "character_2": "Jordan",
+            "lines": [
+                {"character": "Alex", "text": "I need to tell you something.", "stage_direction": None},
+                {"character": "Jordan", "text": "What is it?", "stage_direction": None},
+                {"character": "Alex", "text": "I've been thinking about us. A lot.", "stage_direction": None},
+                {"character": "Jordan", "text": "And?", "stage_direction": None},
+                {"character": "Alex", "text": "I want to do this properly. Will you stay?", "stage_direction": None},
+                {"character": "Jordan", "text": "Yes.", "stage_direction": None},
+            ],
+        }
+    ],
+}
+
+
+@router.post("/ensure-example", response_model=Optional[UserScriptDetailResponse])
+async def ensure_example_script(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    If the user has no scripts, create one example script with one scene so they can try ScenePartner immediately.
+    Idempotent: only creates when script count is 0.
+    """
+    existing = db.query(UserScript).filter(UserScript.user_id == current_user.id).count()
+    if existing > 0:
+        return None
+
+    metadata = EXAMPLE_SCRIPT
+    user_script = UserScript(
+        user_id=current_user.id,
+        title=metadata["title"],
+        author=metadata["author"],
+        description="A short example scene. Edit it or add your own script.",
+        original_filename="example.txt",
+        file_type="text",
+        processing_status="completed",
+        ai_extraction_completed=True,
+        characters=metadata["characters"],
+        num_characters=len(metadata["characters"]),
+        num_scenes_extracted=1,
+    )
+    db.add(user_script)
+    db.commit()
+    db.refresh(user_script)
+
+    play = Play(
+        title=user_script.title,
+        author=user_script.author,
+        year_written=None,
+        genre="Drama",
+        category="contemporary",
+        copyright_status="user_uploaded",
+        license_type="user_content",
+        source_url=None,
+        full_text="",
+        text_format="plain",
+    )
+    db.add(play)
+    db.commit()
+    db.refresh(play)
+
+    scene_data = metadata["scenes"][0]
+    lines_list = scene_data.get("lines", [])
+    line_count = len(lines_list)
+    total_words = sum(len(l.get("text", "").split()) for l in lines_list)
+    duration_seconds = max(30, int((total_words / 150) * 60))
+
+    scene = Scene(
+        play_id=play.id,
+        user_script_id=user_script.id,
+        title=scene_data.get("title", "Untitled Scene"),
+        description=None,
+        character_1_name=scene_data.get("character_1", "Character 1"),
+        character_2_name=scene_data.get("character_2", "Character 2"),
+        line_count=line_count,
+        estimated_duration_seconds=duration_seconds,
+        setting=None,
+        difficulty_level="beginner",
+        is_verified=False,
+    )
+    db.add(scene)
+    db.flush()
+
+    for idx, line_data in enumerate(lines_list):
+        text = line_data.get("text", "")
+        scene_line = SceneLine(
+            scene_id=scene.id,
+            line_order=idx,
+            character_name=line_data.get("character", "Unknown"),
+            text=text,
+            stage_direction=line_data.get("stage_direction"),
+            word_count=len(text.split()),
+        )
+        db.add(scene_line)
+
+    user_script.num_scenes_extracted = 1
+    db.commit()
+    db.refresh(user_script)
+    db.refresh(scene)
+
+    scenes = db.query(Scene).filter(Scene.user_script_id == user_script.id).all()
+    return UserScriptDetailResponse(
+        **UserScriptResponse.model_validate(user_script).model_dump(),
+        scenes=[SceneInScriptResponse.model_validate(s) for s in scenes],
+    )
+
+
 @router.get("/", response_model=List[UserScriptResponse])
 async def list_user_scripts(
     db: Session = Depends(get_db),

@@ -1,7 +1,9 @@
 "use client";
 
+import { useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { toastBookmark } from "@/lib/toast";
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 
@@ -42,8 +44,9 @@ function applyFavoriteToMonologue(mono: Monologue, monologueId: number, isFavori
 // Hook for toggling favorite status
 export function useToggleFavorite() {
   const queryClient = useQueryClient();
+  const mutateRef = useRef<(v: { monologueId: number; isFavorited: boolean }) => void>(() => {});
 
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: async ({ monologueId, isFavorited }: { monologueId: number; isFavorited: boolean }) => {
       if (isFavorited) {
         await api.delete(`/api/monologues/${monologueId}/favorite`);
@@ -102,7 +105,11 @@ export function useToggleFavorite() {
     },
     onSuccess: (_data, variables) => {
       const nextFavorited = !variables.isFavorited;
-      toast.success(nextFavorited ? "Added to bookmarks" : "Removed from bookmarks");
+      toastBookmark(nextFavorited, {
+        duration: 5000,
+        label: "Monologue",
+        onUndo: () => mutateRef.current({ monologueId: variables.monologueId, isFavorited: nextFavorited }),
+      });
     },
     onError: (_err, _variables, context) => {
       if (context?.previous) {
@@ -118,4 +125,6 @@ export function useToggleFavorite() {
       queryClient.invalidateQueries({ queryKey: ["discover"] });
     },
   });
+  mutateRef.current = mutation.mutate;
+  return mutation;
 }

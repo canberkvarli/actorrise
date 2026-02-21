@@ -16,20 +16,32 @@ import { MonologueResultCard } from "@/components/monologue/MonologueResultCard"
 import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { useBookmarks, useToggleFavorite } from "@/hooks/useBookmarks";
+import { useFilmTvFavorites, useToggleFilmTvFavorite } from "@/hooks/useFilmTvFavorites";
+import { FilmTvReferenceCard } from "@/components/search/FilmTvReferenceCard";
+import { accentTeal } from "@/components/search/MatchIndicatorTag";
+import { BookmarkIcon } from "@/components/ui/bookmark-icon";
+import type { FilmTvReference } from "@/types/filmTv";
+import { getFilmTvScriptUrl } from "@/lib/utils";
+import { IconDeviceTv } from "@tabler/icons-react";
 
 export type MyMonologuesSort = "last_added" | "character_az" | "character_za" | "play_az" | "play_za" | "author_az";
 
 export default function MyMonologuesPage() {
   const { data: favorites = [], isLoading } = useBookmarks();
+  const { data: filmTvFavorites = [], isLoading: isLoadingFilmTv } = useFilmTvFavorites();
   const toggleFavoriteMutation = useToggleFavorite();
+  const toggleFilmTvFavoriteMutation = useToggleFilmTvFavorite();
   const [selectedMonologue, setSelectedMonologue] = useState<Monologue | null>(null);
+  const [selectedFilmTvRef, setSelectedFilmTvRef] = useState<FilmTvReference | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isReadingMode, setIsReadingMode] = useState(false);
   const [showDownloadMenu, setShowDownloadMenu] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [sort, setSort] = useState<MyMonologuesSort>("last_added");
+  const [savedTab, setSavedTab] = useState<"theater" | "film_tv">("theater");
 
   const sortedFavorites = useMemo(() => {
     if (sort === "last_added") return [...favorites];
@@ -214,91 +226,161 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-6"
       >
-        <h1 className="text-3xl lg:text-4xl font-bold mb-2">Your Monologues</h1>
+        <h1 className="text-3xl lg:text-4xl font-bold mb-2">Saved</h1>
         <p className="text-muted-foreground">
-          Bookmarked monologues that you&apos;ve saved for later
+          Theater monologues and film & TV references you&apos;ve saved for later
         </p>
       </motion.div>
 
-      {/* Content */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-      >
-        <Card>
-          <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <IconBookmark className="h-5 w-5 text-primary" />
-              Bookmarked Monologues ({favorites.length})
-            </CardTitle>
-            {favorites.length > 0 && (
-              <div className="flex items-center gap-2">
-                <Label htmlFor="my-monologues-sort" className="text-sm text-muted-foreground whitespace-nowrap flex items-center gap-1.5">
-                  <IconArrowsSort className="h-4 w-4" />
-                  Sort
-                </Label>
-                <Select
-                  value={sort}
-                  onValueChange={(v) => setSort(v as MyMonologuesSort)}
-                >
-                  <SelectTrigger id="my-monologues-sort" className="w-[180px] rounded-lg">
-                    <SelectValue placeholder="Sort" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="last_added">Last added</SelectItem>
-                    <SelectItem value="character_az">Character A–Z</SelectItem>
-                    <SelectItem value="character_za">Character Z–A</SelectItem>
-                    <SelectItem value="play_az">Play A–Z</SelectItem>
-                    <SelectItem value="play_za">Play Z–A</SelectItem>
-                    <SelectItem value="author_az">Author A–Z</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+      <Tabs value={savedTab} onValueChange={(v) => setSavedTab(v as "theater" | "film_tv")} className="space-y-4">
+        <TabsList className="grid w-full max-w-md grid-cols-2 h-11 rounded-lg">
+          <TabsTrigger value="theater" className="gap-2">
+            <IconBookmark className="h-4 w-4" />
+            Theater
+            {!isLoading && favorites.length > 0 && (
+              <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums">
+                {favorites.length}
+              </span>
             )}
-          </CardHeader>
-          <CardContent>
-            {isLoading ? (
-              <div className="space-y-3">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />
-                ))}
-              </div>
-            ) : favorites.length > 0 ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {sortedFavorites.map((mono, idx) => (
-                  <MonologueResultCard
-                    key={mono.id}
-                    mono={mono}
-                    onSelect={() => openMonologue(mono)}
-                    onToggleFavorite={toggleFavorite}
-                    variant="default"
-                    index={idx}
-                    showMatchBadge={false}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <IconBookmark className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No bookmarked monologues yet</h3>
-                <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-                  Start exploring monologues and bookmark your favorites. They&apos;ll appear here for easy access.
-                </p>
-                <Button asChild variant="outline" size="sm">
-                  <Link href="/search">
-                    Browse Monologues
-                  </Link>
-                </Button>
-              </div>
+          </TabsTrigger>
+          <TabsTrigger value="film_tv" className="gap-2">
+            <IconDeviceTv className="h-4 w-4" />
+            Film & TV
+            {!isLoadingFilmTv && filmTvFavorites.length > 0 && (
+              <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums">
+                {filmTvFavorites.length}
+              </span>
             )}
-          </CardContent>
-        </Card>
-      </motion.div>
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Slide-over Detail Panel */}
+        <TabsContent value="theater" className="mt-4">
+          <Card>
+            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle className="flex items-center gap-2">
+                <IconBookmark className="h-5 w-5 text-primary" />
+                Theater monologues ({favorites.length})
+              </CardTitle>
+              {favorites.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="my-monologues-sort" className="text-sm text-muted-foreground whitespace-nowrap flex items-center gap-1.5">
+                    <IconArrowsSort className="h-4 w-4" />
+                    Sort
+                  </Label>
+                  <Select
+                    value={sort}
+                    onValueChange={(v) => setSort(v as MyMonologuesSort)}
+                  >
+                    <SelectTrigger id="my-monologues-sort" className="w-[180px] rounded-lg">
+                      <SelectValue placeholder="Sort" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="last_added">Last added</SelectItem>
+                      <SelectItem value="character_az">Character A–Z</SelectItem>
+                      <SelectItem value="character_za">Character Z–A</SelectItem>
+                      <SelectItem value="play_az">Play A–Z</SelectItem>
+                      <SelectItem value="play_za">Play Z–A</SelectItem>
+                      <SelectItem value="author_az">Author A–Z</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />
+                  ))}
+                </div>
+              ) : favorites.length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {sortedFavorites.map((mono, idx) => (
+                    <MonologueResultCard
+                      key={mono.id}
+                      mono={mono}
+                      onSelect={() => openMonologue(mono)}
+                      onToggleFavorite={toggleFavorite}
+                      variant="default"
+                      index={idx}
+                      showMatchBadge={false}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <IconBookmark className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No saved theater monologues yet</h3>
+                  <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                    Start exploring monologues and bookmark your favorites. They&apos;ll appear here for easy access.
+                  </p>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/search">
+                      Browse Monologues
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="film_tv" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <IconDeviceTv className="h-5 w-5 text-primary" />
+                Film & TV ({filmTvFavorites.length})
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingFilmTv ? (
+                <div className="space-y-3">
+                  {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="h-20 bg-muted animate-pulse rounded-lg" />
+                  ))}
+                </div>
+              ) : filmTvFavorites.length > 0 ? (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filmTvFavorites.map((ref, idx) => (
+                    <FilmTvReferenceCard
+                      key={ref.id}
+                      ref_item={ref}
+                      index={idx}
+                      onSelect={() => setSelectedFilmTvRef(ref)}
+                      isFavorited
+                      onToggleFavorite={() => {
+                        toggleFilmTvFavoriteMutation.mutate({
+                          referenceId: ref.id,
+                          isFavorited: true,
+                        });
+                        if (selectedFilmTvRef?.id === ref.id) setSelectedFilmTvRef(null);
+                      }}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <IconDeviceTv className="h-16 w-16 mx-auto text-muted-foreground/30 mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No saved film & TV yet</h3>
+                  <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+                    Search film & TV in the search page and save references to scripts. They&apos;ll appear here.
+                  </p>
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/search?mode=film_tv">
+                      Search Film & TV
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+
+      {/* Slide-over Detail Panel (monologue) */}
       <AnimatePresence>
         {selectedMonologue && (
           <>
@@ -394,14 +476,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           e.stopPropagation();
                           toggleFavorite(e as any, selectedMonologue);
                         }}
-                        className={`min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 active:scale-95 transition-transform ${
+                        className={`min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 active:scale-95 transition-all duration-200 ease-out ${
                           selectedMonologue.is_favorited
-                            ? "bg-violet-500/15 hover:bg-violet-500/25 text-violet-500 dark:text-violet-400"
-                            : "hover:bg-violet-500/15 hover:text-violet-500 text-muted-foreground"
+                            ? `${accentTeal.bg} ${accentTeal.bgHover} ${accentTeal.text}`
+                            : `${accentTeal.hoverBg} ${accentTeal.textHover} text-muted-foreground`
                         }`}
                         aria-label={selectedMonologue.is_favorited ? "Remove bookmark" : "Add bookmark"}
                       >
-                        <IconBookmark className={`h-5 w-5 ${selectedMonologue.is_favorited ? "fill-current" : ""}`} />
+                        <BookmarkIcon filled={!!selectedMonologue.is_favorited} size="md" />
                       </Button>
                     )}
                     {!isReadingMode && (
@@ -482,6 +564,61 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     monologue={selectedMonologue}
                   />
                 )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Film & TV detail slide-over */}
+      <AnimatePresence>
+        {selectedFilmTvRef && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedFilmTvRef(null)}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+              className="fixed inset-0 z-[10000] bg-black/50"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="fixed right-0 top-0 bottom-0 z-[10001] w-full md:w-[600px] bg-background border-l shadow-2xl overflow-y-auto"
+            >
+              <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-[10002]">
+                <div className="flex items-center justify-between p-6">
+                  <h2 className="text-xl font-bold truncate">
+                    {selectedFilmTvRef.type === "tvSeries" ? "TV details" : "Movie details"}
+                  </h2>
+                  <Button variant="ghost" size="icon" onClick={() => setSelectedFilmTvRef(null)}>
+                    <IconX className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <h1 className="text-2xl font-bold text-foreground">{selectedFilmTvRef.title}</h1>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    {selectedFilmTvRef.year ?? ""}
+                    {selectedFilmTvRef.director ? ` · ${selectedFilmTvRef.director}` : ""}
+                  </p>
+                </div>
+                {selectedFilmTvRef.plot && (
+                  <p className="text-sm text-muted-foreground leading-relaxed">{selectedFilmTvRef.plot}</p>
+                )}
+                <Button asChild variant="default" size="sm">
+                  <a
+                    href={getFilmTvScriptUrl(selectedFilmTvRef)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Open Script
+                  </a>
+                </Button>
               </div>
             </motion.div>
           </>

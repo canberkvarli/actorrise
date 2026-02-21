@@ -10,7 +10,8 @@ name: Weekly monologue seed
 #
 # Cost estimate per run:
 #   scrape_all_sources: ~100 new monologues × $0.002 = ~$0.20 OpenAI
-#   seed_film_tv_references --incremental: only processes titles not yet in DB
+#   seed_film_tv_references: loads IMDb list, skips titles already in DB,
+#   then processes the next N new ones (by popularity). No manual index needed.
 
 on:
   schedule:
@@ -24,15 +25,15 @@ on:
         required: false
         default: "100"
       film_tv_limit:
-        description: "Max new film/TV titles to seed (default 200)"
+        description: "Max new film/TV titles to seed per run (default 3000)"
         required: false
-        default: "200"
+        default: "3000"
 
 jobs:
   seed:
     name: Seed database
     runs-on: ubuntu-latest
-    timeout-minutes: 60          # hard cap — never runs more than 1 hour
+    timeout-minutes: 90          # IMDb download ~3m + ~1.1s per title (OMDb + embedding)
 
     defaults:
       run:
@@ -71,7 +72,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           OMDB_API_KEY: ${{ secrets.OMDB_API_KEY }}
         run: |
-          LIMIT="${{ github.event.inputs.film_tv_limit || '200' }}"
+          LIMIT="${{ github.event.inputs.film_tv_limit || '3000' }}"
           echo "Seeding up to $LIMIT new film/TV titles…"
           # --limit here caps total titles processed from the IMDb download.
           # Existing titles (matched by imdb_id) are skipped automatically.

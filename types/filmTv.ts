@@ -24,3 +24,24 @@ export interface FilmTvSearchResponse {
   page: number;
   page_size: number;
 }
+
+/** Film/TV monologue — a single monologue from a film or TV reference (for search results). */
+export interface FilmTvMonologue {
+  character_name: string;
+  source_title: string;
+  source_type?: string | null; // "film" | "tv_series"
+  source_year?: number | null;
+  actor_name?: string | null;
+  character_gender?: string | null;
+  character_age_range?: string | null;
+  primary_emotion?: string | null;
+  difficulty_level?: string | null;
+  tone?: string[] | null;
+  themes?: string[] | null;
+  scene_description?: string | null;
+  description?: string | null;
+  estimated_duration_seconds?: number | null;
+  word_count_approx?: number | null;
+  script_url?: string | null;
+  youtube_url?: string | null;
+}
