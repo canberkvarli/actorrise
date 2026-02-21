@@ -469,7 +469,7 @@ export function LandingDemoSearch() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.1, duration: 0.3 }}
-                className="text-sm text-muted-foreground"
+                className="text-sm text-muted-foreground mb-8"
               >
                 Example results. Type your own search above.
               </motion.p>
