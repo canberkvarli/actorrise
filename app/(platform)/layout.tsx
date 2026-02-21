@@ -175,10 +175,14 @@ export default function PlatformLayout({
       {!isImmersiveRehearsal && (
       <nav className="bg-background/95 backdrop-blur-sm border-b border-border/40 relative z-[9998]" style={{ position: 'relative' }}>
         <div className="container mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-20">
-            <Link href="/dashboard" className="flex items-center gap-2.5 text-foreground hover:opacity-80 transition-opacity">
-              <Image src="/logo.png" alt="ActorRise" width={32} height={32} className="rounded-md" />
-              <span className="font-brand text-2xl font-semibold text-foreground">ActorRise</span>
+          <div className="flex items-center justify-between h-20 gap-3">
+            <Link
+              href="/dashboard"
+              className="flex items-center gap-2.5 min-w-0 shrink text-foreground hover:opacity-80 transition-opacity"
+              aria-label="ActorRise Home"
+            >
+              <Image src="/logo.png" alt="" width={32} height={32} className="rounded-md shrink-0" />
+              <span className="font-brand text-2xl font-semibold text-foreground truncate hidden sm:inline">ActorRise</span>
             </Link>
 
             {/* Desktop Navigation */}
