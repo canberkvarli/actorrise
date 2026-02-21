@@ -334,62 +334,63 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   return (
     <div className="container mx-auto px-4 lg:px-8 py-6 md:py-8 max-w-7xl">
       <div className="space-y-12">
-          {/* ========== SECTION 1: Hero Welcome + optional Complete profile ========== */}
+          {/* ========== UNIFIED HERO: welcome, headline, search CTA (Option A – search first) ========== */}
           <motion.section
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: sectionDuration, ease: sectionEase }}
-            className="flex flex-col gap-4"
+            className="rounded-xl bg-muted/30 dark:bg-muted/20 p-6 md:p-8"
           >
-            {showWelcomeSkeleton ? (
-              <div className="space-y-3">
-                <Skeleton className="h-12 w-80 rounded-lg" />
-                <Skeleton className="h-6 w-56 rounded-lg" />
-              </div>
-            ) : (
+            {/* Row 1: compact welcome (left) + Complete profile CTA (right) */}
+            <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
               <div>
-                <p className="text-sm font-medium text-primary mb-2">
-                  {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                </p>
-                <h1 className="text-2xl md:text-5xl font-bold tracking-tight text-foreground">
-                  Welcome back{greetingName ? `, ${greetingName}` : ''}
-                </h1>
+                {showWelcomeSkeleton ? (
+                  <Skeleton className="h-5 w-56 rounded-lg" />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                    {greetingName ? ` · Welcome back, ${greetingName}` : ''}
+                  </p>
+                )}
               </div>
-            )}
-            {/* Reserved slot for "Complete your profile" CTA to prevent layout shift when stats load */}
-            <div className="min-h-[44px] flex items-center">
-              {showStatsSkeleton && (
-                <Skeleton className="h-11 w-64 rounded-lg" />
-              )}
-              {!showStatsSkeleton && stats && stats.completion_percentage < 100 && (
-                <Link
-                  href="/profile"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg border border-amber-500/30 bg-amber-500/10 dark:bg-amber-400/10 dark:border-amber-400/25 hover:bg-amber-500/15 dark:hover:bg-amber-400/15 transition-colors text-left w-fit max-w-[280px] sm:max-w-none"
-                >
-                  <IconUserCheck className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                  <span className="text-sm font-medium text-foreground">Complete your profile</span>
-                  <span className="text-xs text-muted-foreground">({stats.completion_percentage}%)</span>
-                  <IconArrowRight className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
-                </Link>
-              )}
+              <div className="min-h-[44px] flex items-center">
+                {showStatsSkeleton && (
+                  <Skeleton className="h-11 w-64 rounded-lg" />
+                )}
+                {!showStatsSkeleton && stats && stats.completion_percentage < 100 && (
+                  <Link
+                    href="/profile"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg border border-amber-500/30 bg-amber-500/10 dark:bg-amber-400/10 dark:border-amber-400/25 hover:bg-amber-500/15 dark:hover:bg-amber-400/15 transition-colors text-left w-fit max-w-[280px] sm:max-w-none"
+                  >
+                    <IconUserCheck className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span className="text-sm font-medium text-foreground">Complete your profile</span>
+                    <span className="text-xs text-muted-foreground">({stats.completion_percentage}%)</span>
+                    <IconArrowRight className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
+                  </Link>
+                )}
+              </div>
             </div>
-          </motion.section>
 
-          {/* ========== SECTION 2: Quick Search (primary CTA) ========== */}
-          <motion.section
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: sectionDuration, delay: sectionStagger, ease: sectionEase }}
-          >
-            <Link href="/search" className="block group max-w-2xl">
+            {/* Headline: primary focus above search card */}
+            {showWelcomeSkeleton ? (
+              <Skeleton className="h-9 w-72 md:w-96 rounded-lg mb-6" />
+            ) : (
+              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-6">
+                Find your next monologue
+              </h1>
+            )}
+
+            {/* Search card: primary CTA, full width within hero */}
+            <Link
+              href="/search"
+              className="block group max-w-3xl"
+              aria-label="Find your next monologue — search by description, emotion, character type, or browse filters"
+            >
               <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-md transition-all">
                 <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
                   <IconSearch className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-lg font-medium text-foreground group-hover:text-primary transition-colors">
-                    Find your next monologue
-                  </p>
                   <p className="text-sm text-muted-foreground">
                     Search by description, emotion, character type, or browse filters
                   </p>
