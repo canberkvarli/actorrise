@@ -8,6 +8,9 @@ const INITIAL_DURATION_MS = 2000;
 const UPDATE_DURATION_MS = 1200;
 const POLL_INTERVAL_MS = 25_000;
 
+/** Fallback library stats so the section isn’t empty while the API loads (avoids long "—"). */
+const FALLBACK_LIBRARY = { monologues: 8600, filmTv: 14000 };
+
 /**
  * Ease-out so the number slows as it approaches the target.
  */
@@ -105,11 +108,11 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
     };
   }, [totalSearches]);
 
-  // Don't show "0+" before first fetch — use loading state so we never flash 0 or a broken "0>"
   const isLoading = totalSearches === null;
   const valueToShow = totalSearches === null ? 0 : displayValue;
   const formatted = valueToShow.toLocaleString("en-US", { maximumFractionDigits: 0 });
   const isInline = variant === "inline";
+  const libraryToShow = libraryStats ?? FALLBACK_LIBRARY;
 
   const content = (
     <div className={isInline ? "" : "container mx-auto px-4 sm:px-6"}>
@@ -133,7 +136,7 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
             }
           >
             {isLoading ? (
-              <span className="inline-block min-w-[4ch] animate-pulse text-muted-foreground">—</span>
+              <span className="inline-block min-w-[4ch] text-muted-foreground" aria-hidden>{formatted}+</span>
             ) : (
               <motion.span
                 key={totalSearches ?? 0}
@@ -167,18 +170,10 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
             Library
           </p>
           <p className={isInline ? "text-xl sm:text-2xl font-semibold tabular-nums text-foreground" : "text-2xl sm:text-3xl font-semibold tabular-nums text-foreground"}>
-            {libraryStats ? (
-              <>{libraryStats.monologues.toLocaleString("en-US")}+ monologues</>
-            ) : (
-              <span className="animate-pulse text-muted-foreground">—</span>
-            )}
+            <span className={libraryStats ? "" : "text-muted-foreground"}>{libraryToShow.monologues.toLocaleString("en-US")}+ monologues</span>
           </p>
           <p className={isInline ? "mt-0.5 text-muted-foreground text-sm" : "mt-1 text-muted-foreground text-sm"}>
-            {libraryStats ? (
-              <>{libraryStats.filmTv.toLocaleString("en-US")}+ film & TV</>
-            ) : (
-              <span className="animate-pulse text-muted-foreground">—</span>
-            )}
+            <span className={libraryStats ? "" : "text-muted-foreground"}>{libraryToShow.filmTv.toLocaleString("en-US")}+ film & TV</span>
           </p>
         </div>
       </div>

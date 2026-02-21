@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { MatchIndicatorTag } from "@/components/search/MatchIndicatorTag";
 
 export interface DemoSearchResultItem {
   id: number;
@@ -30,13 +31,18 @@ function formatDuration(seconds: number): string {
 
 export function LandingDemoResultCard({ result, signupRedirectQuery }: LandingDemoResultCardProps) {
   const redirectUrl = `/signup?redirect=${encodeURIComponent(`/search?q=${encodeURIComponent(signupRedirectQuery)}`)}`;
+  const matchLabel =
+    result.relevance_score != null && result.relevance_score > 0.1
+      ? `${Math.round(result.relevance_score * 100)}% match`
+      : null;
 
   return (
     <motion.div
-      className="h-full"
+      className="relative overflow-visible h-full"
       whileHover={{ y: -2 }}
       transition={{ type: "spring", stiffness: 400, damping: 25 }}
     >
+      {matchLabel && <MatchIndicatorTag label={matchLabel} />}
       <Card className="h-full flex flex-col rounded-lg border-border hover:border-primary/40 hover:shadow-xl transition-all duration-300">
       <CardContent className="pt-6 flex-1 flex flex-col">
         <div className="space-y-4 flex-1">
@@ -46,11 +52,6 @@ export function LandingDemoResultCard({ result, signupRedirectQuery }: LandingDe
               <p className="text-sm text-muted-foreground line-clamp-1">{result.play_title}</p>
               <p className="text-xs text-muted-foreground">by {result.author}</p>
             </div>
-            {result.relevance_score != null && result.relevance_score > 0.1 && (
-              <span className="shrink-0 text-xs font-medium rounded-full bg-primary/15 text-primary px-2 py-0.5">
-                {Math.round(result.relevance_score * 100)}% match
-              </span>
-            )}
           </div>
 
           {result.scene_description && (
