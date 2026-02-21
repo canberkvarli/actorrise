@@ -17,7 +17,8 @@ from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/public", tags=["public"])
 
-# In-memory cache: (value, expiry_ts). TTL 30s so landing "live count" updates soon after searches.
+# In-memory cache: (value, expiry_ts). TTL 30s for full payload so landing "live count" updates soon.
+# Library counts are stable; first request can be slow on large DBs so cache reduces repeated work.
 _CACHE: dict[str, tuple[Any, float]] = {}
 _CACHE_TTL_SEC = 30
 
