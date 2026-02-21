@@ -142,6 +142,8 @@ export default function SearchPage() {
   const [resultsViewCount, setResultsViewCount] = useState(0);
   const [filmTvResultsViewCount, setFilmTvResultsViewCount] = useState(0);
   const [restoredFromLastSearch, setRestoredFromLastSearch] = useState(false);
+  /** Query that produced the current results (for summary text); stays stable while user types in the search box. */
+  const [queryUsedForResults, setQueryUsedForResults] = useState("");
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchUpgradeUrl, setSearchUpgradeUrl] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
@@ -414,6 +416,7 @@ export default function SearchPage() {
           setResults(last.results);
           setTotal(last.results.length);
           setHasSearched(last.results.length > 0);
+          setQueryUsedForResults(last.query);
           setRestoredFromLastSearch(true);
         }
       } catch (e) {
@@ -462,6 +465,7 @@ export default function SearchPage() {
         setResults(last.results);
         setTotal(last.results.length);
         setHasSearched(last.results.length > 0);
+        setQueryUsedForResults(last.query);
         setRestoredFromLastSearch(true);
       }
     } catch (e) {
@@ -546,6 +550,7 @@ export default function SearchPage() {
           })
         );
         sessionStorage.setItem(SEARCH_LAST_MODE_KEY, "plays");
+        setQueryUsedForResults(searchQuery);
         addSearchToHistory({
           query: searchQuery,
           filters: savedFilters,
@@ -1678,13 +1683,27 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </p>
                 </div>
               )}
-              {playsQuery.trim() && (activeFilters.length > 0 || hasFreshnessFilter) && (
+              {(() => {
+                  const displayQuery = searchParams.get("q") ?? queryUsedForResults ?? "";
+                  return displayQuery.trim() && (activeFilters.length > 0 || hasFreshnessFilter) ? (
                   <p className="text-sm text-muted-foreground">
-                  Showing monologues matching <span className="font-semibold text-foreground">&ldquo;{playsQuery}&rdquo;</span>
+                  Showing monologues matching{" "}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchMode("plays");
+                      setPlaysQuery(displayQuery);
+                      document.getElementById("search-input")?.focus();
+                    }}
+                    className="font-semibold text-foreground hover:underline cursor-pointer rounded focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    &ldquo;{displayQuery}&rdquo;
+                  </button>
                   {" in "}
                   {[...activeFilters.map(([k, v]) => getFilterDisplay(k, v)), ...(hasFreshnessFilter ? [`Freshness: ${getFreshnessLabel(maxOverdoneScore)}`] : [])].join("; ")}. Filters narrow the set; search ranks by meaning.
                   </p>
-                )}
+                ) : null;
+                })()}
               {/* Results header: count left, feedback center, Bookmarked only right */}
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex flex-col gap-0.5 min-w-0 shrink-0">
