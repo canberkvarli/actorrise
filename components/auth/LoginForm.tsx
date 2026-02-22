@@ -20,14 +20,18 @@ const loginSchema = z.object({
 
 type LoginFormData = z.infer<typeof loginSchema>;
 
-export function LoginForm() {
+interface LoginFormProps {
+  /** Override redirect (e.g. when embedded in modal). Falls back to URL ?redirect= */
+  redirectTo?: string;
+}
+
+export function LoginForm({ redirectTo: redirectToProp }: LoginFormProps = {}) {
   const { login } = useAuth();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Get redirect path from URL params (set by middleware)
-  const redirectTo = searchParams.get("redirect");
+
+  const redirectTo = redirectToProp ?? searchParams.get("redirect") ?? undefined;
 
   const {
     register,

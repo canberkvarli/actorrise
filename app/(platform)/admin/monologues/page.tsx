@@ -7,8 +7,9 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { IconSearch, IconEdit, IconLoader2 } from "@tabler/icons-react";
+import { IconSearch, IconEdit, IconLoader2, IconTrash } from "@tabler/icons-react";
 import { EditMonologueModal, type AdminMonologueItem, type EditMonologueBody } from "@/components/admin/EditMonologueModal";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 
 export type { AdminMonologueItem };
 
@@ -19,6 +20,7 @@ export default function AdminMonologuesPage() {
   const [searchError, setSearchError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [editModal, setEditModal] = useState<AdminMonologueItem | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<AdminMonologueItem | null>(null);
 
   async function runSearch() {
     const raw = searchInput.trim();
@@ -71,6 +73,20 @@ export default function AdminMonologuesPage() {
     },
     onError: (err: Error) => {
       toast.error(err.message || "Update failed");
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      await api.delete(`/api/admin/monologues/${id}`);
+    },
+    onSuccess: (_, id) => {
+      setResults((prev) => prev.filter((m) => m.id !== id));
+      setDeleteTarget(null);
+      toast.success("Monologue deleted");
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "Delete failed");
     },
   });
 
@@ -131,14 +147,25 @@ export default function AdminMonologuesPage() {
                       (ID: {m.id})
                     </span>
                   </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditModal(m)}
-                  >
-                    <IconEdit className="h-4 w-4 mr-1" />
-                    Edit
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditModal(m)}
+                    >
+                      <IconEdit className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={() => setDeleteTarget(m)}
+                    >
+                      <IconTrash className="h-4 w-4 mr-1" />
+                      Delete
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -153,6 +180,20 @@ export default function AdminMonologuesPage() {
           if (editModal) updateMutation.mutate({ id: editModal.id, body });
         }}
         isSaving={updateMutation.isPending}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteTarget != null}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete monologue"
+        description={
+          deleteTarget
+            ? `Permanently delete "${deleteTarget.title}" (${deleteTarget.character_name}, ID: ${deleteTarget.id})? This cannot be undone.`
+            : ""
+        }
+        confirmLabel="Delete"
+        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        isLoading={deleteMutation.isPending}
       />
     </div>
   );

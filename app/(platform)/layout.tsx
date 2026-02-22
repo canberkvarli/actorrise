@@ -194,7 +194,7 @@ export default function PlatformLayout({
           <div className="flex items-center justify-between h-20 gap-3">
             <Link
               href="/dashboard"
-              className="flex items-center min-w-0 shrink text-foreground hover:opacity-80 transition-opacity"
+              className="hidden md:flex items-center min-w-0 shrink text-foreground hover:opacity-80 transition-opacity"
               aria-label="ActorRise Home"
             >
               <BrandLogo size="header" />
@@ -439,7 +439,7 @@ export default function PlatformLayout({
             </div>
 
             {/* Mobile menu: button + dropdown (click outside to close) */}
-            <div ref={mobileMenuRef} className="md:hidden flex flex-col flex-1 min-w-0">
+            <div ref={mobileMenuRef} className="md:hidden relative flex flex-col flex-1 min-w-0">
               <Button
                 variant="ghost"
                 size="icon"
@@ -449,10 +449,10 @@ export default function PlatformLayout({
                 <IconMenu className="h-5 w-5" />
               </Button>
 
-              {/* Mobile Navigation */}
+              {/* Mobile Navigation - fixed below header so position is correct */}
               {mobileMenuOpen && (
-            <div className="border-t border-border/40 overflow-hidden animate-in slide-in-from-top-2 duration-200">
-              <div className="py-3 space-y-1">
+            <div className="fixed left-0 right-0 top-[5rem] z-[9997] border-b border-border bg-background shadow-[0_8px_24px_rgba(0,0,0,0.25)] rounded-b-xl overflow-y-auto max-h-[calc(100dvh-5rem)] animate-in slide-in-from-top-2 duration-200 md:hidden">
+              <div className="py-3 px-3 space-y-1">
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = pathname === item.href;

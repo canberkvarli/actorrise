@@ -15,6 +15,7 @@ from app.core.database import get_db
 from app.middleware.rate_limiting import require_ai_search_when_query
 from app.models.actor import Monologue, MonologueFavorite, Play
 from app.models.user import User
+from app.services.search.query_optimizer import correct_query_typos
 from app.services.search.recommender import Recommender
 from app.services.search.semantic_search import SemanticSearch
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -66,6 +67,7 @@ class SearchResponse(BaseModel):
     total: int
     page: int
     page_size: int
+    corrected_query: Optional[str] = None
 
 
 class LeadMagnetItem(BaseModel):
@@ -104,6 +106,7 @@ class DemoSearchResponse(BaseModel):
     """Response for GET /search-demo (unauthenticated)."""
 
     results: List[DemoSearchResult]
+    corrected_query: Optional[str] = None
 
 
 # Rate limit for demo search: 1 request per IP per 5 minutes (in-memory).
@@ -300,6 +303,8 @@ async def search_monologues(
 
     quote_match_types: dict[int, str] = {}
     actor_profile_for_search: dict | None = None
+    corrected_q: Optional[str] = None
+    was_corrected = False
     if current_user.actor_profile:
         ap = current_user.actor_profile
         actor_profile_for_search = {
@@ -308,9 +313,14 @@ async def search_monologues(
             "profile_bias_enabled": getattr(ap, "profile_bias_enabled", True),
         }
     if q and q.strip():
+        search_q = q.strip()
+        _corrected, was_corrected = correct_query_typos(search_q)
+        if was_corrected:
+            search_q = _corrected
+            corrected_q = _corrected
         # Semantic search returns (list of (Monologue, score), quote_match_types)
         all_results_with_scores, quote_match_types = search_service.search(
-            q.strip(),
+            search_q,
             limit=fetch_limit,
             filters=filters,
             user_id=cast(int, current_user.id),
@@ -354,6 +364,7 @@ async def search_monologues(
         total=total,
         page=page,
         page_size=limit,
+        corrected_query=corrected_q,
     )
 
 
@@ -391,10 +402,14 @@ async def search_demo(
                 )
         _demo_search_last_request[client_ip] = now
 
+    search_q, was_corrected = correct_query_typos(q.strip())
+    corrected_for_demo: Optional[str] = search_q if was_corrected else None
+
     search_service = SemanticSearch(db)
+    # Request more results so landing gets same diversity as full search (then return top 5)
     all_results_with_scores, quote_match_types = search_service.search(
-        q.strip(),
-        limit=3,
+        search_q,
+        limit=10,
         filters={},
         user_id=None,
         actor_profile=None,
@@ -422,12 +437,12 @@ async def search_demo(
             match_type=quote_match_types.get(cast(int, m.id)),
             text_excerpt=_excerpt(m.text),
         )
-        for m, score in all_results_with_scores
+        for m, score in all_results_with_scores[:5]
     ]
 
     if results:
         record_demo_search()
-    return DemoSearchResponse(results=results)
+    return DemoSearchResponse(results=results, corrected_query=corrected_for_demo)
 
 
 @router.get("/recommendations", response_model=List[MonologueResponse])

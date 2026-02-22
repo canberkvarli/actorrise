@@ -12,7 +12,11 @@ const LOGO_DARK = "/transparentLogoText.png";
 type Size = "header" | "auth";
 
 const sizes: Record<Size, { width: number; height: number; className: string }> = {
-  header: { width: 280, height: 64, className: "h-16 w-auto" },
+  header: {
+    width: 280,
+    height: 64,
+    className: "h-9 sm:h-10 md:h-12 lg:h-16 w-auto max-w-full object-contain",
+  },
   auth: { width: 320, height: 80, className: "h-20 w-auto" },
 };
 
@@ -33,7 +37,7 @@ export function BrandLogo({ size = "header" }: { size?: Size }) {
       alt="ActorRise"
       width={width}
       height={height}
-      className={`${className} shrink-0`}
+      className={`${className} ${size === "header" ? "min-w-0" : "shrink-0"}`}
       priority
       onError={() => {
         if (isDark) setDarkFailed(true);

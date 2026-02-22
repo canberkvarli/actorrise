@@ -10,7 +10,7 @@ const MOBILE_LINKS = [
   { href: "#suite", label: "Search" },
   { href: "#how", label: "How it works" },
   { href: "#pricing", label: "Pricing" },
-  { href: "/for-teachers", label: "For teachers" },
+  { href: "/for-students", label: "For students" },
 ] as const;
 
 export function LandingMobileNav() {

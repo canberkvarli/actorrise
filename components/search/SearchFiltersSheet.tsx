@@ -60,7 +60,7 @@ export function SearchFiltersSheet({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="fixed left-0 right-0 bottom-0 top-auto translate-x-0 translate-y-0 rounded-t-2xl rounded-b-none max-h-[85vh] overflow-hidden flex flex-col p-0 gap-0 md:left-[50%] md:right-auto md:bottom-auto md:top-[50%] md:translate-x-[-50%] md:translate-y-[-50%] md:rounded-lg md:max-h-[90vh] md:p-6"
+        className="fixed left-0 right-0 bottom-0 top-auto translate-x-0 translate-y-0 rounded-t-2xl rounded-b-none max-h-[85vh] overflow-hidden flex flex-col p-0 gap-0 bg-background border-t border-x border-border shadow-[0_-4px_24px_rgba(0,0,0,0.2)] md:left-[50%] md:right-auto md:bottom-auto md:top-[50%] md:translate-x-[-50%] md:translate-y-[-50%] md:rounded-lg md:max-h-[90vh] md:p-6 md:border md:shadow-lg"
         onPointerDownOutside={(e) => e.preventDefault()}
       >
         <DialogHeader className="p-4 pb-2 md:p-0 md:pb-4">
@@ -85,7 +85,7 @@ export function SearchFiltersSheet({
                 <SelectTrigger className="min-h-[48px] px-4 py-3 text-base">
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent side="bottom" sideOffset={4}>
                   <SelectItem value="__none__">Any</SelectItem>
                   {options.map((opt) => (
                     <SelectItem key={opt} value={opt} className="capitalize">

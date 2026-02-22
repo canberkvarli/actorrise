@@ -24,7 +24,16 @@ export default function MiniMonologueCard({ monologue }: MiniMonologueCardProps)
       </div>
       <div className="flex gap-1 flex-shrink-0">
         {monologue.category && (
-          <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
+          <Badge
+            variant="outline"
+            className={`text-[9px] px-1 py-0 h-4 ${
+              monologue.category.toLowerCase() === "classical"
+                ? "border-amber-300/50 text-amber-700 dark:text-amber-400 bg-amber-500/10"
+                : monologue.category.toLowerCase() === "contemporary"
+                ? "border-teal-300/50 text-teal-700 dark:text-teal-400 bg-teal-500/10"
+                : ""
+            }`}
+          >
             {monologue.category}
           </Badge>
         )}

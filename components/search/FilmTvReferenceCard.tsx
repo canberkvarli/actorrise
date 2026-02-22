@@ -53,61 +53,63 @@ export function FilmTvReferenceCard({
       >
         {indicatorAbove && <MatchIndicatorTag label={indicatorAbove} />}
         <div
-          className="w-full group p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col min-h-[200px]"
+          className="w-full group p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col min-h-[260px]"
           onClick={onSelect}
         >
-          <div className="flex items-start justify-between gap-3 mb-4">
-            <div className="shrink-0 w-11 h-14 rounded overflow-hidden bg-muted flex items-center justify-center">
+          <div className="flex items-start gap-3 mb-4">
+            <div className="shrink-0 w-16 h-24 rounded overflow-hidden bg-muted flex items-center justify-center">
               {ref_item.poster_url && !posterError ? (
                 <Image
                   src={ref_item.poster_url}
                   alt={ref_item.title}
-                  width={44}
-                  height={56}
+                  width={64}
+                  height={96}
                   className="object-cover w-full h-full"
                   unoptimized
                   onError={() => setPosterError(true)}
                 />
               ) : (
-                <IconPhoto className="h-5 w-5 text-muted-foreground/50" />
+                <IconPhoto className="h-6 w-6 text-muted-foreground/50" />
               )}
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-1">
-                {ref_item.title}
-              </h3>
-              <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
+            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-2 min-w-0 flex-1">
+                  {ref_item.title}
+                </h3>
+                <div className="shrink-0 flex items-center gap-1.5 min-w-[4.5rem] justify-end">
+                  {onToggleFavorite != null && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onToggleFavorite(e);
+                      }}
+                      className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors duration-200 ease-out"
+                      aria-label={isFavorited ? "Remove from saved" : "Add to saved"}
+                    >
+                      <BookmarkIcon filled={isFavorited} size="sm" className={isFavorited ? "text-foreground" : ""} />
+                    </button>
+                  )}
+                  {ref_item.imdb_rating != null && (
+                    <div className="flex items-center gap-0.5 text-amber-500 text-sm font-semibold">
+                      <IconStar className="h-4 w-4 fill-amber-500 shrink-0" />
+                      <span className="tabular-nums">{ref_item.imdb_rating.toFixed(1)}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground line-clamp-2 break-words w-full">
                 {ref_item.year ?? ""}
-                {ref_item.director ? ` · ${ref_item.director}` : ""}
+                {ref_item.director ? ` · Directed by ${ref_item.director}` : ""}
               </p>
-              <p className="text-xs text-muted-foreground/70 mt-0.5 line-clamp-1">
+              <p className="text-xs text-muted-foreground/70 line-clamp-2">
                 {[typeLabel, ref_item.genre?.[0]].filter(Boolean).join(" · ") || "·"}
               </p>
             </div>
-            <div className="shrink-0 flex items-center gap-1.5">
-              {onToggleFavorite != null && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleFavorite(e);
-                  }}
-                  className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors duration-200 ease-out"
-                  aria-label={isFavorited ? "Remove from saved" : "Add to saved"}
-                >
-                  <BookmarkIcon filled={isFavorited} size="sm" className={isFavorited ? "text-foreground" : ""} />
-                </button>
-              )}
-              {ref_item.imdb_rating != null && (
-                <div className="flex items-center gap-0.5 text-amber-500 text-sm font-semibold">
-                  <IconStar className="h-4 w-4 fill-amber-500" />
-                  {ref_item.imdb_rating.toFixed(1)}
-                </div>
-              )}
-            </div>
           </div>
           {ref_item.plot_snippet && (
-            <p className="text-sm text-muted-foreground line-clamp-3 flex-1 leading-relaxed min-h-[3.5rem]">
+            <p className="text-sm text-muted-foreground line-clamp-3 flex-1 leading-relaxed min-h-[4rem]">
               {ref_item.plot_snippet}
             </p>
           )}
@@ -144,33 +146,27 @@ export function FilmTvReferenceCard({
         <CardContent className="pt-6 flex-1 flex flex-col">
           <div className="space-y-3 flex-1">
             <div className="flex items-start gap-3 min-w-0">
-              <div className="shrink-0 rounded overflow-hidden bg-muted flex items-center justify-center w-12 h-16">
+              <div className="shrink-0 rounded overflow-hidden bg-muted flex items-center justify-center w-20 h-28">
                 {ref_item.poster_url && !posterError ? (
                   <Image
                     src={ref_item.poster_url}
                     alt={ref_item.title}
-                    width={48}
-                    height={64}
+                    width={80}
+                    height={112}
                     className="object-cover w-full h-full"
                     unoptimized
                     onError={() => setPosterError(true)}
                   />
                 ) : (
-                  <IconPhoto className="h-5 w-5 text-muted-foreground/50" />
+                  <IconPhoto className="h-6 w-6 text-muted-foreground/50" />
                 )}
               </div>
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-bold text-xl leading-tight group-hover:text-primary transition-colors line-clamp-2">
-                      {ref_item.title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mt-0.5 line-clamp-1">
-                      {ref_item.year ?? ""}
-                      {ref_item.director ? ` · ${ref_item.director}` : ""}
-                    </p>
-                  </div>
-                  <div className="shrink-0 flex items-center gap-1.5">
+                  <h3 className="font-bold text-xl leading-tight group-hover:text-primary transition-colors line-clamp-2 min-w-0 flex-1">
+                    {ref_item.title}
+                  </h3>
+                  <div className="shrink-0 flex items-center gap-1.5 min-w-[4.5rem] justify-end">
                     {onToggleFavorite != null && (
                       <button
                         type="button"
@@ -186,12 +182,16 @@ export function FilmTvReferenceCard({
                     )}
                     {ref_item.imdb_rating != null && (
                       <div className="flex items-center gap-0.5 text-amber-500">
-                        <IconStar className="h-3.5 w-3.5 fill-amber-500" />
-                        <span className="text-sm font-semibold">{ref_item.imdb_rating.toFixed(1)}</span>
+                        <IconStar className="h-3.5 w-3.5 fill-amber-500 shrink-0" />
+                        <span className="text-sm font-semibold tabular-nums">{ref_item.imdb_rating.toFixed(1)}</span>
                       </div>
                     )}
                   </div>
                 </div>
+                <p className="text-sm text-muted-foreground line-clamp-2 break-words w-full">
+                  {ref_item.year ?? ""}
+                  {ref_item.director ? ` · Directed by ${ref_item.director}` : ""}
+                </p>
               </div>
             </div>
 

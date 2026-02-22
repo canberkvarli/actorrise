@@ -35,6 +35,9 @@ const item = {
   },
 };
 
+/** For scroll-triggered sections: animate in when they enter the viewport */
+const viewport = { once: true, amount: 0.15 } as const;
+
 export function LandingPageAnimated() {
   return (
     <motion.div
@@ -67,8 +70,8 @@ export function LandingPageAnimated() {
                 Pricing
               </Link>
               <span className="h-4 w-px bg-border/60" />
-              <Link href="/for-teachers" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
-                For teachers
+              <Link href="/for-students" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
+                For students
               </Link>
               <span className="h-4 w-px bg-border/60" />
               <ContactModalTrigger className="px-3 py-1.5 text-sm text-foreground/90">
@@ -115,6 +118,10 @@ export function LandingPageAnimated() {
 
         <motion.section
           variants={item}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          transition={{ duration, ease: easing }}
           className="border-t border-border/40 bg-muted/20 py-10 md:py-12"
           aria-label="Social proof"
         >
@@ -146,6 +153,10 @@ export function LandingPageAnimated() {
         <motion.section
           id="how"
           variants={item}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          transition={{ duration, ease: easing }}
           className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60"
         >
           <div className="max-w-5xl">
@@ -181,6 +192,10 @@ export function LandingPageAnimated() {
 
         <motion.section
           variants={item}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          transition={{ duration, ease: easing }}
           className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60"
         >
           <div className="max-w-3xl">
@@ -193,19 +208,44 @@ export function LandingPageAnimated() {
           </div>
         </motion.section>
 
-        <motion.div variants={item}>
+        <motion.div
+          variants={item}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          transition={{ duration, ease: easing }}
+        >
           <LandingValueProps />
         </motion.div>
 
-        <motion.section variants={item} id="testimonials">
+        <motion.section
+          variants={item}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          transition={{ duration, ease: easing }}
+          id="testimonials"
+        >
           <LandingTestimonials />
         </motion.section>
 
-        <motion.div variants={item}>
+        <motion.div
+          variants={item}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          transition={{ duration, ease: easing }}
+        >
           <LandingFaq />
         </motion.div>
 
-        <motion.div variants={item}>
+        <motion.div
+          variants={item}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          transition={{ duration, ease: easing }}
+        >
           <LandingPricing />
         </motion.div>
       </main>
@@ -251,6 +291,9 @@ export function LandingPageAnimated() {
               </Link>
               <Link href="/pricing" className="hover:text-foreground transition-colors">
                 Pricing
+              </Link>
+              <Link href="/for-students" className="hover:text-foreground transition-colors">
+                For students
               </Link>
               <Link href="/for-teachers" className="hover:text-foreground transition-colors">
                 For teachers

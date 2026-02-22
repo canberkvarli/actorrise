@@ -18,14 +18,14 @@ import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconExterna
 
 // Fun loading messages for AI search (theater)
 const LOADING_MESSAGES = [
-  "Clanking through the archives...",
-  "Working our magic...",
-  "Squeezing the monologue database...",
   "Asking Shakespeare for advice...",
   "Consulting the drama gods...",
+  "Squeezing the monologue database...",
   "Searching backstage...",
   "Finding your perfect piece...",
   "Digging through the classics...",
+  "Working our magic...",
+  "Rifling through the script pile...",
 ];
 
 // Playful loading messages for film/TV search
@@ -61,14 +61,17 @@ import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackProm
 import type { FilmTvReference } from "@/types/filmTv";
 import { getFilmTvScriptUrl, getScriptSearchUrl, getScriptSlugUrl } from "@/lib/utils";
 import { useFilmTvFavorites, useToggleFilmTvFavorite } from "@/hooks/useFilmTvFavorites";
+import { useProfileStats } from "@/hooks/useDashboardData";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function SearchPage() {
   const router = useRouter();
@@ -133,6 +136,8 @@ export default function SearchPage() {
   const [filmTvEditScriptSaving, setFilmTvEditScriptSaving] = useState(false);
   const [editMonologueId, setEditMonologueId] = useState<number | null>(null);
   const [editMonologueSaving, setEditMonologueSaving] = useState(false);
+  const [showProfileCompleteModal, setShowProfileCompleteModal] = useState(false);
+  const { data: profileStats } = useProfileStats();
 
   const LAST_SEARCH_KEY = "monologue_search_last_results_v1";
   const FILM_TV_LAST_SEARCH_KEY = "film_tv_search_last_results_v1";
@@ -148,6 +153,7 @@ export default function SearchPage() {
   const [searchUpgradeUrl, setSearchUpgradeUrl] = useState<string | null>(null);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const [correctedQuery, setCorrectedQuery] = useState<string | null>(null);
   const PAGE_SIZE = 20;
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -374,6 +380,7 @@ export default function SearchPage() {
           const parsed = JSON.parse(cachedResults) as Monologue[];
           setResults(parsed);
           setTotal(parsed.length);
+          setCorrectedQuery(null);
           setHasSearched(true);
           setRestoredFromLastSearch(false);
           return;
@@ -415,6 +422,7 @@ export default function SearchPage() {
           setMaxOverdoneScore(typeof m === "number" && m >= 0 && m <= 1 ? m : last.filters.exclude_overdone === "true" ? 0.3 : 1);
           setResults(last.results);
           setTotal(last.results.length);
+          setCorrectedQuery(null);
           setHasSearched(last.results.length > 0);
           setQueryUsedForResults(last.query);
           setRestoredFromLastSearch(true);
@@ -464,6 +472,7 @@ export default function SearchPage() {
         setMaxOverdoneScore(typeof m === "number" && m >= 0 && m <= 1 ? m : last.filters.exclude_overdone === "true" ? 0.3 : 1);
         setResults(last.results);
         setTotal(last.results.length);
+        setCorrectedQuery(null);
         setHasSearched(last.results.length > 0);
         setQueryUsedForResults(last.query);
         setRestoredFromLastSearch(true);
@@ -492,6 +501,7 @@ export default function SearchPage() {
     total: number;
     page: number;
     page_size: number;
+    corrected_query?: string | null;
   };
 
   const performSearch = async (
@@ -501,11 +511,13 @@ export default function SearchPage() {
     append: boolean = false,
     maxOverdoneScoreOverride?: number
   ) => {
+    setShowFiltersSheet(false);
     const effectiveMaxOverdone = maxOverdoneScoreOverride ?? maxOverdoneScore;
     if (!append) {
       setIsLoading(true);
       setSearchError(null);
       setSearchUpgradeUrl(null);
+      setCorrectedQuery(null);
     } else {
       setIsLoadingMore(true);
     }
@@ -530,6 +542,7 @@ export default function SearchPage() {
         setResults((prev) => [...prev, ...newResults]);
       } else {
         setResults(newResults);
+        setCorrectedQuery(data.corrected_query ?? null);
       }
       setTotal(data.total);
       setPage(data.page);
@@ -604,6 +617,7 @@ export default function SearchPage() {
 
   const handleSearch = async () => {
     if (searchMode === "film_tv") {
+      setShowFilmTvFilters(false);
       const hasQueryOrFilters = filmTvQuery.trim() !== "" || Object.values(filmTvFilters).some((v) => v !== "");
       // Only set filmTvHasSearched and results when we actually run a fetch (query/filters or explicit "Browse all").
       setFilmTvHasSearched(true);
@@ -669,6 +683,13 @@ export default function SearchPage() {
   };
 
   const handleFindForMe = async () => {
+    // If we already know profile is incomplete, show modal without calling the API
+    const profileIncomplete = profileStats != null && profileStats.completion_percentage < 50;
+    if (profileIncomplete) {
+      setShowProfileCompleteModal(true);
+      return;
+    }
+
     setIsLoading(true);
     setHasSearched(true);
     setPlaysQuery(""); // Clear query to show it's AI-based
@@ -677,6 +698,7 @@ export default function SearchPage() {
     try {
       const response = await api.get<Monologue[]>("/api/monologues/recommendations?limit=20");
       setResults(response.data);
+      setCorrectedQuery(null);
 
       // Persist AI "Find for me" results as the last search so that
       // navigating away and back to /search keeps them visible.
@@ -703,10 +725,13 @@ export default function SearchPage() {
         // ignore
       }
     } catch (error: any) {
-      console.error("Find For Me error:", error);
-      if (error.response?.status === 400) {
-        // Profile incomplete - show helpful message
-        alert("Please complete your actor profile to use AI-powered recommendations. Go to Profile to add your details.");
+      const isProfileError =
+        error?.response?.status === 400 ||
+        (typeof error?.message === "string" && /profile|complete your profile|actor profile not found/i.test(error.message));
+      if (isProfileError) {
+        setShowProfileCompleteModal(true);
+      } else {
+        console.error("Find For Me error:", error);
       }
       setResults([]);
     } finally {
@@ -997,27 +1022,32 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     );
 
   return (
-    <div className="container mx-auto px-4 py-6 md:py-8 max-w-7xl relative">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8 max-w-7xl relative">
       {outlineOverlay}
 
       {/* Hero Search Section - compact on mobile */}
-      <div className="mb-6 md:mb-10">
-        <div className="text-center mb-4 md:mb-8">
+      <div className="mb-4 sm:mb-6 md:mb-10">
+        <div className="text-center mb-3 sm:mb-4 md:mb-8">
           <p className="hidden md:inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-primary font-medium mb-4">
             <IconSparkles className="h-3 w-3" />
             AI-Powered Search
           </p>
-          <h1 className="text-2xl md:text-5xl font-bold tracking-tight mb-1 md:mb-3">Find your next piece</h1>
-          <p className="hidden md:block text-muted-foreground text-lg max-w-xl mx-auto">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold tracking-tight mb-1 md:mb-3">Find your next piece</h1>
+          <p className="hidden md:block text-muted-foreground text-lg max-w-lg mx-auto">
             Describe what you&apos;re looking for in plain English; filters narrow results or let you browse by criteria.
           </p>
         </div>
 
-        {/* Plays vs Film & TV toggle — reserve space for info icon so layout doesn't shift */}
-        <div className="flex items-center justify-center gap-2 mb-4">
-          <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
+        {/* Plays vs Film & TV toggle — spacious on mobile, 44px touch targets */}
+        <div className="flex items-center justify-center gap-2 mb-3 sm:mb-4 px-1">
+          <div className="w-full max-w-sm sm:max-w-none sm:w-auto inline-flex rounded-xl border border-border bg-muted/40 p-2 gap-2 sm:p-1 sm:gap-0">
             <button
               type="button"
+              className={`flex-1 sm:flex-none min-h-[44px] sm:min-w-0 sm:px-4 sm:py-2 rounded-lg sm:rounded-md text-sm font-medium transition-colors touch-manipulation ${
+                searchMode === "plays"
+                  ? "bg-primary/15 text-primary shadow-sm ring-1 ring-primary/30 ring-inset"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              }`}
               onClick={() => {
                 playsActionAtRef.current = Date.now();
                 setSearchMode("plays");
@@ -1032,16 +1062,16 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 if (maxOverdoneScore < 1) params.set("max_overdone_score", String(maxOverdoneScore));
                 router.replace(`/search?${params.toString()}`, { scroll: false });
               }}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                searchMode === "plays"
-                  ? "bg-[rgba(251,146,60,0.12)] shadow text-foreground ring-2 ring-[rgba(251,146,60,0.45)] ring-inset"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
             >
               Plays
             </button>
             <button
               type="button"
+              className={`flex-1 sm:flex-none min-h-[44px] sm:min-w-0 sm:px-4 sm:py-2 rounded-lg sm:rounded-md text-sm font-medium transition-colors touch-manipulation ${
+                searchMode === "film_tv"
+                  ? "bg-[rgba(167,139,250,0.12)] shadow text-foreground ring-1 ring-[rgba(167,139,250,0.45)] ring-inset"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+              }`}
               onClick={() => {
                 setSearchMode("film_tv");
                 setOutlineFlash("film_tv");
@@ -1056,16 +1086,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   setShowFilmTvInfoModal(true);
                 }
               }}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                searchMode === "film_tv"
-                  ? "bg-[rgba(167,139,250,0.12)] shadow text-foreground ring-2 ring-[rgba(167,139,250,0.45)] ring-inset"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
             >
               Film &amp; TV
             </button>
           </div>
-          <div className="w-10 h-10 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0">
             {searchMode === "film_tv" ? (
               <button
                 type="button"
@@ -1152,8 +1177,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               <Button
                 onClick={handleSearch}
                 disabled={isLoading}
-                size="lg"
-                className={`w-auto shrink-0 min-h-[44px] md:min-h-[2.5rem] px-5 md:px-6 rounded-lg transition-all duration-300 ${
+                size="default"
+                className={`shrink-0 min-h-[44px] min-w-[44px] md:min-h-[2.5rem] md:min-w-0 px-4 md:px-6 rounded-lg transition-all duration-300 ${
                   isTyping ? "shadow-md shadow-primary/20" : ""
                 }`}
               >
@@ -1167,7 +1192,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </div>
 
           {/* Action Row - Filters (Plays or Film & TV) + Find for me (Plays only) */}
-          <div id="search-filters" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4">
+          <div id="search-filters" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 sm:mt-4">
             <div className="flex items-center gap-2 flex-wrap">
               {searchMode === "plays" && (
                 <>
@@ -1296,33 +1321,41 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Type</Label>
-                  <select
-                    value={filmTvFilters.type}
-                    onChange={(e) => setFilmTvFilters((f) => ({ ...f, type: e.target.value }))}
-                    className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
+                  <Select
+                    value={filmTvFilters.type || "__any__"}
+                    onValueChange={(v) => setFilmTvFilters((f) => ({ ...f, type: v === "__any__" ? "" : v }))}
                   >
-                    <option value="">Any</option>
-                    <option value="movie">Movie</option>
-                    <option value="tvSeries">TV Series</option>
-                  </select>
+                    <SelectTrigger className="w-full min-h-[44px] px-3 py-2 text-sm">
+                      <SelectValue placeholder="Any" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__any__">Any</SelectItem>
+                      <SelectItem value="movie">Movie</SelectItem>
+                      <SelectItem value="tvSeries">TV Series</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Genre</Label>
-                  <select
-                    value={filmTvFilters.genre}
-                    onChange={(e) => setFilmTvFilters((f) => ({ ...f, genre: e.target.value }))}
-                    className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
+                  <Select
+                    value={filmTvFilters.genre || "__any__"}
+                    onValueChange={(v) => setFilmTvFilters((f) => ({ ...f, genre: v === "__any__" ? "" : v }))}
                   >
-                    <option value="">Any</option>
-                    <option value="drama">Drama</option>
-                    <option value="comedy">Comedy</option>
-                    <option value="crime">Crime</option>
-                    <option value="thriller">Thriller</option>
-                    <option value="biography">Biography</option>
-                    <option value="romance">Romance</option>
-                    <option value="action">Action</option>
-                    <option value="history">History</option>
-                  </select>
+                    <SelectTrigger className="w-full min-h-[44px] px-3 py-2 text-sm">
+                      <SelectValue placeholder="Any" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__any__">Any</SelectItem>
+                      <SelectItem value="drama">Drama</SelectItem>
+                      <SelectItem value="comedy">Comedy</SelectItem>
+                      <SelectItem value="crime">Crime</SelectItem>
+                      <SelectItem value="thriller">Thriller</SelectItem>
+                      <SelectItem value="biography">Biography</SelectItem>
+                      <SelectItem value="romance">Romance</SelectItem>
+                      <SelectItem value="action">Action</SelectItem>
+                      <SelectItem value="history">History</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Year from</Label>
@@ -1350,18 +1383,22 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Min IMDb rating</Label>
-                  <select
-                    value={filmTvFilters.imdb_rating_min}
-                    onChange={(e) => setFilmTvFilters((f) => ({ ...f, imdb_rating_min: e.target.value }))}
-                    className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
+                  <Select
+                    value={filmTvFilters.imdb_rating_min || "__any__"}
+                    onValueChange={(v) => setFilmTvFilters((f) => ({ ...f, imdb_rating_min: v === "__any__" ? "" : v }))}
                   >
-                    <option value="">Any</option>
-                    <option value="6">6+</option>
-                    <option value="7">7+</option>
-                    <option value="7.5">7.5+</option>
-                    <option value="8">8+</option>
-                    <option value="8.5">8.5+</option>
-                  </select>
+                    <SelectTrigger className="w-full min-h-[44px] px-3 py-2 text-sm">
+                      <SelectValue placeholder="Any" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__any__">Any</SelectItem>
+                      <SelectItem value="6">6+</SelectItem>
+                      <SelectItem value="7">7+</SelectItem>
+                      <SelectItem value="7.5">7.5+</SelectItem>
+                      <SelectItem value="8">8+</SelectItem>
+                      <SelectItem value="8.5">8.5+</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Director</Label>
@@ -1395,16 +1432,20 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 ].map(({ key, label, options }) => (
                   <div key={key} className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">{label}</Label>
-                    <select
-                      value={filters[key as keyof typeof filters]}
-                      onChange={(e) => setFilters({ ...filters, [key]: e.target.value })}
-                      className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
+                    <Select
+                      value={filters[key as keyof typeof filters] || "__any__"}
+                      onValueChange={(v) => setFilters({ ...filters, [key]: v === "__any__" ? "" : v })}
                     >
-                      <option value="">Any</option>
-                      {options.map(opt => (
-                        <option key={opt} value={opt} className="capitalize">{opt}</option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="w-full min-h-[44px] px-3 py-2 text-sm">
+                        <SelectValue placeholder="Any" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__any__">Any</SelectItem>
+                        {options.map((opt) => (
+                          <SelectItem key={opt} value={opt} className="capitalize">{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 ))}
               </div>
@@ -1524,17 +1565,17 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.2 }}
               >
-                <Card className="border border-border/60 bg-gradient-to-b from-muted/30 to-muted/10 shadow-sm overflow-hidden">
-                  <CardContent className="pt-14 pb-14 px-6 text-center max-w-lg mx-auto">
-                    <div className="flex justify-center mb-5">
-                      <div className="rounded-full bg-muted/80 p-4">
-                        <IconDeviceTv className="h-8 w-8 text-foreground" aria-hidden />
+                <Card className="border border-border/60 bg-gradient-to-b from-muted/30 to-muted/10 shadow-sm overflow-hidden max-w-md mx-auto">
+                  <CardContent className="pt-10 pb-10 px-5 sm:px-6 text-center">
+                    <div className="flex justify-center mb-4">
+                      <div className="rounded-full bg-muted/80 p-3">
+                        <IconDeviceTv className="h-7 w-7 text-foreground" aria-hidden />
                       </div>
                     </div>
-                    <h3 className="text-base font-semibold text-foreground mb-2">
+                    <h3 className="text-base font-semibold text-foreground mb-1.5">
                       Film & TV references
                     </h3>
-                    <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+                    <p className="text-muted-foreground text-sm leading-relaxed mb-4">
                       Search by mood or scene, same as plays. Or browse all references.
                     </p>
                     <Button
@@ -1563,33 +1604,35 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   const displayList = showFilmTvBookmarkedOnly ? filmTvBookmarked : filmTvResults;
                   return (
                     <>
-                      <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex flex-col gap-0.5 min-w-0 shrink-0">
-                          <div className="flex items-baseline gap-2 flex-wrap">
-                            <span className="text-2xl font-semibold tabular-nums text-foreground">
-                              {showFilmTvBookmarkedOnly ? filmTvBookmarked.length : filmTvTotal}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {showFilmTvBookmarkedOnly ? "saved" : "references"}
-                            </span>
+                      <div className="flex flex-col gap-3">
+                        <div className="flex flex-wrap items-center gap-4">
+                          <div className="flex flex-col gap-0.5 min-w-0 shrink-0">
+                            <div className="flex items-baseline gap-2 flex-wrap">
+                              <span className="text-2xl font-semibold tabular-nums text-foreground">
+                                {showFilmTvBookmarkedOnly ? filmTvBookmarked.length : filmTvTotal}
+                              </span>
+                              <span className="text-sm text-muted-foreground">
+                                {showFilmTvBookmarkedOnly ? "saved" : "references"}
+                              </span>
+                            </div>
                           </div>
+                          <Button
+                            variant={showFilmTvBookmarkedOnly ? "secondary" : "outline"}
+                            size="sm"
+                            onClick={() => setShowFilmTvBookmarkedOnly(!showFilmTvBookmarkedOnly)}
+                            className="gap-2 rounded-full shrink-0 ml-auto"
+                          >
+                            <IconBookmark className={`h-4 w-4 ${showFilmTvBookmarkedOnly ? "fill-current" : ""}`} />
+                            Bookmarked only
+                          </Button>
                         </div>
-                        <div className="flex-1 flex justify-center min-w-0">
+                        <div className="flex justify-center">
                           <ResultsFeedbackPrompt
                             context="film_tv_search"
                             resultsViewCount={filmTvResultsViewCount}
                             onOpenContact={() => setContactOpen(true)}
                           />
                         </div>
-                        <Button
-                          variant={showFilmTvBookmarkedOnly ? "secondary" : "outline"}
-                          size="sm"
-                          onClick={() => setShowFilmTvBookmarkedOnly(!showFilmTvBookmarkedOnly)}
-                          className="gap-2 rounded-full shrink-0"
-                        >
-                          <IconBookmark className={`h-4 w-4 ${showFilmTvBookmarkedOnly ? "fill-current" : ""}`} />
-                          Bookmarked only
-                        </Button>
                       </div>
                       {displayList.length === 0 ? (
                         <Card className="border-dashed bg-muted/20">
@@ -1664,17 +1707,30 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </div>
             </motion.div>
           ) : hasSearched && results.length === 0 ? (
-            <Card>
-              <CardContent className="pt-12 pb-12 text-center">
-                <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No monologues found</h3>
-                <p className="text-sm text-muted-foreground">
-                  Try different search terms or adjust filters
-                </p>
-              </CardContent>
-            </Card>
+            <motion.div
+              key="no-results"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+            >
+              <Card>
+                <CardContent className="pt-12 pb-12 text-center">
+                  <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">No monologues found</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Try different search terms or adjust filters
+                  </p>
+                </CardContent>
+              </Card>
+            </motion.div>
           ) : results.length > 0 ? (
             <div id="search-results" className="space-y-4">
+              {correctedQuery &&
+                (queryUsedForResults ?? "").trim().toLowerCase() !== correctedQuery.trim().toLowerCase() && (
+                <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
+                  We searched for &ldquo;{correctedQuery}&rdquo;. Did you mean that? Here are the results.
+                </div>
+              )}
               {searchParams.get("ai") === "true" && (
                 <div className="flex items-center gap-2 p-4 bg-secondary/10 border border-secondary/30 rounded-lg">
                   <IconSparkles className="h-5 w-5 text-foreground flex-shrink-0" />
@@ -1704,49 +1760,51 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </p>
                 ) : null;
                 })()}
-              {/* Results header: count left, feedback center, Bookmarked only right */}
-              <div className="flex flex-wrap items-center gap-4">
-                <div className="flex flex-col gap-0.5 min-w-0 shrink-0">
-                  <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className="text-2xl font-semibold tabular-nums text-foreground">
-                      {showBookmarkedOnly
-                        ? results.filter((m) => m.is_favorited).length
-                        : total > 0 ? total : results.length}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {showBookmarkedOnly ? "bookmarked" : "monologues found"}
-                    </span>
+              {/* Results header: count + button on first row, feedback on second row to avoid collision */}
+              <div className="flex flex-col gap-3">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="flex flex-col gap-0.5 min-w-0 shrink-0">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="text-2xl font-semibold tabular-nums text-foreground">
+                        {showBookmarkedOnly
+                          ? results.filter((m) => m.is_favorited).length
+                          : total > 0 ? total : results.length}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {showBookmarkedOnly ? "bookmarked" : "monologues found"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                      {!showBookmarkedOnly && !showConfidence && relatedResults.length > 0 && (
+                        <span>Sorted by relevance</span>
+                      )}
+                      {restoredFromLastSearch && searchParams.get("q") === null && (
+                        <>
+                          {!showBookmarkedOnly && !showConfidence && relatedResults.length > 0 && (
+                            <span aria-hidden className="text-border">·</span>
+                          )}
+                          <span>From your last search</span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-                    {!showBookmarkedOnly && !showConfidence && relatedResults.length > 0 && (
-                      <span>Sorted by relevance</span>
-                    )}
-                    {restoredFromLastSearch && searchParams.get("q") === null && (
-                      <>
-                        {!showBookmarkedOnly && !showConfidence && relatedResults.length > 0 && (
-                          <span aria-hidden className="text-border">·</span>
-                        )}
-                        <span>From your last search</span>
-                      </>
-                    )}
-                  </div>
+                  <Button
+                    variant={showBookmarkedOnly ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
+                    className={`gap-2 rounded-full shrink-0 ml-auto ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
+                  >
+                    <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
+                    Bookmarked only
+                  </Button>
                 </div>
-                <div className="flex-1 flex justify-center min-w-0">
+                <div className="flex justify-center">
                   <ResultsFeedbackPrompt
                     context="search"
                     resultsViewCount={resultsViewCount}
                     onOpenContact={() => setContactOpen(true)}
                   />
                 </div>
-                <Button
-                  variant={showBookmarkedOnly ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
-                  className="gap-2 rounded-full shrink-0"
-                >
-                  <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                  Bookmarked only
-                </Button>
               </div>
 
               {/* Unified results grid: Best Match + Related use same card layout; hide confidence for broad queries */}
@@ -1758,7 +1816,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 return (
                   <>
                     {!showBookmarkedOnly && showConfidence && bestMatches.length > 0 && (
-                      <div className="flex items-center gap-2 mb-4">
+                      <div className="flex items-center gap-2 mb-8">
                         <div className="p-2 rounded-lg bg-muted/80 ring-1 ring-border">
                           <IconTargetArrow className="h-5 w-5 text-foreground" />
                         </div>
@@ -1823,16 +1881,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       <AnimatePresence>
         {selectedMonologue && (
           <>
-            {/* Backdrop */}
+            {/* Backdrop — single bg class so opacity transition is smooth */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: isReadingMode ? 0.95 : 0.5 }}
               exit={{ opacity: 0 }}
               onClick={closeMonologue}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className={`fixed inset-0 z-[10000] ${
-                isReadingMode ? "bg-black/95" : "bg-black/50"
-              }`}
+              transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+              className="fixed inset-0 z-[10000] bg-black"
             />
 
             {/* Slide-over Panel */}
@@ -1841,15 +1897,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               initial={{ x: "100%", opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: "100%", opacity: 0 }}
-              transition={{ 
+              transition={{
                 duration: 0.3,
-                ease: "easeOut",
-                opacity: { duration: 0.25 }
+                ease: [0.25, 0.1, 0.25, 1],
+                opacity: { duration: 0.25 },
               }}
-              className={`fixed right-0 top-0 bottom-0 z-[10001] overflow-y-auto transition-all ${
+              className={`fixed right-0 top-0 bottom-0 z-[10001] overflow-y-auto bg-background border-l shadow-2xl transition-[width,box-shadow] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${
                 isReadingMode
-                  ? "w-full bg-background"
-                  : "w-full md:w-[600px] lg:w-[700px] bg-background border-l shadow-2xl"
+                  ? "w-full"
+                  : "w-full md:w-[600px] lg:w-[700px]"
               }`}
             >
               <div className={`sticky top-0 bg-background/95 backdrop-blur-sm border-b z-[10002] ${
@@ -1857,8 +1913,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               }`}>
                 <div className="flex items-center justify-between p-6">
                   {!isReadingMode && <h2 className="hidden sm:block text-2xl font-bold">Monologue Details</h2>}
-                  {(!isReadingMode || isReadingMode) && <div className="flex-1 sm:hidden" />}
-                  <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0" aria-hidden="true" />
+                  <div className="flex items-center gap-2 shrink-0 ml-auto">
                     {/* Download button - show in both modes; 44px touch target on mobile */}
                     <div className="relative z-[10002]">
                       <Button
@@ -1873,39 +1929,51 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       >
                         <IconDownload className="h-5 w-5" />
                       </Button>
-                      {showDownloadMenu && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-[10003]"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowDownloadMenu(false);
-                            }}
-                          />
-                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-[10004]">
-                            <button
+                      <AnimatePresence>
+                        {showDownloadMenu && (
+                          <>
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.15 }}
+                              className="fixed inset-0 z-[10003]"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                downloadMonologue(selectedMonologue, 'text');
                                 setShowDownloadMenu(false);
                               }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
+                            />
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.96, y: -6 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.96, y: -6 }}
+                              transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
+                              className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-[10004] origin-top-right"
                             >
-                              Download as TXT
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                downloadMonologue(selectedMonologue, 'pdf');
-                                setShowDownloadMenu(false);
-                              }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
-                            >
-                              Download as PDF
-                            </button>
-                          </div>
-                        </>
-                      )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  downloadMonologue(selectedMonologue, 'text');
+                                  setShowDownloadMenu(false);
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
+                              >
+                                Download as TXT
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  downloadMonologue(selectedMonologue, 'pdf');
+                                  setShowDownloadMenu(false);
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
+                              >
+                                Download as PDF
+                              </button>
+                            </motion.div>
+                          </>
+                        )}
+                      </AnimatePresence>
                     </div>
                     {!isReadingMode && (
                       <Button
@@ -1976,9 +2044,17 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     <Skeleton className="h-4 w-1/2" />
                     <Skeleton className="h-64 w-full" />
                   </div>
-                ) : isReadingMode ? (
-                  /* Reading Mode - Centered and Focused */
-                  <div className="space-y-8 py-12">
+                ) : (
+                  <AnimatePresence mode="wait">
+                    {isReadingMode ? (
+                      <motion.div
+                        key="reading"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-8 py-12"
+                      >
                     {/* Minimal Header */}
                     <div className="text-center space-y-2">
                       <h1 className="text-4xl font-bold font-typewriter">{selectedMonologue.character_name}</h1>
@@ -1994,12 +2070,22 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <MonologueText text={selectedMonologue.text} />
                       </p>
                     </div>
-                  </div>
-                ) : (
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="detail"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
                   <MonologueDetailContent
                     monologue={selectedMonologue}
                     onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
                   />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 )}
               </div>
             </motion.div>
@@ -2301,6 +2387,33 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         onOpenChange={setContactOpen}
         initialCategory="feedback"
       />
+
+      <Dialog open={showProfileCompleteModal} onOpenChange={setShowProfileCompleteModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl sm:text-2xl">Complete your profile</DialogTitle>
+            <DialogDescription>
+              Add your actor details so we can give you AI-powered recommendations tailored to your type and casting.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowProfileCompleteModal(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setShowProfileCompleteModal(false);
+                router.push("/profile");
+              }}
+            >
+              Go to Profile
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
