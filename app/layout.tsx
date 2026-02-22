@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Montserrat, JetBrains_Mono, Cormorant_Garamond, Playfair_Display } from "next/font/google";
 import "./globals.css";
 import { AuthProviderWrapper } from "@/components/providers/AuthProviderWrapper";
+import { AuthModalProvider } from "@/components/auth/AuthModalContext";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { Toaster } from "sonner";
 import { Analytics } from "@vercel/analytics/react";
@@ -181,7 +182,9 @@ export default function RootLayout({
             <OAuthCallbackRedirect />
             <LastAuthCookieSync />
           </Suspense>
-          <AuthProviderWrapper>{children}</AuthProviderWrapper>
+          <AuthProviderWrapper>
+            <AuthModalProvider>{children}</AuthModalProvider>
+          </AuthProviderWrapper>
           <Toaster
             position="top-center"
             richColors={false}

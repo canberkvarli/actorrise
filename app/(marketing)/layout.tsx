@@ -9,7 +9,6 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { MarketingFooter } from "@/components/contact/MarketingFooter";
 import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions";
 import { PageTransitionWithKey } from "@/components/transition/PageTransition";
-
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -42,6 +41,13 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
                 className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
               >
                 Pricing
+              </Link>
+              <span className="h-4 w-px bg-border/60" />
+              <Link
+                href="/for-students"
+                className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
+              >
+                For students
               </Link>
               <span className="h-4 w-px bg-border/60" />
               <Link

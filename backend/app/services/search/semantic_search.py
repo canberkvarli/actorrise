@@ -175,6 +175,7 @@ def _calculate_relevance_score_multiplicative(
     WEIGHTS = {
         'filter_gender': 0.15,
         'filter_emotion': 0.15,
+        'filter_tone': 0.12,
         'filter_duration': 0.12,
         'filter_theme': 0.08,
         'profile_gender': 0.10,
@@ -193,6 +194,11 @@ def _calculate_relevance_score_multiplicative(
         e = (mono.primary_emotion or "").lower()
         if e == (merged_filters["emotion"] or "").lower():
             score *= (1 + WEIGHTS['filter_emotion'])
+
+    if merged_filters.get("tone"):
+        t = (mono.tone or "").lower()
+        if t == (merged_filters["tone"] or "").lower():
+            score *= (1 + WEIGHTS['filter_tone'])
 
     if merged_filters.get("max_duration") and mono.estimated_duration_seconds:
         try:
@@ -474,20 +480,20 @@ class SemanticSearch:
 
         if not query_embedding:
             logger.info("Failed to generate embedding, falling back to text search")
-            fallback = self._fallback_text_search(query, limit, merged_filters)
+            fallback = self._fallback_text_search(query, limit, merged_filters, explicit_filters)
             return ([(m, 0.0) for m in fallback], {})
 
         # Hybrid search: run text search for direct play/character/title matches and merge on top.
         # Many monologues (e.g. from Gutenberg) have no embeddings, so "hamlet" would otherwise
         # return only semantic results from other plays and never show Hamlet.
-        text_match_results = self._fallback_text_search(query, limit=limit, filters=merged_filters)
+        text_match_results = self._fallback_text_search(query, limit=limit, filters=merged_filters, explicit_filters=explicit_filters)
 
         # Build base query
         base_query = self.db.query(Monologue).join(Play)
 
-        # Apply merged filters
+        # Apply merged filters (gender only as hard filter when set via UI, else boost-only)
         if merged_filters:
-            if merged_filters.get('gender'):
+            if merged_filters.get('gender') and explicit_filters.get('gender'):
                 base_query = base_query.filter(
                     or_(
                         Monologue.character_gender == merged_filters['gender'],
@@ -656,7 +662,7 @@ class SemanticSearch:
                     self.db.rollback()
                 except Exception:
                     pass
-                fallback_monologues = self._fallback_text_search(query, limit, merged_filters)
+                fallback_monologues = self._fallback_text_search(query, limit, merged_filters, explicit_filters)
                 return ([(m, 0.0) for m in fallback_monologues], {})
 
             logger.debug(
@@ -783,7 +789,7 @@ class SemanticSearch:
 
             # Fallback to text search
             fallback_start = time.time()
-            fallback_results = self._fallback_text_search(query, needed * 2, merged_filters)  # Get extra for filtering
+            fallback_results = self._fallback_text_search(query, needed * 2, merged_filters, explicit_filters)  # Get extra for filtering
             fallback_time = time.time() - fallback_start
             logger.debug("Fallback text search took %.2fs", fallback_time)
 
@@ -858,7 +864,8 @@ class SemanticSearch:
         self,
         query: str,
         limit: int,
-        filters: Optional[Dict]
+        filters: Optional[Dict],
+        explicit_filters: Optional[Dict] = None,
     ) -> List[Monologue]:
         """
         Fallback to simple text search if embedding fails.
@@ -869,12 +876,16 @@ class SemanticSearch:
         classical pieces like Hamlet still surface even when the exact phrase
         doesn't appear in the script.
         """
+        # Gender: only hard-filter when set via UI (explicit), not when from query text
+        apply_gender_filter = filters and filters.get('gender') and (
+            explicit_filters is None or explicit_filters.get('gender')
+        )
 
         base_query = self.db.query(Monologue).join(Play)
 
         # Apply filters (same as semantic search)
         if filters:
-            if filters.get('gender'):
+            if apply_gender_filter:
                 base_query = base_query.filter(
                     or_(
                         Monologue.character_gender == filters['gender'],
@@ -882,7 +893,16 @@ class SemanticSearch:
                     )
                 )
 
-            if filters.get('age_range'):
+            if filters.get('tone'):
+                base_query = base_query.filter(
+                    Monologue.tone == filters['tone']
+                )
+
+            if filters.get('age_ranges'):
+                base_query = base_query.filter(
+                    Monologue.character_age_range.in_(filters['age_ranges'])
+                )
+            elif filters.get('age_range'):
                 base_query = base_query.filter(
                     Monologue.character_age_range == filters['age_range']
                 )

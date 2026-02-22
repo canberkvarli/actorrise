@@ -54,7 +54,7 @@ export function AuthProgressiveDisclosure({
                   <div className="h-10 animate-pulse rounded-lg bg-muted" />
                 }
               >
-                <LoginForm />
+                <LoginForm redirectTo={redirectTo} />
               </Suspense>
             ) : (
               <SignupForm />

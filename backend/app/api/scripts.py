@@ -47,6 +47,8 @@ class UserScriptResponse(BaseModel):
     characters: List[dict]
     created_at: datetime
     updated_at: Optional[datetime]
+    first_scene_title: Optional[str] = None
+    first_scene_description: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -529,7 +531,14 @@ async def list_user_scripts(
         UserScript.user_id == current_user.id
     ).order_by(UserScript.created_at.desc()).all()
 
-    return [UserScriptResponse.model_validate(s) for s in scripts]
+    result = []
+    for s in scripts:
+        data = UserScriptResponse.model_validate(s).model_dump()
+        first_scene = db.query(Scene).filter(Scene.user_script_id == s.id).order_by(Scene.id).first()
+        data["first_scene_title"] = first_scene.title if first_scene else None
+        data["first_scene_description"] = (first_scene.description if first_scene and first_scene.description else None)
+        result.append(UserScriptResponse(**data))
+    return result
 
 
 @router.get("/{script_id}", response_model=UserScriptDetailResponse)

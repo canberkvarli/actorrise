@@ -36,14 +36,14 @@ type SearchFilters = {
 };
 
 const LOADING_MESSAGES = [
-  "Clanking through the archives...",
-  "Working our magic...",
-  "Squeezing the monologue database...",
   "Asking Shakespeare for advice...",
   "Consulting the drama gods...",
+  "Squeezing the monologue database...",
   "Searching backstage...",
   "Finding your perfect piece...",
   "Digging through the classics...",
+  "Working our magic...",
+  "Rifling through the script pile...",
 ];
 
 export function SearchInterface() {
@@ -279,7 +279,7 @@ export function SearchInterface() {
                     Choose whether to search classical or contemporary monologues, or both
                   </p>
                 </div>
-                <div className="inline-flex rounded-full border border-secondary/50 bg-secondary/10 overflow-hidden text-xs">
+                <div className="inline-flex rounded-full border border-border overflow-hidden text-xs">
                   <button
                     type="button"
                     onClick={() => {
@@ -288,7 +288,7 @@ export function SearchInterface() {
                     }}
                     className={`px-3 py-1.5 ${
                       era === ""
-                        ? "bg-secondary text-secondary-foreground"
+                        ? "bg-muted text-foreground"
                         : "bg-background text-muted-foreground hover:bg-muted/50"
                     }`}
                   >
@@ -300,9 +300,9 @@ export function SearchInterface() {
                       setEra("contemporary");
                       setFilters(prev => ({ ...prev, category: "Contemporary" }));
                     }}
-                    className={`px-3 py-1.5 border-l border-transparent ${
+                    className={`px-3 py-1.5 border-l border-border ${
                       era === "contemporary"
-                        ? "bg-secondary text-secondary-foreground"
+                        ? "bg-teal-500/15 text-teal-700 dark:text-teal-400 font-medium"
                         : "bg-background text-muted-foreground hover:bg-muted/50"
                     }`}
                   >
@@ -314,9 +314,9 @@ export function SearchInterface() {
                       setEra("classical");
                       setFilters(prev => ({ ...prev, category: "Classical" }));
                     }}
-                    className={`px-3 py-1.5 border-l border-transparent ${
+                    className={`px-3 py-1.5 border-l border-border ${
                       era === "classical"
-                        ? "bg-secondary text-secondary-foreground"
+                        ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 font-medium"
                         : "bg-background text-muted-foreground hover:bg-muted/50"
                     }`}
                   >

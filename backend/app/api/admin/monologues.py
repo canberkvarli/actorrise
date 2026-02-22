@@ -16,7 +16,8 @@ from sqlalchemy import or_
 from app.core.database import get_db
 from app.api.auth import get_current_user
 from app.models.user import User
-from app.models.actor import Monologue, Play
+from app.models.actor import Monologue, MonologueFavorite, Play
+from app.models.moderation import MonologueSubmission
 
 
 router = APIRouter(prefix="/api/admin/monologues", tags=["admin", "monologues"])
@@ -181,3 +182,27 @@ def admin_update_monologue(
     db.commit()
     db.refresh(mono)
     return _mono_to_admin_response(mono)
+
+
+@router.delete("/{monologue_id:int}", status_code=status.HTTP_204_NO_CONTENT)
+def admin_delete_monologue(
+    monologue_id: int,
+    db: Session = Depends(get_db),
+    _user: User = Depends(require_moderator),
+):
+    """
+    Permanently delete a monologue. Removes favorites and unlinks from submissions.
+    """
+    mono = db.query(Monologue).filter(Monologue.id == monologue_id).first()
+    if not mono:
+        raise HTTPException(status_code=404, detail="Monologue not found")
+
+    db.query(MonologueFavorite).filter(MonologueFavorite.monologue_id == monologue_id).delete(
+        synchronize_session=False
+    )
+    db.query(MonologueSubmission).filter(
+        MonologueSubmission.monologue_id == monologue_id
+    ).update({MonologueSubmission.monologue_id: None}, synchronize_session=False)
+    db.delete(mono)
+    db.commit()
+    return None

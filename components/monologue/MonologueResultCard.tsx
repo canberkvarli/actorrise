@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 import { Monologue } from "@/types/actor";
 import { isMeaningfulMonologueTitle } from "@/lib/utils";
 import { MatchIndicatorTag, accentTeal } from "@/components/search/MatchIndicatorTag";
+import { getEmotionBadgeClassName } from "@/lib/emotionColors";
 
 function getMatchLabel(score: number): string {
   if (score >= 0.65) return "Great match";
@@ -132,9 +133,20 @@ export function MonologueResultCard({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Badge variant="secondary" className="font-normal capitalize">
-                {mono.category}
-              </Badge>
+              {mono.category && (
+                <Badge
+                  variant="secondary"
+                  className={`font-normal capitalize ${
+                    mono.category.toLowerCase() === "classical"
+                      ? "bg-amber-500/10 text-amber-700 border-amber-300/40 dark:text-amber-400 dark:border-amber-500/30"
+                      : mono.category.toLowerCase() === "contemporary"
+                      ? "bg-teal-500/10 text-teal-700 border-teal-300/40 dark:text-teal-400 dark:border-teal-500/30"
+                      : ""
+                  }`}
+                >
+                  {mono.category}
+                </Badge>
+              )}
               {mono.character_gender && (
                 <Badge variant="outline" className="font-normal capitalize">
                   {mono.character_gender}
@@ -146,7 +158,7 @@ export function MonologueResultCard({
                 </Badge>
               )}
               {mono.primary_emotion && (
-                <Badge variant="secondary" className="font-normal capitalize">
+                <Badge variant="secondary" className={`font-normal capitalize ${getEmotionBadgeClassName(mono.primary_emotion)}`}>
                   {mono.primary_emotion}
                 </Badge>
               )}

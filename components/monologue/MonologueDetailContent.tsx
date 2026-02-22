@@ -8,6 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { IconSparkles, IconExternalLink, IconInfoCircle, IconBookmark, IconEdit } from "@tabler/icons-react";
 import { Monologue } from "@/types/actor";
 import { isMeaningfulMonologueTitle } from "@/lib/utils";
+import { getEmotionBadgeClassName, getEmotionBarClassName } from "@/lib/emotionColors";
 import { MonologueText } from "@/components/monologue/MonologueText";
 
 export interface MonologueDetailContentProps {
@@ -93,7 +94,16 @@ export function MonologueDetailContent({
           {monologue.category && (
             <div className="flex flex-wrap gap-2 items-center">
               <span className="text-xs text-muted-foreground mr-1">Genre:</span>
-              <Badge variant="secondary" className="font-normal capitalize rounded-lg">
+              <Badge
+                variant="secondary"
+                className={`font-normal capitalize rounded-lg ${
+                  monologue.category.toLowerCase() === "classical"
+                    ? "bg-amber-500/10 text-amber-700 border-amber-300/40 dark:text-amber-400 dark:border-amber-500/30"
+                    : monologue.category.toLowerCase() === "contemporary"
+                    ? "bg-teal-500/10 text-teal-700 border-teal-300/40 dark:text-teal-400 dark:border-teal-500/30"
+                    : ""
+                }`}
+              >
                 {monologue.category}
               </Badge>
             </div>
@@ -133,7 +143,7 @@ export function MonologueDetailContent({
                   <p className="text-xs text-muted-foreground mb-1">Primary Emotion:</p>
                   <Badge
                     variant="outline"
-                    className="font-normal capitalize border-border bg-muted/90 text-foreground"
+                    className={`font-normal capitalize ${getEmotionBadgeClassName(monologue.primary_emotion)}`}
                   >
                     {monologue.primary_emotion}
                   </Badge>
@@ -142,7 +152,7 @@ export function MonologueDetailContent({
               {monologue.tone && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-1">Tone:</p>
-                  <Badge variant="outline" className="font-normal capitalize">
+                  <Badge variant="outline" className={`font-normal capitalize ${getEmotionBadgeClassName(monologue.tone)}`}>
                     {monologue.tone}
                   </Badge>
                 </div>
@@ -186,7 +196,7 @@ export function MonologueDetailContent({
                         <span className="capitalize text-muted-foreground">{emotion}:</span>
                         <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
                           <div
-                            className="h-full bg-foreground/80"
+                            className={`h-full rounded-full ${getEmotionBarClassName(emotion)}`}
                             style={{ width: `${score * 100}%` }}
                           />
                         </div>

@@ -760,12 +760,12 @@ export function ActorProfileForm() {
             {saveStatus === "saving" ? (
               <>
                 <IconLoader2 className="h-4 w-4 animate-spin text-primary" />
-                <span className="font-mono text-muted-foreground">Saving...</span>
+                <span className="text-muted-foreground">Saving...</span>
               </>
             ) : saveStatus === "saved" ? (
               <>
                 <IconSparkles className="h-4 w-4 text-green-600" />
-                <span className="font-mono text-green-600 font-semibold">Saved</span>
+                <span className="text-green-600 font-semibold">Saved</span>
               </>
             ) : null}
           </motion.div>
@@ -889,15 +889,15 @@ export function ActorProfileForm() {
         <div id="profile-tabs">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="basic" className="flex items-center gap-2 font-mono">
+            <TabsTrigger value="basic" className="flex items-center gap-2">
               <IconUser className="h-4 w-4" />
               Basic Info
             </TabsTrigger>
-            <TabsTrigger value="acting" className="flex items-center gap-2 font-mono">
+            <TabsTrigger value="acting" className="flex items-center gap-2">
               <IconBriefcase className="h-4 w-4" />
               Acting Info
             </TabsTrigger>
-            <TabsTrigger value="preferences" id="profile-preferences" className="flex items-center gap-2 font-mono">
+            <TabsTrigger value="preferences" id="profile-preferences" className="flex items-center gap-2">
               <IconSettings className="h-4 w-4" />
               Preferences
             </TabsTrigger>
@@ -918,7 +918,7 @@ export function ActorProfileForm() {
                     <CardContent className="space-y-6">
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required for matching</p>
                       <div className="space-y-2 max-w-xs">
-                        <Label htmlFor="name" className="font-mono">Name *</Label>
+                        <Label htmlFor="name" className="">Name *</Label>
                         <Input 
                           id="name" 
                           {...register("name")}
@@ -936,7 +936,7 @@ export function ActorProfileForm() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="age_range" className="font-mono">Age Range *</Label>
+                          <Label htmlFor="age_range" className="">Age Range *</Label>
                         <Select
                           value={watch("age_range") || undefined}
                           onValueChange={(v) => setValue("age_range", v)}
@@ -962,7 +962,7 @@ export function ActorProfileForm() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="gender" className="font-mono">Gender Identity *</Label>
+                          <Label htmlFor="gender" className="">Gender Identity *</Label>
                         <Select
                           value={watch("gender") || undefined}
                           onValueChange={(v) => setValue("gender", v)}
@@ -991,7 +991,7 @@ export function ActorProfileForm() {
                       <Separator className="my-6" />
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Optional: improves recommendations</p>
                       <div className="space-y-2">
-                        <Label htmlFor="ethnicity" className="font-mono">Ethnicity</Label>
+                        <Label htmlFor="ethnicity" className="">Ethnicity</Label>
                         <Select
                           value={watch("ethnicity") || "__none__"}
                           onValueChange={(v) => setValue("ethnicity", v === "__none__" ? "" : v)}
@@ -1010,7 +1010,7 @@ export function ActorProfileForm() {
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label className="font-mono">Height</Label>
+                          <Label className="">Height</Label>
                           <div className="flex gap-2">
                             <Select
                               value={heightParsed.feet === "__none__" ? "__none__" : heightParsed.feet}
@@ -1062,7 +1062,7 @@ export function ActorProfileForm() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="build" className="font-mono">Build</Label>
+                          <Label htmlFor="build" className="">Build</Label>
                           <Select
                             value={watch("build") || "__none__"}
                             onValueChange={(v) => setValue("build", v === "__none__" ? "" : v)}
@@ -1081,7 +1081,7 @@ export function ActorProfileForm() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="location" className="font-mono">Location / market</Label>
+                        <Label htmlFor="location" className="">Location / market</Label>
                         <Select
                           value={watch("location") || undefined}
                           onValueChange={(v) => setValue("location", v)}
@@ -1124,7 +1124,7 @@ export function ActorProfileForm() {
                     <CardContent className="space-y-6">
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required for matching</p>
                       <div className="space-y-2">
-                        <Label className="font-mono">Actor types</Label>
+                        <Label className="">Actor types</Label>
                         <p className="text-xs text-muted-foreground mb-2">Select all that apply (e.g. Theater, Film & TV)</p>
                         <div className="flex flex-wrap gap-2">
                           {ACTOR_TYPE_IDS.filter((id) => id !== "other").map((id) => {
@@ -1150,7 +1150,7 @@ export function ActorProfileForm() {
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <Label htmlFor="experience_level" className="font-mono">Experience Level *</Label>
+                          <Label htmlFor="experience_level" className="">Experience Level *</Label>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button 
@@ -1195,7 +1195,7 @@ export function ActorProfileForm() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="type" className="font-mono">Type *</Label>
+                        <Label htmlFor="type" className="">Type *</Label>
                         <Select
                           value={watch("type") || "__none__"}
                           onValueChange={(v) => setValue("type", v === "__none__" ? "" : v)}
@@ -1224,7 +1224,7 @@ export function ActorProfileForm() {
                       <Separator className="my-6" />
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Optional: improves recommendations</p>
                       <div className="space-y-2">
-                        <Label htmlFor="training_background" className="font-mono">Training background</Label>
+                        <Label htmlFor="training_background" className="">Training background</Label>
                         <Select
                           value={watch("training_background") || "__none__"}
                           onValueChange={(v) => setValue("training_background", v === "__none__" ? "" : v)}
@@ -1243,7 +1243,7 @@ export function ActorProfileForm() {
 
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <Label htmlFor="union_status" className="font-mono">Union Status *</Label>
+                          <Label htmlFor="union_status" className="">Union Status *</Label>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <button 
@@ -1308,7 +1308,7 @@ export function ActorProfileForm() {
                     <CardContent className="space-y-6">
                       <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
                         <div className="space-y-0.5">
-                          <Label htmlFor="profile_bias" className="text-base font-semibold font-mono">
+                          <Label htmlFor="profile_bias" className="text-base font-semibold">
                             AI-Powered Recommendations
                           </Label>
                           <p className="text-sm text-muted-foreground">
@@ -1325,7 +1325,7 @@ export function ActorProfileForm() {
                       <Separator />
 
                       <div className="space-y-2">
-                        <Label className="font-mono">Preferred genres</Label>
+                        <Label className="">Preferred genres</Label>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                           {PREFERRED_GENRES.map((genre) => (
                             <motion.label
@@ -1348,7 +1348,7 @@ export function ActorProfileForm() {
 
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <Label htmlFor="sensitivity" className="font-mono">
+                          <Label htmlFor="sensitivity" className="">
                             Overdone Alert Sensitivity: {watch("overdone_alert_sensitivity")}
                           </Label>
                           <Tooltip>

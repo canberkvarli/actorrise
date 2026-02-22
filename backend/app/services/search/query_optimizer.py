@@ -1,8 +1,8 @@
 """Query optimization and classification for monologue search."""
 
-from typing import Dict, Tuple, Optional, List
-from functools import lru_cache
 import re
+from functools import lru_cache
+from typing import Dict, List, Optional, Tuple
 
 
 class QueryClassifier:
@@ -435,3 +435,39 @@ class QueryOptimizer:
             'cost_usd': cost.get(tier, 0.0),
             'cache_hit': cache_hit,
         }
+
+
+# Common search-word misspellings -> canonical form (for "did you mean?" and better results)
+QUERY_TYPO_CORRECTIONS: Dict[str, str] = {
+    "crattion": "creation", "creaton": "creation", "creatin": "creation", "creaction": "creation",
+    "monolog": "monologue", "monologe": "monologue", "monolouge": "monologue",
+    "shakespere": "shakespeare", "shakespear": "shakespeare", "shakspeare": "shakespeare",
+    "chekov": "chekhov", "checkov": "chekhov", "chechov": "chekhov",
+    "tragidy": "tragedy", "tragedey": "tragedy",
+    "comedey": "comedy",
+    "dramma": "drama",
+    "romantik": "romantic",
+    "worl": "world", "worls": "world",
+}
+
+
+def correct_query_typos(raw: str) -> Tuple[str, bool]:
+    """
+    Apply simple word-level typo correction for search queries.
+    Returns (corrected_query, was_corrected).
+    """
+    if not raw or not raw.strip():
+        return (raw, False)
+    words = raw.strip().split()
+    corrected_words = []
+    changed = False
+    for w in words:
+        key = w.lower()
+        if key in QUERY_TYPO_CORRECTIONS:
+            repl = QUERY_TYPO_CORRECTIONS[key]
+            corrected_words.append(repl)
+            if repl.lower() != key:
+                changed = True
+        else:
+            corrected_words.append(w)
+    return (" ".join(corrected_words), changed)

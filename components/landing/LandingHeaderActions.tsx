@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
+import { useAuthModal } from "@/components/auth/AuthModalContext";
 
 export function LandingHeaderActions() {
   const { user, loading } = useAuth();
+  const authModal = useAuthModal();
 
   if (loading) {
     return (
@@ -32,11 +34,19 @@ export function LandingHeaderActions() {
 
   return (
     <div className="flex items-center gap-2">
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/login">Sign in</Link>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => authModal?.openAuthModal("login")}
+      >
+        Sign in
       </Button>
-      <Button asChild size="sm" className="rounded-full px-5">
-        <Link href="/signup">Get started</Link>
+      <Button
+        size="sm"
+        className="rounded-full px-5"
+        onClick={() => authModal?.openAuthModal("signup")}
+      >
+        Get started
       </Button>
     </div>
   );

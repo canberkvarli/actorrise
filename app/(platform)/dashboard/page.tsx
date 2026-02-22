@@ -683,16 +683,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       <AnimatePresence>
         {currentMonologue && (
           <>
-            {/* Backdrop */}
+            {/* Backdrop — single bg so opacity transition is smooth */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: isReadingMode ? 0.95 : 0.5 }}
               exit={{ opacity: 0 }}
               onClick={closeMonologue}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className={`fixed inset-0 z-[10000] ${
-                isReadingMode ? "bg-black/95" : "bg-black/50"
-              }`}
+              transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+              className="fixed inset-0 z-[10000] bg-black"
             />
 
             {/* Slide-over Panel */}
@@ -700,11 +698,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
-              className={`fixed right-0 top-0 bottom-0 z-[10001] overflow-y-auto transition-all ${
-                isReadingMode
-                  ? "w-full bg-background"
-                  : "w-full md:w-[600px] lg:w-[700px] bg-background border-l shadow-2xl"
+              transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
+              className={`fixed right-0 top-0 bottom-0 z-[10001] overflow-y-auto bg-background border-l shadow-2xl transition-[width] duration-300 ease-[cubic-bezier(0.25,0.1,0.25,1)] ${
+                isReadingMode ? "w-full" : "w-full md:w-[600px] lg:w-[700px]"
               }`}
             >
               <div className={`sticky top-0 bg-background/95 backdrop-blur-sm border-b z-[10002] ${
@@ -712,8 +708,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               }`}>
                 <div className="flex items-center justify-between p-6">
                   {!isReadingMode && <h2 className="hidden sm:block text-2xl font-bold">Monologue Details</h2>}
-                  <div className="flex-1 sm:hidden" />
-                  <div className="flex items-center gap-2">
+                  <div className="flex-1 min-w-0" aria-hidden="true" />
+                  <div className="flex items-center gap-2 shrink-0 ml-auto">
                     {/* Download button - 44px touch target on mobile */}
                     <TooltipProvider delayDuration={300}>
                     <div className="relative">
@@ -733,39 +729,51 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         </TooltipTrigger>
                         <TooltipContent>Download TXT or PDF</TooltipContent>
                       </Tooltip>
-                      {showDownloadMenu && (
-                        <>
-                          <div
-                            className="fixed inset-0 z-[10003]"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowDownloadMenu(false);
-                            }}
-                          />
-                          <div className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-[10004]">
-                            <button
+                      <AnimatePresence>
+                        {showDownloadMenu && (
+                          <>
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.15 }}
+                              className="fixed inset-0 z-[10003]"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                downloadMonologue(currentMonologue, 'text');
                                 setShowDownloadMenu(false);
                               }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
+                            />
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.96, y: -6 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.96, y: -6 }}
+                              transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
+                              className="absolute right-0 top-full mt-1 bg-background border rounded-lg shadow-lg p-1 min-w-[140px] z-[10004] origin-top-right"
                             >
-                              Download as TXT
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                downloadMonologue(currentMonologue, 'pdf');
-                                setShowDownloadMenu(false);
-                              }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
-                            >
-                              Download as PDF
-                            </button>
-                          </div>
-                        </>
-                      )}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  downloadMonologue(currentMonologue, 'text');
+                                  setShowDownloadMenu(false);
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
+                              >
+                                Download as TXT
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  downloadMonologue(currentMonologue, 'pdf');
+                                  setShowDownloadMenu(false);
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-muted rounded-lg transition-colors"
+                              >
+                                Download as PDF
+                              </button>
+                            </motion.div>
+                          </>
+                        )}
+                      </AnimatePresence>
                     </div>
                     {!isReadingMode && (
                       <Button
@@ -845,27 +853,45 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     <Skeleton className="h-4 w-1/2" />
                     <Skeleton className="h-64 w-full" />
                   </div>
-                ) : isReadingMode ? (
-                  /* Reading Mode */
-                  <div className="space-y-8 py-12">
-                    <div className="text-center space-y-2">
-                      <h1 className="text-4xl font-bold font-typewriter">{currentMonologue.character_name}</h1>
-                      <div>
-                        <p className="text-xl font-semibold font-typewriter text-muted-foreground">{currentMonologue.play_title}</p>
-                        <p className="text-muted-foreground font-typewriter">by {currentMonologue.author}</p>
-                      </div>
-                    </div>
-                    <div className="bg-background p-8 rounded-lg">
-                      <p className="text-xl leading-relaxed whitespace-pre-wrap font-typewriter max-w-3xl mx-auto text-center">
-                        {currentMonologue.text}
-                      </p>
-                    </div>
-                  </div>
                 ) : (
-                  <MonologueDetailContent
-                    monologue={currentMonologue}
-                    onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
-                  />
+                  <AnimatePresence mode="wait">
+                    {isReadingMode ? (
+                      <motion.div
+                        key="reading"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="space-y-8 py-12"
+                      >
+                        <div className="text-center space-y-2">
+                          <h1 className="text-4xl font-bold font-typewriter">{currentMonologue.character_name}</h1>
+                          <div>
+                            <p className="text-xl font-semibold font-typewriter text-muted-foreground">{currentMonologue.play_title}</p>
+                            <p className="text-muted-foreground font-typewriter">by {currentMonologue.author}</p>
+                          </div>
+                        </div>
+                        <div className="bg-background p-8 rounded-lg">
+                          <p className="text-xl leading-relaxed whitespace-pre-wrap font-typewriter max-w-3xl mx-auto text-center">
+                            {currentMonologue.text}
+                          </p>
+                        </div>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="detail"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <MonologueDetailContent
+                          monologue={currentMonologue}
+                          onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 )}
               </div>
             </motion.div>

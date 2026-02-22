@@ -12,6 +12,7 @@ import { supabase } from "@/lib/supabase";
 import { API_URL } from "@/lib/api";
 import type { DemoSearchResultItem } from "./LandingDemoResultCard";
 import { LandingDemoResultCard } from "./LandingDemoResultCard";
+import { useAuthModal } from "@/components/auth/AuthModalContext";
 
 const AUTO_DEMO_QUERY = "funny piece for drama school, male";
 
@@ -52,14 +53,14 @@ const AUTO_DEMO_RESULTS: DemoSearchResultItem[] = [
 ];
 
 const LOADING_MESSAGES = [
-  "Clanking through the archives...",
-  "Working our magic...",
-  "Squeezing the monologue database...",
   "Asking Shakespeare for advice...",
   "Consulting the drama gods...",
+  "Squeezing the monologue database...",
   "Searching backstage...",
   "Finding your perfect piece...",
   "Digging through the classics...",
+  "Working our magic...",
+  "Rifling through the script pile...",
 ];
 
 export function LandingDemoSearch() {
@@ -71,6 +72,8 @@ export function LandingDemoSearch() {
   const [rateLimited, setRateLimited] = useState(false);
   const [rateLimitedWhileLoggedIn, setRateLimitedWhileLoggedIn] = useState(false);
   const [jitter, setJitter] = useState(false);
+  const [correctedQuery, setCorrectedQuery] = useState<string | null>(null);
+  const authModal = useAuthModal();
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
   /** True after we got a successful search response (used to show "No match" when results are empty). */
   const [searchCompleted, setSearchCompleted] = useState(false);
@@ -137,15 +140,20 @@ export function LandingDemoSearch() {
       setJitter(true);
       return;
     }
-    // Demo limit already reached: only jitter the input, don't trigger loading or change bottom sections
+    // Demo limit already reached: open sign up / sign in modal instead of shaking
     if (rateLimited) {
       setError(null);
-      setJitter(true);
+      authModal?.openAuthModal("signup", {
+        title: "Continue searching",
+        description:
+          "Free search used. Sign up to search the full library.",
+      });
       return;
     }
     setError(null);
     setRateLimitedWhileLoggedIn(false);
     setSearchCompleted(false);
+    setCorrectedQuery(null);
     setIsLoading(true);
     // Don't clear results here — only set on success. Avoids bottom section collapsing when we get 429.
 
@@ -162,6 +170,13 @@ export function LandingDemoSearch() {
         setRateLimited(true);
         setRateLimitedWhileLoggedIn(!!session?.access_token);
         setError(null);
+        if (!session?.access_token) {
+          authModal?.openAuthModal("signup", {
+            title: "Continue searching",
+            description:
+              "Free search used. Sign up to search the full library.",
+          });
+        }
         return;
       }
 
@@ -170,10 +185,11 @@ export function LandingDemoSearch() {
         return;
       }
 
-      const data = (await res.json()) as { results: DemoSearchResultItem[] };
+      const data = (await res.json()) as { results: DemoSearchResultItem[]; corrected_query?: string | null };
       const resultList = data.results ?? [];
       setResults(resultList);
       setSearchCompleted(true);
+      setCorrectedQuery(data.corrected_query ?? null);
       // Only refresh live count when we got results (backend increments only then)
       if (resultList.length > 0 && typeof window !== "undefined") {
         window.dispatchEvent(new CustomEvent("actorrise:stats-refresh"));
@@ -248,7 +264,7 @@ export function LandingDemoSearch() {
               aria-label="Search monologues"
             />
           </div>
-          <Button type="submit" size="lg" disabled={isLoading} className="h-10 px-6 rounded-lg shrink-0">
+          <Button type="submit" size="default" disabled={isLoading} className="h-10 px-5 rounded-lg shrink-0 min-w-[88px]">
             {isLoading ? (
               <IconLoader2 className="h-4 w-4 animate-spin" />
             ) : (
@@ -320,19 +336,6 @@ export function LandingDemoSearch() {
         )}
       </AnimatePresence>
 
-      {rateLimited && !rateLimitedWhileLoggedIn && (
-        <motion.p
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="mt-8 text-center text-sm text-muted-foreground"
-        >
-          Like what you see?{" "}
-          <Link href="/signup" className="font-medium text-primary hover:underline">
-            Get started free
-          </Link>
-        </motion.p>
-      )}
       <AnimatePresence mode="wait">
         {rateLimited && rateLimitedWhileLoggedIn && (
           <motion.div
@@ -406,6 +409,17 @@ export function LandingDemoSearch() {
             className="w-screen relative left-1/2 -ml-[50vw] mt-12 overflow-hidden"
           >
             <div className="max-w-5xl mx-auto px-4 sm:px-6 space-y-4">
+              {correctedQuery &&
+                correctedQuery.trim().toLowerCase() !== query.trim().toLowerCase() && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground"
+                >
+                  We searched for &ldquo;{correctedQuery}&rdquo;. Did you mean that? Here are the results.
+                </motion.div>
+              )}
               <motion.p
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}

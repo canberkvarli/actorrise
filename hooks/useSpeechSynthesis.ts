@@ -68,19 +68,39 @@ export function useSpeechSynthesis(
   // Check if Web Speech API is supported
   const isSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
 
-  // Load available voices
+  const filterPreferredVoices = useCallback((list: SpeechSynthesisVoice[]) => {
+    const en = list.filter((v) => v.lang.startsWith('en'));
+    const preferred = ['Google', 'Microsoft', 'Samantha', 'Daniel', 'Karen', 'Alex', 'Kate', 'Victoria', 'Moira', 'Allison'];
+    const score = (v: SpeechSynthesisVoice) => {
+      const name = v.name;
+      const idx = preferred.findIndex((p) => name.includes(p));
+      if (idx >= 0) return preferred.length - idx;
+      if (name.includes('Natural') || name.includes('Premium')) return 5;
+      if (v.localService === false) return 3;
+      return 0;
+    };
+    const byUri = new Map<string, SpeechSynthesisVoice>();
+    en.forEach((v) => {
+      const existing = byUri.get(v.voiceURI);
+      if (!existing || score(v) > score(existing)) byUri.set(v.voiceURI, v);
+    });
+    return Array.from(byUri.values())
+      .sort((a, b) => score(b) - score(a))
+      .slice(0, 24);
+  }, []);
+
+  // Load available voices (filtered to best/modern English voices)
   useEffect(() => {
     if (!isSupported) return;
 
     const loadVoices = () => {
       const availableVoices = window.speechSynthesis.getVoices();
-      setVoices(availableVoices);
+      const filtered = filterPreferredVoices(availableVoices);
+      const list = filtered.length > 0 ? filtered : availableVoices.filter((v) => v.lang.startsWith('en'));
+      setVoices(list);
 
-      // Auto-select a good default voice
-      if (!selectedVoice && availableVoices.length > 0) {
-        // Try to find an English voice
-        const englishVoice = availableVoices.find(v => v.lang.startsWith('en'));
-        setSelectedVoice(englishVoice || availableVoices[0]);
+      if (!selectedVoice && list.length > 0) {
+        setSelectedVoice(list[0]);
       }
     };
 
@@ -96,7 +116,7 @@ export function useSpeechSynthesis(
         window.speechSynthesis.onvoiceschanged = null;
       }
     };
-  }, [isSupported, selectedVoice]);
+  }, [isSupported, selectedVoice, filterPreferredVoices]);
 
   // Monitor speaking state
   useEffect(() => {
@@ -143,11 +163,15 @@ export function useSpeechSynthesis(
       }
     };
 
-    utterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event);
+    utterance.onerror = (event: Event) => {
+      const err = (event as SpeechSynthesisErrorEvent).error;
+      const isCancelOrInterrupt = err === 'interrupted' || err === 'canceled';
+      if (!isCancelOrInterrupt) {
+        console.warn('Speech synthesis error:', err, event);
+      }
       setIsSpeaking(false);
       setIsPaused(false);
-      if (onError) {
+      if (onError && !isCancelOrInterrupt) {
         onError(event);
       }
     };
