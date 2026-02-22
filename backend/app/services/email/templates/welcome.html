@@ -3,79 +3,261 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <title>Welcome to ActorRise</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
     <style>
+        /* Reset and base */
+        body, table, td, p, a, li { -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+        table, td { mso-table-lspace: 0; mso-table-rspace: 0; }
+        img { -ms-interpolation-mode: bicubic; border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; display: block; }
+
         body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            font-size: 16px;
             line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
+            color: #1a1a1a;
+            background-color: #f5f5f5;
         }
+
+        .wrapper {
+            width: 100%;
+            background-color: #f5f5f5;
+            padding: 32px 16px;
+        }
+
+        .container {
+            max-width: 560px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Header: match ActorRise.png background (#242424) */
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 8px 8px 0 0;
+            background-color: #242424;
+            padding: 40px 32px 36px;
             text-align: center;
         }
-        .content {
-            background: #f9fafb;
-            padding: 30px;
-            border-radius: 0 0 8px 8px;
+
+        .logo {
+            max-width: 200px;
+            height: auto;
+            margin: 0 auto;
         }
+
+        .welcome-tagline {
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 0.18em;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin: 0;
+            padding: 20px 32px 0;
+        }
+
+        /* Content */
+        .content {
+            padding: 28px 32px 36px;
+        }
+
+        .content h1 {
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 0 0 20px;
+            line-height: 1.3;
+        }
+
+        .content p {
+            margin: 0 0 16px;
+            color: #374151;
+        }
+
+        .content p.greeting {
+            font-size: 17px;
+            color: #1a1a1a;
+        }
+
+        .steps {
+            margin: 24px 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .steps li {
+            padding: 10px 0 10px 0;
+            margin: 0;
+            color: #374151;
+            font-size: 15px;
+        }
+
+        .bullet {
+            color: #c86b2d;
+            margin-right: 8px;
+        }
+
+        .cta-wrap {
+            text-align: center;
+            margin: 28px 0 24px;
+        }
+
         .cta {
             display: inline-block;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 12px 24px;
-            border-radius: 8px;
+            background-color: #c86b2d;
+            color: #ffffff !important;
+            padding: 14px 28px;
+            border-radius: 10px;
             text-decoration: none;
             font-weight: 600;
-            margin: 16px 0;
+            font-size: 15px;
+            letter-spacing: 0.02em;
         }
-        .footer {
-            text-align: center;
-            color: #6b7280;
+
+        .cta:hover {
+            background-color: #b35a22;
+        }
+
+        .signature {
+            margin-top: 28px;
+            color: #374151;
+        }
+
+        .signature strong {
+            color: #1a1a1a;
+        }
+
+        /* Testimonial ask */
+        .testimonial-box {
+            margin: 32px 0 24px;
+            padding: 28px 24px;
+            background-color: #fef7ed;
+            border: 1px solid #fed7aa;
+            border-radius: 12px;
+        }
+
+        .testimonial-box .testimonial-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 0 0 10px;
+            letter-spacing: 0.02em;
+        }
+
+        .testimonial-box p {
+            margin: 0 0 12px;
             font-size: 14px;
-            margin-top: 30px;
+            color: #374151;
+            line-height: 1.55;
         }
-        a {
-            color: #667eea;
+
+        .testimonial-box p:last-of-type {
+            margin-bottom: 0;
+        }
+
+        .testimonial-box .testimonial-cta {
+            display: inline-block;
+            margin-top: 14px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #c86b2d;
             text-decoration: none;
+        }
+
+        .testimonial-box .testimonial-note {
+            font-size: 12px;
+            color: #6b7280;
+            font-style: italic;
+            margin-top: 10px;
+        }
+
+        /* Footer */
+        .footer {
+            background-color: #f9fafb;
+            padding: 24px 32px;
+            text-align: center;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .footer p {
+            margin: 0 0 8px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .footer a {
+            color: #c86b2d;
+            text-decoration: none;
+        }
+
+        @media only screen and (max-width: 600px) {
+            .wrapper { padding: 20px 12px; }
+            .header, .content { padding-left: 24px; padding-right: 24px; }
+            .footer { padding-left: 24px; padding-right: 24px; }
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <h1>Welcome to ActorRise</h1>
-    </div>
-    <div class="content">
-        <p>Hi {{ user_name }},</p>
+    <div class="wrapper">
+        <div class="container">
+            <div class="header">
+                <img src="https://actorrise.com/ActorRise.png" alt="ActorRise" width="200" class="logo" />
+            </div>
 
-        <p>Thanks for signing up. You're all set to explore monologues, build your profile, and get casting directors to notice you.</p>
+            <p class="welcome-tagline">Welcome</p>
 
-        <p><strong>Quick next steps:</strong></p>
-        <ul>
-            <li>Complete your actor profile so we can tailor monologue suggestions</li>
-            <li>Browse the library and save pieces you love</li>
-            <li>Submit your own monologues for review</li>
-        </ul>
+            <div class="content">
+                <h1>You're in. Let's get started.</h1>
 
-        <p>
-            <a href="https://actorrise.com/dashboard" class="cta">Go to your dashboard</a>
-        </p>
+                <p class="greeting">Hi {{ user_name }},</p>
 
-        <p>If you have any questions, just reply to this email or use our contact form.</p>
+                <p>Thanks for signing up. You're all set to explore 8,600+ theater monologues and film/TV scene references, use AI-powered search that understands plain English, and rehearse with ScenePartner.</p>
 
-        <p>Best regards,<br>
-        The ActorRise Team</p>
-    </div>
+                <p><strong>Quick next steps:</strong></p>
+                <ul class="steps">
+                    <li><span class="bullet" style="color:#c86b2d; margin-right:8px;">&#8226;</span> Complete your actor profile so we can tailor monologue suggestions</li>
+                    <li><span class="bullet" style="color:#c86b2d; margin-right:8px;">&#8226;</span> Browse the library and save pieces you love</li>
+                    <li><span class="bullet" style="color:#c86b2d; margin-right:8px;">&#8226;</span> Submit your own monologues for review</li>
+                </ul>
 
-    <div class="footer">
-        <p>&copy; 2026 ActorRise. All rights reserved.</p>
-        <p><a href="https://actorrise.com">Visit ActorRise</a></p>
+                <div class="cta-wrap">
+                    <a href="https://actorrise.com/dashboard" class="cta">Go to your dashboard</a>
+                </div>
+
+                <p>If you have any questions, just reply to this email or use our contact form.</p>
+
+                <div class="testimonial-box">
+                    <p class="testimonial-title">&#9733; Love ActorRise? We'd love to hear from you</p>
+                    <p>If you're an actor and you've had a good experience, reply to this email with your feedback. I'm happy to feature your testimonial on the ActorRise homepage, with your headshot if you'd like. This offer won't last forever.</p>
+                    <a href="mailto:canberk@actorrise.com?subject=ActorRise%20feedback%20%26%20testimonial" class="testimonial-cta">Email your feedback &rarr;</a>
+                    <p class="testimonial-note">Optional: include your name, a short quote, and a headshot if you want to be featured.</p>
+                </div>
+
+                <p class="signature">
+                    Best regards,<br>
+                    <strong>The ActorRise Team</strong>
+                </p>
+            </div>
+
+            <div class="footer">
+                <p>&copy; 2026 ActorRise. All rights reserved.</p>
+                <p><a href="https://actorrise.com">Visit ActorRise</a></p>
+            </div>
+        </div>
     </div>
 </body>
 </html>
