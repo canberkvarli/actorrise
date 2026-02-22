@@ -92,6 +92,11 @@ export function NewSceneModal({ open, onOpenChange, onSuccess }: NewSceneModalPr
       toast.error("Add at least one line.");
       return;
     }
+    const distinctCharacters = new Set(lines.map((l) => l.characterName.trim()).filter(Boolean));
+    if (distinctCharacters.size < 2) {
+      toast.error("A scene needs at least two characters. Add lines for at least two different character names.");
+      return;
+    }
     const body = lines.map((l) => `${l.characterName}: ${l.text}`).join("\n");
     setSubmitting(true);
     try {
@@ -128,7 +133,7 @@ export function NewSceneModal({ open, onOpenChange, onSuccess }: NewSceneModalPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>New Script</DialogTitle>
+          <DialogTitle className="font-serif">New Script</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
           Create a script from scratch. Add a title, characters, and lines below. No file needed.

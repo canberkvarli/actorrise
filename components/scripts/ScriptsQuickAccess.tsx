@@ -110,7 +110,7 @@ export default function ScriptsQuickAccess() {
                   <IconFileText className="h-4 w-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors">
+                  <div className="font-semibold text-sm text-foreground truncate group-hover:text-primary transition-colors font-serif">
                     {script.title}
                   </div>
                   <div className="text-xs text-muted-foreground truncate mt-0.5">

@@ -183,7 +183,7 @@ export default function SceneEditPage() {
 
       <Card className="mb-6">
         <CardContent className="pt-6 space-y-4">
-          <h1 className="text-xl font-bold">Edit scene</h1>
+          <h1 className="text-xl font-bold font-serif">Edit scene</h1>
           <p className="text-sm text-muted-foreground">
             From {scene.play_title} by {scene.play_author}
           </p>
@@ -247,7 +247,7 @@ export default function SceneEditPage() {
 
       <Card>
         <CardContent className="pt-6">
-          <h2 className="text-lg font-semibold mb-4">Lines</h2>
+          <h2 className="text-lg font-semibold mb-4 font-serif">Lines</h2>
           <div className="space-y-3">
             {scene.lines
               .slice()
