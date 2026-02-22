@@ -66,7 +66,7 @@ export const DEFAULT_PRICING_TIERS: PricingTier[] = [
     id: 3,
     name: "unlimited",
     display_name: "Unlimited",
-    description: "For professionals and coaches",
+    description: "Unlimited searches and premium features",
     monthly_price_cents: 2400,
     annual_price_cents: 19900,
     features: {

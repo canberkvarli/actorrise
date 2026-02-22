@@ -71,7 +71,7 @@ export function LandingPageAnimated() {
               </Link>
               <span className="h-4 w-px bg-border/60" />
               <Link href="/for-students" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
-                For students
+                Students & educators
               </Link>
               <span className="h-4 w-px bg-border/60" />
               <ContactModalTrigger className="px-3 py-1.5 text-sm text-foreground/90">

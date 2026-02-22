@@ -43,8 +43,8 @@ export function MarketingFooter() {
 
   return (
     <>
-      <footer className="border-t border-border/60 bg-background py-8">
-        <div className="container mx-auto px-4 sm:px-6">
+      <footer className="border-t border-border/60 bg-background py-8 overflow-x-hidden">
+        <div className="container mx-auto px-4 sm:px-6 max-w-full">
           <p className="text-xs text-muted-foreground/90 mb-2 max-w-xl">
             All text from public domain and licensed sources (e.g.{" "}
             <Link href="/sources" className="underline hover:no-underline text-foreground/80">
@@ -55,48 +55,48 @@ export function MarketingFooter() {
           <p className="text-xs text-muted-foreground/90 mb-4 max-w-xl">
             We don&apos;t sell your data. Your searches are private.
           </p>
-          <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-col gap-4 text-sm text-muted-foreground">
             <p>&copy; {new Date().getFullYear()} ActorRise</p>
-            <div className="flex items-center gap-4">
+            <nav className="flex flex-wrap items-center gap-x-4 gap-y-2 min-w-0" aria-label="Footer links">
               <WhatsNewLink />
-              <Link href="/monologue-finder" className="hover:text-foreground transition-colors">
+              <Link href="/monologue-finder" className="hover:text-foreground transition-colors shrink-0">
                 Monologue finder
               </Link>
-              <Link href="/audition-monologues" className="hover:text-foreground transition-colors">
+              <Link href="/audition-monologues" className="hover:text-foreground transition-colors shrink-0">
                 Audition monologues
               </Link>
-              <Link href="/audition-ai" className="hover:text-foreground transition-colors">
+              <Link href="/audition-ai" className="hover:text-foreground transition-colors shrink-0">
                 Audition AI
               </Link>
-              <Link href="/about" className="hover:text-foreground transition-colors">
+              <Link href="/about" className="hover:text-foreground transition-colors shrink-0">
                 About
               </Link>
-              <Link href="/for-students" className="hover:text-foreground transition-colors">
-                For students
+              <Link href="/for-students" className="hover:text-foreground transition-colors shrink-0">
+                Students & educators
               </Link>
-              <Link href="/for-teachers" className="hover:text-foreground transition-colors">
+              <Link href="/for-teachers" className="hover:text-foreground transition-colors shrink-0">
                 For teachers
               </Link>
-              <Link href="/pricing" className="hover:text-foreground transition-colors">
+              <Link href="/pricing" className="hover:text-foreground transition-colors shrink-0">
                 Pricing
               </Link>
-              <Link href="/sources" className="hover:text-foreground transition-colors">
-                Sources & copyright
+              <Link href="/sources" className="hover:text-foreground transition-colors shrink-0">
+                Sources
               </Link>
-              <Link href="/terms" className="hover:text-foreground transition-colors">
+              <Link href="/terms" className="hover:text-foreground transition-colors shrink-0">
                 Terms
               </Link>
-              <Link href="/privacy" className="hover:text-foreground transition-colors">
+              <Link href="/privacy" className="hover:text-foreground transition-colors shrink-0">
                 Privacy
               </Link>
               <button
                 type="button"
                 onClick={() => setContactOpen(true)}
-                className="hover:text-foreground transition-colors"
+                className="hover:text-foreground transition-colors text-left shrink-0"
               >
                 Contact
               </button>
-            </div>
+            </nav>
           </div>
           <div className="mt-6 pt-4 border-t border-border/40 flex flex-wrap items-center justify-center gap-4">
             <a

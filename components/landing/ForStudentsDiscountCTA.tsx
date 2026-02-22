@@ -10,7 +10,7 @@ export function ForStudentsDiscountCTA() {
   return (
     <>
       <Button size="lg" className="rounded-full px-6" onClick={() => setOpen(true)}>
-        Request a student discount
+        Request a discount
       </Button>
       <RequestPromoCodeModal open={open} onOpenChange={setOpen} initialType="student" />
     </>

@@ -284,7 +284,7 @@ export default function CheckoutPage() {
                       Student or teacher / school / acting coach?
                     </p>
                     <p className="text-sm text-muted-foreground mb-3">
-                      Request a discount — we&apos;ll review and email you a code. Students get a lower discount; teachers and schools get a discounted rate.
+                      Request a discount; we&apos;ll review and email you a code. Students get a lower discount; teachers and schools get a discounted rate.
                     </p>
                     <Button
                       type="button"
@@ -306,7 +306,7 @@ export default function CheckoutPage() {
                     >
                       Request a review
                     </button>
-                    — we&apos;ll get back to you.
+                    ; we&apos;ll get back to you.
                   </p>
                 </>
               )}

@@ -15,7 +15,7 @@ const sizes: Record<Size, { width: number; height: number; className: string }> 
   header: {
     width: 280,
     height: 64,
-    className: "h-9 sm:h-10 md:h-12 lg:h-16 w-auto max-w-full object-contain",
+    className: "h-11 sm:h-10 md:h-12 lg:h-16 w-auto max-w-full object-contain",
   },
   auth: { width: 320, height: 80, className: "h-20 w-auto" },
 };

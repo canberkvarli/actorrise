@@ -53,7 +53,7 @@ export default function ForTeachersPage() {
         on the roadmap.
       </p>
       <p className="text-muted-foreground mb-8">
-        Need a discount code for your studio or class? ActorRise is open for partnership too—just{" "}
+        Need a discount code for your studio or class? ActorRise is open for partnership too; just{" "}
         <Link href="/contact" className="text-foreground font-medium underline hover:no-underline">
           reach out
         </Link>
