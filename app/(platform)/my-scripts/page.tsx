@@ -78,6 +78,7 @@ interface UserScript {
   updated_at?: string;
   first_scene_title?: string | null;
   first_scene_description?: string | null;
+  scene_titles?: string[];
 }
 
 export default function MyScriptsPage() {
@@ -396,7 +397,7 @@ export default function MyScriptsPage() {
       >
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-1.5">My Scripts</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-1.5 font-serif">My Scripts</h1>
             <p className="text-muted-foreground text-sm max-w-xl">
               Each script can have one or more scenes. <strong>New Script</strong>: create from scratch. <strong>Upload</strong> or <strong>Paste</strong>: we extract scenes from a file or text.
             </p>
@@ -541,7 +542,7 @@ export default function MyScriptsPage() {
                     <CardHeader className="pb-3 pt-5 px-5 sm:px-6">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
-                          <CardTitle className="text-lg font-semibold leading-tight line-clamp-2">
+                          <CardTitle className="text-lg font-semibold leading-tight line-clamp-2 font-serif">
                             {script.title}
                           </CardTitle>
                           <CardDescription className="mt-1.5 text-sm text-muted-foreground">
@@ -570,14 +571,62 @@ export default function MyScriptsPage() {
                       {script.processing_status === "completed" && (
                         <>
                           <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
-                            <span className="flex items-center gap-1.5">
-                              <Users className="w-4 h-4 shrink-0" />
-                              {script.num_characters} character{script.num_characters !== 1 ? "s" : ""}
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                              <FileText className="w-4 h-4 shrink-0" />
-                              {script.num_scenes_extracted} scene{script.num_scenes_extracted !== 1 ? "s" : ""} inside
-                            </span>
+                            {script.characters?.length > 0 ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="flex items-center gap-1.5 cursor-help underline decoration-dotted underline-offset-2">
+                                    <Users className="w-4 h-4 shrink-0" />
+                                    {script.num_characters} character{script.num_characters !== 1 ? "s" : ""}
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[280px]">
+                                  <p className="font-medium mb-1">Characters</p>
+                                  <p className="text-sm">{script.characters.map((c) => c.name).join(", ")}</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="flex items-center gap-1.5">
+                                <Users className="w-4 h-4 shrink-0" />
+                                {script.num_characters} character{script.num_characters !== 1 ? "s" : ""}
+                              </span>
+                            )}
+                            {(script.scene_titles?.length ?? 0) > 0 || script.first_scene_title || script.first_scene_description ? (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="flex items-center gap-1.5 cursor-help underline decoration-dotted underline-offset-2">
+                                    <FileText className="w-4 h-4 shrink-0" />
+                                    {script.num_scenes_extracted} scene{script.num_scenes_extracted !== 1 ? "s" : ""} inside
+                                  </span>
+                                </TooltipTrigger>
+                                <TooltipContent side="top" className="max-w-[320px]">
+                                  <p className="font-medium mb-1.5">Scenes</p>
+                                  {script.scene_titles?.length ? (
+                                    <ul className="text-sm space-y-1 list-disc list-inside">
+                                      {script.scene_titles.slice(0, 5).map((t, i) => (
+                                        <li key={i}>{t}</li>
+                                      ))}
+                                      {(script.scene_titles?.length ?? 0) > 5 && (
+                                        <li className="text-muted-foreground">+{script.scene_titles!.length - 5} more</li>
+                                      )}
+                                    </ul>
+                                  ) : script.first_scene_title ? (
+                                    <p className="text-sm">
+                                      {script.first_scene_title}
+                                      {(script.first_scene_description?.trim() || script.description?.trim()) && (
+                                        <span className="block mt-1 text-muted-foreground line-clamp-2">
+                                          {script.first_scene_description?.trim() || script.description?.trim()}
+                                        </span>
+                                      )}
+                                    </p>
+                                  ) : null}
+                                </TooltipContent>
+                              </Tooltip>
+                            ) : (
+                              <span className="flex items-center gap-1.5">
+                                <FileText className="w-4 h-4 shrink-0" />
+                                {script.num_scenes_extracted} scene{script.num_scenes_extracted !== 1 ? "s" : ""} inside
+                              </span>
+                            )}
                             {script.estimated_length_minutes != null && (
                               <span>~{script.estimated_length_minutes} min</span>
                             )}
@@ -621,8 +670,8 @@ export default function MyScriptsPage() {
                     <CardFooter className="flex justify-between items-center pt-4 pb-5 px-5 sm:px-6 mt-auto border-t bg-muted/20" onClick={(e) => e.stopPropagation()}>
                       <Button
                         size="sm"
-                        variant="default"
-                        className="gap-1.5 shadow-sm"
+                        variant="outline"
+                        className="gap-1.5"
                         onClick={() => router.push(`/my-scripts/${script.id}`)}
                       >
                         Open script
@@ -668,7 +717,7 @@ export default function MyScriptsPage() {
       <Dialog open={showPasteModal} onOpenChange={setShowPasteModal}>
         <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-xl sm:text-2xl">Paste script</DialogTitle>
+            <DialogTitle className="text-xl sm:text-2xl font-serif">Paste script</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
             Paste your scene or script text below. AI will extract title, characters, and two-person scenes. Use the format <strong>CHARACTER: line</strong> (e.g. JORDAN: Hello. SAM: Hi.). Best for one scene or short script.

@@ -212,7 +212,7 @@ export default function ScriptDetailPage() {
           transition={{ duration: 0.25, ease: "easeOut" }}
           className="text-center py-8"
         >
-          <h1 className="text-2xl font-bold mb-4">Script not found</h1>
+          <h1 className="text-2xl font-bold mb-4 font-serif">Script not found</h1>
           <Button onClick={() => router.push("/my-scripts")}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Scripts
@@ -263,7 +263,7 @@ export default function ScriptDetailPage() {
                   className="group flex items-center gap-2 cursor-pointer"
                   onClick={() => startEditing("title", script.title)}
                 >
-                  <h1 className="text-xl font-semibold text-foreground truncate">{script.title}</h1>
+                  <h1 className="text-xl font-semibold text-foreground truncate font-serif">{script.title}</h1>
                   <Edit2 className="w-4 h-4 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
                 </div>
               )}
@@ -365,7 +365,7 @@ export default function ScriptDetailPage() {
       {/* Scenes section */}
       <section aria-label="Scenes in this script" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+          <h2 className="text-base font-semibold text-foreground flex items-center gap-2 font-serif">
             <Sparkles className="w-5 h-5 text-primary" />
             Scenes ({script.scenes.length})
           </h2>
@@ -387,7 +387,7 @@ export default function ScriptDetailPage() {
         {script.scenes.length === 0 ? (
           <>
             <Alert variant="destructive" className="border-destructive bg-destructive/10">
-              <AlertTitle className="text-base">No two-person scenes found</AlertTitle>
+              <AlertTitle className="text-base font-serif">No two-person scenes found</AlertTitle>
               <AlertDescription>
                 We couldn&apos;t find any dialogue in the format <strong>CHARACTER: line</strong>. Paste script text with at least two characters and dialogue (e.g. JORDAN: Hello. SAM: Hi.). If this was a mistake, delete this script from My Scripts and try again.
               </AlertDescription>
@@ -395,7 +395,7 @@ export default function ScriptDetailPage() {
             <Card className="border-dashed border-border/80">
               <CardContent className="py-12 text-center">
                 <FileText className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
-                <h3 className="text-base font-semibold text-foreground mb-1">No scenes extracted</h3>
+                <h3 className="text-base font-semibold text-foreground mb-1 font-serif">No scenes extracted</h3>
                 <p className="text-sm text-muted-foreground max-w-sm mx-auto">
                   Use Edit on another script or try pasting again with the correct format.
                 </p>
@@ -410,7 +410,7 @@ export default function ScriptDetailPage() {
                   <CardContent className="p-4 sm:p-5">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
                       <div className="min-w-0 flex-1">
-                        <h3 className="text-base font-semibold text-foreground truncate">{scene.title}</h3>
+                        <h3 className="text-base font-semibold text-foreground truncate font-serif">{scene.title}</h3>
                         <p className="text-sm text-muted-foreground mt-1">
                           {scene.character_1_name} & {scene.character_2_name}
                           <span className="mx-2">·</span>

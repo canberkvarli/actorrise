@@ -49,6 +49,7 @@ class UserScriptResponse(BaseModel):
     updated_at: Optional[datetime]
     first_scene_title: Optional[str] = None
     first_scene_description: Optional[str] = None
+    scene_titles: List[str] = []
 
     class Config:
         from_attributes = True
@@ -534,9 +535,11 @@ async def list_user_scripts(
     result = []
     for s in scripts:
         data = UserScriptResponse.model_validate(s).model_dump()
-        first_scene = db.query(Scene).filter(Scene.user_script_id == s.id).order_by(Scene.id).first()
+        scenes = db.query(Scene).filter(Scene.user_script_id == s.id).order_by(Scene.id).all()
+        first_scene = scenes[0] if scenes else None
         data["first_scene_title"] = first_scene.title if first_scene else None
         data["first_scene_description"] = (first_scene.description if first_scene and first_scene.description else None)
+        data["scene_titles"] = [sc.title for sc in scenes]
         result.append(UserScriptResponse(**data))
     return result
 
