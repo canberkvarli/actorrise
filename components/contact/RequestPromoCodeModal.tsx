@@ -94,46 +94,47 @@ export function RequestPromoCodeModal({ open, onOpenChange, initialType = null, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="flex max-h-[90dvh] w-[calc(100vw-2rem)] max-w-md flex-col gap-4 overflow-hidden p-4 sm:p-6">
+        <DialogHeader className="shrink-0">
           <DialogTitle className="text-xl">
             Request a discount
           </DialogTitle>
           <DialogDescription className="text-base">
-            We’ll review your request and email you a code. No codes are shown on the site — you’ll get yours by email after approval.
+            We’ll review your request and email you a code. No codes are shown on the site ;  you’ll get yours by email after approval.
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="grid gap-5">
-          <div className="grid gap-3">
-            <Label className="text-base">I&apos;m a…</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setType("business")}
-                disabled={sending}
-                className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-left transition-colors ${
-                  type === "business"
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border bg-muted/30 text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground"
-                }`}
-              >
-                <IconUsers className="h-8 w-8" />
-                <span className="font-semibold text-sm">Teacher / School / Coach</span>
-                <span className="text-xs">Discounted rate</span>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-0">
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-1 grid gap-4">
+            <div className="grid gap-3">
+              <Label className="text-base">I&apos;m a…</Label>
+              <div className="grid grid-cols-2 gap-2 sm:gap-3">
+                <button
+                  type="button"
+                  onClick={() => setType("business")}
+                  disabled={sending}
+                  className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 sm:p-4 text-left transition-colors ${
+                    type === "business"
+                      ? "border-primary bg-primary/10 text-foreground"
+                      : "border-border bg-muted/30 text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground"
+                  }`}
+                >
+                  <IconUsers className="h-7 w-7 sm:h-8 sm:w-8" />
+                <span className="font-semibold text-xs sm:text-sm">Teacher / School / Coach</span>
+                <span className="text-[10px] sm:text-xs">Discounted rate</span>
               </button>
               <button
                 type="button"
                 onClick={() => setType("student")}
                 disabled={sending}
-                className={`flex flex-col items-center gap-2 rounded-xl border-2 p-4 text-left transition-colors ${
+                className={`flex flex-col items-center gap-1.5 rounded-xl border-2 p-3 sm:p-4 text-left transition-colors ${
                   type === "student"
                     ? "border-primary bg-primary/10 text-foreground"
                     : "border-border bg-muted/30 text-muted-foreground hover:border-muted-foreground/30 hover:text-foreground"
                 }`}
               >
-                <IconSchool className="h-8 w-8" />
-                <span className="font-semibold text-sm">Student</span>
-                <span className="text-xs">50% off</span>
+                <IconSchool className="h-7 w-7 sm:h-8 sm:w-8" />
+                <span className="font-semibold text-xs sm:text-sm">Student</span>
+                <span className="text-[10px] sm:text-xs">50% off</span>
               </button>
             </div>
           </div>
@@ -190,7 +191,8 @@ export function RequestPromoCodeModal({ open, onOpenChange, initialType = null, 
               className="resize-none"
             />
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          </div>
+          <div className="flex justify-end gap-2 pt-4 shrink-0 border-t border-border/60 mt-4 pt-4">
             <Button type="button" variant="ghost" onClick={() => onOpenChange(false)} disabled={sending}>
               Cancel
             </Button>

@@ -296,7 +296,7 @@ export default function BillingPage() {
                 Student or teacher / school / coach?
               </p>
               <p className="text-xs text-muted-foreground mt-0.5 leading-tight">
-                Request a discount — we&apos;ll email you a code.
+                Request a discount; we&apos;ll email you a code.
               </p>
             </div>
             <Button

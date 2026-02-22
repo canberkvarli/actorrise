@@ -45,12 +45,12 @@ const faqs = [
   {
     question: "Is there a student discount?",
     answer:
-      "Yes. Students get a discounted rate (lower than teachers/schools). Request a discount at checkout or via the contact form; we’ll review and email you a code. No codes are shown on the site — you’ll get yours by email after approval.",
+      "Yes. Students get a discounted rate (lower than teachers/schools). Request a discount at checkout or via the contact form; we’ll review and email you a code. No codes are shown on the site ;  you’ll get yours by email after approval.",
   },
   {
     question: "Do you offer discounts for teachers, schools, or acting coaches?",
     answer:
-      "Yes. Teachers, drama schools, and acting coaches get a discounted rate. Request a discount at checkout or via the contact form; we’ll review and email you a code. No codes are shown on the site — you’ll get yours by email after approval.",
+      "Yes. Teachers, drama schools, and acting coaches get a discounted rate. Request a discount at checkout or via the contact form; we’ll review and email you a code. No codes are shown on the site ;  you’ll get yours by email after approval.",
   },
   {
     question: "What payment methods do you accept?",
