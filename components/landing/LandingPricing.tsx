@@ -33,13 +33,11 @@ function getFeaturesList(tier: PricingTier): string[] {
 
   features.push(`Download as ${tier.features.download_formats.join(", ").toUpperCase()}`);
 
-  const sp = tier.features.scene_partner_sessions;
-  if (sp) {
-    if (sp === 1) {
-      features.push("1 ScenePartner AI session (one-time)");
-    } else {
-      features.push(`${sp} ScenePartner AI sessions/month`);
-    }
+  // ScenePartner: Free = no mention; Plus = 2/mo; Unlimited = 10/mo (up to 20 min each)
+  if (tier.name === "plus") {
+    features.push("2 ScenePartner AI sessions/month (up to 20 min each)");
+  } else if (tier.name === "unlimited") {
+    features.push("10 ScenePartner AI sessions/month (up to 20 min each)");
   }
   if (tier.features.advanced_analytics) {
     features.push("Advanced analytics & insights");

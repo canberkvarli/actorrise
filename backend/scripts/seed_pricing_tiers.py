@@ -4,7 +4,7 @@ Seed pricing tiers into the database.
 This script populates the pricing_tiers table with the three subscription plans:
 - Free: $0/month (10 AI searches, 5 bookmarks)
 - Pro: $12/month or $99/year (150 AI searches, unlimited bookmarks)
-- Elite: $24/month or $199/year (unlimited searches + future AI features)
+- Elite: $39/month or $324/year (unlimited searches + premium features)
 
 Run this script after creating the database schema:
     python backend/scripts/seed_pricing_tiers.py
@@ -48,7 +48,6 @@ def seed_pricing_tiers():
                     "priority_support": False,
                     "search_history_limit": 5,
                     "advanced_analytics": False,
-                    "scene_partner_sessions": 1,  # One-time for Free
                 },
                 is_active=True,
                 sort_order=0,
@@ -57,7 +56,7 @@ def seed_pricing_tiers():
             PricingTier(
                 name="plus",
                 display_name="Plus",
-                description="For actors",
+                description="For working actors and students",
                 monthly_price_cents=1200,  # $12.00
                 annual_price_cents=9900,  # $99.00 ($8.25/mo, 31% discount)
                 stripe_monthly_price_id=None,  # TODO: Replace with actual Stripe price ID
@@ -71,7 +70,7 @@ def seed_pricing_tiers():
                     "search_history_limit": -1,  # -1 = unlimited
                     "advanced_analytics": False,
                     "early_access": True,
-                    "scene_partner_sessions": 1,  # One-time for Plus
+                    "scene_partner_sessions": 2,  # 2 sessions/month for Plus
                 },
                 is_active=True,
                 sort_order=1,
@@ -80,9 +79,9 @@ def seed_pricing_tiers():
             PricingTier(
                 name="unlimited",
                 display_name="Unlimited",
-                description="For professionals and coaches",
-                monthly_price_cents=2400,  # $24.00
-                annual_price_cents=19900,  # $199.00 ($16.58/mo, 31% discount)
+                description="For professionals, coaches, and serious actors",
+                monthly_price_cents=3900,  # $39.00
+                annual_price_cents=32400,  # $324.00 ($27/mo, save $144/year)
                 stripe_monthly_price_id=None,  # TODO: Replace with actual Stripe price ID
                 stripe_annual_price_id=None,  # TODO: Replace with actual Stripe price ID
                 features={
@@ -121,7 +120,7 @@ def seed_pricing_tiers():
         print("\n📝 Next steps:")
         print("1. Create products in Stripe Dashboard:")
         print("   - Plus: $12/month and $99/year")
-        print("   - Unlimited: $24/month and $199/year")
+        print("   - Unlimited: $39/month and $324/year")
         print("2. Copy the Stripe price IDs (price_xxxxx)")
         print("3. Update the database with SQL:")
         print("   UPDATE pricing_tiers SET")

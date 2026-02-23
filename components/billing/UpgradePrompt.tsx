@@ -44,11 +44,12 @@ export function UpgradePrompt({
         return {
           name: "Unlimited",
           icon: <IconCrown className="h-5 w-5 text-accent" />,
-          price: "$24/month",
-          annualPrice: "$199/year",
+          price: "$39/month",
+          annualPrice: "$324/year",
+          saveBadge: "Save $144/year",
           benefits: [
             "Unlimited AI searches",
-            "10 ScenePartner AI sessions/month",
+            "10 ScenePartner AI sessions/month (up to 20 min each)",
             "Advanced analytics & insights",
             "Collections & white-label export",
           ],
@@ -61,6 +62,7 @@ export function UpgradePrompt({
           icon: <IconRocket className="h-5 w-5 text-accent" />,
           price: "$12/month",
           annualPrice: "$99/year",
+          saveBadge: "save 31%",
           benefits: [
             "150 AI searches/month",
             "Unlimited bookmarks",
@@ -94,7 +96,7 @@ export function UpgradePrompt({
           <div className="flex items-baseline gap-2 mb-1">
             <span className="text-2xl font-bold">{planDetails.price}</span>
             <span className="text-sm text-muted-foreground">
-              or {planDetails.annualPrice} (save 31%)
+              or {planDetails.annualPrice} ({planDetails.saveBadge})
             </span>
           </div>
           <Badge variant="secondary" className="text-xs">

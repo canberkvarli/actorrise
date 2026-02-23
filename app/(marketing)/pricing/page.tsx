@@ -45,12 +45,12 @@ const faqs = [
   {
     question: "Is there a student discount?",
     answer:
-      "Yes. Students get a discounted rate (lower than teachers/schools). Request a discount at checkout or via the contact form; we’ll review and email you a code. No codes are shown on the site ;  you’ll get yours by email after approval.",
+      "Yes. Verified students get 50% off the Plus annual plan. Request a discount via the contact form and we'll email you a code after a quick review.",
   },
   {
     question: "Do you offer discounts for teachers, schools, or acting coaches?",
     answer:
-      "Yes. Teachers, drama schools, and acting coaches get a discounted rate. Request a discount at checkout or via the contact form; we’ll review and email you a code. No codes are shown on the site ;  you’ll get yours by email after approval.",
+      "Yes. Educators and acting coaches get 30% off any paid plan. Drama schools and institutions can contact us for group/institutional pricing. Request a discount via the contact form.",
   },
   {
     question: "What payment methods do you accept?",
@@ -164,14 +164,11 @@ export default function PricingPage() {
     // Download formats
     features.push(`Download as ${tier.features.download_formats.join(", ").toUpperCase()}`);
 
-    // ScenePartner (1 = one-time for Free/Plus; 10 = per month for Unlimited)
-    const sp = tier.features.scene_partner_sessions;
-    if (sp) {
-      if (sp === 1) {
-        features.push("1 ScenePartner AI session (one-time)");
-      } else {
-        features.push(`${sp} ScenePartner AI sessions/month`);
-      }
+    // ScenePartner: Free = no mention; Plus = 2/mo; Unlimited = 10/mo (up to 20 min each)
+    if (tier.name === "plus") {
+      features.push("2 ScenePartner AI sessions/month (up to 20 min each)");
+    } else if (tier.name === "unlimited") {
+      features.push("10 ScenePartner AI sessions/month (up to 20 min each)");
     }
 
     // Advanced Analytics
