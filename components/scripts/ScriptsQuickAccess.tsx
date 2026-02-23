@@ -128,7 +128,7 @@ export default function ScriptsQuickAccess() {
                 asChild
                 variant="outline"
                 size="sm"
-                className="w-fit shrink-0 rounded-lg border-border hover:bg-muted/50 text-foreground text-sm mt-1"
+                className="w-fit shrink-0 rounded-lg border-border hover:bg-muted/60 text-muted-foreground hover:text-foreground text-sm mt-1"
               >
                 <Link href="/my-scripts" className="cursor-pointer text-inherit hover:text-inherit whitespace-nowrap">
                   View all {totalCount}
