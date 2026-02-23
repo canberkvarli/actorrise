@@ -415,7 +415,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   {isProfileComplete ? "Personalized picks based on your profile" : "Explore our curated collection"}
                 </p>
               </div>
-              <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:text-foreground">
+              <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-foreground">
                 <Link href="/search" className="whitespace-nowrap">
                   View all
                   <IconArrowRight className="h-4 w-4 ml-1" />
@@ -529,7 +529,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   Top picks by IMDb rating · Search for more by scene or title
                 </p>
               </div>
-              <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:text-foreground w-fit">
+              <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-foreground w-fit">
                 <Link href="/search?mode=film_tv" className="whitespace-nowrap">
                   View all
                   <IconArrowRight className="h-4 w-4 ml-1" />
@@ -612,7 +612,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     <IconBookmark className={`h-5 w-5 shrink-0 ${accentTeal.text}`} />
                     Your Monologues
                   </h2>
-                  <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground">
+                  <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-foreground">
                     <Link href="/my-monologues" className="whitespace-nowrap">
                       View all
                       <IconArrowRight className="h-4 w-4 ml-1" />
@@ -631,7 +631,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     <IconFileText className="h-5 w-5 text-amber-500 shrink-0" />
                     Your Scripts
                   </h2>
-                  <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground">
+                  <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-foreground">
                     <Link href="/my-scripts" className="whitespace-nowrap">
                       View all
                       <IconArrowRight className="h-4 w-4 ml-1" />
