@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { IconSend, IconCheck, IconAlertCircle, IconClock, IconSparkles } from "@tabler/icons-react";
+import { IconSend, IconCheck, IconAlertCircle, IconClock, IconSparkles, IconCircleCheck, IconCircleX, IconRobot } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -396,7 +396,7 @@ export default function SubmitMonologuePage() {
         </Card>
       </motion.div>
 
-      {/* Guidelines Card */}
+      {/* Guidelines Card – concise, no duplication with form/alert */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -405,37 +405,32 @@ export default function SubmitMonologuePage() {
       >
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Submission Guidelines</CardTitle>
+            <CardTitle>Submission Guidelines</CardTitle>
+            <CardDescription>
+              Public domain or licensed works only. 30–1000 words, complete and well formatted.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="text-sm space-y-3 text-muted-foreground">
-            <div>
-              <strong className="text-foreground">✅ What to Submit:</strong>
-              <ul className="list-disc list-inside mt-1 space-y-1 ml-2">
-                <li>Classical plays (Shakespeare, Chekhov, Ibsen, etc.)</li>
-                <li>Pre-1928 works (public domain in the US)</li>
-                <li>Works with explicit Creative Commons licenses</li>
-                <li>Complete, well-formatted monologues (30-1000 words)</li>
-              </ul>
+          <CardContent className="space-y-4 text-sm text-muted-foreground">
+            <div className="flex gap-3">
+              <IconCircleCheck className="h-5 w-5 shrink-0 text-green-600 dark:text-green-400 mt-0.5" />
+              <div>
+                <p className="font-medium text-foreground mb-1">Acceptable</p>
+                <p>Classical and pre-1928 plays, or works with a clear Creative Commons license.</p>
+              </div>
             </div>
-
-            <div>
-              <strong className="text-foreground">❌ What NOT to Submit:</strong>
-              <ul className="list-disc list-inside mt-1 space-y-1 ml-2">
-                <li>Contemporary copyrighted works (Hamilton, Angels in America, etc.)</li>
-                <li>Incomplete or poorly formatted text</li>
-                <li>Spam or duplicate submissions</li>
-                <li>Works without proper attribution</li>
-              </ul>
+            <div className="flex gap-3">
+              <IconCircleX className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
+              <div>
+                <p className="font-medium text-foreground mb-1">Not acceptable</p>
+                <p>Copyrighted contemporary works, incomplete text, spam, or missing attribution.</p>
+              </div>
             </div>
-
-            <div>
-              <strong className="text-foreground">🤖 Review Process:</strong>
-              <ul className="list-disc list-inside mt-1 space-y-1 ml-2">
-                <li>AI checks quality and copyright status</li>
-                <li>High-quality public domain works are auto-approved</li>
-                <li>Uncertain cases go to human moderators (24-48 hours)</li>
-                <li>You'll receive an email notification with the decision</li>
-              </ul>
+            <div className="flex gap-3">
+              <IconRobot className="h-5 w-5 shrink-0 text-muted-foreground mt-0.5" />
+              <div>
+                <p className="font-medium text-foreground mb-1">Review</p>
+                <p>AI checks first; unclear cases go to moderators. You’ll get an email with the decision (usually within 24–48 hours).</p>
+              </div>
             </div>
           </CardContent>
         </Card>

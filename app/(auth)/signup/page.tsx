@@ -23,7 +23,7 @@ export default function SignupPage() {
           {/* Header with logo */}
           <div className="text-center space-y-4">
             <div className="flex items-center justify-center">
-              <BrandLogo size="auth" />
+              <BrandLogo size="auth" iconOnly />
             </div>
             <div className="space-y-1">
               <p className="text-lg font-medium text-foreground">Create your account</p>

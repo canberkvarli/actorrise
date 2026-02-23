@@ -21,6 +21,7 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { SceneSettingsModal } from "@/components/scenepartner/SceneSettingsModal";
+import { MicAccessWarning } from "@/components/scenepartner/MicAccessWarning";
 
 interface Scene {
   id: number;
@@ -227,6 +228,7 @@ export default function ScriptDetailPage() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
     >
+      <MicAccessWarning />
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-2 text-sm min-h-[44px] sm:min-h-0" aria-label="Breadcrumb">
         <Link

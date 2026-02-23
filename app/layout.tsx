@@ -64,8 +64,8 @@ export const metadata: Metadata = {
   authors: [{ name: "ActorRise", url: siteUrl }],
   creator: "ActorRise",
   icons: {
-    icon: "/favicon.ico",
-    apple: "/apple-touch-icon.png",
+    icon: "/favicon.ico?v=2",
+    apple: "/apple-touch-icon.png?v=2",
   },
   openGraph: {
     type: "website",
@@ -122,7 +122,7 @@ const jsonLd = {
       url: siteUrl,
       description:
         "Find the right audition monologue in less than 20 seconds. AI-powered monologue search for actors. 8,600+ searchable monologues.",
-      logo: { "@type": "ImageObject", url: `${siteUrl}/TextLogo.png` },
+      logo: { "@type": "ImageObject", url: `${siteUrl}/logo.png` },
     },
     {
       "@type": "WebApplication",

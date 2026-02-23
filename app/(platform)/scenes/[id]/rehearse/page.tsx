@@ -36,6 +36,7 @@ import {
   setRehearsalSettings,
   type RehearsalSettings,
 } from '@/lib/scenepartnerStorage';
+import { MicAccessWarning } from '@/components/scenepartner/MicAccessWarning';
 
 interface RehearsalSession {
   id: number;
@@ -393,6 +394,7 @@ export default function RehearsalPage() {
   if (!session) {
     return (
       <div className="container mx-auto px-4 py-16 max-w-4xl">
+        <MicAccessWarning />
         <div className="flex flex-col items-center justify-center text-center space-y-4">
           {error ? (
             <>
@@ -453,6 +455,10 @@ export default function RehearsalPage() {
             </motion.span>
           </div>
         )}
+
+        <div className="shrink-0 px-4 pt-3">
+          <MicAccessWarning />
+        </div>
 
         {/* Script page: traditional script look, all lines visible */}
         <div className="flex-1 overflow-auto flex justify-center px-4 py-6">
@@ -626,6 +632,7 @@ export default function RehearsalPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <MicAccessWarning />
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}

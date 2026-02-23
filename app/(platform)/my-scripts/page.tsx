@@ -6,6 +6,7 @@ import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import UnderConstructionScripts from "@/components/UnderConstructionScripts";
 import { ScenePartnerTutorial } from "@/components/scenepartner/ScenePartnerTutorial";
 import { ScenePartnerAudioCheck } from "@/components/scenepartner/ScenePartnerAudioCheck";
+import { MicAccessWarning } from "@/components/scenepartner/MicAccessWarning";
 import { getScenePartnerTutorialSeen, getScenePartnerAudioCheckDone } from "@/lib/scenepartnerStorage";
 import { NewSceneModal } from "@/components/scenepartner/NewSceneModal";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -356,6 +357,7 @@ export default function MyScriptsPage() {
 
   return (
     <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8 max-w-5xl">
+      <MicAccessWarning />
       <input
         type="file"
         id="script-upload"
