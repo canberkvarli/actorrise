@@ -101,6 +101,11 @@ Extract the following information if present in the query (return null if not me
    - Keywords: romantic/loving → "romantic"
    - Otherwise → null
 
+7. max_duration: What maximum duration in SECONDS is requested?
+   - Extract any duration mention and convert to seconds
+   - Examples: "2 minute" → 120, "under 3 minutes" → 180, "90 second" → 90, "1 min" → 60
+   - Return integer seconds or null if not mentioned
+
 Return ONLY valid JSON with these keys. Use null for any filter not mentioned in the query."""
 
 QUERY_PARSING_TEMPLATE = ChatPromptTemplate.from_messages([
