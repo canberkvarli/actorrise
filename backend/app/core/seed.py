@@ -30,7 +30,6 @@ def ensure_pricing_tiers() -> None:
                     "priority_support": False,
                     "search_history_limit": 5,
                     "advanced_analytics": False,
-                    "scene_partner_sessions": 1,
                 },
                 is_active=True,
                 sort_order=0,
@@ -38,7 +37,7 @@ def ensure_pricing_tiers() -> None:
             PricingTier(
                 name="plus",
                 display_name="Plus",
-                description="For actors",
+                description="For working actors and students",
                 monthly_price_cents=1200,
                 annual_price_cents=9900,
                 stripe_monthly_price_id=None,
@@ -52,7 +51,7 @@ def ensure_pricing_tiers() -> None:
                     "search_history_limit": -1,
                     "advanced_analytics": False,
                     "early_access": True,
-                    "scene_partner_sessions": 1,
+                    "scene_partner_sessions": 2,
                 },
                 is_active=True,
                 sort_order=1,
@@ -60,9 +59,9 @@ def ensure_pricing_tiers() -> None:
             PricingTier(
                 name="unlimited",
                 display_name="Unlimited",
-                description="For professionals and coaches",
-                monthly_price_cents=2400,
-                annual_price_cents=19900,
+                description="For professionals, coaches, and serious actors",
+                monthly_price_cents=3900,
+                annual_price_cents=32400,
                 stripe_monthly_price_id=None,
                 stripe_annual_price_id=None,
                 features={
