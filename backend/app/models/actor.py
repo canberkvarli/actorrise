@@ -125,6 +125,8 @@ class Monologue(Base):
     embedding = Column(Text, nullable=True)
     # Deferred so DBs without this column still load; add column and run backfill when using pgvector.
     embedding_vector = deferred(Column(Vector, nullable=True))
+    # V2 embeddings: text-embedding-3-large (3072 dims) with enriched metadata
+    embedding_vector_v2 = deferred(Column(Vector(3072), nullable=True))
     search_tags = Column(ARRAY(String), nullable=True)  # Searchable keywords
 
     # Usage Analytics
@@ -396,6 +398,8 @@ class FilmTvReference(Base):
     poster_url = Column(String, nullable=True)
     imsdb_url = Column(String, nullable=True)
     embedding = Column(Vector(1536), nullable=True)
+    # V2 embeddings: text-embedding-3-large (3072 dims) with enriched metadata
+    embedding_vector_v2 = deferred(Column(Vector(3072), nullable=True))
     created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))
 
     # Relationships

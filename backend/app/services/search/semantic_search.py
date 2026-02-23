@@ -448,15 +448,36 @@ class SemanticSearch:
                 quote_types = {item[0]: item[2] for item in cached if len(item) >= 3 and item[2]}
             return (ordered_with_scores[:limit], quote_types)
 
+        # Detect which embedding version is available in the database
+        # Check if any monologues have v2 embeddings (3072 dims)
+        has_v2_query = text("SELECT COUNT(*) FROM monologues WHERE embedding_vector_v2 IS NOT NULL LIMIT 1")
+        has_v2 = self.db.execute(has_v2_query).scalar() > 0
+
+        # Choose embedding model based on available vectors
+        if has_v2:
+            embedding_model = "text-embedding-3-large"
+            embedding_dims = 3072
+            embedding_column = "embedding_vector_v2"
+            logger.debug("Using v2 embeddings (text-embedding-3-large, 3072 dims)")
+        else:
+            embedding_model = "text-embedding-3-small"
+            embedding_dims = 1536
+            embedding_column = "embedding_vector"
+            logger.debug("Using v1 embeddings (text-embedding-3-small, 1536 dims)")
+
         # Generate embedding for query (with caching at multiple levels)
-        query_hash = hashlib.md5(canonical_query.encode()).hexdigest()
+        # Cache key includes model and dimensions to avoid mixing v1 and v2 embeddings
+        cache_key_suffix = f"_{embedding_model}_{embedding_dims}"
+        query_hash = hashlib.md5((canonical_query + cache_key_suffix).encode()).hexdigest()
         if query_hash in EMBEDDING_CACHE:
             logger.debug("Using cached embedding for: %s", query)
             query_embedding = EMBEDDING_CACHE[query_hash]
             EMBEDDING_CACHE.move_to_end(query_hash)  # Mark as recently used (LRU)
         else:
             # Try Redis-backed embedding cache first
-            cached_embedding = self.cache.get_embedding(canonical_query)
+            # Use different cache key for v2 embeddings
+            cache_query = canonical_query + cache_key_suffix
+            cached_embedding = self.cache.get_embedding(cache_query)
             if cached_embedding:
                 logger.debug("Using Redis cached embedding for: %s", query)
                 query_embedding = cached_embedding
@@ -464,15 +485,22 @@ class SemanticSearch:
                 EMBEDDING_CACHE.move_to_end(query_hash)  # Mark as recently used
             else:
                 emb_start = time.time()
-                logger.debug("Generating embedding for query (AI): %s", query)
-                query_embedding = self.analyzer.generate_embedding(query)
+                logger.debug("Generating embedding for query (AI) with %s: %s", embedding_model, query)
+                # Use the appropriate model for query embedding
+                from app.services.ai.langchain.embeddings import generate_embedding
+                query_embedding = generate_embedding(
+                    text=query,
+                    model=embedding_model,
+                    dimensions=embedding_dims,
+                    api_key=self.analyzer.api_key
+                )
                 emb_time = time.time() - emb_start
                 logger.debug("Embedding generation took %.2fs", emb_time)
                 if query_embedding:
                     # Store in in-memory and Redis caches
                     EMBEDDING_CACHE[query_hash] = query_embedding
                     EMBEDDING_CACHE.move_to_end(query_hash)  # Mark as recently used
-                    self.cache.set_embedding(canonical_query, query_embedding)
+                    self.cache.set_embedding(cache_query, query_embedding)
                     # Limit in-memory cache size to prevent memory issues
                     # LRU eviction: remove least recently used item
                     if len(EMBEDDING_CACHE) > 1000:
@@ -614,12 +642,24 @@ class SemanticSearch:
             # so we can still apply bookmark boosts and hybrid merging.
             # OPTIMIZED: Reduced from 3x to 1.5x since HNSW indexes are now in place
             VECTOR_CANDIDATES = min(MAX_CANDIDATES, max(int(limit * 1.5), limit))
-            semantic_candidates = (
-                base_query.filter(Monologue.embedding_vector.isnot(None))
-                .order_by(Monologue.embedding_vector.cosine_distance(query_embedding))
-                .limit(VECTOR_CANDIDATES)
-                .all()
-            )
+
+            # Use the appropriate embedding column based on version
+            if embedding_column == "embedding_vector_v2":
+                logger.debug("Using v2 column, query embedding dims: %d", len(query_embedding))
+                semantic_candidates = (
+                    base_query.filter(Monologue.embedding_vector_v2.isnot(None))
+                    .order_by(Monologue.embedding_vector_v2.cosine_distance(query_embedding))
+                    .limit(VECTOR_CANDIDATES)
+                    .all()
+                )
+            else:
+                logger.debug("Using v1 column, query embedding dims: %d", len(query_embedding))
+                semantic_candidates = (
+                    base_query.filter(Monologue.embedding_vector.isnot(None))
+                    .order_by(Monologue.embedding_vector.cosine_distance(query_embedding))
+                    .limit(VECTOR_CANDIDATES)
+                    .all()
+                )
 
             logger.debug(
                 "Loaded %s monologues with pgvector embeddings (max: %s)",
@@ -710,12 +750,14 @@ class SemanticSearch:
         query_stripped = _strip_punctuation(query)
         quote_match_type_by_id: Dict[int, str] = {}
 
-        # Merge hybrid: text matches (play/character/title) first, then semantic results not already in text matches
+        # Merge hybrid: combine text and semantic matches, sort by best score
         if text_match_results:
             existing_ids = {m.id for m in text_match_results}
             semantic_only = [(mono, score) for mono, score in top_semantic if mono.id not in existing_ids]
             semantic_scores_by_id = {mono.id: score for mono, score in top_semantic}
             combined_with_scores: list[tuple[Monologue, float]] = []
+
+            # Score text matches (use max of semantic and keyword scores)
             for m in text_match_results:
                 kw_score, kw_type = _keyword_match_score_and_type(m, query)
                 # Use best of semantic score or keyword score so title/character/play matches rank at top
@@ -723,14 +765,17 @@ class SemanticSearch:
                 if kw_type:
                     quote_match_type_by_id[m.id] = kw_type
                 combined_with_scores.append((m, score))
-            for mono, score in semantic_only:
-                if len(combined_with_scores) >= limit:
-                    break
-                combined_with_scores.append((mono, score))
+
+            # Add semantic-only matches
+            combined_with_scores.extend(semantic_only)
+
+            # Sort by score descending and take top limit
+            combined_with_scores.sort(key=lambda x: x[1], reverse=True)
             top_results = combined_with_scores[:limit]
+
             logger.debug(
-                "Hybrid: %s text + %s semantic = %s results",
-                len(text_match_results), min(len(semantic_only), limit - len(text_match_results)), len(combined_with_scores)
+                "Hybrid: %s text + %s semantic = %s combined, top %s after sorting",
+                len(text_match_results), len(semantic_only), len(combined_with_scores), len(top_results)
             )
         else:
             top_results = top_semantic
@@ -944,6 +989,12 @@ class SemanticSearch:
             if filters.get('author'):
                 base_query = base_query.filter(
                     Play.author == filters['author']
+                )
+
+            # Duration filter
+            if filters.get('max_duration'):
+                base_query = base_query.filter(
+                    Monologue.estimated_duration_seconds <= filters['max_duration']
                 )
 
             # Act/scene filters for classical plays
