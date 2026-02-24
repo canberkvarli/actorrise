@@ -150,6 +150,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Preload auth modal logo so it’s cached before first open (avoids flash of missing logo) */}
+        <link rel="preload" href="/transparent_logo.png" as="image" />
         {gaId && (
           <>
             <Script
