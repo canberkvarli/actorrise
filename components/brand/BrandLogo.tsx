@@ -16,8 +16,8 @@ const LOGO_TEXT_ASPECT = { w: 320, h: 80 };
 /* Larger logo, mobile-friendly: max-w-full so it shrinks in narrow headers, min-h for tap target. */
 const sizes: Record<Size, { iconClass: string; fullLogoClass: string }> = {
   header: {
-    iconClass: "h-16 sm:h-[4.5rem] md:h-20 lg:h-24 w-auto max-w-full min-h-11 shrink-0 object-contain",
-    fullLogoClass: "h-16 sm:h-[4.5rem] md:h-20 lg:h-24 w-auto max-w-full min-h-11 shrink-0 object-contain",
+    iconClass: "h-10 sm:h-12 md:h-14 lg:h-16 w-auto max-w-full min-h-9 shrink-0 object-contain",
+    fullLogoClass: "h-10 sm:h-12 md:h-14 lg:h-16 w-auto max-w-full min-h-9 shrink-0 object-contain",
   },
   auth: {
     iconClass: "h-[5.5rem] sm:h-[6rem] w-auto max-w-full shrink-0 object-contain",
