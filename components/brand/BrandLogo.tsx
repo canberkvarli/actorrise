@@ -4,8 +4,8 @@ import Image from "next/image";
 
 /** Icon-only logo (e.g. favicon, auth). Use transparent_logo.png for icon-only. */
 const LOGO_ICON = "/transparent_logo.png";
-/** Full logo with "ActorRise" wordmark (use version with header-matching bg for blend). */
-const LOGO_WITH_TEXT = "/logo_text.png";
+/** Full logo with "ActorRise" wordmark for web (transparent bg, blends with theme). Keep logo_text.png for social. */
+const LOGO_WITH_TEXT = "/logo_text_transparent.png";
 
 type Size = "header" | "auth";
 
@@ -13,14 +13,15 @@ type Size = "header" | "auth";
 const LOGO_ICON_ASPECT = { w: 273, h: 273 };
 const LOGO_TEXT_ASPECT = { w: 320, h: 80 };
 
+/* Larger logo sizes, mobile-friendly: max-w-full so it shrinks in tight headers, min-h for tap target. */
 const sizes: Record<Size, { iconClass: string; fullLogoClass: string }> = {
   header: {
-    iconClass: "h-10 sm:h-11 md:h-12 lg:h-14 w-auto shrink-0 object-contain",
-    fullLogoClass: "h-10 sm:h-11 md:h-12 lg:h-14 w-auto shrink-0 object-contain",
+    iconClass: "h-12 sm:h-14 md:h-16 lg:h-[4.5rem] w-auto max-w-full min-h-10 shrink-0 object-contain",
+    fullLogoClass: "h-12 sm:h-14 md:h-16 lg:h-[4.5rem] w-auto max-w-full min-h-10 shrink-0 object-contain",
   },
   auth: {
-    iconClass: "h-[5.5rem] sm:h-[6rem] w-auto shrink-0 object-contain",
-    fullLogoClass: "h-[5.5rem] sm:h-[6rem] w-auto shrink-0 object-contain",
+    iconClass: "h-[5.5rem] sm:h-[6rem] w-auto max-w-full shrink-0 object-contain",
+    fullLogoClass: "h-[5.5rem] sm:h-[6rem] w-auto max-w-full shrink-0 object-contain",
   },
 };
 
