@@ -64,8 +64,12 @@ export const metadata: Metadata = {
   authors: [{ name: "ActorRise", url: siteUrl }],
   creator: "ActorRise",
   icons: {
-    icon: "/favicon.ico?v=4",
-    apple: "/apple-touch-icon.png?v=4",
+    icon: [
+      { url: "/favicon.ico?v=5", sizes: "any" },
+      { url: "/icon-192.png?v=5", sizes: "192x192", type: "image/png" },
+      { url: "/icon-512.png?v=5", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png?v=5",
   },
   openGraph: {
     type: "website",
