@@ -8,7 +8,7 @@ Pipeline:
   3. Enrich each title via OMDb API (100 ms delay between requests)
   4. Use Poster field from OMDb response as poster_url; fall back to
      img.omdbapi.com only when Poster is "N/A"
-  5. Generate 1536-dim embedding: "{title} {year} {genre} {plot} {actors} {director}"
+  5. Generate 3072-dim embedding with enriched format (text-embedding-3-large)
   6. Upsert into film_tv_references (skip on duplicate imdb_id)
 
 Requires OMDB_API_KEY in environment / backend/.env
@@ -48,7 +48,7 @@ load_dotenv(backend_dir / ".env")
 
 from app.core.database import SessionLocal
 from app.models.actor import FilmTvReference
-from app.services.ai.content_analyzer import ContentAnalyzer
+from app.services.ai.langchain.embeddings import generate_embedding
 # pylint: enable=wrong-import-position
 
 # ── Constants ──────────────────────────────────────────────────────────────────
@@ -240,18 +240,43 @@ def _poster_url(omdb_data: dict, imdb_id: str, api_key: str) -> Optional[str]:
 
 def _embedding_text(title: str, year: Optional[int], genre: list[str],
                     plot: Optional[str], actors: list[str],
-                    director: Optional[str]) -> str:
-    parts = [title]
-    if year:
-        parts.append(str(year))
+                    director: Optional[str], title_type: Optional[str] = None) -> str:
+    """
+    Build enriched text for film/TV embedding.
+
+    Format matches app.services.ai.embedding_text_builder.build_film_tv_enriched_text
+    for consistency with backfilled monologues.
+    """
+    parts = []
+
+    # Title and year
+    if title:
+        year_str = f" ({year})" if year else ""
+        parts.append(f"{title}{year_str}.")
+
+    # Type (movie/tvSeries)
+    if title_type:
+        parts.append(f"Type: {title_type}.")
+
+    # Genre
     if genre:
-        parts.append(" ".join(genre))
-    if plot and plot != "N/A":
-        parts.append(plot)
-    if actors:
-        parts.append(" ".join(actors))
+        genre_str = ", ".join(genre)
+        parts.append(f"Genre: {genre_str}.")
+
+    # Director
     if director and director != "N/A":
-        parts.append(director)
+        parts.append(f"Director: {director}.")
+
+    # Actors (limit to first 5)
+    if actors:
+        actors_str = ", ".join(actors[:5])
+        parts.append(f"Actors: {actors_str}.")
+
+    # Plot (truncate to 500 chars to keep embedding focused)
+    if plot and plot != "N/A":
+        plot_snippet = plot[:500]
+        parts.append(plot_snippet)
+
     return " ".join(parts)
 
 
@@ -292,7 +317,6 @@ def main() -> None:
         return
 
     # Step 2 — When writing to DB, exclude titles already in DB so we only process "next" N
-    analyzer = ContentAnalyzer()
     db = None if args.dry_run else SessionLocal()
     if db:
         existing_ids = get_existing_imdb_ids(db)
@@ -357,10 +381,15 @@ def main() -> None:
             poster = _poster_url(omdb, tconst, omdb_api_key)
 
             # Step 4 — Embedding (only for quality titles to stay under DB limit)
+            # Use text-embedding-3-large (3072 dims) with enriched format
             embedding = None
             if imdb_rating is not None and imdb_rating >= EMBEDDING_MIN_RATING:
-                emb_text = _embedding_text(title, year, genre_list, plot, actors_list, director)
-                embedding = analyzer.generate_embedding(emb_text)
+                emb_text = _embedding_text(title, year, genre_list, plot, actors_list, director, title_type)
+                embedding = generate_embedding(
+                    text=emb_text,
+                    model="text-embedding-3-large",
+                    dimensions=3072
+                )
 
             if args.dry_run:
                 if (idx + 1) % LOG_EVERY == 0:
