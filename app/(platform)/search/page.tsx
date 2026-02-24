@@ -1604,7 +1604,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   const displayList = showFilmTvBookmarkedOnly ? filmTvBookmarked : filmTvResults;
                   return (
                     <>
-                      <div className="flex flex-wrap items-center gap-4">
+                      <div className="flex flex-wrap items-center gap-4 mb-8">
                         <div className="flex flex-col gap-0.5 min-w-0 shrink-0">
                           <div className="flex items-baseline gap-2 flex-wrap">
                             <span className="text-2xl font-semibold tabular-nums text-foreground">
@@ -1759,7 +1759,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 ) : null;
                 })()}
               {/* Results header: count left, feedback center, Bookmarked only right — one row */}
-              <div className="flex flex-wrap items-center gap-4">
+              <div className="flex flex-wrap items-center gap-4 mb-8">
                 <div className="flex flex-col gap-0.5 min-w-0 shrink-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
                     <span className="text-2xl font-semibold tabular-nums text-foreground">
