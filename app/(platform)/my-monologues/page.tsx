@@ -384,7 +384,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       <AnimatePresence>
         {selectedMonologue && (
           <>
-            {/* Backdrop — single bg so opacity transition is smooth */}
+            {/* Backdrop: single bg so opacity transition is smooth */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: isReadingMode ? 0.95 : 0.5 }}

@@ -30,7 +30,7 @@ export function AuthProgressiveDisclosure({
     mode === "login" ? "Sign in with email" : "Continue with email";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <OAuthButtons
         redirectTo={redirectTo}
         variant="stack"

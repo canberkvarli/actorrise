@@ -1,6 +1,6 @@
 name: Weekly monologue seed
 
-# Runs every Sunday at 02:00 UTC — adds newly scraped public-domain monologues
+# Runs every Sunday at 02:00 UTC; adds newly scraped public-domain monologues
 # and picks up any fresh IMDb titles that just crossed the 10k-vote threshold.
 #
 # Required repository secrets (Settings → Secrets → Actions):

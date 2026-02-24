@@ -101,7 +101,7 @@ class ModerationLog(Base):
     previous_status = Column(String, nullable=True)
     new_status = Column(String, nullable=False)
     reason = Column(Text, nullable=True)
-    extra_data = Column("metadata", JSON, nullable=True)  # Additional context (AI scores, flags, etc.) — column name "metadata" in DB; "metadata" is reserved by SQLAlchemy
+    extra_data = Column("metadata", JSON, nullable=True)  # Additional context (AI scores, flags, etc.); column name "metadata" in DB; "metadata" is reserved by SQLAlchemy
 
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'), nullable=False, index=True)
 

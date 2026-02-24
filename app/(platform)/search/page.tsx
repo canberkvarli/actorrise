@@ -343,7 +343,7 @@ export default function SearchPage() {
       return;
     }
 
-    // Plays: URL params (mode is "plays" or missing — we only enter here when mode !== "film_tv")
+    // Plays: URL params (mode is "plays" or missing; we only enter here when mode !== "film_tv")
     const urlQuery = searchParams.get("q");
     const urlFilters: typeof filters = {
       gender: "",
@@ -1038,7 +1038,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </p>
         </div>
 
-        {/* Plays vs Film & TV toggle — spacious on mobile, 44px touch targets */}
+        {/* Plays vs Film & TV toggle: spacious on mobile, 44px touch targets */}
         <div className="flex items-center justify-center gap-2 mb-3 sm:mb-4 px-1">
           <div className="w-full max-w-sm sm:max-w-none sm:w-auto inline-flex rounded-xl border border-border bg-muted/40 p-2 gap-2 sm:p-1 sm:gap-0">
             <button
@@ -1288,7 +1288,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             )}
           </div>
 
-          {/* Mobile: filters in sheet (SearchFiltersSheet). Desktop: expandable inline filters — Plays only */}
+          {/* Mobile: filters in sheet (SearchFiltersSheet). Desktop: expandable inline filters (Plays only) */}
           {searchMode === "plays" && (
             <SearchFiltersSheet
               open={showFiltersSheet}
@@ -1598,7 +1598,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </Card>
             ) : (
               <div id="search-results" className="space-y-4">
-                {/* Results header: count left, feedback center, Bookmarked only right — one row (same as plays) */}
+                {/* Results header: count left, feedback center, Bookmarked only right (one row, same as plays) */}
                 {(() => {
                   const filmTvBookmarked = filmTvResults.filter((r) => savedFilmTvIds.has(r.id));
                   const displayList = showFilmTvBookmarkedOnly ? filmTvBookmarked : filmTvResults;
@@ -1758,7 +1758,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </p>
                 ) : null;
                 })()}
-              {/* Results header: count left, feedback center, Bookmarked only right — one row */}
+              {/* Results header: count left, feedback center, Bookmarked only right (one row) */}
               <div className="flex flex-wrap items-center gap-4 mb-8">
                 <div className="flex flex-col gap-0.5 min-w-0 shrink-0">
                   <div className="flex items-baseline gap-2 flex-wrap">
@@ -1877,7 +1877,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       <AnimatePresence>
         {selectedMonologue && (
           <>
-            {/* Backdrop — single bg class so opacity transition is smooth */}
+            {/* Backdrop: single bg class so opacity transition is smooth */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: isReadingMode ? 0.95 : 0.5 }}

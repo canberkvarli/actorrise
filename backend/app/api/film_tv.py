@@ -1,4 +1,4 @@
-"""Film & TV search — semantic + structured search over IMDb/OMDb-seeded film_tv_references."""
+"""Film & TV search: semantic + structured search over IMDb/OMDb-seeded film_tv_references."""
 
 import math
 from typing import List, Optional, cast
@@ -18,7 +18,7 @@ router = APIRouter(prefix="/api/film-tv", tags=["film-tv"])
 
 BEST_MATCH_THRESHOLD = 0.90
 
-# Module-level singleton — avoids re-initialising LangChain on every request
+# Module-level singleton: avoids re-initialising LangChain on every request
 _analyzer: "ContentAnalyzer | None" = None
 
 
@@ -191,7 +191,7 @@ async def search_film_tv_references(
         # scores_by_id: imdb_id → (score, ref)
         scores_by_id: dict[str, tuple[float, FilmTvReference]] = {}
 
-        # Path A — semantic (pgvector)
+        # Path A: semantic (pgvector)
         if query_embedding:
             sem_rows = (
                 base.filter(FilmTvReference.embedding.isnot(None))
@@ -211,7 +211,7 @@ async def search_film_tv_references(
                 if prev is None or sem_score > prev[0]:
                     scores_by_id[iid] = (sem_score, ref)
 
-        # Path B — text (title / director / plot ILIKE, actors word match)
+        # Path B: text (title / director / plot ILIKE, actors word match)
         text_rows = (
             base.filter(
                 or_(
@@ -249,7 +249,7 @@ async def search_film_tv_references(
             record_total_search(current_user.id, db)
         return FilmTvSearchResponse(results=results, total=total, page=page, page_size=limit)
 
-    # No query — filter-only, ordered by IMDb rating
+    # No query: filter-only, ordered by IMDb rating
     total = base.count()
     offset = (page - 1) * limit
     rows = base.order_by(FilmTvReference.imdb_rating.desc().nullslast()).offset(offset).limit(limit).all()

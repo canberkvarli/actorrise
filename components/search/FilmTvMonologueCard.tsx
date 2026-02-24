@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import type { FilmTvMonologue } from "../../types/filmTv";
 
 function formatDuration(seconds: number | null | undefined): string {
-  if (seconds == null) return "—";
+  if (seconds == null) return "-";
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
   return `${m}:${s.toString().padStart(2, "0")}`;
@@ -41,7 +41,7 @@ export function FilmTvMonologueCard({
       >
         <CardContent className="pt-6 flex-1 flex flex-col">
           <div className="space-y-4 flex-1">
-            {/* Top: character + source — same hierarchy as plays (character = title, play_title = source) */}
+            {/* Top: character + source (same hierarchy as plays) (character = title, play_title = source) */}
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -65,7 +65,7 @@ export function FilmTvMonologueCard({
               </div>
             </div>
 
-            {/* Badges row — same pattern as plays: category → gender → age → emotion */}
+            {/* Badges row: same pattern as plays: category → gender → age → emotion */}
             <div className="flex flex-wrap gap-2">
               {sourceTypeLabel && (
                 <Badge variant="secondary" className="font-normal capitalize">
@@ -94,14 +94,14 @@ export function FilmTvMonologueCard({
               )}
             </div>
 
-            {/* Scene description — same styled box as plays */}
+            {/* Scene description: same styled box as plays */}
             {mono.scene_description && (
               <div className="bg-secondary/10 px-3 py-2 rounded-md border-l-2 border-secondary/40">
                 <p className="text-xs italic text-muted-foreground line-clamp-2">{mono.scene_description}</p>
               </div>
             )}
 
-            {/* Tone/themes — same pills as plays themes */}
+            {/* Tone/themes: same pills as plays themes */}
             {(toneTags.length > 0 || (mono.themes && mono.themes.length > 0)) && (
               <div className="flex flex-wrap gap-1.5">
                 {toneTags.map((t) => (
@@ -123,7 +123,7 @@ export function FilmTvMonologueCard({
               </div>
             )}
 
-            {/* Description excerpt — analogous to play card's text excerpt (no script text) */}
+            {/* Description excerpt: analogous to play card's text excerpt (no script text) */}
             {mono.description && (
               <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
                 {mono.description}
@@ -131,7 +131,7 @@ export function FilmTvMonologueCard({
             )}
           </div>
 
-          {/* Footer — same border-t layout as plays: duration + meta + actions */}
+          {/* Footer: same border-t layout as plays: duration + meta + actions */}
           <div className="mt-4 pt-4 border-t flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
             <div className="flex items-center gap-3">
               {mono.estimated_duration_seconds != null && (

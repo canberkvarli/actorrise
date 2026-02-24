@@ -2,8 +2,8 @@
 Migration: Add film/TV monologue reference tables (metadata-only, no script text).
 
 Adds:
-1. film_tv_sources — title, type (film/tv_series), year, director, studio, genre[], imdb_id
-2. film_tv_monologues — character, description, themes, embedding (vector 1536), script_url, etc.
+1. film_tv_sources: title, type (film/tv_series), year, director, studio, genre[], imdb_id
+2. film_tv_monologues: character, description, themes, embedding (vector 1536), script_url, etc.
 3. HNSW index on film_tv_monologues.embedding for semantic search
 
 Usage (from backend directory):

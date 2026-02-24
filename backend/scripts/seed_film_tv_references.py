@@ -65,7 +65,7 @@ MIN_YEAR = 1950
 ALLOWED_TYPES = {"movie", "tvSeries"}
 
 # Only generate embeddings for titles at or above this rating threshold.
-# Titles below get stored with embedding=NULL — still searchable via text/ILIKE.
+# Titles below get stored with embedding=NULL; still searchable via text/ILIKE.
 # Keeps DB size under the Supabase 500 MB free tier.
 EMBEDDING_MIN_RATING = 7.5
 
@@ -307,16 +307,16 @@ def main() -> None:
     print("SEED film_tv_references")
     print("=" * 64)
     if args.dry_run:
-        print("DRY RUN — no data will be written to the database.")
+        print("DRY RUN: no data will be written to the database.")
     print()
 
-    # Step 1 — Load IMDb candidates (no cap here; we filter and cap below)
+    # Step 1: Load IMDb candidates (no cap here; we filter and cap below)
     all_candidates = load_imdb_candidates(limit=None)
     if not all_candidates:
         print("No candidates found. Exiting.")
         return
 
-    # Step 2 — When writing to DB, exclude titles already in DB so we only process "next" N
+    # Step 2: When writing to DB, exclude titles already in DB so we only process "next" N
     db = None if args.dry_run else SessionLocal()
     if db:
         existing_ids = get_existing_imdb_ids(db)
@@ -333,7 +333,7 @@ def main() -> None:
         print("No new titles to process (DB is up to date for this list). Exiting.")
         return
 
-    # Step 3–6 — Enrich + embed + save
+    # Step 3-6: Enrich + embed + save
 
     saved = 0
     skipped_omdb = 0
@@ -346,14 +346,14 @@ def main() -> None:
             primary_title = cand["primaryTitle"]
             title_type = cand["titleType"]
 
-            # Step 2 — OMDb enrichment
+            # Step 2: OMDb enrichment
             omdb = fetch_omdb(tconst, omdb_api_key)
             time.sleep(OMDB_DELAY_SEC)
 
             if omdb is None:
                 skipped_omdb += 1
                 if (idx + 1) % LOG_EVERY == 0:
-                    print(f"[{idx + 1}/{total}] Processed — saved={saved}, "
+                    print(f"[{idx + 1}/{total}] Processed: saved={saved}, "
                           f"skipped_omdb={skipped_omdb}, dupes={skipped_duplicate}")
                 continue
 
@@ -377,10 +377,10 @@ def main() -> None:
             runtime_minutes = _parse_runtime(omdb.get("Runtime", ""))
             imdb_rating = _parse_rating(omdb.get("imdbRating", ""))
 
-            # Step 3 — Poster URL
+            # Step 3: Poster URL
             poster = _poster_url(omdb, tconst, omdb_api_key)
 
-            # Step 4 — Embedding (only for quality titles to stay under DB limit)
+            # Step 4: Embedding (only for quality titles to stay under DB limit)
             # Use text-embedding-3-large (3072 dims) with enriched format
             embedding = None
             if imdb_rating is not None and imdb_rating >= EMBEDDING_MIN_RATING:
@@ -393,13 +393,13 @@ def main() -> None:
 
             if args.dry_run:
                 if (idx + 1) % LOG_EVERY == 0:
-                    print(f"[{idx + 1}/{total}] DRY RUN — title={title!r}, "
+                    print(f"[{idx + 1}/{total}] DRY RUN: title={title!r}, "
                           f"year={year}, type={title_type}, "
                           f"embedding={'ok' if embedding else 'FAILED'}")
                 saved += 1
                 continue
 
-            # Step 5 — Upsert into DB
+            # Step 5: Upsert into DB
             existing = db.query(FilmTvReference).filter(
                 FilmTvReference.imdb_id == tconst
             ).first()
@@ -429,7 +429,7 @@ def main() -> None:
             if (idx + 1) % LOG_EVERY == 0:
                 if not args.dry_run:
                     db.commit()
-                print(f"[{idx + 1}/{total}] Processed — saved={saved}, "
+                print(f"[{idx + 1}/{total}] Processed: saved={saved}, "
                       f"skipped_omdb={skipped_omdb}, dupes={skipped_duplicate}")
 
         # Final commit

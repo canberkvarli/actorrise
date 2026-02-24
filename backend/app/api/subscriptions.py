@@ -30,7 +30,7 @@ router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
 # Configure Stripe
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 
-# Educational email domain suffixes (lowercase) — used for auto student 50% discount
+# Educational email domain suffixes (lowercase): used for auto student 50% discount
 SCHOOL_EMAIL_SUFFIXES = (
     ".edu", ".ac.uk", ".edu.au", ".ac.nz", ".edu.sg", ".ac.in", ".edu.in",
     ".edu.tr", ".ac.jp", ".edu.mx", ".edu.br", ".ac.za", ".ac.kr", ".edu.ph",
@@ -259,7 +259,7 @@ async def create_checkout_session(
                     detail="Promo code is not configured. Please contact support.",
                 )
         elif promo in ("BUSINESS", "ACTINGTEACHER26"):
-            # 100% off for 3 months — teachers/coaches (Render: ACTINGTEACHER26=coupon_id)
+            # 100% off for 3 months: teachers/coaches (Render: ACTINGTEACHER26=coupon_id)
             business_coupon_id = os.getenv("STRIPE_BUSINESS_COUPON_ID") or os.getenv("ACTINGTEACHER26")
             if business_coupon_id:
                 discounts = [{"coupon": business_coupon_id}]
@@ -269,7 +269,7 @@ async def create_checkout_session(
                     detail="Promo code is not configured. Please contact support.",
                 )
         elif promo in ("STUDENT", "STUDENTACTOR26"):
-            # 100% off for 6 months — students (Render: STUDENTACTOR26=coupon_id)
+            # 100% off for 6 months: students (Render: STUDENTACTOR26=coupon_id)
             student_coupon_id = os.getenv("STRIPE_STUDENT_COUPON_ID") or os.getenv("STUDENTACTOR26")
             if student_coupon_id:
                 discounts = [{"coupon": student_coupon_id}]
@@ -279,7 +279,7 @@ async def create_checkout_session(
                     detail="Promo code is not configured. Please contact support.",
                 )
         elif promo in ("STXQ5NU4", "STUDENT50"):
-            # 50% off — Student discount (promo code StxQ5Nu4, name: Student discount)
+            # 50% off: Student discount (promo code StxQ5Nu4, name: Student discount)
             student_50_coupon_id = os.getenv("STRIPE_STUDENT_50_COUPON_ID")
             if student_50_coupon_id:
                 discounts = [{"coupon": student_50_coupon_id}]

@@ -189,7 +189,7 @@ export default function ScriptDetailPage() {
 
   return (
     <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-3xl relative min-h-[320px]">
-      {/* Skeleton overlay — fades out when data is loaded */}
+      {/* Skeleton overlay: fades out when data is loaded */}
       <motion.div
         className="absolute inset-0 z-10"
         initial={false}
@@ -205,7 +205,7 @@ export default function ScriptDetailPage() {
         </div>
       </motion.div>
 
-      {/* Not found — fades in when loaded but no script */}
+      {/* Not found: fades in when loaded but no script */}
       {!isLoading && !script && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -221,7 +221,7 @@ export default function ScriptDetailPage() {
         </motion.div>
       )}
 
-      {/* Main content — fades in when script is loaded */}
+      {/* Main content: fades in when script is loaded */}
       {!isLoading && script && (
     <motion.div
       initial={{ opacity: 0 }}
@@ -310,7 +310,7 @@ export default function ScriptDetailPage() {
             ) : (
               <button type="button" className="group flex items-center gap-2 text-muted-foreground hover:text-foreground" onClick={() => startEditing("genre", script.genre || "")}>
                 <span className="font-medium text-foreground/80">Genre</span>
-                <span>{script.genre || "—"}</span>
+                <span>{script.genre || "-"}</span>
                 <Edit2 className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
               </button>
             )}

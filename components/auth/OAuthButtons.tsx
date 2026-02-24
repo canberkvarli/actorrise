@@ -161,7 +161,7 @@ export function OAuthButtons({
               <Button
                 type="button"
                 variant="outline"
-                className="w-full h-11 rounded-lg border-border hover:bg-muted hover:text-foreground hover:border-foreground/20 transition-all justify-center gap-3"
+                className="w-full h-9 rounded-xl border-border/80 hover:bg-muted/80 hover:text-foreground hover:border-foreground/20 transition-all justify-center gap-2 text-sm px-4"
                 onClick={() => handleOAuthSignIn(provider)}
                 disabled={loadingProvider !== null}
               >
@@ -197,7 +197,7 @@ export function OAuthButtons({
             <Button
               type="button"
               variant="outline"
-              className="w-full h-11 rounded-lg border-border hover:bg-muted hover:text-foreground hover:border-foreground/20 transition-all justify-center gap-3"
+              className="w-full h-9 rounded-xl border-border/80 hover:bg-muted/80 hover:text-foreground hover:border-foreground/20 transition-all justify-center gap-2 text-sm px-4"
               onClick={onEmailClick}
             >
               <svg

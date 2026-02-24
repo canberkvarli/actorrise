@@ -530,7 +530,7 @@ export default function AdminOverviewPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            Usage — all users ({stats.from} → {stats.to})
+            Usage: all users ({stats.from} → {stats.to})
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -690,7 +690,7 @@ export default function AdminOverviewPage() {
                 </div>
               </div>
 
-              {/* Searches & AI cost — total (all types) + AI (embeddings/cost), live */}
+              {/* Searches & AI cost: total (all types) + AI (embeddings/cost), live */}
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <IconBrain className="h-4 w-4" />

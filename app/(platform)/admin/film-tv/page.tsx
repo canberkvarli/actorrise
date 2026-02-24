@@ -106,7 +106,7 @@ export default function AdminFilmTvPage() {
           <CardHeader>
             <CardTitle className="text-lg">{item.title}</CardTitle>
             <p className="text-sm text-muted-foreground">
-              {item.year ?? "—"} · {item.type ?? "—"} · IMDb {item.imdb_id}
+              {item.year ?? "-"} · {item.type ?? "-"} · IMDb {item.imdb_id}
             </p>
           </CardHeader>
           <CardContent className="space-y-4">

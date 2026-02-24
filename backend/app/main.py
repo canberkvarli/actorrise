@@ -22,8 +22,8 @@ from app.api.webhooks import router as webhooks_router
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.core.seed import ensure_pricing_tiers
-from app.models.feedback import ResultFeedback  # noqa: F401 — register with Base for create_all
-from app.models.moderation import (  # noqa: F401 — register with Base for create_all
+from app.models.feedback import ResultFeedback  # noqa: F401; register with Base for create_all
+from app.models.moderation import (  # noqa: F401; register with Base for create_all
     ModerationLog, MonologueSubmission)
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
