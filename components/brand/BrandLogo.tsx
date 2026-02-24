@@ -4,13 +4,13 @@ import Image from "next/image";
 
 /** Icon-only logo (e.g. favicon, auth). Use transparent_logo.png for icon-only. */
 const LOGO_ICON = "/transparent_logo.png";
-/** Full logo with "ActorRise" wordmark. Use for header/nav. */
-const LOGO_WITH_TEXT = "/logoText.png";
+/** Full logo with "ActorRise" wordmark (use version with header-matching bg for blend). */
+const LOGO_WITH_TEXT = "/logo_text.png";
 
 type Size = "header" | "auth";
 
-/* Icon aspect (tall). Logo-with-text is wider. */
-const LOGO_ICON_ASPECT = { w: 744, h: 1340 };
+/* Icon: square (e.g. 273×273). Same asset used for auth and for other platforms (social, etc.). */
+const LOGO_ICON_ASPECT = { w: 273, h: 273 };
 const LOGO_TEXT_ASPECT = { w: 320, h: 80 };
 
 const sizes: Record<Size, { iconClass: string; fullLogoClass: string }> = {
