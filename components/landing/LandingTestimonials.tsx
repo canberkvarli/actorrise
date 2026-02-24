@@ -2,7 +2,7 @@
 
 /**
  * Testimonials / social proof. Three equal cards (founder + actors).
- * Title in brand serif; quote and attribution in sans for readability.
+ * Actor headshots: put images in public/testimonials/ and reference as /testimonials/filename.jpg
  */
 
 import Image from "next/image";
@@ -12,6 +12,7 @@ export interface TestimonialItem {
   quote: string;
   name: string;
   descriptor: string;
+  /** Path under /testimonials/ (e.g. /testimonials/canberk.jpeg). Put files in public/testimonials/. */
   image?: string;
   isFounder?: boolean;
 }
@@ -22,7 +23,7 @@ const TESTIMONIALS: TestimonialItem[] = [
       "After years of hunting through tiny databases and random PDFs for audition pieces, I wanted a calmer, faster way to find work that actually fit. ActorRise is that tool.",
     name: "Canberk Varli",
     descriptor: "Founder and actor",
-    image: "/canberk.jpeg",
+    image: "/testimonials/canberk.jpeg",
     isFounder: true,
   },
   {
@@ -30,11 +31,13 @@ const TESTIMONIALS: TestimonialItem[] = [
       "I had a shortlist in under a minute. The search actually understood what I was asking for.",
     name: "Actor",
     descriptor: "Drama school audition",
+    // image: "/testimonials/actor-name.jpg",
   },
   {
     quote: "Used it for a film callback and found a scene that fit the brief in seconds.",
     name: "Actor",
     descriptor: "Screen actor",
+    // image: "/testimonials/actor-name.jpg",
   },
 ];
 

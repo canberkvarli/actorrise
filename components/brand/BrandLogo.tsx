@@ -2,22 +2,25 @@
 
 import Image from "next/image";
 
-/** Brand icon, trimmed (no empty padding). Generated: magick public/logo.png -trim +repage public/logo-trimmed.png */
-const LOGO_ICON = "/logo-trimmed.png";
+/** Icon-only logo (e.g. favicon, auth). Use transparent_logo.png for icon-only. */
+const LOGO_ICON = "/transparent_logo.png";
+/** Full logo with "ActorRise" wordmark. Use for header/nav. */
+const LOGO_WITH_TEXT = "/logoText.png";
 
 type Size = "header" | "auth";
 
-/* Trimmed logo aspect ~744×1340 (tall). Sizing by height, width auto. */
-const LOGO_ASPECT = { w: 744, h: 1340 };
+/* Icon aspect (tall). Logo-with-text is wider. */
+const LOGO_ICON_ASPECT = { w: 744, h: 1340 };
+const LOGO_TEXT_ASPECT = { w: 320, h: 80 };
 
-const sizes: Record<Size, { iconClass: string; textClass: string }> = {
+const sizes: Record<Size, { iconClass: string; fullLogoClass: string }> = {
   header: {
     iconClass: "h-10 sm:h-11 md:h-12 lg:h-14 w-auto shrink-0 object-contain",
-    textClass: "text-xl sm:text-2xl md:text-3xl lg:text-4xl",
+    fullLogoClass: "h-10 sm:h-11 md:h-12 lg:h-14 w-auto shrink-0 object-contain",
   },
   auth: {
     iconClass: "h-[5.5rem] sm:h-[6rem] w-auto shrink-0 object-contain",
-    textClass: "text-3xl sm:text-4xl",
+    fullLogoClass: "h-[5.5rem] sm:h-[6rem] w-auto shrink-0 object-contain",
   },
 };
 
@@ -28,25 +31,29 @@ export function BrandLogo({
   size?: Size;
   iconOnly?: boolean;
 }) {
-  const { iconClass, textClass } = sizes[size];
+  const { iconClass, fullLogoClass } = sizes[size];
 
-  return (
-    <span className="inline-flex items-center gap-2.5 min-w-0 shrink">
+  if (iconOnly) {
+    return (
       <Image
         src={LOGO_ICON}
-        alt={iconOnly ? "ActorRise" : ""}
-        width={LOGO_ASPECT.w}
-        height={LOGO_ASPECT.h}
+        alt="ActorRise"
+        width={LOGO_ICON_ASPECT.w}
+        height={LOGO_ICON_ASPECT.h}
         className={iconClass}
         priority
       />
-      {!iconOnly && (
-        <span
-          className={`font-brand font-semibold text-foreground tracking-tight truncate ${textClass}`}
-        >
-          ActorRise
-        </span>
-      )}
-    </span>
+    );
+  }
+
+  return (
+    <Image
+      src={LOGO_WITH_TEXT}
+      alt="ActorRise"
+      width={LOGO_TEXT_ASPECT.w}
+      height={LOGO_TEXT_ASPECT.h}
+      className={fullLogoClass}
+      priority
+    />
   );
 }

@@ -121,12 +121,11 @@ class Monologue(Base):
 
     # Search & Discovery
     # Legacy JSON/text embedding for backward compatibility with existing data.
-    # New searches should prefer `embedding_vector`, which uses Postgres pgvector.
     embedding = Column(Text, nullable=True)
-    # Deferred so DBs without this column still load; add column and run backfill when using pgvector.
-    embedding_vector = deferred(Column(Vector, nullable=True))
-    # V2 embeddings: text-embedding-3-large (3072 dims) with enriched metadata
-    embedding_vector_v2 = deferred(Column(Vector(3072), nullable=True))
+    # Production embedding: text-embedding-3-large (3072 dims) after finalize
+    embedding_vector = deferred(Column(Vector(3072), nullable=True))
+    # Deprecated v1 embeddings (kept for rollback safety)
+    embedding_vector_deprecated = deferred(Column(Vector(1536), nullable=True))
     search_tags = Column(ARRAY(String), nullable=True)  # Searchable keywords
 
     # Usage Analytics
@@ -397,9 +396,10 @@ class FilmTvReference(Base):
     imdb_rating = Column(Float, nullable=True, index=True)
     poster_url = Column(String, nullable=True)
     imsdb_url = Column(String, nullable=True)
-    embedding = Column(Vector(1536), nullable=True)
-    # V2 embeddings: text-embedding-3-large (3072 dims) with enriched metadata
-    embedding_vector_v2 = deferred(Column(Vector(3072), nullable=True))
+    # Production embedding: text-embedding-3-large (3072 dims) after finalize
+    embedding = Column(Vector(3072), nullable=True)
+    # Deprecated v1 embeddings (kept for rollback safety)
+    embedding_deprecated = deferred(Column(Vector(1536), nullable=True))
     created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))
 
     # Relationships
