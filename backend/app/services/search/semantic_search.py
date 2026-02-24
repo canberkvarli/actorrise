@@ -673,7 +673,7 @@ class SemanticSearch:
             )
 
             # pgvector already returned candidates sorted best-first by cosine distance.
-            # Recomputing cosine similarity in Python is redundant — derive a score
+            # Recomputing cosine similarity in Python is redundant; derive a score
             # from rank position instead (rank 0 = best match → 1.0, decreasing).
             total = len(semantic_candidates)
             for rank, mono in enumerate(semantic_candidates):
@@ -1114,7 +1114,7 @@ class SemanticSearch:
             ).bindparams(pattern=f"%{normalized_for_punctuation}%")
         )
 
-        # Priority 2: Title match — when user searches by monologue title (e.g. "sadf"), put exact/contains match first
+        # Priority 2: Title match: when user searches by monologue title (e.g. "sadf"), put exact/contains match first
         ordering_clauses.append(Monologue.title.ilike(f"%{normalized_query}%").desc())
 
         # Priority 3: Opening line matches query pattern

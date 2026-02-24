@@ -277,7 +277,7 @@ export default function AdminUserDetailPage() {
   const formatBenefitValue = (value: unknown): string => {
     if (Array.isArray(value)) return value.join(", ");
     if (typeof value === "boolean") return value ? "Enabled" : "Disabled";
-    if (value == null) return "—";
+    if (value == null) return "-";
     return String(value);
   };
 

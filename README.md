@@ -1,12 +1,12 @@
 # ActorRise Platform
 
-A modern acting platform built with Next.js and FastAPI — the world's largest AI-powered monologue discovery for **theater and film/TV**. Find the right audition material in under 20 seconds.
+A modern acting platform built with Next.js and FastAPI: the world's largest AI-powered monologue discovery for **theater and film/TV**. Find the right audition material in under 20 seconds.
 
 ## 🎭 Current Features
 
 - **AI Monologue Search**: Semantic search that understands what you're looking for
   - **Theater**: 8,600+ monologues from 172 plays (4–8x larger than competitors). Full script text, filters (gender, age, duration, emotion, overdone), and profile-biased results
-  - **Film/TV**: Search film and TV scene references by character, emotion, tone, difficulty. After search, click a result — then use the **Script** link to open the scene (e.g. IMSDB) and **Watch** for YouTube when available. Same search bar — switch between Plays and Film/TV
+  - **Film/TV**: Search film and TV scene references by character, emotion, tone, difficulty. After search, click a result, then use the **Script** link to open the scene (e.g. IMSDB) and **Watch** for YouTube when available. Same search bar: switch between Plays and Film/TV
 - **Authentication**: Secure Supabase authentication with JWT token verification
 - **Actor Profiles**: Comprehensive profile system for actors
   - Basic info (name, age range, gender, ethnicity, height, build, location)
@@ -210,7 +210,7 @@ SUPABASE_STORAGE_BUCKET=headshots
    - Set your preferences
    - Enable profile bias for future recommendations
 4. **Dashboard**: View your profile completion and stats at `/dashboard`
-5. **Search**: AI-powered monologue search at `/search` — switch between **Plays** (8,600+ theater monologues) and **Film/TV** (scene references) and search in plain English
+5. **Search**: AI-powered monologue search at `/search`: switch between **Plays** (8,600+ theater monologues) and **Film/TV** (scene references) and search in plain English
 
 ## 🧪 Development
 

@@ -1,4 +1,4 @@
-/** Film/TV reference — IMDb/OMDb-seeded metadata for audition prep. */
+/** Film/TV reference: IMDb/OMDb-seeded metadata for audition prep. */
 
 export interface FilmTvReference {
   id: number;
@@ -25,7 +25,7 @@ export interface FilmTvSearchResponse {
   page_size: number;
 }
 
-/** Film/TV monologue — a single monologue from a film or TV reference (for search results). */
+/** Film/TV monologue: a single monologue from a film or TV reference (for search results). */
 export interface FilmTvMonologue {
   character_name: string;
   source_title: string;

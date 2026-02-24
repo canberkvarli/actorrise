@@ -115,7 +115,7 @@ export function WelcomeFlow({ onDismiss }: WelcomeFlowProps) {
       aria-modal="true"
       aria-label="Welcome to Actorrise"
     >
-      {/* Backdrop: no click/tap dismiss — only Skip / Continue / Complete / Start exploring close the flow */}
+      {/* Backdrop: no click/tap dismiss; only Skip / Continue / Complete / Start exploring close the flow */}
       <div
         className="absolute inset-0 bg-black/75 backdrop-blur-sm"
         aria-hidden="true"

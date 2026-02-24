@@ -8,7 +8,7 @@ const INITIAL_DURATION_MS = 2000;
 const UPDATE_DURATION_MS = 1200;
 const POLL_INTERVAL_MS = 25_000;
 
-/** Fallback library stats so the section isn’t empty while the API loads (avoids long "—"). */
+/** Fallback library stats so the section isn’t empty while the API loads (avoids long dash). */
 const FALLBACK_LIBRARY = { monologues: 8600, filmTv: 14000 };
 
 /**

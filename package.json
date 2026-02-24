@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "changelog:from-git": "node scripts/changelog-from-git.mjs",
-    "changelog:dry-run": "node scripts/changelog-from-git.mjs --dry-run"
+    "changelog:dry-run": "node scripts/changelog-from-git.mjs --dry-run",
+    "compress-testimonials": "node scripts/compress-testimonial-images.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -54,6 +55,7 @@
     "@types/react-input-mask": "^3.0.6",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
+    "sharp": "^0.33.5",
     "tailwindcss": "^4",
     "tw-animate-css": "^1.4.0",
     "typescript": "^5"

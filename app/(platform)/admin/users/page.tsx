@@ -189,7 +189,7 @@ export default function AdminUsersPage() {
                           </div>
                         </td>
                         <td className="py-2 text-muted-foreground">
-                          {item.created_at ? new Date(item.created_at).toLocaleDateString() : "—"}
+                          {item.created_at ? new Date(item.created_at).toLocaleDateString() : "-"}
                         </td>
                         <td className="py-2">
                           <Button asChild size="sm" variant="outline">

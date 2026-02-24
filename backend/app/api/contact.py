@@ -1,6 +1,6 @@
 """
 Public contact form API. Sends messages to canberk@actorrise.com via Resend.
-No authentication required — for partnership, feedback, bugs, collaboration, etc.
+No authentication required; for partnership, feedback, bugs, collaboration, etc.
 """
 
 import html

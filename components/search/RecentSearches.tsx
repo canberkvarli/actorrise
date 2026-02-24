@@ -114,7 +114,7 @@ export default function RecentSearches({ maxSearches = 3, compact = false }: Rec
             </div>
             <p className="text-base font-semibold text-foreground">No recent searches yet</p>
             <p className="text-sm text-muted-foreground mt-1 max-w-[240px]">
-              Search for monologues or film & TV scenes — they&apos;ll appear here for quick access.
+              Search for monologues or film & TV scenes; they&apos;ll appear here for quick access.
             </p>
             <div className="flex flex-wrap justify-center gap-2 mt-5">
               <Button asChild size="sm" variant="default" className="gap-2 rounded-lg">

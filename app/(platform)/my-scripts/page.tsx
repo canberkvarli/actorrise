@@ -472,7 +472,7 @@ export default function MyScriptsPage() {
 
       {/* Content: crossfade skeleton → content to avoid flicker */}
       <div className="relative min-h-[340px]">
-        {/* Skeleton overlay — fades out when data is loaded */}
+        {/* Skeleton overlay: fades out when data is loaded */}
         <motion.div
           className="absolute inset-0 z-10 grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6"
           initial={false}
@@ -505,7 +505,7 @@ export default function MyScriptsPage() {
           ))}
         </motion.div>
 
-        {/* Actual content — fades in when loaded */}
+        {/* Actual content: fades in when loaded */}
         {!isLoading && (
           scripts.length === 0 ? (
             <motion.div

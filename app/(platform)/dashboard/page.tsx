@@ -384,7 +384,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             <Link
               href="/search"
               className="block group max-w-3xl"
-              aria-label="Find your next monologue — search by description, emotion, character type, or browse filters"
+              aria-label="Find your next monologue: search by description, emotion, character type, or browse filters"
             >
               <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-md transition-all">
                 <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
@@ -683,7 +683,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       <AnimatePresence>
         {currentMonologue && (
           <>
-            {/* Backdrop — single bg so opacity transition is smooth */}
+            {/* Backdrop: single bg so opacity transition is smooth */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: isReadingMode ? 0.95 : 0.5 }}

@@ -1,6 +1,6 @@
 """
 Result feedback API (e.g. thumbs up/down on search results).
-Stores in DB for product insight. Auth optional — anonymous feedback allowed.
+Stores in DB for product insight. Auth optional; anonymous feedback allowed.
 """
 
 from app.core.database import get_db

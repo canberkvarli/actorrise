@@ -36,7 +36,7 @@ def main():
     if result.get("id") and result.get("id") != "mock_welcome_id":
         print("Done. Check your inbox.")
     elif result.get("status") == "disabled":
-        print("RESEND_API_KEY not set — email was not sent. Set it in backend/.env to send for real.")
+        print("RESEND_API_KEY not set; email was not sent. Set it in backend/.env to send for real.")
     else:
         print("Sent (or check logs above).")
 

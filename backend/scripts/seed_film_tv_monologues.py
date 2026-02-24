@@ -2,7 +2,7 @@
 """
 Seed film_tv_sources and film_tv_monologues with well-known audition pieces.
 
-Metadata only — no script text. Descriptions are original thematic summaries.
+Metadata only; no script text. Descriptions are original thematic summaries.
 Run after add_film_tv_tables.py.
 
 Usage (from backend directory):
@@ -64,7 +64,7 @@ SOURCES = [
 
 # Each tuple: (source_key, character_name, actor_name, description, themes[], primary_emotion, tone[], duration_sec, word_count_approx, character_gender, character_age_range, difficulty_level, scene_description, timestamp_approx, script_url, youtube_url)
 # source_key = index in SOURCES (0-based)
-# Descriptions are ORIGINAL thematic summaries — no script text.
+# Descriptions are ORIGINAL thematic summaries; no script text.
 MONOLOGUES = [
     (0, "The Joker", "Heath Ledger", "A villain explains his nihilistic worldview and the futility of order in a chaotic world.", ["chaos", "morality", "power"], "anger", ["dark", "menacing", "philosophical"], 120, 280, "male", "30s", "advanced", "Hospital scene where Joker visits Harvey Dent", "~1:45:00", "https://imsdb.com/Movie%20Scripts/Dark%20Knight,%20The%20Script.html", None),
     (1, "Will Hunting", "Matt Damon", "A young genius confronts his fear of intimacy and vulnerability with his therapist.", ["trauma", "identity", "connection"], "sadness", ["dramatic", "raw", "emotional"], 90, 220, "male", "20s", "intermediate", "Therapy session breakthrough", None, "https://imsdb.com/Movie%20Scripts/Good%20Will%20Hunting%20Script.html", None),

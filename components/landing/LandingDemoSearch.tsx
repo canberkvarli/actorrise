@@ -155,7 +155,7 @@ export function LandingDemoSearch() {
     setSearchCompleted(false);
     setCorrectedQuery(null);
     setIsLoading(true);
-    // Don't clear results here — only set on success. Avoids bottom section collapsing when we get 429.
+    // Don't clear results here; only set on success. Avoids bottom section collapsing when we get 429.
 
     try {
       const url = `${API_URL}/api/monologues/search-demo?q=${encodeURIComponent(q)}`;
