@@ -53,10 +53,14 @@ class ArchiveOrgScraper:
         logger.info(f"Searching Archive.org: {query}")
 
         try:
-            search_results = ia.search_items(query, max_results=limit)
+            search_results = ia.search_items(query)
 
             plays = []
+            count = 0
             for result in search_results:
+                if limit and count >= limit:
+                    break
+                count += 1
                 try:
                     item = ia.get_item(result['identifier'])
 

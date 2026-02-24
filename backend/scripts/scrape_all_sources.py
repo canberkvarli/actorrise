@@ -98,7 +98,7 @@ def scrape_gutenberg(db, limit_per_author: int = 5) -> dict:
                 logger.info(f"  → Found: {play_title} (ID: {book['id']})")
 
                 # Download and ingest
-                count = scraper.ingest_book(book['id'], author, play_title)
+                count = scraper.ingest_play(book['id'], author, play_title)
 
                 if count:
                     stats['plays_added'] += 1
