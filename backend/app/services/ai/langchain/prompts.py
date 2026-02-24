@@ -106,6 +106,12 @@ Extract the following information if present in the query (return null if not me
    - Examples: "2 minute" → 120, "under 3 minutes" → 180, "90 second" → 90, "1 min" → 60
    - Return integer seconds or null if not mentioned
 
+8. exclude_author: Is the user explicitly excluding a specific author?
+   - Keywords: "not Shakespeare", "no Shakespeare", "except Shakespeare", "anything but Shakespeare" → "William Shakespeare"
+   - Keywords: "not Ibsen", "no Ibsen" → "Henrik Ibsen"
+   - Only extract when user explicitly says NOT/NO/EXCEPT + author name
+   - Return author's full name or null
+
 Return ONLY valid JSON with these keys. Use null for any filter not mentioned in the query."""
 
 QUERY_PARSING_TEMPLATE = ChatPromptTemplate.from_messages([

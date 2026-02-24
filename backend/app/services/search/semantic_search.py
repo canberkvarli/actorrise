@@ -592,6 +592,12 @@ class SemanticSearch:
                     Play.author == merged_filters['author']
                 )
 
+            # Exclude author filter (e.g., "not Shakespeare")
+            if merged_filters.get('exclude_author'):
+                base_query = base_query.filter(
+                    Play.author != merged_filters['exclude_author']
+                )
+
             if merged_filters.get('max_duration'):
                 base_query = base_query.filter(
                     Monologue.estimated_duration_seconds <= merged_filters['max_duration']
@@ -989,6 +995,12 @@ class SemanticSearch:
             if filters.get('author'):
                 base_query = base_query.filter(
                     Play.author == filters['author']
+                )
+
+            # Exclude author filter (e.g., "not Shakespeare")
+            if filters.get('exclude_author'):
+                base_query = base_query.filter(
+                    Play.author != filters['exclude_author']
                 )
 
             # Duration filter
