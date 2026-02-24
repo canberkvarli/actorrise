@@ -43,6 +43,7 @@ export function BrandLogo({
         height={LOGO_ICON_ASPECT.h}
         className={iconClass}
         priority
+        unoptimized
       />
     );
   }
