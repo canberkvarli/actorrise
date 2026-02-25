@@ -3,6 +3,12 @@ name: Weekly monologue seed
 # Runs every Sunday at 02:00 UTC; adds newly scraped public-domain monologues
 # and picks up any fresh IMDb titles that just crossed the 10k-vote threshold.
 #
+# Monologue sources (all legal, public domain, English-only):
+#   - Project Gutenberg (classical plays)
+#   - Internet Archive (public domain theater)
+#   - Wikisource (community-verified plays) [metadata only - needs text parser]
+#   - Perseus Digital Library (Greek/Roman classics) [metadata only - needs text parser]
+#
 # Required repository secrets (Settings → Secrets → Actions):
 #   DATABASE_URL       – production Supabase connection string
 #   OPENAI_API_KEY     – for embedding + analysis
@@ -61,9 +67,11 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           LIMIT="${{ github.event.inputs.monologue_limit || '100' }}"
-          echo "Scraping up to $LIMIT new monologues…"
+          echo "Scraping up to $LIMIT new monologues from all sources…"
+          echo "Sources: Gutenberg, Archive.org, Wikisource, Perseus"
           uv run python scripts/scrape_all_sources.py --limit "$LIMIT" || true
           # '|| true' so a partial failure doesn't block film/TV step
+          # Note: Wikisource & Perseus require text parser integration (metadata only for now)
 
       # ── Step 2: Seed new film/TV titles from IMDb/OMDb ───────────────────────
       - name: Seed new film/TV references

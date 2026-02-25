@@ -303,7 +303,49 @@ class PerseusScraper:
 
 # Integration guide
 """
-To fully integrate Perseus:
+🎯 RECOMMENDED APPROACH: Use Perseus GitHub Repositories (Easier & Better)
+
+Instead of using the CTS API, directly access Perseus's XML text repositories:
+
+1. **Clone Perseus GitHub repos** (one-time setup):
+   git clone https://github.com/PerseusDL/canonical-greekLit.git
+   git clone https://github.com/PerseusDL/canonical-latinLit.git
+
+   License: CC-BY-SA-4.0 (commercial use allowed with attribution)
+
+2. **Parse TEI XML files**:
+   - All texts are in TEI XML format
+   - Well-structured with speaker tags, line numbers, etc.
+   - Use Python's xml.etree.ElementTree or lxml
+   - Extract character speeches for monologue detection
+
+3. **File structure**:
+   canonical-greekLit/data/{author}/{work}/
+   - e.g., data/tlg0011/tlg001/ (Sophocles Antigone)
+   - Multiple translations available per work
+   - Filter for English translations (*.perseus-eng*.xml)
+
+4. **Benefits over CTS API**:
+   - Offline access (no API calls)
+   - Faster (no network latency)
+   - No rate limits
+   - Full control over parsing
+   - GitHub keeps repos updated
+
+5. **Example integration**:
+   ```python
+   import xml.etree.ElementTree as ET
+
+   def parse_perseus_play(xml_path):
+       tree = ET.parse(xml_path)
+       root = tree.getroot()
+       # Parse TEI structure: <sp who="character"><speaker>...</speaker><l>...</l></sp>
+       # Extract monologues from consecutive <l> (line) elements by same speaker
+   ```
+
+Alternative: CTS API approach (if GitHub access not feasible)
+
+To fully integrate Perseus via CTS API:
 
 1. Use the CTS API to dynamically discover works:
    - GetCapabilities to list all available texts

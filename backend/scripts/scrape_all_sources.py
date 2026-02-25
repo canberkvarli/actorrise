@@ -3,10 +3,12 @@
 Master script to scrape all legal monologue sources.
 
 Orchestrates:
-1. Expanded Project Gutenberg scraping
-2. Archive.org public domain theater
-3. Deduplication
-4. Stats reporting
+1. Project Gutenberg - Classical plays (pre-1928)
+2. Archive.org - Public domain theater
+3. Wikisource - Community-verified plays
+4. Perseus Digital Library - Classical Greek/Roman drama
+5. Deduplication
+6. Stats reporting
 
 Usage:
     uv run python scripts/scrape_all_sources.py
@@ -14,6 +16,8 @@ Usage:
 Options:
     --gutenberg-only: Only scrape Gutenberg
     --archive-only: Only scrape Archive.org
+    --wikisource-only: Only scrape Wikisource
+    --perseus-only: Only scrape Perseus
     --limit N: Limit results per source (default: 50)
 """
 
@@ -35,6 +39,8 @@ from app.services.data_ingestion.gutenberg_scraper import (
     GutenbergScraper,
 )
 from app.services.data_ingestion.archive_org_scraper import ArchiveOrgScraper
+from app.services.data_ingestion.wikisource_scraper import WikisourceScraper
+from app.services.data_ingestion.perseus_scraper import PerseusScraper
 from app.services.data_ingestion.deduplicator import MonologueDeduplicator
 
 # Configure logging
@@ -182,6 +188,166 @@ def scrape_archive_org(db, limit: int = 50) -> dict:
     return total_stats
 
 
+def scrape_wikisource(db, limit: int = 50) -> dict:
+    """
+    Scrape Wikisource public domain plays.
+
+    Args:
+        db: Database session
+        limit: Max plays to process
+
+    Returns:
+        Statistics dict
+    """
+    logger.info("\n" + "=" * 60)
+    logger.info("PHASE 3: Wikisource")
+    logger.info("=" * 60)
+
+    scraper = WikisourceScraper()
+    dedup = MonologueDeduplicator(db)
+
+    stats = {
+        'searched': 0,
+        'plays_added': 0,
+        'monologues_added': 0,
+        'duplicates_skipped': 0,
+        'failed': 0
+    }
+
+    # Search main Plays category
+    logger.info(f"Searching Wikisource 'Plays' category (limit={limit})...")
+
+    try:
+        plays = scraper.search_plays(category="Plays", limit=limit)
+        stats['searched'] = len(plays)
+
+        for play_data in plays:
+            try:
+                title = play_data['title']
+                author = play_data.get('author', 'Unknown')
+
+                # Check for duplicates
+                if dedup.is_duplicate_play(title, author):
+                    logger.info(f"  ⊘ Skipping duplicate: {title}")
+                    stats['duplicates_skipped'] += 1
+                    continue
+
+                # Fetch full text
+                logger.info(f"  → Fetching: {title} by {author}")
+                text = scraper.fetch_play_text(title)
+
+                if not text or len(text) < 500:
+                    logger.info(f"  ✗ Text too short or unavailable: {title}")
+                    stats['failed'] += 1
+                    continue
+
+                # TODO: Parse play text and extract monologues
+                # For now, just log that we got the text
+                # In production, integrate with PlainTextParser or similar
+                logger.info(f"  ✓ Retrieved {len(text)} chars for {title}")
+                # stats['plays_added'] += 1
+                # stats['monologues_added'] += count
+
+                time.sleep(1)  # Rate limit
+
+            except Exception as e:
+                logger.error(f"  ✗ Error processing {play_data.get('title', 'Unknown')}: {e}")
+                stats['failed'] += 1
+                continue
+
+    except Exception as e:
+        logger.error(f"Error searching Wikisource: {e}")
+
+    logger.info("\n" + "=" * 60)
+    logger.info("Wikisource Summary:")
+    logger.info(f"  Plays searched: {stats['searched']}")
+    logger.info(f"  Plays added: {stats['plays_added']}")
+    logger.info(f"  Monologues added: {stats['monologues_added']}")
+    logger.info(f"  Duplicates skipped: {stats['duplicates_skipped']}")
+    logger.info(f"  Failed: {stats['failed']}")
+    logger.info("=" * 60)
+    logger.info("Note: Wikisource integration requires play text parser implementation")
+
+    return stats
+
+
+def scrape_perseus(db, limit: int = 50) -> dict:
+    """
+    Scrape Perseus Digital Library classical drama.
+
+    Args:
+        db: Database session
+        limit: Max plays to process (Perseus has curated list, so limit may not apply)
+
+    Returns:
+        Statistics dict
+    """
+    logger.info("\n" + "=" * 60)
+    logger.info("PHASE 4: Perseus Digital Library")
+    logger.info("=" * 60)
+
+    scraper = PerseusScraper()
+    dedup = MonologueDeduplicator(db)
+
+    stats = {
+        'searched': 0,
+        'plays_added': 0,
+        'monologues_added': 0,
+        'duplicates_skipped': 0,
+        'failed': 0
+    }
+
+    logger.info("Fetching classical Greek and Roman plays...")
+
+    try:
+        # Get all classical plays (English translations)
+        plays = scraper.get_classical_plays(language='en')
+        stats['searched'] = len(plays)
+
+        logger.info(f"Found {len(plays)} classical plays")
+
+        for play_data in plays[:limit]:
+            try:
+                title = play_data['title']
+                author = play_data['author']
+                tradition = play_data.get('tradition', 'Classical')
+
+                # Check for duplicates
+                if dedup.is_duplicate_play(title, author):
+                    logger.info(f"  ⊘ Skipping duplicate: {title} by {author}")
+                    stats['duplicates_skipped'] += 1
+                    continue
+
+                logger.info(f"  → {author} - {title} ({tradition})")
+
+                # TODO: Fetch full text using CTS URN or GitHub canonical repos
+                # For now, we have metadata but need text integration
+                # In production: integrate with canonical-greekLit/latinLit repos
+                # stats['plays_added'] += 1
+                # stats['monologues_added'] += count
+
+            except Exception as e:
+                logger.error(f"  ✗ Error processing {play_data.get('title', 'Unknown')}: {e}")
+                stats['failed'] += 1
+                continue
+
+    except Exception as e:
+        logger.error(f"Error fetching Perseus plays: {e}")
+
+    logger.info("\n" + "=" * 60)
+    logger.info("Perseus Summary:")
+    logger.info(f"  Plays cataloged: {stats['searched']}")
+    logger.info(f"  Plays added: {stats['plays_added']}")
+    logger.info(f"  Monologues added: {stats['monologues_added']}")
+    logger.info(f"  Duplicates skipped: {stats['duplicates_skipped']}")
+    logger.info(f"  Failed: {stats['failed']}")
+    logger.info("=" * 60)
+    logger.info("Note: Perseus integration requires CTS URN text fetching or GitHub repo integration")
+    logger.info("      Consider cloning canonical-greekLit/latinLit repos for full text access")
+
+    return stats
+
+
 def main():
     """Main orchestration function."""
     parser = argparse.ArgumentParser(description="Scrape all monologue sources")
@@ -194,6 +360,16 @@ def main():
         '--archive-only',
         action='store_true',
         help='Only scrape Archive.org'
+    )
+    parser.add_argument(
+        '--wikisource-only',
+        action='store_true',
+        help='Only scrape Wikisource'
+    )
+    parser.add_argument(
+        '--perseus-only',
+        action='store_true',
+        help='Only scrape Perseus Digital Library'
     )
     parser.add_argument(
         '--limit',
@@ -224,19 +400,37 @@ def main():
             'duplicates_skipped': 0
         }
 
+        # Check if running specific source only
+        only_flags = [args.gutenberg_only, args.archive_only, args.wikisource_only, args.perseus_only]
+        run_all = not any(only_flags)
+
         # Phase 1: Gutenberg
-        if not args.archive_only:
+        if args.gutenberg_only or run_all:
             gutenberg_stats = scrape_gutenberg(db, limit_per_author=5)
             grand_total['plays_added'] += gutenberg_stats['plays_added']
             grand_total['monologues_added'] += gutenberg_stats['monologues_added']
             grand_total['duplicates_skipped'] += gutenberg_stats['duplicates_skipped']
 
         # Phase 2: Archive.org
-        if not args.gutenberg_only:
+        if args.archive_only or run_all:
             archive_stats = scrape_archive_org(db, limit=args.limit)
             grand_total['plays_added'] += archive_stats['plays_added']
             grand_total['monologues_added'] += archive_stats['monologues_added']
             grand_total['duplicates_skipped'] += archive_stats.get('skipped', 0)
+
+        # Phase 3: Wikisource
+        if args.wikisource_only or run_all:
+            wikisource_stats = scrape_wikisource(db, limit=args.limit)
+            grand_total['plays_added'] += wikisource_stats['plays_added']
+            grand_total['monologues_added'] += wikisource_stats['monologues_added']
+            grand_total['duplicates_skipped'] += wikisource_stats.get('duplicates_skipped', 0)
+
+        # Phase 4: Perseus
+        if args.perseus_only or run_all:
+            perseus_stats = scrape_perseus(db, limit=args.limit)
+            grand_total['plays_added'] += perseus_stats['plays_added']
+            grand_total['monologues_added'] += perseus_stats['monologues_added']
+            grand_total['duplicates_skipped'] += perseus_stats.get('duplicates_skipped', 0)
 
         # Final summary
         elapsed = time.time() - start_time
