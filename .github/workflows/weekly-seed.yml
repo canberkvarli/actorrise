@@ -33,7 +33,7 @@ on:
       film_tv_limit:
         description: "Max new film/TV titles to seed per run (default 3000)"
         required: false
-        default: "3000"
+        default: "100"
 
 jobs:
   seed:
