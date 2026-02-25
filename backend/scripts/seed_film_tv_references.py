@@ -377,6 +377,17 @@ def main() -> None:
             runtime_minutes = _parse_runtime(omdb.get("Runtime", ""))
             imdb_rating = _parse_rating(omdb.get("imdbRating", ""))
 
+            # Filter for English language only
+            language = omdb.get("Language", "")
+            if language and language != "N/A":
+                # Check if English is in the language list
+                if "English" not in language and "english" not in language.lower():
+                    skipped_omdb += 1
+                    if (idx + 1) % LOG_EVERY == 0:
+                        print(f"[{idx + 1}/{total}] Processed — saved={saved}, "
+                              f"skipped_omdb={skipped_omdb}, dupes={skipped_duplicate}")
+                    continue
+
             # Step 3: Poster URL
             poster = _poster_url(omdb, tconst, omdb_api_key)
 
