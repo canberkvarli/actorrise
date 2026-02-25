@@ -35,7 +35,7 @@ class ArchiveOrgScraper:
         limit: int = 100
     ) -> List[Dict]:
         """
-        Search Internet Archive for public domain plays.
+        Search Internet Archive for public domain plays (English only).
 
         Args:
             additional_query: Additional search terms
@@ -45,8 +45,8 @@ class ArchiveOrgScraper:
         Returns:
             List of play metadata dicts
         """
-        # Search for drama/theater texts
-        query = f"collection:americana AND mediatype:texts AND subject:drama AND year:[* TO {year_max}]"
+        # Search for drama/theater texts (English only)
+        query = f"collection:americana AND mediatype:texts AND subject:drama AND language:eng AND year:[* TO {year_max}]"
         if additional_query:
             query += f" AND {additional_query}"
 
@@ -68,7 +68,13 @@ class ArchiveOrgScraper:
                     if not self._is_theatrical_work(item):
                         continue
 
+                    # Filter for English language only
                     metadata = item.metadata
+                    language = metadata.get('language', '').lower()
+                    if language and 'eng' not in language and 'english' not in language:
+                        logger.info(f"Skipping non-English item: {metadata.get('title', 'Unknown')} (language: {language})")
+                        continue
+
                     plays.append({
                         'identifier': item.identifier,
                         'title': metadata.get('title', 'Unknown'),

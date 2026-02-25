@@ -141,7 +141,7 @@ class GutenbergScraper:
         self.parser = PlainTextParser()
 
     def search_plays(self, author: str, title: Optional[str] = None) -> List[Dict]:
-        """Search for plays by a specific author"""
+        """Search for plays by a specific author (English only)"""
 
         try:
             search_term = author
@@ -152,14 +152,26 @@ class GutenbergScraper:
                 self.BASE_URL,
                 params={
                     'search': search_term,
-                    'mime_type': 'text/plain'
+                    'mime_type': 'text/plain',
+                    'languages': 'en'  # English only
                 },
                 timeout=10
             )
 
             if response.status_code == 200:
                 data = response.json()
-                return data.get('results', [])
+                results = data.get('results', [])
+
+                # Double-check language filtering (some results may slip through)
+                english_results = []
+                for book in results:
+                    languages = book.get('languages', [])
+                    if 'en' in languages or not languages:  # Include if English or language unknown
+                        english_results.append(book)
+                    else:
+                        print(f"  ⊘ Skipping non-English book: {book.get('title', 'Unknown')} (languages: {languages})")
+
+                return english_results
             else:
                 print(f"Error searching Gutenberg: {response.status_code}")
                 return []
