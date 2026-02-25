@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import time
+from pathlib import Path
 from typing import Dict, List, Optional
 import xml.etree.ElementTree as ET
 
@@ -298,6 +299,73 @@ class PerseusScraper:
 
         except (requests.RequestException, ET.ParseError) as e:
             logger.error(f"Error fetching CTS URN {cts_urn}: {e}")
+            return None
+
+    def scan_local_repos(self, repo_base_path: str) -> List[Dict]:
+        """
+        Scan local Perseus GitHub repos for English TEI XML files.
+
+        Args:
+            repo_base_path: Path to directory containing canonical-greekLit and canonical-latinLit
+                          e.g., "backend/data/perseus"
+
+        Returns:
+            List of file metadata dicts with: file_path, author_id, work_id, language
+        """
+        base = Path(repo_base_path)
+        files = []
+
+        # Scan both repos
+        for repo_name in ['canonical-greekLit', 'canonical-latinLit']:
+            repo_path = base / repo_name / 'data'
+
+            if not repo_path.exists():
+                logger.warning(f"Perseus repo not found: {repo_path}")
+                continue
+
+            # Find all English TEI XML files
+            # Pattern: tlg####.tlg###.perseus-eng*.xml
+            for xml_file in repo_path.rglob('*perseus-eng*.xml'):
+                # Skip __cts__.xml files (metadata only)
+                if xml_file.name == '__cts__.xml':
+                    continue
+
+                # Extract author and work IDs from path
+                # Path format: data/tlg0011/tlg001/tlg0011.tlg001.perseus-eng2.xml
+                parts = xml_file.parts
+                try:
+                    author_id = parts[-3]  # e.g., "tlg0011"
+                    work_id = parts[-2]    # e.g., "tlg001"
+
+                    files.append({
+                        'file_path': str(xml_file),
+                        'author_id': author_id,
+                        'work_id': work_id,
+                        'language': 'en',
+                        'tradition': 'Greek' if repo_name == 'canonical-greekLit' else 'Latin'
+                    })
+                except IndexError:
+                    logger.warning(f"Could not parse file path: {xml_file}")
+                    continue
+
+        logger.info(f"Found {len(files)} English Perseus texts in local repos")
+        return files
+
+    def read_tei_xml(self, file_path: str) -> Optional[str]:
+        """
+        Read TEI XML file content.
+
+        Args:
+            file_path: Path to TEI XML file
+
+        Returns:
+            XML content as string or None if read fails
+        """
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return f.read()
+        except Exception as e:
+            logger.error(f"Error reading {file_path}: {e}")
             return None
 
 
