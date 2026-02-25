@@ -3,10 +3,15 @@ HathiTrust Digital Library scraper for public domain plays.
 
 Legal status: All retrieved content is verified public domain by HathiTrust.
 Language: English-language filtering via metadata.
-API: HathiTrust Data API with respectful rate limiting.
 
-Note: Bulk download requires Research Center agreement. This scraper uses
-the public API for metadata and links to public domain works.
+⚠️ IMPORTANT: HathiTrust Data API was RETIRED on July 17, 2024.
+   Alternative approaches:
+   1. HathiTrust Research Center (HTRC) - for large-scale text analysis
+   2. Research Datasets - bulk metadata downloads
+   3. Direct catalog scraping (respectful, public domain only)
+
+This scraper is a REFERENCE IMPLEMENTATION showing structure.
+For production use, consider HTRC membership or catalog scraping.
 """
 
 from __future__ import annotations
@@ -26,14 +31,14 @@ class HathiTrustScraper:
 
     HathiTrust provides verified public domain status and high-quality OCR.
     All content is legally available and academically cataloged.
+
+    ⚠️ NOTE: HathiTrust Data API retired July 2024. This is a reference implementation.
+    For production, use HathiTrust Research Center or Research Datasets service.
     """
 
-    # HathiTrust API endpoints
-    BIBLIOGRAPHIC_API = "https://catalog.hathitrust.org/api/volumes/brief"
-    DATA_API = "https://data.analytics.hathitrust.org/genre"
-
-    # Search via catalog (public interface - respectful scraping)
-    CATALOG_SEARCH = "https://catalog.hathitrust.org/Search/Home"
+    # HathiTrust endpoints (Data API retired July 2024)
+    BIBLIOGRAPHIC_API = "https://catalog.hathitrust.org/api/volumes/brief"  # May still work
+    CATALOG_SEARCH = "https://catalog.hathitrust.org/Search/Home"  # Public catalog
 
     RATE_LIMIT_DELAY = 2.0  # 2 seconds between requests (respectful scraping)
 
@@ -253,30 +258,38 @@ class HathiTrustScraper:
 
 # Example usage and integration guide
 """
-To use this scraper in production:
+⚠️ IMPORTANT UPDATE (July 2024): HathiTrust Data API has been RETIRED.
 
-1. Apply for HathiTrust Research Center access (free for non-commercial research):
-   https://www.hathitrust.org/data_research_center
+Alternative approaches for production use:
 
-2. Get API credentials or download bulk metadata:
-   - Solr API: https://solr2.babel.hathitrust.org/
-   - Bulk metadata: https://www.hathitrust.org/hathifiles
+1. **HathiTrust Research Center (HTRC)** - Recommended
+   - Apply for free membership: https://www.hathitrust.org/htrc
+   - Provides text analysis tools and dataset access
+   - Best for large-scale text mining
+   - Contact: htrc-help@hathitrust.org
 
-3. Update search_plays() to use actual API:
+2. **Research Datasets Service**
+   - Bulk metadata downloads: https://www.hathitrust.org/datasets
+   - HathiFiles: complete bibliographic metadata
+   - Extracted Features dataset for text analysis
+   - No API required, download and process locally
 
-   def search_plays(self, query, year_max, limit):
-       solr_url = "https://solr2.babel.hathitrust.org/solr/catalog/select"
-       params = {
-           'q': f'{query} AND publishDate:[* TO {year_max}] AND language:eng AND rights:pd',
-           'fl': 'id,title,author,publishDate,rights,language',
-           'rows': limit,
-           'wt': 'json'
-       }
-       response = self.session.get(solr_url, params=params)
-       data = response.json()
-       # Parse Solr response...
+3. **Respectful Catalog Scraping** (if HTRC not feasible)
+   - Use public catalog search: https://catalog.hathitrust.org/Search/Home
+   - Search: "drama AND language:eng AND rights:pd AND publishDate:[* TO 1928]"
+   - Parse search results HTML (respectful 2-3s delays)
+   - Only public domain works
+   - Link to HathiTrust reader for full text
 
-4. Implement text extraction from PDFs or use HathiTrust's text API
+4. **Bibliographic API** (may still work for metadata)
+   - https://catalog.hathitrust.org/api/volumes/brief/{htid}.json
+   - Metadata only, no full text
+   - Check current status before relying on it
 
-5. Respect rate limits and terms of service
+Recommendation for ActorRise:
+- Start with Wikisource and Perseus (already implemented, working)
+- Apply for HTRC membership for future HathiTrust integration
+- Focus on other sources (Gutenberg, Archive.org) which have working APIs
+
+Contact HathiTrust support for questions: support@hathitrust.org
 """
