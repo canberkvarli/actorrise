@@ -45,44 +45,45 @@ All content must meet these requirements:
 - **Rate Limits**: 100ms delays (1000 requests/day free tier)
 - **Terms**: Patreon supporter or paid API key required
 
----
-
-## Potential New Sources (Legal & Feasible)
-
-### 4. HathiTrust Digital Library
-- **URL**: https://www.hathitrust.org
-- **API**: HathiTrust Data API
-- **Legal Status**: Public domain works verified by HathiTrust
-- **Content**: Academic collection of plays, including rare and international works
-- **Language Filtering**: Metadata includes language field
-- **Advantages**:
-  - Verified public domain status
-  - High-quality OCR
-  - Academic rigor in cataloging
-- **Implementation Considerations**:
-  - API requires registration (free for non-commercial)
-  - Bulk download requires Research Center agreement
-  - Rate limits apply
-- **Recommendation**: ⭐ **HIGH PRIORITY** - Large collection with verified public domain status
+### 4. Perseus Digital Library
+- **URL**: http://www.perseus.tufts.edu
+- **API**: Perseus Catalog API / CTS API
+- **Legal Status**: Public domain classical texts
+- **Language Filtering**: ✅ English translations
+- **Content**: Greek and Roman drama in English translation (Aeschylus, Sophocles, Euripides, Aristophanes, Plautus, Terence, Seneca)
+- **Implementation**: `app/services/data_ingestion/perseus_scraper.py`
+- **Rate Limits**: 1.5 second delays
+- **Terms**: Free access, scholarly annotations included
+- **Status**: ✅ **IMPLEMENTED** (2026-02-24)
 
 ### 5. Wikisource
 - **URL**: https://en.wikisource.org
 - **API**: MediaWiki API
 - **Legal Status**: Public domain works with community verification
-- **Content**: Well-formatted plays with editorial notes
-- **Language Filtering**: English Wikisource subdomain
-- **Advantages**:
-  - Clean, structured text
-  - Already formatted for web display
-  - Community-verified accuracy
-  - Category browsing (Drama, Plays by author, etc.)
-- **Implementation Considerations**:
-  - Standard MediaWiki API
-  - Rate limits: respectful scraping
-  - Category: "Category:Plays" has thousands of works
-- **Recommendation**: ⭐ **HIGH PRIORITY** - Clean text, easy to parse
+- **Language Filtering**: ✅ English Wikisource subdomain
+- **Content**: Well-formatted plays with editorial notes, organized by Category:Plays
+- **Implementation**: `app/services/data_ingestion/wikisource_scraper.py`
+- **Rate Limits**: 1 second delays (respectful scraping)
+- **Terms**: Free access, community-verified accuracy
+- **Status**: ✅ **IMPLEMENTED** (2026-02-24)
 
-### 6. Early English Books Online (EEBO)
+---
+
+## Potential New Sources (Legal & Feasible)
+
+### 6. HathiTrust Digital Library
+- **URL**: https://www.hathitrust.org
+- **API**: HathiTrust Data API / Solr API
+- **Legal Status**: Public domain works verified by HathiTrust
+- **Language Filtering**: Metadata includes language field
+- **Content**: Academic collection of plays, including rare and international works
+- **Implementation**: `app/services/data_ingestion/hathitrust_scraper.py` (structure ready, requires API credentials)
+- **Rate Limits**: 2 second delays
+- **Terms**: Free registration required for non-commercial research
+- **Status**: ⚠️ **PARTIALLY IMPLEMENTED** - Requires Research Center access or API credentials
+- **Next Steps**: Apply for HathiTrust Research Center access at https://www.hathitrust.org/data_research_center
+
+### 7. Early English Books Online (EEBO)
 - **URL**: https://quod.lib.umich.edu/e/eebogroup/
 - **API**: Text Creation Partnership (TCP) texts available
 - **Legal Status**: Public domain (pre-1700 works)
@@ -97,7 +98,7 @@ All content must meet these requirements:
   - Smaller collection but unique content
 - **Recommendation**: ⭐ **MEDIUM PRIORITY** - Specialized but valuable
 
-### 7. Digital Library of India
+### 8. Digital Library of India
 - **URL**: https://ndl.iitkgp.ac.in
 - **API**: Limited API access
 - **Legal Status**: Public domain works (pre-1928)
@@ -112,7 +113,7 @@ All content must meet these requirements:
   - Quality varies
 - **Recommendation**: ⭐ **LOW PRIORITY** - Interesting but complex
 
-### 8. Library of Congress Digital Collections
+### 9. Library of Congress Digital Collections
 - **URL**: https://www.loc.gov/collections/
 - **API**: LOC JSON API
 - **Legal Status**: Public domain works clearly marked
@@ -127,22 +128,6 @@ All content must meet these requirements:
   - Not all content is text (many images/PDFs)
   - OCR quality varies
 - **Recommendation**: ⭐ **MEDIUM PRIORITY** - Quality over quantity
-
-### 9. Perseus Digital Library
-- **URL**: http://www.perseus.tufts.edu
-- **API**: Perseus Catalog API
-- **Legal Status**: Public domain classical texts
-- **Content**: Greek and Roman drama in English translation
-- **Language Filtering**: English translations available
-- **Advantages**:
-  - Authoritative classical texts
-  - Multiple translations available
-  - Scholarly annotations
-- **Implementation Considerations**:
-  - XML-based API
-  - Focus on classical (Greek/Roman) works only
-  - Well-structured but limited scope
-- **Recommendation**: ⭐ **MEDIUM PRIORITY** - Excellent for classical drama
 
 ### 10. Open Library
 - **URL**: https://openlibrary.org
@@ -186,20 +171,27 @@ All content must meet these requirements:
 
 ---
 
-## Implementation Priority
+## Implementation Status
 
-### Phase 1 (High Priority - Immediate Implementation)
-1. **Wikisource** - Clean text, easy API, large collection
-2. **HathiTrust** - Verified public domain, academic quality
+### ✅ Completed (2026-02-24)
+1. **Project Gutenberg** - Classical plays, public domain works
+2. **Internet Archive** - Public domain theater and drama
+3. **IMDb + OMDb** - Film/TV metadata for reference matching
+4. **Wikisource** - Clean text, community-verified plays
+5. **Perseus Digital Library** - Classical Greek/Roman drama
 
-### Phase 2 (Medium Priority - Next Quarter)
-3. **Perseus Digital Library** - Fill classical drama gap
-4. **Library of Congress** - High-quality American theater
-5. **EEBO** - Early modern drama specialization
+### ⚠️ Partially Implemented
+6. **HathiTrust** - Structure ready, awaiting API credentials
 
-### Phase 3 (Low Priority - Future Consideration)
-6. **Open Library** - Additional metadata enrichment
-7. **Digital Library of India** - Cultural diversity
+### 📋 Planned Implementation
+
+#### Phase 2 (Next Quarter)
+- **Library of Congress** - High-quality American theater archive
+- **EEBO** - Early modern English drama (Marlowe, Jonson)
+
+#### Phase 3 (Future Consideration)
+- **Open Library** - Additional metadata enrichment
+- **Digital Library of India** - Cultural diversity
 
 ---
 
@@ -247,13 +239,16 @@ When adding a new source, ensure:
 
 ## Next Steps
 
-1. Implement Wikisource scraper (estimated: 1-2 days)
-2. Add HathiTrust integration (estimated: 2-3 days)
-3. Test language filtering across all sources
-4. Monitor scraping stats in weekly workflow
-5. Consider future licensing partnerships for contemporary works
+1. ✅ ~~Implement Wikisource scraper~~ (completed 2026-02-24)
+2. ✅ ~~Implement Perseus Digital Library scraper~~ (completed 2026-02-24)
+3. ⚠️ Apply for HathiTrust Research Center access and get API credentials
+4. ✅ ~~Test language filtering across all sources~~ (completed 2026-02-24)
+5. Implement Library of Congress scraper (Phase 2)
+6. Implement EEBO scraper (Phase 2)
+7. Monitor scraping stats in weekly workflow
+8. Consider future licensing partnerships for contemporary works
 
 ---
 
-**Last Updated**: 2026-02-23
+**Last Updated**: 2026-02-24
 **Maintained By**: ActorRise Backend Team
