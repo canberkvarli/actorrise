@@ -73,15 +73,17 @@ All content must meet these requirements:
 
 ### 6. HathiTrust Digital Library
 - **URL**: https://www.hathitrust.org
-- **API**: HathiTrust Data API / Solr API
+- **API**: ⚠️ **Data API RETIRED July 2024** - Use HTRC or Research Datasets instead
 - **Legal Status**: Public domain works verified by HathiTrust
 - **Language Filtering**: Metadata includes language field
 - **Content**: Academic collection of plays, including rare and international works
-- **Implementation**: `app/services/data_ingestion/hathitrust_scraper.py` (structure ready, requires API credentials)
-- **Rate Limits**: 2 second delays
-- **Terms**: Free registration required for non-commercial research
-- **Status**: ⚠️ **PARTIALLY IMPLEMENTED** - Requires Research Center access or API credentials
-- **Next Steps**: Apply for HathiTrust Research Center access at https://www.hathitrust.org/data_research_center
+- **Implementation**: `app/services/data_ingestion/hathitrust_scraper.py` (reference only - API retired)
+- **Alternatives**:
+  - HathiTrust Research Center (HTRC) - apply for membership
+  - Research Datasets - bulk metadata downloads
+  - Respectful catalog scraping (public domain only)
+- **Status**: ⚠️ **ON HOLD** - Data API retired, need alternative approach
+- **Recommendation**: Deprioritize until HTRC membership obtained or focus on other working sources
 
 ### 7. Early English Books Online (EEBO)
 - **URL**: https://quod.lib.umich.edu/e/eebogroup/
