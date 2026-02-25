@@ -28,6 +28,7 @@ import logging
 import sys
 import time
 from pathlib import Path
+from typing import Optional
 
 # Add backend to path
 backend_dir = Path(__file__).resolve().parent.parent
@@ -42,6 +43,9 @@ from app.services.data_ingestion.archive_org_scraper import ArchiveOrgScraper
 from app.services.data_ingestion.wikisource_scraper import WikisourceScraper
 from app.services.data_ingestion.perseus_scraper import PerseusScraper
 from app.services.data_ingestion.deduplicator import MonologueDeduplicator
+from app.services.extraction.plain_text_parser import PlainTextParser
+from app.services.extraction.tei_xml_parser import TEIXMLParser
+from app.models.actor import Play, Monologue
 
 # Configure logging
 logging.basicConfig(
@@ -190,7 +194,7 @@ def scrape_archive_org(db, limit: int = 50) -> dict:
 
 def scrape_wikisource(db, limit: int = 50) -> dict:
     """
-    Scrape Wikisource public domain plays.
+    Scrape Wikisource public domain plays and extract monologues.
 
     Args:
         db: Database session
@@ -205,6 +209,7 @@ def scrape_wikisource(db, limit: int = 50) -> dict:
 
     scraper = WikisourceScraper()
     dedup = MonologueDeduplicator(db)
+    parser = PlainTextParser()
 
     stats = {
         'searched': 0,
@@ -225,6 +230,7 @@ def scrape_wikisource(db, limit: int = 50) -> dict:
             try:
                 title = play_data['title']
                 author = play_data.get('author', 'Unknown')
+                year = play_data.get('year')
 
                 # Check for duplicates
                 if dedup.is_duplicate_play(title, author):
@@ -241,18 +247,60 @@ def scrape_wikisource(db, limit: int = 50) -> dict:
                     stats['failed'] += 1
                     continue
 
-                # TODO: Parse play text and extract monologues
-                # For now, just log that we got the text
-                # In production, integrate with PlainTextParser or similar
-                logger.info(f"  ✓ Retrieved {len(text)} chars for {title}")
-                # stats['plays_added'] += 1
-                # stats['monologues_added'] += count
+                # Create Play record
+                play = Play(
+                    title=title,
+                    author=author,
+                    year_written=year,
+                    genre='drama',
+                    category='classical',
+                    copyright_status='public_domain',
+                    source_url=play_data.get('url'),
+                    full_text=text,
+                    text_format='plain',
+                    language='en'
+                )
+
+                db.add(play)
+                db.commit()
+
+                logger.info(f"  ✅ Created play record (ID: {play.id})")
+                stats['plays_added'] += 1
+
+                # Extract monologues
+                logger.info(f"  🔍 Extracting monologues...")
+                monologues = parser.extract_monologues(text, min_words=50, max_words=500)
+
+                logger.info(f"  📝 Found {len(monologues)} potential monologues")
+
+                # Save monologues
+                for mono in monologues:
+                    try:
+                        monologue = Monologue(
+                            play_id=play.id,
+                            title=f"{mono['character']}'s speech from {title}",
+                            character_name=mono['character'],
+                            text=mono['text'],
+                            stage_directions=mono.get('stage_directions'),
+                            word_count=mono['word_count'],
+                            estimated_duration_seconds=int(mono['word_count'] / 150 * 60)  # 150 wpm
+                        )
+                        db.add(monologue)
+                        stats['monologues_added'] += 1
+
+                    except Exception as e:
+                        logger.error(f"  ⚠️  Error creating monologue: {e}")
+                        continue
+
+                db.commit()
+                logger.info(f"  ✓ Added {len(monologues)} monologues")
 
                 time.sleep(1)  # Rate limit
 
             except Exception as e:
                 logger.error(f"  ✗ Error processing {play_data.get('title', 'Unknown')}: {e}")
                 stats['failed'] += 1
+                db.rollback()
                 continue
 
     except Exception as e:
@@ -266,21 +314,26 @@ def scrape_wikisource(db, limit: int = 50) -> dict:
     logger.info(f"  Duplicates skipped: {stats['duplicates_skipped']}")
     logger.info(f"  Failed: {stats['failed']}")
     logger.info("=" * 60)
-    logger.info("Note: Wikisource integration requires play text parser implementation")
 
     return stats
 
 
-def scrape_perseus(db, limit: int = 50) -> dict:
+def scrape_perseus(db, limit: int = 50, perseus_repo_path: Optional[str] = None) -> dict:
     """
     Scrape Perseus Digital Library classical drama.
 
     Args:
         db: Database session
-        limit: Max plays to process (Perseus has curated list, so limit may not apply)
+        limit: Max plays to process
+        perseus_repo_path: Optional path to cloned Perseus GitHub repos
+                          (e.g., "/path/to/canonical-greekLit")
 
     Returns:
         Statistics dict
+
+    Note: For full functionality, clone Perseus repos:
+          git clone https://github.com/PerseusDL/canonical-greekLit.git
+          git clone https://github.com/PerseusDL/canonical-latinLit.git
     """
     logger.info("\n" + "=" * 60)
     logger.info("PHASE 4: Perseus Digital Library")
@@ -288,6 +341,8 @@ def scrape_perseus(db, limit: int = 50) -> dict:
 
     scraper = PerseusScraper()
     dedup = MonologueDeduplicator(db)
+    tei_parser = TEIXMLParser()
+    plain_parser = PlainTextParser()  # Fallback for non-TEI texts
 
     stats = {
         'searched': 0,
@@ -299,18 +354,29 @@ def scrape_perseus(db, limit: int = 50) -> dict:
 
     logger.info("Fetching classical Greek and Roman plays...")
 
+    if perseus_repo_path:
+        logger.info(f"Using Perseus repos at: {perseus_repo_path}")
+    else:
+        logger.info("⚠️  No Perseus repo path provided - metadata only mode")
+        logger.info("   To enable full text parsing:")
+        logger.info("   1. Clone: git clone https://github.com/PerseusDL/canonical-greekLit.git")
+        logger.info("   2. Clone: git clone https://github.com/PerseusDL/canonical-latinLit.git")
+        logger.info("   3. Pass path: --perseus-repo-path /path/to/repos")
+
     try:
         # Get all classical plays (English translations)
         plays = scraper.get_classical_plays(language='en')
         stats['searched'] = len(plays)
 
-        logger.info(f"Found {len(plays)} classical plays")
+        logger.info(f"Found {len(plays)} classical plays in catalog")
 
         for play_data in plays[:limit]:
             try:
                 title = play_data['title']
                 author = play_data['author']
+                year = play_data.get('year')
                 tradition = play_data.get('tradition', 'Classical')
+                genre = play_data.get('genre', 'Tragedy')
 
                 # Check for duplicates
                 if dedup.is_duplicate_play(title, author):
@@ -318,17 +384,36 @@ def scrape_perseus(db, limit: int = 50) -> dict:
                     stats['duplicates_skipped'] += 1
                     continue
 
-                logger.info(f"  → {author} - {title} ({tradition})")
+                logger.info(f"  → {author} - {title} ({tradition} {genre})")
 
-                # TODO: Fetch full text using CTS URN or GitHub canonical repos
-                # For now, we have metadata but need text integration
-                # In production: integrate with canonical-greekLit/latinLit repos
-                # stats['plays_added'] += 1
-                # stats['monologues_added'] += count
+                # For now, create play record with metadata only
+                # Full text integration requires Perseus GitHub repos or CTS API
+                play = Play(
+                    title=title,
+                    author=author,
+                    year_written=year,
+                    genre=genre.lower(),
+                    category='classical',
+                    copyright_status='public_domain',
+                    source_url=play_data.get('url'),
+                    full_text=None,  # TODO: Fetch from GitHub repos
+                    text_format='tei_xml',
+                    language='en'
+                )
+
+                db.add(play)
+                db.commit()
+
+                logger.info(f"  ✅ Created play record (ID: {play.id}) - metadata only")
+                stats['plays_added'] += 1
+
+                # Note: Monologue extraction requires full text from GitHub repos
+                # stats['monologues_added'] += 0  (no text yet)
 
             except Exception as e:
                 logger.error(f"  ✗ Error processing {play_data.get('title', 'Unknown')}: {e}")
                 stats['failed'] += 1
+                db.rollback()
                 continue
 
     except Exception as e:
@@ -342,8 +427,12 @@ def scrape_perseus(db, limit: int = 50) -> dict:
     logger.info(f"  Duplicates skipped: {stats['duplicates_skipped']}")
     logger.info(f"  Failed: {stats['failed']}")
     logger.info("=" * 60)
-    logger.info("Note: Perseus integration requires CTS URN text fetching or GitHub repo integration")
-    logger.info("      Consider cloning canonical-greekLit/latinLit repos for full text access")
+
+    if stats['plays_added'] > 0 and stats['monologues_added'] == 0:
+        logger.info("📋 Next Step: Clone Perseus GitHub repos for full text extraction:")
+        logger.info("   git clone https://github.com/PerseusDL/canonical-greekLit.git")
+        logger.info("   git clone https://github.com/PerseusDL/canonical-latinLit.git")
+        logger.info("   Then parse TEI XML files using TEIXMLParser")
 
     return stats
 
