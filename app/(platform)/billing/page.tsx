@@ -178,7 +178,7 @@ export default function BillingPage() {
                 </p>
               )}
             </CardContent>
-            <CardFooter className="px-5 py-4 pt-0 border-t-0">
+            <CardFooter className="px-5 py-4 pt-0 border-t-0 flex-col items-start gap-3">
               {subscription?.tier_name === "free" ? (
                 <Button asChild size="sm" className="gap-2 w-fit">
                   <Link href="/pricing">
@@ -186,7 +186,7 @@ export default function BillingPage() {
                     Upgrade Plan
                   </Link>
                 </Button>
-              ) : (
+              ) : subscription?.has_stripe_customer ? (
                 <Button
                   onClick={handleManageSubscription}
                   disabled={isManagingSubscription}
@@ -197,6 +197,11 @@ export default function BillingPage() {
                   <IconCreditCard className="h-4 w-4" />
                   Manage Subscription
                 </Button>
+              ) : (
+                <div className="text-sm text-muted-foreground">
+                  <p className="mb-2">You have access to <strong>{subscription?.tier_display_name}</strong> features.</p>
+                  <p className="text-xs">To manage billing, contact support or <Link href="/pricing" className="text-primary hover:underline">upgrade your plan</Link>.</p>
+                </div>
               )}
             </CardFooter>
           </Card>

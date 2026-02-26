@@ -24,6 +24,7 @@ export interface SubscriptionData {
   billing_period: string;
   current_period_end: string | null;
   cancel_at_period_end: boolean;
+  has_stripe_customer: boolean; // Whether user can access Stripe portal
 }
 
 export interface UsageLimits {

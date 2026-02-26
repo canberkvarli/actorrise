@@ -38,15 +38,17 @@ export function LandingHeaderActions() {
         variant="ghost"
         size="sm"
         onClick={() => authModal?.openAuthModal("login")}
+        className="hidden sm:inline-flex"
       >
         Sign in
       </Button>
       <Button
         size="sm"
-        className="rounded-full px-5"
+        className="rounded-full px-3 sm:px-5 text-xs sm:text-sm whitespace-nowrap"
         onClick={() => authModal?.openAuthModal("signup")}
       >
-        Try Free Search
+        <span className="hidden sm:inline">Try Free Search</span>
+        <span className="sm:hidden">Try Free</span>
       </Button>
     </div>
   );
