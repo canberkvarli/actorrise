@@ -116,7 +116,10 @@ class DeliverLineRequest(BaseModel):
 
 class DeliverLineResponse(BaseModel):
     """Response after delivering a line"""
-    ai_response: str  # AI's next line
+    ai_response: str  # AI's next line (backward compat: full response)
+    line_text: Optional[str] = None  # Clean dialogue line only (for TTS)
+    tts_instructions: Optional[str] = None  # How to deliver vocally (auto-generated)
+    ai_voice_id: Optional[str] = None  # OpenAI TTS voice for this character
     feedback: Optional[str]  # Feedback on user's delivery
     next_line_preview: Optional[str]  # User's next line to prepare
     session_status: str
@@ -130,6 +133,24 @@ class SessionFeedbackResponse(BaseModel):
     areas_to_improve: List[str]
     overall_rating: Optional[float]
     transcript: str
+
+
+# ============================================================================
+# Helpers
+# ============================================================================
+
+def _get_ai_voice_id(scene, ai_character_name: str) -> str:
+    """Resolve OpenAI TTS voice for the AI character based on gender + tone."""
+    from app.services.tts_service import get_voice_for_character
+
+    gender = None
+    if str(scene.character_1_name) == ai_character_name:
+        gender = str(scene.character_1_gender) if scene.character_1_gender else None
+    elif str(scene.character_2_name) == ai_character_name:
+        gender = str(scene.character_2_gender) if scene.character_2_gender else None
+
+    tone = str(scene.tone) if scene.tone else None
+    return get_voice_for_character(ai_character_name, gender, tone)
 
 
 # ============================================================================
@@ -438,6 +459,8 @@ async def deliver_line(
         "playwright": str(scene.play.author) if scene.play.author is not None else "",  # type: ignore
         "setting": str(scene.setting) if scene.setting is not None else "",  # type: ignore
         "relationship_dynamic": str(scene.relationship_dynamic) if scene.relationship_dynamic is not None else "",  # type: ignore
+        "tone": str(scene.tone) if scene.tone is not None else "",  # type: ignore
+        "primary_emotions": list(scene.primary_emotions) if scene.primary_emotions else [],  # type: ignore
         "user_character": str(session.user_character) if session.user_character is not None else "",  # type: ignore
         "ai_character": str(session.ai_character) if session.ai_character is not None else "",  # type: ignore
         "user_character_description": "",
@@ -446,7 +469,9 @@ async def deliver_line(
             {
                 "character": str(line.character_name) if line.character_name is not None else "",
                 "text": str(line.text) if line.text is not None else "",
-                "order": int(line.line_order) if line.line_order is not None else 0
+                "order": int(line.line_order) if line.line_order is not None else 0,
+                "stage_direction": str(line.stage_direction) if line.stage_direction else "",
+                "primary_emotion": str(line.primary_emotion) if line.primary_emotion else "",
             }
             for line in all_lines
         ],
@@ -459,7 +484,7 @@ async def deliver_line(
         "mode": "rehearsing",
         "should_continue": True
     }
-    
+
     # Add user input to state (needed by _respond_as_character)
     state["last_user_input"] = request.user_input  # type: ignore
 
@@ -467,15 +492,23 @@ async def deliver_line(
     partner = ScenePartnerGraph(temperature=0.7)
     result_state = partner._respond_as_character(state)
 
-    # Extract AI response
+    # Extract structured AI response
     ai_message = result_state["messages"][-1] if result_state["messages"] else {}
     ai_response_text = ai_message.get("content", "")
+    line_text = ai_message.get("line_text", ai_response_text)
+    feedback_from_ai = ai_message.get("feedback", "")
+    tts_instructions = ai_message.get("tts_instructions", "")
 
-    delivery.ai_response = ai_response_text  # type: ignore
+    delivery.ai_response = line_text  # type: ignore
 
-    # Simple feedback if requested
-    if request.request_feedback:
+    # Use AI-generated feedback, or simple fallback if manually requested
+    if feedback_from_ai:
+        delivery.feedback = feedback_from_ai  # type: ignore
+    elif request.request_feedback:
         delivery.feedback = "Good delivery! Try varying your pace for more emotional impact."  # type: ignore
+
+    # Determine voice for AI character
+    ai_voice_id = _get_ai_voice_id(scene, str(session.ai_character) if session.ai_character else "")
 
     db.add(delivery)
 
@@ -509,7 +542,10 @@ async def deliver_line(
     session_status_str = str(session.status) if session.status is not None else "in_progress"  # type: ignore
 
     return DeliverLineResponse(
-        ai_response=ai_response_text,
+        ai_response=line_text,
+        line_text=line_text,
+        tts_instructions=tts_instructions,
+        ai_voice_id=ai_voice_id,
         feedback=feedback_text,
         next_line_preview=next_user_line,
         session_status=session_status_str,

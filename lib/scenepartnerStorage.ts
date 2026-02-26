@@ -46,6 +46,7 @@ export interface RehearsalSettings {
   skipMyLineIfSilent: boolean;
   skipAfterSeconds: number;
   countdownSeconds: number;
+  useAIVoice: boolean;
 }
 
 const KEY_REHEARSAL_SETTINGS = "scene_partner_rehearsal_settings";
@@ -54,6 +55,7 @@ const DEFAULT_REHEARSAL_SETTINGS: RehearsalSettings = {
   skipMyLineIfSilent: false,
   skipAfterSeconds: 10,
   countdownSeconds: 3,
+  useAIVoice: true,
 };
 
 export function getRehearsalSettings(): RehearsalSettings {

@@ -231,6 +231,15 @@
   }
 }
 
+/* Landing header entrance – pure CSS so it runs from first paint (no hydration flash) */
+@keyframes header-enter {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-header-enter {
+  animation: header-enter 0.5s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+}
+
 /* Search bar jitter when submitting empty */
 @keyframes search-jitter {
   0%, 100% { transform: translateX(0); }

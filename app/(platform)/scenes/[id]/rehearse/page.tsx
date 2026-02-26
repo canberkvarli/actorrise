@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { SCRIPTS_FEATURE_ENABLED } from '@/lib/featureFlags';
@@ -31,12 +31,15 @@ import {
 } from 'lucide-react';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { useSpeechSynthesis } from '@/hooks/useSpeechSynthesis';
+import { useOpenAITTS } from '@/hooks/useOpenAITTS';
 import {
   getRehearsalSettings,
   setRehearsalSettings,
   type RehearsalSettings,
 } from '@/lib/scenepartnerStorage';
 import { MicAccessWarning } from '@/components/scenepartner/MicAccessWarning';
+import { parseUpgradeError } from '@/lib/upgradeError';
+import { UpgradeModal } from '@/components/billing/UpgradeModal';
 
 interface RehearsalSession {
   id: number;
@@ -107,7 +110,7 @@ export default function RehearsalPage() {
   const [autoListenLineKey, setAutoListenLineKey] = useState<string | null>(null);
   /** Rehearsal settings (from localStorage). */
   const [rehearsalSettings, setRehearsalSettingsState] = useState<RehearsalSettings>(() =>
-    typeof window !== 'undefined' ? getRehearsalSettings() : { pauseBetweenLinesSeconds: 3, skipMyLineIfSilent: false, skipAfterSeconds: 10, countdownSeconds: 3 }
+    typeof window !== 'undefined' ? getRehearsalSettings() : { pauseBetweenLinesSeconds: 3, skipMyLineIfSilent: false, skipAfterSeconds: 10, countdownSeconds: 3, useAIVoice: true }
   );
   const skipSilentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -115,7 +118,17 @@ export default function RehearsalPage() {
   // Voice settings
   const [voiceEnabled, setVoiceEnabled] = useState(true);
   const [autoSpeak, setAutoSpeak] = useState(true);
+  const [useAIVoice, setUseAIVoice] = useState(() =>
+    typeof window !== 'undefined' ? getRehearsalSettings().useAIVoice !== false : true
+  );
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
+  // Ref to hold the last AI line for browser-TTS fallback
+  const lastAiLineForFallbackRef = useRef<string | null>(null);
+
+  // Upgrade modal
+  const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string; message: string }>({
+    open: false, feature: "", message: "",
+  });
 
   // Speech recognition hook
   const {
@@ -137,7 +150,17 @@ export default function RehearsalPage() {
     },
   });
 
-  // Speech synthesis hook; after TTS ends, wait pauseBetweenLines then clear AI line
+  // Shared onEnd handler for TTS (both AI and browser)
+  const handleTTSEnd = useCallback(() => {
+    const pauseMs = getRehearsalSettings().pauseBetweenLinesSeconds * 1000;
+    if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+    pauseTimerRef.current = setTimeout(() => {
+      setLastAiLine(null);
+      pauseTimerRef.current = null;
+    }, pauseMs);
+  }, []);
+
+  // Browser speech synthesis (fallback)
   const {
     speak,
     cancel: cancelSpeech,
@@ -150,15 +173,33 @@ export default function RehearsalPage() {
     rate: 1.0,
     pitch: 1.0,
     volume: 1.0,
-    onEnd: () => {
-      const pauseMs = getRehearsalSettings().pauseBetweenLinesSeconds * 1000;
-      if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
-      pauseTimerRef.current = setTimeout(() => {
-        setLastAiLine(null);
-        pauseTimerRef.current = null;
-      }, pauseMs);
+    onEnd: handleTTSEnd,
+  });
+
+  // OpenAI TTS (primary when useAIVoice is on)
+  const {
+    speak: speakAI,
+    cancel: cancelAI,
+    isSpeaking: isSpeakingAI,
+    isLoading: isLoadingAI,
+  } = useOpenAITTS({
+    onEnd: handleTTSEnd,
+    onError: (err) => {
+      const upgrade = parseUpgradeError(err);
+      if (upgrade) {
+        setUpgradeModal({ open: true, feature: "AI Voice", message: upgrade.message });
+        return;
+      }
+      // Fallback to browser TTS on non-upgrade AI TTS failure
+      const fallbackLine = lastAiLineForFallbackRef.current;
+      if (fallbackLine && voiceEnabled && isSpeechSynthesisSupported) {
+        speak(fallbackLine);
+      }
     },
   });
+
+  // Combined speaking state for UI guards
+  const anySpeaking = isSpeaking || isSpeakingAI || isLoadingAI;
 
   useEffect(() => {
     if (sessionId) {
@@ -194,7 +235,7 @@ export default function RehearsalPage() {
       isUserTurn &&
       isSpeechRecognitionSupported &&
       !isListening &&
-      !isSpeaking &&
+      !anySpeaking &&
       !isProcessing &&
       (countdown === null || countdown <= 0) &&
       activeUserLineKey !== null &&
@@ -209,7 +250,7 @@ export default function RehearsalPage() {
     lastAiLine,
     isSpeechRecognitionSupported,
     isListening,
-    isSpeaking,
+    anySpeaking,
     isProcessing,
     countdown,
     activeUserLineKey,
@@ -304,6 +345,9 @@ export default function RehearsalPage() {
     try {
       const response = await api.post<{
         ai_response: string;
+        line_text?: string;
+        tts_instructions?: string;
+        ai_voice_id?: string;
         feedback?: string;
         completion_percentage: number;
         session_status: string;
@@ -317,20 +361,28 @@ export default function RehearsalPage() {
 
       const data = response.data;
 
+      // Use clean line_text for display/TTS, fall back to ai_response
+      const lineForDisplay = data.line_text || data.ai_response;
+
       // Add AI response
       const aiMessage: Message = {
         type: 'ai',
         character: session.ai_character,
-        content: data.ai_response,
+        content: lineForDisplay,
         feedback: data.feedback
       };
 
       setMessages(prev => [...prev, aiMessage]);
-      setLastAiLine(data.ai_response);
+      setLastAiLine(lineForDisplay);
+      lastAiLineForFallbackRef.current = lineForDisplay;
 
-      // Auto-speak AI response if voice enabled
-      if (autoSpeak && voiceEnabled && isSpeechSynthesisSupported) {
-        speak(data.ai_response);
+      // Auto-speak AI response: prefer AI TTS, fall back to browser TTS
+      if (autoSpeak && voiceEnabled) {
+        if (useAIVoice) {
+          speakAI(lineForDisplay, data.ai_voice_id || 'coral', data.tts_instructions || '');
+        } else if (isSpeechSynthesisSupported) {
+          speak(lineForDisplay);
+        }
       }
 
       // Update session and next line for user
@@ -353,20 +405,25 @@ export default function RehearsalPage() {
       setError(null);
     } catch (error: any) {
       console.error('Error delivering line:', error);
-      
-      // Show user-friendly error message
-      let errorMessage = 'Failed to connect to the server. Please make sure the backend is running.';
-      
-      if (error?.message) {
-        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-          errorMessage = 'Unable to connect to the server. Please check that the backend is running on http://localhost:8000';
-        } else {
-          errorMessage = error.message;
+
+      const upgrade = parseUpgradeError(error);
+      if (upgrade) {
+        setUpgradeModal({ open: true, feature: "ScenePartner", message: upgrade.message });
+      } else {
+        // Show user-friendly error message
+        let errorMessage = 'Failed to connect to the server. Please make sure the backend is running.';
+
+        if (error?.message) {
+          if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+            errorMessage = 'Unable to connect to the server. Please check that the backend is running on http://localhost:8000';
+          } else {
+            errorMessage = error.message;
+          }
         }
+
+        setError(errorMessage);
       }
-      
-      setError(errorMessage);
-      
+
       // Remove the user message from the UI since the request failed
       setMessages(prev => prev.slice(0, -1));
       // Restore the input so user can try again
@@ -513,10 +570,10 @@ export default function RehearsalPage() {
                           <p className="text-[15px] leading-relaxed pl-0">
                             {line.text}
                           </p>
-                          {current && isSpeaking && !isUser && (
+                          {current && anySpeaking && !isUser && (
                             <p className="text-xs text-amber-800 mt-1 flex items-center gap-1">
                               <Volume2 className="h-3 w-3" />
-                              AI speaking…
+                              {isLoadingAI ? 'Generating voice…' : 'AI speaking…'}
                             </p>
                           )}
                           {current && isListening && isUser && (
@@ -541,7 +598,9 @@ export default function RehearsalPage() {
         <div className="shrink-0 border-t border-neutral-800 bg-neutral-950/98 px-4 py-3 safe-area-bottom">
           <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
             <div className="text-xs text-neutral-300">
-              {isSpeaking
+              {isLoadingAI
+                ? 'Generating voice'
+                : anySpeaking
                 ? 'AI speaking'
                 : isListening
                 ? 'Listening for your line'
@@ -589,7 +648,7 @@ export default function RehearsalPage() {
                   size="sm"
                   className="border-neutral-700 text-neutral-200 min-h-[44px] sm:min-h-0"
                   onClick={isListening ? stopListening : startListening}
-                  disabled={isProcessing || isSpeaking || !isUserTurn}
+                  disabled={isProcessing || anySpeaking || !isUserTurn}
                 >
                   {isListening ? <MicOff className="h-4 w-4 mr-1" /> : <Mic className="h-4 w-4 mr-1" />}
                   {isListening ? 'Stop' : 'Listen'}
@@ -603,7 +662,7 @@ export default function RehearsalPage() {
                   setError(null);
                   resetTranscript();
                   if (isListening) stopListening();
-                  if (isSpeechRecognitionSupported && isUserTurn && !isSpeaking && !isProcessing) {
+                  if (isSpeechRecognitionSupported && isUserTurn && !anySpeaking && !isProcessing) {
                     startListening();
                   }
                 }}
@@ -720,6 +779,20 @@ export default function RehearsalPage() {
                   />
                 </div>
               )}
+              <div className="flex items-center gap-2 sm:col-span-2">
+                <Checkbox
+                  id="ai-voice"
+                  checked={useAIVoice}
+                  onChange={(e) => {
+                    const v = (e.target as HTMLInputElement).checked;
+                    setUseAIVoice(v);
+                    setRehearsalSettings({ useAIVoice: v });
+                  }}
+                />
+                <Label htmlFor="ai-voice" className="text-xs cursor-pointer">
+                  AI Voice (expressive, scene-aware)
+                </Label>
+              </div>
             </div>
           </CardHeader>
         </Card>
@@ -885,10 +958,10 @@ export default function RehearsalPage() {
                         <span>Voice input</span>
                       </span>
                     )}
-                    {isSpeaking && (
+                    {anySpeaking && (
                       <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 animate-pulse">
                         <Volume2 className="h-3 w-3" />
-                        AI speaking
+                        {isLoadingAI ? 'Generating voice' : 'AI speaking'}
                       </span>
                     )}
                     {isListening && (
@@ -929,7 +1002,7 @@ export default function RehearsalPage() {
                       size="icon"
                       className="min-h-[44px] min-w-[44px] sm:min-h-0 sm:min-w-0 sm:h-9 sm:w-9"
                       onClick={isListening ? stopListening : startListening}
-                      disabled={isProcessing || isSpeaking}
+                      disabled={isProcessing || anySpeaking}
                       title={isListening ? 'Stop recording' : 'Record voice'}
                     >
                       {isListening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
@@ -1063,6 +1136,13 @@ export default function RehearsalPage() {
           </CardContent>
         </Card>
       </motion.div>
+
+      <UpgradeModal
+        open={upgradeModal.open}
+        onOpenChange={(open) => setUpgradeModal((prev) => ({ ...prev, open }))}
+        feature={upgradeModal.feature}
+        message={upgradeModal.message}
+      />
     </div>
   );
 }

@@ -63,8 +63,6 @@ class FeatureGate:
         if settings.superuser_emails and current_user.email:
             emails = [e.strip().lower() for e in settings.superuser_emails.split(",") if e.strip()]
             if current_user.email.lower() in emails:
-                if self.increment and self.feature == "ai_search":
-                    self._increment_usage(current_user.id, "ai_searches_count", db)
                 return True
 
         # Get user's subscription and tier
@@ -135,7 +133,7 @@ class FeatureGate:
                     status_code=403,
                     detail={
                         "error": "script_upload_limit_exceeded",
-                        "message": f"You've reached your limit of {limit} scripts. Upgrade to Plus for up to 10 scripts or Unlimited for no limits.",
+                        "message": f"You've reached your limit of {limit} scripts. Upgrade your plan for more.",
                         "limit": limit,
                         "used": current_count,
                         "upgrade_url": "/pricing",
@@ -150,7 +148,7 @@ class FeatureGate:
                     status_code=403,
                     detail={
                         "error": "feature_not_available",
-                        "message": "Personalized recommendations are only available on Pro and Elite plans. Upgrade to access AI-powered recommendations tailored to your profile.",
+                        "message": "Personalized recommendations are not available on your current plan. Upgrade to access AI-powered recommendations tailored to your profile.",
                         "upgrade_url": "/pricing",
                     },
                 )
@@ -161,7 +159,7 @@ class FeatureGate:
                     status_code=403,
                     detail={
                         "error": "feature_not_available",
-                        "message": "Advanced analytics are only available on the Elite plan. Upgrade to access detailed insights into your monologue search patterns and performance.",
+                        "message": "Advanced analytics are not available on your current plan. Upgrade to access detailed insights into your monologue search patterns and performance.",
                         "upgrade_url": "/pricing",
                     },
                 )
@@ -209,7 +207,7 @@ class FeatureGate:
                 status_code=403,
                 detail={
                     "error": "feature_not_available",
-                    "message": f"{feature_name} are not available on your current plan. Upgrade to Pro or Elite to access this feature.",
+                    "message": f"{feature_name} are not available on your current plan. Upgrade to access this feature.",
                     "upgrade_url": "/pricing",
                 },
             )
@@ -229,7 +227,7 @@ class FeatureGate:
                 status_code=403,
                 detail={
                     "error": f"{usage_field}_limit_exceeded",
-                    "message": f"You've reached your limit of {limit} {feature_name} this month. Upgrade to Pro for more searches or Elite for unlimited.",
+                    "message": f"You've reached your limit of {limit} {feature_name} this month. Upgrade your plan for more.",
                     "limit": limit,
                     "used": usage,
                     "upgrade_url": "/pricing",

@@ -46,6 +46,7 @@ export default function PlatformLayout({
   const [showWelcome, setShowWelcome] = useState(false);
   const [showChangelogModal, setShowChangelogModal] = useState(false);
   const [changelogModalEntry, setChangelogModalEntry] = useState<ChangelogEntry | null>(null);
+  const [minLoadReady, setMinLoadReady] = useState(false);
   const { count: bookmarkCount, isLoading: isLoadingBookmarks } = useBookmarkCount();
   const { count: filmTvFavoriteCount, isLoading: isLoadingFilmTvFavorites } = useFilmTvFavoriteCount();
   const savedCount = bookmarkCount + filmTvFavoriteCount;
@@ -93,6 +94,12 @@ export default function PlatformLayout({
     }
   }, [mobileMenuOpen]);
 
+  // Ensure loading screen displays for at least 800ms to avoid flicker
+  useEffect(() => {
+    const timer = setTimeout(() => setMinLoadReady(true), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Show welcome flow for new users who haven't seen it
   useEffect(() => {
     if (!loading && user && user.has_seen_welcome === false) {
@@ -127,15 +134,37 @@ export default function PlatformLayout({
   }, [loading, user, showWelcome]);
 
   // Note: Route protection is handled by middleware
-  // Single branded loading state so post–sign-in feels like one flow (no "Loading..." then "Loading your dashboard...")
-  if (loading) {
+  // Single branded loading state so post–sign-in feels like one flow
+  if (loading || !minLoadReady) {
+    const loadingLabel = pathname?.includes("/my-scripts")
+      ? "Opening script…"
+      : pathname?.includes("/scenes")
+        ? "Preparing scene…"
+        : pathname?.includes("/search")
+          ? "Loading search…"
+          : pathname?.includes("/audition")
+            ? "Setting the stage…"
+            : "Loading…";
+
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-background">
-        <div className="relative">
-          <div className="h-12 w-12 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-          <IconSparkles className="h-6 w-6 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-        </div>
-        <p className="text-muted-foreground font-medium">Loading your dashboard…</p>
+      <div className="min-h-screen flex flex-col items-center justify-center gap-5 bg-background">
+        <motion.div
+          className="relative"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+        >
+          <div className="h-10 w-10 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+          <IconSparkles className="h-5 w-5 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+        </motion.div>
+        <motion.p
+          className="text-sm text-muted-foreground/80"
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.15 }}
+        >
+          {loadingLabel}
+        </motion.p>
       </div>
     );
   }
@@ -146,7 +175,7 @@ export default function PlatformLayout({
     { href: "/my-scripts", label: "ScenePartner", icon: IconMask },
     { href: "/audition", label: "Audition Mode", icon: IconVideo },
   ];
-  const isImmersiveRehearsal = /^\/scenes\/[^/]+\/rehearse$/.test(pathname || "");
+  const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/my-scripts\/[^/]+\/scenes\/[^/]+\/edit$/.test(pathname || "");
 
   return (
     <>
@@ -188,7 +217,7 @@ export default function PlatformLayout({
         )}
       </AnimatePresence>
       {/* Navigation */}
-      {!isImmersiveRehearsal && (
+      {!isImmersive && (
       <nav className="bg-background/95 backdrop-blur-sm border-b border-border/40 relative z-[9998]" style={{ position: 'relative' }}>
         <div className="container mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-20 gap-3">
@@ -628,12 +657,12 @@ export default function PlatformLayout({
       )}
 
       {/* Main Content - extra padding on mobile so content scrolls above bottom nav */}
-      <main className={isImmersiveRehearsal ? "" : "pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0"}>
-        {isImmersiveRehearsal ? children : <PageTransition transitionKey={pathname}>{children}</PageTransition>}
+      <main className={isImmersive ? "" : "pb-[calc(5rem+env(safe-area-inset-bottom,0px))] md:pb-0"}>
+        {isImmersive ? children : <PageTransition transitionKey={pathname}>{children}</PageTransition>}
       </main>
 
       {/* Mobile Bottom Navigation - one-thumb access to primary actions */}
-      {!isImmersiveRehearsal && (
+      {!isImmersive && (
       <nav
         className="md:hidden fixed bottom-0 left-0 right-0 z-[9998] bg-background/95 backdrop-blur-sm border-t border-border/40 safe-area-bottom"
       >

@@ -8,11 +8,15 @@ This module provides conversational AI scene partner functionality where:
 4. Maintains character throughout the scene
 """
 
+import json
+import logging
 from typing import Dict, List, TypedDict, Optional, Literal
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from app.services.ai.langchain.config import get_llm
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -27,6 +31,8 @@ class ScenePartnerState(TypedDict):
     playwright: str
     setting: str
     relationship_dynamic: str
+    tone: str
+    primary_emotions: List[str]
 
     # Characters
     user_character: str
@@ -34,8 +40,8 @@ class ScenePartnerState(TypedDict):
     user_character_description: str
     ai_character_description: str
 
-    # Script
-    all_lines: List[Dict]  # [{"character": "...", "text": "...", "order": 0}]
+    # Script — each line: {"character", "text", "order", "stage_direction", "primary_emotion"}
+    all_lines: List[Dict]
     current_line_index: int
 
     # Conversation
@@ -67,6 +73,8 @@ SCENE_PARTNER_SYSTEM = """You are an AI acting coach and scene partner for {user
 **SCENE CONTEXT:**
 Setting: {setting}
 Relationship: {relationship_dynamic}
+Tone: {tone}
+Emotions in this scene: {primary_emotions}
 
 **{ai_character} DESCRIPTION:**
 {ai_character_description}
@@ -74,24 +82,26 @@ Relationship: {relationship_dynamic}
 **{user_character} DESCRIPTION:**
 {user_character_description}
 
-**GUIDELINES:**
-1. **Deliver your lines authentically** - Embody {ai_character}'s emotions and motivations
-2. **Be responsive** - React to the user's delivery, not just recite your lines
-3. **Encourage growth** - Notice improvements and suggest adjustments gently
-4. **Stay present** - Focus on the current moment in the scene
-5. **Be supportive** - This is practice, not performance
-
 **CURRENT LINE:**
 The user should say: "{expected_line}"
+{stage_direction_context}
 
-**YOUR NEXT LINE (if they deliver well):**
+**YOUR NEXT LINE (the script says):**
 {your_next_line}
+{ai_stage_direction_context}
 
-**INSTRUCTIONS:**
-- First, acknowledge their delivery with brief feedback (1 sentence)
-- Then, deliver YOUR line as {ai_character}
-- Keep responses natural and in-character
-- If they significantly deviate from the script, gently guide them back"""
+Respond with ONLY valid JSON (no markdown, no code fences) in this exact format:
+{{
+  "feedback": "One sentence of brief, encouraging feedback on the user's delivery.",
+  "line_text": "Your scripted line delivered exactly as written. Do NOT add, remove, or rephrase the scripted words.",
+  "tts_instructions": "Natural language description of how to deliver this line vocally."
+}}
+
+For tts_instructions, consider the scene's setting, tone ({tone}), relationship ({relationship_dynamic}), emotions ({primary_emotions}), and any stage directions. Describe vocal qualities: pace (slow/fast), volume (whisper/loud), emotional color (warm/cold/urgent/playful), and specific acting choices for this moment.
+
+Example tts_instructions: "Deliver with quiet intensity and barely contained anger. Speak slowly, each word deliberate. Lower register, almost a whisper that rises at the end."
+
+If the user significantly deviated from script, note this in feedback and still deliver your line."""
 
 
 COACHING_FEEDBACK_SYSTEM = """You are an expert acting coach providing performance feedback.
@@ -201,7 +211,7 @@ class ScenePartnerGraph:
         return state
 
     def _respond_as_character(self, state: ScenePartnerState) -> ScenePartnerState:
-        """AI delivers their line as the scene partner character"""
+        """AI delivers their line as the scene partner character (structured JSON output)."""
         current_idx = state["current_line_index"]
         all_lines = state["all_lines"]
 
@@ -221,7 +231,19 @@ class ScenePartnerGraph:
         user_delivery = state.get("last_user_input", "")
         expected_line = all_lines[current_idx]["text"]
 
-        # Build context for AI response
+        # Build stage direction context
+        user_stage_dir = all_lines[current_idx].get("stage_direction", "")
+        ai_stage_dir = ai_line.get("stage_direction", "")
+        stage_direction_context = f"Stage direction: [{user_stage_dir}]" if user_stage_dir else ""
+        ai_stage_direction_context = f"Stage direction: [{ai_stage_dir}]" if ai_stage_dir else ""
+
+        # Format emotions list
+        emotions = state.get("primary_emotions", [])
+        emotions_str = ", ".join(emotions) if emotions else "not specified"
+
+        # Use JSON-format LLM for structured output
+        json_llm = get_llm(temperature=0.7, use_json_format=True)
+
         prompt = ChatPromptTemplate.from_messages([
             ("system", SCENE_PARTNER_SYSTEM.format(
                 user_character=state["user_character"],
@@ -231,30 +253,53 @@ class ScenePartnerGraph:
                 ai_character=state["ai_character"],
                 setting=state["setting"],
                 relationship_dynamic=state["relationship_dynamic"],
+                tone=state.get("tone", ""),
+                primary_emotions=emotions_str,
                 ai_character_description=state.get("ai_character_description", ""),
                 user_character_description=state.get("user_character_description", ""),
                 expected_line=expected_line,
-                your_next_line=ai_line["text"]
+                your_next_line=ai_line["text"],
+                stage_direction_context=stage_direction_context,
+                ai_stage_direction_context=ai_stage_direction_context,
             )),
-            ("human", f"User's delivery: \"{user_delivery}\"")
+            ("human", f'User\'s delivery: "{user_delivery}"')
         ])
 
         # Get AI response
-        chain = prompt | self.llm
+        chain = prompt | json_llm
         response = chain.invoke({})
+
+        # Parse structured JSON response
+        line_text = ai_line["text"]  # fallback to scripted line
+        feedback = ""
+        tts_instructions = ""
+
+        try:
+            parsed = json.loads(response.content)
+            line_text = parsed.get("line_text", ai_line["text"])
+            feedback = parsed.get("feedback", "")
+            tts_instructions = parsed.get("tts_instructions", "")
+        except (json.JSONDecodeError, TypeError):
+            logger.warning("Failed to parse structured scene partner response, using raw")
+            line_text = response.content
+            feedback = ""
+            tts_instructions = ""
 
         # Add to dialogue history
         state["dialogue_history"].append({
             "user_character": state["user_character"],
             "user_line": user_delivery,
             "ai_character": state["ai_character"],
-            "ai_response": response.content,
+            "ai_response": line_text,
             "line_index": current_idx
         })
 
         state["messages"].append({
             "type": "ai",
-            "content": response.content
+            "content": line_text,
+            "line_text": line_text,
+            "feedback": feedback,
+            "tts_instructions": tts_instructions,
         })
 
         # Move to next line
