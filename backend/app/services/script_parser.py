@@ -167,7 +167,7 @@ Return ONLY valid JSON array, no explanation."""
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
-                max_tokens=8000
+                max_tokens=32000
             )
 
             response_text = response.choices[0].message.content

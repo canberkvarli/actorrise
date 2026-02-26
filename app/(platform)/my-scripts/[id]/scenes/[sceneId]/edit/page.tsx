@@ -11,8 +11,6 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft, Play, Edit2, Check, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useTheme } from "next-themes";
-import { getCharacterColors } from "@/lib/characterColors";
 import { cn } from "@/lib/utils";
 import api from "@/lib/api";
 import { toast } from "sonner";
@@ -158,10 +156,6 @@ export default function SceneEditPage() {
     }));
   };
 
-  const { theme } = useTheme();
-  const isDark = theme === "dark";
-  const colors = getCharacterColors(isDark);
-
   if (loading || !scene) {
     return (
       <div className="min-h-screen bg-neutral-950 py-8">
@@ -271,11 +265,11 @@ export default function SceneEditPage() {
 
             {/* Character badges */}
             <div className="flex items-center justify-center gap-2 mb-6">
-              <Badge className={cn("text-xs", colors.char1.bg, colors.char1.text)}>
+              <Badge variant="outline" className="text-xs border-amber-900/30 bg-amber-100/50 text-amber-900">
                 {scene.character_1_name}
               </Badge>
               <span className="text-xs text-amber-900/50">and</span>
-              <Badge className={cn("text-xs", colors.char2.bg, colors.char2.text)}>
+              <Badge variant="outline" className="text-xs border-amber-900/30 bg-amber-100/50 text-amber-900">
                 {scene.character_2_name}
               </Badge>
             </div>
@@ -372,8 +366,6 @@ export default function SceneEditPage() {
               .map((line) => {
                 const isEditing = editingLineId === line.id;
                 const values = lineEditValues[line.id];
-                const charIndex = line.character_name === scene.character_1_name ? 0 : 1;
-                const charColor = charIndex === 0 ? colors.char1 : colors.char2;
 
                 return (
                   <AnimatePresence mode="wait" key={line.id}>
@@ -462,12 +454,7 @@ export default function SceneEditPage() {
                       >
                         {/* Character name - screenplay style */}
                         <div className="flex items-center gap-2 mb-1">
-                          <span
-                            className={cn(
-                              "text-xs font-bold uppercase tracking-widest",
-                              charColor.text
-                            )}
-                          >
+                          <span className="text-xs font-bold uppercase tracking-widest text-amber-900">
                             {line.character_name}
                           </span>
                           {line.stage_direction && (

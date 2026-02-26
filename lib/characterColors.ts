@@ -1,66 +1,35 @@
 /**
- * Character color system for visual distinction between characters
- * Uses accessible blue/amber palette that works in light and dark themes
+ * Character badge styling system.
+ *
+ * All characters use a clean neutral badge by default.
+ * The user's selected character (in rehearsal context) gets a subtle primary accent
+ * with a "(You)" label.
  */
 
-export const CHARACTER_COLORS = {
-  char1: {
-    light: {
-      bg: "bg-blue-100",
-      text: "text-blue-900",
-      border: "border-blue-300",
-      ring: "ring-blue-400",
-      hex: "#3B82F6",
-      bgRaw: "#DBEAFE",
-    },
-    dark: {
-      bg: "bg-blue-950",
-      text: "text-blue-100",
-      border: "border-blue-800",
-      ring: "ring-blue-600",
-      hex: "#60A5FA",
-      bgRaw: "#172554",
-    },
-  },
-  char2: {
-    light: {
-      bg: "bg-amber-100",
-      text: "text-amber-900",
-      border: "border-amber-300",
-      ring: "ring-amber-400",
-      hex: "#F59E0B",
-      bgRaw: "#FEF3C7",
-    },
-    dark: {
-      bg: "bg-amber-950",
-      text: "text-amber-100",
-      border: "border-amber-800",
-      ring: "ring-amber-600",
-      hex: "#FBBF24",
-      bgRaw: "#451A03",
-    },
-  },
-} as const;
-
-/**
- * Get character colors for a scene based on current theme
- * Returns Tailwind classes for both characters
- */
-export function getCharacterColors(isDark: boolean = false) {
-  const theme = isDark ? "dark" : "light";
-
-  return {
-    char1: CHARACTER_COLORS.char1[theme],
-    char2: CHARACTER_COLORS.char2[theme],
-  };
+export interface CharacterBadgeStyle {
+  bg: string;
+  text: string;
+  border: string;
 }
 
+/** Neutral badge for all characters */
+const NEUTRAL: CharacterBadgeStyle = {
+  bg: "bg-muted",
+  text: "text-foreground",
+  border: "border-border",
+};
+
+/** Highlighted badge for the user's selected character */
+const USER_HIGHLIGHT: CharacterBadgeStyle = {
+  bg: "bg-primary/10",
+  text: "text-primary",
+  border: "border-primary/30",
+};
+
 /**
- * Get color for a specific character by index (0-based)
+ * Get badge classes for a character.
+ * @param isUserCharacter - Whether this character is the one the user is playing
  */
-export function getCharacterColorByIndex(index: number, isDark: boolean = false) {
-  if (index === 0) return getCharacterColors(isDark).char1;
-  if (index === 1) return getCharacterColors(isDark).char2;
-  // Fallback for additional characters (though scenes are 2-person only)
-  return getCharacterColors(isDark).char1;
+export function getCharacterBadgeStyle(isUserCharacter: boolean = false): CharacterBadgeStyle {
+  return isUserCharacter ? USER_HIGHLIGHT : NEUTRAL;
 }

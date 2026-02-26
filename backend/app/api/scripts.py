@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
 from app.core.database import get_db
+from app.middleware.rate_limiting import require_script_upload
 from app.models.actor import (
     Play,
     RehearsalLineDelivery,
@@ -118,7 +119,8 @@ async def upload_script(
     author: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _gate: bool = Depends(require_script_upload()),
 ):
     """
     Upload a script file (PDF/TXT) and automatically extract characters and scenes.
@@ -278,7 +280,8 @@ async def upload_script(
 async def create_script_from_text(
     request: CreateScriptFromTextRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _gate: bool = Depends(require_script_upload()),
 ):
     """
     Create a script from pasted text. AI extracts title, author, characters,

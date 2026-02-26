@@ -7,11 +7,14 @@ from typing import List, Optional
 
 from app.api.auth import get_current_user
 from app.core.database import get_db
+from app.middleware.rate_limiting import require_scene_partner
 from app.models.actor import (RehearsalLineDelivery, RehearsalSession, Scene,
                               SceneFavorite, UserScript)
+from app.models.billing import UserSubscription
 from app.models.user import User
 from app.services.ai.langchain.scene_partner import (ScenePartnerGraph,
                                                      ScenePartnerState)
+from app.services.benefits import get_effective_benefits
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -281,7 +284,8 @@ async def toggle_favorite(
 async def start_rehearsal(
     request: StartRehearsalRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _gate: bool = Depends(require_scene_partner(increment=True)),
 ):
     """Start a new rehearsal session. Only scenes from the user's own scripts can be rehearsed."""
     scene = db.query(Scene).filter_by(id=request.scene_id).first()
@@ -307,6 +311,24 @@ async def start_rehearsal(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Rehearsal is only available for scenes from your own scripts."
         )
+
+    # Free tier: only allow rehearsal with the example script
+    subscription = (
+        db.query(UserSubscription)
+        .filter(UserSubscription.user_id == current_user.id)
+        .first()
+    )
+    benefits = get_effective_benefits(db, current_user.id, subscription)
+    if benefits.get("scene_partner_trial_only", False):
+        if not script.title.startswith("Example:"):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "trial_example_only",
+                    "message": "Free trial rehearsal is limited to the example script. Upgrade to Plus to rehearse your own scripts.",
+                    "upgrade_url": "/pricing",
+                },
+            )
 
     # Validate character choice
     if request.user_character not in [scene.character_1_name, scene.character_2_name]:

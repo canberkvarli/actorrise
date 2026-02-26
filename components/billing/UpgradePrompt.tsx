@@ -49,9 +49,9 @@ export function UpgradePrompt({
           saveBadge: "Save $144/year",
           benefits: [
             "Unlimited AI searches",
-            "10 ScenePartner AI sessions/month (up to 20 min each)",
+            "Unlimited script uploads",
+            "100 ScenePartner AI sessions/month",
             "Advanced analytics & insights",
-            "Collections & white-label export",
           ],
         };
       case "pro":
@@ -65,9 +65,9 @@ export function UpgradePrompt({
           saveBadge: "save 31%",
           benefits: [
             "150 AI searches/month",
-            "Unlimited bookmarks",
+            "Up to 10 script uploads",
+            "30 ScenePartner AI sessions/month",
             "Personalized recommendations",
-            "Priority support",
           ],
         };
     }

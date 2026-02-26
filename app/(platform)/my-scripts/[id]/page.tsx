@@ -23,8 +23,6 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { SceneSettingsModal } from "@/components/scenepartner/SceneSettingsModal";
 import { MicAccessWarning } from "@/components/scenepartner/MicAccessWarning";
 import { GenreSelect } from "@/components/ui/genre-select";
-import { getCharacterColors } from "@/lib/characterColors";
-import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 
 interface Scene {
@@ -64,7 +62,6 @@ export default function ScriptDetailPage() {
   const router = useRouter();
   const params = useParams();
   const scriptId = parseInt(params.id as string);
-  const { resolvedTheme } = useTheme();
 
   const [script, setScript] = useState<UserScript | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -77,10 +74,6 @@ export default function ScriptDetailPage() {
   const [sceneToDelete, setSceneToDelete] = useState<number | null>(null);
   const deleteSceneTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-
-  // Get character colors based on theme
-  const isDark = resolvedTheme === "dark";
-  const colors = getCharacterColors(isDark);
 
   useEffect(() => {
     fetchScript();
@@ -197,7 +190,7 @@ export default function ScriptDetailPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-3xl relative min-h-[320px]">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-6xl relative min-h-[320px]">
       {/* Skeleton overlay: fades out when data is loaded */}
       <motion.div
         className="absolute inset-0 z-10"
@@ -253,8 +246,13 @@ export default function ScriptDetailPage() {
         </span>
       </nav>
 
+      {/* Two-column layout: script info (left) + scenes (right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+
+      {/* LEFT COLUMN: Script Info */}
+      <aside className="lg:sticky lg:top-6 lg:self-start space-y-4">
       {/* Script info card */}
-      <Card className="mb-6 border-border/80 shadow-sm">
+      <Card className="border-border/80 shadow-sm">
         <CardContent className="p-5 sm:p-6 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1 relative">
@@ -272,6 +270,7 @@ export default function ScriptDetailPage() {
                       value={editValue}
                       onChange={(e) => setEditValue(e.target.value)}
                       className="flex-1 h-10 text-lg pr-20"
+                      maxLength={100}
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === "Enter") saveField("title");
@@ -304,14 +303,13 @@ export default function ScriptDetailPage() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
-                    className="group flex items-center justify-between cursor-pointer"
+                    className="group flex items-center gap-2 cursor-pointer border border-transparent rounded-md px-2.5 py-1.5 -mx-2.5 hover:border-border/50 transition-colors"
                     onClick={() => startEditing("title", script.title)}
                   >
-                    <h1 className="text-xl font-semibold text-foreground truncate font-serif flex-1">
+                    <h1 className="text-xl font-semibold text-foreground truncate font-serif">
                       {script.title}
                     </h1>
-                    {/* Icon ALWAYS visible, subtle - no opacity-0 */}
-                    <Edit2 className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors flex-shrink-0 ml-2" />
+                    <Edit2 className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors flex-shrink-0" />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -348,6 +346,7 @@ export default function ScriptDetailPage() {
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
                     className="h-7 w-32 text-sm"
+                    maxLength={60}
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === "Enter") saveField("author");
@@ -453,6 +452,7 @@ export default function ScriptDetailPage() {
                     onChange={(e) => setEditValue(e.target.value)}
                     placeholder="Description..."
                     rows={3}
+                    maxLength={500}
                     autoFocus
                     className="text-sm"
                   />
@@ -478,13 +478,15 @@ export default function ScriptDetailPage() {
                   className="block w-full text-left pt-2 border-t border-border/80 group"
                   onClick={() => startEditing("description", script.description || "")}
                 >
-                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                    Summary
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                      Summary
+                    </span>
+                    <Edit2 className="w-3 h-3 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+                  </div>
                   <p className="text-sm text-foreground/90 mt-1 line-clamp-2 leading-relaxed">
                     {script.description}
                   </p>
-                  <Edit2 className="w-3.5 h-3.5 mt-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground inline-block" />
                 </motion.button>
               )
             ) : editingField === "description" ? (
@@ -501,6 +503,7 @@ export default function ScriptDetailPage() {
                   onChange={(e) => setEditValue(e.target.value)}
                   placeholder="Add a description..."
                   rows={3}
+                  maxLength={500}
                   autoFocus
                   className="text-sm"
                 />
@@ -536,33 +539,27 @@ export default function ScriptDetailPage() {
 
       {/* Characters card */}
       {script.characters && script.characters.length > 0 && (
-        <Card className="mb-6 border-border/80 shadow-sm">
+        <Card className="border-border/80 shadow-sm">
           <CardContent className="py-3 px-5 sm:px-6">
             <span className="text-sm font-medium text-foreground/90">Characters</span>
             <div className="flex flex-wrap gap-2 mt-2">
-              {script.characters.map((character, idx) => {
-                const isChar1 = idx === 0;
-                const isChar2 = idx === 1;
-                const charColors = isChar1 ? colors.char1 : isChar2 ? colors.char2 : null;
-
-                return (
-                  <Badge
-                    key={idx}
-                    className={cn(
-                      "font-normal text-sm py-1 transition-all",
-                      charColors ? `${charColors.bg} ${charColors.text} ${charColors.border} border` : "variant-secondary"
-                    )}
-                  >
-                    {character.name}
-                  </Badge>
-                );
-              })}
+              {script.characters.map((character, idx) => (
+                <Badge
+                  key={idx}
+                  variant="secondary"
+                  className="font-normal text-sm py-1"
+                >
+                  {character.name}
+                </Badge>
+              ))}
             </div>
           </CardContent>
         </Card>
       )}
+      </aside>
 
-      {/* Scenes section */}
+      {/* RIGHT COLUMN: Scenes */}
+      <main>
       <section aria-label="Scenes in this script" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-base font-semibold text-foreground flex items-center gap-2 font-serif">
@@ -603,7 +600,7 @@ export default function ScriptDetailPage() {
             </Card>
           </>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <AnimatePresence mode="popLayout">
               {script.scenes.map((scene) => (
                 <motion.div
@@ -625,24 +622,18 @@ export default function ScriptDetailPage() {
                     onClick={() => router.push(`/my-scripts/${scriptId}/scenes/${scene.id}/edit`)}
                   >
                     <CardContent className="p-5 space-y-4">
-                      {/* Character color strip */}
-                      <div className="flex gap-1 -mt-5 -mx-5 mb-3">
-                        <div className={cn("h-1.5 flex-1", colors.char1.bg)} />
-                        <div className={cn("h-1.5 flex-1", colors.char2.bg)} />
-                      </div>
-
                       {/* Scene title */}
                       <div>
                         <h3 className="text-lg font-semibold font-serif line-clamp-2 mb-2">
                           {scene.title}
                         </h3>
 
-                        {/* Character badges with colors */}
+                        {/* Character badges */}
                         <div className="flex flex-wrap gap-2">
-                          <Badge className={cn("text-xs", colors.char1.bg, colors.char1.text, colors.char1.border, "border")}>
+                          <Badge variant="secondary" className="text-xs">
                             {scene.character_1_name}
                           </Badge>
-                          <Badge className={cn("text-xs", colors.char2.bg, colors.char2.text, colors.char2.border, "border")}>
+                          <Badge variant="secondary" className="text-xs">
                             {scene.character_2_name}
                           </Badge>
                         </div>
@@ -673,6 +664,9 @@ export default function ScriptDetailPage() {
           </div>
         )}
       </section>
+      </main>
+
+      </div>{/* End two-column grid */}
 
       <ConfirmDeleteDialog
         open={deleteSceneDialogOpen}

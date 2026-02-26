@@ -20,6 +20,7 @@ from typing import Callable
 from app.api.auth import get_current_user
 from app.core.config import settings
 from app.core.database import get_db
+from app.models.actor import UserScript
 from app.models.billing import PricingTier, UsageMetrics, UserSubscription
 from app.models.user import User
 from app.services.benefits import get_effective_benefits
@@ -110,6 +111,37 @@ class FeatureGate:
                 db,
                 feature_name="CraftCoach sessions",
             )
+
+        elif self.feature == "script_upload":
+            limit = features.get("scene_partner_scripts", 0)
+            if limit == -1:
+                return True
+            if limit == 0:
+                raise HTTPException(
+                    status_code=403,
+                    detail={
+                        "error": "feature_not_available",
+                        "message": "Script uploads are not available on your current plan. Upgrade to start uploading scripts.",
+                        "upgrade_url": "/pricing",
+                    },
+                )
+            current_count = (
+                db.query(func.count(UserScript.id))
+                .filter(UserScript.user_id == current_user.id)
+                .scalar()
+            )
+            if current_count >= limit:
+                raise HTTPException(
+                    status_code=403,
+                    detail={
+                        "error": "script_upload_limit_exceeded",
+                        "message": f"You've reached your limit of {limit} scripts. Upgrade to Plus for up to 10 scripts or Unlimited for no limits.",
+                        "limit": limit,
+                        "used": current_count,
+                        "upgrade_url": "/pricing",
+                    },
+                )
+            return True
 
         elif self.feature == "recommendations":
             # Boolean feature check
@@ -324,3 +356,8 @@ def require_recommendations() -> Callable:
 def require_advanced_analytics() -> Callable:
     """Require advanced analytics access."""
     return FeatureGate("advanced_analytics", increment=False)
+
+
+def require_script_upload() -> Callable:
+    """Require script upload access (checks script count against tier limit)."""
+    return FeatureGate("script_upload", increment=False)
