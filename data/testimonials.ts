@@ -10,6 +10,8 @@ export interface TestimonialItem {
   /** Path under /testimonials/ (e.g. /testimonials/canberk.jpeg). Put files in public/testimonials/. */
   image?: string;
   isFounder?: boolean;
+  /** Source platform for the review */
+  source?: "product_hunt" | "reddit" | "direct" | "x" | "actor";
 }
 
 export const TESTIMONIALS: TestimonialItem[] = [
@@ -20,6 +22,7 @@ export const TESTIMONIALS: TestimonialItem[] = [
     descriptor: "Founder · Actor",
     image: "/testimonials/canberk/canberk.jpg",
     isFounder: true,
+    source: "direct",
   },
   {
     quote:
@@ -27,12 +30,14 @@ export const TESTIMONIALS: TestimonialItem[] = [
     name: "Timothy Miller",
     descriptor: "Actor · Voice Actor · Comedian",
     image: "/testimonials/timothy_miller/1000001409.jpg",
+    source: "actor",
   },
   {
     quote:
       "Join and play around. If you like what we're building, reach out. I'm happy to send a code for founding member access. I'd rather have more actors in the room than behind a paywall.",
     name: "Limited founding member spots.",
     descriptor: "",
+    source: "direct",
     // No image: placeholder; big icon opens contact on click
   },
 ];

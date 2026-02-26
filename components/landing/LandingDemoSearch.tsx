@@ -39,17 +39,7 @@ const AUTO_DEMO_RESULTS: DemoSearchResultItem[] = [
     match_type: null,
     text_excerpt: "I have had a most rare vision. I have had a dream, past the wit of man to say what dream it was.",
   },
-  {
-    id: -3,
-    character_name: "Frank",
-    play_title: "Educating Rita",
-    author: "Willy Russell",
-    scene_description: "Frank, a disillusioned university tutor, reflects on the absurdity of his situation.",
-    estimated_duration_seconds: 120,
-    relevance_score: 0.82,
-    match_type: null,
-    text_excerpt: "I'm an appalling teacher. Most of the time, you see, I don't want to talk about literature at all.",
-  },
+  // Reduced from 3 to 2 results for faster demo and less cognitive load
 ];
 
 const LOADING_MESSAGES = [
@@ -146,7 +136,7 @@ export function LandingDemoSearch() {
       authModal?.openAuthModal("signup", {
         title: "Continue searching",
         description:
-          "Free search used. Sign up to search the full library.",
+          "Free search used. Try the full library for free.",
       });
       return;
     }
@@ -174,14 +164,14 @@ export function LandingDemoSearch() {
           authModal?.openAuthModal("signup", {
             title: "Continue searching",
             description:
-              "Free search used. Sign up to search the full library.",
+              "Free search used. Try the full library for free.",
           });
         }
         return;
       }
 
       if (!res.ok) {
-        setError("Something went wrong. Sign up to try full search.");
+        setError("Something went wrong. Try full search for free.");
         return;
       }
 
@@ -195,7 +185,7 @@ export function LandingDemoSearch() {
         window.dispatchEvent(new CustomEvent("actorrise:stats-refresh"));
       }
     } catch {
-      setError("Something went wrong. Sign up to try full search.");
+      setError("Something went wrong. Try full search for free.");
     } finally {
       setIsLoading(false);
     }
@@ -370,7 +360,7 @@ export function LandingDemoSearch() {
               <CardContent className="pt-6 pb-6">
                 <p className="text-foreground font-medium mb-4">{error}</p>
                 <Button asChild size="lg" className="rounded-full">
-                  <Link href="/signup">Sign up to try full search</Link>
+                  <Link href="/signup">Try Full Search Free</Link>
                 </Button>
               </CardContent>
             </Card>
