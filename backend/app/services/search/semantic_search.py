@@ -598,6 +598,12 @@ class SemanticSearch:
                     Play.author != merged_filters['exclude_author']
                 )
 
+            # Character name filter (e.g., "Joker", "Iago")
+            if merged_filters.get('character_name'):
+                base_query = base_query.filter(
+                    Monologue.character_name.ilike(f"%{merged_filters['character_name']}%")
+                )
+
             if merged_filters.get('max_duration'):
                 base_query = base_query.filter(
                     Monologue.estimated_duration_seconds <= merged_filters['max_duration']

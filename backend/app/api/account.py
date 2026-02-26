@@ -10,12 +10,11 @@ import os
 import stripe
 from app.api.auth import get_current_user
 from app.core.database import get_db
+from app.models.actor import (ActorProfile, MonologueFavorite,
+                              RehearsalLineDelivery, RehearsalSession, Scene,
+                              SceneFavorite, SearchHistory, UserScript)
 from app.models.billing import BillingHistory, UsageMetrics, UserSubscription
-from app.models.favorites import MonologueFavorite, SceneFavorite
-from app.models.rehearsal import LineDelivery, RehearsalSession
-from app.models.scripts import Scene, UserScript
-from app.models.search import SearchHistory
-from app.models.user import ActorProfile, User
+from app.models.user import User
 from app.services.storage import delete_headshot
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -66,8 +65,8 @@ def delete_account(
             logger.warning(f"Failed to delete headshot for user {user_id}: {e}")
 
         # Step 3: Delete rehearsal data (line deliveries first, then sessions)
-        db.query(LineDelivery).filter(
-            LineDelivery.session_id.in_(
+        db.query(RehearsalLineDelivery).filter(
+            RehearsalLineDelivery.session_id.in_(
                 db.query(RehearsalSession.id).filter(RehearsalSession.user_id == user_id)
             )
         ).delete(synchronize_session=False)

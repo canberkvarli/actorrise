@@ -75,7 +75,7 @@ export function AuthModalProvider({ children }: AuthModalProviderProps) {
         <DialogContent className="w-[calc(100vw-2rem)] max-w-md max-h-[90dvh] overflow-y-auto overflow-x-hidden overscroll-contain p-5 sm:p-6">
           <DialogHeader>
             <div className="flex justify-center pt-0.5 sm:pt-1">
-              <BrandLogo size="auth" iconOnly />
+              <BrandLogo size="auth" />
             </div>
             <DialogTitle className="text-lg sm:text-xl text-center pt-2 font-semibold">
               {title}

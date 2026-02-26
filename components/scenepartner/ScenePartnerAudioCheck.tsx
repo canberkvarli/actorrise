@@ -79,34 +79,63 @@ function PlaybackLevelBars({ audioRef, active }: { audioRef: React.RefObject<HTM
   const [levels, setLevels] = useState<number[]>(() => Array(LEVEL_BAR_COUNT).fill(0));
   const analyserRef = useRef<AnalyserNode | null>(null);
   const ctxRef = useRef<AudioContext | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const rafRef = useRef<number>(0);
 
   useEffect(() => {
     const el = audioRef.current;
+
+    // Reset levels if not active
     if (!active || !el) {
       setLevels(Array(LEVEL_BAR_COUNT).fill(0));
-      return () => {
-        if (ctxRef.current) ctxRef.current.close();
-        cancelAnimationFrame(rafRef.current);
-      };
+      return;
     }
-    const ctx = new AudioContext();
-    const source = ctx.createMediaElementSource(el);
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = 256;
-    analyser.smoothingTimeConstant = 0.7;
-    source.connect(analyser);
-    analyser.connect(ctx.destination);
-    analyserRef.current = analyser;
-    ctxRef.current = ctx;
 
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    // Create AudioContext and source only if:
+    // 1. We don't have a context yet, OR
+    // 2. The audio element has changed
+    const needsNewConnection = !ctxRef.current || audioElementRef.current !== el;
+
+    if (needsNewConnection) {
+      // Clean up previous connection if it exists
+      if (sourceRef.current) {
+        sourceRef.current.disconnect();
+      }
+      if (analyserRef.current) {
+        analyserRef.current.disconnect();
+      }
+      if (ctxRef.current) {
+        ctxRef.current.close();
+      }
+
+      // Create new AudioContext and connect
+      const ctx = new AudioContext();
+      const source = ctx.createMediaElementSource(el);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.7;
+
+      source.connect(analyser);
+      analyser.connect(ctx.destination);
+
+      // Store references
+      ctxRef.current = ctx;
+      sourceRef.current = source;
+      analyserRef.current = analyser;
+      audioElementRef.current = el;
+    }
+
+    // Start animation loop
+    const dataArray = new Uint8Array(analyserRef.current!.frequencyBinCount);
     let lastUpdate = 0;
+
     const update = (now: number) => {
       rafRef.current = requestAnimationFrame(update);
       if (now - lastUpdate < LEVEL_UPDATE_MS) return;
       lastUpdate = now;
       if (!analyserRef.current) return;
+
       analyserRef.current.getByteFrequencyData(dataArray);
       const step = Math.floor(dataArray.length / LEVEL_BAR_COUNT);
       const next = Array.from({ length: LEVEL_BAR_COUNT }, (_, i) => {
@@ -116,16 +145,30 @@ function PlaybackLevelBars({ audioRef, active }: { audioRef: React.RefObject<HTM
       });
       setLevels(next);
     };
+
     rafRef.current = requestAnimationFrame(update);
+
+    // Cleanup function for animation loop only
     return () => {
       cancelAnimationFrame(rafRef.current);
-      source.disconnect();
-      analyser.disconnect();
-      ctx.close();
-      analyserRef.current = null;
-      ctxRef.current = null;
     };
   }, [active, audioRef]);
+
+  // Separate effect for final cleanup when component unmounts
+  useEffect(() => {
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      if (sourceRef.current) {
+        sourceRef.current.disconnect();
+      }
+      if (analyserRef.current) {
+        analyserRef.current.disconnect();
+      }
+      if (ctxRef.current) {
+        ctxRef.current.close();
+      }
+    };
+  }, []);
 
   if (!active) return null;
   return (
