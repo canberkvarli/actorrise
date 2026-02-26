@@ -26,6 +26,24 @@ function getInitials(name: string): string {
   return name.slice(0, 2).toUpperCase();
 }
 
+/** Choose quote font size based on length so it fits card height without trimming. */
+function getQuoteSizeClasses(quote: string): string {
+  const len = quote.length;
+
+  // Short blurbs: keep original comfortable sizes
+  if (len <= 260) {
+    return "text-sm md:text-base lg:text-lg";
+  }
+
+  // Medium: nudge down slightly
+  if (len <= 420) {
+    return "text-xs sm:text-sm md:text-base";
+  }
+
+  // Long (rare once we enforce character limits): one more step down, but still readable
+  return "text-xs sm:text-xs md:text-sm";
+}
+
 const DOT_GRID_SIZE = 16;
 
 /** Dot pattern (dots everywhere). Use className for color, e.g. text-primary/20. */
@@ -59,7 +77,7 @@ function SectionDotPattern() {
   );
 }
 
-/** Actor headshot: portrait ratio (8×10). Placeholder icon is clickable → signup, with hover effect. */
+/** Actor headshot: portrait 8×10. Tall, theater-style image on web. */
 function TestimonialHeadshot({
   name,
   image,
@@ -90,7 +108,7 @@ function TestimonialHeadshot({
 
   const inner = (
     <div
-      className={`w-full h-full rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/20 flex items-center justify-center text-muted-foreground ${ring} transition-all duration-300 ease-out group-hover:border-primary/50 group-hover:bg-primary/10 group-hover:text-primary group-hover:scale-[1.02] group-hover:shadow-lg group-hover:shadow-primary/10 group-active:scale-[0.99]`}
+      className={`w-full h-full rounded-lg border-2 border-dashed border-muted-foreground/30 bg-muted/20 flex items-center justify-center text-muted-foreground ${ring} transition-all duration-300 ease-out group-hover:border-primary/50 group-hover:bg-primary/10 group-hover:text-primary group-hover:scale-[1.02] group-active:scale-[0.99]`}
     >
       <UserPlus className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 transition-transform duration-300 group-hover:scale-110" />
     </div>
@@ -116,8 +134,6 @@ function TestimonialHeadshot({
   );
 }
 
-/** Fixed height; quote uses line-clamp so no scroll. */
-const CARD_HEIGHT_PX = 420;
 
 /** Small avatar for thumbnail strip: headshot or initials. */
 function ThumbnailDot({
@@ -129,7 +145,7 @@ function ThumbnailDot({
   isActive: boolean;
   onClick: () => void;
 }) {
-  const size = "w-10 h-10 sm:w-11 sm:h-11";
+  const size = "w-8 h-8 sm:w-9 sm:h-9";
   const baseClasses = `${size} shrink-0 rounded-full border-2 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/50 hover:scale-110 hover:shadow-[0_0_20px_rgba(0,0,0,0.15)] hover:shadow-primary/10`;
   if (testimonial.image) {
     return (
@@ -180,7 +196,7 @@ export function LandingTestimonials() {
     <>
       <ContactModal open={contactOpen} onOpenChange={setContactOpen} initialCategory="other" />
     <section
-      className="relative border-t border-border/60 py-24 md:py-32 bg-background overflow-hidden"
+      className="relative border-t border-border/60 py-16 md:py-20 bg-background overflow-hidden"
       aria-label="What actors are saying"
     >
       <SectionDotPattern />
@@ -189,7 +205,7 @@ export function LandingTestimonials() {
           {/* Heading: compact, one idea per line */}
           <div className="text-center md:text-left">
             <motion.p
-              className="font-brand text-2xl md:text-3xl lg:text-4xl tracking-tight font-semibold text-foreground"
+              className="font-brand text-xl sm:text-2xl md:text-3xl tracking-tight font-semibold text-foreground"
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, ease: [0.25, 0.1, 0.25, 1] }}
@@ -197,7 +213,7 @@ export function LandingTestimonials() {
               What actors are saying
             </motion.p>
             <motion.p
-              className="mt-1.5 text-muted-foreground text-base md:text-lg"
+              className="mt-1 text-muted-foreground text-sm md:text-base"
               initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, ease: [0.25, 0.1, 0.25, 1], delay: 0.06 }}
@@ -206,7 +222,8 @@ export function LandingTestimonials() {
             </motion.p>
           </div>
 
-          <div className="mt-10 md:mt-14 flex flex-col md:flex-row md:items-start gap-8 md:gap-10">
+          {/* Layout: mobile column (photo first, then card); desktop row (headshot left, card right). Card fixed size so it never shifts. */}
+          <div className="mt-8 md:mt-10 flex flex-col md:flex-row md:items-start gap-6 md:gap-8 max-w-5xl">
             <div className="flex justify-center md:block md:relative md:-left-2 md:z-10">
               <TestimonialHeadshot
                 name={t.name}
@@ -215,13 +232,12 @@ export function LandingTestimonials() {
               />
             </div>
 
-            {/* Quote card: fixed height, no scroll; long quotes get line-clamp */}
+            {/* Fixed-size card: same dimensions on all breakpoints so switching testimonials doesn’t resize. Text uses dynamic font + scroll. */}
             <div
-              className="flex-1 min-w-0 relative rounded-2xl border border-border/60 bg-card shadow-lg p-8 md:p-10 lg:p-12 flex flex-col"
-              style={{ height: CARD_HEIGHT_PX }}
+              className="flex-none md:flex-1 min-w-0 relative rounded-2xl border border-border/60 bg-card shadow-lg p-6 sm:p-8 md:p-10 flex flex-col h-[320px] min-h-[320px] max-h-[320px]"
             >
               <span
-                className="absolute top-6 left-6 md:top-8 md:left-8 text-5xl md:text-6xl font-serif text-muted-foreground/30 leading-none select-none pointer-events-none"
+                className="absolute top-4 left-4 sm:top-6 sm:left-6 text-4xl sm:text-5xl font-serif text-muted-foreground/30 leading-none select-none pointer-events-none"
                 aria-hidden
               >
                 &ldquo;
@@ -234,22 +250,26 @@ export function LandingTestimonials() {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -12 }}
                   transition={{ duration: 0.3, ease: [0.25, 0.1, 0.25, 1] }}
-                  className="relative pl-6 md:pl-8 flex flex-col flex-1 min-h-0"
+                  className="relative pl-6 sm:pl-8 flex flex-col flex-1 min-h-0 overflow-y-auto"
                 >
-                  <p className="text-sm md:text-base lg:text-lg text-foreground leading-relaxed font-medium line-clamp-6">
+                  <p
+                    className={`text-foreground leading-relaxed font-medium ${getQuoteSizeClasses(
+                      t.quote,
+                    )}`}
+                  >
                     {t.quote}
                   </p>
-                  <div className="mt-4 shrink-0">
-                    <p className="text-base md:text-lg font-semibold text-foreground">
+                  <div className="mt-2 sm:mt-3 shrink-0">
+                    <p className="text-sm sm:text-base font-semibold text-foreground">
                       {t.name}
                     </p>
                     {!isPlaceholder && t.descriptor && (
-                      <p className="mt-0.5 text-sm md:text-base text-muted-foreground">
+                      <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground">
                         {t.descriptor}
                       </p>
                     )}
                     {isPlaceholder && (
-                      <p className="mt-1.5 text-sm md:text-base text-muted-foreground">
+                      <p className="mt-1 text-xs sm:text-sm text-muted-foreground">
                         <button
                           type="button"
                           onClick={() => setContactOpen(true)}
@@ -277,8 +297,8 @@ export function LandingTestimonials() {
             </div>
           </div>
 
-          {/* Thumbnail strip: subtle convex-mirror curve + dot hover bulge */}
-          <div className="mt-8 flex items-center justify-center gap-2 sm:gap-3 w-full max-w-5xl mx-auto">
+          {/* Thumbnail strip */}
+          <div className="mt-6 flex items-center justify-center gap-2 w-full max-w-4xl mx-auto">
             <button
               type="button"
               onClick={goPrev}
@@ -288,8 +308,7 @@ export function LandingTestimonials() {
               <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             <div
-              className="flex-1 min-w-0 max-w-xl overflow-x-auto overflow-y-hidden py-3 flex items-center gap-2 sm:gap-2.5 justify-center transition-transform duration-300"
-              style={{ transform: "perspective(700px) rotateX(5deg)" }}
+              className="flex-1 min-w-0 max-w-xl overflow-x-auto overflow-y-hidden py-3 flex items-center gap-2 sm:gap-2.5 justify-center transition-transform duration-300 md:[transform:perspective(700px)_rotateX(5deg)]"
             >
               {TESTIMONIALS.map((item, i) => (
                 <ThumbnailDot

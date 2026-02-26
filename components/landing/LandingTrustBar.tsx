@@ -11,7 +11,7 @@ export function LandingTrustBar() {
   return (
     <div className="border-y border-border/40 bg-muted/20 py-3 sm:py-4">
       <div className="container mx-auto px-4 sm:px-6">
-        <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8 text-sm">
+        <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 md:gap-6 lg:gap-8 text-xs sm:text-sm">
           {/* Product Hunt Badge */}
           <a
             href="https://www.producthunt.com/products/actorrise?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-actorrise"
@@ -46,16 +46,6 @@ export function LandingTrustBar() {
           {/* User Count - using existing LandingLiveCount */}
           <div className="flex items-center gap-2 text-muted-foreground">
             <LandingLiveCount variant="inline" />
-          </div>
-
-          {/* Trust Badges - Grouped together */}
-          <div className="flex items-center gap-3 text-muted-foreground whitespace-nowrap">
-            <span className="font-medium text-foreground">Free forever</span>
-            <span className="text-muted-foreground/40">·</span>
-            <div className="flex items-center gap-1.5">
-              <IconShieldCheck size={16} className="text-primary" aria-hidden="true" />
-              <span>No credit card</span>
-            </div>
           </div>
         </div>
       </div>

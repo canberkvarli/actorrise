@@ -44,11 +44,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "ActorRise - Find the Right Monologue in Less Than 20 Seconds | AI Search",
+    default: "ActorRise - Find Your Monologue in 20 Seconds, Spend Your Time Rehearsing",
     template: "%s | ActorRise",
   },
   description:
-    "Find the right audition monologue in less than 20 seconds. One search, no keyword hunting. AI that understands what you need. 8,600+ monologues. Free tier available.",
+    "Stop wasting hours searching books. Find your perfect audition monologue in 20 seconds with AI search. 8,600+ theatrical monologues + 14,000 film & TV scenes. Free forever, no credit card required.",
   keywords: [
     "monologue search",
     "audition monologues",
@@ -76,23 +76,23 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: siteUrl,
     siteName: "ActorRise",
-    title: "ActorRise - Find the Right Monologue in Less Than 20 Seconds | AI Search",
+    title: "ActorRise - Find Your Monologue in 20 Seconds, Spend Your Time Rehearsing",
     description:
-      "Find the right audition monologue in less than 20 seconds. One search, no keyword hunting. AI that understands what you need. Free tier available.",
+      "Stop wasting hours searching books. Find your perfect audition monologue in 20 seconds with AI search. 8,600+ theatrical monologues + 14,000 film & TV scenes. Free forever.",
     images: [
       {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "ActorRise - Find the monologue. In seconds.",
+        alt: "ActorRise - Find your monologue in 20 seconds. Spend your time rehearsing.",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ActorRise - Find the Right Monologue in Less Than 20 Seconds | AI Search",
+    title: "ActorRise - Find Your Monologue in 20 Seconds, Spend Your Time Rehearsing",
     description:
-      "Find the right audition monologue in less than 20 seconds. One search, no keyword hunting. AI that understands what you need. Free tier available.",
+      "Stop wasting hours searching books. Find your perfect audition monologue in 20 seconds with AI search. 8,600+ theatrical monologues + 14,000 film & TV scenes. Free forever.",
     images: ["/opengraph-image"],
   },
   robots: {
@@ -116,7 +116,7 @@ const jsonLd = {
       "@id": `${siteUrl}/#website`,
       name: "ActorRise",
       url: siteUrl,
-      description: "AI-powered monologue finder and audition monologue database for actors. 8,600+ real scripts.",
+      description: "Find your perfect audition monologue in 20 seconds with AI search. 8,600+ theatrical monologues + 14,000 film & TV scenes. Spend your time rehearsing.",
       publisher: { "@id": `${siteUrl}/#organization` },
     },
     {
@@ -125,7 +125,7 @@ const jsonLd = {
       name: "ActorRise",
       url: siteUrl,
       description:
-        "Find the right audition monologue in less than 20 seconds. AI-powered monologue search for actors. 8,600+ searchable monologues.",
+        "Stop wasting hours searching books. Find your perfect audition monologue in 20 seconds with AI search. Free forever, no credit card required.",
       logo: { "@type": "ImageObject", url: `${siteUrl}/logo.png` },
     },
     {
@@ -134,7 +134,7 @@ const jsonLd = {
       name: "ActorRise",
       url: siteUrl,
       description:
-        "Find the right audition monologue in less than 20 seconds. AI semantic search that understands what you need. 8,600+ monologues.",
+        "Find your monologue in 20 seconds. Spend your time rehearsing. AI semantic search over 8,600+ theatrical monologues and 14,000+ film & TV scenes.",
       applicationCategory: "EntertainmentApplication",
       operatingSystem: "Any",
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
@@ -151,7 +151,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         {/* Preload auth modal logo so it’s cached before first open (avoids flash of missing logo) */}
-        <link rel="preload" href="/transparent_logo.png" as="image" />
+        <link rel="preload" href="/transparent_textlogo.png" as="image" />
         {gaId && (
           <>
             <Script
