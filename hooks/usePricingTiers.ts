@@ -14,7 +14,9 @@ export interface PricingTier {
     ai_searches_per_month: number;
     bookmarks_limit: number;
     recommendations: boolean;
+    scene_partner_scripts?: number;
     scene_partner_sessions?: number;
+    scene_partner_trial_only?: boolean;
     craft_coach_sessions?: number;
     download_formats: string[];
     priority_support: boolean;
@@ -41,6 +43,9 @@ export const DEFAULT_PRICING_TIERS: PricingTier[] = [
       recommendations: false,
       download_formats: ["txt"],
       priority_support: false,
+      scene_partner_scripts: 3,
+      scene_partner_sessions: 1,
+      scene_partner_trial_only: true,
     },
     sort_order: 0,
   },
@@ -57,7 +62,8 @@ export const DEFAULT_PRICING_TIERS: PricingTier[] = [
       recommendations: true,
       download_formats: ["txt", "pdf"],
       priority_support: true,
-      scene_partner_sessions: 2,
+      scene_partner_scripts: 10,
+      scene_partner_sessions: 30,
     },
     sort_order: 1,
   },
@@ -74,7 +80,8 @@ export const DEFAULT_PRICING_TIERS: PricingTier[] = [
       recommendations: true,
       download_formats: ["txt", "pdf"],
       priority_support: true,
-      scene_partner_sessions: 10,
+      scene_partner_scripts: -1,
+      scene_partner_sessions: 100,
       advanced_analytics: true,
       collections: true,
       collaboration: true,

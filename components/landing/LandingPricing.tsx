@@ -33,11 +33,20 @@ function getFeaturesList(tier: PricingTier): string[] {
 
   features.push(`Download as ${tier.features.download_formats.join(", ").toUpperCase()}`);
 
-  // ScenePartner: Free = no mention; Plus = 2/mo; Unlimited = 10/mo (up to 20 min each)
-  if (tier.name === "plus") {
-    features.push("2 ScenePartner AI sessions/month (up to 20 min each)");
-  } else if (tier.name === "unlimited") {
-    features.push("10 ScenePartner AI sessions/month (up to 20 min each)");
+  // ScenePartner
+  const scripts = tier.features.scene_partner_scripts;
+  const sessions = tier.features.scene_partner_sessions;
+  if (scripts !== undefined) {
+    if (scripts === -1) {
+      features.push("Unlimited script uploads");
+    } else if (scripts > 0) {
+      features.push(`Up to ${scripts} script uploads`);
+    }
+  }
+  if (tier.features.scene_partner_trial_only) {
+    features.push("1 trial rehearsal (example script)");
+  } else if (sessions !== undefined && sessions > 0) {
+    features.push(`${sessions} ScenePartner AI sessions/month`);
   }
   if (tier.features.advanced_analytics) {
     features.push("Advanced analytics & insights");

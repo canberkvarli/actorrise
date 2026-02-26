@@ -48,6 +48,9 @@ def seed_pricing_tiers():
                     "priority_support": False,
                     "search_history_limit": 5,
                     "advanced_analytics": False,
+                    "scene_partner_scripts": 3,
+                    "scene_partner_sessions": 1,
+                    "scene_partner_trial_only": True,
                 },
                 is_active=True,
                 sort_order=0,
@@ -70,7 +73,8 @@ def seed_pricing_tiers():
                     "search_history_limit": -1,  # -1 = unlimited
                     "advanced_analytics": False,
                     "early_access": True,
-                    "scene_partner_sessions": 2,  # 2 sessions/month for Plus
+                    "scene_partner_scripts": 10,  # 10 scripts for Plus
+                    "scene_partner_sessions": 30,  # 30 sessions/month for Plus
                 },
                 is_active=True,
                 sort_order=1,
@@ -88,7 +92,8 @@ def seed_pricing_tiers():
                     "ai_searches_per_month": -1,  # -1 = unlimited
                     "bookmarks_limit": -1,  # -1 = unlimited
                     "recommendations": True,
-                    "scene_partner_sessions": 10,  # Per month for Unlimited (ScenePartner AI)
+                    "scene_partner_scripts": -1,  # Unlimited scripts
+                    "scene_partner_sessions": 100,  # 100/month fair-use cap (ScenePartner AI)
                     "download_formats": ["txt", "pdf"],
                     "priority_support": True,
                     "search_history_limit": -1,  # -1 = unlimited
