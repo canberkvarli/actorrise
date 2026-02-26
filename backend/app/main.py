@@ -1,6 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 
+from app.api.account import router as account_router
 from app.api.admin.film_tv import router as admin_film_tv_router
 from app.api.admin.moderation import router as moderation_router
 from app.api.admin.monologues import router as admin_monologues_router
@@ -106,6 +107,7 @@ app.add_middleware(
 )
 
 # Include routers
+app.include_router(account_router)
 app.include_router(auth_router)
 app.include_router(contact_router)
 app.include_router(feedback_router)
