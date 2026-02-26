@@ -1624,7 +1624,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                             Bookmarked
                           </Button>
                         </div>
-                        <div className="flex-1 flex sm:justify-center min-w-0">
+                        <div className="flex-1 flex justify-center min-w-0">
                           <ResultsFeedbackPrompt
                             context="film_tv_search"
                             resultsViewCount={filmTvResultsViewCount}
@@ -1735,7 +1735,18 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {correctedQuery &&
                 (queryUsedForResults ?? "").trim().toLowerCase() !== correctedQuery.trim().toLowerCase() && (
                 <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
-                  We searched for &ldquo;{correctedQuery}&rdquo;. Did you mean that? Here are the results.
+                  Showing results for <span className="font-semibold">&ldquo;{correctedQuery}&rdquo;</span>.{" "}
+                  <button
+                    type="button"
+                    className="underline text-primary hover:text-primary/80 transition-colors"
+                    onClick={() => {
+                      setCorrectedQuery(null);
+                      setPlaysQuery(queryUsedForResults);
+                      performSearch(queryUsedForResults, filters);
+                    }}
+                  >
+                    Search instead for &ldquo;{queryUsedForResults}&rdquo;
+                  </button>
                 </div>
               )}
               {searchParams.get("ai") === "true" && (
@@ -1805,7 +1816,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     Bookmarked
                   </Button>
                 </div>
-                <div className="flex-1 flex sm:justify-center min-w-0">
+                <div className="flex-1 flex justify-center min-w-0">
                   <ResultsFeedbackPrompt
                     context="search"
                     resultsViewCount={resultsViewCount}
