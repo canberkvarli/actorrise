@@ -62,6 +62,7 @@ class SubscriptionResponse(BaseModel):
     billing_period: str
     current_period_end: datetime | None
     cancel_at_period_end: bool
+    has_stripe_customer: bool  # Whether user can access Stripe portal
 
     class Config:
         from_attributes = True
@@ -148,6 +149,7 @@ async def get_my_subscription(current_user: User = Depends(get_current_user), db
             billing_period="monthly",
             current_period_end=None,
             cancel_at_period_end=False,
+            has_stripe_customer=False,
         )
 
     tier = db.query(PricingTier).get(subscription.tier_id)
@@ -160,6 +162,7 @@ async def get_my_subscription(current_user: User = Depends(get_current_user), db
             billing_period=subscription.billing_period or "monthly",
             current_period_end=subscription.current_period_end,
             cancel_at_period_end=subscription.cancel_at_period_end or False,
+            has_stripe_customer=bool(subscription.stripe_customer_id),
         )
 
     return SubscriptionResponse(
@@ -169,6 +172,7 @@ async def get_my_subscription(current_user: User = Depends(get_current_user), db
         billing_period=subscription.billing_period,
         current_period_end=subscription.current_period_end,
         cancel_at_period_end=subscription.cancel_at_period_end,
+        has_stripe_customer=bool(subscription.stripe_customer_id),
     )
 
 
