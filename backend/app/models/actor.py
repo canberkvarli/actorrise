@@ -120,12 +120,8 @@ class Monologue(Base):
     scene_description = Column(Text, nullable=True)  # Setting and situation
 
     # Search & Discovery
-    # Legacy JSON/text embedding for backward compatibility with existing data.
-    embedding = Column(Text, nullable=True)
-    # Production embedding: text-embedding-3-large (3072 dims) after finalize
+    # Production embedding: text-embedding-3-large (3072 dims)
     embedding_vector = deferred(Column(Vector(3072), nullable=True))
-    # Deprecated v1 embeddings (kept for rollback safety)
-    embedding_vector_deprecated = deferred(Column(Vector(1536), nullable=True))
     search_tags = Column(ARRAY(String), nullable=True)  # Searchable keywords
 
     # Usage Analytics

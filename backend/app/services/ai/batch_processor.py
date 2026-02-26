@@ -41,7 +41,7 @@ class BatchProcessor:
             query = query.filter(Monologue.id.in_(monologue_ids))
 
         if skip_analyzed:
-            query = query.filter(Monologue.embedding.is_(None))
+            query = query.filter(Monologue.embedding_vector.is_(None))
 
         monologues = query.all()
 
@@ -88,8 +88,7 @@ class BatchProcessor:
                     embedding = self.analyzer.generate_embedding(monologue.text)
 
                     if embedding:
-                        # Store as JSON string (will migrate to pgvector later)
-                        monologue.embedding = json.dumps(embedding)
+                        monologue.embedding_vector = embedding
                         print(f"    ✅ Embedding generated ({len(embedding)} dimensions)")
                     else:
                         print(f"    ⚠️  Failed to generate embedding")
@@ -158,7 +157,7 @@ class BatchProcessor:
             # Generate embedding
             embedding = self.analyzer.generate_embedding(monologue.text)
             if embedding:
-                monologue.embedding = json.dumps(embedding)
+                monologue.embedding_vector = embedding
 
             # Generate tags
             tags = self.analyzer.generate_search_tags(

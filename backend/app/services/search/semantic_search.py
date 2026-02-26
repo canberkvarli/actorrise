@@ -7,8 +7,6 @@ import re
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Tuple
 
-import numpy as np
-
 logger = logging.getLogger(__name__)
 from app.models.actor import Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
@@ -176,6 +174,7 @@ def _calculate_relevance_score_multiplicative(
         'filter_gender': 0.15,
         'filter_emotion': 0.15,
         'filter_tone': 0.12,
+        'filter_age_range': 0.10,
         'filter_duration': 0.12,
         'filter_theme': 0.08,
         'profile_gender': 0.10,
@@ -199,6 +198,12 @@ def _calculate_relevance_score_multiplicative(
         t = (mono.tone or "").lower()
         if t == (merged_filters["tone"] or "").lower():
             score *= (1 + WEIGHTS['filter_tone'])
+
+    if merged_filters.get("age_range"):
+        ca = (mono.character_age_range or "").lower()
+        want_age = (merged_filters["age_range"] or "").lower()
+        if ca == want_age or ca == "any":
+            score *= (1 + WEIGHTS['filter_age_range'])
 
     if merged_filters.get("max_duration") and mono.estimated_duration_seconds:
         try:
@@ -403,6 +408,25 @@ class SemanticSearch:
         merged_filters = {**(extracted_filters or {}), **(optimized_filters or {}), **(explicit_filters or {})}
         logger.debug("Merged filters (final): %s", merged_filters)
 
+        # IMPORTANT: Separate hard SQL filters from boost-only filters.
+        # Filters derived from natural language (keyword extraction / AI parsing) for
+        # subjective attributes like emotion, tone, age_range, theme should only BOOST
+        # results, not eliminate them via SQL WHERE clauses. Only explicit UI-selected
+        # filters should be hard constraints for these attributes.
+        # This prevents "funny piece for a middle aged woman" from returning 0 results
+        # when no monologue matches ALL of tone=comedic AND age_range=40s AND gender=female.
+        BOOST_ONLY_KEYS = {'emotion', 'tone', 'age_range', 'theme', 'themes', 'gender'}
+        hard_filters = {}
+        for k, v in merged_filters.items():
+            if k in BOOST_ONLY_KEYS:
+                # Only use as hard SQL filter if it came from explicit UI filters
+                if k in (explicit_filters or {}):
+                    hard_filters[k] = v
+            else:
+                hard_filters[k] = v
+        logger.debug("Hard filters (SQL WHERE): %s", hard_filters)
+        logger.debug("Boost-only filters (scoring): %s", {k: v for k, v in merged_filters.items() if k not in hard_filters})
+
         # Optional: check cache for full search results for this (query, filters, user)
         cache_filters_for_results: Dict = dict(merged_filters)
         if user_id is not None:
@@ -448,25 +472,13 @@ class SemanticSearch:
                 quote_types = {item[0]: item[2] for item in cached if len(item) >= 3 and item[2]}
             return (ordered_with_scores[:limit], quote_types)
 
-        # Detect which embedding version is available in the database
-        # Check if any monologues have v2 embeddings (3072 dims)
-        has_v2_query = text("SELECT COUNT(*) FROM monologues WHERE embedding_vector_v2 IS NOT NULL LIMIT 1")
-        has_v2 = self.db.execute(has_v2_query).scalar() > 0
-
-        # Choose embedding model based on available vectors
-        if has_v2:
-            embedding_model = "text-embedding-3-large"
-            embedding_dims = 3072
-            embedding_column = "embedding_vector_v2"
-            logger.debug("Using v2 embeddings (text-embedding-3-large, 3072 dims)")
-        else:
-            embedding_model = "text-embedding-3-small"
-            embedding_dims = 1536
-            embedding_column = "embedding_vector"
-            logger.debug("Using v1 embeddings (text-embedding-3-small, 1536 dims)")
+        # Production: always use text-embedding-3-large (3072 dims) with embedding_vector column.
+        # The v2 migration has been finalized — embedding_vector now holds 3072-dim vectors.
+        embedding_model = "text-embedding-3-large"
+        embedding_dims = 3072
+        logger.debug("Using production embeddings (text-embedding-3-large, 3072 dims)")
 
         # Generate embedding for query (with caching at multiple levels)
-        # Cache key includes model and dimensions to avoid mixing v1 and v2 embeddings
         cache_key_suffix = f"_{embedding_model}_{embedding_dims}"
         query_hash = hashlib.md5((canonical_query + cache_key_suffix).encode()).hexdigest()
         if query_hash in EMBEDDING_CACHE:
@@ -508,120 +520,108 @@ class SemanticSearch:
 
         if not query_embedding:
             logger.info("Failed to generate embedding, falling back to text search")
-            fallback = self._fallback_text_search(query, limit, merged_filters, explicit_filters)
+            fallback = self._fallback_text_search(query, limit, hard_filters, explicit_filters)
             return ([(m, 0.0) for m in fallback], {})
 
         # Hybrid search: run text search for direct play/character/title matches and merge on top.
         # Many monologues (e.g. from Gutenberg) have no embeddings, so "hamlet" would otherwise
         # return only semantic results from other plays and never show Hamlet.
-        text_match_results = self._fallback_text_search(query, limit=limit, filters=merged_filters, explicit_filters=explicit_filters)
+        text_match_results = self._fallback_text_search(query, limit=limit, filters=hard_filters, explicit_filters=explicit_filters)
 
         # Build base query
         base_query = self.db.query(Monologue).join(Play)
 
-        # Apply merged filters (gender only as hard filter when set via UI, else boost-only)
-        if merged_filters:
-            if merged_filters.get('gender') and explicit_filters.get('gender'):
+        # Apply ONLY hard filters as SQL WHERE clauses.
+        # Soft filters (emotion, tone, age_range, theme from NL query) are applied
+        # as score boosts in _calculate_relevance_score_multiplicative instead.
+        if hard_filters:
+            if hard_filters.get('gender') and explicit_filters.get('gender'):
                 base_query = base_query.filter(
                     or_(
-                        Monologue.character_gender == merged_filters['gender'],
+                        Monologue.character_gender == hard_filters['gender'],
                         Monologue.character_gender == 'any'
                     )
                 )
 
-            if merged_filters.get('age_range'):
+            if hard_filters.get('age_range'):
                 base_query = base_query.filter(
-                    Monologue.character_age_range == merged_filters['age_range']
+                    Monologue.character_age_range == hard_filters['age_range']
                 )
 
-            if merged_filters.get('emotion'):
+            if hard_filters.get('emotion'):
                 base_query = base_query.filter(
-                    Monologue.primary_emotion == merged_filters['emotion']
+                    Monologue.primary_emotion == hard_filters['emotion']
                 )
 
-            if merged_filters.get('theme'):
-                # Check if theme is in the themes array using PostgreSQL array contains operator
-                theme = merged_filters['theme']
-                # Use PostgreSQL @> operator with proper type casting
-                # Cast array to character varying[] to match column type
+            if hard_filters.get('theme'):
+                theme = hard_filters['theme']
                 base_query = base_query.filter(
                     text("monologues.themes @> ARRAY[:theme_val]::character varying[]").bindparams(theme_val=theme)
                 )
 
-            if merged_filters.get('themes'):
-                # Handle multiple themes from query parser
-                themes = merged_filters['themes']
+            if hard_filters.get('themes'):
+                themes = hard_filters['themes']
                 if isinstance(themes, list) and len(themes) > 0:
-                    # Match if any of the requested themes are present
-                    # Use OR condition to match any theme
-                    # Use PostgreSQL @> operator with proper type casting
                     theme_conditions = [
                         text("monologues.themes @> ARRAY[:theme_val]::character varying[]").bindparams(theme_val=theme)
                         for theme in themes
                     ]
                     base_query = base_query.filter(or_(*theme_conditions))
 
-            if merged_filters.get('tone'):
-                # Filter by tone (e.g., 'comedic', 'dramatic')
+            if hard_filters.get('tone'):
                 base_query = base_query.filter(
-                    Monologue.tone == merged_filters['tone']
+                    Monologue.tone == hard_filters['tone']
                 )
 
-            if merged_filters.get('difficulty'):
+            if hard_filters.get('difficulty'):
                 base_query = base_query.filter(
-                    Monologue.difficulty_level == merged_filters['difficulty']
+                    Monologue.difficulty_level == hard_filters['difficulty']
                 )
 
-            if merged_filters.get('category'):
-                category = merged_filters['category']
-                # Handle both string and list formats
+            if hard_filters.get('category'):
+                category = hard_filters['category']
                 if isinstance(category, list):
-                    # If it's a list, use ILIKE with OR conditions
                     category_conditions = [
                         Play.category.ilike(f'%{cat}%') for cat in category
                     ]
                     base_query = base_query.filter(or_(*category_conditions))
                 else:
-                    # If it's a string, use exact match or ILIKE
                     base_query = base_query.filter(
                         Play.category.ilike(f'%{category}%')
                     )
 
-            if merged_filters.get('author'):
+            if hard_filters.get('author'):
                 base_query = base_query.filter(
-                    Play.author == merged_filters['author']
+                    Play.author == hard_filters['author']
                 )
 
-            # Exclude author filter (e.g., "not Shakespeare")
-            if merged_filters.get('exclude_author'):
+            if hard_filters.get('exclude_author'):
                 base_query = base_query.filter(
-                    Play.author != merged_filters['exclude_author']
+                    Play.author != hard_filters['exclude_author']
                 )
 
-            # Character name filter (e.g., "Joker", "Iago")
-            if merged_filters.get('character_name'):
+            if hard_filters.get('character_name'):
                 base_query = base_query.filter(
-                    Monologue.character_name.ilike(f"%{merged_filters['character_name']}%")
+                    Monologue.character_name.ilike(f"%{hard_filters['character_name']}%")
                 )
 
-            if merged_filters.get('max_duration'):
+            if hard_filters.get('max_duration'):
                 base_query = base_query.filter(
-                    Monologue.estimated_duration_seconds <= merged_filters['max_duration']
+                    Monologue.estimated_duration_seconds <= hard_filters['max_duration']
                 )
 
-            # Act/scene filters for classical plays
-            if merged_filters.get('act'):
+            if hard_filters.get('act'):
                 base_query = base_query.filter(
-                    Monologue.act == merged_filters['act']
+                    Monologue.act == hard_filters['act']
                 )
 
-            if merged_filters.get('scene'):
+            if hard_filters.get('scene'):
                 base_query = base_query.filter(
-                    Monologue.scene == merged_filters['scene']
+                    Monologue.scene == hard_filters['scene']
                 )
 
-            if merged_filters.get('max_overdone_score') is not None:
-                threshold = float(merged_filters['max_overdone_score'])
+            if hard_filters.get('max_overdone_score') is not None:
+                threshold = float(hard_filters['max_overdone_score'])
                 base_query = base_query.filter(
                     or_(
                         Monologue.overdone_score.is_(None),
@@ -655,23 +655,12 @@ class SemanticSearch:
             # OPTIMIZED: Reduced from 3x to 1.5x since HNSW indexes are now in place
             VECTOR_CANDIDATES = min(MAX_CANDIDATES, max(int(limit * 1.5), limit))
 
-            # Use the appropriate embedding column based on version
-            if embedding_column == "embedding_vector_v2":
-                logger.debug("Using v2 column, query embedding dims: %d", len(query_embedding))
-                semantic_candidates = (
-                    base_query.filter(Monologue.embedding_vector_v2.isnot(None))
-                    .order_by(Monologue.embedding_vector_v2.cosine_distance(query_embedding))
-                    .limit(VECTOR_CANDIDATES)
-                    .all()
-                )
-            else:
-                logger.debug("Using v1 column, query embedding dims: %d", len(query_embedding))
-                semantic_candidates = (
-                    base_query.filter(Monologue.embedding_vector.isnot(None))
-                    .order_by(Monologue.embedding_vector.cosine_distance(query_embedding))
-                    .limit(VECTOR_CANDIDATES)
-                    .all()
-                )
+            semantic_candidates = (
+                base_query.filter(Monologue.embedding_vector.isnot(None))
+                .order_by(Monologue.embedding_vector.cosine_distance(query_embedding))
+                .limit(VECTOR_CANDIDATES)
+                .all()
+            )
 
             logger.debug(
                 "Loaded %s monologues with pgvector embeddings (max: %s)",
@@ -691,59 +680,13 @@ class SemanticSearch:
         except Exception as e:
             # If pgvector is unavailable or misconfigured, fall back to legacy
             # JSON-based embeddings to keep search functional.
-            logger.debug("pgvector search failed, using legacy embeddings: %s", e)
+            logger.warning("pgvector search failed, falling back to text search: %s", e)
             try:
                 self.db.rollback()
             except Exception:
                 pass
-
-            try:
-                monologues_with_embeddings = (
-                    base_query.filter(
-                        Monologue.embedding.isnot(None),
-                        Monologue.embedding != "",
-                    )
-                    .order_by(Monologue.id)  # deterministic ordering for candidate pool
-                    .limit(MAX_CANDIDATES)
-                    .all()
-                )
-            except Exception as inner_e:
-                logger.debug("Legacy semantic search base query failed: %s", inner_e)
-                # Rollback and fall back to pure text search
-                try:
-                    self.db.rollback()
-                except Exception:
-                    pass
-                fallback_monologues = self._fallback_text_search(query, limit, merged_filters, explicit_filters)
-                return ([(m, 0.0) for m in fallback_monologues], {})
-
-            logger.debug(
-                "Loaded %s monologues with legacy JSON embeddings (max: %s)",
-                len(monologues_with_embeddings), MAX_CANDIDATES
-            )
-
-            similarity_start = time.time()
-            for mono in monologues_with_embeddings:
-                embedding_value: Optional[str] = mono.embedding  # type: ignore[assignment]
-                if embedding_value is not None and len(embedding_value) > 0:
-                    try:
-                        # Parse embedding from JSON
-                        mono_embedding = json.loads(embedding_value)
-
-                        # Calculate cosine similarity
-                        similarity = self._cosine_similarity(query_embedding, mono_embedding)
-                        # Note: Bookmark boost will be applied later in multiplicative scoring
-                        results_with_scores.append((mono, similarity))
-
-                    except (json.JSONDecodeError, ValueError, TypeError) as parse_e:
-                        logger.debug("Error calculating similarity for monologue %s: %s", mono.id, parse_e)
-                        continue
-
-            similarity_time = time.time() - similarity_start
-            logger.debug(
-                "Similarity (legacy JSON) took %.2fs for %s candidates",
-                similarity_time, len(results_with_scores)
-            )
+            fallback_monologues = self._fallback_text_search(query, limit, hard_filters, explicit_filters)
+            return ([(m, 0.0) for m in fallback_monologues], {})
 
         # IMPROVED: Apply all boosts using multiplicative scoring (prevents saturation)
         results_with_scores = [
@@ -846,7 +789,7 @@ class SemanticSearch:
 
             # Fallback to text search
             fallback_start = time.time()
-            fallback_results = self._fallback_text_search(query, needed * 2, merged_filters, explicit_filters)  # Get extra for filtering
+            fallback_results = self._fallback_text_search(query, needed * 2, hard_filters, explicit_filters)  # Get extra for filtering
             fallback_time = time.time() - fallback_start
             logger.debug("Fallback text search took %.2fs", fallback_time)
 
@@ -902,20 +845,6 @@ class SemanticSearch:
             SEARCH_RESULTS_CACHE[results_cache_key] = cache_payload
 
         return (list(top_results), quote_match_type_by_id)
-
-    def _cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
-        """Calculate cosine similarity between two vectors"""
-        vec1_np = np.array(vec1)
-        vec2_np = np.array(vec2)
-
-        dot_product = np.dot(vec1_np, vec2_np)
-        norm1 = np.linalg.norm(vec1_np)
-        norm2 = np.linalg.norm(vec2_np)
-
-        if norm1 == 0 or norm2 == 0:
-            return 0.0
-
-        return float(dot_product / (norm1 * norm2))
 
     def _fallback_text_search(
         self,

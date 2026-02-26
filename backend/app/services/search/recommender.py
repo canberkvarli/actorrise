@@ -1,9 +1,7 @@
 """Recommend monologues based on actor profile and preferences."""
 
-import json
-from typing import Any, List, Optional, cast
+from typing import Any, List, Optional
 
-import numpy as np
 from app.models.actor import ActorProfile, Monologue, Play
 from sqlalchemy import or_
 from sqlalchemy import text as sql_text
@@ -238,42 +236,25 @@ class Recommender:
         monologue_id: int,
         limit: int = 10
     ) -> List[Monologue]:
-        """Find similar monologues based on embedding similarity"""
+        """Find similar monologues using pgvector cosine distance (fast, DB-side)."""
 
         monologue = self.db.query(Monologue).filter(Monologue.id == monologue_id).first()
 
-        embedding_raw = getattr(monologue, "embedding", None) if monologue else None
-        if not monologue or not embedding_raw:
+        if not monologue or monologue.embedding_vector is None:
             return []
 
-        embedding_str = cast(str, embedding_raw)
         try:
-            target_embedding = json.loads(embedding_str)
-
-            # Get all monologues with embeddings (excluding the current one)
-            all_monologues = self.db.query(Monologue).filter(
-                Monologue.id != monologue_id,
-                Monologue.embedding.isnot(None)
-            ).all()
-
-            similarities: List[tuple] = []
-            for mono in all_monologues:
-                try:
-                    mono_emb_raw = getattr(mono, "embedding", None)
-                    if not mono_emb_raw:
-                        continue
-                    mono_embedding = json.loads(cast(str, mono_emb_raw))
-                    similarity = self._cosine_similarity(target_embedding, mono_embedding)
-                    similarities.append((mono, similarity))
-                except (TypeError, ValueError, json.JSONDecodeError):
-                    continue
-
-            # Sort by similarity (descending)
-            similarities.sort(key=lambda x: x[1], reverse=True)
-
-            # Return top N
-            return [mono for mono, score in similarities[:limit]]
-
+            return (
+                self.db.query(Monologue)
+                .join(Play)
+                .filter(
+                    Monologue.id != monologue_id,
+                    Monologue.embedding_vector.isnot(None),
+                )
+                .order_by(Monologue.embedding_vector.cosine_distance(monologue.embedding_vector))
+                .limit(limit)
+                .all()
+            )
         except Exception as e:
             print(f"Error finding similar monologues: {e}")
             # Fallback: same author or same primary emotion
@@ -284,20 +265,6 @@ class Recommender:
                     Monologue.primary_emotion == monologue.primary_emotion
                 )
             ).limit(limit).all()
-
-    def _cosine_similarity(self, vec1: List[float], vec2: List[float]) -> float:
-        """Calculate cosine similarity between two vectors"""
-        vec1_np = np.array(vec1)
-        vec2_np = np.array(vec2)
-
-        dot_product = np.dot(vec1_np, vec2_np)
-        norm1 = np.linalg.norm(vec1_np)
-        norm2 = np.linalg.norm(vec2_np)
-
-        if norm1 == 0 or norm2 == 0:
-            return 0.0
-
-        return float(dot_product / (norm1 * norm2))
 
     def get_trending_monologues(self, limit: int = 20) -> List[Monologue]:
         """Get trending monologues based on recent views and favorites"""

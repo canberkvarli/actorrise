@@ -293,79 +293,92 @@ async def search_monologues(
     elif exclude_overdone:
         filters['max_overdone_score'] = 0.3  # Only show "fresh" pieces (0.0 = fresh, 1.0 = extremely overdone)
 
-    search_service = SemanticSearch(db)
-    # Fetch more results than requested to get accurate total for pagination (capped to reduce DB egress)
-    fetch_limit = min(max(limit * 2, 50), 60)
+    try:
+        search_service = SemanticSearch(db)
+        # Fetch more results than requested to get accurate total for pagination (capped to reduce DB egress)
+        fetch_limit = min(max(limit * 2, 50), 60)
 
-    # Track whether we have relevance scores (semantic search vs random/discover)
-    has_scores = False
-    all_results_with_scores: list[tuple[Monologue, float]] = []
+        # Track whether we have relevance scores (semantic search vs random/discover)
+        has_scores = False
+        all_results_with_scores: list[tuple[Monologue, float]] = []
 
-    quote_match_types: dict[int, str] = {}
-    actor_profile_for_search: dict | None = None
-    corrected_q: Optional[str] = None
-    was_corrected = False
-    if current_user.actor_profile:
-        ap = current_user.actor_profile
-        actor_profile_for_search = {
-            "gender": (ap.gender or "").strip(),
-            "age_range": (ap.age_range or "").strip(),
-            "profile_bias_enabled": getattr(ap, "profile_bias_enabled", True),
-        }
-    if q and q.strip():
-        search_q = q.strip()
-        _corrected, was_corrected = correct_query_typos(search_q)
-        if was_corrected:
-            search_q = _corrected
-            corrected_q = _corrected
-        # Semantic search returns (list of (Monologue, score), quote_match_types)
-        all_results_with_scores, quote_match_types = search_service.search(
-            search_q,
-            limit=fetch_limit,
-            filters=filters,
-            user_id=cast(int, current_user.id),
-            actor_profile=actor_profile_for_search,
+        quote_match_types: dict[int, str] = {}
+        actor_profile_for_search: dict | None = None
+        corrected_q: Optional[str] = None
+        was_corrected = False
+        if current_user.actor_profile:
+            ap = current_user.actor_profile
+            actor_profile_for_search = {
+                "gender": (ap.gender or "").strip(),
+                "age_range": (ap.age_range or "").strip(),
+                "profile_bias_enabled": getattr(ap, "profile_bias_enabled", True),
+            }
+        if q and q.strip():
+            search_q = q.strip()
+            _corrected, was_corrected = correct_query_typos(search_q)
+            if was_corrected:
+                search_q = _corrected
+                corrected_q = _corrected
+            # Semantic search returns (list of (Monologue, score), quote_match_types)
+            all_results_with_scores, quote_match_types = search_service.search(
+                search_q,
+                limit=fetch_limit,
+                filters=filters,
+                user_id=cast(int, current_user.id),
+                actor_profile=actor_profile_for_search,
+            )
+            has_scores = True
+        else:
+            # Random/discover returns just Monologues, wrap with None score
+            random_results = search_service.get_random_monologues(limit=fetch_limit, filters=filters)
+            all_results_with_scores = [(m, 0.0) for m in random_results]
+
+        # Apply pagination
+        offset = (page - 1) * limit
+        results_with_scores = all_results_with_scores[offset:offset + limit]
+        total = len(all_results_with_scores)
+
+        # Get user's favorites - OPTIMIZED: only for result set (not all favorites)
+        result_ids = [m.id for m, _ in results_with_scores]
+        favorites = db.query(MonologueFavorite.monologue_id).filter(
+            MonologueFavorite.user_id == current_user.id,
+            MonologueFavorite.monologue_id.in_(result_ids)  # Only fetch for these results
+        ).all()
+        favorite_ids = {f[0] for f in favorites}
+
+        # Format response with relevance scores and quote match type (only for semantic search)
+        monologue_responses = [
+            _monologue_to_response(
+                m,
+                is_favorited=(m.id in favorite_ids),
+                relevance_score=score if has_scores else None,
+                match_type=quote_match_types.get(cast(int, m.id)) if has_scores else None,
+            )
+            for m, score in results_with_scores
+        ]
+
+        if monologue_responses:
+            record_total_search(current_user.id, db)
+
+        return SearchResponse(
+            results=monologue_responses,
+            total=total,
+            page=page,
+            page_size=limit,
+            corrected_query=corrected_q,
         )
-        has_scores = True
-    else:
-        # Random/discover returns just Monologues, wrap with None score
-        random_results = search_service.get_random_monologues(limit=fetch_limit, filters=filters)
-        all_results_with_scores = [(m, 0.0) for m in random_results]
-
-    # Apply pagination
-    offset = (page - 1) * limit
-    results_with_scores = all_results_with_scores[offset:offset + limit]
-    total = len(all_results_with_scores)
-
-    # Get user's favorites - OPTIMIZED: only for result set (not all favorites)
-    result_ids = [m.id for m, _ in results_with_scores]
-    favorites = db.query(MonologueFavorite.monologue_id).filter(
-        MonologueFavorite.user_id == current_user.id,
-        MonologueFavorite.monologue_id.in_(result_ids)  # Only fetch for these results
-    ).all()
-    favorite_ids = {f[0] for f in favorites}
-
-    # Format response with relevance scores and quote match type (only for semantic search)
-    monologue_responses = [
-        _monologue_to_response(
-            m,
-            is_favorited=(m.id in favorite_ids),
-            relevance_score=score if has_scores else None,
-            match_type=quote_match_types.get(cast(int, m.id)) if has_scores else None,
+    except HTTPException:
+        raise  # Re-raise HTTP exceptions (e.g. from auth/rate-limiting) as-is
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).error("Search failed for q=%r: %s", q, e, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": "search_error",
+                "message": "Search is temporarily unavailable. Please try again in a moment.",
+            },
         )
-        for m, score in results_with_scores
-    ]
-
-    if monologue_responses:
-        record_total_search(current_user.id, db)
-
-    return SearchResponse(
-        results=monologue_responses,
-        total=total,
-        page=page,
-        page_size=limit,
-        corrected_query=corrected_q,
-    )
 
 
 @router.get("/search-demo", response_model=DemoSearchResponse)
@@ -753,7 +766,7 @@ async def get_database_stats(
     contemporary_plays = db.query(Play).filter(Play.category == 'contemporary').count()
 
     analyzed_monologues = db.query(Monologue).filter(
-        Monologue.embedding.isnot(None)
+        Monologue.embedding_vector.isnot(None)
     ).count()
 
     return {

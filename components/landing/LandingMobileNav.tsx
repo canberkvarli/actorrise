@@ -16,7 +16,7 @@ export function LandingMobileNav() {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="md:hidden relative">
+    <div className="lg:hidden relative">
       <Button
         variant="ghost"
         size="icon"
