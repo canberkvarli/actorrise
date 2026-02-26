@@ -407,7 +407,7 @@ export function LandingDemoSearch() {
                   transition={{ duration: 0.25 }}
                   className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground"
                 >
-                  We searched for &ldquo;{correctedQuery}&rdquo;. Did you mean that? Here are the results.
+                  Showing results for <span className="font-semibold">&ldquo;{correctedQuery}&rdquo;</span>.
                 </motion.div>
               )}
               <motion.p

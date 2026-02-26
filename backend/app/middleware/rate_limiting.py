@@ -327,6 +327,8 @@ async def require_ai_search_when_query(
     - In development/local (ENVIRONMENT=development or local), limits are not enforced.
     - If the request has no `q` or empty `q` (e.g. discover/random), the check is
       skipped and usage is not incremented.
+    - Pagination requests (page > 1) still check limits but do NOT increment usage,
+      so "Load More" doesn't burn through the user's search quota.
     - Otherwise the same tier/usage rules as FeatureGate("ai_search", increment=True) apply.
     """
     if settings.environment in ("development", "local"):
@@ -334,7 +336,15 @@ async def require_ai_search_when_query(
     q = (request.query_params.get("q") or "").strip()
     if not q:
         return True
-    gate = FeatureGate("ai_search", increment=True)
+    # Only increment on page 1 (initial search). Pagination (page 2+) should
+    # check the limit but not count as another search.
+    page_str = request.query_params.get("page", "1")
+    try:
+        page = int(page_str)
+    except ValueError:
+        page = 1
+    increment = page <= 1
+    gate = FeatureGate("ai_search", increment=increment)
     return await gate(current_user=current_user, db=db)
 
 
