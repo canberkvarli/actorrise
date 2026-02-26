@@ -1,6 +1,7 @@
 """Query optimization and classification for monologue search."""
 
 import re
+from difflib import get_close_matches
 from functools import lru_cache
 from typing import Dict, List, Optional, Tuple
 
@@ -533,37 +534,218 @@ class QueryOptimizer:
         }
 
 
-# Common search-word misspellings -> canonical form (for "did you mean?" and better results)
+# ── Typo Correction ─────────────────────────────────────────────────────────
+# Two-layer approach:
+#   1. Hardcoded dictionary for common misspellings (instant, reliable)
+#   2. Fuzzy matching against a curated theater/acting vocabulary (catches novel typos)
+
+# Layer 1: known misspellings → canonical form
 QUERY_TYPO_CORRECTIONS: Dict[str, str] = {
+    # Creation / world
     "crattion": "creation", "creaton": "creation", "creatin": "creation", "creaction": "creation",
-    "monolog": "monologue", "monologe": "monologue", "monolouge": "monologue",
-    "shakespere": "shakespeare", "shakespear": "shakespeare", "shakspeare": "shakespeare",
-    "chekov": "chekhov", "checkov": "chekhov", "chechov": "chekhov",
-    "tragidy": "tragedy", "tragedey": "tragedy",
-    "comedey": "comedy",
-    "dramma": "drama",
-    "romantik": "romantic",
     "worl": "world", "worls": "world",
+    # Monologue
+    "monolog": "monologue", "monologe": "monologue", "monolouge": "monologue",
+    "monalouge": "monologue", "monalog": "monologue", "monlogues": "monologues",
+    "monologes": "monologues", "monolouges": "monologues",
+    # Playwrights
+    "shakespere": "shakespeare", "shakespear": "shakespeare", "shakspeare": "shakespeare",
+    "shakspere": "shakespeare", "shakesphere": "shakespeare", "shakespare": "shakespeare",
+    "chekov": "chekhov", "checkov": "chekhov", "chechov": "chekhov", "chekov's": "chekhov",
+    "aurthur": "arthur", "aurther": "arthur",
+    "tenessee": "tennessee", "tennesee": "tennessee",
+    "euripedes": "euripides", "euripidies": "euripides",
+    "sophocles's": "sophocles", "sophacles": "sophocles",
+    "molliere": "moliere", "molier": "moliere",
+    "osccar": "oscar", "osacr": "oscar",
+    "agust": "august", "augst": "august",
+    # Genres / tones
+    "tragidy": "tragedy", "tragedey": "tragedy", "tradegy": "tragedy", "tradgedy": "tragedy",
+    "comedey": "comedy", "comady": "comedy", "commedy": "comedy",
+    "dramma": "drama", "drma": "drama",
+    "romantik": "romantic", "romanitc": "romantic",
+    "dramtic": "dramatic", "drammatic": "dramatic", "dramatik": "dramatic",
+    "commedic": "comedic", "comidic": "comedic", "comedik": "comedic",
+    "sarcastik": "sarcastic", "sarcasitc": "sarcastic",
+    "emotinal": "emotional", "emotioanl": "emotional",
+    "passionat": "passionate", "pasionate": "passionate",
+    "powerfull": "powerful", "poweful": "powerful",
+    "haertfelt": "heartfelt", "heartfel": "heartfelt",
+    "meloncholy": "melancholy", "melancholy": "melancholy", "melancholy": "melancholy",
+    "philisophical": "philosophical", "philosophicle": "philosophical",
+    "contempletive": "contemplative",
+    # Acting terms
+    "audtion": "audition", "auditon": "audition", "audiiton": "audition",
+    "charcter": "character", "charachter": "character", "charactor": "character",
+    "dialoge": "dialogue", "dialouge": "dialogue", "dialague": "dialogue",
+    "soliliquy": "soliloquy", "soliliqy": "soliloquy", "soliloqy": "soliloquy",
+    "rehersal": "rehearsal", "rehearsl": "rehearsal", "rehursal": "rehearsal",
+    "perfomance": "performance", "performence": "performance",
+    "contemparary": "contemporary", "contempory": "contemporary", "contmporary": "contemporary",
+    "clasical": "classical", "classicle": "classical",
+    # Common words in search
+    "femail": "female", "femle": "female",
+    "middel": "middle", "midde": "middle",
+    "womn": "woman", "womam": "woman", "woamn": "woman",
+    "peice": "piece", "peece": "piece",
+    "minuts": "minutes", "minuets": "minutes", "minut": "minute", "minite": "minute",
+    "yong": "young", "yung": "young",
+    "eldery": "elderly",
+    "reveng": "revenge", "revnge": "revenge",
+    "betral": "betrayal", "betrayl": "betrayal",
+    "identiy": "identity", "idenity": "identity",
+    "famliy": "family", "famly": "family",
+}
+
+# Layer 2: curated vocabulary for fuzzy matching (difflib.get_close_matches)
+# Only words ≥4 chars are fuzzy-matched to avoid false positives on short words.
+_THEATER_VOCABULARY: set = {
+    # Playwrights
+    "shakespeare", "chekhov", "ibsen", "moliere", "euripides", "sophocles",
+    "aristophanes", "wilde", "williams", "miller", "albee", "stoppard",
+    "beckett", "ionesco", "pinter", "brecht", "coward", "mamet", "shepard",
+    "sondheim", "tennessee", "arthur", "august", "wilson", "lorraine",
+    "hansberry", "suzan", "lori", "parks", "caryl", "churchill",
+    "lynn", "nottage", "branden", "jacobs", "jenkins",
+    # Plays / works
+    "hamlet", "macbeth", "othello", "tempest", "midsummer", "twelfth",
+    "romeo", "juliet", "merchant", "venice", "lear", "prospero",
+    "streetcar", "desire", "salesman", "crucible", "glass", "menagerie",
+    "seagull", "cherry", "orchard", "sisters", "pygmalion", "importance",
+    "earnest", "godot", "endgame", "rhinoceros", "oleanna", "glengarry",
+    "fences", "piano", "lesson", "raisin",
+    # Genres / tones / emotions
+    "tragedy", "comedy", "drama", "farce", "satire", "melodrama", "tragicomedy",
+    "dramatic", "comedic", "tragic", "romantic", "sarcastic", "emotional",
+    "passionate", "powerful", "heartfelt", "melancholy", "philosophical",
+    "contemplative", "defiant", "rebellious", "vulnerable", "intense",
+    "dark", "light", "whimsical", "absurd", "poignant", "bittersweet",
+    "angry", "desperate", "hopeful", "joyful", "sorrowful", "nostalgic",
+    "sassy", "witty", "fierce", "tender", "haunting",
+    # Acting terms
+    "monologue", "monologues", "soliloquy", "dialogue", "audition",
+    "character", "rehearsal", "performance", "scene", "stage",
+    "classical", "contemporary", "modern", "period", "plays", "play",
+    # Demographics
+    "female", "male", "woman", "man", "young", "elderly", "middle",
+    "teenager", "child", "adult",
+    # Themes
+    "love", "death", "betrayal", "revenge", "family", "identity", "power",
+    "freedom", "justice", "forgiveness", "ambition", "jealousy", "grief",
+    "isolation", "redemption", "sacrifice", "war", "peace", "madness",
+    "creation", "world", "nature", "faith", "corruption",
+    # Search modifiers
+    "piece", "minute", "minutes", "second", "seconds", "short", "long",
+}
+
+# Build sorted list once (get_close_matches needs a sequence)
+_VOCAB_LIST: List[str] = sorted(_THEATER_VOCABULARY)
+
+# Words to never fuzzy-correct (too common / ambiguous).
+# Includes short words + common English words that appear in natural-language search queries.
+_FUZZY_SKIP: set = {
+    # 1-3 letter words
+    "a", "an", "am", "as", "at", "be", "by", "do", "go", "he", "if", "in",
+    "is", "it", "me", "my", "no", "of", "on", "or", "so", "to", "up", "we",
+    "ad", "ah", "ok",
+    "all", "and", "any", "are", "ask", "bad", "big", "bit", "boy", "but",
+    "can", "cry", "cut", "day", "did", "end", "far", "few", "fix", "fun",
+    "get", "god", "got", "had", "has", "her", "him", "his", "hot", "how",
+    "its", "job", "let", "lot", "mad", "man", "may", "men", "met", "mix",
+    "new", "nor", "not", "now", "odd", "off", "old", "one", "our", "out",
+    "own", "put", "ran", "raw", "red", "run", "sad", "saw", "say", "set",
+    "she", "sit", "six", "ten", "the", "too", "top", "try", "two", "use",
+    "via", "war", "was", "way", "who", "why", "win", "won", "yet", "you",
+    "age", "ago", "act", "add", "aim", "air", "art", "ate", "bed", "bet",
+    # 4+ letter common English words that aren't theater-specific
+    "about", "above", "after", "aged", "also", "back", "been", "best",
+    "both", "came", "come", "could", "does", "done", "down", "each",
+    "even", "ever", "feel", "find", "first", "from", "funny", "gave",
+    "give", "goes", "gone", "good", "great", "half", "hand", "have",
+    "here", "high", "home", "idea", "into", "just", "keep", "kind",
+    "knew", "know", "last", "left", "life", "like", "little", "live",
+    "long", "look", "looking", "lost", "made", "make", "many", "mind",
+    "more", "most", "much", "must", "name", "need", "never", "next",
+    "nice", "only", "open", "other", "over", "part", "past", "play",
+    "real", "really", "right", "said", "same", "seem", "self", "show",
+    "side", "some", "soon", "still", "stop", "such", "sure", "take",
+    "tell", "than", "that", "them", "then", "they", "thing", "think",
+    "this", "time", "told", "took", "true", "turn", "upon", "very",
+    "want", "well", "went", "were", "what", "when", "where", "which",
+    "while", "will", "with", "word", "work", "would", "year", "your",
+    # Search-specific words users type
+    "about", "looking", "something", "someone", "anyone", "everybody",
+    "nothing", "everything", "somewhere", "between", "another", "because",
+    "before", "being", "best", "black", "white", "whole", "under",
+    "every", "those", "these", "their", "there", "three", "through",
+    "today", "night", "story", "movie", "film", "book", "actor",
+    "actress", "role", "cast", "line", "lines", "type", "style",
+    "like", "hate", "want", "need", "find", "give", "girl", "wife",
+    "husband", "mother", "father", "sister", "brother", "daughter", "son",
+    "friend", "king", "queen", "prince", "princess", "lord", "lady",
+    "english", "american", "british", "irish", "french", "italian",
+    "african", "asian", "latin", "spanish", "german", "russian",
 }
 
 
-def correct_query_typos(raw: str) -> Tuple[str, bool]:
+def correct_query_typos(raw: str) -> Tuple[str, bool, bool]:
     """
-    Apply simple word-level typo correction for search queries.
-    Returns (corrected_query, was_corrected).
+    Two-layer typo correction for search queries.
+
+    1. Exact dictionary lookup (fast, reliable for known misspellings)
+    2. Fuzzy matching against theater vocabulary for unknown typos (words ≥4 chars)
+
+    Returns (corrected_query, was_corrected, show_banner).
+    - was_corrected: True if any word was changed (always use corrected query for search)
+    - show_banner: True only if the correction is clean enough to display to the user
+      (i.e. every meaningful word was either already correct or successfully corrected)
     """
     if not raw or not raw.strip():
-        return (raw, False)
+        return (raw, False, False)
+
     words = raw.strip().split()
-    corrected_words = []
+    corrected_words: List[str] = []
     changed = False
+    # Track words where fuzzy matching was attempted but failed — these are
+    # likely gibberish that we can't fix, so we shouldn't show a half-baked banner.
+    unfixable_count = 0
+
     for w in words:
-        key = w.lower()
+        # Strip trailing punctuation/possessives for matching, re-attach after
+        suffix = ""
+        stripped = w
+        for s in ("'s", "'s", "'t", "'t"):
+            if stripped.lower().endswith(s):
+                suffix = stripped[len(stripped) - len(s):]
+                stripped = stripped[:len(stripped) - len(s)]
+                break
+
+        key = stripped.lower()
+
+        # Layer 1: exact dictionary hit
         if key in QUERY_TYPO_CORRECTIONS:
             repl = QUERY_TYPO_CORRECTIONS[key]
-            corrected_words.append(repl)
+            corrected_words.append(repl + suffix)
             if repl.lower() != key:
                 changed = True
-        else:
-            corrected_words.append(w)
-    return (" ".join(corrected_words), changed)
+            continue
+
+        # Layer 2: fuzzy match (only for words ≥4 chars, not in vocabulary already, not a skip word)
+        if len(key) >= 4 and key not in _THEATER_VOCABULARY and key not in _FUZZY_SKIP:
+            matches = get_close_matches(key, _VOCAB_LIST, n=1, cutoff=0.8)
+            if matches and matches[0] != key:
+                corrected_words.append(matches[0] + suffix)
+                changed = True
+                continue
+            # No fuzzy match found — this word is unrecognized and unfixable
+            unfixable_count += 1
+
+        corrected_words.append(w)
+
+    # Only show the banner if we made corrections AND there are no unfixable words.
+    # e.g. "shakespear monologe" → both corrected, 0 unfixable → show banner
+    # e.g. "shakespear mnonologeawewewe" → "mnonologeawewewe" unfixable → hide banner
+    # The corrected query is still used for search either way (silent improvement).
+    show_banner = changed and unfixable_count == 0
+
+    return (" ".join(corrected_words), changed, show_banner)

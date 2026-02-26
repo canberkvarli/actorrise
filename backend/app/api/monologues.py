@@ -315,9 +315,10 @@ async def search_monologues(
             }
         if q and q.strip():
             search_q = q.strip()
-            _corrected, was_corrected = correct_query_typos(search_q)
+            _corrected, was_corrected, show_banner = correct_query_typos(search_q)
             if was_corrected:
                 search_q = _corrected
+            if show_banner:
                 corrected_q = _corrected
             # Semantic search returns (list of (Monologue, score), quote_match_types)
             all_results_with_scores, quote_match_types = search_service.search(
@@ -415,8 +416,8 @@ async def search_demo(
                 )
         _demo_search_last_request[client_ip] = now
 
-    search_q, was_corrected = correct_query_typos(q.strip())
-    corrected_for_demo: Optional[str] = search_q if was_corrected else None
+    search_q, _was_corrected, show_banner = correct_query_typos(q.strip())
+    corrected_for_demo: Optional[str] = search_q if show_banner else None
 
     search_service = SemanticSearch(db)
     # Request more results so landing gets same diversity as full search (then return top 5)

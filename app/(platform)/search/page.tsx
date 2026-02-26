@@ -380,7 +380,11 @@ export default function SearchPage() {
           const parsed = JSON.parse(cachedResults) as Monologue[];
           setResults(parsed);
           setTotal(parsed.length);
-          setCorrectedQuery(null);
+          // Restore typo correction banner from cache
+          const correctionKey = `search_correction_${urlQuery}_${JSON.stringify(urlFilters)}_${initialMaxOverdone}`;
+          const cachedCorrection = sessionStorage.getItem(correctionKey);
+          setCorrectedQuery(cachedCorrection || null);
+          setQueryUsedForResults(urlQuery);
           setHasSearched(true);
           setRestoredFromLastSearch(false);
           return;
@@ -553,6 +557,9 @@ export default function SearchPage() {
         playsActionAtRef.current = Date.now();
         const storageKey = `search_results_${searchQuery}_${JSON.stringify(searchFilters)}_${effectiveMaxOverdone}`;
         sessionStorage.setItem(storageKey, JSON.stringify(newResults));
+        // Persist correction alongside the cached results so it survives URL-driven restores
+        const correctionKey = `search_correction_${searchQuery}_${JSON.stringify(searchFilters)}_${effectiveMaxOverdone}`;
+        sessionStorage.setItem(correctionKey, data.corrected_query ?? "");
         const savedFilters = { ...searchFilters, max_overdone_score: effectiveMaxOverdone };
         sessionStorage.setItem(
           LAST_SEARCH_KEY,
