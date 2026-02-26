@@ -30,26 +30,26 @@ export function SceneSettingsModal({ open, onOpenChange }: SceneSettingsModalPro
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl sm:text-2xl">Settings</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">Settings</DialogTitle>
         </DialogHeader>
-        <p className="text-base text-muted-foreground">
+        <p className="text-sm text-muted-foreground">
           Defaults for new scenes and rehearsal behavior.
         </p>
 
         <div className="space-y-6">
           <Card>
-            <CardHeader className="py-4">
-              <CardTitle className="text-lg">Basic</CardTitle>
-              <CardDescription className="text-sm">Countdown before starting a scene.</CardDescription>
+            <CardHeader className="py-3">
+              <CardTitle className="text-base">Basic</CardTitle>
+              <CardDescription className="text-xs">Countdown before starting a scene.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between gap-4">
-                <Label className="flex-1 text-base">Show countdown before starting scene</Label>
+                <Label className="flex-1 text-sm">Show countdown before starting scene</Label>
                 <Switch checked={countdownEnabled} onCheckedChange={setCountdownEnabled} />
               </div>
               {countdownEnabled && (
                 <div className="space-y-2">
-                  <Label className="text-base">Countdown (seconds)</Label>
+                  <Label className="text-sm">Countdown (seconds)</Label>
                   <div className="flex items-center gap-2">
                     <Slider
                       value={countdownSeconds}
@@ -67,22 +67,22 @@ export function SceneSettingsModal({ open, onOpenChange }: SceneSettingsModalPro
           </Card>
 
           <Card>
-            <CardHeader className="py-4">
-              <CardTitle className="text-lg">Playback</CardTitle>
-              <CardDescription className="text-sm">When to move to the next line during rehearsal.</CardDescription>
+            <CardHeader className="py-3">
+              <CardTitle className="text-base">Playback</CardTitle>
+              <CardDescription className="text-xs">When to move to the next line during rehearsal.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between gap-4">
-                <Label className="flex-1 text-base">Move to the next line when I finish my line</Label>
+                <Label className="flex-1 text-sm">Move to the next line when I finish my line</Label>
                 <Switch checked={moveOnFinish} onCheckedChange={setMoveOnFinish} />
               </div>
               <div className="flex items-center justify-between gap-4">
-                <Label className="flex-1 text-base">Skip ahead if I'm quiet</Label>
+                <Label className="flex-1 text-sm">Skip ahead if I'm quiet</Label>
                 <Switch checked={skipIfQuiet} onCheckedChange={setSkipIfQuiet} />
               </div>
               {skipIfQuiet && (
                 <div className="space-y-2">
-                  <Label className="text-base">How long to wait (seconds)</Label>
+                  <Label className="text-sm">How long to wait (seconds)</Label>
                   <div className="flex items-center gap-2">
                     <Slider
                       value={quietWaitSeconds}
@@ -100,31 +100,31 @@ export function SceneSettingsModal({ open, onOpenChange }: SceneSettingsModalPro
           </Card>
 
           <Card>
-            <CardHeader className="py-4">
-              <CardTitle className="text-lg flex items-center gap-2">
+            <CardHeader className="py-3">
+              <CardTitle className="text-base flex items-center gap-2">
                 <Users className="w-4 h-4" />
                 Characters
               </CardTitle>
-              <CardDescription className="text-sm">
+              <CardDescription className="text-xs">
                 Assign voices when you create or edit a scene.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-base text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Character defaults are set when you create a new scene. Use the scene editor to assign voices to characters.
               </p>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader className="py-4">
-              <CardTitle className="text-lg">Advanced</CardTitle>
-              <CardDescription className="text-sm">Speech and performance options.</CardDescription>
+            <CardHeader className="py-3">
+              <CardTitle className="text-base">Advanced</CardTitle>
+              <CardDescription className="text-xs">Speech and performance options.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-base">Speech sampling (skip %)</Label>
-                <p className="text-sm text-muted-foreground">
+                <Label className="text-sm">Speech sampling (skip %)</Label>
+                <p className="text-xs text-muted-foreground">
                   Skip a percentage of speech results to reduce processing. Higher values may improve performance but reduce accuracy.
                 </p>
                 <div className="flex items-center gap-2">

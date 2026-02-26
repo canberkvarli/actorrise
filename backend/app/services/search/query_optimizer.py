@@ -160,6 +160,51 @@ class KeywordExtractor:
             'redemption': 'redemption', 'forgiveness': 'redemption',
         },
 
+        'character_type': {
+            # Villain/Antagonist keywords - map to power/revenge/ambition themes
+            'villain': ['power', 'revenge', 'ambition'],
+            'antagonist': ['power', 'revenge', 'ambition'],
+            'bad guy': ['power', 'revenge'],
+            'evil': ['power', 'madness'],
+            'dark': ['power', 'madness'],
+            'villainous': ['power', 'revenge'],
+            'malevolent': ['power', 'revenge'],
+            'wicked': ['power', 'madness'],
+            'sinister': ['power'],
+            'menacing': ['power'],
+
+            # Hero/Protagonist keywords - map to honor/redemption/identity themes
+            'hero': ['honor', 'redemption', 'identity'],
+            'protagonist': ['honor', 'identity'],
+            'good guy': ['honor', 'redemption'],
+            'heroic': ['honor'],
+        },
+
+        'famous_characters': {
+            # Film/TV Villains
+            'joker': 'Joker',
+            'darth vader': 'Darth Vader',
+            'vader': 'Darth Vader',
+            'hannibal': 'Hannibal Lecter',
+            'voldemort': 'Voldemort',
+            'thanos': 'Thanos',
+            'loki': 'Loki',
+
+            # Shakespeare Villains/Characters
+            'iago': 'Iago',
+            'lady macbeth': 'Lady Macbeth',
+            'macbeth': 'Macbeth',
+            'richard': 'Richard III',
+            'shylock': 'Shylock',
+            'edmund': 'Edmund',
+            'claudius': 'Claudius',
+
+            # Classic Theater Characters
+            'hedda': 'Hedda Gabler',
+            'blanche': 'Blanche DuBois',
+            'willy loman': 'Willy Loman',
+        },
+
         'category': {
             # Classical
             'shakespeare': 'classical', 'shakespearean': 'classical',
@@ -296,6 +341,20 @@ class KeywordExtractor:
                 theme = cls.KEYWORD_MAPPINGS['themes'][word]
                 if theme not in themes_found:
                     themes_found.append(theme)
+
+            # Handle character types (expand to related themes)
+            if word in cls.KEYWORD_MAPPINGS['character_type']:
+                char_themes = cls.KEYWORD_MAPPINGS['character_type'][word]
+                for theme in char_themes:
+                    if theme not in themes_found:
+                        themes_found.append(theme)
+
+        # Check for famous character names (multi-word phrases)
+        for char_key, char_name in cls.KEYWORD_MAPPINGS['famous_characters'].items():
+            if char_key in query_lower:
+                # Store the character name for text matching
+                filters['character_name'] = char_name
+                break
 
         # Add themes if found
         if themes_found:

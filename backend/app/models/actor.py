@@ -398,8 +398,6 @@ class FilmTvReference(Base):
     imsdb_url = Column(String, nullable=True)
     # Production embedding: text-embedding-3-large (3072 dims) after finalize
     embedding = Column(Vector(3072), nullable=True)
-    # Deprecated v1 embeddings (kept for rollback safety)
-    embedding_deprecated = deferred(Column(Vector(1536), nullable=True))
     created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))
 
     # Relationships

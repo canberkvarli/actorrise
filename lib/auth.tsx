@@ -162,6 +162,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
+        const msg = error.message.toLowerCase();
+        if (msg.includes("already registered") || msg.includes("already exists")) {
+          throw new Error("An account with this email already exists. Sign in instead.");
+        }
         throw new Error(error.message);
       }
 

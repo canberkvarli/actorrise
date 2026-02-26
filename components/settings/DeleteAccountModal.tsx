@@ -74,62 +74,68 @@ export function DeleteAccountModal({ open, onOpenChange }: DeleteAccountModalPro
             <IconAlertTriangle className="h-5 w-5" />
             <DialogTitle>Delete Account</DialogTitle>
           </div>
-          <DialogDescription className="space-y-4 pt-2">
-            <p className="text-foreground font-medium">
-              Are you sure you want to delete your account?
-            </p>
-
-            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-3 text-sm space-y-2">
-              <p className="font-medium text-red-800 dark:text-red-200">This will:</p>
-              <ul className="list-disc list-inside text-red-700 dark:text-red-300 space-y-1">
-                <li>Permanently delete all your scripts, scenes, and bookmarks</li>
-                <li>Cancel your subscription immediately (no refund)</li>
-                <li>Remove access to all ActorRise features immediately</li>
-                <li>This action cannot be undone</li>
-              </ul>
-            </div>
-
-            <div className="space-y-4 pt-2">
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="confirm-subscription"
-                  checked={confirmSubscription}
-                  onChange={(e) => setConfirmSubscription(e.target.checked)}
-                  disabled={isDeleting}
-                />
-                <Label htmlFor="confirm-subscription" className="text-sm leading-normal cursor-pointer">
-                  I understand my subscription will be canceled immediately and I will lose access
-                </Label>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Checkbox
-                  id="confirm-data"
-                  checked={confirmData}
-                  onChange={(e) => setConfirmData(e.target.checked)}
-                  disabled={isDeleting}
-                />
-                <Label htmlFor="confirm-data" className="text-sm leading-normal cursor-pointer">
-                  I understand all my data will be permanently deleted
-                </Label>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="delete-confirm" className="text-sm">
-                  To confirm, type <strong>DELETE</strong> below:
-                </Label>
-                <Input
-                  id="delete-confirm"
-                  value={deleteText}
-                  onChange={(e) => setDeleteText(e.target.value)}
-                  placeholder="Type DELETE to confirm"
-                  disabled={isDeleting}
-                  className="uppercase"
-                />
-              </div>
-            </div>
+          <DialogDescription asChild>
+            <span className="sr-only">
+              Permanently delete your account and all data. Subscription will be canceled.
+            </span>
           </DialogDescription>
         </DialogHeader>
+
+        <div className="space-y-4 pt-2">
+          <p className="text-foreground font-medium text-sm">
+            Are you sure you want to delete your account?
+          </p>
+
+          <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-900 rounded-lg p-3 text-sm space-y-2">
+            <p className="font-medium text-red-800 dark:text-red-200">This will:</p>
+            <ul className="list-disc list-inside text-red-700 dark:text-red-300 space-y-1">
+              <li>Permanently delete all your scripts, scenes, and bookmarks</li>
+              <li>Cancel your subscription immediately (no refund)</li>
+              <li>Remove access to all ActorRise features immediately</li>
+              <li>This action cannot be undone</li>
+            </ul>
+          </div>
+
+          <div className="space-y-4 pt-2">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="confirm-subscription"
+                checked={confirmSubscription}
+                onChange={(e) => setConfirmSubscription(e.target.checked)}
+                disabled={isDeleting}
+              />
+              <Label htmlFor="confirm-subscription" className="text-sm leading-normal cursor-pointer">
+                I understand my subscription will be canceled immediately and I will lose access
+              </Label>
+            </div>
+
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="confirm-data"
+                checked={confirmData}
+                onChange={(e) => setConfirmData(e.target.checked)}
+                disabled={isDeleting}
+              />
+              <Label htmlFor="confirm-data" className="text-sm leading-normal cursor-pointer">
+                I understand all my data will be permanently deleted
+              </Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="delete-confirm" className="text-sm">
+                To confirm, type <strong>DELETE</strong> below:
+              </Label>
+              <Input
+                id="delete-confirm"
+                value={deleteText}
+                onChange={(e) => setDeleteText(e.target.value)}
+                placeholder="Type DELETE to confirm"
+                disabled={isDeleting}
+                className="uppercase"
+              />
+            </div>
+          </div>
+        </div>
 
         <DialogFooter className="gap-2">
           <Button variant="outline" disabled={isDeleting} onClick={handleCancel}>

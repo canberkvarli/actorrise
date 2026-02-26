@@ -22,6 +22,10 @@ import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { SceneSettingsModal } from "@/components/scenepartner/SceneSettingsModal";
 import { MicAccessWarning } from "@/components/scenepartner/MicAccessWarning";
+import { GenreSelect } from "@/components/ui/genre-select";
+import { getCharacterColors } from "@/lib/characterColors";
+import { useTheme } from "next-themes";
+import { cn } from "@/lib/utils";
 
 interface Scene {
   id: number;
@@ -60,6 +64,7 @@ export default function ScriptDetailPage() {
   const router = useRouter();
   const params = useParams();
   const scriptId = parseInt(params.id as string);
+  const { resolvedTheme } = useTheme();
 
   const [script, setScript] = useState<UserScript | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -72,6 +77,10 @@ export default function ScriptDetailPage() {
   const [sceneToDelete, setSceneToDelete] = useState<number | null>(null);
   const deleteSceneTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  // Get character colors based on theme
+  const isDark = resolvedTheme === "dark";
+  const colors = getCharacterColors(isDark);
 
   useEffect(() => {
     fetchScript();
@@ -248,27 +257,64 @@ export default function ScriptDetailPage() {
       <Card className="mb-6 border-border/80 shadow-sm">
         <CardContent className="p-5 sm:p-6 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0 flex-1">
-              {editingField === "title" ? (
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
-                    className="flex-1 h-10 text-lg"
-                    autoFocus
-                  />
-                  <Button size="sm" className="h-9" onClick={() => saveField("title")}><Check className="w-4 h-4" /></Button>
-                  <Button size="sm" variant="ghost" className="h-9" onClick={cancelEditing}><X className="w-4 h-4" /></Button>
-                </div>
-              ) : (
-                <div
-                  className="group flex items-center gap-2 cursor-pointer"
-                  onClick={() => startEditing("title", script.title)}
-                >
-                  <h1 className="text-xl font-semibold text-foreground truncate font-serif">{script.title}</h1>
-                  <Edit2 className="w-4 h-4 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground" />
-                </div>
-              )}
+            <div className="min-w-0 flex-1 relative">
+              <AnimatePresence mode="wait">
+                {editingField === "title" ? (
+                  <motion.div
+                    key="editing"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="relative"
+                  >
+                    <Input
+                      value={editValue}
+                      onChange={(e) => setEditValue(e.target.value)}
+                      className="flex-1 h-10 text-lg pr-20"
+                      autoFocus
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveField("title");
+                        if (e.key === "Escape") cancelEditing();
+                      }}
+                    />
+                    {/* Overlay buttons - positioned absolutely to avoid layout shift */}
+                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      <Button
+                        size="sm"
+                        className="h-7 w-7 p-0"
+                        onClick={() => saveField("title")}
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0"
+                        onClick={cancelEditing}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="viewing"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className="group flex items-center justify-between cursor-pointer"
+                    onClick={() => startEditing("title", script.title)}
+                  >
+                    <h1 className="text-xl font-semibold text-foreground truncate font-serif flex-1">
+                      {script.title}
+                    </h1>
+                    {/* Icon ALWAYS visible, subtle - no opacity-0 */}
+                    <Edit2 className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors flex-shrink-0 ml-2" />
+                  </motion.div>
+                )}
+              </AnimatePresence>
               <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
                 <span className="flex items-center gap-1.5">
                   <Users className="w-4 h-4 shrink-0" />
@@ -288,63 +334,203 @@ export default function ScriptDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-border/80 text-sm">
-            {editingField === "author" ? (
-              <div className="flex items-center gap-2">
-                <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} className="h-9 w-44 text-sm" autoFocus />
-                <Button size="sm" className="h-8" onClick={() => saveField("author")}><Check className="w-3.5 h-3.5" /></Button>
-                <Button size="sm" variant="ghost" className="h-8" onClick={cancelEditing}><X className="w-3.5 h-3.5" /></Button>
-              </div>
-            ) : (
-              <button type="button" className="group flex items-center gap-2 text-muted-foreground hover:text-foreground" onClick={() => startEditing("author", script.author)}>
-                <span className="font-medium text-foreground/80">Author</span>
-                <span>{script.author}</span>
-                <Edit2 className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-            )}
-            {editingField === "genre" ? (
-              <div className="flex items-center gap-2">
-                <Input value={editValue} onChange={(e) => setEditValue(e.target.value)} placeholder="Genre" className="h-9 w-32 text-sm" autoFocus />
-                <Button size="sm" className="h-8" onClick={() => saveField("genre")}><Check className="w-3.5 h-3.5" /></Button>
-                <Button size="sm" variant="ghost" className="h-8" onClick={cancelEditing}><X className="w-3.5 h-3.5" /></Button>
-              </div>
-            ) : (
-              <button type="button" className="group flex items-center gap-2 text-muted-foreground hover:text-foreground" onClick={() => startEditing("genre", script.genre || "")}>
-                <span className="font-medium text-foreground/80">Genre</span>
-                <span>{script.genre || "-"}</span>
-                <Edit2 className="w-3.5 h-3.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-              </button>
-            )}
+            <AnimatePresence mode="wait">
+              {editingField === "author" ? (
+                <motion.div
+                  key="editing"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="inline-flex items-center gap-1.5 bg-muted/80 rounded-md px-2 py-1"
+                >
+                  <Input
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    className="h-7 w-32 text-sm"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") saveField("author");
+                      if (e.key === "Escape") cancelEditing();
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => saveField("author")}
+                  >
+                    <Check className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0"
+                    onClick={cancelEditing}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </motion.div>
+              ) : (
+                <motion.button
+                  key="viewing"
+                  type="button"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="group inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => startEditing("author", script.author)}
+                >
+                  <span className="font-medium text-foreground/80">Author</span>
+                  <span>{script.author}</span>
+                  <Edit2 className="w-3 h-3 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+                </motion.button>
+              )}
+            </AnimatePresence>
+            <AnimatePresence mode="wait">
+              {editingField === "genre" ? (
+                <motion.div
+                  key="editing"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="inline-flex items-center gap-1.5 bg-muted/80 rounded-md px-2 py-1"
+                >
+                  <GenreSelect
+                    value={editValue}
+                    onValueChange={setEditValue}
+                    placeholder="Select genre"
+                    className="h-7 w-40 text-sm"
+                  />
+                  <Button
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={() => saveField("genre")}
+                  >
+                    <Check className="w-3 h-3" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 w-6 p-0"
+                    onClick={cancelEditing}
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
+                </motion.div>
+              ) : (
+                <motion.button
+                  key="viewing"
+                  type="button"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="group inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => startEditing("genre", script.genre || "")}
+                >
+                  <span className="font-medium text-foreground/80">Genre</span>
+                  <span>{script.genre || "-"}</span>
+                  <Edit2 className="w-3 h-3 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+                </motion.button>
+              )}
+            </AnimatePresence>
           </div>
-          {script.description != null && script.description !== "" ? (
-            editingField === "description" ? (
-              <div className="space-y-2 pt-2 border-t border-border/80">
-                <Textarea value={editValue} onChange={(e) => setEditValue(e.target.value)} placeholder="Description..." rows={3} autoFocus className="text-sm" />
+          <AnimatePresence mode="wait">
+            {script.description != null && script.description !== "" ? (
+              editingField === "description" ? (
+                <motion.div
+                  key="editing-with-content"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.15 }}
+                  className="space-y-2 pt-2 border-t border-border/80"
+                >
+                  <Textarea
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    placeholder="Description..."
+                    rows={3}
+                    autoFocus
+                    className="text-sm"
+                  />
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => saveField("description")}>
+                      <Check className="w-3.5 h-3.5 mr-1.5" />
+                      Save
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={cancelEditing}>
+                      <X className="w-3.5 h-3.5 mr-1.5" />
+                      Cancel
+                    </Button>
+                  </div>
+                </motion.div>
+              ) : (
+                <motion.button
+                  key="viewing-with-content"
+                  type="button"
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.15 }}
+                  className="block w-full text-left pt-2 border-t border-border/80 group"
+                  onClick={() => startEditing("description", script.description || "")}
+                >
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Summary
+                  </span>
+                  <p className="text-sm text-foreground/90 mt-1 line-clamp-2 leading-relaxed">
+                    {script.description}
+                  </p>
+                  <Edit2 className="w-3.5 h-3.5 mt-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground inline-block" />
+                </motion.button>
+              )
+            ) : editingField === "description" ? (
+              <motion.div
+                key="editing-no-content"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+                className="space-y-2 pt-2 border-t border-border/80"
+              >
+                <Textarea
+                  value={editValue}
+                  onChange={(e) => setEditValue(e.target.value)}
+                  placeholder="Add a description..."
+                  rows={3}
+                  autoFocus
+                  className="text-sm"
+                />
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => saveField("description")}>Save</Button>
-                  <Button size="sm" variant="ghost" onClick={cancelEditing}>Cancel</Button>
+                  <Button size="sm" onClick={() => saveField("description")}>
+                    <Check className="w-3.5 h-3.5 mr-1.5" />
+                    Save
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={cancelEditing}>
+                    <X className="w-3.5 h-3.5 mr-1.5" />
+                    Cancel
+                  </Button>
                 </div>
-              </div>
+              </motion.div>
             ) : (
-              <button type="button" className="block w-full text-left pt-2 border-t border-border/80 group" onClick={() => startEditing("description", script.description || "")}>
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Summary</span>
-                <p className="text-sm text-foreground/90 mt-1 line-clamp-2 leading-relaxed">{script.description}</p>
-                <Edit2 className="w-3.5 h-3.5 mt-1 opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground inline-block" />
-              </button>
-            )
-          ) : editingField === "description" ? (
-            <div className="space-y-2 pt-2 border-t border-border/80">
-              <Textarea value={editValue} onChange={(e) => setEditValue(e.target.value)} placeholder="Add a description..." rows={3} autoFocus className="text-sm" />
-              <div className="flex gap-2">
-                <Button size="sm" onClick={() => saveField("description")}>Save</Button>
-                <Button size="sm" variant="ghost" onClick={cancelEditing}>Cancel</Button>
-              </div>
-            </div>
-          ) : (
-            <button type="button" className="pt-2 border-t border-border/80 text-sm text-muted-foreground hover:text-foreground flex items-center gap-2" onClick={() => startEditing("description", "")}>
-              <Edit2 className="w-3.5 h-3.5" />
-              Add summary
-            </button>
-          )}
+              <motion.button
+                key="viewing-no-content"
+                type="button"
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+                className="pt-2 border-t border-border/80 text-sm text-muted-foreground hover:text-foreground flex items-center gap-2 transition-colors"
+                onClick={() => startEditing("description", "")}
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                Add summary
+              </motion.button>
+            )}
+          </AnimatePresence>
         </CardContent>
       </Card>
 
@@ -354,11 +540,23 @@ export default function ScriptDetailPage() {
           <CardContent className="py-3 px-5 sm:px-6">
             <span className="text-sm font-medium text-foreground/90">Characters</span>
             <div className="flex flex-wrap gap-2 mt-2">
-              {script.characters.map((character, idx) => (
-                <Badge key={idx} variant="secondary" className="font-normal text-sm py-1">
-                  {character.name}
-                </Badge>
-              ))}
+              {script.characters.map((character, idx) => {
+                const isChar1 = idx === 0;
+                const isChar2 = idx === 1;
+                const charColors = isChar1 ? colors.char1 : isChar2 ? colors.char2 : null;
+
+                return (
+                  <Badge
+                    key={idx}
+                    className={cn(
+                      "font-normal text-sm py-1 transition-all",
+                      charColors ? `${charColors.bg} ${charColors.text} ${charColors.border} border` : "variant-secondary"
+                    )}
+                  >
+                    {character.name}
+                  </Badge>
+                );
+              })}
             </div>
           </CardContent>
         </Card>
@@ -405,75 +603,74 @@ export default function ScriptDetailPage() {
             </Card>
           </>
         ) : (
-          <ul className="space-y-3 list-none p-0 m-0">
-            {script.scenes.map((scene) => (
-              <motion.li key={scene.id} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-                <Card className="overflow-hidden border-border/80 shadow-sm hover:shadow-md transition-shadow active:scale-[0.99]">
-                  <CardContent className="p-4 sm:p-5">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-5">
-                      <div className="min-w-0 flex-1">
-                        <h3 className="text-base font-semibold text-foreground truncate font-serif">{scene.title}</h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {scene.character_1_name} & {scene.character_2_name}
-                          <span className="mx-2">·</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <AnimatePresence mode="popLayout">
+              {script.scenes.map((scene) => (
+                <motion.div
+                  key={scene.id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  whileHover={{ y: -2, transition: { duration: 0.15 } }}
+                  whileTap={{ scale: 0.98, transition: { duration: 0.1 } }}
+                  transition={{ duration: 0.2 }}
+                  layout
+                  className="h-full"
+                >
+                  <Card
+                    className={cn(
+                      "overflow-hidden border-2 cursor-pointer transition-all h-full",
+                      "hover:shadow-lg hover:border-primary/50"
+                    )}
+                    onClick={() => router.push(`/my-scripts/${scriptId}/scenes/${scene.id}/edit`)}
+                  >
+                    <CardContent className="p-5 space-y-4">
+                      {/* Character color strip */}
+                      <div className="flex gap-1 -mt-5 -mx-5 mb-3">
+                        <div className={cn("h-1.5 flex-1", colors.char1.bg)} />
+                        <div className={cn("h-1.5 flex-1", colors.char2.bg)} />
+                      </div>
+
+                      {/* Scene title */}
+                      <div>
+                        <h3 className="text-lg font-semibold font-serif line-clamp-2 mb-2">
+                          {scene.title}
+                        </h3>
+
+                        {/* Character badges with colors */}
+                        <div className="flex flex-wrap gap-2">
+                          <Badge className={cn("text-xs", colors.char1.bg, colors.char1.text, colors.char1.border, "border")}>
+                            {scene.character_1_name}
+                          </Badge>
+                          <Badge className={cn("text-xs", colors.char2.bg, colors.char2.text, colors.char2.border, "border")}>
+                            {scene.character_2_name}
+                          </Badge>
+                        </div>
+                      </div>
+
+                      {/* Metadata */}
+                      <div className="flex gap-3 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <FileText className="w-3.5 h-3.5" />
                           {scene.line_count} lines
-                          <span className="mx-2">·</span>
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5" />
                           {formatDuration(scene.estimated_duration_seconds)}
-                        </p>
+                        </span>
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
-                        <label className="flex items-center gap-2 text-sm">
-                          <span className="font-medium text-foreground/90 whitespace-nowrap">I play</span>
-                          <select
-                            className="rounded-lg border border-input bg-background px-3 py-2 text-sm h-9 min-w-[110px] text-foreground"
-                            value={selectedCharacter[scene.id] ?? scene.character_1_name}
-                            onChange={(e) => setSelectedCharacter((prev) => ({ ...prev, [scene.id]: e.target.value }))}
-                          >
-                            <option value={scene.character_1_name}>{scene.character_1_name}</option>
-                            <option value={scene.character_2_name}>{scene.character_2_name}</option>
-                          </select>
-                        </label>
-                        <Button
-                          variant="default"
-                          size="sm"
-                          className="gap-2 h-9 px-4"
-                          onClick={() => handleStartRehearsal(scene)}
-                          disabled={startingRehearsalFor === scene.id}
-                        >
-                          {startingRehearsalFor === scene.id ? (
-                            <span className="animate-pulse">Starting…</span>
-                          ) : (
-                            <>
-                              <Play className="w-4 h-4" />
-                              Rehearse
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-9 w-9 p-0"
-                          onClick={() => router.push(`/my-scripts/${scriptId}/scenes/${scene.id}/edit`)}
-                          aria-label="Edit scene"
-                        >
-                          <Edit2 className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-9 w-9 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDeleteSceneClick(scene.id)}
-                          aria-label="Delete scene"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+
+                      {/* Action hint */}
+                      <div className="flex items-center gap-1.5 text-xs text-primary font-medium pt-2 border-t border-border/50">
+                        <span>Open scene</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.li>
-            ))}
-          </ul>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
         )}
       </section>
 
