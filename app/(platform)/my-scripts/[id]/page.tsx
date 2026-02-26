@@ -23,6 +23,7 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { SceneSettingsModal } from "@/components/scenepartner/SceneSettingsModal";
 import { MicAccessWarning } from "@/components/scenepartner/MicAccessWarning";
 import { GenreSelect } from "@/components/ui/genre-select";
+import { ScenePreviewTooltip } from "@/components/scenepartner/ScenePreviewTooltip";
 import { cn } from "@/lib/utils";
 
 interface Scene {
@@ -537,25 +538,6 @@ export default function ScriptDetailPage() {
         </CardContent>
       </Card>
 
-      {/* Characters card */}
-      {script.characters && script.characters.length > 0 && (
-        <Card className="border-border/80 shadow-sm">
-          <CardContent className="py-3 px-5 sm:px-6">
-            <span className="text-sm font-medium text-foreground/90">Characters</span>
-            <div className="flex flex-wrap gap-2 mt-2">
-              {script.characters.map((character, idx) => (
-                <Badge
-                  key={idx}
-                  variant="secondary"
-                  className="font-normal text-sm py-1"
-                >
-                  {character.name}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
       </aside>
 
       {/* RIGHT COLUMN: Scenes */}
@@ -641,10 +623,12 @@ export default function ScriptDetailPage() {
 
                       {/* Metadata */}
                       <div className="flex gap-3 text-xs text-muted-foreground">
-                        <span className="flex items-center gap-1">
-                          <FileText className="w-3.5 h-3.5" />
-                          {scene.line_count} lines
-                        </span>
+                        <ScenePreviewTooltip sceneId={scene.id}>
+                          <span className="flex items-center gap-1 cursor-default hover:text-foreground transition-colors" onClick={(e) => e.stopPropagation()}>
+                            <FileText className="w-3.5 h-3.5" />
+                            {scene.line_count} lines
+                          </span>
+                        </ScenePreviewTooltip>
                         <span className="flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5" />
                           {formatDuration(scene.estimated_duration_seconds)}

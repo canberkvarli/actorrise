@@ -17,6 +17,7 @@ from app.api.pricing import router as pricing_router
 from app.api.profile import router as profile_router
 from app.api.public import router as public_router
 from app.api.scenes import router as scenes_router
+from app.api.speech import router as speech_router
 from app.api.scripts import router as scripts_router
 from app.api.subscriptions import router as subscriptions_router
 from app.api.webhooks import router as webhooks_router
@@ -115,6 +116,7 @@ app.include_router(profile_router)
 app.include_router(monologues_router)
 app.include_router(film_tv_router)
 app.include_router(scenes_router)
+app.include_router(speech_router)
 app.include_router(scripts_router)
 app.include_router(audition_router)
 app.include_router(public_router)
