@@ -214,9 +214,17 @@ export default function PricingPage() {
     <div className="container mx-auto px-4 py-16 max-w-7xl">
       {/* Header */}
       <div className="text-center mb-12">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium mb-6"
+        >
+          Free forever · No credit card required
+        </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
           className="text-4xl lg:text-5xl font-bold mb-4"
         >
           Choose Your Plan
@@ -227,28 +235,23 @@ export default function PricingPage() {
           transition={{ delay: 0.1 }}
           className="text-xl text-muted-foreground max-w-2xl mx-auto"
         >
-          Find the right audition monologue in less than 20 seconds. Start free, upgrade when
-          you&apos;re ready. All plans include access to our monologue database.
+          Start free. Upgrade when you need more. Cancel anytime.
         </motion.p>
         <motion.p
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="mt-4 text-sm text-muted-foreground max-w-2xl mx-auto"
+          className="mt-3 text-sm text-muted-foreground max-w-2xl mx-auto"
         >
-          ActorRise is powered by AI search and a growing database of monologues. Subscriptions
-          mainly go toward paying for those AI costs and hosting, and a small part pays me so I
-          can keep building, improving, and keeping a generous free plan for actors and students
-          who can&apos;t pay yet.
+          <strong>Founding member offer:</strong> 100% off for 12 months. Apply your code at checkout.
         </motion.p>
         <motion.p
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.18 }}
-          className="mt-2 text-sm text-muted-foreground max-w-2xl mx-auto"
+          className="mt-3 text-xs text-muted-foreground/80 max-w-xl mx-auto"
         >
-          Cancel anytime. Upgrade only if you need more. Founding member offer: 100% off for 12
-          months. Apply your code at checkout.
+          Subscriptions support AI costs, hosting, and development to keep a generous free plan for actors and students.
         </motion.p>
 
         {/* Annual/Monthly Toggle */}
@@ -375,7 +378,7 @@ export default function PricingPage() {
                             : `/checkout?tier=${tier.name}&period=${isAnnual ? "annual" : "monthly"}`
                         }
                       >
-                        {tier.name === "free" ? "Get Started" : "Subscribe"}
+                        {tier.name === "free" ? "Try Free Search" : "Subscribe"}
                       </Link>
                     </Button>
                   )}

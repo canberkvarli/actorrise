@@ -1,17 +1,20 @@
 "use client";
 
 import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { motion } from "framer-motion";
 import { LandingPricing } from "@/components/landing/LandingPricing";
 import { LandingTestimonials } from "@/components/landing/LandingTestimonials";
-import { LandingValueProps } from "@/components/landing/LandingValueProps";
+import { LandingFeatureShowcase } from "@/components/landing/LandingFeatureShowcase";
+import { LandingStickyCta } from "@/components/landing/LandingStickyCta";
 import { LandingDemoSearch } from "@/components/landing/LandingDemoSearch";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions";
 import { LandingFaq } from "@/components/landing/LandingFaq";
 import { LandingFooterAuthLink } from "@/components/landing/LandingFooterAuthLink";
 import { LandingLiveCount } from "@/components/landing/LandingLiveCount";
+import { LandingTrustBar } from "@/components/landing/LandingTrustBar";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 
 const easing = [0.25, 0.1, 0.25, 1] as const;
@@ -48,37 +51,48 @@ export function LandingPageAnimated() {
     >
       <motion.header
         variants={item}
-        className="sticky top-0 z-20 border-b border-border/40 bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/60"
+        className="sticky top-0 z-20 border-b border-border/40 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/70"
       >
-        <div className="container mx-auto px-4 sm:px-6 py-3">
-          <div className="flex items-center justify-between gap-6">
-            <div className="flex items-center gap-3">
-              <Link href="/" className="flex items-center text-foreground hover:opacity-80 transition-opacity">
+        <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-3.5">
+          <div className="flex items-center gap-4">
+            {/* Left: logo */}
+            <div className="flex items-center">
+              <Link
+                href="/"
+                className="flex items-center shrink-0 min-w-0 text-foreground hover:opacity-85 transition-opacity"
+                aria-label="ActorRise home"
+              >
                 <BrandLogo size="header" />
               </Link>
             </div>
-            <div className="hidden md:flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2 py-1">
-              <Link href="#suite" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
-                Search
-              </Link>
-              <span className="h-4 w-px bg-border/60" />
-              <Link href="#how" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
-                How it works
-              </Link>
-              <span className="h-4 w-px bg-border/60" />
-              <Link href="#pricing" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
-                Pricing
-              </Link>
-              <span className="h-4 w-px bg-border/60" />
-              <Link href="/for-students" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
-                Students & educators
-              </Link>
-              <span className="h-4 w-px bg-border/60" />
-              <ContactModalTrigger className="px-3 py-1.5 text-sm text-foreground/90">
-                Contact
-              </ContactModalTrigger>
+
+            {/* Center: primary nav (desktop only), gets flexible space so it can truly center */}
+            <div className="hidden md:flex md:flex-1 items-center justify-center">
+              <div className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2 py-1">
+                <Link href="#suite" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
+                  Search
+                </Link>
+                <span className="h-4 w-px bg-border/60" />
+                <Link href="#how" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
+                  How it works
+                </Link>
+                <span className="h-4 w-px bg-border/60" />
+                <Link href="#pricing" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
+                  Pricing
+                </Link>
+                <span className="h-4 w-px bg-border/60" />
+                <Link href="/for-students" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
+                  Students & educators
+                </Link>
+                <span className="h-4 w-px bg-border/60" />
+                <ContactModalTrigger className="px-3 py-1.5 text-sm text-foreground/90">
+                  Contact
+                </ContactModalTrigger>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
+
+            {/* Right: mobile menu + auth actions */}
+            <div className="flex items-center gap-2 sm:gap-4 md:justify-end shrink-0">
               <LandingMobileNav />
               <LandingHeaderActions />
             </div>
@@ -86,68 +100,76 @@ export function LandingPageAnimated() {
         </div>
       </motion.header>
 
+      {/* Founding Member Urgency Banner */}
+      <motion.div
+        variants={item}
+        className="border-b border-primary/20 bg-primary/5 py-3"
+      >
+        <div className="container mx-auto px-4 sm:px-6 text-center">
+          <p className="text-sm font-medium">
+            <span className="hidden sm:inline">🔥 Limited: </span>
+            <span className="font-semibold">50 founding member spots remaining.</span>
+            {" "}100% off for 12 months.{" "}
+            <Link href="/pricing" className="underline hover:no-underline font-semibold">
+              Claim your spot →
+            </Link>
+          </p>
+        </div>
+      </motion.div>
+
       <main>
         <motion.section
           id="suite"
           variants={item}
           className="container mx-auto px-4 sm:px-6 pt-16 pb-20 md:pt-24 md:pb-28 flex flex-col items-center"
         >
-          <div className="max-w-2xl w-full mx-auto text-center">
-            <div className="mb-4 sm:mb-6 hidden sm:inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 px-3 py-1.5 text-xs text-muted-foreground">
+          <div className="max-w-4xl w-full mx-auto text-center">
+            <div className="mb-4 sm:mb-6 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 px-3 py-1.5 text-xs text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
               Monologues, scenes & film/TV
             </div>
-            <h1 className="text-5xl sm:text-6xl md:text-7xl leading-[1.02] tracking-[-0.04em]">
-              Find the <span className="hero-keyword">monologue</span>. In seconds.
+            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.05] tracking-[-0.03em] max-w-3xl mx-auto">
+              Find your <span className="hero-keyword">monologue</span> in 20&nbsp;seconds.
+              <br />
+              Spend your time <span className="hero-keyword">rehearsing</span>.
             </h1>
-            <p className="mt-3 sm:mt-4 text-sm sm:text-base md:text-lg text-muted-foreground max-w-md mx-auto">
-              Real monologues by playwrights. Not AI-generated.
+            <p className="mt-3 sm:mt-4 text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
+              8,600+ theatrical monologues + 14,000 film & TV scenes. AI search. Free forever.
             </p>
-            <div className="mt-6 sm:mt-8">
-              <LandingDemoSearch />
-            </div>
-            <p className="mt-3 sm:mt-4 text-sm text-muted-foreground">
-              <span className="sm:hidden">Free to try</span>
-              <span className="hidden sm:inline">Free tier · No credit card required</span>
-            </p>
-            <div className="mt-6 sm:mt-8 w-full">
-              <LandingLiveCount variant="inline" />
+
+            {/* Large Primary CTA */}
+            <div className="mt-8 sm:mt-10 flex flex-col items-center gap-3">
+              <Button asChild size="lg" className="h-14 sm:h-16 px-10 sm:px-14 text-base sm:text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all">
+                <Link href="/search">Try Free Search</Link>
+              </Button>
+              <p className="text-sm text-muted-foreground">
+                Free forever · No credit card required
+              </p>
             </div>
           </div>
         </motion.section>
 
+        {/* Trust Bar with social proof */}
+        <motion.div
+          variants={item}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewport}
+          transition={{ duration, ease: easing }}
+        >
+          <LandingTrustBar />
+        </motion.div>
+
+        {/* Testimonials - moved up for better social proof placement */}
         <motion.section
           variants={item}
           initial="hidden"
           whileInView="visible"
           viewport={viewport}
           transition={{ duration, ease: easing }}
-          className="border-t border-border/40 bg-muted/20 py-10 md:py-12"
-          aria-label="Social proof"
+          id="testimonials"
         >
-          <div className="container mx-auto px-4 sm:px-6">
-            <div className="max-w-4xl mx-auto">
-              <p className="text-center font-medium text-foreground text-lg md:text-xl">
-                Actors are already using ActorRise to find audition pieces in seconds.
-              </p>
-              <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-center gap-4 sm:gap-8">
-                <p className="text-center sm:text-left text-sm md:text-base text-muted-foreground border-l-2 border-primary/30 pl-4 py-1">
-                  &ldquo;I had a shortlist in under a minute.&rdquo; <span className="text-muted-foreground/80">Actor, drama school audition</span>
-                </p>
-                <p className="text-center sm:text-left text-sm md:text-base text-muted-foreground border-l-2 border-primary/30 pl-4 py-1">
-                  &ldquo;Found a scene for a film callback in seconds.&rdquo; <span className="text-muted-foreground/80">Actor, screen</span>
-                </p>
-              </div>
-              <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link
-                  href="#testimonials"
-                  className="text-sm font-medium text-primary hover:underline"
-                >
-                  See what actors are saying →
-                </Link>
-              </div>
-            </div>
-          </div>
+          <LandingTestimonials />
         </motion.section>
 
         <motion.section
@@ -215,19 +237,8 @@ export function LandingPageAnimated() {
           viewport={viewport}
           transition={{ duration, ease: easing }}
         >
-          <LandingValueProps />
+          <LandingFeatureShowcase />
         </motion.div>
-
-        <motion.section
-          variants={item}
-          initial="hidden"
-          whileInView="visible"
-          viewport={viewport}
-          transition={{ duration, ease: easing }}
-          id="testimonials"
-        >
-          <LandingTestimonials />
-        </motion.section>
 
         <motion.div
           variants={item}
@@ -323,6 +334,9 @@ export function LandingPageAnimated() {
           </div>
         </div>
       </motion.footer>
+
+      {/* Mobile Sticky CTA - appears on scroll */}
+      <LandingStickyCta />
     </motion.div>
   );
 }

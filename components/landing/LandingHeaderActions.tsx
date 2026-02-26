@@ -46,7 +46,7 @@ export function LandingHeaderActions() {
         className="rounded-full px-5"
         onClick={() => authModal?.openAuthModal("signup")}
       >
-        Get started
+        Try Free Search
       </Button>
     </div>
   );

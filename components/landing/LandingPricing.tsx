@@ -84,17 +84,14 @@ export function LandingPricing() {
   return (
     <section id="pricing" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
       <div className="w-full max-w-[min(1400px,100%)] mx-auto">
+        <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium mb-4">
+          Free forever · No credit card required
+        </div>
         <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
-          Simple pricing.
+          Start free. Upgrade when you need more.
         </h2>
-        <p className="mt-2 text-muted-foreground">
-          Free tier to explore. Upgrade when you&apos;re ready. Start free; no credit card required.
-        </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Cancel anytime. Upgrade only if you need more.
-        </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Founding member offer: 100% off for 12 months. Apply your code at checkout.
+        <p className="mt-3 text-muted-foreground max-w-2xl">
+          Cancel anytime. <strong>Founding member offer:</strong> 100% off for 12 months — apply your code at checkout.
         </p>
         <div className="mt-12 grid md:grid-cols-3 gap-8">
           {tiers.map((tier) => {
@@ -135,7 +132,7 @@ export function LandingPricing() {
                 ) : (
                   <Button asChild variant="outline" className="mt-6 w-full">
                     <Link href={isFree ? "/signup" : "/pricing"}>
-                      {isFree ? "Get started" : "Subscribe"}
+                      {isFree ? "Try Free Search" : "Subscribe"}
                     </Link>
                   </Button>
                 )}

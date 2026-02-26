@@ -38,7 +38,9 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
   const [libraryStats, setLibraryStats] = useState<{ monologues: number; filmTv: number } | null>(null);
   const [displayValue, setDisplayValue] = useState(0);
   const [isPulsing, setIsPulsing] = useState(false);
+  const [hasAnimated, setHasAnimated] = useState(false);
   const fromRef = useRef(0);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const fetchStats = () => {
     const url = `${API_URL}/api/public/stats`;
@@ -60,12 +62,29 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
       .catch(() => {});
   };
 
-  // Initial fetch + polling so the count updates when searches happen
+  // Start animation only when component is in viewport
   useEffect(() => {
-    fetchStats();
-    const interval = setInterval(fetchStats, POLL_INTERVAL_MS);
-    return () => clearInterval(interval);
-  }, []);
+    if (hasAnimated) return; // Only animate once
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setHasAnimated(true);
+          fetchStats();
+          const interval = setInterval(fetchStats, POLL_INTERVAL_MS);
+          observer.disconnect();
+          return () => clearInterval(interval);
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [hasAnimated]);
 
   // Refetch immediately when a demo search completes on the landing page (live update)
   useEffect(() => {
@@ -182,7 +201,7 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
 
   if (isInline) {
     return (
-      <div aria-label="Monologues found so far" className="pt-6">
+      <div ref={containerRef} aria-label="Monologues found so far" className="pt-6">
         {content}
       </div>
     );
@@ -190,6 +209,7 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
 
   return (
     <section
+      ref={containerRef}
       className="border-t border-border/60 py-14 md:py-20"
       aria-label="Monologues found so far"
     >
