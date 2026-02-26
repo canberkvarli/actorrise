@@ -8,7 +8,6 @@ import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 
 const MOBILE_LINKS = [
   { href: "#suite", label: "Search" },
-  { href: "#how", label: "How it works" },
   { href: "#pricing", label: "Pricing" },
   { href: "/for-students", label: "Students & educators" },
 ] as const;

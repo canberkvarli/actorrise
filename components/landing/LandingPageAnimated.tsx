@@ -14,7 +14,7 @@ import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions"
 import { LandingFaq } from "@/components/landing/LandingFaq";
 import { LandingFooterAuthLink } from "@/components/landing/LandingFooterAuthLink";
 import { LandingLiveCount } from "@/components/landing/LandingLiveCount";
-import { LandingTrustBar } from "@/components/landing/LandingTrustBar";
+import { LandingTrustBar, HeroProofBar } from "@/components/landing/LandingTrustBar";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 
 const easing = [0.25, 0.1, 0.25, 1] as const;
@@ -73,10 +73,6 @@ export function LandingPageAnimated() {
                   Search
                 </Link>
                 <span className="h-4 w-px bg-border/60" />
-                <Link href="#how" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
-                  How it works
-                </Link>
-                <span className="h-4 w-px bg-border/60" />
                 <Link href="#pricing" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
                   Pricing
                 </Link>
@@ -129,7 +125,7 @@ export function LandingPageAnimated() {
           whileInView="visible"
           viewport={viewport}
           transition={{ duration, ease: easing }}
-          className="container mx-auto px-4 sm:px-6 pt-16 pb-20 md:pt-24 md:pb-28 flex flex-col items-center"
+          className="container mx-auto px-4 sm:px-6 pt-16 pb-12 md:pt-24 md:pb-16 flex flex-col items-center"
         >
           <div className="max-w-4xl w-full mx-auto text-center">
             <div className="mb-4 sm:mb-6 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 px-3 py-1.5 text-xs text-muted-foreground">
@@ -142,7 +138,7 @@ export function LandingPageAnimated() {
               Spend your time <span className="hero-keyword">rehearsing</span>.
             </h1>
             <p className="mt-3 sm:mt-4 text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-              8,600+ theatrical monologues + 14,000 film & TV scenes. AI search. Free forever.
+              8,600+ theatrical monologues + 14,000 film & TV scenes. AI-powered search.
             </p>
 
             {/* Large Primary CTA */}
@@ -150,9 +146,7 @@ export function LandingPageAnimated() {
               <Button asChild size="lg" className="h-14 sm:h-16 px-10 sm:px-14 text-base sm:text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all">
                 <Link href="/search">Try Free Search</Link>
               </Button>
-              <p className="text-sm text-muted-foreground">
-                Free forever · No credit card required
-              </p>
+              <HeroProofBar />
             </div>
           </div>
         </motion.section>
