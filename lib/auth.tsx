@@ -173,8 +173,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.session) {
         await syncUserWithBackend(false);
         setStoredLastAuthMethod("email");
-        // Send new users straight to dashboard; profile completion is optional via /profile
-        router.push("/dashboard");
+        // Full page redirect so session cookies are sent on the next request and modal state is cleared
+        // Using router.push() leaves the auth modal open because React state persists
+        window.location.href = "/dashboard";
       } else {
         // Email confirmation required - show success message
         // User will need to confirm email before logging in
