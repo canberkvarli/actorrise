@@ -15,20 +15,20 @@ export function LandingFeatureShowcase() {
 
   return (
     <>
-      <section className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
+      <section className="container mx-auto px-4 sm:px-6 py-16 sm:py-20 md:py-28 border-t border-border/60">
         <div className="max-w-6xl mx-auto">
           {/* Section Header */}
-          <div className="text-center mb-12 md:mb-16">
-            <h2 className="text-3xl md:text-4xl lg:text-5xl tracking-[-0.03em]">
+          <div className="text-center mb-10 sm:mb-12 md:mb-16">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl tracking-[-0.03em]">
               Transform your audition workflow
             </h2>
-            <p className="mt-3 text-lg text-muted-foreground">Two tools. One platform.</p>
+            <p className="mt-2 sm:mt-3 text-base sm:text-lg text-muted-foreground">Two tools. One platform.</p>
           </div>
 
           {/* Two-Feature Grid */}
-          <div className="grid md:grid-cols-2 gap-8 md:gap-10">
+          <div className="grid md:grid-cols-2 gap-6 sm:gap-8 md:gap-10">
             {/* Monologue Search - LIVE */}
-            <div className="relative rounded-2xl border border-border bg-card p-8 md:p-10 flex flex-col">
+            <div className="relative rounded-2xl border border-border bg-card p-6 sm:p-8 md:p-10 flex flex-col">
               {/* Live Badge */}
               <div className="inline-flex items-center gap-2 mb-4 self-start">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 border border-green-500/20 px-3 py-1 text-xs font-medium text-green-600 dark:text-green-400">
@@ -38,35 +38,35 @@ export function LandingFeatureShowcase() {
               </div>
 
               {/* Icon & Title */}
-              <div className="flex items-center gap-3 mb-3">
-                <div className="size-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                  <IconSparkles size={24} className="text-primary" />
+              <div className="flex items-center gap-2 sm:gap-3 mb-3">
+                <div className="size-10 sm:size-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <IconSparkles size={20} className="text-primary sm:w-6 sm:h-6" />
                 </div>
-                <h3 className="text-2xl md:text-3xl font-semibold tracking-[-0.02em]">
+                <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-[-0.02em]">
                   Monologue Search
                 </h3>
               </div>
 
-              <p className="text-muted-foreground mb-6">
+              <p className="text-sm sm:text-base text-muted-foreground mb-4 sm:mb-6">
                 Discover unique pieces that make casting directors remember you.
               </p>
 
               {/* Features List */}
-              <ul className="space-y-3 mb-8 flex-grow">
-                <li className="flex items-start gap-2 text-sm">
-                  <IconCheck size={20} className="text-primary shrink-0 mt-0.5" />
+              <ul className="space-y-2 sm:space-y-3 mb-6 sm:mb-8 flex-grow">
+                <li className="flex items-start gap-2 text-xs sm:text-sm">
+                  <IconCheck size={18} className="text-primary shrink-0 mt-0.5 sm:w-5 sm:h-5" />
                   <span><strong>Stand out with unique pieces</strong> — overdone filter included</span>
                 </li>
-                <li className="flex items-start gap-2 text-sm">
-                  <IconCheck size={20} className="text-primary shrink-0 mt-0.5" />
+                <li className="flex items-start gap-2 text-xs sm:text-sm">
+                  <IconCheck size={18} className="text-primary shrink-0 mt-0.5 sm:w-5 sm:h-5" />
                   <span><strong>Classical to contemporary</strong> — 8,600+ monologues</span>
                 </li>
-                <li className="flex items-start gap-2 text-sm">
-                  <IconCheck size={20} className="text-primary shrink-0 mt-0.5" />
+                <li className="flex items-start gap-2 text-xs sm:text-sm">
+                  <IconCheck size={18} className="text-primary shrink-0 mt-0.5 sm:w-5 sm:h-5" />
                   <span><strong>Film & TV scenes</strong> — 14,000+ for screen actors</span>
                 </li>
-                <li className="flex items-start gap-2 text-sm">
-                  <IconCheck size={20} className="text-primary shrink-0 mt-0.5" />
+                <li className="flex items-start gap-2 text-xs sm:text-sm">
+                  <IconCheck size={18} className="text-primary shrink-0 mt-0.5 sm:w-5 sm:h-5" />
                   <span><strong>Natural language search</strong> — describe what you need</span>
                 </li>
               </ul>
@@ -78,7 +78,7 @@ export function LandingFeatureShowcase() {
             </div>
 
             {/* Scene Partner AI - COMING SOON */}
-            <div className="relative rounded-2xl border border-border bg-card p-8 md:p-10 flex flex-col">
+            <div className="relative rounded-2xl border border-border bg-card p-6 sm:p-8 md:p-10 flex flex-col">
               {/* Coming Soon Badge */}
               <div className="inline-flex items-center gap-2 mb-4 self-start">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3 py-1 text-xs font-medium text-primary">

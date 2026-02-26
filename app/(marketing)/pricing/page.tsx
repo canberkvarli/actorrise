@@ -259,22 +259,33 @@ export default function PricingPage() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="flex items-center justify-center gap-4 mt-8"
+          className="flex flex-col items-center gap-2 mt-8"
         >
-          <Label htmlFor="billing-toggle" className={!isAnnual ? "font-semibold" : ""}>
-            Monthly
-          </Label>
-          <Switch
-            id="billing-toggle"
-            checked={isAnnual}
-            onCheckedChange={setIsAnnual}
-          />
-          <Label htmlFor="billing-toggle" className={isAnnual ? "font-semibold" : ""}>
-            Annual
-          </Label>
-          {isAnnual && (
-            <span className="ml-2 text-xs text-muted-foreground">Save up to 31%</span>
-          )}
+          <div className="flex items-center justify-center gap-4">
+            <Label htmlFor="billing-toggle" className={!isAnnual ? "font-semibold" : ""}>
+              Monthly
+            </Label>
+            <Switch
+              id="billing-toggle"
+              checked={isAnnual}
+              onCheckedChange={setIsAnnual}
+            />
+            <Label htmlFor="billing-toggle" className={isAnnual ? "font-semibold" : ""}>
+              Annual
+            </Label>
+          </div>
+          <div className="h-4 flex items-center justify-center">
+            {isAnnual && (
+              <motion.span
+                initial={{ opacity: 0, y: -5 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -5 }}
+                className="text-xs text-muted-foreground"
+              >
+                Save up to 31%
+              </motion.span>
+            )}
+          </div>
         </motion.div>
       </div>
 
