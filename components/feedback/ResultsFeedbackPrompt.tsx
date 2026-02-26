@@ -75,7 +75,7 @@ export function ResultsFeedbackPrompt({
       initial={{ opacity: 0, scale: 0.96, y: -4 }}
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="flex flex-wrap items-center justify-center gap-2 py-2 px-3 rounded-lg border border-border/50 bg-muted/20 w-fit"
+      className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-1.5 sm:gap-2 py-2 px-3 rounded-lg border border-border/50 bg-muted/20 w-fit max-w-full"
     >
       <p className="text-xs font-medium text-muted-foreground whitespace-nowrap">
         Were these results what you expected?

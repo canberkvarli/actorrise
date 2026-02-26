@@ -1604,9 +1604,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   const displayList = showFilmTvBookmarkedOnly ? filmTvBookmarked : filmTvResults;
                   return (
                     <>
-                      <div className="flex flex-wrap items-center gap-4 mb-8">
-                        <div className="flex flex-col gap-0.5 min-w-0 shrink-0">
-                          <div className="flex items-baseline gap-2 flex-wrap">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 mb-8">
+                        <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-0 min-w-0">
+                          <div className="flex items-baseline gap-2 flex-wrap shrink-0">
                             <span className="text-2xl font-semibold tabular-nums text-foreground">
                               {showFilmTvBookmarkedOnly ? filmTvBookmarked.length : filmTvTotal}
                             </span>
@@ -1614,8 +1614,17 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                               {showFilmTvBookmarkedOnly ? "saved" : "references"}
                             </span>
                           </div>
+                          <Button
+                            variant={showFilmTvBookmarkedOnly ? "secondary" : "outline"}
+                            size="sm"
+                            onClick={() => setShowFilmTvBookmarkedOnly(!showFilmTvBookmarkedOnly)}
+                            className="gap-2 rounded-full shrink-0 sm:hidden"
+                          >
+                            <IconBookmark className={`h-4 w-4 ${showFilmTvBookmarkedOnly ? "fill-current" : ""}`} />
+                            Bookmarked
+                          </Button>
                         </div>
-                        <div className="flex-1 flex justify-center min-w-0">
+                        <div className="flex-1 flex sm:justify-center min-w-0">
                           <ResultsFeedbackPrompt
                             context="film_tv_search"
                             resultsViewCount={filmTvResultsViewCount}
@@ -1626,7 +1635,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           variant={showFilmTvBookmarkedOnly ? "secondary" : "outline"}
                           size="sm"
                           onClick={() => setShowFilmTvBookmarkedOnly(!showFilmTvBookmarkedOnly)}
-                          className="gap-2 rounded-full shrink-0"
+                          className="hidden sm:inline-flex gap-2 rounded-full shrink-0"
                         >
                           <IconBookmark className={`h-4 w-4 ${showFilmTvBookmarkedOnly ? "fill-current" : ""}`} />
                           Bookmarked only
@@ -1758,34 +1767,45 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </p>
                 ) : null;
                 })()}
-              {/* Results header: count left, feedback center, Bookmarked only right (one row) */}
-              <div className="flex flex-wrap items-center gap-4 mb-8">
-                <div className="flex flex-col gap-0.5 min-w-0 shrink-0">
-                  <div className="flex items-baseline gap-2 flex-wrap">
-                    <span className="text-2xl font-semibold tabular-nums text-foreground">
-                      {showBookmarkedOnly
-                        ? results.filter((m) => m.is_favorited).length
-                        : total > 0 ? total : results.length}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {showBookmarkedOnly ? "bookmarked" : "monologues found"}
-                    </span>
+              {/* Results header: count + bookmark on same row on mobile, feedback below */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 mb-8">
+                <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-0 min-w-0">
+                  <div className="flex flex-col gap-0.5 shrink-0">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="text-2xl font-semibold tabular-nums text-foreground">
+                        {showBookmarkedOnly
+                          ? results.filter((m) => m.is_favorited).length
+                          : total > 0 ? total : results.length}
+                      </span>
+                      <span className="text-sm text-muted-foreground">
+                        {showBookmarkedOnly ? "bookmarked" : "monologues found"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                      {!showBookmarkedOnly && !showConfidence && relatedResults.length > 0 && (
+                        <span>Sorted by relevance</span>
+                      )}
+                      {restoredFromLastSearch && searchParams.get("q") === null && (
+                        <>
+                          {!showBookmarkedOnly && !showConfidence && relatedResults.length > 0 && (
+                            <span aria-hidden className="text-border">·</span>
+                          )}
+                          <span>From your last search</span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-                    {!showBookmarkedOnly && !showConfidence && relatedResults.length > 0 && (
-                      <span>Sorted by relevance</span>
-                    )}
-                    {restoredFromLastSearch && searchParams.get("q") === null && (
-                      <>
-                        {!showBookmarkedOnly && !showConfidence && relatedResults.length > 0 && (
-                          <span aria-hidden className="text-border">·</span>
-                        )}
-                        <span>From your last search</span>
-                      </>
-                    )}
-                  </div>
+                  <Button
+                    variant={showBookmarkedOnly ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
+                    className={`sm:hidden gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
+                  >
+                    <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
+                    Bookmarked
+                  </Button>
                 </div>
-                <div className="flex-1 flex justify-center min-w-0">
+                <div className="flex-1 flex sm:justify-center min-w-0">
                   <ResultsFeedbackPrompt
                     context="search"
                     resultsViewCount={resultsViewCount}
@@ -1796,7 +1816,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   variant={showBookmarkedOnly ? "secondary" : "outline"}
                   size="sm"
                   onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
-                  className={`gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
+                  className={`hidden sm:inline-flex gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
                 >
                   <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
                   Bookmarked only

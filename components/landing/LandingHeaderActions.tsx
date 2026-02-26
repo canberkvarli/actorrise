@@ -21,11 +21,11 @@ export function LandingHeaderActions() {
 
   if (user) {
     return (
-      <div className="flex items-center gap-2">
-        <Button asChild variant="ghost" size="sm">
+      <div className="flex items-center gap-1.5 sm:gap-2">
+        <Button asChild variant="ghost" size="sm" className="px-2 sm:px-3 text-xs sm:text-sm whitespace-nowrap">
           <Link href="/dashboard">Dashboard</Link>
         </Button>
-        <Button asChild size="sm" className="rounded-full px-5">
+        <Button asChild size="sm" className="rounded-full px-3 sm:px-5 text-xs sm:text-sm whitespace-nowrap">
           <Link href="/search">Search</Link>
         </Button>
       </div>
