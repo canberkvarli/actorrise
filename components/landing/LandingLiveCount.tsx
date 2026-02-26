@@ -20,7 +20,7 @@ function easeOutQuart(t: number): number {
 
 type LandingLiveCountProps = {
   /** Inline variant for hero: compact, no section border */
-  variant?: "section" | "inline";
+  variant?: "section" | "inline" | "micro";
 };
 
 /**
@@ -132,6 +132,14 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
   const formatted = valueToShow.toLocaleString("en-US", { maximumFractionDigits: 0 });
   const isInline = variant === "inline";
   const libraryToShow = libraryStats ?? FALLBACK_LIBRARY;
+
+  if (variant === "micro") {
+    return (
+      <span ref={containerRef} className="tabular-nums text-muted-foreground">
+        {isLoading ? null : <>{formatted}+ monologues found</>}
+      </span>
+    );
+  }
 
   const content = (
     <div className={isInline ? "" : "container mx-auto px-4 sm:px-6"}>
