@@ -192,16 +192,17 @@ export default function PlatformLayout({
       <nav className="bg-background/95 backdrop-blur-sm border-b border-border/40 relative z-[9998]" style={{ position: 'relative' }}>
         <div className="container mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-20 gap-3">
+            {/* Logo: left on all breakpoints */}
             <Link
               href="/dashboard"
-              className="hidden md:flex items-center min-w-0 shrink text-foreground hover:opacity-80 transition-opacity"
+              className="flex items-center min-w-0 shrink-0 text-foreground hover:opacity-80 transition-opacity"
               aria-label="ActorRise Home"
             >
               <BrandLogo size="header" />
             </Link>
 
-            {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center gap-2">
+            {/* Desktop Navigation - centered */}
+            <div className="hidden md:flex items-center justify-center gap-1 lg:gap-2 flex-1">
               {navItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
@@ -212,17 +213,17 @@ export default function PlatformLayout({
                     asChild={!isHomeOnDashboard}
                     variant={isActive ? "outline" : "ghost"}
                     size="sm"
-                    className="gap-2 rounded-full px-4 text-sm"
+                    className="gap-1.5 lg:gap-2 rounded-full px-2.5 lg:px-4 text-xs lg:text-sm"
                   >
                     {isHomeOnDashboard ? (
-                      <span className="flex items-center gap-2 cursor-default">
+                      <span className="flex items-center gap-1.5 lg:gap-2 cursor-default">
                         <Icon className="h-4 w-4" />
-                        {item.label}
+                        <span className="hidden sm:inline">{item.label}</span>
                       </span>
                     ) : (
                       <Link href={item.href}>
                         <Icon className="h-4 w-4" />
-                        {item.label}
+                        <span className="hidden sm:inline">{item.label}</span>
                       </Link>
                     )}
                   </Button>
@@ -233,16 +234,18 @@ export default function PlatformLayout({
                   asChild
                   variant={pathname.startsWith("/admin") ? "outline" : "ghost"}
                   size="sm"
-                  className="gap-2 rounded-full px-4 text-sm"
+                  className="gap-1.5 lg:gap-2 rounded-full px-2.5 lg:px-4 text-xs lg:text-sm"
                 >
                   <Link href="/admin">
                     <IconShieldCheck className="h-4 w-4" />
-                    Admin
+                    <span className="hidden sm:inline">Admin</span>
                   </Link>
                 </Button>
               )}
+            </div>
 
-              {/* Profile Dropdown */}
+            {/* Desktop Profile Dropdown - right aligned */}
+            <div className="hidden md:flex items-center">
               <div className="relative" ref={dropdownRef}>
                 <Button
                   variant="ghost"
@@ -438,13 +441,29 @@ export default function PlatformLayout({
               </div>
             </div>
 
-            {/* Mobile menu: button + dropdown (click outside to close) */}
-            <div ref={mobileMenuRef} className="md:hidden relative flex flex-col flex-1 min-w-0">
+            {/* Mobile: center primary action(s) so header doesn’t feel empty; menu on the right */}
+            <div className="md:hidden flex flex-1 items-center justify-center min-w-0">
+              <Button
+                asChild
+                variant={pathname === "/search" ? "outline" : "ghost"}
+                size="sm"
+                className="gap-2 rounded-full px-4"
+              >
+                <Link href="/search">
+                  <IconSearch className="h-4 w-4" />
+                  <span className="text-sm">Search</span>
+                </Link>
+              </Button>
+            </div>
+
+            {/* Mobile menu: button on far right (click outside to close) */}
+            <div ref={mobileMenuRef} className="md:hidden relative shrink-0">
               <Button
                 variant="ghost"
                 size="icon"
                 className="min-h-[44px] min-w-[44px]"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
               >
                 <IconMenu className="h-5 w-5" />
               </Button>
