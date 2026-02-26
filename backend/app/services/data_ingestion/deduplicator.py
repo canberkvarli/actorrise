@@ -194,8 +194,7 @@ class MonologueDeduplicator:
                 return False
 
             # Transfer any useful metadata from remove to keep
-            if not keep.embedding and remove.embedding:
-                keep.embedding = remove.embedding
+            if keep.embedding_vector is None and remove.embedding_vector is not None:
                 keep.embedding_vector = remove.embedding_vector
 
             if not keep.primary_emotion and remove.primary_emotion:

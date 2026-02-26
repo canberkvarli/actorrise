@@ -256,6 +256,10 @@ class KeywordExtractor:
             # Romantic
             'romantic': 'romantic', 'loving': 'romantic',
 
+            # Sassy / Bold
+            'sassy': 'comedic', 'sarcastic': 'comedic', 'witty': 'comedic',
+            'bold': 'dramatic', 'fierce': 'dramatic', 'powerful': 'dramatic',
+
             # Others
             'philosophical': 'philosophical', 'contemplative': 'contemplative',
             'defiant': 'defiant', 'rebellious': 'defiant',
@@ -378,6 +382,39 @@ class KeywordExtractor:
                 filters['scene'] = int(scene_val)
             else:
                 filters['scene'] = cls._roman_to_int(scene_val.upper())
+
+        # Extract duration from natural language patterns like:
+        # "1 minute", "2 min", "under 3 minutes", "1-2 min", "90 seconds", "short"
+        if 'max_duration' not in filters:
+            # Match "X minute(s)" / "X min"
+            dur_match = re.search(
+                r'(?:under\s+|less\s+than\s+|max\s+)?(\d+)\s*(?:minute|min)\b',
+                query_lower
+            )
+            if dur_match:
+                minutes = int(dur_match.group(1))
+                filters['max_duration'] = minutes * 60
+
+            # Match "X-Y minute(s)" range → use upper bound
+            dur_range_match = re.search(
+                r'(\d+)\s*-\s*(\d+)\s*(?:minute|min)\b',
+                query_lower
+            )
+            if dur_range_match:
+                upper_minutes = int(dur_range_match.group(2))
+                filters['max_duration'] = upper_minutes * 60
+
+            # Match "X seconds" / "X sec"
+            sec_match = re.search(
+                r'(?:under\s+|less\s+than\s+)?(\d+)\s*(?:second|sec)\b',
+                query_lower
+            )
+            if sec_match:
+                filters['max_duration'] = int(sec_match.group(1))
+
+            # Match "short" → ~90 seconds (typical short monologue)
+            if 'max_duration' not in filters and re.search(r'\bshort\b', query_lower):
+                filters['max_duration'] = 90
 
         return filters
 

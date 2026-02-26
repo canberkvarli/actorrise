@@ -14,7 +14,7 @@ import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions"
 import { LandingFaq } from "@/components/landing/LandingFaq";
 import { LandingFooterAuthLink } from "@/components/landing/LandingFooterAuthLink";
 import { LandingLiveCount } from "@/components/landing/LandingLiveCount";
-import { LandingTrustBar, HeroProofBar } from "@/components/landing/LandingTrustBar";
+import { HeroProofBar } from "@/components/landing/LandingTrustBar";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 
 const easing = [0.25, 0.1, 0.25, 1] as const;
@@ -67,21 +67,21 @@ export function LandingPageAnimated() {
             </div>
 
             {/* Center: primary nav (desktop only), gets flexible space so it can truly center */}
-            <div className="hidden md:flex md:flex-1 items-center justify-center">
-              <div className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2 py-1">
-                <Link href="#suite" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
+            <div className="hidden lg:flex lg:flex-1 items-center justify-center min-w-0">
+              <div className="inline-flex items-center gap-0.5 rounded-full border border-border/60 bg-card/60 px-1.5 py-1 whitespace-nowrap">
+                <Link href="#suite" className="px-2.5 py-1.5 text-xs lg:text-sm text-foreground/90 hover:text-foreground transition-colors">
                   Search
                 </Link>
                 <span className="h-4 w-px bg-border/60" />
-                <Link href="#pricing" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
+                <Link href="#pricing" className="px-2.5 py-1.5 text-xs lg:text-sm text-foreground/90 hover:text-foreground transition-colors">
                   Pricing
                 </Link>
                 <span className="h-4 w-px bg-border/60" />
-                <Link href="/for-students" className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors">
-                  Students & educators
+                <Link href="/for-students" className="px-2.5 py-1.5 text-xs lg:text-sm text-foreground/90 hover:text-foreground transition-colors">
+                  Students
                 </Link>
                 <span className="h-4 w-px bg-border/60" />
-                <ContactModalTrigger className="px-3 py-1.5 text-sm text-foreground/90">
+                <ContactModalTrigger className="px-2.5 py-1.5 text-xs lg:text-sm text-foreground/90">
                   Contact
                 </ContactModalTrigger>
               </div>
@@ -148,19 +148,28 @@ export function LandingPageAnimated() {
               </Button>
               <HeroProofBar />
             </div>
+
+            {/* Trust signals — right under stars */}
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-6 sm:gap-10">
+              <a
+                href="https://www.producthunt.com/products/actorrise?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-actorrise"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-block opacity-90 hover:opacity-100 transition-opacity"
+                aria-label="ActorRise on Product Hunt"
+              >
+                <img
+                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1078076&theme=dark&t=1772064638507"
+                  alt="ActorRise - Find the perfect monologue in less than 20 seconds | Product Hunt"
+                  width={250}
+                  height={54}
+                  className="h-[54px] w-auto"
+                />
+              </a>
+              <LandingLiveCount variant="inline" />
+            </div>
           </div>
         </motion.section>
-
-        {/* Trust Bar with social proof */}
-        <motion.div
-          variants={item}
-          initial="hidden"
-          whileInView="visible"
-          viewport={viewport}
-          transition={{ duration, ease: easing }}
-        >
-          <LandingTrustBar />
-        </motion.div>
 
         {/* Testimonials - moved up for better social proof placement */}
         <motion.section
