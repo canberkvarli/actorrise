@@ -48,14 +48,14 @@ export function LandingTrustBar() {
             <LandingLiveCount variant="inline" />
           </div>
 
-          {/* Trust Badges - Separate items */}
-          <div className="flex items-center gap-2 text-muted-foreground whitespace-nowrap">
+          {/* Trust Badges - Grouped together */}
+          <div className="flex items-center gap-3 text-muted-foreground whitespace-nowrap">
             <span className="font-medium text-foreground">Free forever</span>
-          </div>
-
-          <div className="flex items-center gap-2 text-muted-foreground whitespace-nowrap">
-            <IconShieldCheck size={16} className="text-primary" aria-hidden="true" />
-            <span>No credit card</span>
+            <span className="text-muted-foreground/40">·</span>
+            <div className="flex items-center gap-1.5">
+              <IconShieldCheck size={16} className="text-primary" aria-hidden="true" />
+              <span>No credit card</span>
+            </div>
           </div>
         </div>
       </div>
