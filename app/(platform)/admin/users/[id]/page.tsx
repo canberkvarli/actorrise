@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { IconShield, IconSparkles } from "@tabler/icons-react";
@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 type BenefitValueKind = "number" | "boolean" | "string";
 
@@ -43,7 +44,10 @@ export default function AdminUserDetailPage() {
   const params = useParams<{ id: string }>();
   const userId = Number(params.id);
   const queryClient = useQueryClient();
+  const router = useRouter();
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteNote, setDeleteNote] = useState("");
   const [profileNote, setProfileNote] = useState("");
   const [subscriptionNote, setSubscriptionNote] = useState("");
   const [rolesNote, setRolesNote] = useState("");
@@ -141,6 +145,17 @@ export default function AdminUserDetailPage() {
       setBenefitNote("");
     },
     onError: (err: Error) => toast.error(err.message || "Failed to update benefits"),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (note: string) =>
+      api.delete(`/api/admin/users/${userId}?note=${encodeURIComponent(note)}`),
+    onSuccess: () => {
+      toast.success("User deleted successfully");
+      queryClient.removeQueries({ queryKey: ["admin-users-list"] });
+      router.push("/admin/users");
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to delete user"),
   });
 
   const summary = useMemo(() => {
@@ -298,9 +313,14 @@ export default function AdminUserDetailPage() {
             <Badge variant="outline">Joined {formattedCreatedAt}</Badge>
           </div>
         </div>
-        <Button asChild variant="outline">
-          <Link href="/admin/users">Back to users</Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href="/admin/users">Back to users</Link>
+          </Button>
+          <Button variant="destructive" onClick={() => setDeleteOpen(true)}>
+            Delete user
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-3">
@@ -662,6 +682,47 @@ export default function AdminUserDetailPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog
+        open={deleteOpen}
+        onOpenChange={(open) => {
+          if (deleteMutation.isPending) return;
+          setDeleteOpen(open);
+          if (!open) setDeleteNote("");
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete user</DialogTitle>
+            <DialogDescription>
+              This will permanently delete <strong>{data.user.email}</strong> and all their data
+              (scripts, rehearsal sessions, favorites, search history, subscription). This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={deleteNote}
+            onChange={(e) => setDeleteNote(e.target.value)}
+            placeholder="Reason for deleting this user"
+          />
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setDeleteOpen(false)}
+              disabled={deleteMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={deleteMutation.isPending || deleteNote.trim().length < 3}
+              onClick={() => deleteMutation.mutate(deleteNote.trim())}
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete user"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
