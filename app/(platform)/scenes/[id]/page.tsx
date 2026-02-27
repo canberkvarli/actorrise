@@ -22,6 +22,13 @@ import {
   Sparkles,
   ChevronRight
 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 interface SceneLine {
   id: number;
@@ -360,70 +367,72 @@ export default function SceneDetailPage() {
       </motion.div>
 
       {/* Character Selection Modal */}
-      {showCharacterModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="bg-background rounded-lg shadow-lg max-w-md w-full p-6 border border-border"
-          >
-            <h3 className="text-xl font-bold mb-2">Choose Your Character</h3>
-            <p className="text-muted-foreground mb-6">
-              Select which character you'd like to play in this scene.
-            </p>
+      <Dialog
+        open={showCharacterModal}
+        onOpenChange={(open) => {
+          setShowCharacterModal(open);
+          if (!open) setSelectedCharacter('');
+        }}
+      >
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Choose Your Character</DialogTitle>
+            <DialogDescription>
+              Select which character you&apos;d like to play in this scene.
+            </DialogDescription>
+          </DialogHeader>
 
-            <div className="space-y-3 mb-6">
-              <button
-                onClick={() => setSelectedCharacter(scene.character_1_name)}
-                className={`w-full p-4 rounded-lg border-2 transition text-left ${
-                  selectedCharacter === scene.character_1_name
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <div className="font-semibold">{scene.character_1_name}</div>
-                {scene.character_1_gender && (
-                  <div className="text-sm text-muted-foreground capitalize">{scene.character_1_gender}</div>
-                )}
-              </button>
+          <div className="space-y-3 my-2">
+            <button
+              onClick={() => setSelectedCharacter(scene.character_1_name)}
+              className={`w-full p-4 rounded-lg border-2 transition text-left ${
+                selectedCharacter === scene.character_1_name
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border hover:border-primary/50'
+              }`}
+            >
+              <div className="font-semibold">{scene.character_1_name}</div>
+              {scene.character_1_gender && (
+                <div className="text-sm text-muted-foreground capitalize">{scene.character_1_gender}</div>
+              )}
+            </button>
 
-              <button
-                onClick={() => setSelectedCharacter(scene.character_2_name)}
-                className={`w-full p-4 rounded-lg border-2 transition text-left ${
-                  selectedCharacter === scene.character_2_name
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border hover:border-primary/50'
-                }`}
-              >
-                <div className="font-semibold">{scene.character_2_name}</div>
-                {scene.character_2_gender && (
-                  <div className="text-sm text-muted-foreground capitalize">{scene.character_2_gender}</div>
-                )}
-              </button>
-            </div>
+            <button
+              onClick={() => setSelectedCharacter(scene.character_2_name)}
+              className={`w-full p-4 rounded-lg border-2 transition text-left ${
+                selectedCharacter === scene.character_2_name
+                  ? 'border-primary bg-primary/10'
+                  : 'border-border hover:border-primary/50'
+              }`}
+            >
+              <div className="font-semibold">{scene.character_2_name}</div>
+              {scene.character_2_gender && (
+                <div className="text-sm text-muted-foreground capitalize">{scene.character_2_gender}</div>
+              )}
+            </button>
+          </div>
 
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowCharacterModal(false);
-                  setSelectedCharacter('');
-                }}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleStartRehearsal}
-                disabled={!selectedCharacter}
-                className="flex-1"
-              >
-                Start Rehearsal
-              </Button>
-            </div>
-          </motion.div>
-        </div>
-      )}
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowCharacterModal(false);
+                setSelectedCharacter('');
+              }}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleStartRehearsal}
+              disabled={!selectedCharacter}
+              className="flex-1"
+            >
+              Start Rehearsal
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

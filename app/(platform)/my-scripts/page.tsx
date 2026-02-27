@@ -131,7 +131,7 @@ export default function MyScriptsPage() {
       setIsLoading(true);
       const response = await api.get<UserScript[]>("/api/scripts/");
       let list = response.data;
-      if (list.length === 0) {
+      if (list.length === 0 && !localStorage.getItem("dismissed_example_script")) {
         await api.post<unknown>("/api/scripts/ensure-example");
         const retry = await api.get<UserScript[]>("/api/scripts/");
         list = retry.data;
@@ -198,7 +198,11 @@ export default function MyScriptsPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.detail || "Upload failed");
+        const detail = error.detail;
+        const message = typeof detail === "string"
+          ? detail
+          : detail?.message || "Upload failed";
+        throw new Error(message);
       }
 
       const result = await response.json();
@@ -263,13 +267,17 @@ export default function MyScriptsPage() {
   };
 
   const performDeleteScript = async (scriptId: number) => {
+    // Optimistic: remove from UI instantly
+    setScripts((prev) => prev.filter((s) => s.id !== scriptId));
     try {
       await api.delete(`/api/scripts/${scriptId}`);
+      localStorage.setItem("dismissed_example_script", "true");
       toast.success("Script deleted");
-      fetchScripts();
     } catch (error) {
       console.error("Delete error:", error);
       toast.error("Failed to delete script");
+      // Re-fetch on failure to restore
+      fetchScripts();
     }
   };
 
@@ -481,7 +489,7 @@ export default function MyScriptsPage() {
           style={{ pointerEvents: isLoading ? "auto" : "none" }}
           aria-hidden={!isLoading}
         >
-          {[1, 2, 3, 4].map((i) => (
+          {[1, 2].map((i) => (
             <Card key={i} className="min-h-[320px]">
               <CardHeader className="pt-5 px-5 sm:px-6">
                 <Skeleton className="h-6 w-3/4" />
@@ -635,14 +643,14 @@ export default function MyScriptsPage() {
                           </div>
                           {(script.description?.trim() || script.first_scene_title || script.first_scene_description?.trim()) ? (
                             <div className="space-y-1">
-                              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Summary</span>
+                              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Synopsis</span>
                               {script.first_scene_title && (
                                 <p className="text-sm font-medium text-foreground line-clamp-1">
                                   {script.num_scenes_extracted === 1 ? "Scene: " : "First scene: "}{script.first_scene_title}
                                 </p>
                               )}
                               {(script.first_scene_description?.trim() || script.description?.trim()) ? (
-                                <p className="text-sm text-foreground/90 line-clamp-2 leading-relaxed border-l-2 border-primary/30 pl-3">
+                                <p className="text-sm text-foreground/90 line-clamp-2 leading-relaxed border-l-2 border-primary/30 pl-3 break-words">
                                   {(script.first_scene_description?.trim() || script.description?.trim() || "").slice(0, 180)}
                                   {(script.first_scene_description?.trim() || script.description?.trim() || "").length > 180 ? "…" : ""}
                                 </p>

@@ -31,7 +31,7 @@ export function LandingTrustBar() {
   return (
     <div className="border-y border-border/40 bg-muted/20 py-3 sm:py-4">
       <div className="container mx-auto px-4 sm:px-6">
-        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-10">
+        <div className="flex flex-col items-center gap-6 sm:flex-row sm:justify-center sm:gap-10 md:gap-12">
           <a
             href="https://www.producthunt.com/products/actorrise?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-actorrise"
             target="_blank"
@@ -44,10 +44,9 @@ export function LandingTrustBar() {
               alt="ActorRise - Find the perfect monologue in less than 20 seconds | Product Hunt"
               width={250}
               height={54}
-              className="h-[54px] w-auto"
+              className="h-[40px] sm:h-[54px] w-auto"
             />
           </a>
-
           <LandingLiveCount variant="inline" />
         </div>
       </div>

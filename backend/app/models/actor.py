@@ -120,7 +120,7 @@ class Monologue(Base):
     scene_description = Column(Text, nullable=True)  # Setting and situation
 
     # Search & Discovery
-    # Production embedding: text-embedding-3-large (3072 dims)
+    # Embedding: text-embedding-3-large (3072 dims)
     embedding_vector = deferred(Column(Vector(3072), nullable=True))
     search_tags = Column(ARRAY(String), nullable=True)  # Searchable keywords
 
@@ -268,6 +268,9 @@ class RehearsalSession(Base):
     status = Column(String, nullable=False, default="in_progress")  # in_progress, completed, abandoned
     current_line_index = Column(Integer, default=0)  # Where they left off
 
+    # Line Cap (resolved from tier at session start; NULL = unlimited)
+    max_lines = Column(Integer, nullable=True)
+
     # Performance Metrics
     total_lines_delivered = Column(Integer, default=0)
     lines_retried = Column(Integer, default=0)  # How many times user asked to retry
@@ -392,7 +395,7 @@ class FilmTvReference(Base):
     imdb_rating = Column(Float, nullable=True, index=True)
     poster_url = Column(String, nullable=True)
     imsdb_url = Column(String, nullable=True)
-    # Production embedding: text-embedding-3-large (3072 dims) after finalize
+    # Embedding: text-embedding-3-large (3072 dims)
     embedding = Column(Vector(3072), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))
 

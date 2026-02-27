@@ -13,7 +13,13 @@ export function useBookmarks() {
     queryKey: ["bookmarks"],
     queryFn: async () => {
       const response = await api.get<Monologue[]>("/api/monologues/favorites/my");
-      return response.data;
+      // Deduplicate by monologue id (race-condition on rapid toggles can create DB dupes)
+      const seen = new Set<number>();
+      return response.data.filter((m) => {
+        if (seen.has(m.id)) return false;
+        seen.add(m.id);
+        return true;
+      });
     },
     staleTime: 2 * 60 * 1000, // 2 minutes – avoid refetch on every My Monologues visit
     gcTime: 10 * 60 * 1000, // 10 minutes
@@ -45,15 +51,25 @@ function applyFavoriteToMonologue(mono: Monologue, monologueId: number, isFavori
 export function useToggleFavorite() {
   const queryClient = useQueryClient();
   const mutateRef = useRef<(v: { monologueId: number; isFavorited: boolean }) => void>(() => {});
+  // Track in-flight monologue IDs to block rapid toggles
+  const inflightRef = useRef(new Set<number>());
 
   const mutation = useMutation({
     mutationFn: async ({ monologueId, isFavorited }: { monologueId: number; isFavorited: boolean }) => {
-      if (isFavorited) {
-        await api.delete(`/api/monologues/${monologueId}/favorite`);
-      } else {
-        await api.post(`/api/monologues/${monologueId}/favorite`);
+      if (inflightRef.current.has(monologueId)) {
+        throw new Error("__skip__"); // silently skip duplicate rapid toggle
       }
-      return { monologueId, isFavorited: !isFavorited };
+      inflightRef.current.add(monologueId);
+      try {
+        if (isFavorited) {
+          await api.delete(`/api/monologues/${monologueId}/favorite`);
+        } else {
+          await api.post(`/api/monologues/${monologueId}/favorite`);
+        }
+        return { monologueId, isFavorited: !isFavorited };
+      } finally {
+        inflightRef.current.delete(monologueId);
+      }
     },
     onMutate: async (variables) => {
       const { monologueId, isFavorited } = variables;
@@ -96,10 +112,18 @@ export function useToggleFavorite() {
         );
       }
 
+      // Also update the individual monologue detail query (used by slide-over)
+      const detail = queryClient.getQueryData<Monologue>(["monologue", monologueId]);
+      if (detail) {
+        previous.push({ key: ["monologue", monologueId], data: detail });
+        queryClient.setQueryData<Monologue>(["monologue", monologueId], applyFavoriteToMonologue(detail, monologueId, nextFavorited));
+      }
+
       // Cancel in-flight refetches after optimistic update so they don't overwrite
       await queryClient.cancelQueries({ queryKey: ["recommendations"] });
       await queryClient.cancelQueries({ queryKey: ["discover"] });
       await queryClient.cancelQueries({ queryKey: ["bookmarks"] });
+      await queryClient.cancelQueries({ queryKey: ["monologue", monologueId] });
 
       return { previous };
     },
@@ -111,7 +135,8 @@ export function useToggleFavorite() {
         onUndo: () => mutateRef.current({ monologueId: variables.monologueId, isFavorited: nextFavorited }),
       });
     },
-    onError: (_err, _variables, context) => {
+    onError: (err, _variables, context) => {
+      if (err instanceof Error && err.message === "__skip__") return; // rapid-toggle guard
       if (context?.previous) {
         for (const { key, data } of context.previous) {
           queryClient.setQueryData(key, data);
@@ -119,10 +144,11 @@ export function useToggleFavorite() {
       }
       toast.error("Couldn't update bookmark. Please try again.");
     },
-    onSettled: () => {
+    onSettled: (_data, _err, variables) => {
       queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
-      queryClient.invalidateQueries({ queryKey: ["recommendations"] });
-      queryClient.invalidateQueries({ queryKey: ["discover"] });
+      queryClient.invalidateQueries({ queryKey: ["monologue", variables.monologueId] });
+      // Don't invalidate recommendations/discover — the optimistic update already
+      // reflects the new state and refetching would reorder the cards (bad UX).
     },
   });
   mutateRef.current = mutation.mutate;

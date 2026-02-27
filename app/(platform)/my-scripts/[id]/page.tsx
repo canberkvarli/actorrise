@@ -14,13 +14,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   ArrowLeft, Edit2, Check, X, Trash2, Play, Users, Clock,
-  FileText, Sparkles, ChevronRight, Settings
+  FileText, Sparkles, ChevronRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { SceneSettingsModal } from "@/components/scenepartner/SceneSettingsModal";
 import { MicAccessWarning } from "@/components/scenepartner/MicAccessWarning";
 import { GenreSelect } from "@/components/ui/genre-select";
 import { ScenePreviewTooltip } from "@/components/scenepartner/ScenePreviewTooltip";
@@ -74,7 +73,7 @@ export default function ScriptDetailPage() {
   const [deleteSceneDialogOpen, setDeleteSceneDialogOpen] = useState(false);
   const [sceneToDelete, setSceneToDelete] = useState<number | null>(null);
   const deleteSceneTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const synopsisRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     fetchScript();
@@ -346,8 +345,8 @@ export default function ScriptDetailPage() {
                   <Input
                     value={editValue}
                     onChange={(e) => setEditValue(e.target.value)}
-                    className="h-7 w-32 text-sm"
-                    maxLength={60}
+                    className="h-7 w-48 text-sm"
+                    maxLength={40}
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === "Enter") saveField("author");
@@ -378,11 +377,11 @@ export default function ScriptDetailPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.15 }}
-                  className="group inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="group inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors max-w-full min-w-0"
                   onClick={() => startEditing("author", script.author)}
                 >
-                  <span className="font-medium text-foreground/80">Author</span>
-                  <span>{script.author}</span>
+                  <span className="font-medium text-foreground/80 shrink-0">Author</span>
+                  <span className="truncate max-w-[200px]">{script.author}</span>
                   <Edit2 className="w-3 h-3 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
                 </motion.button>
               )}
@@ -449,13 +448,28 @@ export default function ScriptDetailPage() {
                   className="space-y-2 pt-2 border-t border-border/80"
                 >
                   <Textarea
+                    ref={synopsisRef}
                     value={editValue}
-                    onChange={(e) => setEditValue(e.target.value)}
+                    onChange={(e) => {
+                      setEditValue(e.target.value);
+                      if (synopsisRef.current) {
+                        synopsisRef.current.style.height = "auto";
+                        synopsisRef.current.style.height = synopsisRef.current.scrollHeight + "px";
+                      }
+                    }}
+                    onFocus={() => {
+                      requestAnimationFrame(() => {
+                        if (synopsisRef.current) {
+                          synopsisRef.current.style.height = "auto";
+                          synopsisRef.current.style.height = synopsisRef.current.scrollHeight + "px";
+                        }
+                      });
+                    }}
                     placeholder="Description..."
-                    rows={3}
+                    rows={2}
                     maxLength={500}
                     autoFocus
-                    className="text-sm"
+                    className="text-sm resize-none overflow-hidden"
                   />
                   <div className="flex gap-2">
                     <Button size="sm" onClick={() => saveField("description")}>
@@ -481,11 +495,11 @@ export default function ScriptDetailPage() {
                 >
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                      Summary
+                      Synopsis <span className="normal-case text-muted-foreground/60">(optional)</span>
                     </span>
                     <Edit2 className="w-3 h-3 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
                   </div>
-                  <p className="text-sm text-foreground/90 mt-1 line-clamp-2 leading-relaxed">
+                  <p className="text-sm text-foreground/90 mt-1 leading-relaxed break-words">
                     {script.description}
                   </p>
                 </motion.button>
@@ -500,13 +514,20 @@ export default function ScriptDetailPage() {
                 className="space-y-2 pt-2 border-t border-border/80"
               >
                 <Textarea
+                  ref={synopsisRef}
                   value={editValue}
-                  onChange={(e) => setEditValue(e.target.value)}
+                  onChange={(e) => {
+                    setEditValue(e.target.value);
+                    if (synopsisRef.current) {
+                      synopsisRef.current.style.height = "auto";
+                      synopsisRef.current.style.height = synopsisRef.current.scrollHeight + "px";
+                    }
+                  }}
                   placeholder="Add a description..."
-                  rows={3}
+                  rows={2}
                   maxLength={500}
                   autoFocus
-                  className="text-sm"
+                  className="text-sm resize-none overflow-hidden"
                 />
                 <div className="flex gap-2">
                   <Button size="sm" onClick={() => saveField("description")}>
@@ -531,7 +552,7 @@ export default function ScriptDetailPage() {
                 onClick={() => startEditing("description", "")}
               >
                 <Edit2 className="w-3.5 h-3.5" />
-                Add summary
+                Add synopsis (optional)
               </motion.button>
             )}
           </AnimatePresence>
@@ -548,16 +569,6 @@ export default function ScriptDetailPage() {
             <Sparkles className="w-5 h-5 text-primary" />
             Scenes ({script.scenes.length})
           </h2>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 h-9 text-sm font-normal"
-            onClick={() => setShowSettingsModal(true)}
-            aria-label="Scene settings"
-          >
-            <Settings className="w-4 h-4" />
-            Scene settings
-          </Button>
         </div>
         <p className="text-sm text-muted-foreground">
           Pick a scene, choose your character, and tap Rehearse. Use Edit to fix titles or lines.
@@ -664,7 +675,6 @@ export default function ScriptDetailPage() {
         onConfirm={handleConfirmDeleteScene}
       />
 
-      <SceneSettingsModal open={showSettingsModal} onOpenChange={setShowSettingsModal} />
     </motion.div>
       )}
     </div>

@@ -49,6 +49,7 @@ interface RehearsalSession {
   status: string;
   current_line_index: number;
   total_lines_delivered: number;
+  max_lines?: number | null;
   completion_percentage: number;
   first_line_for_user?: string | null;
   current_line_for_user?: string | null;
@@ -110,7 +111,7 @@ export default function RehearsalPage() {
   const [autoListenLineKey, setAutoListenLineKey] = useState<string | null>(null);
   /** Rehearsal settings (from localStorage). */
   const [rehearsalSettings, setRehearsalSettingsState] = useState<RehearsalSettings>(() =>
-    typeof window !== 'undefined' ? getRehearsalSettings() : { pauseBetweenLinesSeconds: 3, skipMyLineIfSilent: false, skipAfterSeconds: 10, countdownSeconds: 3, useAIVoice: true }
+    typeof window !== 'undefined' ? getRehearsalSettings() : { pauseBetweenLinesSeconds: 3, skipMyLineIfSilent: false, skipAfterSeconds: 10, countdownSeconds: 3, useAIVoice: true, autoAdvanceOnFinish: true }
   );
   const skipSilentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -124,6 +125,9 @@ export default function RehearsalPage() {
   const [showVoiceSettings, setShowVoiceSettings] = useState(false);
   // Ref to hold the last AI line for browser-TTS fallback
   const lastAiLineForFallbackRef = useRef<string | null>(null);
+
+  // Line cap tracking
+  const [linesRemaining, setLinesRemaining] = useState<number | null>(null);
 
   // Upgrade modal
   const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string; message: string }>({
@@ -297,6 +301,10 @@ export default function RehearsalPage() {
         `/api/scenes/rehearse/sessions/${sessionId}`
       );
       setSession(data);
+      // Initialize lines remaining from session cap
+      if (data.max_lines != null) {
+        setLinesRemaining(Math.max(0, data.max_lines - (data.total_lines_delivered ?? 0)));
+      }
       const lineToShow = data.current_line_for_user ?? data.first_line_for_user ?? null;
       setCurrentLineForUser(lineToShow);
       setMessages([{
@@ -352,6 +360,7 @@ export default function RehearsalPage() {
         completion_percentage: number;
         session_status: string;
         next_line_preview?: string | null;
+        lines_remaining?: number | null;
       }>('/api/scenes/rehearse/deliver', {
         session_id: session.id,
         user_input: inputToSend,
@@ -391,6 +400,9 @@ export default function RehearsalPage() {
         completion_percentage: data.completion_percentage,
         total_lines_delivered: session.total_lines_delivered + 1
       });
+      if (data.lines_remaining != null) {
+        setLinesRemaining(data.lines_remaining);
+      }
       setCurrentLineForUser(data.next_line_preview ?? null);
       setAutoListenLineKey(null);
 
@@ -597,16 +609,33 @@ export default function RehearsalPage() {
         {/* Voice-only control strip */}
         <div className="shrink-0 border-t border-neutral-800 bg-neutral-950/98 px-4 py-3 safe-area-bottom">
           <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
-            <div className="text-xs text-neutral-300">
-              {isLoadingAI
-                ? 'Generating voice'
-                : anySpeaking
-                ? 'AI speaking'
-                : isListening
-                ? 'Listening for your line'
-                : isUserTurn
-                ? 'Your turn'
-                : 'AI turn'}
+            <div className="flex items-center gap-3">
+              <div className="text-xs text-neutral-300">
+                {isLoadingAI
+                  ? 'Generating voice'
+                  : anySpeaking
+                  ? 'AI speaking'
+                  : isListening
+                  ? 'Listening for your line'
+                  : isUserTurn
+                  ? 'Your turn'
+                  : 'AI turn'}
+              </div>
+              {/* Progress indicator */}
+              <div className="flex items-center gap-1.5">
+                <div className="w-20 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary rounded-full transition-all duration-500"
+                    style={{ width: `${session.completion_percentage}%` }}
+                  />
+                </div>
+                <span className="text-[10px] text-neutral-500 tabular-nums">{Math.round(session.completion_percentage)}%</span>
+                {linesRemaining != null && (
+                  <span className={`text-[10px] tabular-nums ml-1 ${linesRemaining <= 5 ? 'text-amber-400' : 'text-neutral-500'}`}>
+                    {linesRemaining} lines left
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button
@@ -615,32 +644,7 @@ export default function RehearsalPage() {
                 className="border-neutral-700 text-neutral-200 min-h-[44px] sm:min-h-0"
                 onClick={() => router.push(`/scenes/${sceneId}`)}
               >
-                Back
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-neutral-700 text-neutral-200 min-h-[44px] sm:min-h-0"
-                onClick={() => router.push(`/scenes/${sceneId}`)}
-              >
                 Stop
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-neutral-700 text-neutral-200 min-h-[44px] sm:min-h-0"
-                onClick={() => router.push(`/my-scripts`)}
-              >
-                Edit script
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-neutral-700 text-neutral-200 min-h-[44px] sm:min-h-0"
-                onClick={() => setVoiceEnabled((v) => !v)}
-              >
-                {voiceEnabled ? <Volume2 className="h-4 w-4 mr-1" /> : <VolumeX className="h-4 w-4 mr-1" />}
-                {voiceEnabled ? 'Voice on' : 'Voice off'}
               </Button>
               {isSpeechRecognitionSupported && (
                 <Button
@@ -671,13 +675,20 @@ export default function RehearsalPage() {
                 Retry
               </Button>
               <Button
+                variant="outline"
+                size="sm"
+                className="border-neutral-700 text-neutral-200 min-h-[44px] sm:min-h-0"
+                onClick={() => setVoiceEnabled((v) => !v)}
+              >
+                {voiceEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+              </Button>
+              <Button
                 variant="ghost"
                 size="sm"
                 className="text-neutral-400 hover:text-neutral-100 min-h-[44px] sm:min-h-0"
                 onClick={() => setFocusMode(false)}
               >
-                <Settings className="h-4 w-4 mr-1" />
-                Settings
+                <Settings className="h-4 w-4" />
               </Button>
             </div>
           </div>
@@ -685,6 +696,13 @@ export default function RehearsalPage() {
             <p className="max-w-2xl mx-auto text-xs text-red-400 mt-2">{error}</p>
           )}
         </div>
+
+        <UpgradeModal
+          open={upgradeModal.open}
+          onOpenChange={(open) => setUpgradeModal((prev) => ({ ...prev, open }))}
+          feature={upgradeModal.feature}
+          message={upgradeModal.message}
+        />
       </div>
     );
   }

@@ -83,7 +83,7 @@ async def synthesize_speech(
             media_type=CONTENT_TYPE_MAP.get(request.response_format, "audio/mpeg"),
             headers={
                 "Content-Disposition": f"inline; filename=speech.{request.response_format}",
-                "Cache-Control": "no-cache",
+                "Cache-Control": "private, max-age=3600",  # browser can cache for 1h
             },
         )
     except ValueError as e:

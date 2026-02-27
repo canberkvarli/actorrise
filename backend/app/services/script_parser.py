@@ -123,27 +123,42 @@ Return ONLY valid JSON, no explanation."""
         Use AI to extract individual two-person scenes from the script.
         Returns a list of scenes with dialogue lines.
         """
-        character_names = [c['name'] for c in characters]
+        character_names = [c['name'] for c in characters if c.get('name')]
+        char_hint = ', '.join(character_names) if character_names else "(auto-detect from the dialogue)"
 
-        prompt = f"""Analyze this script and extract ALL two-person scenes (scenes with exactly 2 characters).
+        # Truncate very long scripts to stay within model context (gpt-4o-mini: ~128K tokens)
+        # ~4 chars per token, leave room for prompt + output
+        max_chars = 80000
+        truncated_text = script_text[:max_chars]
+        if len(script_text) > max_chars:
+            print(f"Script text truncated from {len(script_text)} to {max_chars} chars for scene extraction")
+
+        prompt = f"""Analyze this script and extract ALL two-person scenes (dialogue between exactly 2 characters).
+
+IMPORTANT RULES:
+- If the entire script is a conversation between 2 characters, treat it as ONE scene.
+- Include even very short exchanges (2+ lines).
+- Every line of dialogue must be captured — do NOT skip or summarize lines.
+- If a character speaks multiple consecutive paragraphs, keep them as separate lines.
+- Stage directions in parentheses or brackets should go in "stage_direction", not in "text".
 
 Script:
 ```
-{script_text}
+{truncated_text}
 ```
 
-Known characters: {', '.join(character_names)}
+Known characters: {char_hint}
 
-For each two-person scene, extract:
+For each scene, extract:
 1. title: Descriptive title for the scene
-2. character_1: First character name (must match a known character)
-3. character_2: Second character name (must match a known character)
-4. description: What happens in the scene
-5. setting: Where the scene takes place
-6. lines: Array of dialogue lines with:
-   - character: Who speaks
-   - text: The dialogue
-   - stage_direction: Any stage directions (optional)
+2. character_1: First character name (use known character name if available, otherwise extract from dialogue)
+3. character_2: Second character name (use known character name if available, otherwise extract from dialogue)
+4. description: Brief description of what happens (1-2 sentences)
+5. setting: Where the scene takes place (or "Unknown" if not clear)
+6. lines: Array of ALL dialogue lines with:
+   - character: Who speaks (must match character_1 or character_2 of the scene)
+   - text: The full dialogue text
+   - stage_direction: Any stage directions (optional, null if none)
 
 Return a JSON array of scenes. Example:
 [
@@ -171,13 +186,20 @@ Return ONLY valid JSON array, no explanation."""
             )
 
             response_text = response.choices[0].message.content
+            print(f"Scene extraction raw response length: {len(response_text or '')} chars")
 
             # Try to find JSON array in the response
             json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
             if json_match:
                 scenes = json.loads(json_match.group())
-                return scenes if isinstance(scenes, list) else []
+                if isinstance(scenes, list):
+                    print(f"Extracted {len(scenes)} scenes, lines per scene: {[len(s.get('lines', [])) for s in scenes]}")
+                    return scenes
+                else:
+                    print(f"Scene extraction returned non-list: {type(scenes)}")
+                    return []
             else:
+                print(f"No JSON array found in response. First 500 chars: {(response_text or '')[:500]}")
                 return []
 
         except Exception as e:

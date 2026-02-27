@@ -89,6 +89,11 @@ class SceneLineUpdate(BaseModel):
     stage_direction: Optional[str] = None
 
 
+class LineReorderRequest(BaseModel):
+    """Reorder scene lines"""
+    line_ids: List[int]
+
+
 class SceneUpdate(BaseModel):
     """Update scene metadata"""
     title: Optional[str] = None
@@ -98,6 +103,16 @@ class SceneUpdate(BaseModel):
     setting: Optional[str] = None
     context_before: Optional[str] = None
     context_after: Optional[str] = None
+    play_title: Optional[str] = None
+    play_author: Optional[str] = None
+
+
+class CreateSceneLineRequest(BaseModel):
+    """Create a new scene line"""
+    character_name: str
+    text: str
+    stage_direction: Optional[str] = None
+    insert_after_line_id: Optional[int] = None
 
 
 class CreateScriptFromTextRequest(BaseModel):
@@ -679,10 +694,44 @@ async def update_scene(
         scene.context_before = update.context_before
     if update.context_after is not None:
         scene.context_after = update.context_after
+    if update.play_title is not None and scene.play:
+        scene.play.title = update.play_title
+    if update.play_author is not None and scene.play:
+        scene.play.author = update.play_author
 
     db.commit()
 
     return {"message": "Scene updated successfully"}
+
+
+@router.patch("/{script_id}/scenes/{scene_id}/lines/reorder")
+async def reorder_scene_lines(
+    script_id: int,
+    scene_id: int,
+    request: LineReorderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Reorder scene lines by providing the new order of line IDs"""
+    script = db.query(UserScript).filter(
+        UserScript.id == script_id,
+        UserScript.user_id == current_user.id
+    ).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="Script not found")
+
+    lines = db.query(SceneLine).filter(SceneLine.scene_id == scene_id).all()
+    line_map = {l.id: l for l in lines}
+
+    for line_id in request.line_ids:
+        if line_id not in line_map:
+            raise HTTPException(status_code=400, detail=f"Line {line_id} not found in scene")
+
+    for idx, line_id in enumerate(request.line_ids):
+        line_map[line_id].line_order = idx
+
+    db.commit()
+    return {"message": "Lines reordered successfully"}
 
 
 @router.patch("/{script_id}/scenes/{scene_id}/lines/{line_id}")
@@ -722,6 +771,175 @@ async def update_scene_line(
     db.commit()
 
     return {"message": "Line updated successfully"}
+
+
+@router.post("/{script_id}/scenes/{scene_id}/lines")
+async def create_scene_line(
+    script_id: int,
+    scene_id: int,
+    request: CreateSceneLineRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Create a new line in a scene"""
+    script = db.query(UserScript).filter(
+        UserScript.id == script_id,
+        UserScript.user_id == current_user.id
+    ).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="Script not found")
+
+    scene = db.query(Scene).filter(
+        Scene.id == scene_id,
+        Scene.user_script_id == script_id
+    ).first()
+    if not scene:
+        raise HTTPException(status_code=404, detail="Scene not found")
+
+    existing_lines = db.query(SceneLine).filter(
+        SceneLine.scene_id == scene_id
+    ).order_by(SceneLine.line_order).all()
+
+    # Determine insertion position
+    if request.insert_after_line_id is not None:
+        insert_idx = None
+        for i, line in enumerate(existing_lines):
+            if line.id == request.insert_after_line_id:
+                insert_idx = i + 1
+                break
+        if insert_idx is None:
+            raise HTTPException(status_code=400, detail="insert_after_line_id not found in scene")
+        # Bump subsequent lines
+        for line in existing_lines[insert_idx:]:
+            line.line_order += 1
+        new_order = insert_idx
+    else:
+        new_order = len(existing_lines)
+
+    word_count = len(request.text.split())
+    new_line = SceneLine(
+        scene_id=scene_id,
+        line_order=new_order,
+        character_name=request.character_name,
+        text=request.text,
+        stage_direction=request.stage_direction,
+        word_count=word_count,
+    )
+    db.add(new_line)
+
+    # Update scene line_count
+    scene.line_count = len(existing_lines) + 1
+
+    db.commit()
+    db.refresh(new_line)
+
+    return {
+        "id": new_line.id,
+        "line_order": new_line.line_order,
+        "character_name": new_line.character_name,
+        "text": new_line.text,
+        "stage_direction": new_line.stage_direction,
+        "word_count": new_line.word_count,
+        "primary_emotion": new_line.primary_emotion,
+    }
+
+
+@router.delete("/{script_id}/scenes/{scene_id}/lines/{line_id}")
+async def delete_scene_line(
+    script_id: int,
+    scene_id: int,
+    line_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a line from a scene"""
+    script = db.query(UserScript).filter(
+        UserScript.id == script_id,
+        UserScript.user_id == current_user.id
+    ).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="Script not found")
+
+    line = db.query(SceneLine).filter(
+        SceneLine.id == line_id,
+        SceneLine.scene_id == scene_id
+    ).first()
+    if not line:
+        raise HTTPException(status_code=404, detail="Line not found")
+
+    deleted_order = line.line_order
+    db.delete(line)
+
+    # Re-number subsequent lines
+    subsequent = db.query(SceneLine).filter(
+        SceneLine.scene_id == scene_id,
+        SceneLine.line_order > deleted_order
+    ).all()
+    for sl in subsequent:
+        sl.line_order -= 1
+
+    # Update scene line_count
+    scene = db.query(Scene).filter(Scene.id == scene_id).first()
+    if scene:
+        remaining = db.query(SceneLine).filter(SceneLine.scene_id == scene_id).count()
+        scene.line_count = remaining
+
+    db.commit()
+    return {"message": "Line deleted successfully"}
+
+
+@router.post("/{script_id}/scenes/{scene_id}/suggest-synopsis")
+async def suggest_synopsis(
+    script_id: int,
+    scene_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Generate a synopsis suggestion for a scene using AI"""
+    script = db.query(UserScript).filter(
+        UserScript.id == script_id,
+        UserScript.user_id == current_user.id
+    ).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="Script not found")
+
+    scene = db.query(Scene).filter(
+        Scene.id == scene_id,
+        Scene.user_script_id == script_id
+    ).first()
+    if not scene:
+        raise HTTPException(status_code=404, detail="Scene not found")
+
+    sorted_lines = sorted(scene.lines, key=lambda l: l.line_order)
+    script_text = "\n".join(
+        [f"{l.character_name}: {l.text}" for l in sorted_lines[:20]]
+    )
+
+    from app.services.ai.langchain.config import get_llm
+    from langchain_core.prompts import ChatPromptTemplate
+    from langchain_core.output_parsers import StrOutputParser
+
+    prompt = ChatPromptTemplate.from_messages([
+        ("system", "You are a theater expert. Write a brief, compelling synopsis for this scene. STRICT RULES: 1-2 sentences max, under 250 characters total. Be concise and evocative. Do not use quotes."),
+        ("human", "Scene: {title}\nFrom: {play_title} by {author}\nCharacters: {char1} and {char2}\n\nDialogue:\n{script_text}")
+    ])
+
+    llm = get_llm(temperature=0.7)
+    chain = prompt | llm | StrOutputParser()
+
+    try:
+        synopsis = chain.invoke({
+            "title": scene.title,
+            "play_title": (scene.play.title if scene.play else None) or script.title,
+            "author": (scene.play.author if scene.play else None) or script.author,
+            "char1": scene.character_1_name,
+            "char2": scene.character_2_name,
+            "script_text": script_text,
+        })
+        result = synopsis.strip()[:300]
+        return {"synopsis": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate synopsis: {str(e)}")
 
 
 @router.delete("/{script_id}/scenes/{scene_id}")

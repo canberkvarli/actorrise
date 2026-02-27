@@ -30,6 +30,11 @@ import {
   IconRocket,
   IconCrown,
   IconGift,
+  IconSearch,
+  IconBookmark,
+  IconScript,
+  IconUpload,
+  IconMicrophone,
 } from "@tabler/icons-react";
 import api from "@/lib/api";
 import Link from "next/link";
@@ -204,6 +209,73 @@ export default function BillingPage() {
                 </div>
               )}
             </CardFooter>
+          </Card>
+        </motion.div>
+
+        {/* Plan Quotas Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.08 }}
+        >
+          <Card className="rounded-xl overflow-hidden">
+            <CardHeader className="py-4 px-5">
+              <CardTitle className="text-lg text-foreground">What&apos;s Included</CardTitle>
+              <CardDescription className="text-xs">
+                {subscription?.tier_name === "free"
+                  ? "Your free plan includes"
+                  : subscription?.tier_name === "plus"
+                  ? "Your Plus plan includes"
+                  : "Your Unlimited plan includes"}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="px-5 pb-5 pt-0">
+              <div className="space-y-3">
+                {(() => {
+                  const tier = subscription?.tier_name ?? "free";
+                  const quotas = tier === "unlimited"
+                    ? [
+                        { icon: IconSearch, label: "AI Searches", value: "Unlimited", desc: "per month" },
+                        { icon: IconBookmark, label: "Bookmarks", value: "Unlimited", desc: "" },
+                        { icon: IconScript, label: "Scripts", value: "Unlimited", desc: "" },
+                        { icon: IconMicrophone, label: "ScenePartner Sessions", value: "100", desc: "per month" },
+                        { icon: IconUpload, label: "Script Uploads", value: "Unlimited", desc: "" },
+                      ]
+                    : tier === "plus"
+                    ? [
+                        { icon: IconSearch, label: "AI Searches", value: "150", desc: "per month" },
+                        { icon: IconBookmark, label: "Bookmarks", value: "Unlimited", desc: "" },
+                        { icon: IconScript, label: "Scripts", value: "10", desc: "" },
+                        { icon: IconMicrophone, label: "ScenePartner Sessions", value: "30", desc: "per month" },
+                        { icon: IconUpload, label: "Script Uploads", value: "10", desc: "" },
+                      ]
+                    : [
+                        { icon: IconSearch, label: "AI Searches", value: "10", desc: "per month" },
+                        { icon: IconBookmark, label: "Bookmarks", value: "5", desc: "" },
+                        { icon: IconScript, label: "Scripts", value: "3", desc: "" },
+                        { icon: IconMicrophone, label: "ScenePartner Sessions", value: "1", desc: "trial" },
+                        { icon: IconUpload, label: "Script Uploads", value: "—", desc: "upgrade required" },
+                      ];
+                  return quotas.map(({ icon: Icon, label, value, desc }) => (
+                    <div key={label} className="flex items-center gap-3">
+                      <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="text-sm flex-1">{label}</span>
+                      <span className="text-sm font-semibold tabular-nums">{value}</span>
+                      {desc && (
+                        <span className="text-xs text-muted-foreground w-16 text-right">{desc}</span>
+                      )}
+                    </div>
+                  ));
+                })()}
+              </div>
+              {subscription?.tier_name === "free" && (
+                <div className="mt-4 pt-3 border-t border-border/60">
+                  <p className="text-xs text-muted-foreground">
+                    Upgrade to Plus for more searches, scripts, and full ScenePartner access.
+                  </p>
+                </div>
+              )}
+            </CardContent>
           </Card>
         </motion.div>
 

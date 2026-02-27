@@ -59,7 +59,11 @@ class FeatureGate:
         self, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
     ) -> bool:
         """Check if user has access to feature."""
-        # Superuser bypass (e.g. local dev or admin)
+        # Dev/local environment bypass — no limits during development
+        if settings.environment in ("development", "local"):
+            return True
+
+        # Superuser bypass (e.g. admin)
         if settings.superuser_emails and current_user.email:
             emails = [e.strip().lower() for e in settings.superuser_emails.split(",") if e.strip()]
             if current_user.email.lower() in emails:

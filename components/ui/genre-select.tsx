@@ -73,6 +73,7 @@ export function GenreSelect({ value, onValueChange, placeholder = "Select genre"
           onKeyDown={handleCustomKeyDown}
           placeholder="Enter custom genre"
           className={className}
+          maxLength={30}
           autoFocus
         />
         <button

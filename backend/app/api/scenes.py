@@ -86,6 +86,7 @@ class StartRehearsalRequest(BaseModel):
     """Request to start a rehearsal session"""
     scene_id: int
     user_character: str  # Which character the user wants to play
+    start_from_line_index: Optional[int] = None  # Start rehearsal from a specific line
 
 
 class RehearsalSessionResponse(BaseModel):
@@ -97,6 +98,7 @@ class RehearsalSessionResponse(BaseModel):
     status: str
     current_line_index: int
     total_lines_delivered: int
+    max_lines: Optional[int] = None  # Per-session line cap (None = unlimited)
     completion_percentage: float
     started_at: datetime
     first_line_for_user: Optional[str] = None  # User's first line to deliver (when first in scene)
@@ -124,6 +126,7 @@ class DeliverLineResponse(BaseModel):
     next_line_preview: Optional[str]  # User's next line to prepare
     session_status: str
     completion_percentage: float
+    lines_remaining: Optional[int] = None  # Lines left before cap (None = unlimited)
 
 
 class SessionFeedbackResponse(BaseModel):
@@ -366,13 +369,16 @@ async def start_rehearsal(
     )
 
     # Create session
+    start_index = request.start_from_line_index if request.start_from_line_index is not None else 0
+    lines_per_session = benefits.get("scene_partner_lines_per_session")
     session = RehearsalSession(
         user_id=current_user.id,
         scene_id=request.scene_id,
         user_character=request.user_character,
         ai_character=ai_character,
         status="in_progress",
-        current_line_index=0
+        current_line_index=start_index,
+        max_lines=lines_per_session if lines_per_session and lines_per_session != -1 else None,
     )
 
     db.add(session)
@@ -417,6 +423,21 @@ async def deliver_line(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Session is not in progress"
         )
+
+    # Enforce per-session line cap
+    if session.max_lines is not None:
+        total_delivered = int(session.total_lines_delivered) if session.total_lines_delivered else 0
+        if total_delivered >= session.max_lines:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail={
+                    "error": "lines_per_session_limit_exceeded",
+                    "message": f"You've reached your {session.max_lines} lines limit for this session. Start a new session or upgrade your plan.",
+                    "limit": session.max_lines,
+                    "used": total_delivered,
+                    "upgrade_url": "/pricing",
+                },
+            )
 
     # Get scene and lines
     scene = session.scene
@@ -541,6 +562,11 @@ async def deliver_line(
     feedback_text = str(delivery.feedback) if delivery.feedback is not None else None  # type: ignore
     session_status_str = str(session.status) if session.status is not None else "in_progress"  # type: ignore
 
+    # Calculate lines remaining (None = unlimited)
+    lines_remaining = None
+    if session.max_lines is not None:
+        lines_remaining = max(0, session.max_lines - new_total_delivered)
+
     return DeliverLineResponse(
         ai_response=line_text,
         line_text=line_text,
@@ -549,7 +575,8 @@ async def deliver_line(
         feedback=feedback_text,
         next_line_preview=next_user_line,
         session_status=session_status_str,
-        completion_percentage=completion_pct
+        completion_percentage=completion_pct,
+        lines_remaining=lines_remaining,
     )
 
 
