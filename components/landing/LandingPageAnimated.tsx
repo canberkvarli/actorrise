@@ -19,16 +19,6 @@ import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 
 const easing = [0.25, 0.1, 0.25, 1] as const;
 const duration = 0.45;
-const stagger = 0.06;
-
-const container = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { staggerChildren: stagger, delayChildren: 0.08 },
-  },
-};
-
 const item = {
   hidden: { opacity: 0, y: 14 },
   visible: {
@@ -43,15 +33,9 @@ const viewport = { once: true, amount: 0.15 } as const;
 
 export function LandingPageAnimated() {
   return (
-    <motion.div
-      className="min-h-screen bg-background overflow-x-hidden"
-      initial="hidden"
-      animate="visible"
-      variants={container}
-    >
-      <motion.header
-        variants={item}
-        className="sticky top-0 z-20 border-b border-border/40 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/70"
+    <div className="min-h-screen bg-background overflow-x-hidden">
+      <header
+        className="sticky top-0 z-20 border-b border-border/40 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 animate-header-enter"
       >
         <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-3.5">
           <div className="flex items-center gap-4">
@@ -94,7 +78,7 @@ export function LandingPageAnimated() {
             </div>
           </div>
         </div>
-      </motion.header>
+      </header>
 
       {/* Founding Member Urgency Banner */}
       <motion.div
@@ -272,7 +256,7 @@ export function LandingPageAnimated() {
         </motion.div>
       </main>
 
-      <motion.footer variants={item} className="border-t border-border/60">
+      <motion.footer variants={item} initial="hidden" whileInView="visible" viewport={viewport} transition={{ duration, ease: easing }} className="border-t border-border/60">
         <div className="container mx-auto px-4 sm:px-6 py-10 flex flex-col gap-4">
           <p className="text-xs text-muted-foreground/90 max-w-xl">
             All text from public domain and licensed sources (e.g.{" "}
@@ -331,6 +315,6 @@ export function LandingPageAnimated() {
 
       {/* Mobile Sticky CTA - appears on scroll */}
       <LandingStickyCta />
-    </motion.div>
+    </div>
   );
 }
