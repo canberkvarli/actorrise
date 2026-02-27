@@ -8,13 +8,13 @@ import { LandingPricing } from "@/components/landing/LandingPricing";
 import { LandingTestimonials } from "@/components/landing/LandingTestimonials";
 import { LandingFeatureShowcase } from "@/components/landing/LandingFeatureShowcase";
 import { LandingStickyCta } from "@/components/landing/LandingStickyCta";
-import { LandingDemoSearch } from "@/components/landing/LandingDemoSearch";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions";
 import { LandingFaq } from "@/components/landing/LandingFaq";
 import { LandingFooterAuthLink } from "@/components/landing/LandingFooterAuthLink";
 import { LandingLiveCount } from "@/components/landing/LandingLiveCount";
 import { HeroProofBar } from "@/components/landing/LandingTrustBar";
+import { RevealSection } from "@/components/landing/RevealSection";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 
 const easing = [0.25, 0.1, 0.25, 1] as const;
@@ -27,9 +27,6 @@ const item = {
     transition: { duration, ease: easing },
   },
 };
-
-/** For scroll-triggered sections: animate in when they enter the viewport */
-const viewport = { once: true, amount: 0.15 } as const;
 
 export function LandingPageAnimated() {
   return (
@@ -84,8 +81,7 @@ export function LandingPageAnimated() {
       <motion.div
         variants={item}
         initial="hidden"
-        whileInView="visible"
-        viewport={viewport}
+        animate="visible"
         transition={{ duration, ease: easing }}
         className="border-b border-primary/20 bg-primary/5 py-3"
       >
@@ -106,9 +102,8 @@ export function LandingPageAnimated() {
           id="suite"
           variants={item}
           initial="hidden"
-          whileInView="visible"
-          viewport={viewport}
-          transition={{ duration, ease: easing }}
+          animate="visible"
+          transition={{ duration, ease: easing, delay: 0.1 }}
           className="container mx-auto px-4 sm:px-6 pt-16 pb-12 md:pt-24 md:pb-16 flex flex-col items-center"
         >
           <div className="max-w-4xl w-full mx-auto text-center">
@@ -134,7 +129,7 @@ export function LandingPageAnimated() {
             </div>
 
             {/* Trust signals — right under stars */}
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-6 sm:gap-10">
+            <div className="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:justify-center sm:gap-10 md:gap-12">
               <a
                 href="https://www.producthunt.com/products/actorrise?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-actorrise"
                 target="_blank"
@@ -147,7 +142,7 @@ export function LandingPageAnimated() {
                   alt="ActorRise - Find the perfect monologue in less than 20 seconds | Product Hunt"
                   width={250}
                   height={54}
-                  className="h-[54px] w-auto"
+                  className="h-[40px] sm:h-[54px] w-auto"
                 />
               </a>
               <LandingLiveCount variant="inline" />
@@ -156,26 +151,11 @@ export function LandingPageAnimated() {
         </motion.section>
 
         {/* Testimonials - moved up for better social proof placement */}
-        <motion.section
-          variants={item}
-          initial="hidden"
-          whileInView="visible"
-          viewport={viewport}
-          transition={{ duration, ease: easing }}
-          id="testimonials"
-        >
+        <RevealSection id="testimonials">
           <LandingTestimonials />
-        </motion.section>
+        </RevealSection>
 
-        <motion.section
-          id="how"
-          variants={item}
-          initial="hidden"
-          whileInView="visible"
-          viewport={viewport}
-          transition={{ duration, ease: easing }}
-          className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60"
-        >
+        <RevealSection id="how" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
           <div className="max-w-5xl">
             <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
               Get back to what matters: <span className="italic underline underline-offset-2 decoration-primary/60">performing.</span>
@@ -205,16 +185,9 @@ export function LandingPageAnimated() {
               </div>
             </div>
           </div>
-        </motion.section>
+        </RevealSection>
 
-        <motion.section
-          variants={item}
-          initial="hidden"
-          whileInView="visible"
-          viewport={viewport}
-          transition={{ duration, ease: easing }}
-          className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60"
-        >
+        <RevealSection className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
           <div className="max-w-3xl">
             <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
               Give casting directors <span className="font-semibold text-primary">something different.</span>
@@ -223,40 +196,22 @@ export function LandingPageAnimated() {
               The Overdone filter helps you show up with pieces they haven’t seen a hundred times.
             </p>
           </div>
-        </motion.section>
+        </RevealSection>
 
-        <motion.div
-          variants={item}
-          initial="hidden"
-          whileInView="visible"
-          viewport={viewport}
-          transition={{ duration, ease: easing }}
-        >
+        <RevealSection as="div">
           <LandingFeatureShowcase />
-        </motion.div>
+        </RevealSection>
 
-        <motion.div
-          variants={item}
-          initial="hidden"
-          whileInView="visible"
-          viewport={viewport}
-          transition={{ duration, ease: easing }}
-        >
+        <RevealSection as="div">
           <LandingFaq />
-        </motion.div>
+        </RevealSection>
 
-        <motion.div
-          variants={item}
-          initial="hidden"
-          whileInView="visible"
-          viewport={viewport}
-          transition={{ duration, ease: easing }}
-        >
+        <RevealSection as="div">
           <LandingPricing />
-        </motion.div>
+        </RevealSection>
       </main>
 
-      <motion.footer variants={item} initial="hidden" whileInView="visible" viewport={viewport} transition={{ duration, ease: easing }} className="border-t border-border/60">
+      <footer className="border-t border-border/60">
         <div className="container mx-auto px-4 sm:px-6 py-10 flex flex-col gap-4">
           <p className="text-xs text-muted-foreground/90 max-w-xl">
             All text from public domain and licensed sources (e.g.{" "}
@@ -311,7 +266,7 @@ export function LandingPageAnimated() {
             </div>
           </div>
         </div>
-      </motion.footer>
+      </footer>
 
       {/* Mobile Sticky CTA - appears on scroll */}
       <LandingStickyCta />

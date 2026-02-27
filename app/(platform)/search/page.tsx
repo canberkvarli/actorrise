@@ -969,7 +969,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     score <= 0 ? "Freshest only" : score <= 0.3 ? "Fresh" : score <= 0.5 ? "Some overdone OK" : score <= 0.7 ? "More OK" : "Show all";
 
   // Sort by confidence score (desc). Best match = only actual quote matches (exact_quote/fuzzy_quote); rest are related.
-  const HIGH_SCORE_CAP_FOR_CONFIDENCE = 5; // If more than this many have score >= 0.70, treat as broad query and hide confidence
+  const HIGH_SCORE_CAP_FOR_CONFIDENCE = 10; // If more than this many have score >= 0.80, treat as broad query and hide confidence
   const { bestMatches, relatedResults, showConfidence } = useMemo(() => {
     const sorted = [...results].sort(
       (a, b) => (b.relevance_score ?? -1) - (a.relevance_score ?? -1)
@@ -977,7 +977,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     const scores = sorted
       .map((r) => r.relevance_score)
       .filter((s): s is number => s != null && s > 0.1);
-    const highCount = scores.filter((s) => s >= 0.70).length;
+    const highCount = scores.filter((s) => s >= 0.80).length;
     const showConf = scores.length > 0 && highCount <= HIGH_SCORE_CAP_FOR_CONFIDENCE;
 
     const best: Monologue[] = [];
@@ -1133,7 +1133,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             {/* Sweeping spotlight overlay */}
             <div className="absolute inset-0 rounded-xl overflow-hidden pointer-events-none">
               <div
-                className={`absolute inset-0 bg-gradient-to-r from-transparent via-primary/10 to-transparent transition-transform duration-700 ease-out ${
+                className={`absolute inset-0 bg-gradient-to-r from-transparent ${searchMode === "film_tv" ? "via-violet-400/10" : "via-primary/10"} to-transparent transition-transform duration-700 ease-out ${
                   isTyping ? "translate-x-full" : "-translate-x-full"
                 }`}
               />
@@ -1141,13 +1141,17 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
             <div
               className={`relative flex flex-col md:flex-row md:items-center gap-2 p-2 bg-card border rounded-xl shadow-sm transition-all duration-300 ${
-                isTyping ? "border-primary/50 shadow-lg shadow-primary/5" : "border-border"
+                isTyping
+                  ? searchMode === "film_tv"
+                    ? "border-violet-400/50 shadow-lg shadow-violet-400/5"
+                    : "border-primary/50 shadow-lg shadow-primary/5"
+                  : "border-border"
               } ${jitter ? "search-jitter" : ""}`}
               onAnimationEnd={() => setJitter(false)}
             >
               <div className="flex-1 relative min-w-0 w-full">
                 <IconSearch className={`absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 transition-colors duration-300 ${
-                  isTyping ? "text-primary" : "text-muted-foreground"
+                  isTyping ? (searchMode === "film_tv" ? "text-violet-400" : "text-primary") : "text-muted-foreground"
                 }`} />
                 <Input
                   id="search-input"
@@ -1186,7 +1190,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 disabled={isLoading}
                 size="default"
                 className={`shrink-0 min-h-[44px] min-w-[44px] md:min-h-[2.5rem] md:min-w-0 px-4 md:px-6 rounded-lg transition-all duration-300 ${
-                  isTyping ? "shadow-md shadow-primary/20" : ""
+                  isTyping ? (searchMode === "film_tv" ? "shadow-md shadow-violet-400/20" : "shadow-md shadow-primary/20") : ""
                 }`}
               >
                 {isLoading ? (
@@ -1559,10 +1563,34 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="flex flex-col items-center justify-center py-16"
+                className="py-16"
               >
-                <p className="text-muted-foreground mb-4">{currentLoadingMessage}</p>
-                <IconLoader2 className="h-10 w-10 animate-spin text-foreground" />
+                <div className="flex flex-col items-center justify-center gap-6 mb-12">
+                  <div className="relative">
+                    <div className="h-16 w-16 rounded-full border-2 border-violet-400/30 border-t-violet-400 animate-spin" />
+                    <IconDeviceTv className="h-7 w-7 text-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                  </div>
+                  <motion.p
+                    key={loadingMessageIndex}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="text-lg font-medium text-foreground"
+                  >
+                    {currentLoadingMessage}
+                  </motion.p>
+                </div>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <Card key={i} className="opacity-50">
+                      <CardContent className="pt-6 space-y-4">
+                        <Skeleton className="h-6 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                        <Skeleton className="h-20 w-full" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </motion.div>
             ) : !filmTvHasSearched ? (
               <motion.div

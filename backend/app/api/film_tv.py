@@ -186,7 +186,8 @@ async def search_film_tv_references(
 
     if q and q.strip():
         q_clean = q.strip()
-        query_embedding = _get_analyzer().generate_embedding(q_clean)
+        from app.services.ai.langchain.embeddings import generate_embedding
+        query_embedding = generate_embedding(q_clean, model="text-embedding-3-large", dimensions=3072)
 
         # scores_by_id: imdb_id → (score, ref)
         scores_by_id: dict[str, tuple[float, FilmTvReference]] = {}

@@ -11,9 +11,11 @@ from typing import Any
 from app.core.database import get_db
 from app.models.actor import FilmTvReference, Monologue, Play
 from app.models.billing import UsageMetrics
+from app.models.user import User
 from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
+from sqlalchemy.sql.functions import count as sql_count
 
 router = APIRouter(prefix="/api/public", tags=["public"])
 
@@ -60,15 +62,18 @@ def get_public_stats(db: Session = Depends(get_db)) -> dict[str, Any]:
     total = int(db_total) + _demo_searches_count
 
     # Content record counts (for "8,600+ monologues", "14,000+ film & TV", etc.)
-    monologue_count = db.query(func.count(Monologue.id)).scalar() or 0
-    play_count = db.query(func.count(Play.id)).scalar() or 0
-    film_tv_count = db.query(func.count(FilmTvReference.id)).scalar() or 0
+    monologue_count = db.query(sql_count(Monologue.id)).scalar() or 0
+    play_count = db.query(sql_count(Play.id)).scalar() or 0
+    film_tv_count = db.query(sql_count(FilmTvReference.id)).scalar() or 0
+
+    user_count = db.query(sql_count(User.id)).scalar() or 0
 
     payload = {
         "total_searches": total,
         "total_monologues": int(monologue_count),
         "total_plays": int(play_count),
         "total_film_tv_references": int(film_tv_count),
+        "total_users": int(user_count),
     }
     _CACHE["public_stats"] = (payload, now + _CACHE_TTL_SEC)
     return payload

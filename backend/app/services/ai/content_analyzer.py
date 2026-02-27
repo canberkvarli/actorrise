@@ -123,14 +123,14 @@ class ContentAnalyzer:
             text: Text to embed
 
         Returns:
-            List of floats representing the embedding vector (1536 dimensions)
+            List of floats representing the embedding vector (3072 dimensions)
         """
         try:
             # Use LangChain embedding generation
             return langchain_generate_embedding(
                 text=text,
-                model="text-embedding-3-small",
-                dimensions=1536,
+                model="text-embedding-3-large",
+                dimensions=3072,
                 api_key=self.api_key
             )
 

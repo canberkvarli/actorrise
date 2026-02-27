@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { IconHome, IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket } from "@tabler/icons-react";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef, Suspense } from "react";
-import { useBookmarkCount } from "@/hooks/useBookmarkCount";
+import { useBookmarkCount } from "@/hooks/useBookmarks";
 import { useFilmTvFavoriteCount } from "@/hooks/useFilmTvFavorites";
 import { useProfile } from "@/hooks/useDashboardData";
 import { ContactModal } from "@/components/contact/ContactModal";
@@ -137,7 +137,7 @@ export default function PlatformLayout({
   // Single branded loading state so post–sign-in feels like one flow
   if (loading || !minLoadReady) {
     const loadingLabel = pathname?.includes("/my-scripts")
-      ? "Opening script…"
+      ? "Opening ScenePartner…"
       : pathname?.includes("/scenes")
         ? "Preparing scene…"
         : pathname?.includes("/search")

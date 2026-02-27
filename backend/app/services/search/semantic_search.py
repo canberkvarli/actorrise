@@ -472,8 +472,7 @@ class SemanticSearch:
                 quote_types = {item[0]: item[2] for item in cached if len(item) >= 3 and item[2]}
             return (ordered_with_scores[:limit], quote_types)
 
-        # Production: always use text-embedding-3-large (3072 dims) with embedding_vector column.
-        # The v2 migration has been finalized — embedding_vector now holds 3072-dim vectors.
+        # Production: text-embedding-3-large (3072 dims)
         embedding_model = "text-embedding-3-large"
         embedding_dims = 3072
         logger.debug("Using production embeddings (text-embedding-3-large, 3072 dims)")
@@ -769,6 +768,20 @@ class SemanticSearch:
                     len(exact_matches), EXACT_QUOTE_MATCH_SCORE,
                     len(fuzzy_matches), FUZZY_QUOTE_MATCH_SCORE
                 )
+
+        # Tag ALL results with keyword match type (title/character/play) if applicable.
+        # The initial merge only tags text_match_results; semantic-only results from the
+        # same play/character miss the badge. This ensures e.g. ALL Hamlet monologues get
+        # "play_match" type and a score boost, not just the ones from keyword search.
+        boosted_results: list[tuple[Monologue, float]] = []
+        for m, s in top_results:
+            if m.id not in quote_match_type_by_id:
+                kw_score, kw_type = _keyword_match_score_and_type(m, query)
+                if kw_type:
+                    quote_match_type_by_id[m.id] = kw_type
+                    s = max(s, kw_score)
+            boosted_results.append((m, s))
+        top_results = boosted_results
 
         # No real match: if best score is below threshold (e.g. unrelated language / gibberish), return empty
         if top_results:

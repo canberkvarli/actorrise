@@ -18,7 +18,7 @@ export function LandingStickyCta() {
       setVisible(window.scrollY > 600);
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
     // Check initial position
     handleScroll();
 

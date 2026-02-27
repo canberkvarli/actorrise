@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { IconUsers } from "@tabler/icons-react";
 import { API_URL } from "@/lib/api";
 
 const INITIAL_DURATION_MS = 2000;
@@ -31,10 +32,12 @@ type PublicStats = {
   total_searches: number;
   total_monologues?: number;
   total_film_tv_references?: number;
+  total_users?: number;
 };
 
 export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps) {
   const [totalSearches, setTotalSearches] = useState<number | null>(null);
+  const [totalUsers, setTotalUsers] = useState<number | null>(null);
   const [libraryStats, setLibraryStats] = useState<{ monologues: number; filmTv: number } | null>(null);
   const [displayValue, setDisplayValue] = useState(0);
   const [isPulsing, setIsPulsing] = useState(false);
@@ -49,6 +52,9 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
       .then((data: PublicStats | null) => {
         if (!data || typeof data.total_searches !== "number") return;
         setTotalSearches(data.total_searches);
+        if (typeof data.total_users === "number") {
+          setTotalUsers(data.total_users);
+        }
         if (
           typeof data.total_monologues === "number" &&
           typeof data.total_film_tv_references === "number"
@@ -203,6 +209,40 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
             <span className={libraryStats ? "" : "text-muted-foreground"}>{libraryToShow.filmTv.toLocaleString("en-US")}+ film & TV</span>
           </p>
         </div>
+
+        {/* Actors count */}
+        {totalUsers !== null && (
+          <div
+            className={
+              isInline
+                ? "pl-0 sm:pl-6 sm:border-l border-border/50 flex-1 min-w-0"
+                : "pl-0 sm:pl-8 sm:border-l border-border/50 flex-1 min-w-0"
+            }
+          >
+            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1.5">
+              Community
+            </p>
+            <p
+              className={
+                isInline
+                  ? "text-xl sm:text-2xl font-semibold tabular-nums text-foreground flex items-center gap-2"
+                  : "text-2xl sm:text-3xl font-semibold tabular-nums text-foreground flex items-center gap-2"
+              }
+            >
+              <IconUsers size={isInline ? 20 : 24} className="text-primary" />
+              {totalUsers.toLocaleString("en-US")}+ actors
+            </p>
+            <p
+              className={
+                isInline
+                  ? "mt-0.5 text-muted-foreground text-sm"
+                  : "mt-1 text-muted-foreground text-sm"
+              }
+            >
+              are using ActorRise
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
