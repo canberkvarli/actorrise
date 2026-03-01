@@ -1252,11 +1252,9 @@ export default function SceneEditPage() {
   // ---------------------------------------------------------------------------
 
   const formatDuration = (seconds: number) => {
-    if (seconds < 60) return `${seconds}s`;
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    if (m < 2) return s > 0 ? `${m}m ${s}s` : `${m} min`;
-    return `${m} min`;
+    if (seconds < 60) return `~${seconds}s`;
+    const m = Math.round(seconds / 60);
+    return `~${m} min`;
   };
 
   // Recalculate duration client-side from actual lines (~150 wpm)
@@ -1508,11 +1506,16 @@ export default function SceneEditPage() {
             </Badge>
           )}
         </div>
-        {(gender || ageRange) && (
-          <div className="text-xs text-neutral-400 ml-5 mb-2">
-            {[gender, ageRange].filter(Boolean).join(" · ")}
-          </div>
-        )}
+        {(() => {
+          const cleanGender = gender && gender.toLowerCase() !== "unknown" ? gender : null;
+          const cleanAge = ageRange && ageRange.toLowerCase() !== "unknown" ? ageRange : null;
+          const meta = [cleanGender, cleanAge].filter(Boolean);
+          return meta.length > 0 ? (
+            <div className="text-xs text-neutral-400 ml-5 mb-2">
+              {meta.join(" · ")}
+            </div>
+          ) : null;
+        })()}
         {/* Voice selector — only for the AI scene partner, not for "You" */}
         {!isSelected && (
           <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
@@ -1720,10 +1723,15 @@ export default function SceneEditPage() {
           <span className="text-sm font-medium text-neutral-100 tabular-nums">{scene.line_count}</span>
           <span className="text-xs text-neutral-400">line{scene.line_count !== 1 ? "s" : ""}</span>
         </div>
-        <div className="flex items-center gap-1.5 rounded-full bg-neutral-900/70 border border-neutral-800 px-3.5 py-2">
-          <Clock className="w-3.5 h-3.5 text-primary/70" />
-          <span className="text-sm font-medium text-neutral-100 tabular-nums">{formatDuration(computedDuration)}</span>
-        </div>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="flex items-center gap-1.5 rounded-full bg-neutral-900/70 border border-neutral-800 px-3.5 py-2 cursor-default">
+              <Clock className="w-3.5 h-3.5 text-primary/70" />
+              <span className="text-sm font-medium text-neutral-100 tabular-nums">{formatDuration(computedDuration)}</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent><p>Estimated at ~150 words per minute</p></TooltipContent>
+        </Tooltip>
         <div className="flex items-center gap-1.5 rounded-full bg-neutral-900/70 border border-neutral-800 px-3.5 py-2">
           <Users className="w-3.5 h-3.5 text-primary/70" />
           <span className="text-sm font-medium text-neutral-100 tabular-nums">{scene.rehearsal_count}</span>
@@ -2840,65 +2848,69 @@ export default function SceneEditPage() {
 
       {/* Rehearsal confirmation modal */}
       <Dialog open={showRehearsalModal} onOpenChange={(open) => { setShowRehearsalModal(open); if (!open) setRehearsalStartLineIndex(null); }}>
-        <DialogContent className="max-w-xs">
-          <DialogHeader>
-            <DialogTitle className="text-base">Start rehearsal</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              {(() => {
-                const partner = scene ? (selectedCharacter === scene.character_1_name ? scene.character_2_name : scene.character_1_name) : "";
-                const partnerNum = scene ? (partner === scene.character_1_name ? 1 : 2) : 1;
-                const vid = partnerNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice;
-                const voice = AI_VOICES.find(v => v.id === vid);
-                return (
-                  <span className="flex flex-col gap-2 pt-1">
-                    <span className="flex items-center gap-2 text-sm text-foreground">
-                      <span className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+        <DialogContent className="max-w-xs sm:max-w-sm p-0 overflow-hidden">
+          {scene && (() => {
+            const partner = selectedCharacter === scene.character_1_name ? scene.character_2_name : scene.character_1_name;
+            const partnerNum = partner === scene.character_1_name ? 1 : 2;
+            const vid = partnerNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice;
+            const voice = AI_VOICES.find(v => v.id === vid);
+            return (
+              <>
+                <div className="px-5 pt-5 pb-3 space-y-3">
+                  <DialogHeader>
+                    <DialogTitle className="text-base font-semibold">Rehearse</DialogTitle>
+                    <DialogDescription className="sr-only">Start a rehearsal session</DialogDescription>
+                  </DialogHeader>
+                  {/* Characters — compact row */}
+                  <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
                         {selectedCharacter?.[0]?.toUpperCase()}
                       </span>
-                      <span className="font-medium truncate">{selectedCharacter}</span>
-                      <span className="text-[10px] text-orange-500 font-medium">(You)</span>
-                    </span>
-                    <span className="flex items-center gap-2 text-sm text-foreground">
-                      <span className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0", voice?.color ?? "bg-neutral-400")}>
+                      <span className="text-sm font-medium text-foreground truncate flex-1">{selectedCharacter}</span>
+                      <span className="text-[10px] text-orange-500 font-medium shrink-0">(You)</span>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <span className={cn("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0", voice?.color ?? "bg-neutral-400")}>
                         {voice ? voice.label[0] : partner?.[0]?.toUpperCase()}
                       </span>
-                      <span className="font-medium truncate">{partner}</span>
-                      {voice && <span className="text-[10px] text-muted-foreground">{voice.label}</span>}
-                    </span>
-                    {rehearsalStartLineIndex !== null && (
-                      <span className="text-xs text-muted-foreground">Starting from line {rehearsalStartLineIndex + 1}</span>
+                      <span className="text-sm font-medium text-foreground truncate flex-1">{partner}</span>
+                      {voice && <span className="text-[10px] text-muted-foreground shrink-0">{voice.label} voice</span>}
+                    </div>
+                  </div>
+                  {rehearsalStartLineIndex !== null && (
+                    <p className="text-xs text-muted-foreground text-center">Starting from line {rehearsalStartLineIndex + 1} of {scene.lines.length}</p>
+                  )}
+                </div>
+                <div className="flex gap-2 px-5 pb-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowRehearsalModal(false)}
+                    className="flex-1"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setShowRehearsalModal(false);
+                      handleStartRehearsal();
+                    }}
+                    disabled={startingRehearsal || !selectedCharacter}
+                    className="flex-1 gap-1.5"
+                  >
+                    {startingRehearsal ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Play className="w-4 h-4" />
                     )}
-                  </span>
-                );
-              })()}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex gap-3 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowRehearsalModal(false)}
-              className="flex-1"
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => {
-                setShowRehearsalModal(false);
-                handleStartRehearsal();
-              }}
-              disabled={startingRehearsal || !selectedCharacter}
-              className="flex-1 gap-1.5"
-            >
-              {startingRehearsal ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Play className="w-4 h-4" />
-              )}
-              Start
-            </Button>
-          </div>
+                    Start
+                  </Button>
+                </div>
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -2933,13 +2945,13 @@ export default function SceneEditPage() {
       </Dialog>
 
       {/* Add Line modal */}
-      <Dialog open={showAddLineModal} onOpenChange={setShowAddLineModal}>
+      <Dialog open={showAddLineModal} onOpenChange={(open) => { setShowAddLineModal(open); if (!open) setVoiceDropdownOpen(null); }}>
         <DialogContent className="max-w-xs sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-base">Add line</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 pt-1">
-            {/* Character selector — compact inline buttons */}
+            {/* Character selector with inline edit */}
             <div className="space-y-1.5">
               <Label className="text-xs text-muted-foreground">Character</Label>
               {scene && (
@@ -2947,44 +2959,93 @@ export default function SceneEditPage() {
                   {[scene.character_1_name, scene.character_2_name].map((charName) => {
                     const isUser = charName === selectedCharacter;
                     const isSelected = newLineCharacter === charName;
+                    const charNum = charName === scene.character_1_name ? 1 : 2;
+                    const vid = charNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice;
+                    const voice = AI_VOICES.find(v => v.id === vid);
                     return (
                       <button
                         key={charName}
                         type="button"
                         onClick={() => setNewLineCharacter(charName)}
                         className={cn(
-                          "flex-1 flex items-center justify-center gap-1.5 rounded-md border px-2.5 py-2 text-sm transition-all",
+                          "flex-1 flex items-center gap-2 rounded-md border px-2 py-1.5 text-sm transition-all text-left min-w-0",
                           isSelected
-                            ? "border-primary bg-primary/5 text-foreground font-medium"
+                            ? "border-primary bg-primary/5 text-foreground"
                             : "border-border bg-background text-muted-foreground hover:bg-accent"
                         )}
                       >
-                        <span className="truncate">{charName}</span>
-                        {isUser && <span className="text-[10px] text-orange-500 shrink-0">(You)</span>}
+                        {isUser ? (
+                          <span className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                            {charName[0]?.toUpperCase()}
+                          </span>
+                        ) : voice ? (
+                          <span className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0", voice.color)}>
+                            {voice.label[0]}
+                          </span>
+                        ) : (
+                          <span className="w-5 h-5 rounded-full bg-neutral-300 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                            {charName[0]?.toUpperCase()}
+                          </span>
+                        )}
+                        <span className="flex flex-col min-w-0">
+                          <span className="truncate text-xs font-medium">{charName}</span>
+                          {isUser && <span className="text-[10px] leading-tight text-orange-500">(You)</span>}
+                        </span>
                       </button>
                     );
                   })}
                 </div>
               )}
             </div>
-            {/* Voice selector for scene partner lines */}
+            {/* Voice selector for scene partner lines — custom dropdown */}
             {scene && newLineCharacter && newLineCharacter !== selectedCharacter && (() => {
               const charNum = newLineCharacter === scene.character_1_name ? 1 : 2;
               const voiceKey = charNum === 1 ? "character_1_voice" : "character_2_voice";
               const currentVoice = charVoices[voiceKey];
+              const selectedVoice = AI_VOICES.find(v => v.id === currentVoice);
               return (
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Voice</Label>
-                  <select
-                    value={currentVoice || ""}
-                    onChange={(e) => handleVoiceChange(charNum as 1 | 2, e.target.value)}
-                    className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-                  >
-                    <option value="">Select a voice...</option>
-                    {AI_VOICES.map((v) => (
-                      <option key={v.id} value={v.id}>{v.label} — {v.desc}</option>
-                    ))}
-                  </select>
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setVoiceDropdownOpen(voiceDropdownOpen === "addline" ? null : "addline")}
+                      className="w-full flex items-center gap-2 rounded-md border border-input bg-background px-2.5 py-1.5 text-sm hover:bg-accent transition-colors text-left"
+                    >
+                      {selectedVoice ? (
+                        <>
+                          <span className={cn("w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white shrink-0", selectedVoice.color)}>
+                            {selectedVoice.label[0]}
+                          </span>
+                          <span className="flex-1 truncate text-foreground">{selectedVoice.label} — {selectedVoice.desc}</span>
+                        </>
+                      ) : (
+                        <span className="flex-1 text-muted-foreground">Select voice...</span>
+                      )}
+                      <ChevronDown className={cn("w-3 h-3 text-muted-foreground shrink-0 transition-transform", voiceDropdownOpen === "addline" && "rotate-180")} />
+                    </button>
+                    {voiceDropdownOpen === "addline" && (
+                      <div className="absolute z-20 mt-1 w-full rounded-md bg-popover border border-border shadow-lg py-1 max-h-40 overflow-y-auto">
+                        {AI_VOICES.map((v) => (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => { handleVoiceChange(charNum as 1 | 2, v.id); setVoiceDropdownOpen(null); }}
+                            className={cn(
+                              "w-full flex items-center gap-2 px-2.5 py-1.5 text-sm hover:bg-accent transition-colors text-left",
+                              currentVoice === v.id && "bg-accent/50"
+                            )}
+                          >
+                            <span className={cn("w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white shrink-0", v.color)}>
+                              {v.label[0]}
+                            </span>
+                            <span className="flex-1 min-w-0 truncate">{v.label} <span className="text-muted-foreground">— {v.desc}</span></span>
+                            {currentVoice === v.id && <Check className="w-3 h-3 text-primary shrink-0" />}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             })()}
