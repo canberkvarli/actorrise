@@ -2,20 +2,21 @@
 
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { Mic, RefreshCw } from 'lucide-react';
+import { Mic, RefreshCw, X } from 'lucide-react';
 import { useMicPermission } from '@/hooks/useMicPermission';
+import { useState } from 'react';
 
 /**
  * Compact inline warning when the microphone is not accessible.
- * Minimal footprint — single line with icon, message, and action.
+ * Non-intrusive banner that can be dismissed.
  */
 export function MicAccessWarning() {
   const { status, isBlocked, requestMic } = useMicPermission({ recheckOnVisible: true });
+  const [dismissed, setDismissed] = useState(false);
 
   const isUnavailable = status === 'unavailable';
-  const message = isUnavailable
-    ? 'Microphone not available on this device'
-    : 'Microphone access needed for rehearsal';
+
+  if (dismissed) return null;
 
   return (
     <AnimatePresence>
@@ -25,22 +26,31 @@ export function MicAccessWarning() {
           animate={{ opacity: 1, height: 'auto' }}
           exit={{ opacity: 0, height: 0 }}
           transition={{ duration: 0.2 }}
-          className="mb-3"
+          className="mb-3 flex justify-center"
         >
-          <div className="flex items-center gap-2.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm">
-            <Mic className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-            <span className="text-amber-800 text-xs flex-1">{message}</span>
+          <div className="inline-flex items-center gap-2 rounded-full border border-neutral-700 bg-neutral-800/80 px-3 py-1.5 text-xs">
+            <Mic className="w-3 h-3 text-orange-400 shrink-0" />
+            <span className="text-neutral-300">
+              {isUnavailable ? 'Mic not available' : 'Mic access needed'}
+            </span>
             {!isUnavailable && (
               <Button
                 variant="ghost"
                 size="sm"
-                className="h-6 px-2 text-xs text-amber-700 hover:text-amber-900 hover:bg-amber-100"
+                className="h-5 px-1.5 text-[11px] text-orange-400 hover:text-orange-300 hover:bg-neutral-700 rounded-full"
                 onClick={requestMic}
               >
-                <RefreshCw className="w-3 h-3 mr-1" />
+                <RefreshCw className="w-2.5 h-2.5 mr-1" />
                 Allow
               </Button>
             )}
+            <button
+              type="button"
+              onClick={() => setDismissed(true)}
+              className="text-neutral-500 hover:text-neutral-300 transition-colors ml-0.5"
+            >
+              <X className="w-3 h-3" />
+            </button>
           </div>
         </motion.div>
       )}
