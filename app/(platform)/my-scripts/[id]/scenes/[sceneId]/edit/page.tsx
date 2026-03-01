@@ -1259,6 +1259,13 @@ export default function SceneEditPage() {
     return `${m} min`;
   };
 
+  // Recalculate duration client-side from actual lines (~150 wpm)
+  const computedDuration = useMemo(() => {
+    if (!scene) return 0;
+    const totalWords = scene.lines.reduce((acc, l) => acc + l.text.trim().split(/\s+/).filter(Boolean).length, 0);
+    return Math.max(5, Math.round((totalWords / 150) * 60));
+  }, [scene]);
+
   // ---------------------------------------------------------------------------
   // Download
   // ---------------------------------------------------------------------------
@@ -1715,7 +1722,7 @@ export default function SceneEditPage() {
         </div>
         <div className="flex items-center gap-1.5 rounded-full bg-neutral-900/70 border border-neutral-800 px-3.5 py-2">
           <Clock className="w-3.5 h-3.5 text-primary/70" />
-          <span className="text-sm font-medium text-neutral-100 tabular-nums">{formatDuration(scene.estimated_duration_seconds)}</span>
+          <span className="text-sm font-medium text-neutral-100 tabular-nums">{formatDuration(computedDuration)}</span>
         </div>
         <div className="flex items-center gap-1.5 rounded-full bg-neutral-900/70 border border-neutral-800 px-3.5 py-2">
           <Users className="w-3.5 h-3.5 text-primary/70" />
@@ -1928,7 +1935,7 @@ export default function SceneEditPage() {
   const rightPanelContent = (
     <div
       className="bg-white text-neutral-900 rounded-lg shadow-2xl border border-neutral-200 px-6 sm:px-10 py-6 sm:py-8 overflow-hidden"
-      style={{ fontFamily: 'Courier, "Courier New", monospace' }}
+      style={{ fontFamily: '"Courier New", Courier, monospace', fontStyle: 'italic' }}
     >
       {/* Title inside parchment — editable */}
       <div className="text-center mb-6 pb-5 border-b border-neutral-200">
@@ -2683,45 +2690,61 @@ export default function SceneEditPage() {
 
         {/* Center: Editing tools */}
         <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={undo}
-            disabled={!canUndo || applyingHistory}
-            className="text-neutral-400 hover:text-neutral-100 h-8 w-8 p-0 disabled:opacity-30"
-            title="Undo (⌘Z)"
-          >
-            {applyingHistory ? <Loader2 className="w-4 h-4 animate-spin" /> : <Undo2 className="w-4 h-4" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={redo}
-            disabled={!canRedo || applyingHistory}
-            className="text-neutral-400 hover:text-neutral-100 h-8 w-8 p-0 disabled:opacity-30"
-            title="Redo (⌘⇧Z)"
-          >
-            {applyingHistory ? <Loader2 className="w-4 h-4 animate-spin" /> : <Redo2 className="w-4 h-4" />}
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowResetConfirm(true)}
-            className="text-neutral-400 hover:text-neutral-100 h-8 w-8 p-0 disabled:opacity-30"
-            title="Reset to original"
-          >
-            <RotateCcw className="w-4 h-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={undo}
+                disabled={!canUndo || applyingHistory}
+                className="text-neutral-400 hover:text-neutral-100 h-8 w-8 p-0 disabled:opacity-30"
+              >
+                {applyingHistory ? <Loader2 className="w-4 h-4 animate-spin" /> : <Undo2 className="w-4 h-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom"><p>Undo <kbd className="ml-1 text-[10px] opacity-60">&#8984;Z</kbd></p></TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={redo}
+                disabled={!canRedo || applyingHistory}
+                className="text-neutral-400 hover:text-neutral-100 h-8 w-8 p-0 disabled:opacity-30"
+              >
+                {applyingHistory ? <Loader2 className="w-4 h-4 animate-spin" /> : <Redo2 className="w-4 h-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom"><p>Redo <kbd className="ml-1 text-[10px] opacity-60">&#8984;&#8679;Z</kbd></p></TooltipContent>
+          </Tooltip>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowResetConfirm(true)}
+                className="text-neutral-400 hover:text-neutral-100 h-8 w-8 p-0 disabled:opacity-30"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom"><p>Reset to original</p></TooltipContent>
+          </Tooltip>
           <div className="w-px h-5 bg-neutral-700 mx-1" />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={downloadAsPdf}
-            className="text-neutral-400 hover:text-neutral-100 h-8 w-8 p-0"
-            title="Download as PDF"
-          >
-            <Download className="w-4 h-4" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={downloadAsPdf}
+                className="text-neutral-400 hover:text-neutral-100 h-8 w-8 p-0"
+              >
+                <Download className="w-4 h-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom"><p>Download PDF</p></TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Right: spacer for balance */}
@@ -2817,54 +2840,50 @@ export default function SceneEditPage() {
 
       {/* Rehearsal confirmation modal */}
       <Dialog open={showRehearsalModal} onOpenChange={(open) => { setShowRehearsalModal(open); if (!open) setRehearsalStartLineIndex(null); }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-xs">
           <DialogHeader>
-            <DialogTitle className="text-xl font-serif">Ready to Rehearse</DialogTitle>
-            <DialogDescription asChild>
-              <div className="space-y-3 pt-1">
-                {/* Role cards */}
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 rounded-lg border border-orange-200 bg-orange-50 p-3 text-center">
-                    <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-sm font-bold text-white mx-auto mb-1.5">
-                      {selectedCharacter?.[0]?.toUpperCase()}
-                    </div>
-                    <p className="text-xs text-orange-600 font-medium">You</p>
-                    <p className="text-sm font-semibold text-foreground truncate">{selectedCharacter}</p>
-                  </div>
-                  <span className="text-muted-foreground text-xs font-medium">vs</span>
-                  <div className="flex-1 rounded-lg border border-blue-200 bg-blue-50 p-3 text-center">
-                    {(() => {
-                      const partner = selectedCharacter === scene.character_1_name ? scene.character_2_name : scene.character_1_name;
-                      const partnerNum = partner === scene.character_1_name ? 1 : 2;
-                      const vid = partnerNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice;
-                      const voice = AI_VOICES.find(v => v.id === vid);
-                      return (
-                        <>
-                          <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white mx-auto mb-1.5", voice?.color ?? "bg-blue-500")}>
-                            {voice ? voice.label[0] : partner?.[0]?.toUpperCase()}
-                          </div>
-                          <p className="text-xs text-blue-600 font-medium">Scene Partner</p>
-                          <p className="text-sm font-semibold text-foreground truncate">{partner}</p>
-                        </>
-                      );
-                    })()}
-                  </div>
-                </div>
-                {rehearsalStartLineIndex !== null && (
-                  <p className="text-sm text-muted-foreground text-center">Starting from line {rehearsalStartLineIndex + 1}</p>
-                )}
-              </div>
+            <DialogTitle className="text-base">Start rehearsal</DialogTitle>
+            <DialogDescription className="text-sm text-muted-foreground">
+              {(() => {
+                const partner = scene ? (selectedCharacter === scene.character_1_name ? scene.character_2_name : scene.character_1_name) : "";
+                const partnerNum = scene ? (partner === scene.character_1_name ? 1 : 2) : 1;
+                const vid = partnerNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice;
+                const voice = AI_VOICES.find(v => v.id === vid);
+                return (
+                  <span className="flex flex-col gap-2 pt-1">
+                    <span className="flex items-center gap-2 text-sm text-foreground">
+                      <span className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                        {selectedCharacter?.[0]?.toUpperCase()}
+                      </span>
+                      <span className="font-medium truncate">{selectedCharacter}</span>
+                      <span className="text-[10px] text-orange-500 font-medium">(You)</span>
+                    </span>
+                    <span className="flex items-center gap-2 text-sm text-foreground">
+                      <span className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0", voice?.color ?? "bg-neutral-400")}>
+                        {voice ? voice.label[0] : partner?.[0]?.toUpperCase()}
+                      </span>
+                      <span className="font-medium truncate">{partner}</span>
+                      {voice && <span className="text-[10px] text-muted-foreground">{voice.label}</span>}
+                    </span>
+                    {rehearsalStartLineIndex !== null && (
+                      <span className="text-xs text-muted-foreground">Starting from line {rehearsalStartLineIndex + 1}</span>
+                    )}
+                  </span>
+                );
+              })()}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-3 pt-3">
+          <div className="flex gap-3 pt-2">
             <Button
               variant="outline"
+              size="sm"
               onClick={() => setShowRehearsalModal(false)}
               className="flex-1"
             >
               Cancel
             </Button>
             <Button
+              size="sm"
               onClick={() => {
                 setShowRehearsalModal(false);
                 handleStartRehearsal();
@@ -2877,7 +2896,7 @@ export default function SceneEditPage() {
               ) : (
                 <Play className="w-4 h-4" />
               )}
-              Start Rehearsal
+              Start
             </Button>
           </div>
         </DialogContent>
@@ -2915,60 +2934,33 @@ export default function SceneEditPage() {
 
       {/* Add Line modal */}
       <Dialog open={showAddLineModal} onOpenChange={setShowAddLineModal}>
-        <DialogContent className="max-w-md p-0 overflow-hidden">
-          <div className="px-6 pt-6 pb-3">
-            <DialogHeader>
-              <DialogTitle className="text-lg">Add a new line</DialogTitle>
-              <DialogDescription className="text-sm text-muted-foreground">
-                Insert a line after the selected position.
-              </DialogDescription>
-            </DialogHeader>
-          </div>
-          <div className="px-6 pb-6 space-y-4">
-            {/* Character selector — buttons instead of dropdown */}
-            <div className="space-y-2">
-              <Label className="text-sm font-medium">Who is speaking?</Label>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-base">Add line</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-1">
+            {/* Character selector — compact inline buttons */}
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Character</Label>
               {scene && (
-                <div className="flex gap-2">
+                <div className="flex gap-1.5">
                   {[scene.character_1_name, scene.character_2_name].map((charName) => {
                     const isUser = charName === selectedCharacter;
                     const isSelected = newLineCharacter === charName;
-                    const charNum = charName === scene.character_1_name ? 1 : 2;
-                    const vid = charNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice;
-                    const voice = AI_VOICES.find(v => v.id === vid);
                     return (
                       <button
                         key={charName}
                         type="button"
                         onClick={() => setNewLineCharacter(charName)}
                         className={cn(
-                          "flex-1 flex items-center gap-2.5 rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-left",
+                          "flex-1 flex items-center justify-center gap-1.5 rounded-md border px-2.5 py-2 text-sm transition-all",
                           isSelected
-                            ? isUser
-                              ? "border-orange-400 bg-orange-50 text-orange-700"
-                              : "border-blue-400 bg-blue-50 text-blue-700"
-                            : "border-muted bg-background text-muted-foreground hover:border-border hover:bg-accent"
+                            ? "border-primary bg-primary/5 text-foreground font-medium"
+                            : "border-border bg-background text-muted-foreground hover:bg-accent"
                         )}
                       >
-                        {isUser ? (
-                          <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-[11px] font-bold text-white shrink-0">
-                            {charName[0]?.toUpperCase()}
-                          </div>
-                        ) : voice ? (
-                          <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0", voice.color)}>
-                            {voice.label[0]}
-                          </div>
-                        ) : (
-                          <div className="w-7 h-7 rounded-full bg-neutral-400 flex items-center justify-center text-[11px] font-bold text-white shrink-0">
-                            {charName[0]?.toUpperCase()}
-                          </div>
-                        )}
-                        <div className="flex flex-col min-w-0">
-                          <span className="truncate">{charName}</span>
-                          {isUser && <span className="text-[10px] font-normal text-orange-500">(You)</span>}
-                          {!isUser && voice && <span className="text-[10px] font-normal opacity-60">{voice.label}</span>}
-                        </div>
-                        {isSelected && <Check className="w-4 h-4 shrink-0 ml-auto" />}
+                        <span className="truncate">{charName}</span>
+                        {isUser && <span className="text-[10px] text-orange-500 shrink-0">(You)</span>}
                       </button>
                     );
                   })}
@@ -2980,68 +2972,63 @@ export default function SceneEditPage() {
               const charNum = newLineCharacter === scene.character_1_name ? 1 : 2;
               const voiceKey = charNum === 1 ? "character_1_voice" : "character_2_voice";
               const currentVoice = charVoices[voiceKey];
-              const selectedVoice = AI_VOICES.find(v => v.id === currentVoice);
               return (
                 <div className="space-y-1.5">
-                  <Label className="text-sm text-muted-foreground">Scene partner voice</Label>
+                  <Label className="text-xs text-muted-foreground">Voice</Label>
                   <select
                     value={currentVoice || ""}
                     onChange={(e) => handleVoiceChange(charNum as 1 | 2, e.target.value)}
-                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    className="w-full rounded-md border border-input bg-background px-2.5 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
                   >
                     <option value="">Select a voice...</option>
                     {AI_VOICES.map((v) => (
                       <option key={v.id} value={v.id}>{v.label} — {v.desc}</option>
                     ))}
                   </select>
-                  {selectedVoice && (
-                    <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
-                      <div className={cn("w-3.5 h-3.5 rounded-full shrink-0", selectedVoice.color)} />
-                      {selectedVoice.label}: {selectedVoice.desc}
-                    </p>
-                  )}
                 </div>
               );
             })()}
             {/* Line text */}
             <div className="space-y-1.5">
-              <Label className="text-sm font-medium">Line text</Label>
+              <Label className="text-xs text-muted-foreground">Line text</Label>
               <Textarea
                 value={newLineText}
                 onChange={(e) => setNewLineText(e.target.value)}
                 placeholder="Type the line here..."
                 rows={3}
-                className="resize-none text-base"
+                className="resize-none"
                 autoFocus
               />
             </div>
             {/* Stage direction */}
             <div className="space-y-1.5">
-              <Label className="text-sm text-muted-foreground">Stage direction <span className="text-xs">(optional)</span></Label>
+              <Label className="text-xs text-muted-foreground">Stage direction (optional)</Label>
               <Input
                 value={newLineStageDir}
                 onChange={(e) => setNewLineStageDir(e.target.value)}
                 placeholder="e.g. softly, aside, laughing"
                 maxLength={100}
-                className="italic"
+                className="italic text-sm"
               />
             </div>
             {/* Actions */}
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-2 pt-1">
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => setShowAddLineModal(false)}
                 className="flex-1"
               >
                 Cancel
               </Button>
               <Button
+                size="sm"
                 onClick={handleAddLine}
                 disabled={addingLine || !newLineText.trim()}
                 className="flex-1 gap-1.5"
               >
-                {addingLine ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                Add line
+                {addingLine ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                Add
               </Button>
             </div>
           </div>

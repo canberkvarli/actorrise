@@ -177,21 +177,25 @@ export function TTSWaveform({
 
       // Report speech-onset-aware progress
       if (audioElement && audioElement.duration && isSpeaking && onProgress) {
-        if (onsetTimeRef.current >= 0) {
-          // Speech has started — compute progress relative to actual speech region
+        const hasAnalyser = analyserRef.current !== null;
+        if (hasAnalyser && onsetTimeRef.current >= 0) {
+          // Speech onset detected — compute progress relative to actual speech region
           const onset = onsetTimeRef.current;
-          // Estimate trail: mirror onset duration, cap at 0.15s
-          const trail = Math.min(onset * 0.8, 0.15);
+          const trail = Math.min(onset * 0.7, 0.12);
           const speechDuration = Math.max(0.1, audioElement.duration - onset - trail);
           const elapsed = audioElement.currentTime - onset;
           onProgress(Math.max(0, Math.min(1, elapsed / speechDuration)));
-        } else {
-          // Still in lead-in silence — report 0
+        } else if (hasAnalyser) {
+          // Analyser active but onset not yet detected — still in lead-in silence
           onProgress(0);
+        } else {
+          // Fallback without analyser: use fixed lead-in/trail estimate
+          const LEAD_IN = 0.05;
+          const TRAIL = 0.03;
+          const range = 1 - LEAD_IN - TRAIL;
+          const raw = audioElement.currentTime / audioElement.duration;
+          onProgress(Math.max(0, Math.min(1, (raw - LEAD_IN) / range)));
         }
-      } else if (audioElement && audioElement.duration && isSpeaking && onProgress) {
-        // Fallback without analyser: raw progress
-        onProgress(audioElement.currentTime / audioElement.duration);
       }
 
       rafRef.current = requestAnimationFrame(draw);
