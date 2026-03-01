@@ -5,7 +5,7 @@ API endpoints for user script management - upload, edit, manage scripts
 from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
@@ -16,6 +16,7 @@ from app.models.actor import (
     RehearsalLineDelivery,
     RehearsalSession,
     Scene,
+    SceneFavorite,
     SceneLine,
     UserScript,
 )
@@ -60,6 +61,7 @@ class SceneInScriptResponse(BaseModel):
     """Minimal scene data for script listing"""
     id: int
     title: str
+    description: Optional[str] = None
     character_1_name: str
     character_2_name: str
     line_count: int
@@ -84,9 +86,9 @@ class ScriptMetadataUpdate(BaseModel):
 
 class SceneLineUpdate(BaseModel):
     """Update a scene line"""
-    character_name: Optional[str] = None
-    text: Optional[str] = None
-    stage_direction: Optional[str] = None
+    character_name: Optional[str] = Field(None, max_length=80)
+    text: Optional[str] = Field(None, max_length=2000)
+    stage_direction: Optional[str] = Field(None, max_length=120)
 
 
 class LineReorderRequest(BaseModel):
@@ -97,21 +99,21 @@ class LineReorderRequest(BaseModel):
 class SceneUpdate(BaseModel):
     """Update scene metadata"""
     title: Optional[str] = None
-    description: Optional[str] = None
-    character_1_name: Optional[str] = None
-    character_2_name: Optional[str] = None
-    setting: Optional[str] = None
-    context_before: Optional[str] = None
-    context_after: Optional[str] = None
-    play_title: Optional[str] = None
-    play_author: Optional[str] = None
+    description: Optional[str] = Field(None, max_length=500)
+    character_1_name: Optional[str] = Field(None, max_length=80)
+    character_2_name: Optional[str] = Field(None, max_length=80)
+    setting: Optional[str] = Field(None, max_length=200)
+    context_before: Optional[str] = Field(None, max_length=1000)
+    context_after: Optional[str] = Field(None, max_length=1000)
+    play_title: Optional[str] = Field(None, max_length=200)
+    play_author: Optional[str] = Field(None, max_length=200)
 
 
 class CreateSceneLineRequest(BaseModel):
     """Create a new scene line"""
-    character_name: str
-    text: str
-    stage_direction: Optional[str] = None
+    character_name: str = Field(..., max_length=80)
+    text: str = Field(..., max_length=2000)
+    stage_direction: Optional[str] = Field(None, max_length=120)
     insert_after_line_id: Optional[int] = None
 
 
@@ -121,6 +123,28 @@ class CreateScriptFromTextRequest(BaseModel):
     title: Optional[str] = None
     author: Optional[str] = None
     description: Optional[str] = None
+
+
+class BulkResetLineData(BaseModel):
+    """Line data for bulk reset"""
+    character_name: str
+    text: str
+    stage_direction: Optional[str] = None
+    line_order: int
+
+
+class BulkResetRequest(BaseModel):
+    """Bulk reset: replace all scene data with provided snapshot"""
+    title: str
+    description: Optional[str] = None
+    play_title: Optional[str] = None
+    play_author: Optional[str] = None
+    character_1_name: str
+    character_2_name: str
+    setting: Optional[str] = None
+    context_before: Optional[str] = None
+    context_after: Optional[str] = None
+    lines: List[BulkResetLineData]
 
 
 # ============================================================================
@@ -230,6 +254,10 @@ async def upload_script(
                 {}
             )
 
+            # Sanitize setting — AI sometimes returns "Unknown"
+            raw_setting = scene_data.get("setting")
+            clean_setting = None if not raw_setting or raw_setting.strip().lower() == "unknown" else raw_setting
+
             scene = Scene(
                 play_id=play.id,
                 user_script_id=user_script.id,
@@ -243,16 +271,19 @@ async def upload_script(
                 character_2_age_range=char2_info.get("age_range"),
                 line_count=lines_count,
                 estimated_duration_seconds=duration_seconds,
-                setting=scene_data.get("setting"),
+                setting=clean_setting,
                 difficulty_level="intermediate",
-                primary_emotions=[],
+                tone=scene_data.get("tone"),
+                primary_emotions=scene_data.get("primary_emotions", []),
+                relationship_dynamic=scene_data.get("relationship_dynamic"),
                 is_verified=False
             )
 
             db.add(scene)
             db.flush()  # Get scene ID
 
-            # Add scene lines
+            # Add scene lines + build original snapshot
+            original_lines = []
             for idx, line_data in enumerate(scene_data.get("lines", [])):
                 scene_line = SceneLine(
                     scene_id=scene.id,
@@ -263,6 +294,19 @@ async def upload_script(
                     word_count=len(line_data.get("text", "").split())
                 )
                 db.add(scene_line)
+                original_lines.append({
+                    "line_order": idx,
+                    "character_name": line_data.get("character", "Unknown"),
+                    "text": line_data.get("text", ""),
+                    "stage_direction": line_data.get("stage_direction"),
+                })
+
+            # Store original snapshot for "Reset to original" feature
+            scene.original_snapshot = {
+                "character_1_name": scene_data.get("character_1", "Character 1"),
+                "character_2_name": scene_data.get("character_2", "Character 2"),
+                "lines": original_lines,
+            }
 
             scenes_created.append(scene)
 
@@ -369,6 +413,9 @@ async def create_script_from_text(
                 (c for c in user_script.characters if c.get("name") == scene_data.get("character_2")),
                 {},
             )
+            raw_setting = scene_data.get("setting")
+            clean_setting = None if not raw_setting or raw_setting.strip().lower() == "unknown" else raw_setting
+
             scene = Scene(
                 play_id=play.id,
                 user_script_id=user_script.id,
@@ -382,13 +429,16 @@ async def create_script_from_text(
                 character_2_age_range=char2_info.get("age_range"),
                 line_count=lines_count,
                 estimated_duration_seconds=duration_seconds,
-                setting=scene_data.get("setting"),
+                setting=clean_setting,
                 difficulty_level="intermediate",
-                primary_emotions=[],
+                tone=scene_data.get("tone"),
+                primary_emotions=scene_data.get("primary_emotions", []),
+                relationship_dynamic=scene_data.get("relationship_dynamic"),
                 is_verified=False,
             )
             db.add(scene)
             db.flush()
+            original_lines = []
             for idx, line_data in enumerate(scene_data.get("lines", [])):
                 scene_line = SceneLine(
                     scene_id=scene.id,
@@ -399,6 +449,17 @@ async def create_script_from_text(
                     word_count=len(line_data.get("text", "").split()),
                 )
                 db.add(scene_line)
+                original_lines.append({
+                    "line_order": idx,
+                    "character_name": line_data.get("character", "Unknown"),
+                    "text": line_data.get("text", ""),
+                    "stage_direction": line_data.get("stage_direction"),
+                })
+            scene.original_snapshot = {
+                "character_1_name": scene_data.get("character_1", "Character 1"),
+                "character_2_name": scene_data.get("character_2", "Character 2"),
+                "lines": original_lines,
+            }
             scenes_created.append(scene)
 
         user_script.num_scenes_extracted = len(scenes_created)
@@ -516,6 +577,7 @@ async def ensure_example_script(
     db.add(scene)
     db.flush()
 
+    original_lines = []
     for idx, line_data in enumerate(lines_list):
         text = line_data.get("text", "")
         scene_line = SceneLine(
@@ -527,6 +589,17 @@ async def ensure_example_script(
             word_count=len(text.split()),
         )
         db.add(scene_line)
+        original_lines.append({
+            "line_order": idx,
+            "character_name": line_data.get("character", "Unknown"),
+            "text": text,
+            "stage_direction": line_data.get("stage_direction"),
+        })
+    scene.original_snapshot = {
+        "character_1_name": scene_data.get("character_1", "Character 1"),
+        "character_2_name": scene_data.get("character_2", "Character 2"),
+        "lines": original_lines,
+    }
 
     user_script.num_scenes_extracted = 1
     db.commit()
@@ -633,11 +706,18 @@ async def delete_script(
     if not script:
         raise HTTPException(status_code=404, detail="Script not found")
 
-    # Delete all associated scenes and their lines
+    # Delete all associated scenes and their dependencies
     scenes = db.query(Scene).filter(Scene.user_script_id == script_id).all()
     for scene in scenes:
+        # Delete rehearsal line deliveries, then rehearsal sessions
+        session_ids = [s.id for s in db.query(RehearsalSession).filter(RehearsalSession.scene_id == scene.id).all()]
+        if session_ids:
+            db.query(RehearsalLineDelivery).filter(RehearsalLineDelivery.session_id.in_(session_ids)).delete(synchronize_session=False)
+            db.query(RehearsalSession).filter(RehearsalSession.scene_id == scene.id).delete(synchronize_session=False)
+        # Delete scene favorites
+        db.query(SceneFavorite).filter(SceneFavorite.scene_id == scene.id).delete(synchronize_session=False)
         # Delete scene lines
-        db.query(SceneLine).filter(SceneLine.scene_id == scene.id).delete()
+        db.query(SceneLine).filter(SceneLine.scene_id == scene.id).delete(synchronize_session=False)
         # Delete scene
         db.delete(scene)
 
@@ -732,6 +812,107 @@ async def reorder_scene_lines(
 
     db.commit()
     return {"message": "Lines reordered successfully"}
+
+
+@router.post("/{script_id}/scenes/{scene_id}/lines/bulk-reset")
+async def bulk_reset_scene(
+    script_id: int,
+    scene_id: int,
+    request: BulkResetRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Reset a scene to a snapshot in a single transaction — replaces all scene data and lines."""
+    script = db.query(UserScript).filter(
+        UserScript.id == script_id,
+        UserScript.user_id == current_user.id
+    ).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="Script not found")
+
+    scene = db.query(Scene).filter(Scene.id == scene_id, Scene.user_script_id == script_id).first()
+    if not scene:
+        raise HTTPException(status_code=404, detail="Scene not found")
+
+    # Update scene fields
+    scene.title = request.title
+    scene.description = request.description
+    scene.character_1_name = request.character_1_name
+    scene.character_2_name = request.character_2_name
+    scene.setting = request.setting
+    scene.context_before = request.context_before
+    scene.context_after = request.context_after
+    if request.play_title is not None and scene.play:
+        scene.play.title = request.play_title
+    if request.play_author is not None and scene.play:
+        scene.play.author = request.play_author
+
+    # Delete all existing lines
+    db.query(SceneLine).filter(SceneLine.scene_id == scene_id).delete(synchronize_session=False)
+
+    # Create new lines from snapshot
+    for line_data in request.lines:
+        db.add(SceneLine(
+            scene_id=scene_id,
+            line_order=line_data.line_order,
+            character_name=line_data.character_name,
+            text=line_data.text,
+            stage_direction=line_data.stage_direction,
+            word_count=len(line_data.text.split()),
+        ))
+
+    scene.line_count = len(request.lines)
+    db.commit()
+
+    return {"message": "Scene reset successfully"}
+
+
+@router.post("/{script_id}/scenes/{scene_id}/reset-to-original")
+async def reset_scene_to_original(
+    script_id: int,
+    scene_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Reset a scene back to its original state (when first extracted/uploaded)."""
+    script = db.query(UserScript).filter(
+        UserScript.id == script_id,
+        UserScript.user_id == current_user.id,
+    ).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="Script not found")
+
+    scene = db.query(Scene).filter(Scene.id == scene_id, Scene.user_script_id == script_id).first()
+    if not scene:
+        raise HTTPException(status_code=404, detail="Scene not found")
+
+    if not scene.original_snapshot:
+        raise HTTPException(status_code=400, detail="No original snapshot available for this scene")
+
+    snapshot = scene.original_snapshot
+
+    # Restore character names
+    scene.character_1_name = snapshot["character_1_name"]
+    scene.character_2_name = snapshot["character_2_name"]
+
+    # Delete all existing lines
+    db.query(SceneLine).filter(SceneLine.scene_id == scene_id).delete(synchronize_session=False)
+
+    # Recreate lines from snapshot
+    for line_data in snapshot["lines"]:
+        db.add(SceneLine(
+            scene_id=scene_id,
+            line_order=line_data["line_order"],
+            character_name=line_data["character_name"],
+            text=line_data["text"],
+            stage_direction=line_data.get("stage_direction"),
+            word_count=len(line_data["text"].split()),
+        ))
+
+    scene.line_count = len(snapshot["lines"])
+    db.commit()
+
+    return {"message": "Scene reset to original"}
 
 
 @router.patch("/{script_id}/scenes/{scene_id}/lines/{line_id}")
@@ -912,7 +1093,7 @@ async def suggest_synopsis(
 
     sorted_lines = sorted(scene.lines, key=lambda l: l.line_order)
     script_text = "\n".join(
-        [f"{l.character_name}: {l.text}" for l in sorted_lines[:20]]
+        [f"{l.character_name}{f' ({l.stage_direction})' if l.stage_direction else ''}: {l.text}" for l in sorted_lines[:20]]
     )
 
     from app.services.ai.langchain.config import get_llm
@@ -976,6 +1157,8 @@ async def delete_scene(
         )
         db.query(RehearsalSession).filter(RehearsalSession.scene_id == scene_id).delete(synchronize_session=False)
 
+    # Delete scene favorites
+    db.query(SceneFavorite).filter(SceneFavorite.scene_id == scene_id).delete(synchronize_session=False)
     # Delete scene lines
     db.query(SceneLine).filter(SceneLine.scene_id == scene_id).delete(synchronize_session=False)
 

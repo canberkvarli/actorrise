@@ -80,6 +80,7 @@ class SceneLineResponse(BaseModel):
 class SceneDetailResponse(SceneResponse):
     """Detailed scene with all lines"""
     lines: List[SceneLineResponse]
+    has_original_snapshot: bool = False
 
 
 class StartRehearsalRequest(BaseModel):
@@ -254,6 +255,7 @@ async def get_scene_detail(
         "play_author": scene.play.author,
         "is_favorited": is_favorited,
         "primary_emotions": scene.primary_emotions or [],
+        "has_original_snapshot": scene.original_snapshot is not None,
         "lines": [SceneLineResponse(**line.__dict__) for line in scene.lines]
     }
 
@@ -848,8 +850,9 @@ async def upload_scene(
         db.commit()
         db.refresh(scene)
 
-        # Add scene lines
+        # Add scene lines + build original snapshot
         scene_lines = []
+        original_lines = []
         for idx, line_data in enumerate(upload.lines):
             scene_line = SceneLine(
                 scene_id=scene.id,
@@ -858,11 +861,22 @@ async def upload_scene(
                 text=line_data.text,
                 stage_direction=line_data.stage_direction,
                 word_count=len(line_data.text.split()),
-                primary_emotion=None  # Could enhance with AI analysis
+                primary_emotion=None
             )
             db.add(scene_line)
             scene_lines.append(scene_line)
+            original_lines.append({
+                "line_order": idx,
+                "character_name": line_data.character_name,
+                "text": line_data.text,
+                "stage_direction": line_data.stage_direction,
+            })
 
+        scene.original_snapshot = {
+            "character_1_name": upload.character_1_name,
+            "character_2_name": upload.character_2_name,
+            "lines": original_lines,
+        }
         db.commit()
 
         # Refresh to get IDs

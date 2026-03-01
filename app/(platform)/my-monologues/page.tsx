@@ -408,7 +408,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 isReadingMode ? "border-b-0" : ""
               }`}>
                 <div className="flex items-center justify-between p-6">
-                  {!isReadingMode && <h2 className="hidden sm:block text-2xl font-bold">Monologue Details</h2>}
+                  {!isReadingMode && <h2 className="hidden sm:block text-3xl font-bold">Monologue Details</h2>}
                   <div className="flex-1 sm:hidden" />
                   <div className="flex items-center gap-2">
                     <TooltipProvider delayDuration={300}>

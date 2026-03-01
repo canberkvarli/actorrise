@@ -13,6 +13,7 @@ All webhook handlers are idempotent to handle duplicate events.
 
 import logging
 import os
+import threading
 from datetime import datetime
 
 import stripe
@@ -115,6 +116,29 @@ def handle_checkout_completed(session: dict, db: Session):
     db.commit()
 
     print(f"✅ Checkout completed for user {user_id} - {billing_period} subscription")
+
+    # Send upgrade notification to admin (fire-and-forget)
+    try:
+        from app.models.user import User
+
+        user = db.query(User).filter(User.id == user_id).first()
+        tier = db.query(PricingTier).filter(PricingTier.id == tier_id).first()
+
+        if user and tier and tier.name != "free":
+            from app.services.email.notifications import send_upgrade_notification
+
+            threading.Thread(
+                target=send_upgrade_notification,
+                kwargs={
+                    "user_name": user.name or "",
+                    "user_email": user.email,
+                    "tier_display_name": tier.display_name,
+                    "billing_period": billing_period,
+                },
+                daemon=True,
+            ).start()
+    except Exception as e:
+        print(f"Warning: Could not send upgrade notification: {e}")
 
 
 def handle_invoice_paid(invoice: dict, db: Session):

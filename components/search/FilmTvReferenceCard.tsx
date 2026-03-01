@@ -49,11 +49,11 @@ export function FilmTvReferenceCard({
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: index * 0.04, duration: 0.35, ease: cardEase }}
-        className="relative overflow-visible"
+        className="relative overflow-visible h-full"
       >
         {indicatorAbove && <MatchIndicatorTag label={indicatorAbove} />}
         <div
-          className="w-full group p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col min-h-[260px]"
+          className="w-full group p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col min-h-[320px]"
           onClick={onSelect}
         >
           <div className="flex items-start gap-3 mb-4">
@@ -74,7 +74,7 @@ export function FilmTvReferenceCard({
             </div>
             <div className="flex-1 min-w-0 flex flex-col gap-0.5">
               <div className="flex items-start justify-between gap-2">
-                <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-2 min-w-0 flex-1">
+                <h3 className="font-bold text-base sm:text-lg text-foreground group-hover:text-primary transition-colors break-words min-w-0 flex-1">
                   {ref_item.title}
                 </h3>
                 <div className="shrink-0 flex items-center gap-1.5 min-w-[4.5rem] justify-end">
@@ -163,7 +163,7 @@ export function FilmTvReferenceCard({
               </div>
               <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-xl leading-tight group-hover:text-primary transition-colors line-clamp-2 min-w-0 flex-1">
+                  <h3 className="font-bold text-lg sm:text-xl leading-tight group-hover:text-primary transition-colors break-words min-w-0 flex-1">
                     {ref_item.title}
                   </h3>
                   <div className="shrink-0 flex items-center gap-1.5 min-w-[4.5rem] justify-end">

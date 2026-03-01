@@ -119,8 +119,11 @@ export default function SceneDetailPage() {
   };
 
   const formatDuration = (seconds: number): string => {
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes} min`;
+    if (seconds < 60) return `${seconds}s`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    if (m < 2) return s > 0 ? `${m}m ${s}s` : `${m} min`;
+    return `${m} min`;
   };
 
   if (isLoading) {

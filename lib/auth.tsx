@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "./supabase";
 import api from "./api";
@@ -38,20 +38,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const router = useRouter();
-  const [isInitialized, setIsInitialized] = useState(false);
+  const isInitializedRef = useRef(false);
+  const lastSyncRef = useRef(0);
 
   const syncUserWithBackend = useCallback(async (shouldSetLoading = false) => {
+    const now = Date.now();
+    if (now - lastSyncRef.current < 3000) {
+      if (shouldSetLoading) setLoading(false);
+      return;
+    }
+    lastSyncRef.current = now;
     try {
-      // Sync user with backend to get our User model
-      // Use a timeout so we don't get stuck on the loading screen if the backend is slow/unreachable in production.
       const response = await api.get<User>("/api/auth/me", { timeoutMs: 8000 });
       setUser(response.data);
-      if (shouldSetLoading) {
-        setLoading(false);
-      }
     } catch (error: unknown) {
       console.error("Failed to sync user with backend:", error);
-      // Backend unreachable or user not in DB yet: fall back to Supabase session so the app still shows as logged in
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
@@ -64,58 +65,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch {
         // ignore
       }
-      if (shouldSetLoading) {
-        setLoading(false);
-      }
+    } finally {
+      if (shouldSetLoading) setLoading(false);
     }
   }, []);
 
-  const checkAuth = useCallback(async () => {
-    if (isInitialized) return;
-    
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        setLoading(false);
-        setIsInitialized(true);
-        return;
-      }
-
-      await syncUserWithBackend(true);
-      setIsInitialized(true);
-    } catch (error: unknown) {
-      console.error("Auth check failed:", error);
-      setLoading(false);
-      setIsInitialized(true);
-    }
-  }, [syncUserWithBackend, isInitialized]);
-
   useEffect(() => {
-    // Check initial session only once
-    if (!isInitialized) {
-      checkAuth();
+    // Check initial session once
+    if (!isInitializedRef.current) {
+      isInitializedRef.current = true;
+      (async () => {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            await syncUserWithBackend(true);
+          } else {
+            setLoading(false);
+          }
+        } catch {
+          setLoading(false);
+        }
+      })();
     }
 
-    // Listen for auth changes
+    // Listen for auth changes (sign-in, sign-out, token refresh — but NOT initial session)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "INITIAL_SESSION") return; // already handled above
       if (session) {
-        // Don't set loading on auth state changes to prevent flickering
         syncUserWithBackend(false);
       } else {
         setUser(null);
-        // Only set loading if we're still initializing
-        if (!isInitialized) {
-          setLoading(false);
-          setIsInitialized(true);
-        }
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [checkAuth, syncUserWithBackend, isInitialized]);
+  }, [syncUserWithBackend]);
 
   const login = useCallback(async (email: string, password: string, redirectTo?: string) => {
     try {

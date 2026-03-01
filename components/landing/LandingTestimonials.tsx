@@ -13,7 +13,7 @@ import {
 } from "@/data/testimonials";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 
 export type { TestimonialItem };
@@ -182,10 +182,21 @@ function ThumbnailDot({
 }
 
 export function LandingTestimonials() {
+  const shuffled = useMemo(() => {
+    const founder = TESTIMONIALS.filter((t) => t.isFounder);
+    const placeholder = TESTIMONIALS.filter((t) => !t.isFounder && !t.image);
+    const rest = TESTIMONIALS.filter((t) => !t.isFounder && t.image);
+    for (let i = rest.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [rest[i], rest[j]] = [rest[j], rest[i]];
+    }
+    return [...founder, ...rest, ...placeholder];
+  }, []);
+
   const [index, setIndex] = useState(0);
   const [contactOpen, setContactOpen] = useState(false);
-  const total = TESTIMONIALS.length;
-  const t = TESTIMONIALS[index];
+  const total = shuffled.length;
+  const t = shuffled[index];
   const authModal = useAuthModal();
   const isPlaceholder = !t.image;
 
@@ -310,7 +321,7 @@ export function LandingTestimonials() {
             <div
               className="flex-1 min-w-0 max-w-xl overflow-x-auto overflow-y-hidden py-3 flex items-center gap-2 sm:gap-2.5 justify-center transition-transform duration-300 md:[transform:perspective(700px)_rotateX(5deg)]"
             >
-              {TESTIMONIALS.map((item, i) => (
+              {shuffled.map((item, i) => (
                 <ThumbnailDot
                   key={`${item.name}-${i}`}
                   testimonial={item}

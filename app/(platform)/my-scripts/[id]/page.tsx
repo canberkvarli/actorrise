@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 interface Scene {
   id: number;
   title: string;
+  description?: string | null;
   character_1_name: string;
   character_2_name: string;
   line_count: number;
@@ -185,8 +186,11 @@ export default function ScriptDetailPage() {
   };
 
   const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    return `${minutes} min`;
+    if (seconds < 60) return `${seconds}s`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    if (m < 2) return s > 0 ? `${m}m ${s}s` : `${m} min`;
+    return `${m} min`;
   };
 
   return (
@@ -565,7 +569,7 @@ export default function ScriptDetailPage() {
       <main>
       <section aria-label="Scenes in this script" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-foreground flex items-center gap-2 font-serif">
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 font-serif">
             <Sparkles className="w-5 h-5 text-primary" />
             Scenes ({script.scenes.length})
           </h2>
@@ -617,16 +621,21 @@ export default function ScriptDetailPage() {
                     <CardContent className="p-5 space-y-4">
                       {/* Scene title */}
                       <div>
-                        <h3 className="text-lg font-semibold font-serif line-clamp-2 mb-2">
+                        <h3 className="text-lg font-semibold font-serif line-clamp-2 mb-2" title={scene.title}>
                           {scene.title}
                         </h3>
+                        {scene.description && (
+                          <p className="text-sm text-muted-foreground italic line-clamp-2 mb-2">
+                            {scene.description}
+                          </p>
+                        )}
 
                         {/* Character badges */}
                         <div className="flex flex-wrap gap-2">
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="secondary" className="text-xs" title={scene.character_1_name}>
                             {scene.character_1_name}
                           </Badge>
-                          <Badge variant="secondary" className="text-xs">
+                          <Badge variant="secondary" className="text-xs" title={scene.character_2_name}>
                             {scene.character_2_name}
                           </Badge>
                         </div>

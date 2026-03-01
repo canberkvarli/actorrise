@@ -11,7 +11,7 @@ from app.models.user import User
 from app.services.ai.content_analyzer import ContentAnalyzer
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/film-tv", tags=["film-tv"])
@@ -152,6 +152,7 @@ async def search_film_tv_references(
     director: Optional[str] = Query(None),
     title: Optional[str] = Query(None, description="Title fuzzy match"),
     imdb_rating_min: Optional[float] = Query(None),
+    personalized: bool = Query(False, description="Personalize no-query results by actor preferred genres"),
     limit: int = Query(20, le=100),
     page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
@@ -250,7 +251,50 @@ async def search_film_tv_references(
             record_total_search(current_user.id, db)
         return FilmTvSearchResponse(results=results, total=total, page=page, page_size=limit)
 
-    # No query: filter-only, ordered by IMDb rating
+    # No query: filter-only
+    # When personalized=True, match actor's preferred genres to Film/TV genres
+    if personalized:
+        profile = getattr(current_user, "actor_profile", None)
+        raw_genres = getattr(profile, "preferred_genres", None) if profile else None
+        pref_genres = [str(g).lower() for g in raw_genres[:10] if g] if raw_genres and isinstance(raw_genres, list) else []
+
+        if pref_genres:
+            # Map theatre-centric genre labels to IMDb genre taxonomy
+            genre_map = {
+                "drama": ["drama"],
+                "comedy": ["comedy"],
+                "classical": ["drama", "history"],
+                "contemporary": ["drama", "comedy", "thriller"],
+                "musical": ["musical", "music"],
+                "shakespeare": ["drama", "history", "romance"],
+            }
+            film_genres: set = set()
+            for pg in pref_genres:
+                film_genres.update(genre_map.get(pg, [pg]))
+
+            genre_conditions = [FilmTvReference.genre.any(g) for g in film_genres]
+            personalized_base = base.filter(or_(*genre_conditions))
+            p_total = personalized_base.count()
+
+            if p_total > 0:
+                offset = (page - 1) * limit
+                rows = (
+                    personalized_base
+                    .order_by(func.random())
+                    .offset(offset)
+                    .limit(limit)
+                    .all()
+                )
+                if rows:
+                    record_total_search(current_user.id, db)
+                return FilmTvSearchResponse(
+                    results=[_to_result(r) for r in rows],
+                    total=p_total,
+                    page=page,
+                    page_size=limit,
+                )
+            # Fall through to generic ordering if zero personalized results
+
     total = base.count()
     offset = (page - 1) * limit
     rows = base.order_by(FilmTvReference.imdb_rating.desc().nullslast()).offset(offset).limit(limit).all()

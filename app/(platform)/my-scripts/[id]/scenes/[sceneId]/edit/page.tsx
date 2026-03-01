@@ -39,7 +39,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
 import { cn } from "@/lib/utils";
-import api from "@/lib/api";
+import api, { API_URL } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useOpenAITTS } from "@/hooks/useOpenAITTS";
 
@@ -65,6 +66,7 @@ import {
   type RehearsalSettings,
 } from "@/lib/scenepartnerStorage";
 import { ContactModal } from "@/components/contact/ContactModal";
+import { TTSWaveform } from "@/components/scenepartner/TTSWaveform";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -101,6 +103,7 @@ interface SceneDetail {
   line_count: number;
   estimated_duration_seconds: number;
   rehearsal_count: number;
+  has_original_snapshot: boolean;
   lines: SceneLine[];
 }
 
@@ -152,6 +155,16 @@ type UndoEntry =
       type: "delete_line";
       lineData: SceneLine;
       insertAfterLineId: number | null;
+    }
+  | {
+      type: "voice";
+      old: CharacterVoices;
+      cur: CharacterVoices;
+    }
+  | {
+      type: "selected_character";
+      old: string;
+      cur: string;
     };
 
 // ---------------------------------------------------------------------------
@@ -213,10 +226,12 @@ function ReorderLineItem({
   lineId,
   children,
   onDragEnd,
+  onDragStart,
 }: {
   lineId: number;
   children: (startDrag: (e: React.PointerEvent) => void) => React.ReactNode;
   onDragEnd?: () => void;
+  onDragStart?: () => void;
 }) {
   const controls = useDragControls();
   return (
@@ -226,6 +241,7 @@ function ReorderLineItem({
       dragListener={false}
       dragControls={controls}
       onDragEnd={onDragEnd}
+      onDragStart={onDragStart}
       className="relative"
     >
       {children((e) => controls.start(e))}
@@ -238,8 +254,6 @@ function ReorderLineItem({
 // ---------------------------------------------------------------------------
 
 export default function SceneEditPage() {
-  if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
-
   const router = useRouter();
   const params = useParams();
   const scriptId = Number(params.id);
@@ -274,6 +288,8 @@ export default function SceneEditPage() {
   const dragLineOrderRef = useRef<number[]>([]);
   const isDraggingRef = useRef(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [draggingLineId, setDraggingLineId] = useState<number | null>(null);
+  const pendingDragLineRef = useRef<number | null>(null);
 
   // Context sections collapsed by default
   const [contextExpanded, setContextExpanded] = useState(false);
@@ -289,6 +305,101 @@ export default function SceneEditPage() {
   const [previewingVoice, setPreviewingVoice] = useState<1 | 2 | null>(null);
 
   const autoFocusTextRef = useRef<HTMLTextAreaElement>(null);
+
+  // Refs to track latest editing state for flush-on-navigate / unmount
+  const editingLineIdRef = useRef<number | null>(null);
+  editingLineIdRef.current = editingLineId;
+  const lineEditValuesRef = useRef(lineEditValues);
+  lineEditValuesRef.current = lineEditValues;
+  const sceneRef = useRef(scene);
+  sceneRef.current = scene;
+
+  // ── Auto-save infrastructure ─────────────────────────────────────────────
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAutoSavedRef = useRef<Record<number, { character_name: string; text: string; stage_direction: string }>>({});
+  const authTokenRef = useRef<string | null>(null);
+  // Keep auth token fresh for keepalive fetches
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => { authTokenRef.current = session?.access_token ?? null; });
+  }, []);
+
+  /** Fire-and-forget save of any in-progress line edit. Uses keepalive for beforeunload safety. */
+  const flushPendingEdits = useCallback(() => {
+    if (autoSaveTimerRef.current) { clearTimeout(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
+    const lid = editingLineIdRef.current;
+    const s = sceneRef.current;
+    if (lid === null || !s) return;
+    const vals = lineEditValuesRef.current[lid];
+    const line = s.lines.find(l => l.id === lid);
+    if (!vals || !line) return;
+    const last = lastAutoSavedRef.current[lid];
+    const hasChanges = !last ||
+      vals.character_name !== last.character_name ||
+      vals.text !== last.text ||
+      vals.stage_direction !== last.stage_direction;
+    if (!hasChanges) return;
+    const token = authTokenRef.current;
+    fetch(`${API_URL}/api/scripts/${scriptId}/scenes/${sceneId}/lines/${lid}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      body: JSON.stringify({ character_name: vals.character_name, text: vals.text, stage_direction: vals.stage_direction || null }),
+      keepalive: true,
+    }).catch(() => {});
+  }, [scriptId, sceneId]);
+
+  useEffect(() => {
+    if (editingLineId === null) return;
+    const values = lineEditValuesRef.current[editingLineId];
+    if (!values) return;
+    const last = lastAutoSavedRef.current[editingLineId];
+    // Compare against what was last saved (or the original line values on first edit)
+    if (last && values.text === last.text && values.character_name === last.character_name && values.stage_direction === last.stage_direction) return;
+
+    if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
+    const lid = editingLineId;
+    autoSaveTimerRef.current = setTimeout(() => {
+      const currentVals = lineEditValuesRef.current[lid];
+      if (!currentVals) return;
+      api.patch(
+        `/api/scripts/${scriptId}/scenes/${sceneId}/lines/${lid}`,
+        { character_name: currentVals.character_name, text: currentVals.text, stage_direction: currentVals.stage_direction || null }
+      ).then(() => {
+        lastAutoSavedRef.current[lid] = { ...currentVals };
+        // Sync scene state so a refresh shows the saved data
+        setScene(prev => prev ? {
+          ...prev,
+          lines: prev.lines.map(l =>
+            l.id === lid ? { ...l, character_name: currentVals.character_name, text: currentVals.text, stage_direction: currentVals.stage_direction || null, word_count: currentVals.text.trim().split(/\s+/).filter(Boolean).length } : l
+          ),
+        } : prev);
+      }).catch(() => {});
+    }, 1200);
+
+    return () => { if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current); };
+  }, [lineEditValues, editingLineId, scriptId, sceneId]);
+
+  // ── Debounced auto-save for scene field edits ───────────────────────────
+  const sceneFieldSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSceneFieldValueRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!editingSceneField) return;
+    // Don't auto-save character names (handled by renameCharacter)
+    if (editingSceneField === "character_1_name" || editingSceneField === "character_2_name") return;
+    if (sceneEditValue === lastSceneFieldValueRef.current) return;
+
+    if (sceneFieldSaveTimerRef.current) clearTimeout(sceneFieldSaveTimerRef.current);
+    const field = editingSceneField as SceneStringKey;
+    const val = sceneEditValue;
+    sceneFieldSaveTimerRef.current = setTimeout(() => {
+      api.patch(`/api/scripts/${scriptId}/scenes/${sceneId}`, { [field]: val || null }).then(() => {
+        lastSceneFieldValueRef.current = val;
+        setScene(prev => prev ? { ...prev, [field]: val || null } : prev);
+      }).catch(() => {});
+    }, 1200);
+
+    return () => { if (sceneFieldSaveTimerRef.current) clearTimeout(sceneFieldSaveTimerRef.current); };
+  }, [sceneEditValue, editingSceneField, scriptId, sceneId]);
 
   // Auto-focus the text textarea when editingLineId changes
   useEffect(() => {
@@ -315,24 +426,24 @@ export default function SceneEditPage() {
   const [newLineStageDir, setNewLineStageDir] = useState("");
   const [addingLine, setAddingLine] = useState(false);
   const [deletingLineId, setDeletingLineId] = useState<number | null>(null);
-  const [customCharEditLineId, setCustomCharEditLineId] = useState<number | null>(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [rehearsalStartLineIndex, setRehearsalStartLineIndex] = useState<number | null>(null);
   const [editingCharName, setEditingCharName] = useState<1 | 2 | null>(null);
   const [charNameEditValue, setCharNameEditValue] = useState("");
-  const [voiceDropdownOpen, setVoiceDropdownOpen] = useState<1 | 2 | "addline" | null>(null);
+  const [voiceDropdownOpen, setVoiceDropdownOpen] = useState<string | number | null>(null);
 
   // Close voice dropdown when clicking outside
+  // Use "click" (not "mousedown") so that input onBlur fires first and saves pending edits
   useEffect(() => {
     if (!voiceDropdownOpen) return;
     const handler = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest("[data-voice-dropdown]")) {
+      if (!target.closest("[data-voice-dropdown]") && !target.closest(".fixed.z-50")) {
         setVoiceDropdownOpen(null);
       }
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
   }, [voiceDropdownOpen]);
 
   // Rehearsal settings (inline in left panel)
@@ -350,32 +461,69 @@ export default function SceneEditPage() {
     });
   }, []);
 
-  // Undo / Redo
+  // Undo / Redo — persisted in sessionStorage across visits
+  const undoStorageKey = `scene-undo-${sceneId}`;
+  const redoStorageKey = `scene-redo-${sceneId}`;
+
+  const loadedUndoRef = useRef(false);
   const undoStackRef = useRef<UndoEntry[]>([]);
   const redoStackRef = useRef<UndoEntry[]>([]);
-  const [canUndo, setCanUndo] = useState(false);
-  const [canRedo, setCanRedo] = useState(false);
+  if (!loadedUndoRef.current && typeof window !== "undefined") {
+    loadedUndoRef.current = true;
+    try { const s = sessionStorage.getItem(undoStorageKey); if (s) undoStackRef.current = JSON.parse(s); } catch { /* ignore */ }
+    try { const s = sessionStorage.getItem(redoStorageKey); if (s) redoStackRef.current = JSON.parse(s); } catch { /* ignore */ }
+  }
+
+  const [canUndo, setCanUndo] = useState(() => undoStackRef.current.length > 0);
+  const [canRedo, setCanRedo] = useState(() => redoStackRef.current.length > 0);
   const [applyingHistory, setApplyingHistory] = useState(false);
   const [resetting, setResetting] = useState(false);
-  const syncHistory = () => {
+
+  const persistHistory = useCallback(() => {
+    try {
+      sessionStorage.setItem(undoStorageKey, JSON.stringify(undoStackRef.current));
+      sessionStorage.setItem(redoStorageKey, JSON.stringify(redoStackRef.current));
+    } catch { /* sessionStorage full — ignore */ }
+  }, [undoStorageKey, redoStorageKey]);
+
+  const syncHistory = useCallback(() => {
     setCanUndo(undoStackRef.current.length > 0);
     setCanRedo(redoStackRef.current.length > 0);
-  };
-  const pushUndo = (entry: UndoEntry) => {
+    persistHistory();
+  }, [persistHistory]);
+
+  const pushUndo = useCallback((entry: UndoEntry) => {
     undoStackRef.current.push(entry);
     redoStackRef.current = [];
     syncHistory();
-  };
+  }, [syncHistory]);
+
+  // Auto-save on browser close/refresh
+  useEffect(() => {
+    const handler = () => { flushPendingEdits(); };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [flushPendingEdits]);
+
+  const cancelAIRef = useRef<(() => void) | null>(null);
+
+  // Cleanup on unmount: flush pending edits + stop audio
+  useEffect(() => {
+    return () => { flushPendingEdits(); cancelAIRef.current?.(); };
+  }, [flushPendingEdits]);
 
   // Upgrade modal
   const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string; message: string }>({
     open: false, feature: "", message: "",
   });
 
-  const { speak: speakAI, cancel: cancelAI, isSpeaking: isSpeakingAI, isLoading: isLoadingAI } = useOpenAITTS({
-    onEnd: () => setPreviewingVoice(null),
+  const [ttsProgress, setTtsProgress] = useState(0);
+  const ttsLineIdRef = useRef<number | null>(null);
+
+  const { speak: speakAI, cancel: cancelAI, isSpeaking: isSpeakingAI, isLoading: isLoadingAI, audioElementRef: aiAudioRef } = useOpenAITTS({
+    onEnd: () => { setPreviewingVoice(null); ttsLineIdRef.current = null; setTtsProgress(0); },
     onError: (err) => {
-      setPreviewingVoice(null);
+      setPreviewingVoice(null); ttsLineIdRef.current = null; setTtsProgress(0);
       const upgrade = parseUpgradeError(err);
       if (upgrade) {
         setUpgradeModal({ open: true, feature: "AI Voice", message: upgrade.message });
@@ -384,6 +532,7 @@ export default function SceneEditPage() {
       }
     },
   });
+  cancelAIRef.current = cancelAI;
 
   // Line order memo
   const sortedLineIds = useMemo(
@@ -414,8 +563,17 @@ export default function SceneEditPage() {
         originalSceneRef.current = JSON.parse(JSON.stringify(data));
         // Default character selection to character_1
         setSelectedCharacter(data.character_1_name);
-        // Load saved voices
-        setCharVoices(getCharacterVoices(sceneId));
+        // Load saved voices — auto-assign defaults if none set
+        const saved = getCharacterVoices(sceneId);
+        if (!saved.character_1_voice || !saved.character_2_voice) {
+          const updated = { ...saved };
+          if (!updated.character_1_voice) updated.character_1_voice = "coral";
+          if (!updated.character_2_voice) updated.character_2_voice = "ash";
+          setCharacterVoices(sceneId, updated);
+          setCharVoices(updated);
+        } else {
+          setCharVoices(saved);
+        }
       } catch {
         toast.error("Failed to load scene");
         router.push(`/my-scripts/${scriptId}`);
@@ -432,24 +590,127 @@ export default function SceneEditPage() {
   const saveSceneField = async (field: SceneStringKey, value: string | null) => {
     if (!scene) return;
     const oldVal = scene[field] as string | undefined;
-    const newVal = value ?? undefined;
+    // Trim whitespace and collapse multiple spaces
+    const cleaned = value?.trim().replace(/\s{2,}/g, " ") || null;
+    const newVal = cleaned ?? undefined;
+
+    // Optimistic update — immediately reflect in UI before API round-trip
+    setScene(prev => {
+      if (!prev) return prev;
+      const prevCharName = prev[field] as string | undefined;
+      const updated = { ...prev, [field]: newVal };
+      const isCharRename = (field === "character_1_name" || field === "character_2_name") && prevCharName && newVal && prevCharName !== newVal;
+      if (isCharRename) {
+        updated.lines = prev.lines.map(l => l.character_name === prevCharName ? { ...l, character_name: newVal as string } : l);
+      }
+      return updated;
+    });
+    setEditingSceneField(null);
+
     setSaving(`scene-${field}`);
     try {
       await api.patch(`/api/scripts/${scriptId}/scenes/${sceneId}`, {
         [field]: newVal,
       });
       pushUndo({ type: "scene_field", field, old: oldVal, cur: newVal });
-      setScene({ ...scene, [field]: newVal });
-      setEditingSceneField(null);
       toast.success("Scene updated");
     } catch {
+      // Revert optimistic update on failure
+      setScene(prev => {
+        if (!prev) return prev;
+        const reverted = { ...prev, [field]: oldVal };
+        if ((field === "character_1_name" || field === "character_2_name") && oldVal && newVal && oldVal !== newVal) {
+          reverted.lines = prev.lines.map(l => l.character_name === (newVal as string) ? { ...l, character_name: oldVal as string } : l);
+        }
+        return reverted;
+      });
       toast.error("Failed to update scene");
     } finally {
       setSaving(null);
     }
   };
 
+  /** Rename a character everywhere — scene field, ALL lines, lineEditValues, selectedCharacter. */
+  const renameCharacter = async (oldName: string, newName: string) => {
+    if (!scene || !oldName || !newName || oldName === newName) return;
+
+    // Determine which scene-level field to update
+    const field: SceneStringKey | null =
+      scene.character_1_name === oldName ? "character_1_name"
+      : scene.character_2_name === oldName ? "character_2_name"
+      : null;
+
+    // Optimistic: update scene field + ALL lines with oldName
+    setScene(prev => {
+      if (!prev) return prev;
+      const updated = { ...prev };
+      if (field) (updated as Record<string, unknown>)[field] = newName;
+      updated.lines = prev.lines.map(l =>
+        l.character_name === oldName ? { ...l, character_name: newName } : l
+      );
+      return updated as SceneDetail;
+    });
+
+    // Update lineEditValues for any lines being tracked
+    setLineEditValues(prev => {
+      const next = { ...prev };
+      for (const [id, vals] of Object.entries(next)) {
+        if (vals.character_name === oldName) {
+          next[Number(id)] = { ...vals, character_name: newName };
+        }
+      }
+      return next;
+    });
+
+    // Update selectedCharacter
+    if (selectedCharacter === oldName) setSelectedCharacter(newName);
+
+    // Persist to backend: scene field + ALL affected line records
+    setSaving(`scene-rename`);
+    try {
+      // Update scene-level character name
+      if (field) {
+        await api.patch(`/api/scripts/${scriptId}/scenes/${sceneId}`, { [field]: newName });
+      }
+      // Also update each individual line record that had the old name
+      const affectedLines = scene.lines.filter(l => l.character_name === oldName);
+      await Promise.all(
+        affectedLines.map(l =>
+          api.patch(`/api/scripts/${scriptId}/scenes/${sceneId}/lines/${l.id}`, { character_name: newName }).catch(() => {})
+        )
+      );
+      if (field) pushUndo({ type: "scene_field", field, old: oldName, cur: newName });
+      toast.success("Character renamed");
+    } catch {
+      // Revert on failure
+      setScene(prev => {
+        if (!prev) return prev;
+        const reverted = { ...prev };
+        if (field) (reverted as Record<string, unknown>)[field] = oldName;
+        reverted.lines = prev.lines.map(l =>
+          l.character_name === newName ? { ...l, character_name: oldName } : l
+        );
+        return reverted as SceneDetail;
+      });
+      setLineEditValues(prev => {
+        const next = { ...prev };
+        for (const [id, vals] of Object.entries(next)) {
+          if (vals.character_name === newName) {
+            next[Number(id)] = { ...vals, character_name: oldName };
+          }
+        }
+        return next;
+      });
+      if (selectedCharacter === newName) setSelectedCharacter(oldName);
+      toast.error("Failed to rename character");
+    } finally {
+      setSaving(null);
+    }
+  };
+
   const saveLine = async (line: SceneLine) => {
+    // Cancel any pending auto-save since we're doing an explicit save
+    if (autoSaveTimerRef.current) { clearTimeout(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
     const values = lineEditValues[line.id];
     if (!values || !scene) return;
     const oldVals = {
@@ -458,11 +719,15 @@ export default function SceneEditPage() {
       stage_direction: line.stage_direction,
       word_count: line.word_count,
     };
-    const newWc = values.text.trim().split(/\s+/).filter(Boolean).length;
+    // Normalize whitespace: trim edges, collapse internal runs
+    const trimmedText = values.text.trim().replace(/\s{2,}/g, " ");
+    const trimmedCharName = values.character_name.trim().replace(/\s{2,}/g, " ");
+    const trimmedStageDir = values.stage_direction?.trim().replace(/\s{2,}/g, " ") || null;
+    const newWc = trimmedText.split(/\s+/).filter(Boolean).length;
     const newVals = {
-      character_name: values.character_name,
-      text: values.text,
-      stage_direction: values.stage_direction || null,
+      character_name: trimmedCharName,
+      text: trimmedText,
+      stage_direction: trimmedStageDir,
       word_count: newWc,
     };
     setSaving(`line-${line.id}`);
@@ -470,18 +735,18 @@ export default function SceneEditPage() {
       await api.patch(
         `/api/scripts/${scriptId}/scenes/${sceneId}/lines/${line.id}`,
         {
-          character_name: values.character_name,
-          text: values.text,
-          stage_direction: values.stage_direction || null,
+          character_name: trimmedCharName,
+          text: trimmedText,
+          stage_direction: trimmedStageDir,
         }
       );
       pushUndo({ type: "line", lineId: line.id, old: oldVals, cur: newVals });
-      setScene({
-        ...scene,
-        lines: scene.lines.map((l) =>
+      setScene(prev => prev ? {
+        ...prev,
+        lines: prev.lines.map((l) =>
           l.id === line.id ? { ...l, ...newVals } : l
         ),
-      });
+      } : prev);
       setEditingLineId(null);
       setLineEditValues((prev) => {
         const next = { ...prev };
@@ -500,6 +765,7 @@ export default function SceneEditPage() {
     setEditingSceneField(field);
     setEditingLocation(location);
     setSceneEditValue(current ?? "");
+    lastSceneFieldValueRef.current = current ?? "";
   };
 
   const startEditLine = (line: SceneLine) => {
@@ -529,14 +795,9 @@ export default function SceneEditPage() {
 
     // Set new editing state
     setEditingLineId(line.id);
-    setLineEditValues((prev) => ({
-      ...prev,
-      [line.id]: {
-        character_name: line.character_name,
-        text: line.text,
-        stage_direction: line.stage_direction ?? "",
-      },
-    }));
+    const initVals = { character_name: line.character_name, text: line.text, stage_direction: line.stage_direction ?? "" };
+    lastAutoSavedRef.current[line.id] = { ...initVals };
+    setLineEditValues((prev) => ({ ...prev, [line.id]: initVals }));
   };
 
   // ---------------------------------------------------------------------------
@@ -578,12 +839,31 @@ export default function SceneEditPage() {
   // ---------------------------------------------------------------------------
 
   const handleVoiceChange = (charNum: 1 | 2, voiceId: string) => {
+    const oldVoices = { ...charVoices };
     const updated = {
       ...charVoices,
       [`character_${charNum}_voice`]: voiceId || null,
     } as CharacterVoices;
+    pushUndo({ type: "voice", old: oldVoices, cur: updated });
     setCharVoices(updated);
     setCharacterVoices(sceneId, updated);
+
+    // If TTS is playing a line by this character, restart with the new voice
+    if ((isSpeakingAI || isLoadingAI) && ttsLineIdRef.current !== null && scene) {
+      const playingLine = scene.lines.find(l => l.id === ttsLineIdRef.current);
+      if (playingLine) {
+        const playingCharNum = playingLine.character_name === scene.character_1_name ? 1 : 2;
+        if (playingCharNum === charNum) {
+          cancelAI();
+          const editVals = lineEditValues[playingLine.id];
+          const text = editVals?.text || playingLine.text;
+          const stageDir = editVals?.stage_direction || playingLine.stage_direction || "";
+          const instructions = stageDir ? `You are an actor performing a scene. The stage direction says: (${stageDir}). Deliver this line exactly as that direction demands. If it says "laughingly", laugh while speaking. If it says "whispering", whisper. If it says "angrily", sound genuinely angry. Fully commit to the direction in your vocal performance.` : "";
+          setTtsProgress(0);
+          speakAI(text, voiceId || "coral", instructions);
+        }
+      }
+    }
   };
 
   const previewVoice = (charNum: 1 | 2, voiceIdOverride?: string) => {
@@ -609,8 +889,6 @@ export default function SceneEditPage() {
   // ---------------------------------------------------------------------------
 
   const handleReorder = useCallback((newOrder: number[]) => {
-    isDraggingRef.current = true;
-    setIsDragging(true);
     setDragLineOrder(newOrder);
     dragLineOrderRef.current = newOrder;
   }, []);
@@ -618,6 +896,8 @@ export default function SceneEditPage() {
   const persistLineOrder = useCallback(async () => {
     isDraggingRef.current = false;
     setIsDragging(false);
+    setDraggingLineId(null);
+    pendingDragLineRef.current = null;
     if (!scene) return;
     const currentOrder = dragLineOrderRef.current;
     // Check if order actually changed
@@ -644,84 +924,55 @@ export default function SceneEditPage() {
   // ---------------------------------------------------------------------------
 
   const resetToOriginal = useCallback(async () => {
-    if (!scene || !originalSceneRef.current || resetting) return;
+    if (!scene || resetting) return;
+
+    // Prefer the true original snapshot stored on the backend (from first extraction)
+    if (scene.has_original_snapshot) {
+      if (!window.confirm("Reset this scene to its original state? All edits will be lost.")) return;
+      setResetting(true);
+      try {
+        await api.post(`/api/scripts/${scriptId}/scenes/${sceneId}/reset-to-original`);
+        const { data: fresh } = await api.get<SceneDetail>(`/api/scenes/${sceneId}`);
+        setScene(fresh);
+        setEditingLineId(null);
+        setLineEditValues({});
+        undoStackRef.current = [];
+        redoStackRef.current = [];
+        syncHistory();
+        toast.success("Scene reset to original");
+      } catch {
+        toast.error("Failed to reset scene");
+      } finally {
+        setResetting(false);
+      }
+      return;
+    }
+
+    // Fallback: reset to session-start snapshot
+    if (!originalSceneRef.current) return;
     const original = originalSceneRef.current;
     const currentSnapshot: SceneDetail = JSON.parse(JSON.stringify(scene));
 
     setResetting(true);
     try {
-      // 1. Reset scene-level fields
-      await api.patch(`/api/scripts/${scriptId}/scenes/${sceneId}`, {
-        title: original.title, description: original.description,
-        play_title: original.play_title, play_author: original.play_author,
-        character_1_name: original.character_1_name, character_2_name: original.character_2_name,
-        setting: original.setting, context_before: original.context_before, context_after: original.context_after,
+      await api.post(`/api/scripts/${scriptId}/scenes/${sceneId}/lines/bulk-reset`, {
+        title: original.title,
+        description: original.description,
+        play_title: original.play_title,
+        play_author: original.play_author,
+        character_1_name: original.character_1_name,
+        character_2_name: original.character_2_name,
+        setting: original.setting,
+        context_before: original.context_before,
+        context_after: original.context_after,
+        lines: original.lines.map(l => ({
+          character_name: l.character_name,
+          text: l.text,
+          stage_direction: l.stage_direction,
+          line_order: l.line_order,
+        })),
       });
 
-      // 2. Fetch current state to know what exists
-      const { data: current } = await api.get<SceneDetail>(`/api/scenes/${sceneId}`);
-      const originalIds = new Set(original.lines.map(l => l.id));
-      const currentIds = new Set(current.lines.map((l: SceneLine) => l.id));
-
-      // 3. Delete lines that were added after the original
-      for (const currentLine of current.lines) {
-        if (!originalIds.has(currentLine.id)) {
-          try {
-            await api.delete(`/api/scripts/${scriptId}/scenes/${sceneId}/lines/${currentLine.id}`);
-          } catch { /* best effort */ }
-        }
-      }
-
-      // 4. Update/recreate original lines
-      for (const origLine of original.lines) {
-        if (currentIds.has(origLine.id)) {
-          // Line still exists — update it
-          try {
-            await api.patch(`/api/scripts/${scriptId}/scenes/${sceneId}/lines/${origLine.id}`, {
-              character_name: origLine.character_name, text: origLine.text, stage_direction: origLine.stage_direction,
-            });
-          } catch { /* skip */ }
-        } else {
-          // Line was deleted — recreate it
-          try {
-            await api.post(`/api/scripts/${scriptId}/scenes/${sceneId}/lines`, {
-              character_name: origLine.character_name, text: origLine.text,
-              stage_direction: origLine.stage_direction,
-            });
-          } catch { /* skip */ }
-        }
-      }
-
-      // 5. Reorder to match original
-      try {
-        const { data: mid } = await api.get<SceneDetail>(`/api/scenes/${sceneId}`);
-        // Build a mapping: for recreated lines, match by text+character to find new IDs
-        const origSorted = original.lines.slice().sort((a, b) => a.line_order - b.line_order);
-        const reorderIds: number[] = [];
-        const midLines = [...mid.lines];
-        for (const origLine of origSorted) {
-          // Try exact ID match first
-          const byId = midLines.find((l: SceneLine) => l.id === origLine.id);
-          if (byId) {
-            reorderIds.push(byId.id);
-            continue;
-          }
-          // Fallback: match by text + character_name (for recreated lines)
-          const byContent = midLines.find((l: SceneLine) =>
-            l.character_name === origLine.character_name && l.text === origLine.text && !reorderIds.includes(l.id)
-          );
-          if (byContent) reorderIds.push(byContent.id);
-        }
-        // Add any remaining lines not yet in the order
-        for (const l of midLines) {
-          if (!reorderIds.includes(l.id)) reorderIds.push(l.id);
-        }
-        if (reorderIds.length > 0) {
-          await api.patch(`/api/scripts/${scriptId}/scenes/${sceneId}/lines/reorder`, { line_ids: reorderIds });
-        }
-      } catch { /* best effort */ }
-
-      // 6. Re-fetch final state
       const { data: fresh } = await api.get<SceneDetail>(`/api/scenes/${sceneId}`);
       pushUndo({ type: "reset", oldScene: currentSnapshot, curScene: JSON.parse(JSON.stringify(fresh)) });
       setScene(fresh);
@@ -732,7 +983,7 @@ export default function SceneEditPage() {
     } finally {
       setResetting(false);
     }
-  }, [scene, scriptId, sceneId, resetting]);
+  }, [scene, scriptId, sceneId, resetting, pushUndo, syncHistory]);
 
   // ---------------------------------------------------------------------------
   // AI Synopsis suggestion
@@ -769,16 +1020,19 @@ export default function SceneEditPage() {
   }, [scene]);
 
   const handleAddLine = useCallback(async () => {
-    if (!scene || !newLineText.trim() || !newLineCharacter.trim()) return;
+    const cleanText = newLineText.trim().replace(/\s{2,}/g, " ");
+    const cleanChar = newLineCharacter.trim().replace(/\s{2,}/g, " ");
+    const cleanStageDir = newLineStageDir.trim().replace(/\s{2,}/g, " ") || null;
+    if (!scene || !cleanText || !cleanChar) return;
     setAddingLine(true);
     try {
       const { data } = await api.post<{
         id: number; line_order: number; character_name: string;
         text: string; stage_direction: string | null; word_count: number; primary_emotion: string | null;
       }>(`/api/scripts/${scriptId}/scenes/${sceneId}/lines`, {
-        character_name: newLineCharacter.trim(),
-        text: newLineText.trim(),
-        stage_direction: newLineStageDir.trim() || null,
+        character_name: cleanChar,
+        text: cleanText,
+        stage_direction: cleanStageDir,
         insert_after_line_id: addLineAfterLineId,
       });
       const { data: fresh } = await api.get<SceneDetail>(`/api/scenes/${sceneId}`);
@@ -786,9 +1040,9 @@ export default function SceneEditPage() {
         type: "add_line",
         lineId: data.id,
         lineData: {
-          character_name: newLineCharacter.trim(),
-          text: newLineText.trim(),
-          stage_direction: newLineStageDir.trim() || null,
+          character_name: cleanChar,
+          text: cleanText,
+          stage_direction: cleanStageDir,
         },
         insertAfterLineId: addLineAfterLineId,
       });
@@ -838,8 +1092,17 @@ export default function SceneEditPage() {
     try {
       if (entry.type === "scene_field") {
         const value = entry[v];
+        const otherVal = entry[v === "old" ? "cur" : "old"];
+        const isCharRename = (entry.field === "character_1_name" || entry.field === "character_2_name") && otherVal && value && otherVal !== value;
         // Optimistic: update UI first
-        setScene((prev) => prev ? { ...prev, [entry.field]: value } : prev);
+        setScene((prev) => {
+          if (!prev) return prev;
+          const updated = { ...prev, [entry.field]: value };
+          if (isCharRename) {
+            updated.lines = prev.lines.map(l => l.character_name === otherVal ? { ...l, character_name: value as string } : l);
+          }
+          return updated;
+        });
         api.patch(`/api/scripts/${scriptId}/scenes/${sceneId}`, { [entry.field]: value }).catch(() => {});
       } else if (entry.type === "line") {
         const lineVals = entry[v];
@@ -918,6 +1181,12 @@ export default function SceneEditPage() {
           setScene((prev) => prev ? { ...prev, lines: prev.lines.filter(l => l.id !== entry.lineData.id) } : prev);
           api.delete(`/api/scripts/${scriptId}/scenes/${sceneId}/lines/${entry.lineData.id}`).catch(() => {});
         }
+      } else if (entry.type === "voice") {
+        const voices = entry[v];
+        setCharVoices(voices);
+        setCharacterVoices(sceneId, voices);
+      } else if (entry.type === "selected_character") {
+        setSelectedCharacter(entry[v]);
       }
     } catch {
       // Re-fetch to get consistent state after failure
@@ -983,8 +1252,11 @@ export default function SceneEditPage() {
   // ---------------------------------------------------------------------------
 
   const formatDuration = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    return minutes > 0 ? `${minutes} min` : `${seconds}s`;
+    if (seconds < 60) return `${seconds}s`;
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    if (m < 2) return s > 0 ? `${m}m ${s}s` : `${m} min`;
+    return `${m} min`;
   };
 
   // ---------------------------------------------------------------------------
@@ -1092,7 +1364,7 @@ export default function SceneEditPage() {
             <button
               type="button"
               onClick={() => startEditScene(field, str)}
-              className="text-neutral-600 hover:text-neutral-400 transition-colors"
+              className="text-neutral-500 hover:text-neutral-300 transition-colors"
             >
               <Edit2 className="w-3 h-3" />
             </button>
@@ -1140,7 +1412,7 @@ export default function SceneEditPage() {
               {str || `Add ${label.toLowerCase()}...`}
             </p>
             {!iconNextToLabel && (
-              <Edit2 className="w-3 h-3 text-neutral-600 group-hover:text-neutral-400 transition-colors flex-shrink-0 mt-0.5" />
+              <Edit2 className="w-3 h-3 text-neutral-500 group-hover:text-neutral-300 transition-colors flex-shrink-0 mt-0.5" />
             )}
           </button>
         )}
@@ -1196,20 +1468,14 @@ export default function SceneEditPage() {
                 e.stopPropagation();
                 if (e.key === "Enter") {
                   const newName = charNameEditValue.trim();
-                  if (newName && newName !== name) {
-                    saveSceneField(nameField as SceneStringKey, newName);
-                    if (selectedCharacter === name) setSelectedCharacter(newName);
-                  }
+                  if (newName && newName !== name) renameCharacter(name, newName);
                   setEditingCharName(null);
                 }
                 if (e.key === "Escape") setEditingCharName(null);
               }}
               onBlur={() => {
                 const newName = charNameEditValue.trim();
-                if (newName && newName !== name) {
-                  saveSceneField(nameField as SceneStringKey, newName);
-                  if (selectedCharacter === name) setSelectedCharacter(newName);
-                }
+                if (newName && newName !== name) renameCharacter(name, newName);
                 setEditingCharName(null);
               }}
             />
@@ -1223,7 +1489,7 @@ export default function SceneEditPage() {
                   setEditingCharName(charNum);
                   setCharNameEditValue(name);
                 }}
-                className="text-neutral-600 hover:text-neutral-400 transition-colors opacity-0 group-hover/charname:opacity-100"
+                className="text-neutral-500 hover:text-neutral-300 transition-colors opacity-0 group-hover/charname:opacity-100"
               >
                 <Edit2 className="w-3 h-3" />
               </button>
@@ -1236,14 +1502,14 @@ export default function SceneEditPage() {
           )}
         </div>
         {(gender || ageRange) && (
-          <div className="text-xs text-neutral-500 ml-5 mb-2">
+          <div className="text-xs text-neutral-400 ml-5 mb-2">
             {[gender, ageRange].filter(Boolean).join(" · ")}
           </div>
         )}
         {/* Voice selector — only for the AI scene partner, not for "You" */}
         {!isSelected && (
           <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
-            <label className="text-[11px] text-neutral-500 uppercase tracking-wider ml-5">
+            <label className="text-[11px] text-neutral-400 uppercase tracking-wider ml-5">
               Your scene partner
             </label>
             <div className="flex items-center gap-2 ml-5">
@@ -1325,7 +1591,7 @@ export default function SceneEditPage() {
     <div className="space-y-5">
       {/* Header — title + attribution */}
       <div className="rounded-xl bg-gradient-to-br from-neutral-900 to-neutral-900/60 border border-neutral-800 p-4 space-y-3 overflow-hidden">
-        <div className="text-sm text-neutral-500 tracking-wide break-words">
+        <div className="text-sm text-neutral-400 tracking-wide break-words">
           {editingSceneField === "play_title" && editingLocation === "left" ? (
             <Input
               value={sceneEditValue}
@@ -1352,7 +1618,7 @@ export default function SceneEditPage() {
                 className="group/pt inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
               >
                 <span className="text-neutral-300 font-medium break-words">{scene.play_title}</span>
-                <Edit2 className="w-2.5 h-2.5 text-neutral-600 opacity-0 group-hover/pt:opacity-100 transition-opacity shrink-0" />
+                <Edit2 className="w-2.5 h-2.5 text-neutral-500 opacity-0 group-hover/pt:opacity-100 transition-opacity shrink-0" />
               </button>
             </>
           )}
@@ -1385,7 +1651,7 @@ export default function SceneEditPage() {
                 className="group/pa inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
               >
                 <span className="text-neutral-300 font-medium break-words">{scene.play_author}</span>
-                <Edit2 className="w-2.5 h-2.5 text-neutral-600 opacity-0 group-hover/pa:opacity-100 transition-opacity shrink-0" />
+                <Edit2 className="w-2.5 h-2.5 text-neutral-500 opacity-0 group-hover/pa:opacity-100 transition-opacity shrink-0" />
               </button>
             </>
           ) : (
@@ -1402,7 +1668,7 @@ export default function SceneEditPage() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-xs uppercase tracking-wider text-neutral-400 font-medium">
-                Description <span className="normal-case text-neutral-600">(optional)</span>
+                Description <span className="normal-case text-neutral-500">(optional)</span>
               </span>
               <button
                 type="button"
@@ -1432,7 +1698,7 @@ export default function SceneEditPage() {
               </p>
             )}
             {!scene.description && (
-              <p className="text-sm text-neutral-500 italic px-2 py-1.5 -mx-2">
+              <p className="text-sm text-neutral-400 italic px-2 py-1.5 -mx-2">
                 No description yet
               </p>
             )}
@@ -1464,7 +1730,7 @@ export default function SceneEditPage() {
           <Theater className="w-4 h-4 text-primary" />
           <h3 className="text-lg font-semibold text-neutral-100">Characters</h3>
         </div>
-        <p className="text-[11px] text-neutral-500 -mt-1">
+        <p className="text-[11px] text-neutral-400 -mt-1">
           Select who you&apos;ll play
         </p>
         <div className="space-y-2">
@@ -1554,18 +1820,18 @@ export default function SceneEditPage() {
       </div>
 
       {/* Scene Info — tone, emotions, relationship, setting grouped */}
-      {(scene.tone || (scene.primary_emotions && scene.primary_emotions.length > 0) || scene.relationship_dynamic || scene.setting) && (
+      {(scene.tone || (scene.primary_emotions && scene.primary_emotions.length > 0) || scene.setting) && (
         <div className="rounded-xl bg-neutral-900/40 border border-neutral-800 p-4 space-y-4">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
-            <h3 className="text-base font-semibold text-neutral-100">Scene Info</h3>
+            <h3 className="text-lg font-semibold text-neutral-100">Scene Info</h3>
           </div>
 
           {/* Tone */}
           {scene.tone && (
             <div className="space-y-1.5">
               <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-medium">Tone</p>
-              <Badge className="text-[11px] bg-primary/15 text-primary border-primary/30 capitalize hover:bg-primary/20">
+              <Badge className="text-xs bg-amber-500/15 text-amber-400 border-amber-500/30 capitalize hover:bg-amber-500/20">
                 {scene.tone}
               </Badge>
             </div>
@@ -1580,22 +1846,12 @@ export default function SceneEditPage() {
                   <Badge
                     key={emotion}
                     variant="secondary"
-                    className="text-[11px] bg-neutral-800 text-neutral-200 capitalize border border-neutral-700"
+                    className="text-xs bg-violet-500/15 text-violet-300 capitalize border border-violet-500/30"
                   >
                     {emotion}
                   </Badge>
                 ))}
               </div>
-            </div>
-          )}
-
-          {/* Relationship */}
-          {scene.relationship_dynamic && (
-            <div className="space-y-1.5">
-              <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-medium">Relationship</p>
-              <p className="text-sm text-neutral-200 capitalize">
-                {scene.relationship_dynamic}
-              </p>
             </div>
           )}
 
@@ -1636,6 +1892,19 @@ export default function SceneEditPage() {
             )}
           </AnimatePresence>
         </div>
+      )}
+
+      {/* Reset to original */}
+      {scene.has_original_snapshot && (
+        <button
+          type="button"
+          onClick={resetToOriginal}
+          disabled={resetting}
+          className="flex items-center gap-2 text-xs text-neutral-500 hover:text-orange-400 transition-colors mt-4 mx-auto disabled:opacity-50"
+        >
+          {resetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
+          Reset to original
+        </button>
       )}
 
       {/* Feedback / Report */}
@@ -1784,11 +2053,10 @@ export default function SceneEditPage() {
             const values = lineEditValues[line.id];
             const isMine = isMyLine(line.character_name);
 
-            const showCustomChar = customCharEditLineId === line.id;
 
             const cancelLineEdit = () => {
+              if (isSpeakingAI || isLoadingAI) cancelAI();
               setEditingLineId(null);
-              setCustomCharEditLineId(null);
               setLineEditValues((prev) => {
                 const next = { ...prev };
                 delete next[line.id];
@@ -1799,6 +2067,7 @@ export default function SceneEditPage() {
             const handleLineBlur = (e: React.FocusEvent) => {
               const relatedTarget = e.relatedTarget as HTMLElement | null;
               if (relatedTarget?.closest(`[data-line-edit="${line.id}"]`)) return;
+              if (relatedTarget?.closest(".fixed.z-50")) return;
               if (!values) return;
               const hasChanges =
                 values.character_name !== line.character_name ||
@@ -1817,16 +2086,25 @@ export default function SceneEditPage() {
             };
 
             return (
-              <ReorderLineItem key={lineId} lineId={lineId} onDragEnd={persistLineOrder}>
+              <ReorderLineItem key={lineId} lineId={lineId} onDragEnd={persistLineOrder} onDragStart={() => { setIsDragging(true); setDraggingLineId(pendingDragLineRef.current); }}>
                 {(startDrag) => (
-                <div className="relative group/linerow transition-all px-2 py-1">
+                <div className={cn("relative group/linerow transition-all px-2 py-1", isDragging && draggingLineId !== lineId && "opacity-50")}>
                   {/* Inner content — narrower, centered */}
-                  <div className="max-w-[600px] mx-auto flex flex-col items-center rounded-lg px-4 py-3 border border-transparent group-hover/linerow:bg-neutral-50 group-hover/linerow:border-neutral-200 transition-all relative">
+                  <div className={cn(
+                    "max-w-[600px] mx-auto flex flex-col items-center rounded-lg px-4 py-3 border relative",
+                    draggingLineId === lineId
+                      ? "border-amber-400 bg-amber-50 shadow-md ring-2 ring-amber-300/50"
+                      : "border-transparent group-hover/linerow:bg-neutral-50 group-hover/linerow:border-neutral-200"
+                  )}>
                   {/* Drag handle — inside container, left edge */}
                   {!isEditing && (
                     <div
                       className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover/linerow:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none select-none p-1 rounded hover:bg-neutral-200/60 text-neutral-400 hover:text-neutral-600"
-                      onPointerDown={startDrag}
+                      onPointerDown={(e) => {
+                        isDraggingRef.current = true;
+                        pendingDragLineRef.current = lineId;
+                        startDrag(e);
+                      }}
                       title="Reorder lines"
                     >
                       <GripVertical className="w-3.5 h-3.5" />
@@ -1852,91 +2130,312 @@ export default function SceneEditPage() {
                     </button>
                   )}
                   {isEditing && values ? (
-                    <div
+                    (() => {
+                      const editCharNum = line.character_name === scene.character_1_name ? 1 : 2;
+                      const editVid = editCharNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice;
+                      const editVoice = AI_VOICES.find(v => v.id === editVid);
+                      const editDropdownKey = `edit-${lineId}`;
+                      const isPlayingThisLine = (isSpeakingAI || isLoadingAI) && ttsLineIdRef.current === line.id;
+                      return (
+                    <motion.div
+                      key="editing"
                       data-line-edit={line.id}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.2, ease: "easeOut" }}
                       className="space-y-2 w-full max-w-full mx-auto overflow-hidden"
                     >
-                      {/* Character name (dropdown) + stage direction — centered inline */}
-                      <div className="flex items-center justify-center gap-2 flex-wrap">
-                        {showCustomChar ? (
-                          <input
-                            value={values.character_name}
-                            onChange={(e) =>
-                              setLineEditValues((prev) => ({
-                                ...prev,
-                                [line.id]: { ...values, character_name: e.target.value },
-                              }))
-                            }
-                            className="text-sm font-bold uppercase tracking-widest text-neutral-700 bg-transparent border-b-2 border-dashed border-neutral-400 outline-none text-center py-0.5 px-1"
-                            style={{ width: `${Math.max(4, values.character_name.length + 2)}ch` }}
-                            disabled={saving !== null}
-                            onBlur={handleLineBlur}
-                            onKeyDown={handleLineKeyDown}
-                            autoFocus
-                            placeholder="Character name"
-                          />
-                        ) : (
-                          <select
-                            value={
-                              values.character_name === scene.character_1_name || values.character_name === scene.character_2_name
-                                ? values.character_name
-                                : "__custom__"
-                            }
-                            onChange={(e) => {
-                              if (e.target.value === "__custom__") {
-                                setCustomCharEditLineId(line.id);
-                              } else {
-                                setLineEditValues((prev) => ({
-                                  ...prev,
-                                  [line.id]: { ...values, character_name: e.target.value },
-                                }));
-                              }
-                            }}
-                            className="text-sm font-bold uppercase tracking-widest text-neutral-700 bg-transparent border-b-2 border-dashed border-neutral-400 outline-none text-center py-0.5 px-1 cursor-pointer"
-                            disabled={saving !== null}
-                            onBlur={handleLineBlur}
-                            onKeyDown={handleLineKeyDown}
+                      {/* Playback controls + waveform — TOP (only for partner lines) */}
+                      {!isMine && (
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (isPlayingThisLine) { cancelAI(); ttsLineIdRef.current = null; setTtsProgress(0); return; }
+                            cancelAI();
+                            const stageDir = values.stage_direction || line.stage_direction || "";
+                            const instructions = stageDir ? `You are an actor performing a scene. The stage direction says: (${stageDir}). Deliver this line exactly as that direction demands. If it says "laughingly", laugh while speaking. If it says "whispering", whisper. If it says "angrily", sound genuinely angry. Fully commit to the direction in your vocal performance.` : "";
+                            ttsLineIdRef.current = line.id;
+                            setTtsProgress(0);
+                            speakAI(values.text || line.text, editVid || "coral", instructions);
+                          }}
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
+                            isPlayingThisLine
+                              ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
+                              : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100"
+                          )}
+                          title={isPlayingThisLine ? "Stop playback" : "Listen to this line"}
+                        >
+                          {isPlayingThisLine && isLoadingAI ? (
+                            <><Loader2 className="w-3 h-3 animate-spin" /> Loading...</>
+                          ) : isPlayingThisLine && isSpeakingAI ? (
+                            <><Square className="w-3 h-3" /> Stop</>
+                          ) : (
+                            <><Volume2 className="w-3 h-3" /> Listen</>
+                          )}
+                        </button>
+                      </div>
+                      )}
+                      <AnimatePresence>
+                        {isPlayingThisLine && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            transition={{ duration: 0.2 }}
                           >
-                            <option value={scene.character_1_name}>{scene.character_1_name.toUpperCase()}</option>
-                            <option value={scene.character_2_name}>{scene.character_2_name.toUpperCase()}</option>
-                            <option value="__custom__">Rename...</option>
-                          </select>
+                            <TTSWaveform
+                              audioElement={aiAudioRef.current}
+                              isLoading={isLoadingAI}
+                              isSpeaking={isSpeakingAI}
+                              onProgress={setTtsProgress}
+                              className="max-w-[240px] mx-auto"
+                            />
+                          </motion.div>
                         )}
-                        <input
-                          placeholder="Stage direction"
+                      </AnimatePresence>
+
+                      {/* Character name (dropdown trigger) + stage direction */}
+                      <div className="flex items-center justify-center gap-2 flex-wrap">
+                        <div className="relative" data-voice-dropdown>
+                          <button
+                            ref={(el) => { if (el) el.dataset.voiceBtnId = editDropdownKey; }}
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); setVoiceDropdownOpen(voiceDropdownOpen === editDropdownKey ? null : editDropdownKey); }}
+                            className="inline-flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+                          >
+                            {isMine ? (
+                              <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                                {line.character_name[0]?.toUpperCase()}
+                              </div>
+                            ) : editVoice ? (
+                              <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0", editVoice.color)}>
+                                {editVoice.label[0]}
+                              </div>
+                            ) : (
+                              <div className="w-5 h-5 rounded-full bg-neutral-400 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                                {line.character_name[0]?.toUpperCase()}
+                              </div>
+                            )}
+                            <span className="text-sm font-bold uppercase tracking-widest text-neutral-700">{line.character_name}</span>
+                            <ChevronDown className="w-3 h-3 text-neutral-400" />
+                          </button>
+                          {/* Dropdown reuses same pattern as parchment dropdown */}
+                          {voiceDropdownOpen === editDropdownKey && (() => {
+                            const btn = document.querySelector(`[data-voice-btn-id="${editDropdownKey}"]`) as HTMLElement | null;
+                            const rect = btn?.getBoundingClientRect();
+                            return (
+                              <div
+                                className="fixed z-50 w-64 rounded-xl bg-white border border-neutral-200 shadow-xl py-2 max-h-[400px] overflow-y-auto"
+                                style={rect ? { top: rect.bottom + 8, left: Math.max(8, rect.left + rect.width / 2 - 128) } : {}}
+                              >
+                                {/* Character name */}
+                                <div className="px-3 pb-2 border-b border-neutral-100">
+                                  <label className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1.5 block">Character name</label>
+                                  <input
+                                    key={line.character_name}
+                                    type="text"
+                                    defaultValue={line.character_name}
+                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-md px-2.5 py-1.5 text-sm text-neutral-800 focus:outline-none focus:border-neutral-400"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        const val = (e.target as HTMLInputElement).value.trim();
+                                        if (val && val !== line.character_name) renameCharacter(line.character_name, val);
+                                        setVoiceDropdownOpen(null);
+                                      }
+                                    }}
+                                    onBlur={(e) => {
+                                      const val = e.target.value.trim();
+                                      if (val && val !== line.character_name) renameCharacter(line.character_name, val);
+                                    }}
+                                  />
+                                </div>
+                                {/* Role selector */}
+                                <div className="px-3 py-2 border-b border-neutral-100">
+                                  <label className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1.5 block">Role</label>
+                                  <div className="flex gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); if (!isMine) { pushUndo({ type: "selected_character", old: selectedCharacter, cur: line.character_name }); } setSelectedCharacter(line.character_name); }}
+                                      className={cn("flex-1 py-1.5 rounded-md text-xs font-medium transition-colors", isMine ? "bg-orange-500 text-white" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200")}
+                                    >You</button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const otherChar = line.character_name === scene.character_1_name ? scene.character_2_name : scene.character_1_name;
+                                        if (isMine) { pushUndo({ type: "selected_character", old: selectedCharacter, cur: otherChar }); }
+                                        setSelectedCharacter(otherChar);
+                                      }}
+                                      className={cn("flex-1 py-1.5 rounded-md text-xs font-medium transition-colors", !isMine ? "bg-blue-600 text-white" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200")}
+                                    >Scene partner</button>
+                                  </div>
+                                </div>
+                                {/* Voice selection (only for AI partner) */}
+                                {!isMine && (
+                                  <>
+                                    <div className="px-3 pt-2 pb-1">
+                                      <label className="text-[10px] uppercase tracking-wider text-neutral-400 block">Voice</label>
+                                    </div>
+                                    {AI_VOICES.map((v) => (
+                                      <button
+                                        key={v.id}
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); handleVoiceChange(editCharNum, v.id); setVoiceDropdownOpen(null); }}
+                                        className={cn("w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-neutral-50 transition-colors text-left", editVid === v.id && "bg-neutral-100")}
+                                      >
+                                        <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0", v.color)}>{v.label[0]}</div>
+                                        <span className="text-neutral-700 text-sm">{v.label}</span>
+                                        <span className="text-neutral-400 text-xs">— {v.desc}</span>
+                                        {editVid === v.id && <Check className="w-3.5 h-3.5 text-primary shrink-0 ml-auto" />}
+                                      </button>
+                                    ))}
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                        <textarea
                           value={values.stage_direction}
+                          maxLength={120}
+                          placeholder="Stage directions"
                           onChange={(e) =>
                             setLineEditValues((prev) => ({
                               ...prev,
                               [line.id]: { ...values, stage_direction: e.target.value },
                             }))
                           }
-                          className="text-xs italic text-neutral-500 bg-transparent border-b border-dashed border-neutral-300 outline-none text-center py-0.5 px-1"
-                          style={{ width: `${Math.max(18, (values.stage_direction?.length || 0) + 3)}ch` }}
+                          rows={Math.max(1, Math.ceil((values.stage_direction?.length || 0) / 40))}
+                          className="text-xs italic text-neutral-500 bg-transparent border-b border-dashed border-neutral-300 outline-none text-center py-0.5 px-2 resize-none w-full max-w-[300px] placeholder:italic placeholder:text-neutral-300"
                           disabled={saving !== null}
                           onBlur={handleLineBlur}
                           onKeyDown={handleLineKeyDown}
                         />
+                        {values.stage_direction && (
+                          <span className="text-[10px] text-neutral-400">{values.stage_direction.length}/120</span>
+                        )}
                       </div>
 
-                      {/* Line text */}
-                      <textarea
-                        ref={autoFocusTextRef}
-                        value={values.text}
-                        onChange={(e) =>
-                          setLineEditValues((prev) => ({
-                            ...prev,
-                            [line.id]: { ...values, text: e.target.value },
-                          }))
-                        }
-                        rows={Math.max(2, Math.ceil(values.text.length / 60))}
-                        className="text-base font-medium leading-relaxed w-full bg-transparent border-b-2 border-dashed border-neutral-300 outline-none py-1 resize-none text-neutral-800 break-words text-center"
-                        disabled={saving !== null}
-                        onBlur={handleLineBlur}
-                        onKeyDown={handleLineKeyDown}
-                      />
+                      {/* Line text — animated swap between word highlight and textarea */}
+                      <div className="relative w-full">
+                        <AnimatePresence mode="wait">
+                          {isPlayingThisLine && isSpeakingAI ? (
+                            <motion.div
+                              key="highlight"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.25 }}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() => { cancelAI(); ttsLineIdRef.current = null; setTtsProgress(0); }}
+                              className="text-base font-medium leading-relaxed w-full py-1 text-center break-words cursor-pointer"
+                              style={{ overflowWrap: "anywhere" }}
+                              title="Click to stop and edit"
+                            >
+                              {(() => {
+                                const lineText = values.text || line.text;
+                                const tokens = lineText.split(/(\s+)/);
+                                const words = tokens.filter(t => t.trim());
+                                const totalWords = words.length;
+                                if (totalWords === 0) return <span>{lineText}</span>;
 
-                      {/* Save hint — desktop vs mobile */}
+                                // Progress is already onset-corrected from TTSWaveform
+                                const speechProgress = Math.max(0, Math.min(1, ttsProgress));
+
+                                // Syllable estimation for word duration modeling
+                                const estimateSyllables = (word: string): number => {
+                                  const w = word.toLowerCase().replace(/[^a-z]/g, "");
+                                  if (w.length <= 2) return 1;
+                                  const vowelGroups = w.match(/[aeiouy]+/g) || [];
+                                  let count = vowelGroups.length;
+                                  if (w.endsWith("e") && count > 1) count--;
+                                  if (w.endsWith("le") && w.length > 3 && !/[aeiouy]/.test(w[w.length - 3])) count++;
+                                  return Math.max(1, count);
+                                };
+
+                                // Punctuation-based pause weights (TTS pauses after punctuation)
+                                const trailingPause = (word: string): number => {
+                                  if (/[.!?]$/.test(word)) return 0.6;
+                                  if (/[;:]$/.test(word)) return 0.35;
+                                  if (/[,]$/.test(word)) return 0.25;
+                                  if (/[—–\-]$/.test(word)) return 0.3;
+                                  if (/\.{2,}$/.test(word)) return 0.8;
+                                  return 0;
+                                };
+
+                                // Word weight = syllables + inter-word gap + punctuation pause
+                                const INTER_WORD_GAP = 0.15;
+                                const wordWeights = words.map(w =>
+                                  estimateSyllables(w) + INTER_WORD_GAP + trailingPause(w)
+                                );
+                                const totalWeight = wordWeights.reduce((a, b) => a + b, 0);
+
+                                // Cumulative end-of-word positions (0..1)
+                                const cumulative: number[] = [];
+                                let sum = 0;
+                                for (const wt of wordWeights) {
+                                  sum += wt;
+                                  cumulative.push(sum / totalWeight);
+                                }
+
+                                let wordIdx = 0;
+                                return tokens.map((token, idx) => {
+                                  if (!token.trim()) return <span key={idx}>{token}</span>;
+                                  const wi = wordIdx;
+                                  wordIdx++;
+                                  const wordStart = wi > 0 ? cumulative[wi - 1] : 0;
+                                  const wordEnd = cumulative[wi];
+                                  const isHighlighted = wordEnd <= speechProgress;
+                                  const isCurrent = !isHighlighted && speechProgress >= wordStart;
+                                  return (
+                                    <span
+                                      key={idx}
+                                      className={cn(
+                                        "transition-colors duration-75 ease-out",
+                                        isHighlighted
+                                          ? "text-orange-600 font-semibold"
+                                          : isCurrent
+                                          ? "text-orange-500 font-semibold"
+                                          : "text-neutral-300"
+                                      )}
+                                    >{token}</span>
+                                  );
+                                });
+                              })()}
+                            </motion.div>
+                          ) : (
+                            <motion.div
+                              key="textarea"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <textarea
+                                ref={autoFocusTextRef}
+                                value={values.text}
+                                onChange={(e) => {
+                                  if (isSpeakingAI || isLoadingAI) { cancelAI(); ttsLineIdRef.current = null; setTtsProgress(0); }
+                                  setLineEditValues((prev) => ({
+                                    ...prev,
+                                    [line.id]: { ...values, text: e.target.value },
+                                  }));
+                                }}
+                                rows={Math.max(2, Math.ceil(values.text.length / 60))}
+                                className="text-base font-medium leading-relaxed w-full bg-transparent border-b-2 border-dashed border-neutral-300 outline-none py-1 resize-none text-neutral-800 break-words text-center"
+                                disabled={saving !== null}
+                                onBlur={handleLineBlur}
+                                onKeyDown={handleLineKeyDown}
+                              />
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
                       <p className="text-[10px] text-neutral-400 text-center">
                         <span className="hidden sm:inline">
                           <kbd className="px-1 py-0.5 rounded bg-neutral-100 text-neutral-500 font-sans">&#8984;Enter</kbd> save &middot; <kbd className="px-1 py-0.5 rounded bg-neutral-100 text-neutral-500 font-sans">Esc</kbd> cancel
@@ -1945,43 +2444,168 @@ export default function SceneEditPage() {
                           Tap outside to save
                         </span>
                       </p>
-                    </div>
+                    </motion.div>
+                      );
+                    })()
                   ) : (
-                    <button
-                      type="button"
-                      onClick={() => startEditLine(line)}
+                    <div className="w-full">
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => !isDragging && startEditLine(line)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); !isDragging && startEditLine(line); } }}
                       className="group/line-btn inline-flex flex-col items-center w-full max-w-full overflow-hidden rounded-md px-4 py-2 transition-colors cursor-pointer"
                     >
-                      {/* Character name + stage direction */}
-                      <div className="flex items-center justify-center gap-1.5 mb-1">
-                        <span className="text-sm font-bold uppercase tracking-widest text-neutral-600">
-                          {line.character_name}
-                        </span>
-                        {isMine && (
-                          <span className="text-[11px] font-sans font-bold text-orange-500">(You)</span>
-                        )}
-                        {line.stage_direction && (
-                          <span className="text-xs italic text-neutral-400 normal-case">
+                      {/* Character name + avatar + stage direction */}
+                      {(() => {
+                        const charNum = line.character_name === scene.character_1_name ? 1 : 2;
+                        const vid = charNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice;
+                        const voice = AI_VOICES.find(v => v.id === vid);
+                        const dropdownKey = `parchment-${lineId}`;
+                        return (
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <div className="relative" data-voice-dropdown onClick={(e) => e.stopPropagation()}>
+                          <button
+                            ref={(el) => { if (el) el.dataset.voiceBtnId = dropdownKey; }}
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); e.preventDefault(); setVoiceDropdownOpen(voiceDropdownOpen === dropdownKey ? null : dropdownKey); }}
+                            className="inline-flex items-center gap-1.5 hover:opacity-80 transition-opacity"
+                          >
+                            {/* Avatar */}
+                            {isMine ? (
+                              <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                                {line.character_name[0]?.toUpperCase()}
+                              </div>
+                            ) : voice ? (
+                              <div className={cn("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0", voice.color)}>
+                                {voice.label[0]}
+                              </div>
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-neutral-400 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                                {line.character_name[0]?.toUpperCase()}
+                              </div>
+                            )}
+                            <span className="text-sm font-bold uppercase tracking-widest text-neutral-600">
+                              {line.character_name}
+                            </span>
+                            <span className={cn("text-[11px] font-sans font-bold min-w-[30px]", isMine ? "text-orange-500" : "text-transparent select-none pointer-events-none")}>{isMine ? "(You)" : "\u00A0"}</span>
+                          </button>
+                          {/* Combined character settings dropdown */}
+                          {voiceDropdownOpen === dropdownKey && (() => {
+                            const btn = document.querySelector(`[data-voice-btn-id="${dropdownKey}"]`) as HTMLElement | null;
+                            const rect = btn?.getBoundingClientRect();
+                            return (
+                              <div
+                                className="fixed z-50 w-64 rounded-xl bg-white border border-neutral-200 shadow-xl py-2 max-h-[400px] overflow-y-auto"
+                                style={rect ? { top: rect.bottom + 8, left: Math.max(8, rect.left + rect.width / 2 - 128) } : {}}
+                              >
+                                {/* Character name */}
+                                <div className="px-3 pb-2 border-b border-neutral-100">
+                                  <label className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1.5 block">Character name</label>
+                                  <input
+                                    key={line.character_name}
+                                    type="text"
+                                    defaultValue={line.character_name}
+                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-md px-2.5 py-1.5 text-sm text-neutral-800 focus:outline-none focus:border-neutral-400"
+                                    onClick={(e) => e.stopPropagation()}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        const val = (e.target as HTMLInputElement).value.trim();
+                                        if (val && val !== line.character_name) renameCharacter(line.character_name, val);
+                                        setVoiceDropdownOpen(null);
+                                      }
+                                    }}
+                                    onBlur={(e) => {
+                                      const val = e.target.value.trim();
+                                      if (val && val !== line.character_name) renameCharacter(line.character_name, val);
+                                    }}
+                                  />
+                                </div>
+                                {/* Role selector */}
+                                <div className="px-3 py-2 border-b border-neutral-100">
+                                  <label className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1.5 block">Role</label>
+                                  <div className="flex gap-1.5">
+                                    <button
+                                      type="button"
+                                      onClick={(e) => { e.stopPropagation(); if (!isMine) { pushUndo({ type: "selected_character", old: selectedCharacter, cur: line.character_name }); } setSelectedCharacter(line.character_name); }}
+                                      className={cn(
+                                        "flex-1 py-1.5 rounded-md text-xs font-medium transition-colors",
+                                        isMine ? "bg-orange-500 text-white" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
+                                      )}
+                                    >
+                                      You
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        const otherChar = line.character_name === scene.character_1_name ? scene.character_2_name : scene.character_1_name;
+                                        if (isMine) { pushUndo({ type: "selected_character", old: selectedCharacter, cur: otherChar }); }
+                                        setSelectedCharacter(otherChar);
+                                      }}
+                                      className={cn(
+                                        "flex-1 py-1.5 rounded-md text-xs font-medium transition-colors",
+                                        !isMine ? "bg-blue-600 text-white" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
+                                      )}
+                                    >
+                                      Scene partner
+                                    </button>
+                                  </div>
+                                </div>
+                                {/* Voice selection (only for AI partner) */}
+                                {!isMine && (
+                                  <>
+                                    <div className="px-3 pt-2 pb-1">
+                                      <label className="text-[10px] uppercase tracking-wider text-neutral-400 block">Voice</label>
+                                    </div>
+                                    {AI_VOICES.map((v) => (
+                                      <button
+                                        key={v.id}
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); handleVoiceChange(charNum, v.id); setVoiceDropdownOpen(null); }}
+                                        className={cn("w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-neutral-50 transition-colors text-left", vid === v.id && "bg-neutral-100")}
+                                      >
+                                        <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0", v.color)}>{v.label[0]}</div>
+                                        <span className="text-neutral-700 text-sm">{v.label}</span>
+                                        <span className="text-neutral-400 text-xs">— {v.desc}</span>
+                                        {vid === v.id && <Check className="w-3.5 h-3.5 text-primary shrink-0 ml-auto" />}
+                                      </button>
+                                    ))}
+                                  </>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                        {line.stage_direction && !isDragging && (
+                          <span className="text-xs italic text-neutral-400 normal-case break-words whitespace-pre-wrap max-w-[250px]" style={{ overflowWrap: "anywhere" }}>
                             ({line.stage_direction})
                           </span>
                         )}
-                        <Edit2 className="w-3 h-3 text-neutral-400 opacity-0 group-hover/line-btn:opacity-100 transition-opacity shrink-0" />
+                        {!isDragging && (
+                          <Edit2 className="w-3 h-3 text-neutral-400 opacity-0 group-hover/line-btn:opacity-100 transition-opacity shrink-0" />
+                        )}
                       </div>
+                        );
+                      })()}
                       {/* Line text */}
-                      <p
+                      <motion.p
+                        layout="position"
                         className={cn(
-                          "text-base font-medium leading-relaxed text-neutral-800 break-words whitespace-pre-wrap text-center w-full",
-                          highlightMyLines && isMine && "bg-yellow-200/70 rounded px-1 -mx-1",
-                          isDragging && "line-clamp-1"
+                          "text-base font-medium leading-relaxed text-neutral-800 break-words whitespace-pre-wrap text-center w-full transition-colors duration-300",
+                          highlightMyLines && isMine && "bg-yellow-200/70 rounded px-1 -mx-1"
                         )}
                         style={{ overflowWrap: "anywhere" }}
+                        animate={highlightMyLines && isMine ? { scale: [1, 1.01, 1] } : { scale: 1 }}
+                        transition={{ duration: 0.3 }}
                       >
                         {line.text}
-                      </p>
-                    </button>
+                      </motion.p>
+                    </div>
+                    </div>
                   )}
                   {/* Bottom toolbar on hover */}
-                  {!isEditing && (
+                  {!isEditing && !isDragging && (
                     <div className="flex items-center gap-3 mt-1 pt-1 opacity-0 group-hover/linerow:opacity-100 transition-opacity">
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -2020,17 +2644,8 @@ export default function SceneEditPage() {
           })}
       </Reorder.Group>
 
-      {/* Add line at the bottom */}
-      <div className="flex justify-center py-3">
-        <button
-          type="button"
-          onClick={() => openAddLineModal(dragLineOrder.length > 0 ? dragLineOrder[dragLineOrder.length - 1] : null)}
-          className="flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-700 transition-colors rounded-full border border-dashed border-neutral-400 px-3 py-1 hover:border-neutral-500"
-        >
-          <Plus className="w-3 h-3" />
-          Add line
-        </button>
-      </div>
+      {/* Spacer after lines */}
+      <div className="h-3" />
 
       {/* Footer */}
       <div className="mt-4 pt-4 border-t border-neutral-200 text-center">
@@ -2045,6 +2660,8 @@ export default function SceneEditPage() {
   // Render
   // ---------------------------------------------------------------------------
 
+  if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
+
   return (
     <div className="min-h-screen bg-neutral-950 flex flex-col">
       {/* Top bar */}
@@ -2057,7 +2674,7 @@ export default function SceneEditPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push(`/my-scripts/${scriptId}`)}
+          onClick={() => { flushPendingEdits(); cancelAIRef.current?.(); router.push(`/my-scripts/${scriptId}`); }}
           className="text-neutral-400 hover:text-neutral-100 gap-1.5"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -2202,16 +2819,44 @@ export default function SceneEditPage() {
       <Dialog open={showRehearsalModal} onOpenChange={(open) => { setShowRehearsalModal(open); if (!open) setRehearsalStartLineIndex(null); }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle className="text-xl">Start Rehearsal</DialogTitle>
-            <DialogDescription>
-              You&apos;ll play as <span className="font-semibold text-foreground">{selectedCharacter}</span>.
-              Your scene partner will read {selectedCharacter === scene.character_1_name ? scene.character_2_name : scene.character_1_name}.
-              {rehearsalStartLineIndex !== null && (
-                <span className="block mt-1 text-sm">Starting from line {rehearsalStartLineIndex + 1}.</span>
-              )}
+            <DialogTitle className="text-xl font-serif">Ready to Rehearse</DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-3 pt-1">
+                {/* Role cards */}
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 rounded-lg border border-orange-200 bg-orange-50 p-3 text-center">
+                    <div className="w-8 h-8 rounded-full bg-orange-500 flex items-center justify-center text-sm font-bold text-white mx-auto mb-1.5">
+                      {selectedCharacter?.[0]?.toUpperCase()}
+                    </div>
+                    <p className="text-xs text-orange-600 font-medium">You</p>
+                    <p className="text-sm font-semibold text-foreground truncate">{selectedCharacter}</p>
+                  </div>
+                  <span className="text-muted-foreground text-xs font-medium">vs</span>
+                  <div className="flex-1 rounded-lg border border-blue-200 bg-blue-50 p-3 text-center">
+                    {(() => {
+                      const partner = selectedCharacter === scene.character_1_name ? scene.character_2_name : scene.character_1_name;
+                      const partnerNum = partner === scene.character_1_name ? 1 : 2;
+                      const vid = partnerNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice;
+                      const voice = AI_VOICES.find(v => v.id === vid);
+                      return (
+                        <>
+                          <div className={cn("w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold text-white mx-auto mb-1.5", voice?.color ?? "bg-blue-500")}>
+                            {voice ? voice.label[0] : partner?.[0]?.toUpperCase()}
+                          </div>
+                          <p className="text-xs text-blue-600 font-medium">Scene Partner</p>
+                          <p className="text-sm font-semibold text-foreground truncate">{partner}</p>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+                {rehearsalStartLineIndex !== null && (
+                  <p className="text-sm text-muted-foreground text-center">Starting from line {rehearsalStartLineIndex + 1}</p>
+                )}
+              </div>
             </DialogDescription>
           </DialogHeader>
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-3">
             <Button
               variant="outline"
               onClick={() => setShowRehearsalModal(false)}
@@ -2232,7 +2877,7 @@ export default function SceneEditPage() {
               ) : (
                 <Play className="w-4 h-4" />
               )}
-              Start
+              Start Rehearsal
             </Button>
           </div>
         </DialogContent>
@@ -2270,27 +2915,67 @@ export default function SceneEditPage() {
 
       {/* Add Line modal */}
       <Dialog open={showAddLineModal} onOpenChange={setShowAddLineModal}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Add Line</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 pt-2">
-            <div className="space-y-1.5">
-              <Label className="text-sm">Character</Label>
-              <select
-                value={newLineCharacter}
-                onChange={(e) => setNewLineCharacter(e.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-              >
-                {scene && (
-                  <>
-                    <option value={scene.character_1_name}>{scene.character_1_name}</option>
-                    <option value={scene.character_2_name}>{scene.character_2_name}</option>
-                  </>
-                )}
-              </select>
+        <DialogContent className="max-w-md p-0 overflow-hidden">
+          <div className="px-6 pt-6 pb-3">
+            <DialogHeader>
+              <DialogTitle className="text-lg">Add a new line</DialogTitle>
+              <DialogDescription className="text-sm text-muted-foreground">
+                Insert a line after the selected position.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="px-6 pb-6 space-y-4">
+            {/* Character selector — buttons instead of dropdown */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Who is speaking?</Label>
+              {scene && (
+                <div className="flex gap-2">
+                  {[scene.character_1_name, scene.character_2_name].map((charName) => {
+                    const isUser = charName === selectedCharacter;
+                    const isSelected = newLineCharacter === charName;
+                    const charNum = charName === scene.character_1_name ? 1 : 2;
+                    const vid = charNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice;
+                    const voice = AI_VOICES.find(v => v.id === vid);
+                    return (
+                      <button
+                        key={charName}
+                        type="button"
+                        onClick={() => setNewLineCharacter(charName)}
+                        className={cn(
+                          "flex-1 flex items-center gap-2.5 rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-all text-left",
+                          isSelected
+                            ? isUser
+                              ? "border-orange-400 bg-orange-50 text-orange-700"
+                              : "border-blue-400 bg-blue-50 text-blue-700"
+                            : "border-muted bg-background text-muted-foreground hover:border-border hover:bg-accent"
+                        )}
+                      >
+                        {isUser ? (
+                          <div className="w-7 h-7 rounded-full bg-orange-500 flex items-center justify-center text-[11px] font-bold text-white shrink-0">
+                            {charName[0]?.toUpperCase()}
+                          </div>
+                        ) : voice ? (
+                          <div className={cn("w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0", voice.color)}>
+                            {voice.label[0]}
+                          </div>
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-neutral-400 flex items-center justify-center text-[11px] font-bold text-white shrink-0">
+                            {charName[0]?.toUpperCase()}
+                          </div>
+                        )}
+                        <div className="flex flex-col min-w-0">
+                          <span className="truncate">{charName}</span>
+                          {isUser && <span className="text-[10px] font-normal text-orange-500">(You)</span>}
+                          {!isUser && voice && <span className="text-[10px] font-normal opacity-60">{voice.label}</span>}
+                        </div>
+                        {isSelected && <Check className="w-4 h-4 shrink-0 ml-auto" />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-            {/* Voice for the non-user character (scene partner) */}
+            {/* Voice selector for scene partner lines */}
             {scene && newLineCharacter && newLineCharacter !== selectedCharacter && (() => {
               const charNum = newLineCharacter === scene.character_1_name ? 1 : 2;
               const voiceKey = charNum === 1 ? "character_1_voice" : "character_2_voice";
@@ -2299,76 +2984,50 @@ export default function SceneEditPage() {
               return (
                 <div className="space-y-1.5">
                   <Label className="text-sm text-muted-foreground">Scene partner voice</Label>
-                  <div className="relative" data-voice-dropdown>
-                    <button
-                      type="button"
-                      onClick={() => setVoiceDropdownOpen(voiceDropdownOpen === "addline" ? null : "addline")}
-                      className="w-full flex items-center gap-2 rounded-md border border-input bg-background px-2.5 py-2 text-sm hover:bg-accent transition-colors text-left"
-                    >
-                      {selectedVoice ? (
-                        <>
-                          <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0", selectedVoice.color)}>
-                            {selectedVoice.label[0]}
-                          </div>
-                          <span className="flex-1 truncate">{selectedVoice.label} — {selectedVoice.desc}</span>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] text-muted-foreground shrink-0">?</div>
-                          <span className="flex-1 text-muted-foreground">Select a voice...</span>
-                        </>
-                      )}
-                      <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform", voiceDropdownOpen === "addline" && "rotate-180")} />
-                    </button>
-                    {voiceDropdownOpen === "addline" && (
-                      <div className="absolute z-20 mt-1 w-full rounded-md bg-popover border border-border shadow-lg py-1 max-h-48 overflow-y-auto">
-                        {AI_VOICES.map((v) => (
-                          <button
-                            key={v.id}
-                            type="button"
-                            onClick={() => { handleVoiceChange(charNum as 1 | 2, v.id); setVoiceDropdownOpen(null); }}
-                            className={cn(
-                              "w-full flex items-center gap-2 px-2.5 py-1.5 text-sm hover:bg-accent transition-colors text-left",
-                              currentVoice === v.id && "bg-accent/50"
-                            )}
-                          >
-                            <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0", v.color)}>
-                              {v.label[0]}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <span>{v.label}</span>
-                              <span className="text-muted-foreground ml-1">— {v.desc}</span>
-                            </div>
-                            {currentVoice === v.id && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <select
+                    value={currentVoice || ""}
+                    onChange={(e) => handleVoiceChange(charNum as 1 | 2, e.target.value)}
+                    className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  >
+                    <option value="">Select a voice...</option>
+                    {AI_VOICES.map((v) => (
+                      <option key={v.id} value={v.id}>{v.label} — {v.desc}</option>
+                    ))}
+                  </select>
+                  {selectedVoice && (
+                    <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                      <div className={cn("w-3.5 h-3.5 rounded-full shrink-0", selectedVoice.color)} />
+                      {selectedVoice.label}: {selectedVoice.desc}
+                    </p>
+                  )}
                 </div>
               );
             })()}
+            {/* Line text */}
             <div className="space-y-1.5">
-              <Label className="text-sm">Line text</Label>
+              <Label className="text-sm font-medium">Line text</Label>
               <Textarea
                 value={newLineText}
                 onChange={(e) => setNewLineText(e.target.value)}
-                placeholder="Type line here..."
+                placeholder="Type the line here..."
                 rows={3}
-                className="resize-none"
+                className="resize-none text-base"
                 autoFocus
               />
             </div>
+            {/* Stage direction */}
             <div className="space-y-1.5">
-              <Label className="text-sm text-muted-foreground">Stage direction (optional)</Label>
+              <Label className="text-sm text-muted-foreground">Stage direction <span className="text-xs">(optional)</span></Label>
               <Input
                 value={newLineStageDir}
                 onChange={(e) => setNewLineStageDir(e.target.value)}
                 placeholder="e.g. softly, aside, laughing"
                 maxLength={100}
+                className="italic"
               />
             </div>
-            <div className="flex gap-3 pt-1">
+            {/* Actions */}
+            <div className="flex gap-3 pt-2">
               <Button
                 variant="outline"
                 onClick={() => setShowAddLineModal(false)}
@@ -2382,12 +3041,13 @@ export default function SceneEditPage() {
                 className="flex-1 gap-1.5"
               >
                 {addingLine ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                Add
+                Add line
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

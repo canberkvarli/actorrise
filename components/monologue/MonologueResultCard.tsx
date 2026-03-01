@@ -81,7 +81,7 @@ export function MonologueResultCard({
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-bold text-xl mb-1 group-hover:text-foreground transition-colors">
+                  <h3 className="font-bold text-2xl mb-1 group-hover:text-foreground transition-colors">
                     {mono.character_name}
                   </h3>
                   {mono.is_favorited && (

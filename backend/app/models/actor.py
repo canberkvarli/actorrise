@@ -218,6 +218,9 @@ class Scene(Base):
     is_verified = Column(Boolean, default=False)
     quality_score = Column(Float, nullable=True)
 
+    # Original snapshot for "Reset to original" (set once on creation, never modified)
+    original_snapshot = Column(JSON, nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
     updated_at = Column(DateTime(timezone=True), onupdate=sql_text('now()'))
 

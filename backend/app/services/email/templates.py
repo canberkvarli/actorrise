@@ -137,3 +137,21 @@ class EmailTemplates:
         """
         template = self.env.get_template('welcome.html')
         return template.render(user_name=user_name or "there")
+
+    def render_upgrade_notification(
+        self,
+        user_name: str,
+        user_email: str,
+        tier_display_name: str,
+        billing_period: str,
+        timestamp: str,
+    ) -> str:
+        """Render upgrade notification email (sent to admin)."""
+        template = self.env.get_template('upgrade_notification.html')
+        return template.render(
+            user_name=user_name,
+            user_email=user_email,
+            tier_display_name=tier_display_name,
+            billing_period=billing_period,
+            timestamp=timestamp,
+        )

@@ -61,8 +61,8 @@ export function useDiscover(enabled: boolean = true) {
       return response.data;
     },
     enabled,
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
     retry: 1,
   });
 }
@@ -77,28 +77,29 @@ export function useRecommendations(enabled: boolean = true, fast: boolean = true
       const response = await api.get<Monologue[]>(`/api/monologues/recommendations?${params}`, { timeoutMs: DASHBOARD_REQUEST_TIMEOUT_MS });
       return response.data;
     },
-    enabled, // Only fetch if profile is complete enough
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    gcTime: 5 * 60 * 1000, // 5 minutes
+    enabled,
+    staleTime: 10 * 60 * 1000, // 10 minutes
+    gcTime: 15 * 60 * 1000, // 15 minutes
     retry: 1,
   });
 }
 
-// Hook for discover Film & TV. Not profile-based: no query returns top by IMDb rating.
-// For profile-based film/TV recommendations we’d need a dedicated backend endpoint (e.g. by preferred genres).
-export function useDiscoverFilmTv(enabled: boolean = true) {
+// Hook for discover Film & TV. When personalized=true, results are matched to actor’s preferred genres.
+export function useDiscoverFilmTv(enabled: boolean = true, personalized: boolean = false) {
   return useQuery<FilmTvReference[]>({
-    queryKey: ["discover-film-tv"],
+    queryKey: ["discover-film-tv", personalized],
     queryFn: async () => {
+      const params = new URLSearchParams({ limit: "6" });
+      if (personalized) params.set("personalized", "true");
       const response = await api.get<{ results: FilmTvReference[]; total: number }>(
-        "/api/film-tv/search?limit=6",
+        `/api/film-tv/search?${params}`,
         { timeoutMs: DASHBOARD_REQUEST_TIMEOUT_MS }
       );
       return response.data.results;
     },
     enabled,
-    staleTime: 2 * 60 * 1000,
-    gcTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
     retry: 1,
   });
 }
