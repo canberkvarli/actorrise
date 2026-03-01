@@ -1467,7 +1467,7 @@ export default function SceneEditPage() {
             <Input
               value={charNameEditValue}
               onChange={(e) => setCharNameEditValue(e.target.value)}
-              className="h-6 text-sm font-medium bg-transparent border-neutral-700 text-neutral-100 px-1.5 py-0 w-auto max-w-[160px] focus-visible:ring-1 focus-visible:ring-primary/50"
+              className="h-6 text-sm font-medium bg-transparent border-neutral-700 text-neutral-100 px-1.5 py-0 w-full max-w-[160px] focus-visible:ring-1 focus-visible:ring-primary/50"
               autoFocus
               maxLength={60}
               onClick={(e) => e.stopPropagation()}
@@ -1487,8 +1487,8 @@ export default function SceneEditPage() {
               }}
             />
           ) : (
-            <span className="font-medium text-sm text-neutral-100 group/charname inline-flex items-center gap-1">
-              {name}
+            <span className="font-medium text-sm text-neutral-100 group/charname inline-flex items-center gap-1 min-w-0">
+              <span className="truncate">{name}</span>
               <button
                 type="button"
                 onClick={(e) => {
@@ -1496,7 +1496,7 @@ export default function SceneEditPage() {
                   setEditingCharName(charNum);
                   setCharNameEditValue(name);
                 }}
-                className="text-neutral-500 hover:text-neutral-300 transition-colors opacity-0 group-hover/charname:opacity-100"
+                className="text-neutral-500 hover:text-neutral-300 transition-colors opacity-100 sm:opacity-0 sm:group-hover/charname:opacity-100"
               >
                 <Edit2 className="w-3 h-3" />
               </button>
@@ -1543,7 +1543,7 @@ export default function SceneEditPage() {
                   <ChevronDown className={cn("w-3.5 h-3.5 text-neutral-500 shrink-0 transition-transform", voiceDropdownOpen === charNum && "rotate-180")} />
                 </button>
                 {voiceDropdownOpen === charNum && (
-                  <div className="absolute z-20 mt-1 w-full rounded-md bg-neutral-800 border border-neutral-700 shadow-lg py-1 max-h-48 overflow-y-auto">
+                  <div className="absolute z-20 mt-1 w-full rounded-md bg-neutral-800 border border-neutral-700 shadow-lg py-1 max-h-[40vh] sm:max-h-48 overflow-y-auto">
                     {AI_VOICES.map((v) => (
                       <button
                         key={v.id}
@@ -1625,7 +1625,7 @@ export default function SceneEditPage() {
                 className="group/pt inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
               >
                 <span className="text-neutral-300 font-medium break-words">{scene.play_title}</span>
-                <Edit2 className="w-2.5 h-2.5 text-neutral-500 opacity-0 group-hover/pt:opacity-100 transition-opacity shrink-0" />
+                <Edit2 className="w-2.5 h-2.5 text-neutral-500 opacity-60 sm:opacity-0 sm:group-hover/pt:opacity-100 transition-opacity shrink-0" />
               </button>
             </>
           )}
@@ -1658,7 +1658,7 @@ export default function SceneEditPage() {
                 className="group/pa inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
               >
                 <span className="text-neutral-300 font-medium break-words">{scene.play_author}</span>
-                <Edit2 className="w-2.5 h-2.5 text-neutral-500 opacity-0 group-hover/pa:opacity-100 transition-opacity shrink-0" />
+                <Edit2 className="w-2.5 h-2.5 text-neutral-500 opacity-60 sm:opacity-0 sm:group-hover/pa:opacity-100 transition-opacity shrink-0" />
               </button>
             </>
           ) : (
@@ -1934,7 +1934,7 @@ export default function SceneEditPage() {
 
   const rightPanelContent = (
     <div
-      className="bg-white text-neutral-900 rounded-lg shadow-2xl border border-neutral-200 px-6 sm:px-10 py-6 sm:py-8 overflow-hidden"
+      className="bg-white text-neutral-900 rounded-lg shadow-2xl border border-neutral-200 px-4 sm:px-10 py-5 sm:py-8 overflow-hidden"
       style={{ fontFamily: '"Courier New", Courier, monospace', fontStyle: 'italic' }}
     >
       {/* Title inside parchment — editable */}
@@ -1963,7 +1963,7 @@ export default function SceneEditPage() {
             className="group inline-flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <h2 className="text-xl font-bold uppercase tracking-wider break-words">{scene.title}</h2>
-            <Edit2 className="w-3.5 h-3.5 text-neutral-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Edit2 className="w-3.5 h-3.5 text-neutral-300 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
           </button>
         )}
         <div className="text-lg text-neutral-500 mt-2 break-words">
@@ -1998,7 +1998,7 @@ export default function SceneEditPage() {
               <button
                 type="button"
                 onClick={() => startEditScene("play_title", scene.play_title, "parchment")}
-                className="inline-flex ml-0.5 opacity-0 group-hover/ppt:opacity-100 transition-opacity align-middle"
+                className="inline-flex ml-0.5 opacity-60 sm:opacity-0 sm:group-hover/ppt:opacity-100 transition-opacity align-middle"
               >
                 <Edit2 className="w-3 h-3 text-neutral-400 shrink-0" />
               </button>
@@ -2037,7 +2037,7 @@ export default function SceneEditPage() {
               <button
                 type="button"
                 onClick={() => startEditScene("play_author", scene.play_author, "parchment")}
-                className="inline-flex ml-0.5 opacity-0 group-hover/ppa:opacity-100 transition-opacity align-middle"
+                className="inline-flex ml-0.5 opacity-60 sm:opacity-0 sm:group-hover/ppa:opacity-100 transition-opacity align-middle"
               >
                 <Edit2 className="w-3 h-3 text-neutral-400 shrink-0" />
               </button>
@@ -2098,7 +2098,7 @@ export default function SceneEditPage() {
                 <div className={cn("relative group/linerow transition-all px-2 py-1", isDragging && draggingLineId !== lineId && "opacity-50")}>
                   {/* Inner content — narrower, centered */}
                   <div className={cn(
-                    "max-w-[600px] mx-auto flex flex-col items-center rounded-lg px-4 py-3 border relative",
+                    "max-w-full sm:max-w-[600px] mx-auto flex flex-col items-center rounded-lg px-3 sm:px-4 py-3 border relative",
                     draggingLineId === lineId
                       ? "border-amber-400 bg-amber-50 shadow-md ring-2 ring-amber-300/50"
                       : "border-transparent group-hover/linerow:bg-neutral-50 group-hover/linerow:border-neutral-200"
@@ -2106,7 +2106,7 @@ export default function SceneEditPage() {
                   {/* Drag handle — inside container, left edge */}
                   {!isEditing && (
                     <div
-                      className="absolute left-1 top-1/2 -translate-y-1/2 opacity-0 group-hover/linerow:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none select-none p-1 rounded hover:bg-neutral-200/60 text-neutral-400 hover:text-neutral-600"
+                      className="absolute left-0.5 sm:left-1 top-1/2 -translate-y-1/2 opacity-60 sm:opacity-0 sm:group-hover/linerow:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none select-none p-1 rounded hover:bg-neutral-200/60 text-neutral-400 hover:text-neutral-600"
                       onPointerDown={(e) => {
                         isDraggingRef.current = true;
                         pendingDragLineRef.current = lineId;
@@ -2126,7 +2126,7 @@ export default function SceneEditPage() {
                         handleDeleteLine(line.id);
                       }}
                       disabled={deletingLineId === line.id}
-                      className="absolute top-2 right-2 opacity-0 group-hover/linerow:opacity-100 transition-opacity p-1 rounded-full bg-white border border-neutral-200 shadow-sm hover:bg-red-50 hover:border-red-300 z-10"
+                      className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 opacity-60 sm:opacity-0 sm:group-hover/linerow:opacity-100 transition-opacity p-1 rounded-full bg-white border border-neutral-200 shadow-sm hover:bg-red-50 hover:border-red-300 z-10"
                       title="Delete line"
                     >
                       {deletingLineId === line.id ? (
@@ -2198,7 +2198,7 @@ export default function SceneEditPage() {
                               isLoading={isLoadingAI}
                               isSpeaking={isSpeakingAI}
                               onProgress={setTtsProgress}
-                              className="max-w-[240px] mx-auto"
+                              className="max-w-[200px] sm:max-w-[240px] mx-auto"
                             />
                           </motion.div>
                         )}
@@ -2235,8 +2235,8 @@ export default function SceneEditPage() {
                             const rect = btn?.getBoundingClientRect();
                             return (
                               <div
-                                className="fixed z-50 w-64 rounded-xl bg-white border border-neutral-200 shadow-xl py-2 max-h-[400px] overflow-y-auto"
-                                style={rect ? { top: rect.bottom + 8, left: Math.max(8, rect.left + rect.width / 2 - 128) } : {}}
+                                className="fixed z-50 w-[calc(100vw-16px)] sm:w-64 rounded-xl bg-white border border-neutral-200 shadow-xl py-2 max-h-[50vh] sm:max-h-[400px] overflow-y-auto"
+                                style={rect ? { top: Math.min(rect.bottom + 8, window.innerHeight - 300), left: Math.max(8, Math.min(rect.left + rect.width / 2 - 128, window.innerWidth - 264)) } : {}}
                               >
                                 {/* Character name */}
                                 <div className="px-3 pb-2 border-b border-neutral-100">
@@ -2317,7 +2317,7 @@ export default function SceneEditPage() {
                             }))
                           }
                           rows={Math.max(1, Math.ceil((values.stage_direction?.length || 0) / 40))}
-                          className="text-xs italic text-neutral-500 bg-transparent border-b border-dashed border-neutral-300 outline-none text-center py-0.5 px-2 resize-none w-full max-w-[300px] placeholder:italic placeholder:text-neutral-300"
+                          className="text-xs italic text-neutral-500 bg-transparent border-b border-dashed border-neutral-300 outline-none text-center py-0.5 px-2 resize-none w-full sm:max-w-[300px] placeholder:italic placeholder:text-neutral-300"
                           disabled={saving !== null}
                           onBlur={handleLineBlur}
                           onKeyDown={handleLineKeyDown}
@@ -2461,7 +2461,7 @@ export default function SceneEditPage() {
                       tabIndex={0}
                       onClick={() => !isDragging && startEditLine(line)}
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); !isDragging && startEditLine(line); } }}
-                      className="group/line-btn inline-flex flex-col items-center w-full max-w-full overflow-hidden rounded-md px-4 py-2 transition-colors cursor-pointer"
+                      className="group/line-btn inline-flex flex-col items-center w-full max-w-full overflow-hidden rounded-md px-3 sm:px-4 py-2.5 sm:py-2 transition-colors cursor-pointer"
                     >
                       {/* Character name + avatar + stage direction */}
                       {(() => {
@@ -2503,8 +2503,8 @@ export default function SceneEditPage() {
                             const rect = btn?.getBoundingClientRect();
                             return (
                               <div
-                                className="fixed z-50 w-64 rounded-xl bg-white border border-neutral-200 shadow-xl py-2 max-h-[400px] overflow-y-auto"
-                                style={rect ? { top: rect.bottom + 8, left: Math.max(8, rect.left + rect.width / 2 - 128) } : {}}
+                                className="fixed z-50 w-[calc(100vw-16px)] sm:w-64 rounded-xl bg-white border border-neutral-200 shadow-xl py-2 max-h-[50vh] sm:max-h-[400px] overflow-y-auto"
+                                style={rect ? { top: Math.min(rect.bottom + 8, window.innerHeight - 300), left: Math.max(8, Math.min(rect.left + rect.width / 2 - 128, window.innerWidth - 264)) } : {}}
                               >
                                 {/* Character name */}
                                 <div className="px-3 pb-2 border-b border-neutral-100">
@@ -2590,7 +2590,7 @@ export default function SceneEditPage() {
                           </span>
                         )}
                         {!isDragging && (
-                          <Edit2 className="w-3 h-3 text-neutral-400 opacity-0 group-hover/line-btn:opacity-100 transition-opacity shrink-0" />
+                          <Edit2 className="w-3 h-3 text-neutral-400 opacity-60 sm:opacity-0 sm:group-hover/line-btn:opacity-100 transition-opacity shrink-0" />
                         )}
                       </div>
                         );
@@ -2611,17 +2611,17 @@ export default function SceneEditPage() {
                     </div>
                     </div>
                   )}
-                  {/* Bottom toolbar on hover */}
+                  {/* Bottom toolbar — always visible on mobile, hover on desktop */}
                   {!isEditing && !isDragging && (
-                    <div className="flex items-center gap-3 mt-1 pt-1 opacity-0 group-hover/linerow:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-3 mt-1 pt-1 opacity-100 sm:opacity-0 sm:group-hover/linerow:opacity-100 transition-opacity">
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <button
                             type="button"
                             onClick={() => openAddLineModal(line.id)}
-                            className="p-1 rounded hover:bg-neutral-200/60 transition-colors text-neutral-500 hover:text-neutral-700"
+                            className="p-1.5 sm:p-1 rounded hover:bg-neutral-200/60 transition-colors text-neutral-400 sm:text-neutral-500 hover:text-neutral-700"
                           >
-                            <Plus className="w-3.5 h-3.5" />
+                            <Plus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                           </button>
                         </TooltipTrigger>
                         <TooltipContent><p>Add a new line</p></TooltipContent>
@@ -2634,9 +2634,9 @@ export default function SceneEditPage() {
                               setRehearsalStartLineIndex(lineIdx);
                               setShowRehearsalModal(true);
                             }}
-                            className="p-1 rounded hover:bg-neutral-200/60 transition-colors text-neutral-500 hover:text-neutral-700"
+                            className="p-1.5 sm:p-1 rounded hover:bg-neutral-200/60 transition-colors text-neutral-400 sm:text-neutral-500 hover:text-neutral-700"
                           >
-                            <Play className="w-3.5 h-3.5" />
+                            <Play className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                           </button>
                         </TooltipTrigger>
                         <TooltipContent><p>Play from here</p></TooltipContent>
@@ -2748,7 +2748,7 @@ export default function SceneEditPage() {
         </div>
 
         {/* Right: spacer for balance */}
-        <div className="w-[72px]" />
+        <div className="w-10 sm:w-[72px]" />
       </motion.header>
 
       {/* Mobile tabs */}
@@ -2787,7 +2787,7 @@ export default function SceneEditPage() {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.1, ease: [0.25, 0.1, 0.25, 1] }}
           className={cn(
-            "w-full lg:w-[540px] lg:shrink-0 lg:border-r lg:border-neutral-800 overflow-y-auto p-5 sm:p-6",
+            "w-full lg:w-[480px] xl:w-[540px] lg:shrink-0 lg:border-r lg:border-neutral-800 overflow-y-auto p-4 sm:p-6",
             // On mobile, show/hide based on tab
             mobileTab === "details" ? "block lg:block" : "hidden lg:block"
           )}
@@ -2819,10 +2819,10 @@ export default function SceneEditPage() {
           }
           setShowRehearsalModal(true);
         }}
-        className="fixed bottom-6 right-6 z-50 gap-2 shadow-xl shadow-primary/20 rounded-full px-6 h-12"
+        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 gap-2 shadow-xl shadow-primary/20 rounded-full px-4 sm:px-6 h-11 sm:h-12"
       >
         <Play className="w-5 h-5" />
-        <span>Rehearse</span>
+        <span className="hidden sm:inline">Rehearse</span>
       </Button>
 
       <UpgradeModal
@@ -2904,7 +2904,7 @@ export default function SceneEditPage() {
 
       {/* Reset confirmation modal */}
       <Dialog open={showResetConfirm} onOpenChange={setShowResetConfirm}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-xs sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Reset to Original</DialogTitle>
             <DialogDescription>
@@ -2934,7 +2934,7 @@ export default function SceneEditPage() {
 
       {/* Add Line modal */}
       <Dialog open={showAddLineModal} onOpenChange={setShowAddLineModal}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-xs sm:max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-base">Add line</DialogTitle>
           </DialogHeader>
