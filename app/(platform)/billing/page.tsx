@@ -20,15 +20,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   IconSparkles,
   IconCreditCard,
   IconDownload,
   IconArrowUpRight,
-  IconRocket,
-  IconCrown,
   IconGift,
   IconSearch,
   IconBookmark,
@@ -39,11 +36,12 @@ import {
 import api from "@/lib/api";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useSubscription, useUsageLimits, useBillingHistory } from "@/hooks/useSubscription";
 import { RequestPromoCodeModal } from "@/components/contact/RequestPromoCodeModal";
 
 export default function BillingPage() {
-  const { user } = useAuth();
+  useAuth();
   const [isManagingSubscription, setIsManagingSubscription] = useState(false);
   const [promoModalOpen, setPromoModalOpen] = useState(false);
 
@@ -83,17 +81,6 @@ export default function BillingPage() {
   const getUsagePercentage = (used: number, limit: number) => {
     if (limit === -1) return 0; // Unlimited
     return Math.min((used / limit) * 100, 100);
-  };
-
-  const getTierIcon = (tierName: string) => {
-    switch (tierName) {
-      case "pro":
-        return <IconRocket className="h-5 w-5" />;
-      case "elite":
-        return <IconCrown className="h-5 w-5" />;
-      default:
-        return <IconSparkles className="h-5 w-5" />;
-    }
   };
 
   // Show error state if subscription fetch fails
@@ -143,13 +130,7 @@ export default function BillingPage() {
             <CardHeader className="py-4 px-5">
               <div className="flex items-center justify-between gap-2">
                 <CardTitle className="text-lg">Current Plan</CardTitle>
-                <Badge
-                  variant={subscription?.tier_name === "free" ? "outline" : "default"}
-                  className="gap-1.5 shrink-0 text-xs"
-                >
-                  {getTierIcon(subscription?.tier_name || "free")}
-                  {subscription?.tier_display_name}
-                </Badge>
+                <PlanBadge planName={subscription?.tier_name || "free"} />
               </div>
             </CardHeader>
             <CardContent className="px-5 pb-4 pt-0 space-y-3">
@@ -230,40 +211,46 @@ export default function BillingPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="px-5 pb-5 pt-0">
-              <div className="space-y-3">
+              <div className="divide-y divide-border/50">
                 {(() => {
                   const tier = subscription?.tier_name ?? "free";
                   const quotas = tier === "unlimited"
                     ? [
-                        { icon: IconSearch, label: "AI Searches", value: "Unlimited", desc: "per month" },
-                        { icon: IconBookmark, label: "Bookmarks", value: "Unlimited", desc: "" },
-                        { icon: IconScript, label: "Scripts", value: "Unlimited", desc: "" },
-                        { icon: IconMicrophone, label: "ScenePartner Sessions", value: "100", desc: "per month" },
-                        { icon: IconUpload, label: "Script Uploads", value: "Unlimited", desc: "" },
+                        { icon: IconSearch, label: "AI Searches", value: "Unlimited", desc: "/ mo" },
+                        { icon: IconBookmark, label: "Bookmarks", value: "Unlimited" },
+                        { icon: IconScript, label: "Scripts", value: "Unlimited" },
+                        { icon: IconMicrophone, label: "ScenePartner", value: "100", desc: "/ mo" },
+                        { icon: IconUpload, label: "Script Uploads", value: "Unlimited" },
                       ]
                     : tier === "plus"
                     ? [
-                        { icon: IconSearch, label: "AI Searches", value: "150", desc: "per month" },
-                        { icon: IconBookmark, label: "Bookmarks", value: "Unlimited", desc: "" },
-                        { icon: IconScript, label: "Scripts", value: "10", desc: "" },
-                        { icon: IconMicrophone, label: "ScenePartner Sessions", value: "30", desc: "per month" },
-                        { icon: IconUpload, label: "Script Uploads", value: "10", desc: "" },
+                        { icon: IconSearch, label: "AI Searches", value: "150", desc: "/ mo" },
+                        { icon: IconBookmark, label: "Bookmarks", value: "Unlimited" },
+                        { icon: IconScript, label: "Scripts", value: "10" },
+                        { icon: IconMicrophone, label: "ScenePartner", value: "30", desc: "/ mo" },
+                        { icon: IconUpload, label: "Script Uploads", value: "10" },
                       ]
                     : [
-                        { icon: IconSearch, label: "AI Searches", value: "10", desc: "per month" },
-                        { icon: IconBookmark, label: "Bookmarks", value: "5", desc: "" },
-                        { icon: IconScript, label: "Scripts", value: "3", desc: "" },
-                        { icon: IconMicrophone, label: "ScenePartner Sessions", value: "1", desc: "trial" },
-                        { icon: IconUpload, label: "Script Uploads", value: "—", desc: "upgrade required" },
+                        { icon: IconSearch, label: "AI Searches", value: "10", desc: "/ mo" },
+                        { icon: IconBookmark, label: "Bookmarks", value: "5" },
+                        { icon: IconScript, label: "Scripts", value: "3" },
+                        { icon: IconMicrophone, label: "ScenePartner", value: "1", desc: "trial" },
+                        { icon: IconUpload, label: "Script Uploads", value: "—", desc: "upgrade req." },
                       ];
                   return quotas.map(({ icon: Icon, label, value, desc }) => (
-                    <div key={label} className="flex items-center gap-3">
-                      <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="text-sm flex-1">{label}</span>
-                      <span className="text-sm font-semibold tabular-nums">{value}</span>
-                      {desc && (
-                        <span className="text-xs text-muted-foreground w-16 text-right">{desc}</span>
-                      )}
+                    <div key={label} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                        <span className="text-sm">{label}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className={`text-sm font-semibold tabular-nums ${value === "Unlimited" ? "text-violet-600 dark:text-violet-400" : ""}`}>
+                          {value}
+                        </span>
+                        {desc && (
+                          <span className="text-xs text-muted-foreground">{desc}</span>
+                        )}
+                      </div>
                     </div>
                   ));
                 })()}

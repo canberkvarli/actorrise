@@ -1058,6 +1058,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               onClick={() => {
                 playsActionAtRef.current = Date.now();
                 setSearchMode("plays");
+                setIsLoading(false);
                 setOutlineFlash("plays");
                 const params = new URLSearchParams();
                 params.set("mode", "plays");
@@ -1081,6 +1082,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               }`}
               onClick={() => {
                 setSearchMode("film_tv");
+                setIsLoading(false);
                 setOutlineFlash("film_tv");
                 const params = new URLSearchParams();
                 params.set("mode", "film_tv");
@@ -1721,8 +1723,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {/* Fun Loading State */}
               <div className="flex flex-col items-center justify-center gap-6 mb-12">
                 <div className="relative">
-                  <div className="h-16 w-16 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-                  <IconSparkles className="h-7 w-7 text-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                  <div className="h-16 w-16 rounded-full border-2 border-amber-400/30 border-t-amber-500 animate-spin" />
+                  <IconSparkles className="h-7 w-7 text-amber-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                 </div>
                 <motion.p
                   key={loadingMessageIndex}
@@ -1974,7 +1976,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 isReadingMode ? "border-b-0" : ""
               }`}>
                 <div className="flex items-center justify-between p-6">
-                  {!isReadingMode && <h2 className="hidden sm:block text-2xl font-bold">Monologue Details</h2>}
+                  {!isReadingMode && <h2 className="hidden sm:block text-3xl font-bold">Monologue Details</h2>}
                   <div className="flex-1 min-w-0" aria-hidden="true" />
                   <div className="flex items-center gap-2 shrink-0 ml-auto">
                     {/* Download button - show in both modes; 44px touch target on mobile */}

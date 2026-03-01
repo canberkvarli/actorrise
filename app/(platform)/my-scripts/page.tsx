@@ -130,13 +130,7 @@ export default function MyScriptsPage() {
     try {
       setIsLoading(true);
       const response = await api.get<UserScript[]>("/api/scripts/");
-      let list = response.data;
-      if (list.length === 0 && !localStorage.getItem("dismissed_example_script")) {
-        await api.post<unknown>("/api/scripts/ensure-example");
-        const retry = await api.get<UserScript[]>("/api/scripts/");
-        list = retry.data;
-      }
-      setScripts(list);
+      setScripts(response.data);
     } catch (error) {
       console.error("Error fetching scripts:", error);
       toast.error("Failed to load scripts");
@@ -208,10 +202,7 @@ export default function MyScriptsPage() {
       const result = await response.json();
       toast.success(`Script uploaded! Extracted ${result.num_scenes_extracted} scenes.`);
 
-      // Refresh scripts list
-      fetchScripts();
-
-      // Navigate to the script detail view
+      // Navigate to the script detail view (it will fetch its own data)
       router.push(`/my-scripts/${result.id}`);
     } catch (error: any) {
       console.error("Upload error:", error);

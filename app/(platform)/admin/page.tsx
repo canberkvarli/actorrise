@@ -70,6 +70,11 @@ export interface AdminStats {
       craft_coach_sessions: number;
     };
   };
+  subscribers: {
+    plus_subscribers: number;
+    founding_goal: number;
+    founding_progress_percent: number;
+  };
 }
 
 function useAdminStats(from?: string, to?: string) {
@@ -286,6 +291,11 @@ export default function AdminOverviewPage() {
       value: stats.usage.alltime_searches ?? 0,
       icon: IconSearch,
     },
+    {
+      title: "Paid subscribers",
+      value: stats.subscribers.plus_subscribers,
+      icon: IconRocket,
+    },
   ];
 
   const submissionStatusData = Object.entries(stats.submissions.by_status).map(
@@ -382,6 +392,37 @@ export default function AdminOverviewPage() {
           );
         })}
       </div>
+
+      {/* Founding Actors Goal */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <IconRocket className="h-4 w-4" />
+            First 50 Founding Actors
+          </CardTitle>
+          <span className="text-sm font-semibold text-muted-foreground">
+            {stats.subscribers.plus_subscribers} / {stats.subscribers.founding_goal}
+          </span>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="h-3 w-full rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all"
+              style={{
+                width: `${Math.min(stats.subscribers.founding_progress_percent, 100)}%`,
+              }}
+            />
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">
+              {stats.subscribers.founding_progress_percent}% of goal
+            </span>
+            <span className="text-muted-foreground">
+              {Math.max(stats.subscribers.founding_goal - stats.subscribers.plus_subscribers, 0)} remaining
+            </span>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Charts */}
       <Card>

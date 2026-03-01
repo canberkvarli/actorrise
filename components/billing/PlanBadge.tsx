@@ -53,15 +53,31 @@ export function PlanBadge({
     }
   };
 
+  const getColorClass = () => {
+    switch (planName.toLowerCase()) {
+      case "pro":
+      case "plus":
+        return "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/40 dark:text-amber-300 dark:border-amber-600/50";
+      case "elite":
+      case "unlimited":
+        return "bg-violet-100 text-violet-800 border-violet-300 dark:bg-violet-900/40 dark:text-violet-300 dark:border-violet-600/50";
+      default:
+        return "";
+    }
+  };
+
+  const colorClass = getColorClass();
+
   const combinedClassName = [
     showIcon ? "gap-1" : "",
+    colorClass,
     className || "",
   ]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <Badge variant={variant} className={combinedClassName}>
+    <Badge variant={colorClass ? "outline" : variant} className={combinedClassName}>
       {showIcon && getIcon()}
       {getDisplayName()}
     </Badge>

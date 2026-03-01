@@ -154,8 +154,11 @@ For each scene, extract:
 2. character_1: First character name (use known character name if available, otherwise extract from dialogue)
 3. character_2: Second character name (use known character name if available, otherwise extract from dialogue)
 4. description: Brief description of what happens (1-2 sentences)
-5. setting: Where the scene takes place (or "Unknown" if not clear)
-6. lines: Array of ALL dialogue lines with:
+5. setting: Where the scene takes place (null if not clear — do NOT use "Unknown")
+6. tone: Overall tone of the scene — one of: "romantic", "comedic", "tragic", "tense", "dramatic", "lighthearted", "mysterious", "melancholic" (pick the closest, null if unclear)
+7. primary_emotions: Array of 1-3 dominant emotions present, e.g. ["love", "tension", "hope"] (empty array if unclear)
+8. relationship_dynamic: The relationship between the two characters — one of: "romantic", "adversarial", "familial", "friendship", "professional", "mentor-student", "strangers" (null if unclear)
+9. lines: Array of ALL dialogue lines with:
    - character: Who speaks (must match character_1 or character_2 of the scene)
    - text: The full dialogue text
    - stage_direction: Any stage directions (optional, null if none)
@@ -168,6 +171,9 @@ Return a JSON array of scenes. Example:
     "character_2": "John",
     "description": "Sarah confronts John about his betrayal",
     "setting": "Kitchen at night",
+    "tone": "tense",
+    "primary_emotions": ["anger", "betrayal", "desperation"],
+    "relationship_dynamic": "romantic",
     "lines": [
       {{"character": "Sarah", "text": "I know what you did.", "stage_direction": null}},
       {{"character": "John", "text": "What are you talking about?", "stage_direction": "nervously"}}
@@ -182,7 +188,7 @@ Return ONLY valid JSON array, no explanation."""
                 model="gpt-4o-mini",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0.3,
-                max_tokens=32000
+                max_tokens=16000
             )
 
             response_text = response.choices[0].message.content

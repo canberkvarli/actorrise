@@ -10,7 +10,7 @@ from typing import Any, Optional
 
 from app.api.auth import get_current_user
 from app.core.database import get_db
-from app.models.billing import UsageMetrics
+from app.models.billing import PricingTier, UserSubscription, UsageMetrics
 from app.models.feedback import ResultFeedback
 from app.models.moderation import MonologueSubmission
 from app.models.user import User
@@ -214,6 +214,19 @@ def get_admin_stats(
     except Exception:
         usage["current_user"]["total_searches"] = usage["current_user"]["ai_searches"]
 
+    # --- Paid subscribers (founding actors goal) ---
+    FOUNDING_GOAL = 50
+    free_tier = db.query(PricingTier).filter(PricingTier.name == "free").first()
+    free_tier_id = free_tier.id if free_tier else 1
+    plus_subscribers = (
+        db.query(UserSubscription)
+        .filter(
+            UserSubscription.tier_id != free_tier_id,
+            UserSubscription.status.in_(["active", "trialing"]),
+        )
+        .count()
+    )
+
     return {
         "from": from_d.isoformat(),
         "to": to_d.isoformat(),
@@ -233,6 +246,13 @@ def get_admin_stats(
             "rejected_today": rejected_today,
         },
         "usage": usage,
+        "subscribers": {
+            "plus_subscribers": plus_subscribers,
+            "founding_goal": FOUNDING_GOAL,
+            "founding_progress_percent": round(
+                min(plus_subscribers / FOUNDING_GOAL * 100, 100), 1
+            ),
+        },
     }
 
 

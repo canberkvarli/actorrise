@@ -127,3 +127,41 @@ def send_submission_notification(
     except Exception as e:
         print(f"Error sending {status} notification to {user_email}: {e}")
         raise
+
+
+def send_upgrade_notification(
+    user_name: str,
+    user_email: str,
+    tier_display_name: str,
+    billing_period: str,
+) -> dict:
+    """
+    Send upgrade notification to admin when a user upgrades to a paid tier.
+    Fire-and-forget — never raises.
+    """
+    if not os.getenv("RESEND_API_KEY"):
+        print("Warning: RESEND_API_KEY not set. Upgrade notification disabled.")
+        return {"id": "mock_upgrade_id", "status": "disabled"}
+
+    try:
+        from datetime import datetime
+
+        client = ResendEmailClient()
+        templates = EmailTemplates()
+        timestamp = datetime.now().strftime("%B %d, %Y at %I:%M %p UTC")
+        subject = f"New upgrade: {user_name or user_email} -> {tier_display_name}"
+        html = templates.render_upgrade_notification(
+            user_name=user_name or "Unknown",
+            user_email=user_email,
+            tier_display_name=tier_display_name,
+            billing_period=billing_period,
+            timestamp=timestamp,
+        )
+        return client.send_email(
+            to="canberk@actorrise.com",
+            subject=subject,
+            html=html,
+        )
+    except Exception as e:
+        print(f"Error sending upgrade notification: {e}")
+        return {"id": "error", "status": "failed"}

@@ -10,6 +10,9 @@ engine = create_engine(
     settings.database_url,
     pool_pre_ping=True,
     pool_recycle=300,  # 5 minutes
+    pool_size=3,       # keep only 3 persistent connections
+    max_overflow=5,    # allow up to 8 total (3+5) under burst
+    pool_timeout=10,   # fail fast if no connection available in 10s
 )
 
 # Create session factory

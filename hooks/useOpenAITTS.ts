@@ -21,6 +21,56 @@ export class TTSError extends Error {
   }
 }
 
+// ── Client-side audio blob cache ──────────────────────────────────────────
+// Keyed by "text|voice|instructions". Survives across hook instances within
+// the same page load. Entries auto-expire after 10 minutes.
+const CACHE_TTL_MS = 10 * 60 * 1000;
+
+interface CacheEntry {
+  blobUrl: string;
+  blob: Blob;
+  createdAt: number;
+}
+
+const _audioCache = new Map<string, CacheEntry>();
+
+function cacheKey(text: string, voice: string, instructions: string): string {
+  return `${text}|${voice}|${instructions}`;
+}
+
+function getCached(key: string): CacheEntry | null {
+  const entry = _audioCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.createdAt > CACHE_TTL_MS) {
+    URL.revokeObjectURL(entry.blobUrl);
+    _audioCache.delete(key);
+    return null;
+  }
+  return entry;
+}
+
+function setCache(key: string, blob: Blob): string {
+  // Evict expired entries
+  for (const [k, v] of _audioCache) {
+    if (Date.now() - v.createdAt > CACHE_TTL_MS) {
+      URL.revokeObjectURL(v.blobUrl);
+      _audioCache.delete(k);
+    }
+  }
+  // Cap at 50 entries
+  if (_audioCache.size >= 50) {
+    const oldest = _audioCache.keys().next().value!;
+    const entry = _audioCache.get(oldest);
+    if (entry) URL.revokeObjectURL(entry.blobUrl);
+    _audioCache.delete(oldest);
+  }
+  const blobUrl = URL.createObjectURL(blob);
+  _audioCache.set(key, { blobUrl, blob, createdAt: Date.now() });
+  return blobUrl;
+}
+
+// ── Hook ──────────────────────────────────────────────────────────────────
+
 interface UseOpenAITTSOptions {
   onEnd?: () => void;
   onError?: (error: unknown) => void;
@@ -32,13 +82,15 @@ interface UseOpenAITTSReturn {
   isSpeaking: boolean;
   isLoading: boolean;
   error: string | null;
+  /** Ref to the underlying HTMLAudioElement (null when not playing). */
+  audioElementRef: React.RefObject<HTMLAudioElement | null>;
 }
 
 /**
  * Hook for OpenAI gpt-4o-mini-tts via backend /api/speech/synthesize.
  *
- * Fetches an audio blob from the backend and plays it. Falls back
- * gracefully via onError so the caller can switch to browser TTS.
+ * Fetches an audio blob from the backend and plays it. Client-side cache
+ * avoids repeat API calls for the same text+voice+instructions combo.
  *
  * On 403, throws a TTSError with the structured detail from the backend
  * so callers can show an upgrade modal.
@@ -50,7 +102,8 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
   const [error, setError] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const abortRef = useRef<AbortController | null>(null);
-  const objectUrlRef = useRef<string | null>(null);
+  // Track non-cached object URLs so we can revoke them (cached ones are managed by the cache)
+  const ownedUrlRef = useRef<string | null>(null);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -60,7 +113,9 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
         audioRef.current.pause();
         audioRef.current.src = '';
       }
-      if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+      if (ownedUrlRef.current) {
+        URL.revokeObjectURL(ownedUrlRef.current);
+      }
     };
   }, []);
 
@@ -70,7 +125,6 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
       abortRef.current = null;
     }
     if (audioRef.current) {
-      // Detach handlers BEFORE clearing src so we don't trigger onerror
       audioRef.current.onplay = null;
       audioRef.current.onended = null;
       audioRef.current.onerror = null;
@@ -78,9 +132,10 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
       audioRef.current.src = '';
       audioRef.current = null;
     }
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = null;
+    // Don't revoke cached URLs — only revoke non-cached ones
+    if (ownedUrlRef.current) {
+      URL.revokeObjectURL(ownedUrlRef.current);
+      ownedUrlRef.current = null;
     }
     setIsSpeaking(false);
     setIsLoading(false);
@@ -89,43 +144,62 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
   const speak = useCallback(
     async (text: string, voice: string = 'coral', instructions: string = '') => {
       cancel();
-      setIsLoading(true);
       setError(null);
 
+      const key = cacheKey(text, voice, instructions);
+      const cached = getCached(key);
+
       try {
-        const abortController = new AbortController();
-        abortRef.current = abortController;
+        let audioUrl: string;
+        let fromCache = false;
 
-        // Get auth token
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const token = session?.access_token;
+        if (cached) {
+          // Cache hit — create a fresh blob URL from the stored blob
+          // (the old blobUrl may have been revoked by the audio element)
+          audioUrl = URL.createObjectURL(cached.blob);
+          ownedUrlRef.current = audioUrl;
+          fromCache = true;
+        } else {
+          // Cache miss — fetch from API
+          setIsLoading(true);
 
-        const response = await fetch(`${API_URL}/api/speech/synthesize`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify({ text, voice, instructions, response_format: 'mp3' }),
-          signal: abortController.signal,
-        });
+          const abortController = new AbortController();
+          abortRef.current = abortController;
 
-        if (!response.ok) {
-          let detail: unknown = null;
-          try {
-            detail = await response.json();
-          } catch {
-            // body not JSON
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          const token = session?.access_token;
+
+          const response = await fetch(`${API_URL}/api/speech/synthesize`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify({ text, voice, instructions, response_format: 'mp3' }),
+            signal: abortController.signal,
+          });
+
+          if (!response.ok) {
+            let detail: unknown = null;
+            try {
+              detail = await response.json();
+            } catch {
+              // body not JSON
+            }
+            const nested = detail && typeof detail === "object" && "detail" in detail ? (detail as Record<string, unknown>).detail : detail;
+            throw new TTSError(response.status, nested ?? detail);
           }
-          const nested = detail && typeof detail === "object" && "detail" in detail ? (detail as Record<string, unknown>).detail : detail;
-          throw new TTSError(response.status, nested ?? detail);
-        }
 
-        const audioBlob = await response.blob();
-        const audioUrl = URL.createObjectURL(audioBlob);
-        objectUrlRef.current = audioUrl;
+          const audioBlob = await response.blob();
+          // Store in cache (cache manages its own blobUrl)
+          setCache(key, audioBlob);
+          // Create a separate blobUrl for this playback
+          audioUrl = URL.createObjectURL(audioBlob);
+          ownedUrlRef.current = audioUrl;
+          fromCache = false;
+        }
 
         const audio = new Audio(audioUrl);
         audioRef.current = audio;
@@ -137,9 +211,9 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
 
         audio.onended = () => {
           setIsSpeaking(false);
-          if (objectUrlRef.current) {
-            URL.revokeObjectURL(objectUrlRef.current);
-            objectUrlRef.current = null;
+          if (ownedUrlRef.current) {
+            URL.revokeObjectURL(ownedUrlRef.current);
+            ownedUrlRef.current = null;
           }
           onEnd?.();
         };
@@ -147,9 +221,13 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
         audio.onerror = () => {
           setIsSpeaking(false);
           setIsLoading(false);
-          if (objectUrlRef.current) {
-            URL.revokeObjectURL(objectUrlRef.current);
-            objectUrlRef.current = null;
+          if (ownedUrlRef.current) {
+            URL.revokeObjectURL(ownedUrlRef.current);
+            ownedUrlRef.current = null;
+          }
+          // If cached entry failed, evict it and retry without cache
+          if (fromCache) {
+            _audioCache.delete(key);
           }
           onError?.(new Error('Audio playback failed'));
         };
@@ -167,5 +245,5 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
     [cancel, onEnd, onError],
   );
 
-  return { speak, cancel, isSpeaking, isLoading, error };
+  return { speak, cancel, isSpeaking, isLoading, error, audioElementRef: audioRef };
 }

@@ -16,8 +16,8 @@ const LOGO_TEXT_ASPECT = { w: 320, h: 80 };
 /* Larger logo, mobile-friendly: prominent on small screens so header isn’t just “dropdown on the left”. */
 const sizes: Record<Size, { iconClass: string; fullLogoClass: string }> = {
   header: {
-    iconClass: "h-10 sm:h-11 md:h-12 w-auto max-w-full min-h-9 shrink-0 object-contain",
-    fullLogoClass: "h-10 sm:h-11 md:h-12 w-auto max-w-[180px] sm:max-w-[200px] md:max-w-none min-h-9 shrink-0 object-contain",
+    iconClass: "h-11 sm:h-12 md:h-14 w-auto max-w-full min-h-10 shrink-0 object-contain",
+    fullLogoClass: "h-11 sm:h-12 md:h-14 w-auto max-w-[200px] sm:max-w-[220px] md:max-w-none min-h-10 shrink-0 object-contain",
   },
   auth: {
     iconClass: "h-[5.5rem] sm:h-[6rem] w-auto max-w-full shrink-0 object-contain",

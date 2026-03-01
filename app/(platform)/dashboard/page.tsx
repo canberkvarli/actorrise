@@ -121,7 +121,10 @@ export default function DashboardPage() {
   const { data: discoverMonologues = [], isLoading: isLoadingDiscover } = useDiscover(!(isProfileComplete ?? false));
   const mainMonologues = isProfileComplete ? recommendations : discoverMonologues;
   const isLoadingMain = isProfileComplete ? isLoadingRecommendations : isLoadingDiscover;
-  const { data: discoverFilmTv = [], isLoading: isLoadingFilmTv } = useDiscoverFilmTv();
+  const { data: discoverFilmTv = [], isLoading: isLoadingFilmTv } = useDiscoverFilmTv(
+    true,
+    isProfileComplete ?? false,
+  );
   const toggleFavoriteMutation = useToggleFavorite();
   const { data: filmTvFavorites = [] } = useFilmTvFavorites();
   const toggleFilmTvFavoriteMutation = useToggleFilmTvFavorite();
@@ -435,19 +438,22 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 ))}
               </div>
             ) : mainMonologues.length > 0 ? (
+              <AnimatePresence mode="popLayout">
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[280px]">
                 {mainMonologues.slice(0, 4).map((mono, idx) => (
                   <motion.div
                     key={mono.id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.3, delay: idx * 0.04, ease: sectionEase }}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.35, delay: idx * 0.05, ease: [0.25, 0.1, 0.25, 1] }}
                     className="group p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col min-h-[260px]"
                     onClick={() => openMonologue(mono)}
                   >
                       <div className="flex items-start justify-between gap-2 mb-4">
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors line-clamp-1">
+                          <h3 className="font-bold text-base sm:text-lg text-foreground group-hover:text-primary transition-colors break-words">
                             {mono.character_name}
                           </h3>
                           <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
@@ -500,6 +506,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </motion.div>
                 ))}
               </div>
+              </AnimatePresence>
             ) : (
               <div className="text-center py-16 bg-card border border-border rounded-xl min-h-[280px] flex flex-col items-center justify-center">
                 <IconSparkles className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
@@ -526,7 +533,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   <span className="truncate">Film & TV</span>
                 </h2>
                 <p className="text-muted-foreground mt-1">
-                  Top picks by IMDb rating · Search for more by scene or title
+                  {isProfileComplete
+                    ? "Personalized picks based on your preferred genres"
+                    : "Top picks by IMDb rating \u00b7 Search for more by scene or title"}
                 </p>
               </div>
               <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-foreground w-fit">
@@ -565,10 +574,19 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 ))}
               </div>
             ) : discoverFilmTv.length > 0 ? (
+              <AnimatePresence mode="popLayout">
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[240px]">
                 {discoverFilmTv.slice(0, 4).map((ref, idx) => (
-                  <FilmTvReferenceCard
+                  <motion.div
                     key={ref.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={{ duration: 0.35, delay: idx * 0.05, ease: [0.25, 0.1, 0.25, 1] }}
+                    className="h-full"
+                  >
+                  <FilmTvReferenceCard
                     ref_item={ref}
                     index={idx}
                     compact
@@ -582,8 +600,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       });
                     }}
                   />
+                  </motion.div>
                 ))}
               </div>
+              </AnimatePresence>
             ) : (
               <div className="text-center py-14 px-6 bg-card border border-border rounded-xl min-h-[240px] flex flex-col items-center justify-center">
                 <IconDeviceTv className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
@@ -707,7 +727,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 isReadingMode ? "border-b-0" : ""
               }`}>
                 <div className="flex items-center justify-between p-6">
-                  {!isReadingMode && <h2 className="hidden sm:block text-2xl font-bold">Monologue Details</h2>}
+                  {!isReadingMode && <h2 className="hidden sm:block text-3xl font-bold">Monologue Details</h2>}
                   <div className="flex-1 min-w-0" aria-hidden="true" />
                   <div className="flex items-center gap-2 shrink-0 ml-auto">
                     {/* Download button - 44px touch target on mobile */}

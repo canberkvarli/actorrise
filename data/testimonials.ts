@@ -34,6 +34,14 @@ export const TESTIMONIALS: TestimonialItem[] = [
   },
   {
     quote:
+      "ActorRise has honestly been such a game changer for me. I used to spend hours searching for the perfect monologue for self tapes and still end up second guessing it. Now I can find material in minutes. The algorithm is kind of scary in the best way, it's super specific and really tailored to me and my tone. Let's be honest, AI doesn't always \"get\" actors... but this actually does, which is absolutely impeccable!!!",
+    name: "Jeanielle Ettinoffe",
+    descriptor: "Actor",
+    image: "/testimonials/jeannille-ettinoffe/jeannille-ettinoffe.jpg",
+    source: "actor",
+  },
+  {
+    quote:
       "Join and play around. If you like what we're building, reach out. I'm happy to send a code for founding member access. I'd rather have more actors in the room than behind a paywall.",
     name: "Limited founding member spots.",
     descriptor: "",

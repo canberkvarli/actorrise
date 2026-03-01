@@ -479,7 +479,9 @@ async def get_recommendations(
 
     # Get recommendations (fast=True skips semantic search for quicker dashboard load)
     recommender = Recommender(db)
-    results = recommender.recommend_for_actor(actor_profile, limit=limit, fast=fast)
+    results = recommender.recommend_for_actor(
+        actor_profile, limit=limit, fast=fast, user_id=current_user.id
+    )
 
     # Get favorites - OPTIMIZED: only for result set
     result_ids = [m.id for m in results]
