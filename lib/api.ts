@@ -96,6 +96,10 @@ async function request<T = unknown>(
       message = isLocal
         ? "Search timed out or the backend is unreachable. Make sure the API is running (e.g. cd backend && uv run uvicorn app.main:app --reload) and try again."
         : "Search is taking longer than usual. Please try again.";
+    } else if (isAbort) {
+      message = isLocal
+        ? `Request timed out for ${fullUrl}. Is the API running?`
+        : "Request timed out. Please try again in a moment.";
     } else if (isNetworkError) {
       const isProd = typeof window !== "undefined" ? !API_URL.includes("localhost") : process.env.VERCEL;
       message = isProd
