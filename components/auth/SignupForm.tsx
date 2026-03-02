@@ -58,9 +58,9 @@ export function SignupForm() {
 
   return (
     <div className="w-full">
-      <form method="post" onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+      <form method="post" onSubmit={handleSubmit(onSubmit)} className="space-y-2">
+        <div className="relative pb-4">
+          <Label htmlFor="email" className="block mb-1.5">Email</Label>
           <Input
             id="email"
             type="email"
@@ -68,12 +68,12 @@ export function SignupForm() {
             {...register("email")}
           />
           {errors.email && (
-            <p className="text-sm text-destructive">{errors.email.message}</p>
+            <p className="absolute bottom-0 left-0 text-xs text-destructive">{errors.email.message}</p>
           )}
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
+        <div className="relative pb-4">
+          <Label htmlFor="password" className="block mb-1.5">Password</Label>
           <Input
             id="password"
             type="password"
@@ -81,7 +81,7 @@ export function SignupForm() {
             {...register("password")}
           />
           {errors.password && (
-            <p className="text-sm text-destructive">{errors.password.message}</p>
+            <p className="absolute bottom-0 left-0 text-xs text-destructive">{errors.password.message}</p>
           )}
         </div>
 
