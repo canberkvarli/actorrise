@@ -186,10 +186,6 @@ export function LandingTestimonials() {
     const founder = TESTIMONIALS.filter((t) => t.isFounder);
     const placeholder = TESTIMONIALS.filter((t) => !t.isFounder && !t.image);
     const rest = TESTIMONIALS.filter((t) => !t.isFounder && t.image);
-    for (let i = rest.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [rest[i], rest[j]] = [rest[j], rest[i]];
-    }
     return [...founder, ...rest, ...placeholder];
   }, []);
 
