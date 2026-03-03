@@ -146,15 +146,17 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Fetch monologue detail
+  // Fetch monologue detail (skip for demo mock monologues which have negative IDs)
+  const selectedId = selectedMonologue?.id;
+  const isDemoMonologue = selectedId != null && selectedId < 0;
   const { data: monologueDetail } = useQuery<Monologue | null>({
-    queryKey: ["monologue", selectedMonologue?.id],
+    queryKey: ["monologue", selectedId],
     queryFn: async () => {
-      if (!selectedMonologue?.id) return null;
-      const response = await api.get<Monologue>(`/api/monologues/${selectedMonologue.id}`);
+      if (!selectedId) return null;
+      const response = await api.get<Monologue>(`/api/monologues/${selectedId}`);
       return response.data;
     },
-    enabled: !!selectedMonologue?.id && !isLoadingDetail,
+    enabled: !!selectedId && !isDemoMonologue && !isLoadingDetail,
   });
 
   // Update selected monologue when detail loads
@@ -169,8 +171,10 @@ export default function DashboardPage() {
 
   const openMonologue = async (mono: Monologue) => {
     setSelectedMonologue(mono);
-    setIsLoadingDetail(true);
     setIsReadingMode(false);
+    // Demo mock monologues (negative IDs) already have all data — skip the API call
+    if (mono.id < 0) return;
+    setIsLoadingDetail(true);
     try {
       const response = await api.get<Monologue>(`/api/monologues/${mono.id}`);
       setSelectedMonologue(response.data);
@@ -189,6 +193,16 @@ export default function DashboardPage() {
 
   const toggleFavorite = async (e: React.MouseEvent, mono: Monologue) => {
     e.stopPropagation();
+    // Optimistically update local slide-over state for instant visual feedback
+    if (selectedMonologue?.id === mono.id) {
+      setSelectedMonologue({
+        ...mono,
+        is_favorited: !mono.is_favorited,
+        favorite_count: mono.is_favorited
+          ? Math.max(0, mono.favorite_count - 1)
+          : mono.favorite_count + 1,
+      });
+    }
     toggleFavoriteMutation.mutate({
       monologueId: mono.id,
       isFavorited: mono.is_favorited ?? false,
@@ -1036,10 +1050,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </div>
                 )}
 
-                {selectedFilmTvRef.plot && (
+                {(selectedFilmTvRef.plot || selectedFilmTvRef.plot_snippet) && (
                   <div>
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Plot</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{selectedFilmTvRef.plot}</p>
+                    <p className="text-sm text-muted-foreground leading-relaxed">{selectedFilmTvRef.plot || selectedFilmTvRef.plot_snippet}</p>
                   </div>
                 )}
 

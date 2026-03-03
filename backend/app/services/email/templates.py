@@ -125,18 +125,17 @@ class EmailTemplates:
             estimated_review_time=estimated_review_time
         )
 
-    def render_welcome(self, user_name: str) -> str:
-        """
-        Render welcome email for new signups.
-
-        Args:
-            user_name: User's display name (or "there" if empty)
-
-        Returns:
-            HTML email content
-        """
+    def render_welcome(
+        self,
+        user_name: str,
+        unsubscribe_url: Optional[str] = None,
+    ) -> str:
+        """Render welcome email for new signups."""
         template = self.env.get_template('welcome.html')
-        return template.render(user_name=user_name or "there")
+        return template.render(
+            user_name=user_name or "there",
+            unsubscribe_url=unsubscribe_url,
+        )
 
     def render_upgrade_notification(
         self,
@@ -154,4 +153,120 @@ class EmailTemplates:
             tier_display_name=tier_display_name,
             billing_period=billing_period,
             timestamp=timestamp,
+        )
+
+    def render_upgrade_nudge(
+        self,
+        user_name: str,
+        searches_used: int,
+        searches_limit: int,
+        unsubscribe_url: Optional[str] = None,
+    ) -> str:
+        """Render upgrade nudge email for free-tier users."""
+        template = self.env.get_template('upgrade_nudge.html')
+        return template.render(
+            user_name=user_name or "there",
+            searches_used=searches_used,
+            searches_limit=searches_limit,
+            unsubscribe_url=unsubscribe_url,
+        )
+
+    def render_feature_announcement(
+        self,
+        user_name: str,
+        feature_title: str,
+        feature_description: str,
+        cta_text: str,
+        cta_url: str,
+        video_url: Optional[str] = None,
+        unsubscribe_url: Optional[str] = None,
+    ) -> str:
+        """Render feature announcement email."""
+        template = self.env.get_template('feature_announcement.html')
+        return template.render(
+            user_name=user_name or "there",
+            feature_title=feature_title,
+            feature_description=feature_description,
+            cta_text=cta_text,
+            cta_url=cta_url,
+            video_url=video_url,
+            unsubscribe_url=unsubscribe_url,
+        )
+
+    def render_founder_offer(
+        self,
+        user_name: str,
+        promo_code: str = "FOUNDER",
+        discount_description: str = "Enter at checkout for 12 months of Plus, completely free",
+        upgrade_url: str = "https://actorrise.com/pricing",
+        sender_name: str = "Canberk",
+        sender_title: str = "Founder, ActorRise",
+        share_text: Optional[str] = None,
+        share_url: Optional[str] = None,
+        unsubscribe_url: Optional[str] = None,
+    ) -> str:
+        """Render founder offer email with promo code, testimony ask, and share CTA."""
+        template = self.env.get_template('founder_offer.html')
+        return template.render(
+            user_name=user_name or "there",
+            promo_code=promo_code,
+            discount_description=discount_description,
+            upgrade_url=upgrade_url,
+            sender_name=sender_name,
+            sender_title=sender_title,
+            share_text=share_text,
+            share_url=share_url or "https://actorrise.com",
+            unsubscribe_url=unsubscribe_url,
+        )
+
+    def render_actor_page(
+        self,
+        user_name: str,
+        intro_text: str = "I'm building actor pages on ActorRise where you can showcase your work, link your socials, and let people reach out to you directly. I'd love to set yours up.",
+        step_1: str = "Sign up or log in at actorrise.com",
+        step_2: str = "Go to your profile and fill in your bio, headshot, and links",
+        step_3: str = "Your page goes live and anyone can find you",
+        page_url: Optional[str] = None,
+        cta_text: str = "Check out your page",
+        extra_text: Optional[str] = None,
+        sender_name: str = "Canberk",
+        sender_title: str = "Founder | Actor, ActorRise",
+        unsubscribe_url: Optional[str] = None,
+    ) -> str:
+        """Render actor page email."""
+        template = self.env.get_template('actor_page.html')
+        return template.render(
+            user_name=user_name or "there",
+            intro_text=intro_text,
+            step_1=step_1,
+            step_2=step_2,
+            step_3=step_3,
+            page_url=page_url,
+            cta_text=cta_text,
+            extra_text=extra_text,
+            sender_name=sender_name,
+            sender_title=sender_title,
+            unsubscribe_url=unsubscribe_url,
+        )
+
+    def render_weekly_engagement(
+        self,
+        user_name: str,
+        monologue_title: Optional[str] = None,
+        monologue_snippet: Optional[str] = None,
+        monologue_url: Optional[str] = None,
+        tip_title: Optional[str] = None,
+        tip_body: Optional[str] = None,
+        unsubscribe_url: Optional[str] = None,
+    ) -> str:
+        """Render weekly engagement digest email."""
+        template = self.env.get_template('weekly_engagement.html')
+        return template.render(
+            user_name=user_name or "there",
+            monologue_title=monologue_title,
+            monologue_snippet=monologue_snippet,
+            monologue_url=monologue_url or "https://actorrise.com/dashboard",
+            tip_title=tip_title,
+            tip_body=tip_body,
+            unsubscribe_url=unsubscribe_url,
         )

@@ -90,22 +90,90 @@ def upload_headshot(base64_image: str, user_id: int) -> str:
 def delete_headshot(user_id: int) -> bool:
     """
     Delete a user's headshot from Supabase Storage.
-    
+
     Args:
         user_id: User ID
-    
+
     Returns:
         True if deleted successfully, False otherwise
     """
     if not settings.supabase_url or not settings.supabase_service_role_key:
         return False
-    
+
     supabase = get_supabase_client()
     if not supabase:
         return False
-    
+
     try:
         file_path = f"{user_id}/headshot.jpg"
+        supabase.storage.from_(settings.supabase_storage_bucket).remove([file_path])
+        return True
+    except Exception:
+        return False
+
+
+def upload_founding_actor_headshot(base64_image: str, user_id: int, index: int) -> str:
+    """Upload a founding actor headshot to Supabase Storage.
+
+    Stored at ``founding-actors/{user_id}/headshot-{index}.jpg``.
+    """
+    if not settings.supabase_url or not settings.supabase_service_role_key:
+        raise ValueError("Supabase storage is not configured")
+
+    if "," in base64_image:
+        base64_image = base64_image.split(",")[1]
+
+    try:
+        image_data = base64.b64decode(base64_image)
+        image = Image.open(io.BytesIO(image_data))
+    except Exception as e:
+        raise ValueError(f"Invalid image data: {str(e)}")
+
+    if image.mode in ("RGBA", "P"):
+        rgb_image = Image.new("RGB", image.size, (255, 255, 255))
+        if image.mode == "RGBA":
+            rgb_image.paste(image, mask=image.split()[3])
+        else:
+            rgb_image.paste(image)
+        image = rgb_image
+
+    output = io.BytesIO()
+    image.save(output, format="JPEG", quality=85, optimize=True)
+    image_bytes = output.getvalue()
+
+    file_path = f"founding-actors/{user_id}/headshot-{index}.jpg"
+
+    supabase = get_supabase_client()
+    if not supabase:
+        raise ValueError("Failed to create Supabase client")
+
+    try:
+        supabase.storage.from_(settings.supabase_storage_bucket).upload(
+            file_path,
+            image_bytes,
+            file_options={"content-type": "image/jpeg", "upsert": "true"},
+        )
+        public_url = supabase.storage.from_(settings.supabase_storage_bucket).get_public_url(file_path)
+        if not public_url.startswith("http"):
+            supabase_url = settings.supabase_url.rstrip("/")
+            bucket_name = settings.supabase_storage_bucket
+            public_url = f"{supabase_url}/storage/v1/object/public/{bucket_name}/{file_path}"
+        return public_url
+    except Exception as e:
+        raise ValueError(f"Failed to upload image to Supabase: {str(e)}")
+
+
+def delete_founding_actor_headshot(user_id: int, index: int) -> bool:
+    """Delete a founding actor headshot from Supabase Storage."""
+    if not settings.supabase_url or not settings.supabase_service_role_key:
+        return False
+
+    supabase = get_supabase_client()
+    if not supabase:
+        return False
+
+    try:
+        file_path = f"founding-actors/{user_id}/headshot-{index}.jpg"
         supabase.storage.from_(settings.supabase_storage_bucket).remove([file_path])
         return True
     except Exception:

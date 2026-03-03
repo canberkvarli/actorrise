@@ -8,6 +8,7 @@ from app.models.billing import (
     UserSubscription,
     UsageMetrics,
 )
+from app.models.founding_actor import FoundingActor
 from app.models.moderation import MonologueSubmission, ModerationLog
 
 

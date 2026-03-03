@@ -1,6 +1,7 @@
 """Film & TV search: semantic + structured search over IMDb/OMDb-seeded film_tv_references."""
 
 import math
+import random as _random
 from typing import List, Optional, cast
 
 from app.api.auth import get_current_user
@@ -11,7 +12,7 @@ from app.models.user import User
 from app.services.ai.content_analyzer import ContentAnalyzer
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import func, or_
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/film-tv", tags=["film-tv"])
@@ -277,12 +278,12 @@ async def search_film_tv_references(
             p_total = personalized_base.count()
 
             if p_total > 0:
-                offset = (page - 1) * limit
+                # Use ID-sampling instead of ORDER BY RANDOM() for performance
+                all_ids = [r[0] for r in personalized_base.with_entities(FilmTvReference.id).all()]
+                selected_ids = _random.sample(all_ids, min(limit, len(all_ids)))
                 rows = (
                     personalized_base
-                    .order_by(func.random())
-                    .offset(offset)
-                    .limit(limit)
+                    .filter(FilmTvReference.id.in_(selected_ids))
                     .all()
                 )
                 if rows:

@@ -16,6 +16,7 @@ interface User {
   has_seen_profile_tour?: boolean;
   is_moderator?: boolean;
   can_approve_submissions?: boolean;
+  is_founding_actor?: boolean;
 }
 
 const DEMO_EMAIL = "demo@actorrise.com";
@@ -52,10 +53,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     lastSyncRef.current = now;
     try {
-      const response = await api.get<User>("/api/auth/me", { timeoutMs: 8000 });
+      // Try with 8s timeout; on failure retry once (handles cold DB connection pool)
+      let response;
+      try {
+        response = await api.get<User>("/api/auth/me", { timeoutMs: 8000 });
+      } catch {
+        response = await api.get<User>("/api/auth/me", { timeoutMs: 12000 });
+      }
       setUser(response.data);
     } catch (error: unknown) {
-      console.error("Failed to sync user with backend:", error);
+      console.warn("[auth] Could not reach backend, using session fallback:", error);
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
@@ -97,7 +104,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "INITIAL_SESSION") return; // already handled above
       if (session) {
-        syncUserWithBackend(false);
+        // Fire-and-forget — must catch to prevent unhandled promise rejection
+        syncUserWithBackend(false).catch(() => {});
       } else {
         setUser(null);
       }

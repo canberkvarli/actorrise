@@ -12,6 +12,10 @@ export interface TestimonialItem {
   isFounder?: boolean;
   /** Source platform for the review */
   source?: "product_hunt" | "reddit" | "direct" | "x" | "actor";
+  /** URL slug for the actor's dedicated page (e.g. "canberk-varli" → /actors/canberk-varli). */
+  slug?: string;
+  /** Social links: { imdb, website, instagram, x } */
+  socialLinks?: Record<string, string>;
 }
 
 export const TESTIMONIALS: TestimonialItem[] = [

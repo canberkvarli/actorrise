@@ -3,6 +3,7 @@
 import hashlib
 import json
 import logging
+import random as _random
 import re
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Tuple
@@ -12,7 +13,7 @@ from app.models.actor import Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
 from app.services.search.cache_manager import cache_manager
 from app.services.search.query_optimizer import QueryOptimizer
-from sqlalchemy import func, or_, text
+from sqlalchemy import or_, text
 from sqlalchemy.orm import Session
 
 # Module-level in-memory caches (Level 0 hot cache shared across SemanticSearch instances).
@@ -1093,27 +1094,35 @@ class SemanticSearch:
         return base_query.all()
 
     def get_random_monologues(self, limit: int = 10, filters: Optional[Dict] = None) -> List[Monologue]:
-        """Get random monologues (for "Discover" feature)"""
+        """Get random monologues (for "Discover" feature).
 
-        base_query = self.db.query(Monologue).join(Play)
+        Uses a two-query approach instead of ORDER BY RANDOM() which is O(n log n)
+        on the full table. First fetches only IDs (lightweight), samples in Python,
+        then loads full objects by primary key.
+        """
+
+        id_query = self.db.query(Monologue.id).join(Play)
 
         # Apply filters
         if filters:
             if filters.get('category'):
-                base_query = base_query.filter(Play.category == filters['category'])
+                id_query = id_query.filter(Play.category == filters['category'])
 
             if filters.get('difficulty'):
-                base_query = base_query.filter(Monologue.difficulty_level == filters['difficulty'])
+                id_query = id_query.filter(Monologue.difficulty_level == filters['difficulty'])
 
             if filters.get('max_overdone_score') is not None:
                 threshold = float(filters['max_overdone_score'])
-                base_query = base_query.filter(
+                id_query = id_query.filter(
                     or_(
                         Monologue.overdone_score.is_(None),
                         Monologue.overdone_score <= threshold,
                     )
                 )
 
-        # Order by random and limit. SQLAlchemy's func.random() is callable at runtime,
-        # but static analysis (pylint) may flag it as not-callable, so we disable that check here.
-        return base_query.order_by(func.random()).limit(limit).all()  # pylint: disable=not-callable
+        all_ids = [row[0] for row in id_query.all()]
+        if not all_ids:
+            return []
+
+        selected_ids = _random.sample(all_ids, min(limit, len(all_ids)))
+        return self.db.query(Monologue).filter(Monologue.id.in_(selected_ids)).all()

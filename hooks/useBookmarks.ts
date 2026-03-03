@@ -56,6 +56,10 @@ export function useToggleFavorite() {
 
   const mutation = useMutation({
     mutationFn: async ({ monologueId, isFavorited }: { monologueId: number; isFavorited: boolean }) => {
+      // Demo mock monologues have negative IDs — skip the API call
+      if (monologueId < 0) {
+        return { monologueId, isFavorited: !isFavorited };
+      }
       if (inflightRef.current.has(monologueId)) {
         throw new Error("__skip__"); // silently skip duplicate rapid toggle
       }

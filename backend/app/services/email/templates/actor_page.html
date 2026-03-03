@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Your actor page on ActorRise{% endblock %}
+
+{% block content %}
+                <p class="greeting">Hey {{ user_name }},</p>
+
+                <p>{{ intro_text }}</p>
+
+                <p><strong>Here's how to set it up:</strong></p>
+                <ul class="steps">
+                    <li><span class="bullet" style="color:#CB4B00; margin-right:8px;">1.</span> {{ step_1 }}</li>
+                    <li><span class="bullet" style="color:#CB4B00; margin-right:8px;">2.</span> {{ step_2 }}</li>
+                    <li><span class="bullet" style="color:#CB4B00; margin-right:8px;">3.</span> {{ step_3 }}</li>
+                </ul>
+
+                <div class="cta-wrap">
+                    <a href="{{ page_url or 'https://actorrise.com/signup' }}" class="cta">{{ cta_text }}</a>
+                </div>
+
+                {% if extra_text %}
+                <p>{{ extra_text }}</p>
+                {% endif %}
+
+                <p>If you have any questions, just reply to this email.</p>
+
+                <p class="signature">
+                    {{ sender_name }}<br>
+                    <span style="font-size:14px; color:#616161;">{{ sender_title }}</span>
+                </p>
+{% endblock %}

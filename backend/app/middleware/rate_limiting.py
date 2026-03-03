@@ -332,6 +332,9 @@ async def require_ai_search_when_query(
     - Pagination requests (page > 1) still check limits but do NOT increment usage,
       so "Load More" doesn't burn through the user's search quota.
     - Otherwise the same tier/usage rules as FeatureGate("ai_search", increment=True) apply.
+
+    After a successful increment, checks whether the user should receive an
+    upgrade-nudge email (fires at 80% of their monthly limit).
     """
     if settings.environment in ("development", "local"):
         return True
@@ -347,7 +350,17 @@ async def require_ai_search_when_query(
         page = 1
     increment = page <= 1
     gate = FeatureGate("ai_search", increment=increment)
-    return await gate(current_user=current_user, db=db)
+    result = await gate(current_user=current_user, db=db)
+
+    # After a successful search increment, check if an upgrade nudge should fire
+    if increment and result:
+        try:
+            from app.services.email.marketing import maybe_send_upgrade_nudge
+            maybe_send_upgrade_nudge(db, current_user.id)
+        except Exception:
+            pass  # never block search for a marketing email
+
+    return result
 
 
 def require_scene_partner(increment: bool = True) -> Callable:

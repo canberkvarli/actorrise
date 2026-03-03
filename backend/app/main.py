@@ -6,12 +6,15 @@ from app.api.admin.film_tv import router as admin_film_tv_router
 from app.api.admin.moderation import router as moderation_router
 from app.api.admin.monologues import router as admin_monologues_router
 from app.api.admin.stats import router as admin_stats_router
+from app.api.admin.emails import router as admin_emails_router
+from app.api.admin.founding_actors import router as admin_founding_actors_router
 from app.api.admin.users import router as admin_users_router
 from app.api.audition import router as audition_router
 from app.api.auth import router as auth_router
 from app.api.contact import router as contact_router
 from app.api.feedback import router as feedback_router
 from app.api.film_tv import router as film_tv_router
+from app.api.founding_actors import router as founding_actors_router
 from app.api.monologues import router as monologues_router
 from app.api.pricing import router as pricing_router
 from app.api.profile import router as profile_router
@@ -128,6 +131,9 @@ app.include_router(admin_monologues_router)
 app.include_router(admin_film_tv_router)
 app.include_router(admin_stats_router)
 app.include_router(admin_users_router)
+app.include_router(admin_emails_router)
+app.include_router(founding_actors_router)
+app.include_router(admin_founding_actors_router)
 
 
 @app.get("/")
