@@ -81,7 +81,7 @@ function getInitials(displayName: string) {
 const FILM_TV_LAST_SEARCH_KEY = "film_tv_search_last_results_v1";
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, isDemoUser } = useAuth();
   const router = useRouter();
   const [headshotFailed, setHeadshotFailed] = useState(false);
   const [selectedMonologue, setSelectedMonologue] = useState<Monologue | null>(null);
@@ -113,17 +113,18 @@ export default function DashboardPage() {
   }, [selectedFilmTvRef?.id]);
 
   // React Query hooks
-  const { data: stats, isLoading: isLoadingStats } = useProfileStats();
-  const { data: profile, isLoading: isLoadingProfile } = useProfile();
+  const { data: stats, isLoading: isLoadingStats } = useProfileStats(isDemoUser);
+  const { data: profile, isLoading: isLoadingProfile } = useProfile(isDemoUser);
   const { count: bookmarkCount } = useBookmarkCount();
   const isProfileComplete = stats && stats.completion_percentage >= 50;
-  const { data: recommendations = [], isLoading: isLoadingRecommendations } = useRecommendations(isProfileComplete ?? false);
-  const { data: discoverMonologues = [], isLoading: isLoadingDiscover } = useDiscover(!(isProfileComplete ?? false));
+  const { data: recommendations = [], isLoading: isLoadingRecommendations } = useRecommendations(isProfileComplete ?? false, true, isDemoUser);
+  const { data: discoverMonologues = [], isLoading: isLoadingDiscover } = useDiscover(!(isProfileComplete ?? false), isDemoUser);
   const mainMonologues = isProfileComplete ? recommendations : discoverMonologues;
   const isLoadingMain = isProfileComplete ? isLoadingRecommendations : isLoadingDiscover;
   const { data: discoverFilmTv = [], isLoading: isLoadingFilmTv } = useDiscoverFilmTv(
     true,
     isProfileComplete ?? false,
+    isDemoUser,
   );
   const toggleFavoriteMutation = useToggleFavorite();
   const { data: filmTvFavorites = [] } = useFilmTvFavorites();

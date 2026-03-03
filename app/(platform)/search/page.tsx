@@ -77,7 +77,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export default function SearchPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, refreshUser } = useAuth();
+  const { user, isDemoUser, refreshUser } = useAuth();
   const [showSearchTour, setShowSearchTour] = useState(false);
   const [playsQuery, setPlaysQuery] = useState("");
   const [filmTvQuery, setFilmTvQuery] = useState("");
@@ -138,7 +138,7 @@ export default function SearchPage() {
   const [editMonologueId, setEditMonologueId] = useState<number | null>(null);
   const [editMonologueSaving, setEditMonologueSaving] = useState(false);
   const [showProfileCompleteModal, setShowProfileCompleteModal] = useState(false);
-  const { data: profileStats } = useProfileStats();
+  const { data: profileStats } = useProfileStats(isDemoUser);
 
   const LAST_SEARCH_KEY = "monologue_search_last_results_v1";
   const FILM_TV_LAST_SEARCH_KEY = "film_tv_search_last_results_v1";
