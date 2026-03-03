@@ -77,16 +77,16 @@ export function MonologueDetailContent({
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2 items-center">
             <span className="text-xs text-muted-foreground mr-1">Character:</span>
-            <Badge variant="outline" className="font-normal font-typewriter rounded-lg">
+            <Badge variant="outline" className="font-normal font-typewriter">
               {monologue.character_name}
             </Badge>
             {monologue.character_gender && (
-              <Badge variant="outline" className="font-normal capitalize rounded-lg">
+              <Badge variant="outline" className="font-normal capitalize">
                 {monologue.character_gender}
               </Badge>
             )}
             {monologue.character_age_range && (
-              <Badge variant="outline" className="font-normal rounded-lg">
+              <Badge variant="outline" className="font-normal">
                 {monologue.character_age_range}
               </Badge>
             )}
@@ -96,7 +96,7 @@ export function MonologueDetailContent({
               <span className="text-xs text-muted-foreground mr-1">Genre:</span>
               <Badge
                 variant="secondary"
-                className={`font-normal capitalize rounded-lg ${
+                className={`font-normal capitalize ${
                   monologue.category.toLowerCase() === "classical"
                     ? "bg-amber-500/10 text-amber-700 border-amber-300/40 dark:text-amber-400 dark:border-amber-500/30"
                     : monologue.category.toLowerCase() === "contemporary"
@@ -115,7 +115,7 @@ export function MonologueDetailContent({
                 {monologue.themes.map((theme) => (
                   <span
                     key={theme}
-                    className="px-2.5 py-1 bg-muted/80 text-muted-foreground rounded-full text-xs font-medium capitalize"
+                    className="px-2 py-0.5 bg-muted/80 text-muted-foreground rounded-md text-xs font-medium capitalize"
                   >
                     {theme}
                   </span>
@@ -171,7 +171,7 @@ export function MonologueDetailContent({
                     </Tooltip>
                   </TooltipProvider>
                 </p>
-                <Badge variant="outline" className="font-normal rounded-lg">
+                <Badge variant="outline" className="font-normal">
                   {duration}:{seconds.toString().padStart(2, "0")} min
                 </Badge>
               </div>

@@ -85,7 +85,7 @@ export function MonologueResultCard({
                     {mono.character_name}
                   </h3>
                   {mono.is_favorited && (
-                    <span className="px-2 py-0.5 bg-muted/90 text-foreground border border-border text-xs font-semibold rounded-full">
+                    <span className="px-2 py-0.5 bg-muted/90 text-foreground border border-border text-xs font-medium rounded-md">
                       Saved
                     </span>
                   )}
@@ -175,7 +175,7 @@ export function MonologueResultCard({
                 {mono.themes.slice(0, 3).map((theme) => (
                   <span
                     key={theme}
-                    className="text-xs px-2.5 py-1 bg-secondary/10 text-secondary-foreground/90 rounded-full font-medium capitalize"
+                    className="text-xs px-2 py-0.5 bg-secondary/10 text-secondary-foreground/90 rounded-md font-medium capitalize"
                   >
                     {theme}
                   </span>
