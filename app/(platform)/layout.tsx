@@ -38,7 +38,7 @@ export default function PlatformLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading, isLoggingOut, logout, refreshUser } = useAuth();
+  const { user, loading, isLoggingOut, isDemoUser, logout, refreshUser } = useAuth();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -50,7 +50,7 @@ export default function PlatformLayout({
   const { count: bookmarkCount, isLoading: isLoadingBookmarks } = useBookmarkCount();
   const { count: filmTvFavoriteCount, isLoading: isLoadingFilmTvFavorites } = useFilmTvFavoriteCount();
   const savedCount = bookmarkCount + filmTvFavoriteCount;
-  const { data: profile } = useProfile();
+  const { data: profile } = useProfile(isDemoUser);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const displayName = profile?.name?.trim() || user?.name?.trim() || "";

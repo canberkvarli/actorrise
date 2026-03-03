@@ -18,10 +18,13 @@ interface User {
   can_approve_submissions?: boolean;
 }
 
+const DEMO_EMAIL = "demo@actorrise.com";
+
 interface AuthContextType {
   user: User | null;
   loading: boolean;
   isLoggingOut: boolean;
+  isDemoUser: boolean;
   login: (email: string, password: string, redirectTo?: string) => Promise<void>;
   signup: (email: string, password: string, name?: string, marketingOptIn?: boolean) => Promise<void>;
   logout: () => Promise<void>;
@@ -208,18 +211,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await syncUserWithBackend(false);
   }, [syncUserWithBackend]);
 
+  const isDemoUser = !!user && user.email === DEMO_EMAIL;
+
+  // Developer login gets full admin/moderator access
+  const effectiveUser = isDemoUser && user
+    ? { ...user, is_moderator: true, can_approve_submissions: true }
+    : user;
+
   const contextValue = useMemo<AuthContextType>(
     () => ({
-      user,
+      user: effectiveUser,
       loading,
       isLoggingOut,
+      isDemoUser,
       login,
       signup,
       logout,
       refreshUser,
       isAuthenticated: !!user,
     }),
-    [user, loading, isLoggingOut, login, signup, logout, refreshUser]
+    [effectiveUser, loading, isLoggingOut, isDemoUser, login, signup, logout, refreshUser]
   );
 
   return (

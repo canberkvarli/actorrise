@@ -31,10 +31,10 @@ export function DemoLoginButton() {
       {isLoading ? (
         <>
           <IconLoader2 className="h-4 w-4 animate-spin" />
-          Loading demo...
+          Logging in...
         </>
       ) : (
-        "Demo Login"
+        "Developer Login"
       )}
     </Button>
   );
