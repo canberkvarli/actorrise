@@ -76,7 +76,17 @@ async function request<T = unknown>(
   if (timeoutMs != null && timeoutMs > 0) {
     const controller = new AbortController();
     timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    init.signal = controller.signal;
+    // Combine caller signal with timeout signal so either can abort
+    const callerSignal = init.signal as AbortSignal | undefined;
+    if (callerSignal && typeof AbortSignal.any === "function") {
+      init.signal = AbortSignal.any([callerSignal, controller.signal]);
+    } else if (callerSignal) {
+      // Fallback: forward caller abort to timeout controller
+      callerSignal.addEventListener("abort", () => controller.abort(), { once: true });
+      init.signal = controller.signal;
+    } else {
+      init.signal = controller.signal;
+    }
   }
 
   // Make request with redirect handling
