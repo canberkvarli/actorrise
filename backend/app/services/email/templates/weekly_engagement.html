@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Your weekly pick | ActorRise{% endblock %}
+
+{% block content %}
+                <p class="greeting">Hi {{ user_name }},</p>
+
+                <p>Here's what's new on ActorRise this week.</p>
+
+                {% if monologue_title %}
+                <div class="accent-box accent-box-orange">
+                    <p class="accent-title">This week's pick</p>
+                    <p style="font-size:15px; font-weight:600; color:#292929; margin:0 0 8px;">{{ monologue_title }}</p>
+                    {% if monologue_snippet %}
+                    <p style="font-style:italic; color:#374151; margin:0 0 12px;">{{ monologue_snippet }}</p>
+                    {% endif %}
+                    <a href="{{ monologue_url }}" style="font-size:14px; font-weight:600; color:#CB4B00; text-decoration:none;">Read the full monologue &rarr;</a>
+                </div>
+                {% endif %}
+
+                {% if tip_title %}
+                <div class="accent-box accent-box-blue">
+                    <p class="accent-title">{{ tip_title }}</p>
+                    <p>{{ tip_body }}</p>
+                </div>
+                {% endif %}
+
+                <div class="cta-wrap">
+                    <a href="https://actorrise.com/dashboard" class="cta">Open ActorRise</a>
+                </div>
+
+                <p style="font-size:13px; color:#616161;">You're receiving this because you opted in to weekly updates from ActorRise.</p>
+
+                <p class="signature">
+                    Best,<br>
+                    <strong>Canberk</strong><br>
+                    <span style="font-size:14px; color:#616161;">Founder, ActorRise</span>
+                </p>
+{% endblock %}

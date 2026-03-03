@@ -7,7 +7,7 @@ import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconHome, IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket } from "@tabler/icons-react";
+import { IconHome, IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar } from "@tabler/icons-react";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarks";
@@ -356,6 +356,16 @@ export default function PlatformLayout({
                         <IconUser className="h-4 w-4 text-muted-foreground" />
                         <span>Edit profile</span>
                       </Link>
+                      {user?.is_founding_actor && (
+                        <Link
+                          href="/founding-actor"
+                          onClick={() => setProfileDropdownOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                        >
+                          <IconStar className="h-4 w-4 text-muted-foreground" />
+                          <span>My founding page</span>
+                        </Link>
+                      )}
 
                       <p className="px-2 py-1.5 mt-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                         Content

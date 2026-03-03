@@ -90,10 +90,10 @@ export function LoginForm({ redirectTo: redirectToProp }: LoginFormProps = {}) {
             </p>
           </div>
 
-          {error && (
-            <div className="space-y-2">
+          <div className={`overflow-hidden transition-all duration-200 ${error ? 'max-h-24 opacity-100' : 'max-h-0 opacity-0'}`}>
+            <div className="space-y-2 pb-1">
               <p className="text-sm text-destructive">{error}</p>
-              {error.includes("No account found") && (
+              {error?.includes("No account found") && (
                 <p className="text-sm text-muted-foreground">
                   Don&apos;t have an account?{" "}
                   <Link href="/signup" className="text-primary hover:underline">
@@ -102,7 +102,7 @@ export function LoginForm({ redirectTo: redirectToProp }: LoginFormProps = {}) {
                 </p>
               )}
             </div>
-          )}
+          </div>
 
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? (

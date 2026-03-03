@@ -7,13 +7,15 @@
 
 import { useAuthModal } from "@/components/auth/AuthModalContext";
 import { ContactModal } from "@/components/contact/ContactModal";
+import { SocialLinkIcons } from "@/components/founding-actor/SocialLinkIcons";
 import {
-  TESTIMONIALS,
   type TestimonialItem,
 } from "@/data/testimonials";
+import { useTestimonials } from "@/hooks/useTestimonials";
 import Image from "next/image";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 
 export type { TestimonialItem };
@@ -182,12 +184,7 @@ function ThumbnailDot({
 }
 
 export function LandingTestimonials() {
-  const shuffled = useMemo(() => {
-    const founder = TESTIMONIALS.filter((t) => t.isFounder);
-    const placeholder = TESTIMONIALS.filter((t) => !t.isFounder && !t.image);
-    const rest = TESTIMONIALS.filter((t) => !t.isFounder && t.image);
-    return [...founder, ...rest, ...placeholder];
-  }, []);
+  const { testimonials: shuffled } = useTestimonials();
 
   const [index, setIndex] = useState(0);
   const [contactOpen, setContactOpen] = useState(false);
@@ -274,6 +271,17 @@ export function LandingTestimonials() {
                       <p className="mt-0.5 text-xs sm:text-sm text-muted-foreground">
                         {t.descriptor}
                       </p>
+                    )}
+                    {!isPlaceholder && t.socialLinks && Object.keys(t.socialLinks).length > 0 && (
+                      <SocialLinkIcons socialLinks={t.socialLinks} className="mt-1.5" />
+                    )}
+                    {!isPlaceholder && t.slug && (
+                      <Link
+                        href={`/actors/${t.slug}`}
+                        className="mt-1.5 inline-block text-xs text-primary hover:underline font-medium"
+                      >
+                        Learn more about {t.name.split(" ")[0]} &rarr;
+                      </Link>
                     )}
                     {isPlaceholder && (
                       <p className="mt-1 text-xs sm:text-sm text-muted-foreground">

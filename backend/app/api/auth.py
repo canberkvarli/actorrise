@@ -1,10 +1,14 @@
 from app.core.database import get_db
 from app.core.security import verify_supabase_token
+from app.models.founding_actor import FoundingActor
 from app.models.user import User
+from app.services.email.marketing import verify_unsubscribe_token
 from app.services.email.notifications import send_welcome_email
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import HTMLResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+from sqlalchemy import exists
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -137,8 +141,14 @@ def get_current_user_optional(
 
 
 @router.get("/me")
-def get_me(current_user: User = Depends(get_current_user)):
+def get_me(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     """Get current user information."""
+    is_founding_actor = db.query(
+        exists().where(FoundingActor.user_id == current_user.id)
+    ).scalar()
     return {
         "id": current_user.id,
         "email": current_user.email,
@@ -150,6 +160,7 @@ def get_me(current_user: User = Depends(get_current_user)):
         "has_seen_profile_tour": current_user.has_seen_profile_tour,
         "is_moderator": current_user.is_moderator,
         "can_approve_submissions": current_user.can_approve_submissions,
+        "is_founding_actor": is_founding_actor,
     }
 
 
@@ -197,3 +208,61 @@ def update_onboarding(
         "has_seen_search_tour": current_user.has_seen_search_tour,
         "has_seen_profile_tour": current_user.has_seen_profile_tour,
     }
+
+
+@router.get("/unsubscribe", response_class=HTMLResponse)
+def unsubscribe(
+    email: str = Query(...),
+    token: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    """Unsubscribe a user from marketing emails via signed link."""
+    if not verify_unsubscribe_token(email, token):
+        return HTMLResponse(
+            content=_unsubscribe_page("Invalid or expired unsubscribe link."),
+            status_code=400,
+        )
+
+    user = db.query(User).filter(User.email == email).first()
+    if user and user.marketing_opt_in:
+        user.marketing_opt_in = False
+        db.commit()
+
+    return HTMLResponse(content=_unsubscribe_page(
+        "You've been unsubscribed from ActorRise marketing emails. "
+        "You can re-subscribe anytime from your account settings."
+    ))
+
+
+def _unsubscribe_page(message: str) -> str:
+    """Render a minimal unsubscribe confirmation page."""
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Unsubscribe — ActorRise</title>
+    <style>
+        body {{
+            margin: 0; padding: 60px 24px;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5; color: #292929; text-align: center;
+        }}
+        .card {{
+            max-width: 480px; margin: 0 auto; background: #fff;
+            border-radius: 16px; padding: 48px 32px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+        }}
+        .card img {{ max-width: 160px; margin: 0 auto 24px; display: block; }}
+        .card p {{ font-size: 16px; line-height: 1.6; color: #374151; }}
+        .card a {{ color: #CB4B00; text-decoration: none; font-weight: 600; }}
+    </style>
+</head>
+<body>
+    <div class="card">
+        <img src="https://actorrise.com/logo_with_text.png" alt="ActorRise" />
+        <p>{message}</p>
+        <p><a href="https://actorrise.com">Back to ActorRise</a></p>
+    </div>
+</body>
+</html>"""

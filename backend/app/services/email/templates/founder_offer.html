@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block title %}A special offer for you | ActorRise{% endblock %}
+
+{% block content %}
+                <p class="greeting">Hey {{ user_name }},</p>
+
+                <p>I wanted to reach out personally. I'm an actor too, and I built ActorRise because I couldn't find the tools I needed. You signed up early and that means a lot to me.</p>
+
+                <p>As a thank-you, here's a code that gets you <strong>12 months of ActorRise Plus completely free</strong>:</p>
+
+                <div class="accent-box accent-box-orange" style="text-align:center;">
+                    <p style="font-size:13px; font-weight:600; color:#CB4B00; margin:0 0 4px; text-transform:uppercase; letter-spacing:0.08em;">Your code</p>
+                    <p style="font-size:28px; font-weight:700; color:#292929; margin:0 0 8px; letter-spacing:0.04em;">{{ promo_code }}</p>
+                    <p style="font-size:14px; color:#616161; margin:0;">{{ discount_description }}</p>
+                </div>
+
+                <div class="cta-wrap">
+                    <a href="{{ upgrade_url }}" class="cta">Get Plus free for 12 months</a>
+                </div>
+
+                <p>If you like what you see and want to be featured on the homepage as a founding actor, all I'd ask for in return is a short testimonial in your own words, just your honest thoughts on the platform or what you think it could do for actors. A headshot to go next to it would be amazing too, totally optional though.</p>
+
+                <div class="accent-box accent-box-blue">
+                    <p class="accent-title">Just reply to this email with:</p>
+                    <ul style="margin:8px 0 0; padding:0 0 0 20px;">
+                        <li>A sentence or two about your experience</li>
+                        <li>Your headshot (optional, attach or link it)</li>
+                        <li>How you'd like to be credited (name, role, city)</li>
+                    </ul>
+                </div>
+
+                {% if share_text %}
+                <p>And if you know other actors who'd love this, feel free to send them this way. Word of mouth means everything at this stage.</p>
+
+                <div class="accent-box accent-box-green" style="text-align:center;">
+                    <p style="font-size:14px; color:#292929; margin:0 0 8px; font-style:italic;">{{ share_text }}</p>
+                    <a href="{{ share_url }}" style="font-size:14px; font-weight:600; color:#CB4B00; text-decoration:none;">{{ share_url }}</a>
+                </div>
+                {% endif %}
+
+                <p>Really glad you're here. Welcome!</p>
+
+                <p class="signature">
+                    {{ sender_name }}<br>
+                    <span style="font-size:14px; color:#616161;">{{ sender_title }}</span>
+                </p>
+{% endblock %}

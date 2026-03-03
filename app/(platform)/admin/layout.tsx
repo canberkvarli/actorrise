@@ -11,6 +11,8 @@ import {
   IconFileSearch,
   IconDeviceTv,
   IconUsers,
+  IconMail,
+  IconStar,
 } from "@tabler/icons-react";
 
 export default function AdminLayout({
@@ -55,6 +57,8 @@ export default function AdminLayout({
     { href: "/admin/moderation", label: "Moderation", icon: IconShieldCheck },
     { href: "/admin/monologues", label: "Monologues", icon: IconFileSearch },
     { href: "/admin/film-tv", label: "Film/TV", icon: IconDeviceTv },
+    { href: "/admin/emails", label: "Emails", icon: IconMail },
+    { href: "/admin/founding-actors", label: "Founding Actors", icon: IconStar },
   ];
 
   return (

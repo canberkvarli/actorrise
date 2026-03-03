@@ -623,10 +623,25 @@ async def list_user_scripts(
         UserScript.user_id == current_user.id
     ).order_by(UserScript.created_at.desc()).all()
 
+    if not scripts:
+        return []
+
+    # Batch-load all scenes in one query instead of N+1
+    script_ids = [s.id for s in scripts]
+    all_scenes = (
+        db.query(Scene)
+        .filter(Scene.user_script_id.in_(script_ids))
+        .order_by(Scene.id)
+        .all()
+    )
+    scenes_by_script: dict[int, list[Scene]] = {}
+    for sc in all_scenes:
+        scenes_by_script.setdefault(sc.user_script_id, []).append(sc)
+
     result = []
     for s in scripts:
         data = UserScriptResponse.model_validate(s).model_dump()
-        scenes = db.query(Scene).filter(Scene.user_script_id == s.id).order_by(Scene.id).all()
+        scenes = scenes_by_script.get(s.id, [])
         first_scene = scenes[0] if scenes else None
         data["first_scene_title"] = first_scene.title if first_scene else None
         data["first_scene_description"] = (first_scene.description if first_scene and first_scene.description else None)

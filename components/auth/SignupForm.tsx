@@ -99,7 +99,9 @@ export function SignupForm() {
           </Label>
         </div>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        <div className={`overflow-hidden transition-all duration-200 ${error ? 'max-h-16 opacity-100' : 'max-h-0 opacity-0'}`}>
+          <p className="text-sm text-destructive pb-1">{error}</p>
+        </div>
 
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (

@@ -1,11 +1,11 @@
 """Recommend monologues based on actor profile and preferences."""
 
+import random as _random
 from collections import Counter
 from typing import Any, List, Optional, Set
 
 from app.models.actor import ActorProfile, Monologue, MonologueFavorite, Play
 from sqlalchemy import or_
-from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Session
 
 from .semantic_search import SemanticSearch
@@ -328,6 +328,9 @@ class Recommender:
         """
         Get recommendations using SQL queries instead of semantic search.
         Used as fallback when embeddings aren't available.
+
+        Fetches a larger candidate pool sorted by score, then randomly samples
+        from that pool instead of using ORDER BY random() which is O(n log n).
         """
         filters = filters or {}
         preferred_genres = _preferred_genres_list(actor_profile)
@@ -341,12 +344,16 @@ class Recommender:
             ]
             query = query.filter(or_(*genre_conditions))
 
+        # Fetch a pool of top-scored candidates, then sample for variety
+        pool_size = min(limit * 4, 80)
         query = query.order_by(
             (Monologue.favorite_count * (1.0 - Monologue.overdone_score)).desc(),
-            sql_text("random()"),
         )
+        pool = query.limit(pool_size).all()
 
-        return query.limit(limit).all()
+        if len(pool) <= limit:
+            return pool
+        return _random.sample(pool, limit)
 
     # ── Favorites-based recommendations ────────────────────────────────────
 
@@ -514,12 +521,16 @@ class Recommender:
                 )
             )
 
+        # Fetch a pool of top-scored candidates, then sample for variety
+        pool_size = min(limit * 4, 40)
         query = query.order_by(
             (Monologue.favorite_count * (1.0 - Monologue.overdone_score)).desc(),
-            sql_text("random()"),
         )
+        pool = query.limit(pool_size).all()
 
-        return query.limit(limit).all()
+        if len(pool) <= limit:
+            return pool
+        return _random.sample(pool, limit)
 
     def get_similar_monologues(
         self,
@@ -568,7 +579,16 @@ class Recommender:
     def get_fresh_picks(self, limit: int = 20) -> List[Monologue]:
         """Get fresh, under-performed monologues (opposite of trending)"""
 
-        return self.db.query(Monologue).filter(
-            Monologue.overdone_score < 0.3,
-            Monologue.favorite_count < 10
-        ).order_by(sql_text("random()")).limit(limit).all()
+        all_ids = [
+            row[0]
+            for row in self.db.query(Monologue.id)
+            .filter(
+                Monologue.overdone_score < 0.3,
+                Monologue.favorite_count < 10,
+            )
+            .all()
+        ]
+        if not all_ids:
+            return []
+        selected_ids = _random.sample(all_ids, min(limit, len(all_ids)))
+        return self.db.query(Monologue).filter(Monologue.id.in_(selected_ids)).all()

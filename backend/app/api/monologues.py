@@ -20,7 +20,7 @@ from app.services.search.recommender import Recommender
 from app.services.search.semantic_search import SemanticSearch
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 router = APIRouter(prefix="/api/monologues", tags=["monologues"])
 
@@ -564,7 +564,12 @@ async def get_monologue(
 ):
     """Get detailed monologue information"""
 
-    monologue = db.query(Monologue).filter(Monologue.id == monologue_id).first()
+    monologue = (
+        db.query(Monologue)
+        .options(joinedload(Monologue.play))
+        .filter(Monologue.id == monologue_id)
+        .first()
+    )
 
     if not monologue:
         raise HTTPException(status_code=404, detail="Monologue not found")
@@ -720,6 +725,7 @@ async def get_my_favorites(
 
     monologues = (
         db.query(Monologue)
+        .options(joinedload(Monologue.play))
         .filter(Monologue.id.in_([f.monologue_id for f in favorites]))
         .all()
     )

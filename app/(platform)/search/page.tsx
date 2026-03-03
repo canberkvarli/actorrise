@@ -189,7 +189,9 @@ export default function SearchPage() {
       resumeDelayMs: 4000,
     });
 
+  const userStoppedRef = useRef(false);
   const stopSearch = useCallback(() => {
+    userStoppedRef.current = true;
     if (searchAbortRef.current) {
       searchAbortRef.current.abort();
       searchAbortRef.current = null;
@@ -552,6 +554,7 @@ export default function SearchPage() {
     maxOverdoneScoreOverride?: number
   ) => {
     setShowFiltersSheet(false);
+    userStoppedRef.current = false;
     // Cancel any in-flight search
     if (searchAbortRef.current) searchAbortRef.current.abort();
     const controller = new AbortController();
@@ -636,6 +639,7 @@ export default function SearchPage() {
         }
       }
     } catch (error: unknown) {
+      if (userStoppedRef.current) { userStoppedRef.current = false; return; }
       const res = (error as { response?: { data?: { detail?: string | { message?: string; upgrade_url?: string } } } })?.response;
       const raw = res?.data?.detail;
       const message =
@@ -668,6 +672,7 @@ export default function SearchPage() {
       const hasQueryOrFilters = filmTvQuery.trim() !== "" || Object.values(filmTvFilters).some((v) => v !== "");
       // Only set filmTvHasSearched and results when we actually run a fetch (query/filters or explicit "Browse all").
       // Cancel any in-flight search
+      userStoppedRef.current = false;
       if (searchAbortRef.current) searchAbortRef.current.abort();
       const controller = new AbortController();
       searchAbortRef.current = controller;
@@ -716,6 +721,7 @@ export default function SearchPage() {
         });
         router.replace(`/search?${urlParams.toString()}`, { scroll: false });
       } catch (err: unknown) {
+        if (userStoppedRef.current) { userStoppedRef.current = false; return; }
         const msg = err && typeof err === "object" && "response" in err
           ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
           : "Search failed.";
@@ -1228,7 +1234,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   }}
                   className="pl-12 pr-10 min-h-[48px] md:h-12 text-base border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
-                {(searchMode === "plays" ? playsQuery : filmTvQuery) && (
+                {!isLoading && (searchMode === "plays" ? playsQuery : filmTvQuery) && (
                   <button
                     type="button"
                     onClick={() => searchMode === "plays" ? setPlaysQuery("") : setFilmTvQuery("")}
@@ -1593,16 +1599,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
         {/* Error banner with retry */}
         {searchError && (
-          <Card className="border-destructive/50 bg-destructive/5">
-            <CardContent className="pt-4 pb-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div className="flex flex-col gap-2">
-                <p className="text-sm text-destructive font-medium">{searchError}</p>
-                {searchUpgradeUrl && (
-                  <Link href={searchUpgradeUrl}>
-                    <Button variant="default" size="sm">View plans & upgrade</Button>
-                  </Link>
-                )}
-              </div>
+          <Card className="border-destructive/50 bg-destructive/5 max-w-md mx-auto">
+            <CardContent className="pt-4 pb-4 flex flex-col items-center text-center gap-3">
+              <p className="text-sm text-destructive font-medium">{searchError}</p>
+              {searchUpgradeUrl && (
+                <Link href={searchUpgradeUrl}>
+                  <Button variant="default" size="sm">View plans & upgrade</Button>
+                </Link>
+              )}
               <Button variant="outline" size="sm" onClick={() => { setSearchError(null); setSearchUpgradeUrl(null); searchMode === "film_tv" ? handleSearch() : performSearch(playsQuery, filters); }}>
                 Try again
               </Button>

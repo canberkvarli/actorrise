@@ -1,90 +1,40 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Submission Under Review</title>
-    <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .header {
-            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-            color: white;
-            padding: 30px;
-            border-radius: 8px 8px 0 0;
-            text-align: center;
-        }
-        .content {
-            background: #f9fafb;
-            padding: 30px;
-            border-radius: 0 0 8px 8px;
-        }
-        .monologue-title {
-            background: white;
-            padding: 15px;
-            border-left: 4px solid #f59e0b;
-            margin: 20px 0;
-            border-radius: 4px;
-        }
-        .info-box {
-            background: #fffbeb;
-            padding: 15px;
-            border-radius: 6px;
-            margin: 20px 0;
-        }
-        .footer {
-            text-align: center;
-            color: #6b7280;
-            font-size: 14px;
-            margin-top: 30px;
-        }
-        a {
-            color: #f59e0b;
-            text-decoration: none;
-        }
-    </style>
-</head>
-<body>
-    <div class="header">
-        <h1>Submission Under Review</h1>
-    </div>
-    <div class="content">
-        <p>Hi {{ user_name }},</p>
+{% extends "base.html" %}
 
-        <p>Your monologue submission is currently being reviewed by our moderation team:</p>
+{% block title %}Submission Under Review{% endblock %}
 
-        <div class="monologue-title">
-            <strong>{{ monologue_title }}</strong>
-        </div>
+{% block sub_header %}
+            <div class="sub-header" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                <h1>Submission Under Review</h1>
+            </div>
+{% endblock %}
 
-        <div class="info-box">
-            <p><strong>Estimated Review Time:</strong> {{ estimated_review_time }}</p>
-            <p>Our moderators are carefully reviewing your submission to ensure it meets our quality and copyright standards.</p>
-        </div>
+{% block content %}
+                <p class="greeting">Hi {{ user_name }},</p>
 
-        <p><strong>What we're checking:</strong></p>
-        <ul>
-            <li>Copyright status and licensing</li>
-            <li>Quality and completeness of the text</li>
-            <li>Adherence to community guidelines</li>
-            <li>Duplicate detection</li>
-        </ul>
+                <p>Your monologue submission is currently being reviewed:</p>
 
-        <p>You'll receive an email notification once a decision has been made. Thank you for your patience!</p>
+                <div class="monologue-title" style="border-left-color: #f59e0b;">
+                    <strong>{{ monologue_title }}</strong>
+                </div>
 
-        <p>Best regards,<br>
-        The ActorRise Team</p>
-    </div>
+                <div class="accent-box accent-box-yellow">
+                    <p><strong>Estimated Review Time:</strong> {{ estimated_review_time }}</p>
+                    <p>I'm carefully reviewing your submission to make sure it meets quality and copyright standards.</p>
+                </div>
 
-    <div class="footer">
-        <p>&copy; 2025 ActorRise. All rights reserved.</p>
-        <p><a href="https://actorrise.com">Visit ActorRise</a></p>
-    </div>
-</body>
-</html>
+                <p><strong>What I'm checking:</strong></p>
+                <ul>
+                    <li>Copyright status and licensing</li>
+                    <li>Quality and completeness of the text</li>
+                    <li>Adherence to community guidelines</li>
+                    <li>Duplicate detection</li>
+                </ul>
+
+                <p>You'll receive an email once a decision has been made. Thank you for your patience!</p>
+
+                <p class="signature">
+                    Best,<br>
+                    <strong>Canberk</strong><br>
+                    <span style="font-size:14px; color:#616161;">Founder, ActorRise</span>
+                </p>
+{% endblock %}
