@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { SearchTour } from "@/components/onboarding/SearchTour";
+import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -161,6 +162,41 @@ export default function SearchPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [jitter, setJitter] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
+
+  // Typewriter placeholder examples
+  const PLAYS_EXAMPLES = useMemo(() => [
+    "funny monologue for a 20 year old, under 2 min",
+    "dramatic classical piece for a woman",
+    "comedic monologue about love",
+    "angry male monologue, contemporary",
+    "audition piece for drama school",
+    "Shakespeare monologue for a young man",
+  ], []);
+  const FILM_TV_EXAMPLES = useMemo(() => [
+    "courtroom drama, intense closing argument",
+    "breakup scene, emotional",
+    "villain monologue, intimidating",
+    "comedy, awkward first date scene",
+    "war film, motivational speech",
+  ], []);
+
+  const currentQuery = searchMode === "plays" ? playsQuery : filmTvQuery;
+  const typewriterExamples = searchMode === "plays" ? PLAYS_EXAMPLES : FILM_TV_EXAMPLES;
+  const { placeholder: typewriterText, pause: pauseTypewriter, scheduleResume: resumeTypewriter } =
+    useTypewriterPlaceholder(typewriterExamples, {
+      enabled: !currentQuery && !isLoading && !hasSearched && !filmTvHasSearched,
+      resumeDelayMs: 4000,
+    });
+
+  const stopSearch = useCallback(() => {
+    if (searchAbortRef.current) {
+      searchAbortRef.current.abort();
+      searchAbortRef.current = null;
+    }
+    setIsLoading(false);
+    setIsLoadingMore(false);
+  }, []);
 
   const { data: filmTvFavorites = [] } = useFilmTvFavorites();
   const toggleFilmTvFavoriteMutation = useToggleFilmTvFavorite();
@@ -516,6 +552,10 @@ export default function SearchPage() {
     maxOverdoneScoreOverride?: number
   ) => {
     setShowFiltersSheet(false);
+    // Cancel any in-flight search
+    if (searchAbortRef.current) searchAbortRef.current.abort();
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
     const effectiveMaxOverdone = maxOverdoneScoreOverride ?? maxOverdoneScore;
     if (!append) {
       setIsLoading(true);
@@ -537,7 +577,7 @@ export default function SearchPage() {
 
       const response = await api.get<SearchResponseShape>(
         `/api/monologues/search?${params.toString()}`,
-        { timeoutMs: 180000 }
+        { timeoutMs: 180000, signal: controller.signal }
       );
       const data = response.data;
       const newResults = data.results;
@@ -627,6 +667,10 @@ export default function SearchPage() {
       setShowFilmTvFilters(false);
       const hasQueryOrFilters = filmTvQuery.trim() !== "" || Object.values(filmTvFilters).some((v) => v !== "");
       // Only set filmTvHasSearched and results when we actually run a fetch (query/filters or explicit "Browse all").
+      // Cancel any in-flight search
+      if (searchAbortRef.current) searchAbortRef.current.abort();
+      const controller = new AbortController();
+      searchAbortRef.current = controller;
       setFilmTvHasSearched(true);
       setIsLoading(true);
       setSearchError(null);
@@ -637,7 +681,8 @@ export default function SearchPage() {
           if (value) params.set(key, value);
         });
         const res = await api.get<{ results: FilmTvReference[]; total: number }>(
-          `/api/film-tv/search?${params.toString()}`
+          `/api/film-tv/search?${params.toString()}`,
+          { signal: controller.signal }
         );
         const results = res.data.results;
         const total = res.data.total;
@@ -1157,12 +1202,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 }`} />
                 <Input
                   id="search-input"
-                  placeholder={searchMode === "film_tv" ? "e.g. villain monologue, courtroom scene, breakup..." : "e.g. funny piece, 2 min..."}
+                  placeholder={typewriterText || (searchMode === "film_tv" ? "Search scripts, scenes, speeches..." : "Search monologues...")}
                   value={searchMode === "plays" ? playsQuery : filmTvQuery}
                   onChange={(e) => {
                     const v = e.target.value;
                     if (searchMode === "plays") setPlaysQuery(v);
                     else setFilmTvQuery(v);
+                    pauseTypewriter();
                     setIsTyping(true);
                     if (typingTimeoutRef.current) {
                       clearTimeout(typingTimeoutRef.current);
@@ -1172,8 +1218,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     }, 800);
                   }}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                  onFocus={() => (searchMode === "plays" ? playsQuery : filmTvQuery) && setIsTyping(true)}
-                  onBlur={() => setTimeout(() => setIsTyping(false), 200)}
+                  onFocus={() => {
+                    pauseTypewriter();
+                    if (currentQuery) setIsTyping(true);
+                  }}
+                  onBlur={() => {
+                    setTimeout(() => setIsTyping(false), 200);
+                    if (!currentQuery) resumeTypewriter();
+                  }}
                   className="pl-12 pr-10 min-h-[48px] md:h-12 text-base border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
                 />
                 {(searchMode === "plays" ? playsQuery : filmTvQuery) && (
@@ -1188,15 +1240,18 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 )}
               </div>
               <Button
-                onClick={handleSearch}
-                disabled={isLoading}
+                onClick={isLoading ? stopSearch : handleSearch}
                 size="default"
+                variant={isLoading ? "outline" : "default"}
                 className={`shrink-0 min-h-[44px] min-w-[44px] md:min-h-[2.5rem] md:min-w-0 px-4 md:px-6 rounded-lg transition-all duration-300 ${
-                  isTyping ? (searchMode === "film_tv" ? "shadow-md shadow-violet-400/20" : "shadow-md shadow-primary/20") : ""
+                  isLoading ? "" : isTyping ? (searchMode === "film_tv" ? "shadow-md shadow-violet-400/20" : "shadow-md shadow-primary/20") : ""
                 }`}
               >
                 {isLoading ? (
-                  <IconLoader2 className="h-4 w-4 animate-spin" />
+                  <>
+                    <IconX className="h-4 w-4" />
+                    <span className="hidden md:inline ml-1">Stop</span>
+                  </>
                 ) : (
                   "Search"
                 )}
