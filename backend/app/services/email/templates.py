@@ -196,8 +196,10 @@ class EmailTemplates:
     def render_founder_offer(
         self,
         user_name: str,
+        intro_text: str = "I wanted to reach out personally. I'm an actor too, and I built ActorRise because I couldn't find the tools I needed. You signed up early and that means a lot to me.",
+        body_text: Optional[str] = None,
         promo_code: str = "FOUNDER",
-        discount_description: str = "Enter at checkout for 12 months of Plus, completely free",
+        discount_description: str = "Enter this at checkout",
         upgrade_url: str = "https://actorrise.com/pricing",
         sender_name: str = "Canberk",
         sender_title: str = "Founder, ActorRise",
@@ -209,6 +211,8 @@ class EmailTemplates:
         template = self.env.get_template('founder_offer.html')
         return template.render(
             user_name=user_name or "there",
+            intro_text=intro_text,
+            body_text=body_text,
             promo_code=promo_code,
             discount_description=discount_description,
             upgrade_url=upgrade_url,
@@ -244,6 +248,32 @@ class EmailTemplates:
             page_url=page_url,
             cta_text=cta_text,
             extra_text=extra_text,
+            sender_name=sender_name,
+            sender_title=sender_title,
+            unsubscribe_url=unsubscribe_url,
+        )
+
+    def render_cold_outreach(
+        self,
+        user_name: str,
+        intro_text: str = "I found your profile on Backstage and really liked your work. I'm building a platform called ActorRise where actors can find and rehearse monologues, get a personal profile page, and connect with other actors. I think you'd be a great fit.",
+        body_text: Optional[str] = None,
+        cta_text: Optional[str] = "Check it out",
+        cta_url: Optional[str] = "https://actorrise.com",
+        closing_text: Optional[str] = None,
+        sender_name: str = "Canberk",
+        sender_title: str = "Founder | Actor, ActorRise",
+        unsubscribe_url: Optional[str] = None,
+    ) -> str:
+        """Render cold outreach email for recruiting actors."""
+        template = self.env.get_template('cold_outreach.html')
+        return template.render(
+            user_name=user_name or "there",
+            intro_text=intro_text,
+            body_text=body_text,
+            cta_text=cta_text,
+            cta_url=cta_url,
+            closing_text=closing_text,
             sender_name=sender_name,
             sender_title=sender_title,
             unsubscribe_url=unsubscribe_url,

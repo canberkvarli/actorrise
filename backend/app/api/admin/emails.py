@@ -5,6 +5,9 @@ Allows moderators to preview email templates and send emails
 to individual users or targeted campaigns.
 """
 
+import logging
+import threading
+import time
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -12,8 +15,9 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
-from app.core.database import get_db
+from app.core.database import SessionLocal, get_db
 from app.models.billing import AdminAuditLog
+from app.models.email_tracking import EmailBatch, EmailSend
 from app.models.user import User
 from app.services.email.marketing import (
     _get_ai_search_limit,
@@ -25,6 +29,8 @@ from app.services.email.marketing import (
 )
 from app.services.email.resend_client import ResendEmailClient
 from app.services.email.templates import EmailTemplates
+
+logger = logging.getLogger(__name__)
 
 
 router = APIRouter(prefix="/api/admin/emails", tags=["admin", "emails"])
@@ -98,8 +104,10 @@ TEMPLATES = [
         "subject": "A special offer just for you",
         "variables": [
             {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
+            {"name": "intro_text", "label": "Main message", "type": "text", "default": "I wanted to reach out personally. I'm an actor too, and I built ActorRise because I couldn't find the tools I needed. You signed up early and that means a lot to me.", "required": True},
+            {"name": "body_text", "label": "Extra paragraph (optional)", "type": "text", "default": "", "required": False},
             {"name": "promo_code", "label": "Promo code", "type": "text", "default": "FOUNDER", "required": True},
-            {"name": "discount_description", "label": "Discount details", "type": "text", "default": "Enter at checkout for 12 months of Plus, completely free", "required": True},
+            {"name": "discount_description", "label": "Discount details", "type": "text", "default": "Enter this at checkout", "required": True},
             {"name": "upgrade_url", "label": "Upgrade URL", "type": "url", "default": "https://actorrise.com/pricing", "required": True},
             {"name": "sender_name", "label": "Sender name", "type": "text", "default": "Canberk", "required": True},
             {"name": "sender_title", "label": "Sender title", "type": "text", "default": "Founder, ActorRise", "required": True},
@@ -121,6 +129,22 @@ TEMPLATES = [
             {"name": "page_url", "label": "Their page URL (optional)", "type": "url", "default": "", "required": False},
             {"name": "cta_text", "label": "Button text", "type": "text", "default": "Check out your page", "required": False},
             {"name": "extra_text", "label": "Extra text below button (optional)", "type": "text", "default": "", "required": False},
+            {"name": "sender_name", "label": "Sender name", "type": "text", "default": "Canberk", "required": True},
+            {"name": "sender_title", "label": "Sender title", "type": "text", "default": "Founder | Actor, ActorRise", "required": True},
+        ],
+    },
+    {
+        "id": "cold_outreach",
+        "name": "Cold Outreach",
+        "description": "Personal outreach to recruit actors (e.g. from Backstage)",
+        "subject": "hey from ActorRise",
+        "variables": [
+            {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
+            {"name": "intro_text", "label": "Main message", "type": "text", "default": "I found your profile on Backstage and really liked your work. I'm building a platform called ActorRise where actors can find and rehearse monologues, get a personal profile page, and connect with other actors. I think you'd be a great fit.", "required": True},
+            {"name": "body_text", "label": "Extra paragraph (optional)", "type": "text", "default": "", "required": False},
+            {"name": "cta_text", "label": "Button text", "type": "text", "default": "Check it out", "required": False},
+            {"name": "cta_url", "label": "Button URL", "type": "url", "default": "https://actorrise.com", "required": False},
+            {"name": "closing_text", "label": "Closing line (optional)", "type": "text", "default": "", "required": False},
             {"name": "sender_name", "label": "Sender name", "type": "text", "default": "Canberk", "required": True},
             {"name": "sender_title", "label": "Sender title", "type": "text", "default": "Founder | Actor, ActorRise", "required": True},
         ],
@@ -161,6 +185,30 @@ class SendRequest(BaseModel):
     to: str
     subject: Optional[str] = None
     variables: dict[str, Any] = {}
+
+
+class BulkRecipient(BaseModel):
+    email: str
+    name: str = ""
+
+
+class BulkSendRequest(BaseModel):
+    template_id: str
+    recipients: list[BulkRecipient]
+    subject: Optional[str] = None
+    variables: dict[str, Any] = {}
+    campaign_key: Optional[str] = None
+    scheduled_at: Optional[str] = None  # ISO datetime string
+
+
+class BatchStatusResponse(BaseModel):
+    batch_id: int
+    status: str
+    total: int
+    sent: int
+    skipped: int
+    errors: list[str]
+    sends: list[dict[str, Any]] = []
 
 
 class CampaignRequest(BaseModel):
@@ -210,6 +258,7 @@ def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, 
         "feature_announcement": templates.render_feature_announcement,
         "founder_offer": templates.render_founder_offer,
         "actor_page": templates.render_actor_page,
+        "cold_outreach": templates.render_cold_outreach,
         "weekly_engagement": templates.render_weekly_engagement,
     }
 
@@ -278,6 +327,245 @@ def send_email(
     return {"ok": True, "result": result}
 
 
+@router.post("/bulk-send", status_code=202)
+def bulk_send_email(
+    body: BulkSendRequest,
+    admin: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+):
+    """Start a bulk email send. Returns batch_id immediately, processes in background."""
+    if not body.recipients:
+        raise HTTPException(status_code=400, detail="No recipients provided")
+
+    _, default_subject = _render_template(body.template_id, body.variables)
+    subject = body.subject or default_subject
+
+    # Create batch
+    batch = EmailBatch(
+        template_id=body.template_id,
+        campaign_key=body.campaign_key or None,
+        subject=subject,
+        status="pending",
+        total=len(body.recipients),
+        created_by=admin.id,
+        scheduled_at=body.scheduled_at,
+    )
+    db.add(batch)
+    db.flush()
+
+    default_name = body.variables.get("user_name", "there")
+    skipped_dupes = 0
+    seen_in_batch: set[str] = set()
+
+    for recipient in body.recipients:
+        email_addr = recipient.email.strip().lower()
+        if not email_addr:
+            continue
+
+        # Dedup within this batch (e.g. pasted same email twice)
+        if email_addr in seen_in_batch:
+            skipped_dupes += 1
+            continue
+        seen_in_batch.add(email_addr)
+
+        # Cross-batch dedup: skip if same email + campaign_key already sent
+        if body.campaign_key:
+            existing = (
+                db.query(EmailSend)
+                .join(EmailBatch)
+                .filter(
+                    EmailSend.to_email == email_addr,
+                    EmailBatch.campaign_key == body.campaign_key,
+                    EmailSend.status.notin_(["failed"]),
+                )
+                .first()
+            )
+            if existing:
+                skipped_dupes += 1
+                continue
+
+        # Resolve name: typed > DB > default
+        name = recipient.name.strip() if recipient.name else ""
+        if not name:
+            user = db.query(User).filter(User.email == email_addr).first()
+            name = (user.name if user else "") or default_name
+
+        send = EmailSend(
+            batch_id=batch.id,
+            to_email=email_addr,
+            to_name=name,
+            status="queued",
+        )
+        db.add(send)
+
+    batch.skipped = skipped_dupes
+    batch.total = batch.total - skipped_dupes
+    if skipped_dupes > 0:
+        batch.errors_json = [f"{skipped_dupes} duplicate(s) skipped (campaign: {body.campaign_key})"]
+    db.commit()
+
+    batch_id = batch.id
+
+    # Spawn background thread to process sends
+    def _process_batch():
+        db2 = SessionLocal()
+        try:
+            b = db2.query(EmailBatch).filter(EmailBatch.id == batch_id).first()
+            if not b:
+                return
+            b.status = "processing"
+            db2.commit()
+
+            client = ResendEmailClient()
+            sends = db2.query(EmailSend).filter(
+                EmailSend.batch_id == batch_id,
+                EmailSend.status == "queued",
+            ).all()
+
+            for send_row in sends:
+                try:
+                    vars_copy = dict(body.variables)
+                    vars_copy["unsubscribe_url"] = build_unsubscribe_url(send_row.to_email)
+                    vars_copy["user_name"] = send_row.to_name or default_name
+
+                    html, _ = _render_template(body.template_id, vars_copy)
+
+                    response = client.send_email(
+                        to=send_row.to_email,
+                        subject=subject,
+                        html=html,
+                        scheduled_at=body.scheduled_at or None,
+                    )
+
+                    send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
+                    send_row.status = "sent"
+                    b.sent += 1
+                except Exception as e:
+                    send_row.status = "failed"
+                    b.skipped += 1
+                    errors = list(b.errors_json or [])
+                    errors.append(f"{send_row.to_email}: {e}")
+                    b.errors_json = errors
+                    logger.warning("Failed to send to %s: %s", send_row.to_email, e)
+
+                db2.commit()
+                time.sleep(0.5)  # Respect Resend rate limit (2 req/sec)
+
+            b.status = "completed"
+            db2.commit()
+
+            # Audit log
+            if b.sent > 0:
+                audit = AdminAuditLog(
+                    actor_admin_id=b.created_by,
+                    target_user_id=b.created_by,
+                    action_type="bulk_email_sent",
+                    after_json={
+                        "template": b.template_id,
+                        "subject": b.subject,
+                        "sent": b.sent,
+                        "total": b.total,
+                        "campaign_key": b.campaign_key,
+                    },
+                )
+                db2.add(audit)
+                db2.commit()
+
+        except Exception as e:
+            logger.exception("Batch %s failed: %s", batch_id, e)
+            try:
+                b = db2.query(EmailBatch).filter(EmailBatch.id == batch_id).first()
+                if b:
+                    b.status = "failed"
+                    db2.commit()
+            except Exception:
+                pass
+        finally:
+            db2.close()
+
+    t = threading.Thread(target=_process_batch, daemon=True)
+    t.start()
+
+    return {"batch_id": batch_id, "status": "pending", "total": batch.total}
+
+
+@router.get("/batch/{batch_id}", response_model=BatchStatusResponse)
+def get_batch_status(
+    batch_id: int,
+    _user: User = Depends(require_moderator),
+    db: Session = Depends(get_db),
+):
+    """Poll the status of a bulk email batch."""
+    batch = db.query(EmailBatch).filter(EmailBatch.id == batch_id).first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+
+    sends = db.query(EmailSend).filter(EmailSend.batch_id == batch_id).all()
+
+    return BatchStatusResponse(
+        batch_id=batch.id,
+        status=batch.status,
+        total=batch.total,
+        sent=batch.sent,
+        skipped=batch.skipped,
+        errors=list(batch.errors_json or []),
+        sends=[
+            {
+                "email": s.to_email,
+                "name": s.to_name,
+                "status": s.status,
+                "resend_id": s.resend_email_id,
+                "opened_at": s.opened_at.isoformat() if s.opened_at else None,
+                "clicked_at": s.clicked_at.isoformat() if s.clicked_at else None,
+            }
+            for s in sends
+        ],
+    )
+
+
+@router.get("/batches")
+def list_batches(
+    _user: User = Depends(require_moderator),
+    db: Session = Depends(get_db),
+):
+    """List recent email batches (newest first)."""
+    batches = (
+        db.query(EmailBatch)
+        .order_by(EmailBatch.created_at.desc())
+        .limit(20)
+        .all()
+    )
+
+    results = []
+    for b in batches:
+        sends = db.query(EmailSend).filter(EmailSend.batch_id == b.id).all()
+        status_counts: dict[str, int] = {}
+        for s in sends:
+            status_counts[s.status] = status_counts.get(s.status, 0) + 1
+
+        # Auto-recover stuck batches: if no queued sends remain but status is still processing
+        if b.status == "processing" and status_counts.get("queued", 0) == 0 and sends:
+            b.status = "completed"
+            b.sent = sum(1 for s in sends if s.status not in ("failed", "queued"))
+            db.commit()
+
+        results.append({
+            "batch_id": b.id,
+            "template_id": b.template_id,
+            "campaign_key": b.campaign_key,
+            "subject": b.subject,
+            "status": b.status,
+            "total": b.total,
+            "sent": b.sent,
+            "skipped": b.skipped,
+            "scheduled_at": b.scheduled_at.isoformat() if b.scheduled_at else None,
+            "created_at": b.created_at.isoformat() if b.created_at else None,
+            "status_counts": status_counts,
+        })
+
+    return results
+
+
 @router.post("/campaign", response_model=CampaignResponse)
 def send_campaign_endpoint(
     body: CampaignRequest,
@@ -285,7 +573,7 @@ def send_campaign_endpoint(
     db: Session = Depends(get_db),
 ):
     """Send a campaign to a user segment."""
-    if body.target not in ("all", "free", "paid"):
+    if body.target not in ("all", "free", "paid", "all_users", "all_free"):
         raise HTTPException(status_code=400, detail="target must be all, free, or paid")
 
     campaign_type = body.template_id

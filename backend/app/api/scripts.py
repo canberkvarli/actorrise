@@ -862,6 +862,13 @@ async def bulk_reset_scene(
     if request.play_author is not None and scene.play:
         scene.play.author = request.play_author
 
+    # Delete rehearsal line deliveries that reference these scene lines (FK constraint)
+    line_ids = [row[0] for row in db.query(SceneLine.id).filter(SceneLine.scene_id == scene_id).all()]
+    if line_ids:
+        db.query(RehearsalLineDelivery).filter(
+            RehearsalLineDelivery.scene_line_id.in_(line_ids)
+        ).delete(synchronize_session=False)
+
     # Delete all existing lines
     db.query(SceneLine).filter(SceneLine.scene_id == scene_id).delete(synchronize_session=False)
 
@@ -909,6 +916,13 @@ async def reset_scene_to_original(
     # Restore character names
     scene.character_1_name = snapshot["character_1_name"]
     scene.character_2_name = snapshot["character_2_name"]
+
+    # Delete rehearsal line deliveries that reference these scene lines (FK constraint)
+    line_ids = [row[0] for row in db.query(SceneLine.id).filter(SceneLine.scene_id == scene_id).all()]
+    if line_ids:
+        db.query(RehearsalLineDelivery).filter(
+            RehearsalLineDelivery.scene_line_id.in_(line_ids)
+        ).delete(synchronize_session=False)
 
     # Delete all existing lines
     db.query(SceneLine).filter(SceneLine.scene_id == scene_id).delete(synchronize_session=False)

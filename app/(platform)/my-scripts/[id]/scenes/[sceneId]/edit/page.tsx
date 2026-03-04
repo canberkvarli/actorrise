@@ -35,6 +35,7 @@ import {
   Plus,
   Trash2,
   MessageSquare,
+  Mic,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
@@ -67,6 +68,7 @@ import {
 } from "@/lib/scenepartnerStorage";
 import { ContactModal } from "@/components/contact/ContactModal";
 import { TTSWaveform } from "@/components/scenepartner/TTSWaveform";
+import { useMicPermission } from "@/hooks/useMicPermission";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -279,6 +281,10 @@ export default function SceneEditPage() {
   const [showRehearsalModal, setShowRehearsalModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [generatingSynopsis, setGeneratingSynopsis] = useState(false);
+  const [showMicModal, setShowMicModal] = useState(false);
+
+  // Microphone permission
+  const { status: micStatus, isGranted: micGranted, requestMic } = useMicPermission({ recheckOnVisible: true });
 
   // Original scene snapshot for reset
   const originalSceneRef = useRef<SceneDetail | null>(null);
@@ -800,6 +806,14 @@ export default function SceneEditPage() {
     setLineEditValues((prev) => ({ ...prev, [line.id]: initVals }));
   };
 
+  // When mic becomes granted while the mic modal is open, close it and re-open rehearsal
+  useEffect(() => {
+    if (micGranted && showMicModal) {
+      setShowMicModal(false);
+      setShowRehearsalModal(true);
+    }
+  }, [micGranted, showMicModal]);
+
   // ---------------------------------------------------------------------------
   // Rehearsal
   // ---------------------------------------------------------------------------
@@ -817,8 +831,15 @@ export default function SceneEditPage() {
         ...(rehearsalStartLineIndex !== null && { start_from_line_index: rehearsalStartLineIndex }),
       });
       setRehearsalStartLineIndex(null);
-      router.push(`/scenes/${scene.id}/rehearse?session=${data.id}`);
+      // Determine AI character's voice to pass to rehearsal
+      const aiCharVoice = selectedCharacter === scene.character_1_name
+        ? charVoices.character_2_voice
+        : charVoices.character_1_voice;
+      const voiceParam = aiCharVoice ? `&voice=${aiCharVoice}` : '';
+      // Navigate immediately — no animation delay
+      router.push(`/scenes/${scene.id}/rehearse?session=${data.id}&script=${scriptId}${voiceParam}`);
     } catch (err: unknown) {
+      setStartingRehearsal(false); // only reset on error — on success the page navigates away
       const upgrade = parseUpgradeError(err);
       if (upgrade) {
         setUpgradeModal({ open: true, feature: "ScenePartner", message: upgrade.message });
@@ -829,10 +850,8 @@ export default function SceneEditPage() {
             : "Failed to start rehearsal";
         toast.error(typeof message === "string" ? message : "Failed to start rehearsal");
       }
-    } finally {
-      setStartingRehearsal(false);
     }
-  }, [scene, selectedCharacter, router, rehearsalStartLineIndex]);
+  }, [scene, selectedCharacter, router, rehearsalStartLineIndex, charVoices]);
 
   // ---------------------------------------------------------------------------
   // Voice helpers
@@ -928,7 +947,6 @@ export default function SceneEditPage() {
 
     // Prefer the true original snapshot stored on the backend (from first extraction)
     if (scene.has_original_snapshot) {
-      if (!window.confirm("Reset this scene to its original state? All edits will be lost.")) return;
       setResetting(true);
       try {
         await api.post(`/api/scripts/${scriptId}/scenes/${sceneId}/reset-to-original`);
@@ -939,9 +957,10 @@ export default function SceneEditPage() {
         undoStackRef.current = [];
         redoStackRef.current = [];
         syncHistory();
+        setShowResetConfirm(false);
         toast.success("Scene reset to original");
       } catch {
-        toast.error("Failed to reset scene");
+        toast.error("Failed to reset scene. Try again.");
       } finally {
         setResetting(false);
       }
@@ -1913,7 +1932,7 @@ export default function SceneEditPage() {
       {scene.has_original_snapshot && (
         <button
           type="button"
-          onClick={resetToOriginal}
+          onClick={() => setShowResetConfirm(true)}
           disabled={resetting}
           className="flex items-center gap-2 text-xs text-neutral-500 hover:text-orange-400 transition-colors mt-4 mx-auto disabled:opacity-50"
         >
@@ -1943,7 +1962,7 @@ export default function SceneEditPage() {
   const rightPanelContent = (
     <div
       className="bg-white text-neutral-900 rounded-lg shadow-2xl border border-neutral-200 px-4 sm:px-10 py-5 sm:py-8 overflow-hidden"
-      style={{ fontFamily: '"Courier New", Courier, monospace', fontStyle: 'italic' }}
+      style={{ fontFamily: '"Courier New", Courier, monospace' }}
     >
       {/* Title inside parchment — editable */}
       <div className="text-center mb-6 pb-5 border-b border-neutral-200">
@@ -1974,7 +1993,7 @@ export default function SceneEditPage() {
             <Edit2 className="w-3.5 h-3.5 text-neutral-300 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
           </button>
         )}
-        <div className="text-lg text-neutral-500 mt-2 break-words">
+        <div className="text-lg text-neutral-700 mt-2 break-words">
           {editingSceneField === "play_title" && editingLocation === "parchment" ? (
             <Input
               value={sceneEditValue}
@@ -2000,7 +2019,7 @@ export default function SceneEditPage() {
                 onClick={() => startEditScene("play_title", scene.play_title, "parchment")}
                 className="hover:opacity-70 transition-opacity"
               >
-                <span className="text-neutral-700 font-medium break-words">{scene.play_title}</span>
+                <span className="text-neutral-900 font-medium break-words">{scene.play_title}</span>
               </button>
               {"\u201D"}
               <button
@@ -2040,7 +2059,7 @@ export default function SceneEditPage() {
                 onClick={() => startEditScene("play_author", scene.play_author, "parchment")}
                 className="hover:opacity-70 transition-opacity"
               >
-                <span className="text-neutral-700 font-medium break-words">{scene.play_author}</span>
+                <span className="text-neutral-900 font-medium break-words">{scene.play_author}</span>
               </button>
               <button
                 type="button"
@@ -2053,11 +2072,60 @@ export default function SceneEditPage() {
           ) : (
             <>
               {" by "}
-              <span className="text-neutral-700 font-medium break-words">{scene.play_author}</span>
+              <span className="text-neutral-900 font-medium break-words">{scene.play_author}</span>
             </>
           )}
         </div>
       </div>
+
+      {/* Description on parchment — editable */}
+      <AnimatePresence>
+        {editingSceneField === "description" && editingLocation === "parchment" ? (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="text-center mb-4 mt-1 px-2"
+          >
+            <textarea
+              value={sceneEditValue}
+              onChange={(e) => setSceneEditValue(e.target.value)}
+              className="w-full text-sm italic text-neutral-600 bg-transparent border-b-2 border-dashed border-neutral-300 outline-none text-center py-1 px-2 resize-none leading-relaxed focus:border-neutral-400"
+              rows={2}
+              maxLength={500}
+              autoFocus
+              placeholder="Add a scene description..."
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setEditingSceneField(null);
+              }}
+              onBlur={() => {
+                if (sceneEditValue !== (scene.description ?? "")) saveSceneField("description", sceneEditValue);
+                else setEditingSceneField(null);
+              }}
+            />
+          </motion.div>
+        ) : scene.description ? (
+          <motion.p
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="text-sm italic text-neutral-600 text-center mb-4 mt-1 leading-relaxed px-2 cursor-pointer hover:opacity-70 transition-opacity"
+            onClick={() => startEditScene("description", scene.description ?? "", "parchment")}
+          >
+            {scene.description}
+          </motion.p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => startEditScene("description", "", "parchment")}
+            className="text-xs italic text-neutral-400 hover:text-neutral-500 transition-colors mb-4 mt-1 block mx-auto"
+          >
+            + Add description
+          </button>
+        )}
+      </AnimatePresence>
 
       {/* Script lines — drag-and-drop reorderable */}
       <Reorder.Group as="div" axis="y" values={dragLineOrder} onReorder={handleReorder} className="space-y-1">
@@ -2500,7 +2568,7 @@ export default function SceneEditPage() {
                                 {line.character_name[0]?.toUpperCase()}
                               </div>
                             )}
-                            <span className="text-sm font-bold uppercase tracking-widest text-neutral-600">
+                            <span className="text-sm font-bold uppercase tracking-widest text-neutral-900">
                               {line.character_name}
                             </span>
                             <span className={cn("text-[11px] font-sans font-bold min-w-[30px]", isMine ? "text-orange-500" : "text-transparent select-none pointer-events-none")}>{isMine ? "(You)" : "\u00A0"}</span>
@@ -2593,7 +2661,7 @@ export default function SceneEditPage() {
                           })()}
                         </div>
                         {line.stage_direction && !isDragging && (
-                          <span className="text-xs italic text-neutral-400 normal-case break-words whitespace-pre-wrap max-w-[250px]" style={{ overflowWrap: "anywhere" }}>
+                          <span className="text-xs italic text-neutral-600 normal-case break-words whitespace-pre-wrap max-w-[250px]" style={{ overflowWrap: "anywhere" }}>
                             ({line.stage_direction})
                           </span>
                         )}
@@ -2607,7 +2675,7 @@ export default function SceneEditPage() {
                       <motion.p
                         layout="position"
                         className={cn(
-                          "text-base font-medium leading-relaxed text-neutral-800 break-words whitespace-pre-wrap text-center w-full transition-colors duration-300",
+                          "text-base font-medium leading-relaxed text-neutral-900 break-words whitespace-pre-wrap text-center w-full transition-colors duration-300",
                           highlightMyLines && isMine && "bg-yellow-200/70 rounded px-1 -mx-1"
                         )}
                         style={{ overflowWrap: "anywhere" }}
@@ -2817,20 +2885,51 @@ export default function SceneEditPage() {
         </motion.main>
       </div>
 
-      {/* Floating Rehearse button */}
+      {/* Full-screen overlay when starting rehearsal — blocks all interaction */}
+      <AnimatePresence>
+        {startingRehearsal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] bg-neutral-950 flex items-center justify-center"
+          >
+            <div className="text-center space-y-4">
+              <div className="h-8 w-8 rounded-full border-2 border-neutral-700 border-t-primary animate-spin mx-auto" />
+              <p className="text-neutral-400 text-sm">Preparing rehearsal...</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Rehearse button — starts immediately if character selected + mic granted */}
       <Button
         size="lg"
+        disabled={startingRehearsal}
         onClick={() => {
           if (editingLineId !== null) {
             toast("Please finish editing the current line first", { duration: 2000 });
             return;
           }
-          setShowRehearsalModal(true);
+          if (!selectedCharacter) {
+            setShowRehearsalModal(true);
+            return;
+          }
+          if (!micGranted) {
+            setShowMicModal(true);
+            return;
+          }
+          // Character selected + mic granted → start immediately, no modal
+          handleStartRehearsal();
         }}
         className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 gap-2 shadow-xl shadow-primary/20 rounded-full px-4 sm:px-6 h-11 sm:h-12"
       >
-        <Play className="w-5 h-5" />
-        <span className="hidden sm:inline">Rehearse</span>
+        {startingRehearsal ? (
+          <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+        ) : (
+          <Play className="w-5 h-5" />
+        )}
+        <span className="hidden sm:inline">{startingRehearsal ? 'Starting...' : 'Rehearse'}</span>
       </Button>
 
       <UpgradeModal
@@ -2894,7 +2993,11 @@ export default function SceneEditPage() {
                   <Button
                     size="sm"
                     onClick={() => {
-                      setShowRehearsalModal(false);
+                      if (!micGranted) {
+                        setShowRehearsalModal(false);
+                        setShowMicModal(true);
+                        return;
+                      }
                       handleStartRehearsal();
                     }}
                     disabled={startingRehearsal || !selectedCharacter}
@@ -2905,12 +3008,60 @@ export default function SceneEditPage() {
                     ) : (
                       <Play className="w-4 h-4" />
                     )}
-                    Start
+                    {startingRehearsal ? 'Starting...' : 'Start'}
                   </Button>
                 </div>
               </>
             );
           })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Microphone permission modal */}
+      <Dialog open={showMicModal} onOpenChange={setShowMicModal}>
+        <DialogContent className="max-w-xs sm:max-w-sm p-0 overflow-hidden">
+          <div className="px-5 pt-5 pb-3 space-y-4">
+            <DialogHeader>
+              <DialogTitle className="text-base font-semibold">Microphone Required</DialogTitle>
+              <DialogDescription className="sr-only">Grant microphone access to start rehearsal</DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col items-center gap-3 py-2">
+              <div className="w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center">
+                <Mic className="w-6 h-6 text-orange-500" />
+              </div>
+              <p className="text-sm text-muted-foreground text-center leading-relaxed">
+                {micStatus === "unavailable"
+                  ? "Your device doesn't have a microphone available. Rehearsal requires a mic to detect when you've finished speaking."
+                  : micStatus === "denied"
+                  ? "Microphone access was denied. Please allow it in your browser settings, then try again."
+                  : "Rehearsal needs your microphone to listen for your lines. Allow access to get started."}
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 px-5 pb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowMicModal(false)}
+              className="flex-1"
+            >
+              Not Now
+            </Button>
+            {micStatus !== "unavailable" && (
+              <Button
+                size="sm"
+                onClick={async () => {
+                  await requestMic();
+                  // After requesting, if granted, close this modal and re-open rehearsal
+                  // The hook updates micGranted reactively
+                }}
+                className="flex-1 gap-1.5"
+              >
+                <Mic className="w-4 h-4" />
+                Allow Microphone
+              </Button>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -3006,10 +3157,10 @@ export default function SceneEditPage() {
               return (
                 <div className="space-y-1.5">
                   <Label className="text-xs text-muted-foreground">Voice</Label>
-                  <div className="relative">
+                  <div className="relative" data-voice-dropdown>
                     <button
                       type="button"
-                      onClick={() => setVoiceDropdownOpen(voiceDropdownOpen === "addline" ? null : "addline")}
+                      onClick={(e) => { e.stopPropagation(); setVoiceDropdownOpen(voiceDropdownOpen === "addline" ? null : "addline"); }}
                       className="w-full flex items-center gap-2 rounded-md border border-input bg-background px-2.5 py-1.5 text-sm hover:bg-accent transition-colors text-left"
                     >
                       {selectedVoice ? (
@@ -3025,7 +3176,7 @@ export default function SceneEditPage() {
                       <ChevronDown className={cn("w-3 h-3 text-muted-foreground shrink-0 transition-transform", voiceDropdownOpen === "addline" && "rotate-180")} />
                     </button>
                     {voiceDropdownOpen === "addline" && (
-                      <div className="absolute z-20 mt-1 w-full rounded-md bg-popover border border-border shadow-lg py-1 max-h-40 overflow-y-auto">
+                      <div className="absolute z-[10030] mt-1 w-full rounded-md bg-popover border border-border shadow-lg py-1 max-h-40 overflow-y-auto">
                         {AI_VOICES.map((v) => (
                           <button
                             key={v.id}

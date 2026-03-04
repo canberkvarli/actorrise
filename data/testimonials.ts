@@ -39,10 +39,18 @@ export const TESTIMONIALS: TestimonialItem[] = [
   {
     quote:
       "ActorRise has honestly been such a game changer for me. I used to spend hours searching for the perfect monologue for self tapes and still end up second guessing it. Now I can find material in minutes. The algorithm is kind of scary in the best way, it's super specific and really tailored to me and my tone. Let's be honest, AI doesn't always \"get\" actors... but this actually does, which is absolutely impeccable!!!",
-    name: "Jeanielle Ettinoffe",
-    descriptor: "Actor",
+    name: "Jeannille Ettinoffe",
+    descriptor: "Singer ⭒ Actress ⭒ Dancer ⭒ Musician",
     image: "/testimonials/jeannille-ettinoffe/jeannille-ettinoffe.jpg",
     source: "actor",
+    slug: "jeannille-ettinoffe",
+    socialLinks: {
+      instagram: "https://www.instagram.com/theeofficial_jeannille",
+      youtube: "https://www.youtube.com/@jeannille_music",
+      backstage: "https://www.backstage.com/u/jeannille-ettinoffe/",
+      imdb: "https://www.imdb.com/name/nm17774164/",
+      website: "https://www.jeannilleettinoffe.com",
+    },
   },
   {
     quote:

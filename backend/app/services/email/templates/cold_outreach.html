@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ subject or "hey from ActorRise" }}{% endblock %}
+
+{% block content %}
+                <p class="greeting">Hey {{ user_name.split()[0] }},</p>
+
+                <p>{{ intro_text }}</p>
+
+                {% if body_text %}
+                <p>{{ body_text }}</p>
+                {% endif %}
+
+                {% if cta_text and cta_url %}
+                <div class="cta-wrap">
+                    <a href="{{ cta_url }}" class="cta">{{ cta_text }}</a>
+                </div>
+                {% endif %}
+
+                {% if closing_text %}
+                <p>{{ closing_text }}</p>
+                {% endif %}
+
+                <p>If you have any questions, just reply to this email.</p>
+
+                <p class="signature">
+                    {{ sender_name }}<br>
+                    <span style="font-size:14px; color:#616161;">{{ sender_title }}</span>
+                </p>
+{% endblock %}

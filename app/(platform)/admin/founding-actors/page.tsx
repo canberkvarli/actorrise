@@ -18,9 +18,11 @@ import {
   IconLink,
   IconEye,
   IconEyeOff,
+  IconExternalLink,
   IconLoader2,
   IconSearch,
 } from "@tabler/icons-react";
+import Link from "next/link";
 import Image from "next/image";
 
 interface AdminFoundingActor {
@@ -42,6 +44,7 @@ export default function AdminFoundingActorsPage() {
   const queryClient = useQueryClient();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [linkingActorId, setLinkingActorId] = useState<number | null>(null);
+  const [editingActorId, setEditingActorId] = useState<number | null>(null);
 
   const { data: actors, isLoading, refetch, isFetching } = useQuery<AdminFoundingActor[]>({
     queryKey: ["admin-founding-actors"],
@@ -188,6 +191,22 @@ export default function AdminFoundingActorsPage() {
                   {/* Actions */}
                   <div className="flex gap-1 shrink-0">
                     <Button
+                      variant={editingActorId === actor.id ? "secondary" : "ghost"}
+                      size="sm"
+                      onClick={() => setEditingActorId(editingActorId === actor.id ? null : actor.id)}
+                      title="Edit profile"
+                    >
+                      <IconEdit className="h-4 w-4" />
+                    </Button>
+                    <Link
+                      href={`/actors/${actor.slug}`}
+                      target="_blank"
+                      className="inline-flex items-center justify-center h-8 w-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                      title="View public page"
+                    >
+                      <IconExternalLink className="h-4 w-4" />
+                    </Link>
+                    <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleTogglePublished(actor)}
@@ -224,6 +243,17 @@ export default function AdminFoundingActorsPage() {
                   <UserSearchPanel
                     onSelect={(userId) => handleLinkUser(actor.id, userId)}
                     onCancel={() => setLinkingActorId(null)}
+                  />
+                )}
+                {editingActorId === actor.id && (
+                  <EditFoundingActorPanel
+                    actor={actor}
+                    onSaved={() => {
+                      setEditingActorId(null);
+                      queryClient.invalidateQueries({ queryKey: ["admin-founding-actors"] });
+                      queryClient.invalidateQueries({ queryKey: ["founding-actors"] });
+                    }}
+                    onCancel={() => setEditingActorId(null)}
                   />
                 )}
               </Card>
@@ -416,5 +446,178 @@ function CreateFoundingActorForm({
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+
+function EditFoundingActorPanel({
+  actor,
+  onSaved,
+  onCancel,
+}: {
+  actor: AdminFoundingActor;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(actor.name);
+  const [descriptor, setDescriptor] = useState(actor.descriptor || "");
+  const [bio, setBio] = useState(actor.bio || "");
+  const [quote, setQuote] = useState(actor.quote || "");
+  const [displayOrder, setDisplayOrder] = useState(actor.display_order);
+  const [imdb, setImdb] = useState(actor.social_links.imdb || "");
+  const [website, setWebsite] = useState(actor.social_links.website || "");
+  const [instagram, setInstagram] = useState(actor.social_links.instagram || "");
+  const [x, setX] = useState(actor.social_links.x || "");
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      toast.error("Name is required");
+      return;
+    }
+    setSaving(true);
+    try {
+      const socialLinks: Record<string, string> = {};
+      if (imdb.trim()) socialLinks.imdb = imdb.trim();
+      if (website.trim()) socialLinks.website = website.trim();
+      if (instagram.trim()) socialLinks.instagram = instagram.trim();
+      if (x.trim()) socialLinks.x = x.trim();
+
+      await api.patch(`/api/admin/founding-actors/${actor.id}`, {
+        name: name.trim(),
+        descriptor: descriptor.trim() || null,
+        bio: bio.trim() || null,
+        quote: quote.trim() || null,
+        display_order: displayOrder,
+        social_links: socialLinks,
+      });
+      toast.success(`${name} updated`);
+      onSaved();
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail || "Failed to update";
+      toast.error(detail);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="border-t border-border/40 px-5 py-5 bg-muted/30 space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium text-foreground">Edit {actor.name}</p>
+        <Button variant="ghost" size="sm" onClick={onCancel} className="text-xs">
+          Cancel
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor={`edit-name-${actor.id}`} className="text-xs">Name *</Label>
+          <Input
+            id={`edit-name-${actor.id}`}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="h-8 text-sm"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`edit-descriptor-${actor.id}`} className="text-xs">Descriptor</Label>
+          <Input
+            id={`edit-descriptor-${actor.id}`}
+            value={descriptor}
+            onChange={(e) => setDescriptor(e.target.value)}
+            placeholder="Actor · Voice Actor"
+            className="h-8 text-sm"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`edit-order-${actor.id}`} className="text-xs">Display Order</Label>
+          <Input
+            id={`edit-order-${actor.id}`}
+            type="number"
+            value={displayOrder}
+            onChange={(e) => setDisplayOrder(Number(e.target.value))}
+            className="h-8 text-sm"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor={`edit-quote-${actor.id}`} className="text-xs">Quote</Label>
+        <Textarea
+          id={`edit-quote-${actor.id}`}
+          value={quote}
+          onChange={(e) => setQuote(e.target.value)}
+          placeholder="Testimonial quote..."
+          rows={3}
+          className="text-sm"
+        />
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor={`edit-bio-${actor.id}`} className="text-xs">Bio</Label>
+        <Textarea
+          id={`edit-bio-${actor.id}`}
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          placeholder="Bio text..."
+          rows={4}
+          className="text-sm"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-1.5">
+          <Label htmlFor={`edit-imdb-${actor.id}`} className="text-xs">IMDb URL</Label>
+          <Input
+            id={`edit-imdb-${actor.id}`}
+            value={imdb}
+            onChange={(e) => setImdb(e.target.value)}
+            placeholder="https://www.imdb.com/name/nm..."
+            className="h-8 text-sm"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`edit-website-${actor.id}`} className="text-xs">Website</Label>
+          <Input
+            id={`edit-website-${actor.id}`}
+            value={website}
+            onChange={(e) => setWebsite(e.target.value)}
+            placeholder="https://..."
+            className="h-8 text-sm"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`edit-instagram-${actor.id}`} className="text-xs">Instagram</Label>
+          <Input
+            id={`edit-instagram-${actor.id}`}
+            value={instagram}
+            onChange={(e) => setInstagram(e.target.value)}
+            placeholder="@username"
+            className="h-8 text-sm"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor={`edit-x-${actor.id}`} className="text-xs">X / Twitter</Label>
+          <Input
+            id={`edit-x-${actor.id}`}
+            value={x}
+            onChange={(e) => setX(e.target.value)}
+            placeholder="@username"
+            className="h-8 text-sm"
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-2 pt-1">
+        <Button size="sm" onClick={handleSave} disabled={saving}>
+          {saving && <IconLoader2 className="h-4 w-4 animate-spin mr-1" />}
+          Save
+        </Button>
+        <Button size="sm" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+      </div>
+    </div>
   );
 }

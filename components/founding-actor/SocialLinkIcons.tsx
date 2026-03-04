@@ -1,6 +1,6 @@
 "use client";
 
-import { Film, Globe, Instagram } from "lucide-react";
+import { Film, Globe, Instagram, Youtube, Star } from "lucide-react";
 import { IconBrandX } from "@tabler/icons-react";
 
 interface SocialLinkIconsProps {
@@ -41,6 +41,19 @@ const PLATFORMS: {
     buildUrl: (v) =>
       v.startsWith("http") ? v : `https://x.com/${v.replace(/^@/, "")}`,
   },
+  {
+    key: "youtube",
+    icon: Youtube,
+    label: "YouTube",
+    buildUrl: (v) => (v.startsWith("http") ? v : `https://www.youtube.com/${v}`),
+  },
+  {
+    key: "backstage",
+    icon: Star,
+    label: "Backstage",
+    buildUrl: (v) =>
+      v.startsWith("http") ? v : `https://www.backstage.com/u/${v}`,
+  },
 ];
 
 export function SocialLinkIcons({
@@ -65,6 +78,7 @@ export function SocialLinkIcons({
             target="_blank"
             rel="noopener noreferrer"
             aria-label={p.label}
+            onClick={(e) => e.stopPropagation()}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
             <Icon className={iconSize} />

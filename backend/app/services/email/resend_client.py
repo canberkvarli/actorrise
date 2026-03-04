@@ -41,7 +41,8 @@ class ResendEmailClient:
         to: str,
         subject: str,
         html: str,
-        from_email: str = "ActorRise <notifications@actorrise.com>"
+        from_email: str = "ActorRise <notifications@actorrise.com>",
+        scheduled_at: Optional[str] = None,
     ) -> dict:
         """
         Send an email via Resend.
@@ -51,6 +52,7 @@ class ResendEmailClient:
             subject: Email subject
             html: HTML email body
             from_email: Sender email (default: notifications@actorrise.com)
+            scheduled_at: ISO datetime string to schedule send (max 72h ahead)
 
         Returns:
             Resend response dict with email ID
@@ -59,12 +61,16 @@ class ResendEmailClient:
             Exception: If email sending fails
         """
         try:
-            response = resend.Emails.send({
+            params: dict = {
                 "from": from_email,
                 "to": to,
                 "subject": subject,
-                "html": html
-            })
+                "html": html,
+            }
+            if scheduled_at:
+                params["scheduled_at"] = scheduled_at
+
+            response = resend.Emails.send(params)
 
             return response
 

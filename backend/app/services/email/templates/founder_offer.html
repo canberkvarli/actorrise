@@ -3,11 +3,15 @@
 {% block title %}A special offer for you | ActorRise{% endblock %}
 
 {% block content %}
-                <p class="greeting">Hey {{ user_name }},</p>
+                <p class="greeting">Hey {{ user_name.split()[0] }},</p>
 
-                <p>I wanted to reach out personally. I'm an actor too, and I built ActorRise because I couldn't find the tools I needed. You signed up early and that means a lot to me.</p>
+                <p>{{ intro_text }}</p>
 
-                <p>As a thank-you, here's a code that gets you <strong>12 months of ActorRise Plus completely free</strong>:</p>
+                {% if body_text %}
+                <p>{{ body_text }}</p>
+                {% endif %}
+
+                <p>As a thank-you, here's a code for <strong>12 months of ActorRise Plus on me</strong>:</p>
 
                 <div class="accent-box accent-box-orange" style="text-align:center;">
                     <p style="font-size:13px; font-weight:600; color:#CB4B00; margin:0 0 4px; text-transform:uppercase; letter-spacing:0.08em;">Your code</p>
@@ -16,22 +20,24 @@
                 </div>
 
                 <div class="cta-wrap">
-                    <a href="{{ upgrade_url }}" class="cta">Get Plus free for 12 months</a>
+                    <a href="{{ upgrade_url }}" class="cta">Claim your 12 months</a>
                 </div>
 
-                <p>If you like what you see and want to be featured on the homepage as a founding actor, all I'd ask for in return is a short testimonial in your own words, just your honest thoughts on the platform or what you think it could do for actors. A headshot to go next to it would be amazing too, totally optional though.</p>
+                <p>One more thing. I'm creating dedicated profiles for the first 50 actors on ActorRise, our founding actors. Your own page on the site showcasing who you are and what you do. <a href="https://actorrise.com/actors" style="color:#CB4B00; text-decoration:underline;">Here's what it looks like so far.</a> If you activate Plus with your founder code, you're in. And if you want to make your profile even better, you can reply to this email with any of the following:</p>
 
                 <div class="accent-box accent-box-blue">
-                    <p class="accent-title">Just reply to this email with:</p>
+                    <p class="accent-title">Optional, but makes your profile stand out:</p>
                     <ul style="margin:8px 0 0; padding:0 0 0 20px;">
-                        <li>A sentence or two about your experience</li>
-                        <li>Your headshot (optional, attach or link it)</li>
-                        <li>How you'd like to be credited (name, role, city)</li>
+                        <li>A short testimony in your own words (just a sentence or two, your honest take)</li>
+                        <li>A headshot</li>
+                        <li>Your bio</li>
+                        <li>Your website, IMDB, reel, or any media of your work</li>
+                        <li>Your resume</li>
                     </ul>
                 </div>
 
                 {% if share_text %}
-                <p>And if you know other actors who'd love this, feel free to send them this way. Word of mouth means everything at this stage.</p>
+                <p>Bonus: if you share ActorRise with your audience, that goes a long way. Word of mouth means everything at this stage.</p>
 
                 <div class="accent-box accent-box-green" style="text-align:center;">
                     <p style="font-size:14px; color:#292929; margin:0 0 8px; font-style:italic;">{{ share_text }}</p>
@@ -39,7 +45,7 @@
                 </div>
                 {% endif %}
 
-                <p>Really glad you're here. Welcome!</p>
+                <p>Really glad you're here. Let's make something great together.</p>
 
                 <p class="signature">
                     {{ sender_name }}<br>

@@ -52,7 +52,7 @@ def build_unsubscribe_url(email: str) -> str:
     """Build the full unsubscribe URL for a user."""
     token = generate_unsubscribe_token(email)
     base = os.getenv("SITE_URL", "https://actorrise.com")
-    return f"{base}/api/auth/unsubscribe?email={email}&token={token}"
+    return f"{base}/unsubscribe?email={email}&token={token}"
 
 
 # ---------------------------------------------------------------------------
@@ -71,6 +71,22 @@ def _get_marketing_recipients(
         "free" — only users on the free tier (no active paid subscription)
         "paid" — only users with an active paid subscription
     """
+    if target == "all_users":
+        return db.query(User).all()
+
+    if target == "all_free":
+        # All free-tier users regardless of opt-in
+        paid_user_ids = (
+            db.query(UserSubscription.user_id)
+            .join(PricingTier, UserSubscription.tier_id == PricingTier.id)
+            .filter(
+                UserSubscription.status.in_(["active", "trialing"]),
+                PricingTier.name != "free",
+            )
+            .subquery()
+        )
+        return db.query(User).filter(~User.id.in_(paid_user_ids)).all()
+
     query = db.query(User).filter(User.marketing_opt_in.is_(True))
 
     if target == "free":
@@ -148,6 +164,7 @@ def send_campaign(
         "feature_announcement": template_kwargs.get("feature_title", "What's new on ActorRise"),
         "founder_offer": "A special offer just for you",
         "actor_page": "Your actor page on ActorRise",
+        "cold_outreach": "hey from ActorRise",
         "weekly_engagement": "Your weekly pick from ActorRise",
     }
     subject = subject_map.get(campaign_type, "News from ActorRise")
@@ -157,6 +174,7 @@ def send_campaign(
         "feature_announcement": templates.render_feature_announcement,
         "founder_offer": templates.render_founder_offer,
         "actor_page": templates.render_actor_page,
+        "cold_outreach": templates.render_cold_outreach,
         "weekly_engagement": templates.render_weekly_engagement,
     }
     render_fn = render_map.get(campaign_type)

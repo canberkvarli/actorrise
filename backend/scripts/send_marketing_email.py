@@ -89,7 +89,7 @@ def _send_test(args):
         "founder-offer": lambda: templates.render_founder_offer(
             user_name="Test User",
             promo_code=getattr(args, "promo_code", None) or "FOUNDER",
-            discount_description=getattr(args, "discount_description", None) or "Enter at checkout for 12 months of Plus, completely free",
+            discount_description=getattr(args, "discount_description", None) or "Enter this at checkout",
             upgrade_url=getattr(args, "upgrade_url", None) or "https://actorrise.com/pricing",
             sender_name=getattr(args, "sender_name", None) or "Canberk",
             sender_title=getattr(args, "sender_title", None) or "Founder, ActorRise",
