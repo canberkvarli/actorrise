@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { SocialLinkIcons } from "./SocialLinkIcons";
 
 interface Headshot {
@@ -27,13 +27,19 @@ export function FoundingActorCard({
   headshots,
   socialLinks,
 }: FoundingActorCardProps) {
+  const router = useRouter();
   const primaryHeadshot =
     headshots.find((h) => h.is_primary) || headshots[0];
 
   return (
-    <Link
-      href={`/actors/${slug}`}
-      className="group block rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+    <div
+      role="link"
+      tabIndex={0}
+      onClick={() => router.push(`/actors/${slug}`)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") router.push(`/actors/${slug}`);
+      }}
+      className="group block rounded-2xl border border-border/60 bg-card shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer"
     >
       {/* Headshot */}
       {primaryHeadshot ? (
@@ -59,7 +65,7 @@ export function FoundingActorCard({
       )}
 
       {/* Content */}
-      <div className="p-4 sm:p-5">
+      <div className="p-5 pb-6 sm:p-6 sm:pb-8 min-h-[180px] sm:min-h-[200px]">
         <h3 className="font-semibold text-foreground text-base sm:text-lg group-hover:text-primary transition-colors">
           {name}
         </h3>
@@ -81,6 +87,6 @@ export function FoundingActorCard({
           </span>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

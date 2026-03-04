@@ -91,11 +91,11 @@ The user should say: "{expected_line}"
 {ai_stage_direction_context}
 
 Respond with ONLY valid JSON (no markdown, no code fences) in this exact format:
-{{
+{{{{
   "feedback": "One sentence of brief, encouraging feedback on the user's delivery.",
   "line_text": "Your scripted line delivered exactly as written. Do NOT add, remove, or rephrase the scripted words.",
   "tts_instructions": "Natural language description of how to deliver this line vocally."
-}}
+}}}}
 
 For tts_instructions, consider the scene's setting, tone ({tone}), relationship ({relationship_dynamic}), emotions ({primary_emotions}), and any stage directions. Describe vocal qualities: pace (slow/fast), volume (whisper/loud), emotional color (warm/cold/urgent/playful), and specific acting choices for this moment.
 

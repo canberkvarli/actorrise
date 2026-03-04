@@ -4,8 +4,8 @@ from app.models.founding_actor import FoundingActor
 from app.models.user import User
 from app.services.email.marketing import verify_unsubscribe_token
 from app.services.email.notifications import send_welcome_email
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from fastapi.responses import HTMLResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 from sqlalchemy import exists
@@ -210,14 +210,19 @@ def update_onboarding(
     }
 
 
-@router.get("/unsubscribe", response_class=HTMLResponse)
+@router.get("/unsubscribe")
 def unsubscribe(
     email: str = Query(...),
     token: str = Query(...),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     """Unsubscribe a user from marketing emails via signed link."""
+    want_json = "application/json" in (request.headers.get("accept", "") if request else "")
+
     if not verify_unsubscribe_token(email, token):
+        if want_json:
+            return JSONResponse({"ok": False, "message": "Invalid or expired unsubscribe link."}, status_code=400)
         return HTMLResponse(
             content=_unsubscribe_page("Invalid or expired unsubscribe link."),
             status_code=400,
@@ -227,6 +232,9 @@ def unsubscribe(
     if user and user.marketing_opt_in:
         user.marketing_opt_in = False
         db.commit()
+
+    if want_json:
+        return JSONResponse({"ok": True, "message": "Unsubscribed successfully."})
 
     return HTMLResponse(content=_unsubscribe_page(
         "You've been unsubscribed from ActorRise marketing emails. "

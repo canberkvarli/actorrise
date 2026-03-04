@@ -9,6 +9,7 @@ from app.models.billing import (
     UsageMetrics,
 )
 from app.models.founding_actor import FoundingActor
+from app.models.email_tracking import EmailBatch, EmailSend
 from app.models.moderation import MonologueSubmission, ModerationLog
 
 

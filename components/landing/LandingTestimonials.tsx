@@ -238,7 +238,7 @@ export function LandingTestimonials() {
 
             {/* Fixed-size card: same dimensions on all breakpoints so switching testimonials doesn’t resize. Text uses dynamic font + scroll. */}
             <div
-              className="flex-none md:flex-1 min-w-0 relative rounded-2xl border border-border/60 bg-card shadow-lg p-6 sm:p-8 md:p-10 flex flex-col h-[320px] min-h-[320px] max-h-[320px]"
+              className="flex-none md:flex-1 min-w-0 relative rounded-2xl border border-border/60 bg-card shadow-lg p-6 sm:p-8 md:p-10 flex flex-col h-[380px] min-h-[380px] max-h-[380px]"
             >
               <span
                 className="absolute top-4 left-4 sm:top-6 sm:left-6 text-4xl sm:text-5xl font-serif text-muted-foreground/30 leading-none select-none pointer-events-none"

@@ -2,13 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-interface Voice {
-  name: string;
-  lang: string;
-  voiceURI: string;
-  localService: boolean;
-}
-
 interface UseSpeechSynthesisOptions {
   voice?: SpeechSynthesisVoice | null;
   rate?: number; // 0.1 to 10 (1 = normal)
@@ -37,15 +30,6 @@ interface UseSpeechSynthesisReturn {
  *
  * FREE - Uses browser's built-in voices
  * Works on all modern browsers
- *
- * @example
- * const { speak, isSpeaking, voices } = useSpeechSynthesis({
- *   rate: 1.0,
- *   pitch: 1.0,
- *   volume: 1.0
- * });
- *
- * speak("Hello, I'm your scene partner!");
  */
 export function useSpeechSynthesis(
   options: UseSpeechSynthesisOptions = {}
@@ -64,6 +48,12 @@ export function useSpeechSynthesis(
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(options.voice || null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+
+  // Store callbacks in refs to avoid stale closures in speak()
+  const onEndRef = useRef(onEnd);
+  const onErrorRef = useRef(onError);
+  useEffect(() => { onEndRef.current = onEnd; }, [onEnd]);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
 
   // Check if Web Speech API is supported
   const isSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
@@ -158,9 +148,7 @@ export function useSpeechSynthesis(
     utterance.onend = () => {
       setIsSpeaking(false);
       setIsPaused(false);
-      if (onEnd) {
-        onEnd();
-      }
+      onEndRef.current?.();
     };
 
     utterance.onerror = (event: Event) => {
@@ -171,14 +159,14 @@ export function useSpeechSynthesis(
       }
       setIsSpeaking(false);
       setIsPaused(false);
-      if (onError && !isCancelOrInterrupt) {
-        onError(event);
+      if (!isCancelOrInterrupt) {
+        onErrorRef.current?.(event);
       }
     };
 
     utteranceRef.current = utterance;
     window.speechSynthesis.speak(utterance);
-  }, [isSupported, rate, pitch, volume, lang, selectedVoice, onEnd, onError]);
+  }, [isSupported, rate, pitch, volume, lang, selectedVoice]);
 
   const cancel = useCallback(() => {
     if (isSupported) {

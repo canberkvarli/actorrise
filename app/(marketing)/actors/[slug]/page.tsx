@@ -3,7 +3,9 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { useFoundingActor } from "@/hooks/useFoundingActors";
+import { IconEdit } from "@tabler/icons-react";
+import { useAuth } from "@/lib/auth";
+import { useFoundingActor, useMyFoundingActor } from "@/hooks/useFoundingActors";
 import { HeadshotGallery } from "@/components/founding-actor/HeadshotGallery";
 import { SocialLinkIcons } from "@/components/founding-actor/SocialLinkIcons";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +13,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function FoundingActorPage() {
   const params = useParams();
   const slug = params.slug as string;
+  const { user } = useAuth();
   const { data: actor, isLoading } = useFoundingActor(slug);
+  const { data: myActor } = useMyFoundingActor();
+
+  const isOwnPage = myActor?.slug === slug;
+  const isAdmin = user?.is_moderator === true;
+  const canEdit = isOwnPage || isAdmin;
 
   if (isLoading) {
     return (
@@ -68,9 +76,20 @@ export default function FoundingActorPage() {
 
         {/* Content */}
         <div className="flex flex-col">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground font-brand">
-            {actor.name}
-          </h1>
+          <div className="flex items-start justify-between gap-3">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground font-brand">
+              {actor.name}
+            </h1>
+            {canEdit && (
+              <Link
+                href={isOwnPage ? "/founding-actor" : "/admin/founding-actors"}
+                className="shrink-0 mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              >
+                <IconEdit className="h-4 w-4" />
+                Edit
+              </Link>
+            )}
+          </div>
           {actor.descriptor && (
             <p className="mt-1 text-muted-foreground text-base md:text-lg">
               {actor.descriptor}

@@ -26,11 +26,6 @@ interface UseSpeechRecognitionReturn {
  *
  * FREE - Uses browser's built-in speech recognition
  * Works on Chrome, Edge, Safari (with webkit prefix)
- *
- * @example
- * const { transcript, isListening, startListening, stopListening } = useSpeechRecognition({
- *   onResult: (text) => console.log('User said:', text)
- * });
  */
 export function useSpeechRecognition(
   options: UseSpeechRecognitionOptions = {}
@@ -48,6 +43,15 @@ export function useSpeechRecognition(
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
+
+  // Store callbacks in refs so the recognition instance doesn't need to be
+  // recreated when inline arrow functions change identity across renders.
+  const onResultRef = useRef(onResult);
+  const onEndRef = useRef(onEnd);
+  const onErrorRef = useRef(onError);
+  useEffect(() => { onResultRef.current = onResult; }, [onResult]);
+  useEffect(() => { onEndRef.current = onEnd; }, [onEnd]);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
 
   // Check if Web Speech API is supported
   const isSupported = typeof window !== 'undefined' &&
@@ -88,8 +92,8 @@ export function useSpeechRecognition(
       const currentTranscript = finalTranscript || interimTranscript;
       setTranscript(currentTranscript.trim());
 
-      if (finalTranscript && onResult) {
-        onResult(finalTranscript.trim());
+      if (finalTranscript && onResultRef.current) {
+        onResultRef.current(finalTranscript.trim());
       }
     };
 
@@ -97,15 +101,15 @@ export function useSpeechRecognition(
       console.error('Speech recognition error:', event.error);
       setError(event.error);
       setIsListening(false);
-      if (onError) {
-        onError(event.error);
+      if (onErrorRef.current) {
+        onErrorRef.current(event.error);
       }
     };
 
     recognition.onend = () => {
       setIsListening(false);
-      if (onEnd) {
-        onEnd();
+      if (onEndRef.current) {
+        onEndRef.current();
       }
     };
 
@@ -116,7 +120,8 @@ export function useSpeechRecognition(
         recognitionRef.current.abort();
       }
     };
-  }, [continuous, interimResults, lang, onResult, onEnd, onError, isSupported]);
+    // Only recreate recognition when config primitives change, NOT callbacks
+  }, [continuous, interimResults, lang, isSupported]);
 
   const startListening = useCallback(() => {
     if (!isSupported) {
@@ -129,7 +134,9 @@ export function useSpeechRecognition(
         setTranscript('');
         setError(null);
         recognitionRef.current.start();
-      } catch (err) {
+      } catch (err: any) {
+        // Already running — safe to ignore
+        if (err?.name === 'InvalidStateError') return;
         console.error('Error starting recognition:', err);
         setError('Failed to start speech recognition');
       }

@@ -52,7 +52,7 @@ export interface RehearsalSettings {
 
 const KEY_REHEARSAL_SETTINGS = "scene_partner_rehearsal_settings";
 const DEFAULT_REHEARSAL_SETTINGS: RehearsalSettings = {
-  pauseBetweenLinesSeconds: 3,
+  pauseBetweenLinesSeconds: 1,
   skipMyLineIfSilent: false,
   skipAfterSeconds: 10,
   countdownSeconds: 3,

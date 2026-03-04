@@ -1,16 +1,13 @@
 """
-Stripe webhook handlers.
+Webhook handlers for Stripe and Resend.
 
-Handles all Stripe webhook events for subscription management:
-- checkout.session.completed: Create subscription after successful payment
-- invoice.paid: Update subscription dates and create billing history
-- invoice.payment_failed: Mark subscription as past_due
-- customer.subscription.updated: Update subscription status
-- customer.subscription.deleted: Move user back to free tier
+Stripe: subscription management (checkout, invoices, cancellations)
+Resend: email delivery tracking (delivered, opened, clicked, bounced)
 
 All webhook handlers are idempotent to handle duplicate events.
 """
 
+import json
 import logging
 import os
 import threading
@@ -19,7 +16,9 @@ from datetime import datetime
 import stripe
 from app.core.database import get_db
 from app.models.billing import BillingHistory, PricingTier, UserSubscription
+from app.models.email_tracking import EmailSend
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
@@ -286,3 +285,76 @@ def handle_subscription_deleted(stripe_subscription: dict, db: Session):
     db.commit()
 
     print(f"✅ Subscription canceled for user {subscription.user_id} - moved to free tier")
+
+
+# ============================================================================
+# Resend Webhook Handler
+# ============================================================================
+
+resend_webhook_secret = os.getenv("RESEND_WEBHOOK_SECRET")
+
+
+@router.post("/resend")
+async def resend_webhook(request: Request, db: Session = Depends(get_db)):
+    """
+    Handle Resend webhook events for email tracking.
+
+    Tracks: delivered, opened, clicked, bounced, complained.
+    Verifies signature using Svix if RESEND_WEBHOOK_SECRET is set.
+    """
+    payload = await request.body()
+
+    # Verify webhook signature if secret is configured
+    if resend_webhook_secret:
+        try:
+            from svix.webhooks import Webhook
+            wh = Webhook(resend_webhook_secret)
+            wh.verify(payload, {
+                "svix-id": request.headers.get("svix-id", ""),
+                "svix-timestamp": request.headers.get("svix-timestamp", ""),
+                "svix-signature": request.headers.get("svix-signature", ""),
+            })
+        except ImportError:
+            logger.warning("svix not installed, skipping webhook verification")
+        except Exception as e:
+            logger.warning("Resend webhook signature verification failed: %s", e)
+            return JSONResponse(status_code=400, content={"error": "Invalid signature"})
+
+    try:
+        event = json.loads(payload)
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content={"error": "Invalid JSON"})
+
+    event_type = event.get("type", "")
+    data = event.get("data", {})
+    email_id = data.get("email_id")
+
+    if not email_id:
+        return {"status": "ok", "message": "no email_id"}
+
+    # Find the matching EmailSend row
+    send = db.query(EmailSend).filter(EmailSend.resend_email_id == email_id).first()
+    if not send:
+        return {"status": "ok", "message": "email_id not tracked"}
+
+    now = datetime.utcnow()
+
+    if event_type == "email.delivered":
+        send.status = "delivered"
+    elif event_type == "email.opened":
+        send.status = "opened"
+        if not send.opened_at:
+            send.opened_at = now
+    elif event_type == "email.clicked":
+        send.status = "clicked"
+        if not send.clicked_at:
+            send.clicked_at = now
+    elif event_type == "email.bounced":
+        send.status = "bounced"
+    elif event_type == "email.complained":
+        send.status = "bounced"
+    else:
+        return {"status": "ok", "message": f"unhandled event: {event_type}"}
+
+    db.commit()
+    return {"status": "ok"}
