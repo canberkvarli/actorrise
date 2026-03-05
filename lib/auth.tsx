@@ -10,7 +10,6 @@ interface User {
   id: number;
   email: string;
   name?: string;
-  marketing_opt_in?: boolean;
   has_seen_welcome?: boolean;
   has_seen_search_tour?: boolean;
   has_seen_profile_tour?: boolean;
@@ -27,7 +26,7 @@ interface AuthContextType {
   isLoggingOut: boolean;
   isDemoUser: boolean;
   login: (email: string, password: string, redirectTo?: string) => Promise<void>;
-  signup: (email: string, password: string, name?: string, marketingOptIn?: boolean) => Promise<void>;
+  signup: (email: string, password: string, name?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
@@ -36,6 +35,25 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const LOGOUT_TRANSITION_MS = 420;
+const USER_CACHE_KEY = "actorrise_user_v1";
+
+function getCachedUser(): User | null {
+  try {
+    const raw = sessionStorage.getItem(USER_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as User) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedUser(user: User | null) {
+  try {
+    if (user) sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+    else sessionStorage.removeItem(USER_CACHE_KEY);
+  } catch {
+    // ignore
+  }
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -53,14 +71,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     lastSyncRef.current = now;
     try {
-      // Try with 8s timeout; on failure retry once (handles cold DB connection pool)
-      let response;
-      try {
-        response = await api.get<User>("/api/auth/me", { timeoutMs: 8000 });
-      } catch {
-        response = await api.get<User>("/api/auth/me", { timeoutMs: 12000 });
-      }
+      const response = await api.get<User>("/api/auth/me", { timeoutMs: 10000 });
       setUser(response.data);
+      setCachedUser(response.data);
     } catch (error: unknown) {
       console.warn("[auth] Could not reach backend, using session fallback:", error);
       try {
@@ -84,12 +97,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check initial session once
     if (!isInitializedRef.current) {
       isInitializedRef.current = true;
+
+      // Load cached user immediately — no spinner for returning users
+      const cached = getCachedUser();
+      if (cached) {
+        setUser(cached);
+        setLoading(false);
+      }
+
       (async () => {
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
-            await syncUserWithBackend(true);
+            // Revalidate in background (no spinner if we had cached data)
+            await syncUserWithBackend(!cached);
           } else {
+            setCachedUser(null);
+            if (cached) setUser(null);
             setLoading(false);
           }
         } catch {
@@ -129,8 +153,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error("No session received");
       }
 
-      // Sync with backend (don't set loading to prevent flickering)
-      await syncUserWithBackend(false);
+      // Prefill cache from session metadata so dashboard shows instantly after redirect.
+      // AuthProvider will revalidate with backend in background (gets is_moderator, etc).
+      setCachedUser({
+        id: 0,
+        email: data.session.user.email ?? email,
+        name: data.session.user.user_metadata?.name ?? data.session.user.user_metadata?.full_name ?? undefined,
+      });
 
       setStoredLastAuthMethod("email");
 
@@ -143,9 +172,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const message = error instanceof Error ? error.message : "Failed to login";
       throw new Error(message);
     }
-  }, [syncUserWithBackend]);
+  }, []);
 
-  const signup = useCallback(async (email: string, password: string, name?: string, marketingOptIn?: boolean) => {
+  const signup = useCallback(async (email: string, password: string, name?: string) => {
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -153,7 +182,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         options: {
           data: {
             name: name || null,
-            marketing_opt_in: marketingOptIn === true,
           },
         },
       });
@@ -172,7 +200,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // If session exists, user is auto-confirmed (email confirmation disabled)
       if (data.session) {
-        await syncUserWithBackend(false);
+        setCachedUser({
+          id: 0,
+          email: data.session.user.email ?? email,
+          name: name ?? data.session.user.user_metadata?.name ?? undefined,
+        });
         setStoredLastAuthMethod("email");
         // Full page redirect so session cookies are sent on the next request and modal state is cleared
         // Using router.push() leaves the auth modal open because React state persists
@@ -187,7 +219,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const message = error instanceof Error ? error.message : "Failed to sign up";
       throw new Error(message);
     }
-  }, [syncUserWithBackend, router]);
+  }, [router]);
 
   const logout = useCallback(async () => {
     if (isLoggingOut) return;
@@ -208,6 +240,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     await supabase.auth.signOut();
+    setCachedUser(null);
     setUser(null);
 
     // Brief delay so UI can play fade-out animation before redirect

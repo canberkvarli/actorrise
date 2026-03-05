@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import useSWR from "swr";
 import { useRouter } from "next/navigation";
 import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import UnderConstructionScripts from "@/components/UnderConstructionScripts";
@@ -88,8 +89,6 @@ export default function MyScriptsPage() {
   const router = useRouter();
   const [showTutorial, setShowTutorial] = useState<boolean | null>(null);
   const [showAudioCheck, setShowAudioCheck] = useState<boolean | null>(null);
-  const [scripts, setScripts] = useState<UserScript[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [showPasteModal, setShowPasteModal] = useState(false);
@@ -104,13 +103,15 @@ export default function MyScriptsPage() {
   const [scriptToDelete, setScriptToDelete] = useState<number | null>(null);
   const deleteScriptTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const { data: scripts = [], isLoading, mutate: mutateScripts } = useSWR<UserScript[]>(
+    "/api/scripts/",
+    () => api.get<UserScript[]>("/api/scripts/").then((r) => r.data),
+    { revalidateOnFocus: false, dedupingInterval: 30000 }
+  );
+
   useEffect(() => {
     setShowTutorial(!getScenePartnerTutorialSeen());
     setShowAudioCheck(!getScenePartnerAudioCheckDone());
-  }, []);
-
-  useEffect(() => {
-    fetchScripts();
   }, []);
 
   // Rotate loading message every 2s while uploading or pasting
@@ -126,18 +127,6 @@ export default function MyScriptsPage() {
     return () => clearInterval(id);
   }, [uploadingFile, pasting]);
 
-  const fetchScripts = async () => {
-    try {
-      setIsLoading(true);
-      const response = await api.get<UserScript[]>("/api/scripts/");
-      setScripts(response.data);
-    } catch (error) {
-      console.error("Error fetching scripts:", error);
-      toast.error("Failed to load scripts");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -244,7 +233,7 @@ export default function MyScriptsPage() {
       setPasteTitle("");
       setPasteAuthor("");
       setPasteDescription("");
-      fetchScripts();
+      mutateScripts();
       router.push(`/my-scripts/${data.id}`);
     } catch (err: unknown) {
       const msg =
@@ -259,7 +248,7 @@ export default function MyScriptsPage() {
 
   const performDeleteScript = async (scriptId: number) => {
     // Optimistic: remove from UI instantly
-    setScripts((prev) => prev.filter((s) => s.id !== scriptId));
+    mutateScripts((prev) => (prev ?? []).filter((s) => s.id !== scriptId), false);
     try {
       await api.delete(`/api/scripts/${scriptId}`);
       localStorage.setItem("dismissed_example_script", "true");
@@ -267,8 +256,7 @@ export default function MyScriptsPage() {
     } catch (error) {
       console.error("Delete error:", error);
       toast.error("Failed to delete script");
-      // Re-fetch on failure to restore
-      fetchScripts();
+      mutateScripts();
     }
   };
 
@@ -336,9 +324,6 @@ export default function MyScriptsPage() {
   const isProcessing = uploadingFile || pasting;
   const currentLoadingMessage = SCRIPT_LOADING_MESSAGES[loadingMessageIndex];
 
-  if (showTutorial === null) {
-    return <div className="min-h-[60vh] flex items-center justify-center" aria-hidden="true" />;
-  }
   if (showTutorial === true) {
     return (
       <ScenePartnerTutorial
@@ -701,7 +686,7 @@ export default function MyScriptsPage() {
       <NewSceneModal
         open={showNewSceneModal}
         onOpenChange={setShowNewSceneModal}
-        onSuccess={fetchScripts}
+        onSuccess={() => mutateScripts()}
       />
       <ConfirmDeleteDialog
         open={deleteScriptDialogOpen}
