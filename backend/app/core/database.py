@@ -2,17 +2,14 @@ from app.core.config import settings
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import NullPool
 
-# Create PostgreSQL engine.
-# pool_pre_ping: verify connections are alive before use (avoids "server closed the connection" after idle/timeout).
-# pool_recycle: recycle connections before server idle timeout (e.g. Supabase pooler ~10 min).
+# NullPool: required when using Supabase's connection pooler (PgBouncer in session mode).
+# SQLAlchemy must NOT maintain its own pool — each request opens/closes a connection via the pooler.
+# Holding persistent connections against a session-mode pooler exhausts its client limit.
 engine = create_engine(
     settings.database_url,
-    pool_pre_ping=True,
-    pool_recycle=300,  # 5 minutes
-    pool_size=3,       # keep only 3 persistent connections
-    max_overflow=5,    # allow up to 8 total (3+5) under burst
-    pool_timeout=10,   # fail fast if no connection available in 10s
+    poolclass=NullPool,
 )
 
 # Create session factory
