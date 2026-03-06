@@ -1162,7 +1162,7 @@ export default function RehearsalPage() {
                             {line.character_name.charAt(0).toUpperCase()}
                           </div>
                         )}
-                        <span className="text-sm font-bold uppercase tracking-widest text-black">
+                        <span className="text-base font-extrabold uppercase tracking-widest text-black">
                           {line.character_name}
                         </span>
                         <span className={cn(
