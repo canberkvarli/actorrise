@@ -727,19 +727,16 @@ export default function RehearsalPage() {
         }
         setLiveMatchedIndices(matched);
 
-        // Instant advance: SR final result with ≥55% word match → skip Whisper round-trip entirely
-        // Use wordMatchScore (counts duplicate expected words) so lines like "about us. About where"
-        // don't get deflated by the positional matcher used for highlighting
+        // Instant advance: SR final result with ≥55% strict sequential match
+        // Uses the same sequential matched set — words must be said in order from the start
         if (hasFinal && !srAdvancedRef.current) {
-          const score = wordMatchScore(expected, transcript);
+          const score = expectedWords.length > 0 ? matched.size / expectedWords.length : 1;
           if (score >= 0.55) {
             srAdvancedRef.current = true;
             try { recognition.stop(); liveRecognitionRef.current = null; } catch {}
             cancelTranscriptionRef.current();
-            // Build final word-match result and show it briefly before advancing
-            // so the user sees which words were highlighted before the line changes
-            const transcriptWordSet = new Set(norm(transcript).split(/\s+/).filter(Boolean));
-            const finalWords = expectedWords.map(w => ({ word: w, matched: transcriptWordSet.has(w) }));
+            // Build final word-match result from the sequential match
+            const finalWords = expectedWords.map((w, i) => ({ word: w, matched: matched.has(i) }));
             setLiveMatchedIndices(new Set()); // clear live highlights; wordMatchResult takes over
             setWordMatchResult({ words: finalWords, willAdvance: true });
             srAdvanceTimerRef.current = setTimeout(() => {
