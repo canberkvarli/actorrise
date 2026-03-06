@@ -1201,7 +1201,7 @@ export default function RehearsalPage() {
                       )}
 
                       {/* Line text — live highlights while listening, post-result highlights after */}
-                      <p className="text-[17px] font-semibold leading-relaxed text-[#000] text-center break-words whitespace-pre-wrap">
+                      <p className="text-[17px] font-normal leading-relaxed text-neutral-800 text-center break-words whitespace-pre-wrap">
                         {isCurrentUserLine && wordMatchResult
                           ? renderLineWithWordHighlights(line.text, wordMatchResult)
                           : isCurrentUserLine && liveWordResult
