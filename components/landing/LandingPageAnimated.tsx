@@ -116,10 +116,6 @@ export function LandingPageAnimated() {
               <br />
               Spend your time <span className="hero-keyword">rehearsing</span>.
             </h1>
-            <p className="mt-3 sm:mt-4 text-sm sm:text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
-              8,600+ theatrical monologues + 14,000 film & TV scenes. AI-powered search.
-            </p>
-
             {/* Large Primary CTA */}
             <div className="mt-8 sm:mt-10 flex flex-col items-center gap-3">
               <Button asChild size="lg" className="h-14 sm:h-16 px-10 sm:px-14 text-base sm:text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all">
@@ -130,21 +126,6 @@ export function LandingPageAnimated() {
 
             {/* Trust signals — right under stars */}
             <div className="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:justify-center sm:gap-10 md:gap-12">
-              <a
-                href="https://www.producthunt.com/products/actorrise?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-actorrise"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block opacity-90 hover:opacity-100 transition-opacity"
-                aria-label="ActorRise on Product Hunt"
-              >
-                <img
-                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1078076&theme=dark&t=1772064638507"
-                  alt="ActorRise - Find the perfect monologue in less than 20 seconds | Product Hunt"
-                  width={250}
-                  height={54}
-                  className="h-[40px] sm:h-[54px] w-auto"
-                />
-              </a>
               <LandingLiveCount variant="inline" />
             </div>
           </div>
