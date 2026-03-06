@@ -39,12 +39,23 @@ import { parseUpgradeError } from '@/lib/upgradeError';
 import { UpgradeModal } from '@/components/billing/UpgradeModal';
 import { cn } from '@/lib/utils';
 
-/** Build TTS input text: prepend stage_direction as a parenthetical so the
- *  voice model can act on it (e.g. "laughingly" → speaks with a laugh). */
+/** Pure dialogue for TTS — strips both [bracket] and (paren) stage directions. */
 function ttsText(line: { text: string; stage_direction?: string | null }): string {
-  const dialogue = stripStageDirections(line.text);
-  const dir = line.stage_direction?.trim();
-  return dir ? `(${dir}) ${dialogue}` : dialogue;
+  return line.text
+    .replace(/\[([^\]]+)\]/g, '')
+    .replace(/\(([^)]+)\)/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+/** Build TTS instructions from stage directions so the voice ACTS on them
+ *  instead of reading them aloud (e.g. "laughingly" → "Speak laughingly"). */
+function ttsInstructions(line: { text: string; stage_direction?: string | null }): string {
+  const fieldDir = line.stage_direction?.trim();
+  const inlineDirs = [...line.text.matchAll(/\(([^)]+)\)/g)].map(m => m[1].trim());
+  const allDirs = [fieldDir, ...inlineDirs].filter(Boolean);
+  if (!allDirs.length) return '';
+  return `Speak ${[...new Set(allDirs)].join(', ')}`;
 }
 
 const LOADING_TEXTS = [
@@ -130,6 +141,7 @@ interface RehearsalSession {
   current_line_index: number;
   total_lines_delivered: number;
   max_lines?: number | null;
+  ai_voice_id?: string | null;
   completion_percentage: number;
   first_line_for_user?: string | null;
   current_line_for_user?: string | null;
@@ -255,6 +267,7 @@ export default function RehearsalPage() {
   const [shouldShake, setShouldShake] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const srAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Per-line delivery guard — prevents the same line from being delivered twice,
   // without blocking delivery of subsequent lines (unlike isProcessing flag)
   const lastDeliveredIndexRef = useRef<number | null>(null);;
@@ -438,7 +451,7 @@ export default function RehearsalPage() {
       // AI's turn — speak it from script (strip any inline [stage directions])
       setLastAiLine(line.text);
       setAutoListenLineKey(null);
-      speakLineRef.current(ttsText(line), line.stage_direction?.trim() ? `Speak ${line.stage_direction.trim()}` : '');
+      speakLineRef.current(ttsText(line), ttsInstructions(line));
     } else {
       // User's turn — set up for auto-listen
       setLastAiLine(null);
@@ -551,7 +564,7 @@ export default function RehearsalPage() {
         sceneData.lines
           .filter(l => l.character_name === data.ai_character)
           .slice(0, 5)
-          .forEach(l => preloadTTSRef.current(ttsText(l), voiceId, ''));
+          .forEach(l => preloadTTSRef.current(ttsText(l), voiceId, ttsInstructions(l)));
       } catch {
         // Non-fatal
       }
@@ -580,12 +593,19 @@ export default function RehearsalPage() {
 
   /* ── Effects ───────────────────────────────────────────────────── */
 
-  // Kill audio when user navigates away (back button, bfcache, etc.)
+  // Kill audio when user navigates away (back button, bfcache, client-side route)
   useEffect(() => {
-    const stop = () => { cancelAI(); if (isListening) stopListening(); };
+    const stop = () => { cancelAI(); window.speechSynthesis?.cancel(); };
     window.addEventListener('pagehide', stop);
-    return () => window.removeEventListener('pagehide', stop);
-  }, [cancelAI, isListening, stopListening]);
+    return () => {
+      window.removeEventListener('pagehide', stop);
+      // Component unmount — kill all pending timers and audio
+      stop();
+      if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+      if (srAdvanceTimerRef.current) clearTimeout(srAdvanceTimerRef.current);
+      if (pendingAdvanceRef.current) clearTimeout(pendingAdvanceRef.current);
+    };
+  }, [cancelAI]);
 
   // Initial load
   useEffect(() => {
@@ -618,7 +638,7 @@ export default function RehearsalPage() {
 
     if (firstLine.character_name === session.ai_character) {
       setLastAiLine(firstLine.text);
-      speakLineRef.current(ttsText(firstLine), firstLine.stage_direction?.trim() ? `Speak ${firstLine.stage_direction.trim()}` : '');
+      speakLineRef.current(ttsText(firstLine), ttsInstructions(firstLine));
     } else {
       // User's line — auto-listen will handle
       setLastAiLine(null);
@@ -719,7 +739,8 @@ export default function RehearsalPage() {
             const finalWords = expectedWords.map(w => ({ word: w, matched: transcriptWordSet.has(w) }));
             setLiveMatchedIndices(new Set()); // clear live highlights; wordMatchResult takes over
             setWordMatchResult({ words: finalWords, willAdvance: true });
-            setTimeout(() => {
+            srAdvanceTimerRef.current = setTimeout(() => {
+              srAdvanceTimerRef.current = null;
               handleDeliverLineRef.current(transcript.trim());
             }, 400);
           }
@@ -769,7 +790,7 @@ export default function RehearsalPage() {
     const aiLines = orderedLines
       .filter(l => l.character_name === session.ai_character)
       .slice(0, 5); // preload first 5 AI lines
-    aiLines.forEach(l => preloadTTS(ttsText(l), lastKnownVoiceIdRef.current, ''));
+    aiLines.forEach(l => preloadTTS(ttsText(l), lastKnownVoiceIdRef.current, ttsInstructions(l)));
   }, [session?.ai_character, orderedLines, preloadTTS]);
 
   // Preload next AI line while user speaks
@@ -782,7 +803,7 @@ export default function RehearsalPage() {
     let found = 0;
     for (let i = activeLineIndex + 1; i < orderedLines.length && found < 2; i++) {
       if (orderedLines[i].character_name === session.ai_character) {
-        preloadTTS(ttsText(orderedLines[i]), lastKnownVoiceIdRef.current, '');
+        preloadTTS(ttsText(orderedLines[i]), lastKnownVoiceIdRef.current, ttsInstructions(orderedLines[i]));
         found++;
       }
     }
@@ -833,6 +854,14 @@ export default function RehearsalPage() {
       clearTimeout(pauseTimerRef.current);
       pauseTimerRef.current = null;
     }
+    if (srAdvanceTimerRef.current) {
+      clearTimeout(srAdvanceTimerRef.current);
+      srAdvanceTimerRef.current = null;
+    }
+    if (pendingAdvanceRef.current) {
+      clearTimeout(pendingAdvanceRef.current);
+      pendingAdvanceRef.current = null;
+    }
   }, [cancelAI, isListening, stopListening]);
 
   const handleExit = useCallback(() => {
@@ -861,7 +890,7 @@ export default function RehearsalPage() {
       const line = lines[idx];
       if (line && line.character_name === sess.ai_character) {
         setLastAiLine(line.text);
-        speakLineRef.current(ttsText(line), line.stage_direction?.trim() ? `Speak ${line.stage_direction.trim()}` : '');
+        speakLineRef.current(ttsText(line), ttsInstructions(line));
       }
     }
   }, []);
