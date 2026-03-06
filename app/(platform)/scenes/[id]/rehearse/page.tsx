@@ -1094,7 +1094,7 @@ export default function RehearsalPage() {
       {/* Script parchment */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-6">
         <div
-          className="max-w-3xl mx-auto bg-white text-neutral-900 rounded-lg shadow-2xl border border-neutral-200 px-4 sm:px-6 py-5 sm:py-7"
+          className="max-w-4xl mx-auto bg-white text-neutral-900 rounded-lg shadow-2xl border border-neutral-200 px-4 sm:px-6 py-5 sm:py-7"
           style={{ fontFamily: '"Courier New", Courier, monospace' }}
         >
           {sceneWithLines ? (
@@ -1132,7 +1132,7 @@ export default function RehearsalPage() {
                       transition={{ duration: 0.4, ease: 'easeInOut' }}
                       className={cn(
                         'rounded-lg px-3 sm:px-4 py-3 transition-all duration-200',
-                        !isCurrent && 'opacity-40 cursor-pointer hover:opacity-65',
+                        !isCurrent && 'opacity-55 cursor-pointer hover:opacity-75',
                         isCurrentUserLine && 'bg-orange-50/80 ring-1 ring-orange-200/60',
                         isCurrentAiLine && 'bg-neutral-100/60 ring-1 ring-neutral-200/60',
                       )}
@@ -1201,7 +1201,7 @@ export default function RehearsalPage() {
                       )}
 
                       {/* Line text — live highlights while listening, post-result highlights after */}
-                      <p className="text-[17px] font-medium leading-relaxed text-[#000] text-center break-words whitespace-pre-wrap">
+                      <p className="text-[17px] font-semibold leading-relaxed text-[#000] text-center break-words whitespace-pre-wrap">
                         {isCurrentUserLine && wordMatchResult
                           ? renderLineWithWordHighlights(line.text, wordMatchResult)
                           : isCurrentUserLine && liveWordResult
