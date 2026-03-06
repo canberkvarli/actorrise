@@ -27,6 +27,10 @@ export const TESTIMONIALS: TestimonialItem[] = [
     image: "/testimonials/canberk/canberk.jpg",
     isFounder: true,
     source: "direct",
+    socialLinks: {
+      instagram: "https://www.instagram.com/canberk.varli",
+      x: "https://x.com/canberkvarli",
+    },
   },
   {
     quote:

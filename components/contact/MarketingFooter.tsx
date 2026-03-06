@@ -98,23 +98,6 @@ export function MarketingFooter() {
               </button>
             </nav>
           </div>
-          <div className="mt-6 pt-4 border-t border-border/40 flex flex-wrap items-center justify-center gap-4">
-            <a
-              href="https://www.producthunt.com/products/actorrise?utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-actorrise"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block opacity-80 hover:opacity-100 transition-opacity"
-              aria-label="ActorRise on Product Hunt"
-            >
-              <img
-                src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1078076&theme=neutral&t=1771519524232"
-                alt="ActorRise on Product Hunt"
-                width={200}
-                height={43}
-                className="h-[43px] w-auto"
-              />
-            </a>
-          </div>
         </div>
       </footer>
       <ContactModal open={contactOpen} onOpenChange={setContactOpen} />

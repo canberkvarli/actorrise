@@ -16,13 +16,14 @@ from app.models.user import User
 router = APIRouter(prefix="/api/feedback", tags=["feedback"])
 security_optional = HTTPBearer(auto_error=False)
 
-ALLOWED_CONTEXTS = {"search", "film_tv_search"}
+ALLOWED_CONTEXTS = {"search", "film_tv_search", "script_source"}
 ALLOWED_RATINGS = {"positive", "negative"}
 
 
 class FeedbackRequest(BaseModel):
     context: str = Field(..., min_length=1, max_length=64, description="e.g. search")
     rating: str = Field(..., description="positive | negative")
+    comment: str | None = Field(None, max_length=500, description="Optional free-text feedback")
 
 
 def get_current_user_optional(
@@ -65,6 +66,7 @@ def submit_feedback(
     row = ResultFeedback(
         context=body.context,
         rating=body.rating,
+        comment=body.comment,
         user_id=user.id if user else None,
     )
     db.add(row)

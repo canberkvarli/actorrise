@@ -1,7 +1,7 @@
 """User feedback (e.g. thumbs up/down on search results)."""
 
 from app.core.database import Base
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, text
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Text, text
 from sqlalchemy.orm import relationship
 
 
@@ -17,6 +17,7 @@ class ResultFeedback(Base):
     id = Column(Integer, primary_key=True, index=True)
     context = Column(String(64), nullable=False, index=True)
     rating = Column(String(16), nullable=False)  # "positive" | "negative"
+    comment = Column(Text, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=text("now()"), nullable=False)
 

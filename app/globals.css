@@ -318,6 +318,11 @@
   color: var(--primary) !important;
 }
 
+/* Sonner toast container: ensure toasts render above detail panels and modals. */
+[data-sonner-toaster] {
+  z-index: 99999 !important;
+}
+
 /* Bookmark toast: distinct saved-state style (teal accent, compact). Text must match card for light/dark. */
 [data-sonner-toast].actorrise-toast-bookmark {
   background: var(--card) !important;

@@ -205,9 +205,12 @@ export function LandingPageAnimated() {
             We don&apos;t sell your data. Your searches are private.
           </p>
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} ActorRise</p>
               <p className="text-xs text-muted-foreground/80">Built by an actor, for actors.</p>
+              <a href="https://fazier.com/launches/www.actorrise.com" target="_blank" rel="noopener noreferrer">
+                <img src="https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=launched&theme=dark" width={120} alt="Fazier badge" />
+              </a>
             </div>
             <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-4">
               <Link href="/monologue-finder" className="hover:text-foreground transition-colors">
