@@ -9,10 +9,6 @@ import api from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import {
   ArrowLeft,
-  Sparkles,
-  Check,
-  Trophy,
-  Star,
   Pause,
   Play,
   X,
@@ -291,7 +287,7 @@ export default function RehearsalPage() {
     analyserRef,
   } = useWhisperSTT({
     silenceThreshold: 25,
-    silenceTimeoutMs: 2500,
+    silenceTimeoutMs: 3000,
     prompt: currentUserLineText ? stripStageDirections(currentUserLineText) : undefined,
     onResult: (text) => {
       if (srAdvancedRef.current) return; // SR already advanced this line — ignore late Whisper result
@@ -299,7 +295,7 @@ export default function RehearsalPage() {
       setSpeechError(null);
       const expected = currentUserLineText ? stripStageDirections(currentUserLineText) : '';
       const score = wordMatchScore(expected, text);
-      const willAdvance = !expected || score >= 0.4;
+      const willAdvance = !expected || score >= 0.6;
 
       // Build per-word match result from expected line words
       const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
@@ -1006,94 +1002,69 @@ export default function RehearsalPage() {
   if (showFeedback && sessionFeedback) {
     return (
       <div className="fixed inset-0 bg-neutral-950 text-neutral-100 flex flex-col z-[10050]">
-        <div className="flex-1 overflow-auto flex justify-center px-4 py-8">
+        <div className="flex-1 overflow-auto flex justify-center px-4 py-10">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-md space-y-5"
+            className="w-full max-w-md space-y-8"
           >
             {/* Header */}
-            <div className="text-center space-y-2">
-              <div className="w-14 h-14 rounded-full bg-yellow-500/10 flex items-center justify-center mx-auto">
-                <Trophy className="h-7 w-7 text-yellow-500" />
-              </div>
-              <h1 className="text-xl font-semibold">Scene Complete</h1>
-              <p className="text-sm text-neutral-500">
+            <div className="text-center space-y-1.5">
+              <p className="text-xs uppercase tracking-widest text-neutral-500">Scene Complete</p>
+              <h1 className="text-lg font-medium text-neutral-200">
                 {sceneWithLines?.title}{sceneWithLines?.play_title ? ` from ${sceneWithLines.play_title}` : ''}
-              </p>
+              </h1>
             </div>
-
-            {/* Rating */}
-            {sessionFeedback.overall_rating != null && (
-              <div className="flex items-center justify-center gap-1">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <Star
-                    key={s}
-                    className={cn(
-                      'h-5 w-5',
-                      s <= Math.round(sessionFeedback.overall_rating)
-                        ? 'text-yellow-500 fill-yellow-500'
-                        : 'text-neutral-700'
-                    )}
-                  />
-                ))}
-              </div>
-            )}
 
             {/* Overall feedback */}
-            <div className="rounded-xl bg-neutral-900 border border-neutral-800 p-4 space-y-2">
-              <p className="text-sm font-medium text-neutral-200">Coach&apos;s Notes</p>
-              <p className="text-sm text-neutral-400 leading-relaxed whitespace-pre-line">
-                {sessionFeedback.overall_feedback}
-              </p>
-            </div>
+            <p className="text-sm text-neutral-300 leading-relaxed">
+              {sessionFeedback.overall_feedback}
+            </p>
 
-            {/* Strengths */}
-            {sessionFeedback.strengths?.length > 0 && (
-              <div className="rounded-xl bg-neutral-900 border border-neutral-800 p-4 space-y-2.5">
-                <div className="flex items-center gap-2 text-sm font-medium text-emerald-400">
-                  <Check className="h-4 w-4" />
-                  What worked
-                </div>
-                <ul className="space-y-2">
-                  {sessionFeedback.strengths.map((s: string, i: number) => (
-                    <li key={i} className="text-sm text-neutral-300 flex gap-2.5 leading-relaxed">
-                      <span className="text-emerald-600 mt-0.5 shrink-0">+</span>
-                      <span>{s}</span>
-                    </li>
-                  ))}
-                </ul>
+            {/* Strengths + Areas in one clean section */}
+            {(sessionFeedback.strengths?.length > 0 || sessionFeedback.areas_to_improve?.length > 0) && (
+              <div className="space-y-5">
+                {sessionFeedback.strengths?.length > 0 && (
+                  <div className="space-y-2.5">
+                    <p className="text-xs uppercase tracking-widest text-neutral-500">What landed</p>
+                    <ul className="space-y-1.5">
+                      {sessionFeedback.strengths.map((s: string, i: number) => (
+                        <li key={i} className="text-sm text-neutral-300 leading-relaxed pl-3 border-l-2 border-emerald-700/50">
+                          {s}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {sessionFeedback.areas_to_improve?.length > 0 && (
+                  <div className="space-y-2.5">
+                    <p className="text-xs uppercase tracking-widest text-neutral-500">To explore</p>
+                    <ul className="space-y-1.5">
+                      {sessionFeedback.areas_to_improve.map((a: string, i: number) => (
+                        <li key={i} className="text-sm text-neutral-300 leading-relaxed pl-3 border-l-2 border-orange-700/50">
+                          {a}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Areas to improve */}
-            {sessionFeedback.areas_to_improve?.length > 0 && (
-              <div className="rounded-xl bg-neutral-900 border border-neutral-800 p-4 space-y-2.5">
-                <div className="flex items-center gap-2 text-sm font-medium text-orange-400">
-                  <Sparkles className="h-4 w-4" />
-                  To work on
-                </div>
-                <ul className="space-y-2">
-                  {sessionFeedback.areas_to_improve.map((a: string, i: number) => (
-                    <li key={i} className="text-sm text-neutral-300 flex gap-2.5 leading-relaxed">
-                      <span className="text-orange-600 mt-0.5 shrink-0">~</span>
-                      <span>{a}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {/* Divider */}
+            <div className="border-t border-neutral-800/50" />
 
             {/* AI disclaimer */}
-            <p className="text-[11px] text-neutral-600 text-center leading-relaxed px-4">
-              This analysis is generated by AI based on your voice input during rehearsal. Use it as a starting point, not a final verdict. Trust yourself, keep rehearsing, and consider working with a coach for deeper training.
+            <p className="text-xs text-neutral-600 leading-relaxed">
+              This is AI-generated analysis based on your voice input. It catches patterns, not truth. The audience doesn&apos;t want perfect, they want you. Trust your instincts, keep showing up, and let the work speak.
             </p>
 
             {/* Actions */}
-            <div className="flex gap-3 pt-1">
+            <div className="flex gap-3">
               <Button
                 variant="outline"
-                className="flex-1 border-neutral-700 text-neutral-200 hover:bg-neutral-800"
+                className="flex-1 border-neutral-800 text-neutral-300 hover:bg-neutral-900"
                 onClick={handleExit}
               >
                 Back to Script
@@ -1103,7 +1074,7 @@ export default function RehearsalPage() {
                 onClick={handleRestart}
                 disabled={isRestarting}
               >
-                {isRestarting ? 'Starting...' : 'Rehearse Again'}
+                {isRestarting ? 'Starting...' : 'Run It Again'}
               </Button>
             </div>
           </motion.div>
