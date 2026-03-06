@@ -1,17 +1,22 @@
 """
-TTS endpoint for Scene Partner.
-Converts AI character dialogue to spoken audio using OpenAI gpt-4o-mini-tts.
+TTS + STT endpoints for Scene Partner.
+Converts AI character dialogue to spoken audio (OpenAI TTS) and
+transcribes user speech to text (OpenAI Whisper).
 """
 
 import logging
+import os
+import tempfile
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import StreamingResponse
+from openai import OpenAI
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
+from app.core.config import settings
 from app.core.database import get_db
 from app.middleware.rate_limiting import FeatureGate
 from app.models.user import User
@@ -97,6 +102,63 @@ async def synthesize_speech(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="TTS synthesis failed. Please try again.",
         )
+
+
+@router.post("/transcribe")
+async def transcribe_speech(
+    audio: UploadFile = File(...),
+    prompt: Optional[str] = None,  # Expected line text — improves Whisper accuracy
+    current_user: User = Depends(get_current_user),
+    _gate: bool = Depends(FeatureGate("scene_partner", increment=False)),
+):
+    """Transcribe user speech using OpenAI Whisper-1."""
+    if not settings.openai_api_key:
+        raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+
+    audio_data = await audio.read()
+    if len(audio_data) < 500:
+        return {"text": ""}
+
+    # Determine file extension from filename (more reliable than content-type header)
+    filename = audio.filename or ""
+    content_type = audio.content_type or ""
+    if filename.endswith(".m4a") or "mp4" in content_type or "m4a" in content_type:
+        suffix = ".m4a"
+    elif filename.endswith(".wav") or "wav" in content_type:
+        suffix = ".wav"
+    elif filename.endswith(".ogg") or "ogg" in content_type:
+        suffix = ".ogg"
+    else:
+        suffix = ".webm"
+
+    tmp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f:
+            f.write(audio_data)
+            tmp_path = f.name
+
+        client = OpenAI(api_key=settings.openai_api_key)
+        with open(tmp_path, "rb") as f:
+            kwargs: dict = dict(model="whisper-1", file=f, language="en")
+            if prompt:
+                # Hints Whisper toward the expected vocabulary (theatrical/dramatic language)
+                kwargs["prompt"] = prompt[:224]  # Whisper prompt max ~224 tokens
+            result = client.audio.transcriptions.create(**kwargs)
+        return {"text": result.text.strip()}
+    except Exception as e:
+        err_str = str(e)
+        # Whisper 400 = bad/empty audio file — treat as no speech rather than server error
+        if "400" in err_str or "invalid_request_error" in err_str or "Invalid file format" in err_str:
+            logger.warning("Whisper rejected audio (bad format/empty): %s", err_str)
+            return {"text": ""}
+        logger.exception("Whisper transcription failed: %s", e)
+        raise HTTPException(status_code=500, detail="Transcription failed")
+    finally:
+        if tmp_path:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
 
 
 @router.get("/voices")

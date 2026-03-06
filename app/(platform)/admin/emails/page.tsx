@@ -768,11 +768,9 @@ export default function AdminEmailsPage() {
                             onChange={(e) => setTarget(e.target.value)}
                             className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
                           >
-                            <option value="all">All opted-in users</option>
-                            <option value="all_users">All users (ignore opt-in)</option>
-                            <option value="all_free">All free tier (ignore opt-in)</option>
-                            <option value="free">Free tier (opted-in only)</option>
-                            <option value="paid">Paid tier only</option>
+                            <option value="all">All users</option>
+                            <option value="free">Free tier</option>
+                            <option value="paid">Paid tier</option>
                           </select>
                         </div>
                         <label className="flex items-center gap-2 text-sm cursor-pointer pb-2">

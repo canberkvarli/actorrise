@@ -126,7 +126,7 @@ const jsonLd = {
       url: siteUrl,
       description:
         "Stop wasting hours searching books. Find your perfect audition monologue in 20 seconds with AI search. Free forever, no credit card required.",
-      logo: { "@type": "ImageObject", url: `${siteUrl}/logo.png` },
+      logo: { "@type": "ImageObject", url: `${siteUrl}/icon-512.png` },
     },
     {
       "@type": "WebApplication",
