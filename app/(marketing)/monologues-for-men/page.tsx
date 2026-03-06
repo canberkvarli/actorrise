@@ -35,6 +35,66 @@ export default function Page() {
           Search monologues for men
         </Link>
       </Button>
+
+      <div className="mt-12 space-y-3 text-sm text-muted-foreground">
+        <p>
+          Browse by category:{" "}
+          <Link href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
+            dramatic monologues
+          </Link>
+          ,{" "}
+          <Link href="/shakespeare-monologues" className="text-foreground underline hover:no-underline">
+            Shakespeare monologues
+          </Link>
+          , or{" "}
+          <Link href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
+            contemporary monologues
+          </Link>
+          .
+        </p>
+      </div>
+
+      <section className="mt-16 border-t border-border pt-12">
+        <h2 className="text-2xl font-bold text-foreground mb-8">Frequently asked questions</h2>
+
+        <div className="space-y-6">
+          <div>
+            <h3 className="font-semibold text-foreground mb-2">
+              What are good monologues for men that aren&apos;t overdone?
+            </h3>
+            <p className="text-muted-foreground">
+              The Overdone filter on ActorRise flags pieces that casting directors see constantly.
+              Search for what you need, toggle the filter, and you&apos;ll get fresh material that
+              still fits the tone of your audition.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-foreground mb-2">
+              Should I do a comedic or dramatic monologue?
+            </h3>
+            <p className="text-muted-foreground">
+              Match the tone of the project. If the audition doesn&apos;t specify, go with whichever
+              shows your range better. Some actors keep one of each ready. You can search for both
+              and save them to your library.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-foreground mb-2">
+              Can I practice my monologue with AI?
+            </h3>
+            <p className="text-muted-foreground">
+              Yes.{" "}
+              <Link href="/ai-rehearsal-tool" className="text-foreground underline hover:no-underline">
+                ActorRise&apos;s rehearsal tool
+              </Link>{" "}
+              lets you run through scenes and monologues with AI reading the other parts. No need to
+              find a scene partner.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
