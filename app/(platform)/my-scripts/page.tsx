@@ -37,8 +37,6 @@ import {
   Sparkles,
   ClipboardPaste,
   Plus,
-  FileText,
-  Users,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api, { API_URL } from "@/lib/api";
@@ -308,7 +306,7 @@ export default function MyScriptsPage() {
   };
 
   const getStatusBadge = (status: UserScript["processing_status"]) => {
-    const tagClass = "inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-muted/90 text-foreground border border-border";
+    const tagClass = "inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-muted/90 text-foreground border border-border";
     if (status === "failed") {
       return <Badge variant="destructive" className="font-normal text-xs">Failed</Badge>;
     }
@@ -466,7 +464,7 @@ export default function MyScriptsPage() {
           aria-hidden={!isLoading}
         >
           {[1, 2].map((i) => (
-            <Card key={i} className="min-h-[320px]">
+            <Card key={i}>
               <CardHeader className="pt-5 px-5 sm:px-6">
                 <Skeleton className="h-6 w-3/4" />
                 <Skeleton className="h-4 w-1/2 mt-2" />
@@ -496,7 +494,7 @@ export default function MyScriptsPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="rounded-2xl border border-dashed border-border bg-muted/30 py-16 px-6 text-center"
+              className="border border-dashed border-border bg-muted/30 py-16 px-6 text-center"
             >
               <p className="text-muted-foreground text-base">No scripts yet. Use the buttons above to add one.</p>
             </motion.div>
@@ -522,7 +520,7 @@ export default function MyScriptsPage() {
                   className="touch-manipulation h-full"
                 >
                   <Card
-                    className="cursor-pointer group h-full flex flex-col border-border/80 hover:border-border hover:shadow-lg transition-all duration-300 hover:border-primary/40 min-h-[300px] sm:min-h-[320px] active:scale-[0.99]"
+                    className="cursor-pointer group h-full flex flex-col border-border/80 hover:border-border hover:shadow-md transition-all duration-200 hover:border-primary/40 active:scale-[0.99]"
                     onClick={() => router.push(`/my-scripts/${script.id}`)}
                   >
                     <CardHeader className="pb-3 pt-5 px-5 sm:px-6">
@@ -538,54 +536,39 @@ export default function MyScriptsPage() {
                         </div>
                         <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end" onClick={(e) => e.stopPropagation()}>
                           {script.title.startsWith("Example:") && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="inline-block">
-                                  <Badge variant="outline" className="font-normal text-xs cursor-help">Example</Badge>
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent side="bottom" className="max-w-[240px]">
-                                Sample script included so you can try ScenePartner right away.
-                              </TooltipContent>
-                            </Tooltip>
+                            <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 border border-border">Sample</span>
                           )}
                           {getStatusBadge(script.processing_status)}
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent className="flex-1 flex flex-col gap-4 px-5 pb-4 sm:px-6">
+                    <CardContent className="flex-1 flex flex-col gap-3 px-5 pb-4 sm:px-6">
                       {script.processing_status === "completed" && (
                         <>
-                          <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted-foreground">
+                          <div className="flex items-center flex-wrap gap-1.5 text-sm text-muted-foreground">
                             {script.characters?.length > 0 ? (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="flex items-center gap-1.5 cursor-help underline decoration-dotted underline-offset-2">
-                                    <Users className="w-4 h-4 shrink-0" />
+                                  <span className="cursor-help underline decoration-dotted underline-offset-2">
                                     {script.num_characters} character{script.num_characters !== 1 ? "s" : ""}
                                   </span>
                                 </TooltipTrigger>
-                                <TooltipContent side="top" className="max-w-[280px]">
-                                  <p className="font-medium mb-1">Characters</p>
-                                  <p className="text-sm">{script.characters.map((c) => c.name).join(", ")}</p>
+                                <TooltipContent side="top">
+                                  {script.characters.map((c) => c.name).join(", ")}
                                 </TooltipContent>
                               </Tooltip>
                             ) : (
-                              <span className="flex items-center gap-1.5">
-                                <Users className="w-4 h-4 shrink-0" />
-                                {script.num_characters} character{script.num_characters !== 1 ? "s" : ""}
-                              </span>
+                              <span>{script.num_characters} character{script.num_characters !== 1 ? "s" : ""}</span>
                             )}
-                            {(script.scene_titles?.length ?? 0) > 0 || script.first_scene_title || script.first_scene_description ? (
+                            <span className="text-muted-foreground/40">·</span>
+                            {(script.scene_titles?.length ?? 0) > 0 || script.first_scene_title ? (
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <span className="flex items-center gap-1.5 cursor-help underline decoration-dotted underline-offset-2">
-                                    <FileText className="w-4 h-4 shrink-0" />
-                                    {script.num_scenes_extracted} scene{script.num_scenes_extracted !== 1 ? "s" : ""} inside
+                                  <span className="cursor-help underline decoration-dotted underline-offset-2">
+                                    {script.num_scenes_extracted} scene{script.num_scenes_extracted !== 1 ? "s" : ""}
                                   </span>
                                 </TooltipTrigger>
                                 <TooltipContent side="top" className="max-w-[320px]">
-                                  <p className="font-medium mb-1.5">Scenes</p>
                                   {script.scene_titles?.length ? (
                                     <ul className="text-sm space-y-1 list-disc list-inside">
                                       {script.scene_titles.slice(0, 5).map((t, i) => (
@@ -596,55 +579,25 @@ export default function MyScriptsPage() {
                                       )}
                                     </ul>
                                   ) : script.first_scene_title ? (
-                                    <p className="text-sm">
-                                      {script.first_scene_title}
-                                      {(script.first_scene_description?.trim() || script.description?.trim()) && (
-                                        <span className="block mt-1 text-muted-foreground line-clamp-2">
-                                          {script.first_scene_description?.trim() || script.description?.trim()}
-                                        </span>
-                                      )}
-                                    </p>
+                                    <p className="text-sm">{script.first_scene_title}</p>
                                   ) : null}
                                 </TooltipContent>
                               </Tooltip>
                             ) : (
-                              <span className="flex items-center gap-1.5">
-                                <FileText className="w-4 h-4 shrink-0" />
-                                {script.num_scenes_extracted} scene{script.num_scenes_extracted !== 1 ? "s" : ""} inside
-                              </span>
+                              <span>{script.num_scenes_extracted} scene{script.num_scenes_extracted !== 1 ? "s" : ""}</span>
                             )}
                             {script.estimated_length_minutes != null && (
-                              <span>~{script.estimated_length_minutes} min</span>
+                              <>
+                                <span className="text-muted-foreground/40">·</span>
+                                <span>~{script.estimated_length_minutes} min</span>
+                              </>
                             )}
                           </div>
-                          {(script.description?.trim() || script.first_scene_title || script.first_scene_description?.trim()) ? (
-                            <div className="space-y-1">
-                              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Synopsis</span>
-                              {script.first_scene_title && (
-                                <p className="text-sm font-medium text-foreground line-clamp-1">
-                                  {script.num_scenes_extracted === 1 ? "Scene: " : "First scene: "}{script.first_scene_title}
-                                </p>
-                              )}
-                              {(script.first_scene_description?.trim() || script.description?.trim()) ? (
-                                <p className="text-sm text-foreground/90 line-clamp-2 leading-relaxed border-l-2 border-primary/30 pl-3 break-words">
-                                  {(script.first_scene_description?.trim() || script.description?.trim() || "").slice(0, 180)}
-                                  {(script.first_scene_description?.trim() || script.description?.trim() || "").length > 180 ? "…" : ""}
-                                </p>
-                              ) : null}
-                            </div>
-                          ) : null}
-                          {script.characters?.length > 0 && (
-                            <div className="flex flex-wrap items-center gap-1.5">
-                              <span className="text-xs font-medium text-muted-foreground">Characters:</span>
-                              {script.characters.slice(0, 5).map((c, i) => (
-                                <Badge key={i} variant="secondary" className="font-normal text-xs">
-                                  {c.name}
-                                </Badge>
-                              ))}
-                              {script.characters.length > 5 && (
-                                <span className="text-xs text-muted-foreground">+{script.characters.length - 5}</span>
-                              )}
-                            </div>
+                          {(script.first_scene_description?.trim() || script.description?.trim()) && (
+                            <p className="text-sm text-muted-foreground/80 line-clamp-2 leading-relaxed">
+                              {(script.first_scene_description?.trim() || script.description?.trim() || "").slice(0, 160)}
+                              {(script.first_scene_description?.trim() || script.description?.trim() || "").length > 160 ? "…" : ""}
+                            </p>
                           )}
                         </>
                       )}

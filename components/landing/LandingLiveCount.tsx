@@ -7,7 +7,6 @@ import { API_URL } from "@/lib/api";
 
 const INITIAL_DURATION_MS = 2000;
 const UPDATE_DURATION_MS = 1200;
-const POLL_INTERVAL_MS = 25_000;
 
 /** Fallback library stats so the section isn’t empty while the API loads (avoids long dash). */
 const FALLBACK_LIBRARY = { monologues: 8600, filmTv: 14000 };
@@ -77,9 +76,7 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
         if (entries[0].isIntersecting) {
           setHasAnimated(true);
           fetchStats();
-          const interval = setInterval(fetchStats, POLL_INTERVAL_MS);
           observer.disconnect();
-          return () => clearInterval(interval);
         }
       },
       { threshold: 0.1 }

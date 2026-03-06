@@ -192,7 +192,7 @@ export default function RootLayout({
             <AuthModalProvider>{children}</AuthModalProvider>
           </AuthProviderWrapper>
           <Toaster
-            position="top-center"
+            position="bottom-center"
             richColors={false}
             toastOptions={{
               classNames: {

@@ -15,6 +15,7 @@ import { useFilmTvFavoriteCount } from "@/hooks/useFilmTvFavorites";
 import { useProfile } from "@/hooks/useDashboardData";
 import { ContactModal } from "@/components/contact/ContactModal";
 import { SWRConfig } from "swr";
+import { localStorageProvider } from "@/lib/swrCache";
 import { useSubscription } from "@/hooks/useSubscription";
 import { AnimatePresence, motion } from "framer-motion";
 import { WelcomeFlow } from "@/components/onboarding/WelcomeFlow";
@@ -46,7 +47,7 @@ export default function PlatformLayout({
   const [showWelcome, setShowWelcome] = useState(false);
   const [showChangelogModal, setShowChangelogModal] = useState(false);
   const [changelogModalEntry, setChangelogModalEntry] = useState<ChangelogEntry | null>(null);
-  const [minLoadReady, setMinLoadReady] = useState(false);
+  const [minLoadReady] = useState(true); // No artificial delay — auth resolves fast
   const { count: bookmarkCount, isLoading: isLoadingBookmarks } = useBookmarkCount();
   const { count: filmTvFavoriteCount, isLoading: isLoadingFilmTvFavorites } = useFilmTvFavoriteCount();
   const savedCount = bookmarkCount + filmTvFavoriteCount;
@@ -93,12 +94,6 @@ export default function PlatformLayout({
       return () => document.removeEventListener("pointerdown", handlePointerDownOutside);
     }
   }, [mobileMenuOpen]);
-
-  // Ensure loading screen displays for at least 800ms to avoid flicker
-  useEffect(() => {
-    const timer = setTimeout(() => setMinLoadReady(true), 800);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Show welcome flow for new users who haven't seen it
   useEffect(() => {
@@ -184,6 +179,7 @@ export default function PlatformLayout({
     </Suspense>
     <SWRConfig
       value={{
+        provider: localStorageProvider,
         revalidateOnFocus: false,
         revalidateOnReconnect: true,
         dedupingInterval: 60000, // 1 minute

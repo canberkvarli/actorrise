@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { IconStar, IconExternalLink, IconPhoto } from "@tabler/icons-react";
+import { IconStar, IconPhoto } from "@tabler/icons-react";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import type { FilmTvReference } from "@/types/filmTv";
-import { getFilmTvScriptUrl } from "@/lib/utils";
 import { MatchIndicatorTag } from "@/components/search/MatchIndicatorTag";
+import { ScriptSourcePicker } from "@/components/search/ScriptSourcePicker";
 
 export interface FilmTvReferenceCardProps {
   ref_item: FilmTvReference;
@@ -115,16 +115,7 @@ export function FilmTvReferenceCard({
           )}
           <div className="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-border/50 text-xs">
             {typeLabel && <span className="font-medium text-muted-foreground">{typeLabel}</span>}
-            <a
-              href={getFilmTvScriptUrl(ref_item)}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-            >
-              <IconExternalLink className="h-3 w-3" />
-              Script
-            </a>
+            <ScriptSourcePicker ref_item={ref_item} compact />
           </div>
         </div>
       </motion.div>
@@ -222,17 +213,7 @@ export function FilmTvReferenceCard({
           </div>
 
           <div className="mt-4 pt-4 border-t flex items-center justify-end gap-2 text-xs">
-            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-              <a
-                href={getFilmTvScriptUrl(ref_item)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
-                <IconExternalLink className="h-3 w-3" />
-                Script
-              </a>
-            </div>
+            <ScriptSourcePicker ref_item={ref_item} />
           </div>
         </CardContent>
       </Card>

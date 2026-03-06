@@ -170,11 +170,11 @@ def _serialize_subscription(subscription: UserSubscription | None, tier: Pricing
         "tier_display_name": tier.display_name if tier else "Free",
         "status": subscription.status,
         "billing_period": subscription.billing_period,
-        "current_period_start": subscription.current_period_start,
-        "current_period_end": subscription.current_period_end,
+        "current_period_start": subscription.current_period_start.isoformat() if subscription.current_period_start else None,
+        "current_period_end": subscription.current_period_end.isoformat() if subscription.current_period_end else None,
         "cancel_at_period_end": subscription.cancel_at_period_end,
-        "canceled_at": subscription.canceled_at,
-        "trial_end": subscription.trial_end,
+        "canceled_at": subscription.canceled_at.isoformat() if subscription.canceled_at else None,
+        "trial_end": subscription.trial_end.isoformat() if subscription.trial_end else None,
     }
 
 
@@ -213,7 +213,7 @@ def _serialize_user(user: User) -> dict[str, Any]:
         "has_seen_welcome": user.has_seen_welcome,
         "has_seen_search_tour": user.has_seen_search_tour,
         "has_seen_profile_tour": user.has_seen_profile_tour,
-        "created_at": user.created_at,
+        "created_at": user.created_at.isoformat() if user.created_at else None,
     }
 
 

@@ -78,6 +78,7 @@ def get_current_user(
         if existing_user:
             # Update existing user with supabase_id and name
             existing_user.supabase_id = supabase_id
+            existing_user.marketing_opt_in = True
             if name:
                 existing_user.name = name
             db.commit()

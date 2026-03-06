@@ -30,6 +30,7 @@ import {
   IconEdit,
   IconLoader2,
   IconFileText,
+  IconMicrophone,
 } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -50,7 +51,8 @@ import Image from "next/image";
 import { FilmTvReferenceCard } from "@/components/search/FilmTvReferenceCard";
 import { accentTeal } from "@/components/search/MatchIndicatorTag";
 import type { FilmTvReference } from "@/types/filmTv";
-import { getFilmTvScriptUrl, getScriptSearchUrl, getScriptSlugUrl } from "@/lib/utils";
+import { getFilmTvScriptUrl } from "@/lib/utils";
+import { ScriptSourcePicker } from "@/components/search/ScriptSourcePicker";
 import {
   Dialog,
   DialogContent,
@@ -351,71 +353,90 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
   return (
     <div className="container mx-auto px-4 lg:px-8 py-6 md:py-8 max-w-7xl">
-      <div className="space-y-12">
-          {/* ========== UNIFIED HERO: welcome, headline, search CTA (Option A – search first) ========== */}
+      <div className="space-y-16">
+          {/* ========== HERO: greeting, actions, profile progress ========== */}
           <motion.section
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: sectionDuration, ease: sectionEase }}
-            className="rounded-xl bg-muted/30 dark:bg-muted/20 p-6 md:p-8"
+            className="space-y-6"
           >
-            {/* Row 1: compact welcome (left) + Complete profile CTA (right) */}
-            <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
-              <div>
-                {showWelcomeSkeleton ? (
-                  <Skeleton className="h-5 w-56 rounded-lg" />
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                    {greetingName ? ` · Welcome back, ${greetingName}` : ''}
-                  </p>
-                )}
-              </div>
-              <div className="min-h-[44px] flex items-center">
-                {showStatsSkeleton && (
-                  <Skeleton className="h-11 w-64 rounded-lg" />
-                )}
-                {!showStatsSkeleton && stats && stats.completion_percentage < 100 && (
-                  <Link
-                    href="/profile"
-                    className="inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-lg border border-amber-500/30 bg-amber-500/10 dark:bg-amber-400/10 dark:border-amber-400/25 hover:bg-amber-500/15 dark:hover:bg-amber-400/15 transition-colors text-left w-fit max-w-[280px] sm:max-w-none"
-                  >
-                    <IconUserCheck className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <span className="text-sm font-medium text-foreground">Complete your profile</span>
-                    <span className="text-xs text-muted-foreground">({stats.completion_percentage}%)</span>
-                    <IconArrowRight className="h-4 w-4 text-muted-foreground ml-auto shrink-0" />
-                  </Link>
-                )}
-              </div>
+            {/* Top row: date + profile progress */}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              {showWelcomeSkeleton ? (
+                <Skeleton className="h-4 w-40 rounded-md" />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  {new Date().toLocaleDateString('en-US', {
+                    weekday: 'long',
+                    month: 'long',
+                    day: 'numeric',
+                  })}
+                </p>
+              )}
+
+              {showStatsSkeleton && (
+                <Skeleton className="h-4 w-44 rounded-md" />
+              )}
+              {!showStatsSkeleton && stats && stats.completion_percentage < 100 && (
+                <Link href="/profile" className="group flex items-center gap-2.5">
+                  <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+                    Profile {stats.completion_percentage}%
+                  </span>
+                  <div className="relative h-1.5 w-24 overflow-hidden rounded-full bg-border">
+                    <motion.div
+                      className="h-full rounded-full bg-primary"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${stats.completion_percentage}%` }}
+                      transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1], delay: 0.3 }}
+                    />
+                  </div>
+                  <IconArrowRight className="h-3 w-3 text-muted-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                </Link>
+              )}
             </div>
 
-            {/* Headline: primary focus above search card */}
+            {/* Greeting */}
             {showWelcomeSkeleton ? (
-              <Skeleton className="h-9 w-72 md:w-96 rounded-lg mb-6" />
+              <Skeleton className="h-10 w-72 md:w-96 rounded-lg" />
             ) : (
-              <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground mb-6">
-                Find your next monologue
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
+                {greetingName ? (
+                  <>Welcome back, {greetingName}</>
+                ) : (
+                  <>What are you working on?</>
+                )}
               </h1>
             )}
 
-            {/* Search card: primary CTA, full width within hero */}
-            <Link
-              href="/search"
-              className="block group max-w-3xl"
-              aria-label="Find your next monologue: search by description, emotion, character type, or browse filters"
-            >
-              <div className="flex items-center gap-4 p-4 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-md transition-all">
-                <div className="p-3 rounded-lg bg-primary/10 group-hover:bg-primary/15 transition-colors">
-                  <IconSearch className="h-6 w-6 text-primary" />
+            {/* Action links – editorial style, no cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-5 pt-1">
+              <Link href="/search" className="group">
+                <div className="flex items-center gap-2 mb-1">
+                  <IconSearch className="h-[18px] w-[18px] text-primary" />
+                  <span className="text-[15px] font-semibold text-foreground">
+                    Find a monologue
+                  </span>
+                  <IconArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground">
-                    Search by description, emotion, character type, or browse filters
-                  </p>
+                <p className="text-sm text-muted-foreground pl-[26px] group-hover:text-muted-foreground/80 transition-colors">
+                  Search by description, emotion, or filters
+                </p>
+              </Link>
+
+              <Link href="/my-scripts" className="group">
+                <div className="flex items-center gap-2 mb-1">
+                  <IconMicrophone className="h-[18px] w-[18px] text-primary" />
+                  <span className="text-[15px] font-semibold text-foreground">
+                    Rehearse a scene
+                  </span>
+                  <IconArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
                 </div>
-                <IconChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0" />
-              </div>
-            </Link>
+                <p className="text-sm text-muted-foreground pl-[26px] group-hover:text-muted-foreground/80 transition-colors">
+                  Upload a script and run lines with AI
+                </p>
+              </Link>
+            </div>
           </motion.section>
 
           {/* ========== SECTION 3: Recommendations ========== */}
@@ -468,7 +489,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   >
                       <div className="flex items-start justify-between gap-2 mb-4">
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-base sm:text-lg text-foreground group-hover:text-primary transition-colors break-words">
+                          <h3 className="font-bold text-lg sm:text-xl text-foreground group-hover:text-primary transition-colors break-words">
                             {mono.character_name}
                           </h3>
                           <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
@@ -1085,33 +1106,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 )}
 
                 <div className="flex flex-wrap gap-2 pt-2 border-t">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => window.open(getFilmTvScriptUrl(selectedFilmTvRef), "_blank", "noopener,noreferrer")}
-                  >
-                    <IconExternalLink className="h-4 w-4" />
-                    Script on IMSDb
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => window.open(getScriptSlugUrl(selectedFilmTvRef.title, selectedFilmTvRef.year), "_blank", "noopener,noreferrer")}
-                  >
-                    <IconExternalLink className="h-4 w-4" />
-                    Script on Script Slug
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => window.open(getScriptSearchUrl(selectedFilmTvRef.title), "_blank", "noopener,noreferrer")}
-                  >
-                    <IconExternalLink className="h-4 w-4" />
-                    Search Google
-                  </Button>
+                  <ScriptSourcePicker ref_item={selectedFilmTvRef} />
                   <Button
                     variant="outline"
                     size="sm"
@@ -1122,9 +1117,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     IMDb page
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Try IMSDb first, then Script Slug. If the script isn&apos;t there, use Search Google.
-                </p>
               </div>
             </motion.div>
           </>

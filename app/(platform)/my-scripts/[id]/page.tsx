@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
+import useSWR from "swr";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
@@ -10,11 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ArrowLeft, Edit2, Check, X, Trash2, Play, Users, Clock,
-  FileText, Sparkles, ChevronRight
+  ArrowLeft, Edit2, Check, X, Trash2, ChevronRight
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
@@ -23,7 +22,6 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { MicAccessWarning } from "@/components/scenepartner/MicAccessWarning";
 import { GenreSelect } from "@/components/ui/genre-select";
 import { ScenePreviewTooltip } from "@/components/scenepartner/ScenePreviewTooltip";
-import { cn } from "@/lib/utils";
 
 interface Scene {
   id: number;
@@ -64,8 +62,11 @@ export default function ScriptDetailPage() {
   const params = useParams();
   const scriptId = parseInt(params.id as string);
 
-  const [script, setScript] = useState<UserScript | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: script, isLoading, mutate: mutateScript } = useSWR<UserScript>(
+    scriptId ? `/api/scripts/${scriptId}` : null,
+    () => api.get<UserScript>(`/api/scripts/${scriptId}`).then((r) => r.data),
+    { revalidateOnFocus: false, dedupingInterval: 30000 }
+  );
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   /** Which character the user will play per scene (sceneId -> character name) */
@@ -75,23 +76,6 @@ export default function ScriptDetailPage() {
   const [sceneToDelete, setSceneToDelete] = useState<number | null>(null);
   const deleteSceneTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const synopsisRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    fetchScript();
-  }, [scriptId]);
-
-  const fetchScript = async () => {
-    try {
-      setIsLoading(true);
-      const response = await api.get<UserScript>(`/api/scripts/${scriptId}`);
-      setScript(response.data);
-    } catch (error) {
-      console.error("Error fetching script:", error);
-      toast.error("Failed to load script");
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const startEditing = (field: string, currentValue: string) => {
     setEditingField(field);
@@ -113,8 +97,8 @@ export default function ScriptDetailPage() {
       await api.patch(`/api/scripts/${scriptId}`, update);
       toast.success("Updated successfully");
 
-      // Update local state
-      setScript({ ...script, [field]: editValue });
+      // Update SWR cache optimistically
+      mutateScript((prev) => prev ? { ...prev, [field]: editValue } : prev, false);
       setEditingField(null);
     } catch (error) {
       console.error("Update error:", error);
@@ -145,7 +129,7 @@ export default function ScriptDetailPage() {
     try {
       await api.delete(`/api/scripts/${scriptId}/scenes/${sceneId}`);
       toast.success("Scene deleted");
-      fetchScript();
+      mutateScript();
     } catch (error) {
       console.error("Delete error:", error);
       toast.error("Failed to delete scene");
@@ -250,11 +234,10 @@ export default function ScriptDetailPage() {
         </span>
       </nav>
 
-      {/* Two-column layout: script info (left) + scenes (right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="space-y-8 max-w-3xl">
 
-      {/* LEFT COLUMN: Script Info */}
-      <aside className="lg:sticky lg:top-6 lg:self-start space-y-4">
+      {/* Script Info */}
+      <section className="space-y-4">
       {/* Script info card */}
       <Card className="border-border/80 shadow-sm">
         <CardContent className="p-5 sm:p-6 space-y-4">
@@ -317,20 +300,15 @@ export default function ScriptDetailPage() {
                   </motion.div>
                 )}
               </AnimatePresence>
-              <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1.5">
-                  <Users className="w-4 h-4 shrink-0" />
-                  {script.num_characters} characters
-                </span>
-                <span className="flex items-center gap-1.5">
-                  <FileText className="w-4 h-4 shrink-0" />
-                  {script.num_scenes_extracted} scenes
-                </span>
+              <div className="flex flex-wrap items-center gap-1.5 mt-2 text-sm text-muted-foreground">
+                <span>{script.num_characters} characters</span>
+                <span className="text-muted-foreground/40">·</span>
+                <span>{script.num_scenes_extracted} scene{script.num_scenes_extracted !== 1 ? "s" : ""}</span>
                 {script.estimated_length_minutes != null && (
-                  <span className="flex items-center gap-1.5">
-                    <Clock className="w-4 h-4 shrink-0" />
-                    ~{script.estimated_length_minutes} min
-                  </span>
+                  <>
+                    <span className="text-muted-foreground/40">·</span>
+                    <span>~{script.estimated_length_minutes} min</span>
+                  </>
                 )}
               </div>
             </div>
@@ -563,20 +541,13 @@ export default function ScriptDetailPage() {
         </CardContent>
       </Card>
 
-      </aside>
+      </section>
 
-      {/* RIGHT COLUMN: Scenes */}
-      <main>
+      {/* Extracted Scenes */}
       <section aria-label="Scenes in this script" className="space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2 font-serif">
-            <Sparkles className="w-5 h-5 text-primary" />
-            Scenes ({script.scenes.length})
-          </h2>
-        </div>
-        <p className="text-sm text-muted-foreground">
-          Pick a scene, choose your character, and tap Rehearse. Use Edit to fix titles or lines.
-        </p>
+        <h2 className="text-lg font-semibold text-foreground font-serif">
+          Extracted Scenes ({script.scenes.length})
+        </h2>
 
         {script.scenes.length === 0 ? (
           <>
@@ -588,10 +559,9 @@ export default function ScriptDetailPage() {
             </Alert>
             <Card className="border-dashed border-border/80">
               <CardContent className="py-12 text-center">
-                <FileText className="w-12 h-12 text-muted-foreground/40 mx-auto mb-3" />
                 <h3 className="text-base font-semibold text-foreground mb-1 font-serif">No scenes extracted</h3>
                 <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                  Use Edit on another script or try pasting again with the correct format.
+                  Try pasting again with the correct format.
                 </p>
               </CardContent>
             </Card>
@@ -612,53 +582,33 @@ export default function ScriptDetailPage() {
                   className="h-full"
                 >
                   <Card
-                    className={cn(
-                      "overflow-hidden border-2 cursor-pointer transition-all h-full",
-                      "hover:shadow-lg hover:border-primary/50"
-                    )}
+                    className="overflow-hidden cursor-pointer transition-all h-full hover:shadow-md hover:border-primary/40"
                     onClick={() => router.push(`/my-scripts/${scriptId}/scenes/${scene.id}/edit`)}
                   >
-                    <CardContent className="p-5 space-y-4">
-                      {/* Scene title */}
+                    <CardContent className="p-5 space-y-3">
                       <div>
-                        <h3 className="text-lg font-semibold font-serif line-clamp-2 mb-2" title={scene.title}>
+                        <h3 className="text-base font-semibold font-serif line-clamp-2" title={scene.title}>
                           {scene.title}
                         </h3>
                         {scene.description && (
-                          <p className="text-sm text-muted-foreground italic line-clamp-2 mb-2">
+                          <p className="text-sm text-muted-foreground/80 line-clamp-2 mt-1 leading-relaxed">
                             {scene.description}
                           </p>
                         )}
-
-                        {/* Character badges */}
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="secondary" className="text-xs" title={scene.character_1_name}>
-                            {scene.character_1_name}
-                          </Badge>
-                          <Badge variant="secondary" className="text-xs" title={scene.character_2_name}>
-                            {scene.character_2_name}
-                          </Badge>
-                        </div>
                       </div>
 
-                      {/* Metadata */}
-                      <div className="flex gap-3 text-xs text-muted-foreground">
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                        <span>{scene.character_1_name}</span>
+                        <span className="text-muted-foreground/40">·</span>
+                        <span>{scene.character_2_name}</span>
+                        <span className="text-muted-foreground/40">·</span>
                         <ScenePreviewTooltip sceneId={scene.id}>
-                          <span className="flex items-center gap-1 cursor-default hover:text-foreground transition-colors" onClick={(e) => e.stopPropagation()}>
-                            <FileText className="w-3.5 h-3.5" />
+                          <span className="cursor-help underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors" onClick={(e) => e.stopPropagation()}>
                             {scene.line_count} lines
                           </span>
                         </ScenePreviewTooltip>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5" />
-                          {formatDuration(scene.estimated_duration_seconds)}
-                        </span>
-                      </div>
-
-                      {/* Action hint */}
-                      <div className="flex items-center gap-1.5 text-xs text-primary font-medium pt-2 border-t border-border/50">
-                        <span>Open scene</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
+                        <span className="text-muted-foreground/40">·</span>
+                        <span>{formatDuration(scene.estimated_duration_seconds)}</span>
                       </div>
                     </CardContent>
                   </Card>
@@ -668,9 +618,8 @@ export default function ScriptDetailPage() {
           </div>
         )}
       </section>
-      </main>
 
-      </div>{/* End two-column grid */}
+      </div>
 
       <ConfirmDeleteDialog
         open={deleteSceneDialogOpen}
