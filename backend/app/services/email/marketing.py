@@ -64,33 +64,19 @@ def _get_marketing_recipients(
     target: str = "all",
 ) -> list[User]:
     """
-    Query users who opted in to marketing, optionally filtered by tier.
+    Query users filtered by tier. Unsubscribed users (marketing_opt_in=False)
+    are excluded; everyone else is included.
 
     target:
-        "all"  — every opted-in user
-        "free" — only users on the free tier (no active paid subscription)
+        "all"  — every subscribed user
+        "free" — only free-tier users
         "paid" — only users with an active paid subscription
     """
-    if target == "all_users":
-        return db.query(User).all()
-
-    if target == "all_free":
-        # All free-tier users regardless of opt-in
-        paid_user_ids = (
-            db.query(UserSubscription.user_id)
-            .join(PricingTier, UserSubscription.tier_id == PricingTier.id)
-            .filter(
-                UserSubscription.status.in_(["active", "trialing"]),
-                PricingTier.name != "free",
-            )
-            .subquery()
-        )
-        return db.query(User).filter(~User.id.in_(paid_user_ids)).all()
-
     query = db.query(User).filter(User.marketing_opt_in.is_(True))
 
-    if target == "free":
-        # Users with no active paid subscription
+    if target == "all":
+        pass  # no additional filter
+    elif target == "free":
         paid_user_ids = (
             db.query(UserSubscription.user_id)
             .join(PricingTier, UserSubscription.tier_id == PricingTier.id)
@@ -101,7 +87,6 @@ def _get_marketing_recipients(
             .subquery()
         )
         query = query.filter(~User.id.in_(paid_user_ids))
-
     elif target == "paid":
         paid_user_ids = (
             db.query(UserSubscription.user_id)

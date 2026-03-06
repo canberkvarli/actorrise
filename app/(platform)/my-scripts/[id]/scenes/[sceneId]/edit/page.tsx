@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import useSWR from "swr";
 import { useRouter, useParams } from "next/navigation";
 import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import UnderConstructionScripts from "@/components/UnderConstructionScripts";
@@ -66,9 +67,92 @@ import {
   setRehearsalSettings as persistRehearsalSettings,
   type RehearsalSettings,
 } from "@/lib/scenepartnerStorage";
+import { renderTextWithStageDirections } from "@/lib/stageDirections";
 import { ContactModal } from "@/components/contact/ContactModal";
 import { TTSWaveform } from "@/components/scenepartner/TTSWaveform";
 import { useMicPermission } from "@/hooks/useMicPermission";
+
+// ---------------------------------------------------------------------------
+// Rehearsal loading overlay (whimsical texts)
+// ---------------------------------------------------------------------------
+
+const REHEARSAL_LOADING_TEXTS = [
+  "Warming up the stage lights...",
+  "Getting into character...",
+  "Brushing up on the lines...",
+  "Setting the scene...",
+  "Cueing the spotlight...",
+];
+
+function RehearsalLoadingOverlay() {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setIdx(i => (i + 1) % REHEARSAL_LOADING_TEXTS.length), 2500);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[9999] bg-neutral-950 flex items-center justify-center"
+    >
+      <div className="text-center space-y-4">
+        <div className="h-8 w-8 rounded-full border-2 border-neutral-700 border-t-primary animate-spin mx-auto" />
+        <motion.p
+          key={idx}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-neutral-500 text-sm"
+        >
+          {REHEARSAL_LOADING_TEXTS[idx]}
+        </motion.p>
+      </div>
+    </motion.div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Scene edit loading screen (whimsical texts, dark theme)
+// ---------------------------------------------------------------------------
+
+const SCENE_EDIT_LOADING_TEXTS = [
+  "Setting the scene...",
+  "Arranging the script pages...",
+  "Warming up the stage lights...",
+  "Finding your mark...",
+  "Cueing the spotlight...",
+];
+
+function SceneEditLoadingScreen() {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setIdx((i) => (i + 1) % SCENE_EDIT_LOADING_TEXTS.length), 2500);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <motion.div
+          className="relative mx-auto"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+        >
+          <div className="h-8 w-8 rounded-full border-2 border-neutral-700 border-t-primary animate-spin mx-auto" />
+        </motion.div>
+        <motion.p
+          key={idx}
+          initial={{ opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-neutral-500 text-sm"
+        >
+          {SCENE_EDIT_LOADING_TEXTS[idx]}
+        </motion.p>
+      </div>
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -558,36 +642,44 @@ export default function SceneEditPage() {
     }
   }, [sortedLineIds]);
 
-  // Fetch scene
-  useEffect(() => {
-    if (!sceneId) return;
-    (async () => {
-      try {
-        const { data } = await api.get<SceneDetail>(`/api/scenes/${sceneId}`);
-        setScene(data);
-        // Store original snapshot for reset (deep clone)
-        originalSceneRef.current = JSON.parse(JSON.stringify(data));
-        // Default character selection to character_1
-        setSelectedCharacter(data.character_1_name);
-        // Load saved voices — auto-assign defaults if none set
-        const saved = getCharacterVoices(sceneId);
-        if (!saved.character_1_voice || !saved.character_2_voice) {
-          const updated = { ...saved };
-          if (!updated.character_1_voice) updated.character_1_voice = "coral";
-          if (!updated.character_2_voice) updated.character_2_voice = "ash";
-          setCharacterVoices(sceneId, updated);
-          setCharVoices(updated);
-        } else {
-          setCharVoices(saved);
-        }
-      } catch {
+  // Fetch scene via SWR for instant revisits (cached data shows immediately)
+  const { data: swrScene } = useSWR<SceneDetail>(
+    sceneId ? `/api/scenes/${sceneId}` : null,
+    () => api.get<SceneDetail>(`/api/scenes/${sceneId}`).then((r) => r.data),
+    {
+      revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      dedupingInterval: 60000,
+      onError: () => {
         toast.error("Failed to load scene");
         router.push(`/my-scripts/${scriptId}`);
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [sceneId, scriptId, router]);
+      },
+    }
+  );
+
+  // Seed local state from SWR data (runs once when data first arrives)
+  const initializedSceneIdRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (!swrScene || initializedSceneIdRef.current === swrScene.id) return;
+    initializedSceneIdRef.current = swrScene.id;
+    setScene(swrScene);
+    setLoading(false);
+    // Store original snapshot for reset (deep clone)
+    originalSceneRef.current = JSON.parse(JSON.stringify(swrScene));
+    // Default character selection to character_1
+    setSelectedCharacter(swrScene.character_1_name);
+    // Load saved voices — auto-assign defaults if none set
+    const saved = getCharacterVoices(sceneId);
+    if (!saved.character_1_voice || !saved.character_2_voice) {
+      const updated = { ...saved };
+      if (!updated.character_1_voice) updated.character_1_voice = "coral";
+      if (!updated.character_2_voice) updated.character_2_voice = "ash";
+      setCharacterVoices(sceneId, updated);
+      setCharVoices(updated);
+    } else {
+      setCharVoices(saved);
+    }
+  }, [swrScene, sceneId]);
 
   // ---------------------------------------------------------------------------
   // Save helpers
@@ -1341,7 +1433,7 @@ export default function SceneEditPage() {
   // ---------------------------------------------------------------------------
 
   if (loading || !scene) {
-    return <div className="min-h-screen bg-neutral-950" />;
+    return <SceneEditLoadingScreen />;
   }
 
   // ---------------------------------------------------------------------------
@@ -2289,11 +2381,7 @@ export default function SceneEditPage() {
                             onClick={(e) => { e.stopPropagation(); setVoiceDropdownOpen(voiceDropdownOpen === editDropdownKey ? null : editDropdownKey); }}
                             className="inline-flex items-center gap-1.5 hover:opacity-80 transition-opacity"
                           >
-                            {isMine ? (
-                              <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
-                                {line.character_name[0]?.toUpperCase()}
-                              </div>
-                            ) : editVoice ? (
+                            {!isMine && (editVoice ? (
                               <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0", editVoice.color)}>
                                 {editVoice.label[0]}
                               </div>
@@ -2301,7 +2389,7 @@ export default function SceneEditPage() {
                               <div className="w-5 h-5 rounded-full bg-neutral-400 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
                                 {line.character_name[0]?.toUpperCase()}
                               </div>
-                            )}
+                            ))}
                             <span className="text-sm font-bold uppercase tracking-widest text-neutral-700">{line.character_name}</span>
                             <ChevronDown className="w-3 h-3 text-neutral-400" />
                           </button>
@@ -2554,12 +2642,8 @@ export default function SceneEditPage() {
                             onClick={(e) => { e.stopPropagation(); e.preventDefault(); setVoiceDropdownOpen(voiceDropdownOpen === dropdownKey ? null : dropdownKey); }}
                             className="inline-flex items-center gap-1.5 hover:opacity-80 transition-opacity"
                           >
-                            {/* Avatar */}
-                            {isMine ? (
-                              <div className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
-                                {line.character_name[0]?.toUpperCase()}
-                              </div>
-                            ) : voice ? (
+                            {/* Avatar — only for AI character */}
+                            {!isMine && (voice ? (
                               <div className={cn("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0", voice.color)}>
                                 {voice.label[0]}
                               </div>
@@ -2567,7 +2651,7 @@ export default function SceneEditPage() {
                               <div className="w-6 h-6 rounded-full bg-neutral-400 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
                                 {line.character_name[0]?.toUpperCase()}
                               </div>
-                            )}
+                            ))}
                             <span className="text-sm font-bold uppercase tracking-widest text-neutral-900">
                               {line.character_name}
                             </span>
@@ -2682,7 +2766,7 @@ export default function SceneEditPage() {
                         animate={highlightMyLines && isMine ? { scale: [1, 1.01, 1] } : { scale: 1 }}
                         transition={{ duration: 0.3 }}
                       >
-                        {line.text}
+                        {renderTextWithStageDirections(line.text)}
                       </motion.p>
                     </div>
                     </div>
@@ -2885,20 +2969,10 @@ export default function SceneEditPage() {
         </motion.main>
       </div>
 
-      {/* Full-screen overlay when starting rehearsal — blocks all interaction */}
+      {/* Full-screen overlay when starting rehearsal — whimsical loading */}
       <AnimatePresence>
         {startingRehearsal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[9999] bg-neutral-950 flex items-center justify-center"
-          >
-            <div className="text-center space-y-4">
-              <div className="h-8 w-8 rounded-full border-2 border-neutral-700 border-t-primary animate-spin mx-auto" />
-              <p className="text-neutral-400 text-sm">Preparing rehearsal...</p>
-            </div>
-          </motion.div>
+          <RehearsalLoadingOverlay />
         )}
       </AnimatePresence>
 
@@ -2998,6 +3072,7 @@ export default function SceneEditPage() {
                         setShowMicModal(true);
                         return;
                       }
+                      setShowRehearsalModal(false);
                       handleStartRehearsal();
                     }}
                     disabled={startingRehearsal || !selectedCharacter}

@@ -50,10 +50,9 @@ def get_current_user(
     supabase_id = token_data.get("sub")
     email = token_data.get("email")
 
-    # Extract name and marketing preference from token metadata
+    # Extract name from token metadata
     user_metadata = token_data.get("user_metadata", {}) or {}
     name = user_metadata.get("name") or user_metadata.get("full_name")
-    marketing_opt_in = user_metadata.get("marketing_opt_in") is True
 
     if not supabase_id:
         raise HTTPException(
@@ -85,12 +84,12 @@ def get_current_user(
             db.refresh(existing_user)
             return existing_user
 
-        # Create new user (marketing_opt_in: explicit opt-in only, never default True)
+        # Create new user (all users receive marketing emails; they can unsubscribe)
         user = User(
             email=email,
             supabase_id=supabase_id,
             name=name,
-            marketing_opt_in=marketing_opt_in,
+            marketing_opt_in=True,
         )
         db.add(user)
         db.commit()

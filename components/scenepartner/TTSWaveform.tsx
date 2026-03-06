@@ -16,8 +16,8 @@ interface TTSWaveformProps {
   className?: string;
 }
 
-const BAR_COUNT = 40;
-const IDLE_HEIGHT = 2; // px
+const BAR_COUNT = 24;
+const IDLE_HEIGHT = 1.5; // px
 const ONSET_THRESHOLD = 12; // avg frequency amplitude to consider "speech started"
 
 // Shared AudioContext + per-element source cache (one source per element lifetime)
@@ -149,14 +149,14 @@ export function TTSWaveform({
             Math.floor(1 + (i / BAR_COUNT) * (freqData.length - 2))
           );
           const value = freqData[binIndex] / 255;
-          barH = Math.max(IDLE_HEIGHT, value * h * 0.85);
+          barH = Math.max(IDLE_HEIGHT, value * h * 0.7);
         } else if (isSpeaking || isLoading) {
-          const speed = isSpeaking ? 0.06 : 0.03;
-          const amplitude = isSpeaking ? 0.55 : 0.25;
+          const speed = isSpeaking ? 0.04 : 0.025;
+          const amplitude = isSpeaking ? 0.35 : 0.18;
           const p1 = Math.sin(frame * speed + i * 0.35);
           const p2 = Math.sin(frame * speed * 0.7 + i * 0.5 + 1.5);
           const combined = p1 * 0.6 + p2 * 0.4;
-          barH = Math.max(IDLE_HEIGHT, (0.25 + amplitude * Math.abs(combined)) * h);
+          barH = Math.max(IDLE_HEIGHT, (0.15 + amplitude * Math.abs(combined)) * h);
         } else {
           barH = IDLE_HEIGHT;
         }
@@ -165,10 +165,10 @@ export function TTSWaveform({
         const y = (h - barH) / 2;
 
         ctx.fillStyle = isSpeaking
-          ? `rgba(234, 88, 12, ${0.4 + (barH / h) * 0.6})`
+          ? `rgba(203, 75, 0, ${0.2 + (barH / h) * 0.5})`
           : isLoading
-          ? "rgba(156, 163, 175, 0.4)"
-          : "rgba(212, 212, 216, 0.3)";
+          ? "rgba(156, 163, 175, 0.3)"
+          : "rgba(212, 212, 216, 0.2)";
 
         ctx.beginPath();
         ctx.roundRect(x, y, barW, barH, barW / 2);

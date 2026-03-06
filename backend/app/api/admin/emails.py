@@ -573,7 +573,7 @@ def send_campaign_endpoint(
     db: Session = Depends(get_db),
 ):
     """Send a campaign to a user segment."""
-    if body.target not in ("all", "free", "paid", "all_users", "all_free"):
+    if body.target not in ("all", "free", "paid"):
         raise HTTPException(status_code=400, detail="target must be all, free, or paid")
 
     campaign_type = body.template_id
