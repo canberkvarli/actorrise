@@ -20,15 +20,32 @@ export type SearchFiltersState = {
   emotion: string;
   theme: string;
   category: string;
+  tone: string;
+  difficulty: string;
+  author: string;
+  max_duration: string;
 };
 
 const FILTER_CONFIG = [
   { key: "gender" as const, label: "Gender", options: ["male", "female", "any"] },
   { key: "age_range" as const, label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
   { key: "emotion" as const, label: "Emotion", options: ["joy", "sadness", "anger", "fear", "melancholy", "hope"] },
+  { key: "tone" as const, label: "Tone", options: ["dramatic", "comedic", "dark", "romantic", "philosophical", "contemplative"] },
   { key: "theme" as const, label: "Theme", options: ["love", "death", "betrayal", "identity", "power", "revenge"] },
+  { key: "difficulty" as const, label: "Difficulty", options: ["beginner", "intermediate", "advanced"] },
   { key: "category" as const, label: "Category", options: ["classical", "contemporary"] },
 ];
+
+const DURATION_OPTIONS = [
+  { value: "60", label: "1 min" },
+  { value: "90", label: "1.5 min" },
+  { value: "120", label: "2 min" },
+  { value: "180", label: "3 min" },
+  { value: "300", label: "5 min" },
+];
+
+export const getDurationLabel = (seconds: string) =>
+  DURATION_OPTIONS.find((d) => d.value === seconds)?.label ?? `${seconds}s`;
 
 const getFreshnessLabel = (score: number) =>
   score <= 0 ? "Freshest only" : score <= 0.3 ? "Fresh" : score <= 0.5 ? "Some overdone OK" : score <= 0.7 ? "More OK" : "Show all";
@@ -53,7 +70,7 @@ export function SearchFiltersSheet({
   const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
   const hasFreshnessFilter = maxOverdoneScore < 1;
   const clearAll = () => {
-    setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "" });
+    setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" });
     setMaxOverdoneScore(1);
   };
 
@@ -97,6 +114,37 @@ export function SearchFiltersSheet({
             </div>
           ))}
 
+          <div className="space-y-2">
+            <Label className="text-sm text-muted-foreground">Author</Label>
+            <input
+              type="text"
+              placeholder="e.g. Shakespeare"
+              value={filters.author}
+              onChange={(e) => setFilters({ ...filters, author: e.target.value })}
+              className="w-full min-h-[48px] px-4 py-3 text-base rounded-lg border border-input bg-background"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm text-muted-foreground">Max Duration</Label>
+            <Select
+              value={filters.max_duration || "__none__"}
+              onValueChange={(v) => setFilters({ ...filters, max_duration: v === "__none__" ? "" : v })}
+            >
+              <SelectTrigger className="min-h-[48px] px-4 py-3 text-base">
+                <SelectValue placeholder="Any" />
+              </SelectTrigger>
+              <SelectContent side="bottom" sideOffset={4}>
+                <SelectItem value="__none__">Any</SelectItem>
+                {DURATION_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="pt-4 border-t border-border/80 space-y-3">
             <div className="flex items-center gap-2">
               <Label className="text-sm font-medium text-muted-foreground shrink-0">Freshness</Label>
@@ -134,7 +182,7 @@ export function SearchFiltersSheet({
             <div className="flex flex-wrap gap-2 pt-2 border-t">
               {activeFilters.map(([key, value]) => (
                 <Badge key={key} variant="secondary" className="gap-1 capitalize">
-                  {key.replace(/_/g, " ")}: {value}
+                  {key.replace(/_/g, " ")}: {key === "max_duration" ? getDurationLabel(value) : value}
                   <button
                     type="button"
                     onClick={() => setFilters({ ...filters, [key]: "" })}
