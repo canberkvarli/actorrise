@@ -291,7 +291,7 @@ export default function RehearsalPage() {
     analyserRef,
   } = useWhisperSTT({
     silenceThreshold: 25,
-    silenceTimeoutMs: 1000,
+    silenceTimeoutMs: 2500,
     prompt: currentUserLineText ? stripStageDirections(currentUserLineText) : undefined,
     onResult: (text) => {
       if (srAdvancedRef.current) return; // SR already advanced this line — ignore late Whisper result
@@ -1263,7 +1263,7 @@ export default function RehearsalPage() {
                       )}
 
                       {/* Line text — live highlights while listening, post-result highlights after */}
-                      <p className="text-[17px] font-medium leading-relaxed text-neutral-800 text-center break-words whitespace-pre-wrap">
+                      <p className="text-[17px] font-semibold leading-relaxed text-black text-center break-words whitespace-pre-wrap">
                         {isCurrentUserLine && wordMatchResult
                           ? renderLineWithWordHighlights(line.text, wordMatchResult)
                           : isCurrentUserLine && liveWordResult
