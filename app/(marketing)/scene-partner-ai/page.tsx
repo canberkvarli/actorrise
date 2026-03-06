@@ -59,6 +59,65 @@ export default function Page() {
           <Link href="/audition-ai">Learn more about Audition AI</Link>
         </Button>
       </div>
+
+      <div className="mt-12 space-y-3 text-sm text-muted-foreground">
+        <p>
+          Need material first? Try the{" "}
+          <Link href="/monologue-finder" className="text-foreground underline hover:no-underline">
+            monologue finder
+          </Link>{" "}
+          or browse{" "}
+          <Link href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
+            dramatic monologues
+          </Link>{" "}
+          and{" "}
+          <Link href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
+            contemporary monologues
+          </Link>
+          .
+        </p>
+      </div>
+
+      <section className="mt-16 border-t border-border pt-12">
+        <h2 className="text-2xl font-bold text-foreground mb-8">Frequently asked questions</h2>
+
+        <div className="space-y-6">
+          <div>
+            <h3 className="font-semibold text-foreground mb-2">
+              How does ScenePartner AI work?
+            </h3>
+            <p className="text-muted-foreground">
+              Pick a scene or monologue, choose which character you want to play, and hit start.
+              ScenePartner reads the other lines out loud using text-to-speech. It listens for your
+              cue lines and advances automatically, so you can rehearse hands-free.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-foreground mb-2">
+              Is ScenePartner free?
+            </h3>
+            <p className="text-muted-foreground">
+              The free tier includes limited ScenePartner sessions. For unlimited rehearsal, check
+              the{" "}
+              <Link href="/pricing" className="text-foreground underline hover:no-underline">
+                pricing page
+              </Link>
+              .
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-foreground mb-2">
+              Can I use my own sides or scripts?
+            </h3>
+            <p className="text-muted-foreground">
+              Yes. You can paste or upload your own audition sides and rehearse them with
+              ScenePartner. It works with any text, not just material from the ActorRise database.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

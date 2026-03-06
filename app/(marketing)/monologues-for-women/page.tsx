@@ -35,6 +35,65 @@ export default function Page() {
           Search monologues for women
         </Link>
       </Button>
+
+      <div className="mt-12 space-y-3 text-sm text-muted-foreground">
+        <p>
+          Browse by category:{" "}
+          <Link href="/monologues/comedic-woman-under-2-minutes" className="text-foreground underline hover:no-underline">
+            comedic monologues for women under 2 minutes
+          </Link>
+          ,{" "}
+          <Link href="/dramatic-monologues" className="text-foreground underline hover:no-underline">
+            dramatic monologues
+          </Link>
+          , or{" "}
+          <Link href="/contemporary-monologues" className="text-foreground underline hover:no-underline">
+            contemporary monologues
+          </Link>
+          .
+        </p>
+      </div>
+
+      <section className="mt-16 border-t border-border pt-12">
+        <h2 className="text-2xl font-bold text-foreground mb-8">Frequently asked questions</h2>
+
+        <div className="space-y-6">
+          <div>
+            <h3 className="font-semibold text-foreground mb-2">
+              How do I pick the right monologue for an audition?
+            </h3>
+            <p className="text-muted-foreground">
+              Match the tone of the show. If you&apos;re auditioning for a comedy, bring a comedic
+              piece. If the breakdown mentions a specific age range or type, search for that. The
+              Overdone filter helps you avoid pieces casting directors have heard a thousand times.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-foreground mb-2">
+              Can I filter monologues by age range?
+            </h3>
+            <p className="text-muted-foreground">
+              Yes. Describe the age range in your search, like &quot;monologue for woman in her
+              20s&quot; or &quot;older woman, 50s, serious.&quot; The AI understands natural language
+              so you don&apos;t need to pick from dropdown menus.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-foreground mb-2">
+              Can I rehearse monologues on ActorRise?
+            </h3>
+            <p className="text-muted-foreground">
+              Yes. Save any monologue and rehearse it with{" "}
+              <Link href="/scene-partner-ai" className="text-foreground underline hover:no-underline">
+                ScenePartner AI
+              </Link>
+              , which reads the other lines out loud so you can practice on your own.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

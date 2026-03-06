@@ -59,6 +59,70 @@ export default function Page() {
           <Link href="/scene-partner-ai">Learn about ScenePartner</Link>
         </Button>
       </div>
+
+      <div className="mt-12 space-y-3 text-sm text-muted-foreground">
+        <p>
+          Looking for material? Try the{" "}
+          <Link href="/monologue-finder" className="text-foreground underline hover:no-underline">
+            monologue finder
+          </Link>
+          , browse{" "}
+          <Link href="/audition-monologues" className="text-foreground underline hover:no-underline">
+            audition monologues
+          </Link>
+          , or explore{" "}
+          <Link href="/monologues-for-women" className="text-foreground underline hover:no-underline">
+            monologues for women
+          </Link>{" "}
+          and{" "}
+          <Link href="/monologues-for-men" className="text-foreground underline hover:no-underline">
+            monologues for men
+          </Link>
+          .
+        </p>
+      </div>
+
+      <section className="mt-16 border-t border-border pt-12">
+        <h2 className="text-2xl font-bold text-foreground mb-8">Frequently asked questions</h2>
+
+        <div className="space-y-6">
+          <div>
+            <h3 className="font-semibold text-foreground mb-2">
+              Is ActorRise free to use?
+            </h3>
+            <p className="text-muted-foreground">
+              Yes. The free tier gives you access to monologue search and limited ScenePartner
+              sessions. No credit card required. Check the{" "}
+              <Link href="/pricing" className="text-foreground underline hover:no-underline">
+                pricing page
+              </Link>{" "}
+              for details on paid plans.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-foreground mb-2">
+              How is this different from rehearsing with a friend?
+            </h3>
+            <p className="text-muted-foreground">
+              It&apos;s available whenever you need it. No scheduling, no asking for favors.
+              ScenePartner reads the lines consistently every time, which is great for drilling
+              memorization and working on your choices before you bring it to a real scene partner.
+            </p>
+          </div>
+
+          <div>
+            <h3 className="font-semibold text-foreground mb-2">
+              What kind of material can I rehearse?
+            </h3>
+            <p className="text-muted-foreground">
+              Anything. Monologues and scenes from the 8,600+ piece database, your own sides or
+              scripts that you paste in, or film and TV scene references from the 14,000+ reference
+              library.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
