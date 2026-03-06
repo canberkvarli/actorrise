@@ -402,6 +402,8 @@ export default function RehearsalPage() {
   }, [useAIVoice, speakAI, speakBrowser, isSpeechSynthesisSupported, isListening, stopListening]);
   const speakLineRef = useRef(speakLine);
   speakLineRef.current = speakLine;
+  const preloadTTSRef = useRef(preloadTTS);
+  preloadTTSRef.current = preloadTTS;
 
   /* ── Core: advance to a specific line index ────────────────────── */
 
@@ -520,13 +522,21 @@ export default function RehearsalPage() {
         const cached = typeof sessionStorage !== 'undefined'
           ? sessionStorage.getItem(cacheKey)
           : null;
+        let sceneData: SceneWithLines;
         if (cached) {
-          setSceneWithLines(JSON.parse(cached));
+          sceneData = JSON.parse(cached);
         } else {
           const sceneRes = await api.get<SceneWithLines>(`/api/scenes/${data.scene_id}`);
-          setSceneWithLines(sceneRes.data);
-          try { sessionStorage.setItem(cacheKey, JSON.stringify(sceneRes.data)); } catch { /* quota */ }
+          sceneData = sceneRes.data;
+          try { sessionStorage.setItem(cacheKey, JSON.stringify(sceneData)); } catch { /* quota */ }
         }
+        setSceneWithLines(sceneData);
+        // Eagerly preload first AI lines during loading screen so they're cached before countdown ends
+        const voiceId = voiceParam || data.ai_voice_id || 'coral';
+        sceneData.lines
+          .filter(l => l.character_name === data.ai_character)
+          .slice(0, 5)
+          .forEach(l => preloadTTSRef.current(stripStageDirections(l.text), voiceId, ''));
       } catch {
         // Non-fatal
       }
@@ -1084,7 +1094,7 @@ export default function RehearsalPage() {
       {/* Script parchment */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-6">
         <div
-          className="max-w-2xl mx-auto bg-white text-neutral-900 rounded-lg shadow-2xl border border-neutral-200 px-4 sm:px-6 py-5 sm:py-7"
+          className="max-w-3xl mx-auto bg-white text-neutral-900 rounded-lg shadow-2xl border border-neutral-200 px-4 sm:px-6 py-5 sm:py-7"
           style={{ fontFamily: '"Courier New", Courier, monospace' }}
         >
           {sceneWithLines ? (
@@ -1191,7 +1201,7 @@ export default function RehearsalPage() {
                       )}
 
                       {/* Line text — live highlights while listening, post-result highlights after */}
-                      <p className="text-[17px] font-normal leading-relaxed text-[#000] text-center break-words whitespace-pre-wrap">
+                      <p className="text-[17px] font-medium leading-relaxed text-[#000] text-center break-words whitespace-pre-wrap">
                         {isCurrentUserLine && wordMatchResult
                           ? renderLineWithWordHighlights(line.text, wordMatchResult)
                           : isCurrentUserLine && liveWordResult
