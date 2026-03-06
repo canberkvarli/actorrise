@@ -727,11 +727,11 @@ export default function RehearsalPage() {
         }
         setLiveMatchedIndices(matched);
 
-        // Instant advance: SR final result with ≥55% strict sequential match
-        // Uses the same sequential matched set — words must be said in order from the start
+        // Instant advance: SR final result with ≥75% strict sequential match
+        // High threshold ensures user says most of the line before jumping
         if (hasFinal && !srAdvancedRef.current) {
           const score = expectedWords.length > 0 ? matched.size / expectedWords.length : 1;
-          if (score >= 0.55) {
+          if (score >= 0.75) {
             srAdvancedRef.current = true;
             try { recognition.stop(); liveRecognitionRef.current = null; } catch {}
             cancelTranscriptionRef.current();
