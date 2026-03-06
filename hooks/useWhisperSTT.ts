@@ -52,6 +52,7 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
   const stoppedRef = useRef(false); // prevent double-stop
   const mimeTypeRef = useRef<string>('audio/webm');
   const recordingStartRef = useRef<number>(0); // for minimum recording time guard
+  const speechDetectedRef = useRef(false); // only start silence timer after speech is detected
   const skipNextTranscriptionRef = useRef(false); // set by cancelTranscription to skip the next blob
   const transcribeAbortRef = useRef<AbortController | null>(null); // abort in-flight Whisper request
 
@@ -183,15 +184,20 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     analyserRef.current = analyser;
     const freqData = new Uint8Array(analyser.frequencyBinCount);
     silenceStartRef.current = null;
+    speechDetectedRef.current = false;
 
     const checkSilence = () => {
       if (stoppedRef.current) return;
       analyser.getByteFrequencyData(freqData);
       const peak = Math.max(...Array.from(freqData));
 
-      if (peak < silenceThreshold) {
+      if (peak >= silenceThreshold) {
+        // Speech detected — reset silence timer
+        speechDetectedRef.current = true;
+        silenceStartRef.current = null;
+      } else if (speechDetectedRef.current) {
+        // Only start silence countdown AFTER speech was detected
         if (silenceStartRef.current === null) silenceStartRef.current = Date.now();
-        // Don't stop until at least 400ms of recording has passed (prevents corrupt short files)
         else if (
           Date.now() - silenceStartRef.current >= silenceTimeoutMs &&
           Date.now() - recordingStartRef.current >= 400
@@ -199,9 +205,8 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
           stopRecording();
           return;
         }
-      } else {
-        silenceStartRef.current = null;
       }
+      // Before speech detected: keep listening indefinitely
       rafRef.current = requestAnimationFrame(checkSilence);
     };
     rafRef.current = requestAnimationFrame(checkSilence);
