@@ -712,6 +712,7 @@ export default function RehearsalPage() {
         }
         // Sequential/greedy match — walk expected words left-to-right through spoken words
         // so duplicate words only highlight the correct positional occurrence
+        // Strictly sequential match — can't highlight word N without saying word N-1 first
         const spokenWords = norm(transcript).split(/\s+/).filter(Boolean);
         const matched = new Set<number>();
         let spokenCursor = 0;
@@ -720,6 +721,8 @@ export default function RehearsalPage() {
           if (found !== -1) {
             matched.add(ei);
             spokenCursor = found + 1;
+          } else {
+            break; // Stop at first unmatched word — no skipping ahead
           }
         }
         setLiveMatchedIndices(matched);
@@ -1263,7 +1266,7 @@ export default function RehearsalPage() {
                       )}
 
                       {/* Line text — live highlights while listening, post-result highlights after */}
-                      <p className="text-[17px] font-normal leading-relaxed text-neutral-800 text-center break-words whitespace-pre-wrap">
+                      <p className="text-[17px] font-medium leading-relaxed text-neutral-800 text-center break-words whitespace-pre-wrap">
                         {isCurrentUserLine && wordMatchResult
                           ? renderLineWithWordHighlights(line.text, wordMatchResult)
                           : isCurrentUserLine && liveWordResult
