@@ -66,30 +66,23 @@ interface WordMatchResult {
 }
 
 /** Renders line text with per-word highlight coloring based on word match result.
- *  Stage directions ([bracket]) are preserved as italic spans. */
+ *  Uses position-based indexing (not word-text keys) so duplicate words are
+ *  highlighted independently. Stage directions ([bracket]) are italic and don't
+ *  consume word positions. */
 function renderLineWithWordHighlights(text: string, result: WordMatchResult) {
   const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-  const wordMap = new Map(result.words.map(w => [w.word, w.matched]));
 
-  const highlightSegment = (segment: string, baseKey: string) => {
-    const tokens = segment.split(/(\s+)/);
-    return tokens.map((token, i) => {
-      if (!token || /^\s+$/.test(token)) return token;
-      const key = `${baseKey}-${i}`;
-      const normalized = norm(token);
-      const matched = wordMap.get(normalized);
-      if (matched === true) {
-        return <span key={key} className="text-primary font-semibold">{token}</span>;
-      } else if (matched === false) {
-        return <span key={key} className="opacity-35">{token}</span>;
-      }
-      return token;
-    });
+  // wordPos tracks which result.words[i] we're consuming — positional, not text-keyed
+  let wordPos = 0;
+
+  const highlightToken = (token: string, key: string) => {
+    const normalized = norm(token);
+    if (!normalized) return <span key={key}>{token}</span>; // punctuation-only, no position consumed
+    const entry = result.words[wordPos++];
+    if (!entry) return <span key={key}>{token}</span>;
+    if (entry.matched) return <span key={key} className="text-primary">{token}</span>;
+    return <span key={key} className="opacity-40">{token}</span>;
   };
-
-  if (!text.includes('[')) {
-    return <>{highlightSegment(text, 't')}</>;
-  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const parts: any[] = [];
@@ -97,10 +90,16 @@ function renderLineWithWordHighlights(text: string, result: WordMatchResult) {
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
+  const processSegment = (segment: string, baseKey: string) => {
+    segment.split(/(\s+)/).forEach((token, i) => {
+      if (/^\s*$/.test(token)) { parts.push(token); return; }
+      parts.push(highlightToken(token, `${baseKey}-${i}`));
+    });
+  };
+
   while ((match = regex.exec(text)) !== null) {
-    if (match.index > lastIndex) {
-      parts.push(...highlightSegment(text.slice(lastIndex, match.index), `t${lastIndex}`));
-    }
+    if (match.index > lastIndex) processSegment(text.slice(lastIndex, match.index), `t${lastIndex}`);
+    // Stage directions are NOT part of result.words — render italic, skip wordPos
     parts.push(
       <em key={`d${match.index}`} className="italic text-neutral-500 text-[0.85em]">
         ({match[1]})
@@ -108,9 +107,7 @@ function renderLineWithWordHighlights(text: string, result: WordMatchResult) {
     );
     lastIndex = regex.lastIndex;
   }
-  if (lastIndex < text.length) {
-    parts.push(...highlightSegment(text.slice(lastIndex), `t${lastIndex}`));
-  }
+  if (lastIndex < text.length) processSegment(text.slice(lastIndex), `t${lastIndex}`);
   return <>{parts}</>;
 }
 
@@ -1087,7 +1084,7 @@ export default function RehearsalPage() {
       {/* Script parchment */}
       <div className="flex-1 overflow-y-auto p-3 sm:p-6">
         <div
-          className="max-w-xl mx-auto bg-white text-neutral-900 rounded-lg shadow-2xl border border-neutral-200 px-4 sm:px-5 py-5 sm:py-7"
+          className="max-w-2xl mx-auto bg-white text-neutral-900 rounded-lg shadow-2xl border border-neutral-200 px-4 sm:px-6 py-5 sm:py-7"
           style={{ fontFamily: '"Courier New", Courier, monospace' }}
         >
           {sceneWithLines ? (
@@ -1124,10 +1121,10 @@ export default function RehearsalPage() {
                       animate={isCurrentUserLine && shouldShake ? { x: [-8, 8, -6, 6, -4, 4, 0] } : {}}
                       transition={{ duration: 0.4, ease: 'easeInOut' }}
                       className={cn(
-                        'rounded-lg px-3 sm:px-4 py-3 border-l-2 border-r border-y border-r-transparent border-y-transparent transition-colors duration-150',
-                        !isCurrent && 'opacity-80 cursor-pointer hover:opacity-95 border-l-transparent',
-                        isCurrentUserLine && 'border-l-orange-400/60',
-                        isCurrentAiLine && 'border-l-primary/40',
+                        'rounded-lg px-3 sm:px-4 py-3 transition-all duration-200',
+                        !isCurrent && 'opacity-40 cursor-pointer hover:opacity-65',
+                        isCurrentUserLine && 'bg-orange-50/80 ring-1 ring-orange-200/60',
+                        isCurrentAiLine && 'bg-neutral-100/60 ring-1 ring-neutral-200/60',
                       )}
                       onClick={() => {
                         if (!isCurrent) handleJumpToLine(lineIdx);
@@ -1194,7 +1191,7 @@ export default function RehearsalPage() {
                       )}
 
                       {/* Line text — live highlights while listening, post-result highlights after */}
-                      <p className="text-[17px] font-bold leading-relaxed text-[#000] text-center break-words whitespace-pre-wrap">
+                      <p className="text-[17px] font-normal leading-relaxed text-[#000] text-center break-words whitespace-pre-wrap">
                         {isCurrentUserLine && wordMatchResult
                           ? renderLineWithWordHighlights(line.text, wordMatchResult)
                           : isCurrentUserLine && liveWordResult
