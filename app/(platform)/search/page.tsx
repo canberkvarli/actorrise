@@ -48,7 +48,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueResultCard } from "@/components/monologue/MonologueResultCard";
-import { SearchFiltersSheet } from "@/components/search/SearchFiltersSheet";
+import { SearchFiltersSheet, getDurationLabel } from "@/components/search/SearchFiltersSheet";
 import { FilmTvReferenceCard } from "@/components/search/FilmTvReferenceCard";
 import { accentTeal } from "@/components/search/MatchIndicatorTag";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
@@ -60,7 +60,8 @@ import { Slider } from "@/components/ui/slider";
 import { ContactModal } from "@/components/contact/ContactModal";
 import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackPrompt";
 import type { FilmTvReference } from "@/types/filmTv";
-import { getFilmTvScriptUrl, getScriptSearchUrl, getScriptSlugUrl } from "@/lib/utils";
+import { getFilmTvScriptUrl } from "@/lib/utils";
+import { ScriptSourcePicker } from "@/components/search/ScriptSourcePicker";
 import { useFilmTvFavorites, useToggleFilmTvFavorite } from "@/hooks/useFilmTvFavorites";
 import { useProfileStats } from "@/hooks/useDashboardData";
 import { useQueryClient } from "@tanstack/react-query";
@@ -87,6 +88,10 @@ export default function SearchPage() {
     emotion: "",
     theme: "",
     category: "",
+    tone: "",
+    difficulty: "",
+    author: "",
+    max_duration: "",
   });
   /** 0 = freshest only, 0.3 = fresh, 0.5 = some overdone OK, 1 = show all. Separate from filters for clearer UX. */
   const [maxOverdoneScore, setMaxOverdoneScore] = useState(1);
@@ -282,12 +287,17 @@ export default function SearchPage() {
         setPlaysQuery(historyEntry.query);
         setSearchMode("plays");
         // Normalize filters to ensure all required fields are strings
+        const hf = historyEntry.filters as Record<string, string>;
         setFilters({
-          gender: historyEntry.filters.gender || "",
-          age_range: historyEntry.filters.age_range || "",
-          emotion: historyEntry.filters.emotion || "",
-          theme: historyEntry.filters.theme || "",
-          category: historyEntry.filters.category || "",
+          gender: hf.gender || "",
+          age_range: hf.age_range || "",
+          emotion: hf.emotion || "",
+          theme: hf.theme || "",
+          category: hf.category || "",
+          tone: hf.tone || "",
+          difficulty: hf.difficulty || "",
+          author: hf.author || "",
+          max_duration: hf.max_duration || "",
         });
         const h = historyEntry.filters as { exclude_overdone?: string; max_overdone_score?: number };
         setMaxOverdoneScore(typeof h.max_overdone_score === "number" ? h.max_overdone_score : h.exclude_overdone === "true" ? 0.3 : 1);
@@ -389,8 +399,12 @@ export default function SearchPage() {
       emotion: "",
       theme: "",
       category: "",
+      tone: "",
+      difficulty: "",
+      author: "",
+      max_duration: "",
     };
-    ["gender", "age_range", "emotion", "theme", "category"].forEach((key) => {
+    ["gender", "age_range", "emotion", "theme", "category", "tone", "difficulty", "author", "max_duration"].forEach((key) => {
       const value = searchParams.get(key);
       if (value) {
         urlFilters[key as keyof typeof filters] = value;
@@ -459,6 +473,10 @@ export default function SearchPage() {
             emotion: last.filters.emotion ?? "",
             theme: last.filters.theme ?? "",
             category: last.filters.category ?? "",
+            tone: (last.filters as any).tone ?? "",
+            difficulty: (last.filters as any).difficulty ?? "",
+            author: (last.filters as any).author ?? "",
+            max_duration: (last.filters as any).max_duration ?? "",
           });
           const m = last.filters.max_overdone_score;
           setMaxOverdoneScore(typeof m === "number" && m >= 0 && m <= 1 ? m : last.filters.exclude_overdone === "true" ? 0.3 : 1);
@@ -509,6 +527,10 @@ export default function SearchPage() {
           emotion: last.filters.emotion ?? "",
           theme: last.filters.theme ?? "",
           category: last.filters.category ?? "",
+          tone: (last.filters as any).tone ?? "",
+          difficulty: (last.filters as any).difficulty ?? "",
+          author: (last.filters as any).author ?? "",
+          max_duration: (last.filters as any).max_duration ?? "",
         });
         const m = last.filters.max_overdone_score;
         setMaxOverdoneScore(typeof m === "number" && m >= 0 && m <= 1 ? m : last.filters.exclude_overdone === "true" ? 0.3 : 1);
@@ -751,7 +773,7 @@ export default function SearchPage() {
     setIsLoading(true);
     setHasSearched(true);
     setPlaysQuery(""); // Clear query to show it's AI-based
-    setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "" }); // Clear filters
+    setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" }); // Clear filters
 
     try {
       const response = await api.get<Monologue[]>("/api/monologues/recommendations?limit=20");
@@ -764,7 +786,7 @@ export default function SearchPage() {
         LAST_SEARCH_KEY,
         JSON.stringify({
           query: "",
-          filters: { gender: "", age_range: "", emotion: "", theme: "", category: "" },
+          filters: { gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" },
           results: response.data,
         })
       );
@@ -1015,7 +1037,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
   const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
   const hasFreshnessFilter = maxOverdoneScore < 1;
-  const getFilterDisplay = (key: string, value: string) => `${key.replace(/_/g, " ")}: ${value}`;
+  const getFilterDisplay = (key: string, value: string) => `${key.replace(/_/g, " ")}: ${key === "max_duration" ? getDurationLabel(value) : value}`;
   const getFreshnessLabel = (score: number) =>
     score <= 0 ? "Freshest only" : score <= 0.3 ? "Fresh" : score <= 0.5 ? "Some overdone OK" : score <= 0.7 ? "More OK" : "Show all";
 
@@ -1114,7 +1136,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 const params = new URLSearchParams();
                 params.set("mode", "plays");
                 if (playsQuery) params.set("q", playsQuery);
-                ["gender", "age_range", "emotion", "theme", "category"].forEach((key) => {
+                Object.keys(filters).forEach((key) => {
                   const value = filters[key as keyof typeof filters];
                   if (value) params.set(key, value);
                 });
@@ -1496,13 +1518,22 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               exit={{ opacity: 0, height: 0 }}
               className="hidden md:block mt-4 p-4 bg-card border border-border rounded-lg"
             >
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {[
                   { key: "gender", label: "Gender", options: ["male", "female", "any"] },
                   { key: "age_range", label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
                   { key: "emotion", label: "Emotion", options: ["joy", "sadness", "anger", "fear", "melancholy", "hope"] },
+                  { key: "tone", label: "Tone", options: ["dramatic", "comedic", "dark", "romantic", "philosophical", "contemplative"] },
                   { key: "theme", label: "Theme", options: ["love", "death", "betrayal", "identity", "power", "revenge"] },
+                  { key: "difficulty", label: "Difficulty", options: ["beginner", "intermediate", "advanced"] },
                   { key: "category", label: "Category", options: ["classical", "contemporary"] },
+                  { key: "max_duration", label: "Max Duration", options: [
+                    { value: "60", label: "1 min" },
+                    { value: "90", label: "1.5 min" },
+                    { value: "120", label: "2 min" },
+                    { value: "180", label: "3 min" },
+                    { value: "300", label: "5 min" },
+                  ] },
                 ].map(({ key, label, options }) => (
                   <div key={key} className="space-y-1.5">
                     <Label className="text-xs text-muted-foreground">{label}</Label>
@@ -1515,13 +1546,27 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="__any__">Any</SelectItem>
-                        {options.map((opt) => (
-                          <SelectItem key={opt} value={opt} className="capitalize">{opt}</SelectItem>
-                        ))}
+                        {(options as Array<string | { value: string; label: string }>).map((opt) =>
+                          typeof opt === "string" ? (
+                            <SelectItem key={opt} value={opt} className="capitalize">{opt}</SelectItem>
+                          ) : (
+                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                          )
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
                 ))}
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Author</Label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Shakespeare"
+                    value={filters.author}
+                    onChange={(e) => setFilters({ ...filters, author: e.target.value })}
+                    className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
+                  />
+                </div>
               </div>
 
               {/* Freshness – separate from category filters, stable layout so nothing shifts */}
@@ -1583,7 +1628,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     </Badge>
                   )}
                   <button
-                    onClick={() => { setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "" }); setMaxOverdoneScore(1); }}
+                    onClick={() => { setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" }); setMaxOverdoneScore(1); }}
                     className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
                   >
                     Clear all
@@ -2379,33 +2424,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
                 {/* Actions */}
                 <div className="flex flex-wrap gap-2 pt-2 border-t">
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => window.open(getFilmTvScriptUrl(selectedFilmTvRef), "_blank", "noopener,noreferrer")}
-                  >
-                    <IconExternalLink className="h-4 w-4" />
-                    Script on IMSDb
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => window.open(getScriptSlugUrl(selectedFilmTvRef.title, selectedFilmTvRef.year), "_blank", "noopener,noreferrer")}
-                  >
-                    <IconExternalLink className="h-4 w-4" />
-                    Script on Script Slug
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => window.open(getScriptSearchUrl(selectedFilmTvRef.title), "_blank", "noopener,noreferrer")}
-                  >
-                    <IconExternalLink className="h-4 w-4" />
-                    Search Google
-                  </Button>
+                  <ScriptSourcePicker ref_item={selectedFilmTvRef} />
                   <Button
                     variant="outline"
                     size="sm"
@@ -2416,9 +2435,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     IMDb page
                   </Button>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Try IMSDb first, then Script Slug. If the script isn&apos;t there, use Search Google.
-                </p>
               </div>
             </motion.div>
           </>
