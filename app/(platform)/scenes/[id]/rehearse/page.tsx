@@ -286,7 +286,7 @@ export default function RehearsalPage() {
     resetTranscript,
     analyserRef,
   } = useWhisperSTT({
-    silenceThreshold: 25,
+    silenceThreshold: 50,
     silenceTimeoutMs: 3000,
     prompt: currentUserLineText ? stripStageDirections(currentUserLineText) : undefined,
     onResult: (text) => {
