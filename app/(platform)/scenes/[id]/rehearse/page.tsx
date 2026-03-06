@@ -675,9 +675,18 @@ export default function RehearsalPage() {
           transcript += event.results[i][0].transcript + ' ';
           if (event.results[i].isFinal) hasFinal = true;
         }
-        const spoken = new Set(norm(transcript).split(/\s+/).filter(Boolean));
+        // Sequential/greedy match — walk expected words left-to-right through spoken words
+        // so duplicate words only highlight the correct positional occurrence
+        const spokenWords = norm(transcript).split(/\s+/).filter(Boolean);
         const matched = new Set<number>();
-        expectedWords.forEach((w, idx) => { if (spoken.has(w)) matched.add(idx); });
+        let spokenCursor = 0;
+        for (let ei = 0; ei < expectedWords.length; ei++) {
+          const found = spokenWords.indexOf(expectedWords[ei], spokenCursor);
+          if (found !== -1) {
+            matched.add(ei);
+            spokenCursor = found + 1;
+          }
+        }
         setLiveMatchedIndices(matched);
 
         // Instant advance: SR final result with ≥60% word match → skip Whisper round-trip entirely
