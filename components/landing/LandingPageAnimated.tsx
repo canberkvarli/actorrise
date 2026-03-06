@@ -97,6 +97,8 @@ export function LandingPageAnimated() {
               <br className="hidden sm:block" />
               {" "}Spend your time <span className="hero-keyword">rehearsing</span>.
             </h1>
+
+
             {/* Large Primary CTA */}
             <div className="mt-8 sm:mt-10 flex flex-col items-center gap-3">
               <HeroCta />
