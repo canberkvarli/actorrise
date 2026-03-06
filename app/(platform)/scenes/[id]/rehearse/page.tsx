@@ -712,9 +712,16 @@ export default function RehearsalPage() {
           if (score >= 0.55) {
             srAdvancedRef.current = true;
             try { recognition.stop(); liveRecognitionRef.current = null; } catch {}
-            // Cancel Whisper immediately so isTranscribing doesn't block auto-listen on next line
             cancelTranscriptionRef.current();
-            handleDeliverLineRef.current(transcript.trim());
+            // Build final word-match result and show it briefly before advancing
+            // so the user sees which words were highlighted before the line changes
+            const transcriptWordSet = new Set(norm(transcript).split(/\s+/).filter(Boolean));
+            const finalWords = expectedWords.map(w => ({ word: w, matched: transcriptWordSet.has(w) }));
+            setLiveMatchedIndices(new Set()); // clear live highlights; wordMatchResult takes over
+            setWordMatchResult({ words: finalWords, willAdvance: true });
+            setTimeout(() => {
+              handleDeliverLineRef.current(transcript.trim());
+            }, 400);
           }
         }
       };
