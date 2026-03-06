@@ -455,6 +455,8 @@ export default function SceneEditPage() {
         { character_name: currentVals.character_name, text: currentVals.text, stage_direction: currentVals.stage_direction || null }
       ).then(() => {
         lastAutoSavedRef.current[lid] = { ...currentVals };
+        // Invalidate rehearsal cache so changes appear immediately on next rehearse
+        try { sessionStorage.removeItem(`actorrise_scene_${sceneId}`); } catch {}
         // Sync scene state so a refresh shows the saved data
         setScene(prev => prev ? {
           ...prev,
@@ -839,6 +841,7 @@ export default function SceneEditPage() {
         }
       );
       pushUndo({ type: "line", lineId: line.id, old: oldVals, cur: newVals });
+      try { sessionStorage.removeItem(`actorrise_scene_${sceneId}`); } catch {}
       setScene(prev => prev ? {
         ...prev,
         lines: prev.lines.map((l) =>

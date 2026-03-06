@@ -255,6 +255,9 @@ export default function RehearsalPage() {
   const [shouldShake, setShouldShake] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Per-line delivery guard — prevents the same line from being delivered twice,
+  // without blocking delivery of subsequent lines (unlike isProcessing flag)
+  const lastDeliveredIndexRef = useRef<number | null>(null);;
   const pendingRetryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Live word matching via SpeechRecognition (for real-time highlighting while Whisper records)
@@ -399,11 +402,11 @@ export default function RehearsalPage() {
 
   /* ── Speak a line (AI or browser) ──────────────────────────────── */
 
-  const speakLine = useCallback((text: string) => {
+  const speakLine = useCallback((text: string, instructions: string = '') => {
     if (isListening) stopListening();
     lastAiLineForFallbackRef.current = text;
     if (useAIVoice) {
-      speakAI(text, lastKnownVoiceIdRef.current, '');
+      speakAI(text, lastKnownVoiceIdRef.current, instructions);
     } else if (isSpeechSynthesisSupported) {
       speakBrowser(text);
     }
@@ -435,7 +438,7 @@ export default function RehearsalPage() {
       // AI's turn — speak it from script (strip any inline [stage directions])
       setLastAiLine(line.text);
       setAutoListenLineKey(null);
-      speakLineRef.current(ttsText(line));
+      speakLineRef.current(ttsText(line), line.stage_direction?.trim() ? `Speak ${line.stage_direction.trim()}` : '');
     } else {
       // User's turn — set up for auto-listen
       setLastAiLine(null);
@@ -450,7 +453,11 @@ export default function RehearsalPage() {
   const handleDeliverLine = async (text: string) => {
     const toSend = text.trim();
     const sess = sessionRef.current;
-    if (!toSend || isProcessing || !sess) return;
+    const currentIdx = activeLineIndexRef.current ?? 0;
+    if (!toSend || !sess) return;
+    // Prevent double-delivery of the same line without blocking subsequent lines
+    if (lastDeliveredIndexRef.current === currentIdx) return;
+    lastDeliveredIndexRef.current = currentIdx;
     if (skipSilentTimerRef.current) {
       clearTimeout(skipSilentTimerRef.current);
       skipSilentTimerRef.current = null;
@@ -611,7 +618,7 @@ export default function RehearsalPage() {
 
     if (firstLine.character_name === session.ai_character) {
       setLastAiLine(firstLine.text);
-      speakLineRef.current(ttsText(firstLine));
+      speakLineRef.current(ttsText(firstLine), firstLine.stage_direction?.trim() ? `Speak ${firstLine.stage_direction.trim()}` : '');
     } else {
       // User's line — auto-listen will handle
       setLastAiLine(null);
@@ -740,6 +747,7 @@ export default function RehearsalPage() {
       toastTimerRef.current = null;
     }
     srAdvancedRef.current = false;
+    lastDeliveredIndexRef.current = null;
     setWordMatchResult(null);
     setSpeechError(null);
     setShouldShake(false);
@@ -846,7 +854,7 @@ export default function RehearsalPage() {
       const line = lines[idx];
       if (line && line.character_name === sess.ai_character) {
         setLastAiLine(line.text);
-        speakLineRef.current(ttsText(line));
+        speakLineRef.current(ttsText(line), line.stage_direction?.trim() ? `Speak ${line.stage_direction.trim()}` : '');
       }
     }
   }, []);
