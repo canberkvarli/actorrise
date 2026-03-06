@@ -39,6 +39,14 @@ import { parseUpgradeError } from '@/lib/upgradeError';
 import { UpgradeModal } from '@/components/billing/UpgradeModal';
 import { cn } from '@/lib/utils';
 
+/** Build TTS input text: prepend stage_direction as a parenthetical so the
+ *  voice model can act on it (e.g. "laughingly" → speaks with a laugh). */
+function ttsText(line: { text: string; stage_direction?: string | null }): string {
+  const dialogue = stripStageDirections(line.text);
+  const dir = line.stage_direction?.trim();
+  return dir ? `(${dir}) ${dialogue}` : dialogue;
+}
+
 const LOADING_TEXTS = [
   "Warming up the stage lights...",
   "Getting into character...",
@@ -427,7 +435,7 @@ export default function RehearsalPage() {
       // AI's turn — speak it from script (strip any inline [stage directions])
       setLastAiLine(line.text);
       setAutoListenLineKey(null);
-      speakLineRef.current(stripStageDirections(line.text));
+      speakLineRef.current(ttsText(line));
     } else {
       // User's turn — set up for auto-listen
       setLastAiLine(null);
@@ -536,7 +544,7 @@ export default function RehearsalPage() {
         sceneData.lines
           .filter(l => l.character_name === data.ai_character)
           .slice(0, 5)
-          .forEach(l => preloadTTSRef.current(stripStageDirections(l.text), voiceId, ''));
+          .forEach(l => preloadTTSRef.current(ttsText(l), voiceId, ''));
       } catch {
         // Non-fatal
       }
@@ -603,7 +611,7 @@ export default function RehearsalPage() {
 
     if (firstLine.character_name === session.ai_character) {
       setLastAiLine(firstLine.text);
-      speakLineRef.current(stripStageDirections(firstLine.text));
+      speakLineRef.current(ttsText(firstLine));
     } else {
       // User's line — auto-listen will handle
       setLastAiLine(null);
@@ -689,11 +697,12 @@ export default function RehearsalPage() {
         }
         setLiveMatchedIndices(matched);
 
-        // Instant advance: SR final result with ≥60% word match → skip Whisper round-trip entirely
-        // This eliminates the ~1-2s dead air (silence timeout + Whisper API call)
+        // Instant advance: SR final result with ≥55% word match → skip Whisper round-trip entirely
+        // Use wordMatchScore (counts duplicate expected words) so lines like "about us. About where"
+        // don't get deflated by the positional matcher used for highlighting
         if (hasFinal && !srAdvancedRef.current) {
-          const score = expectedWords.length > 0 ? matched.size / expectedWords.length : 1;
-          if (score >= 0.6) {
+          const score = wordMatchScore(expected, transcript);
+          if (score >= 0.55) {
             srAdvancedRef.current = true;
             try { recognition.stop(); liveRecognitionRef.current = null; } catch {}
             // Cancel Whisper immediately so isTranscribing doesn't block auto-listen on next line
@@ -745,7 +754,7 @@ export default function RehearsalPage() {
     const aiLines = orderedLines
       .filter(l => l.character_name === session.ai_character)
       .slice(0, 5); // preload first 5 AI lines
-    aiLines.forEach(l => preloadTTS(l.text, lastKnownVoiceIdRef.current, ''));
+    aiLines.forEach(l => preloadTTS(ttsText(l), lastKnownVoiceIdRef.current, ''));
   }, [session?.ai_character, orderedLines, preloadTTS]);
 
   // Preload next AI line while user speaks
@@ -758,7 +767,7 @@ export default function RehearsalPage() {
     let found = 0;
     for (let i = activeLineIndex + 1; i < orderedLines.length && found < 2; i++) {
       if (orderedLines[i].character_name === session.ai_character) {
-        preloadTTS(orderedLines[i].text, lastKnownVoiceIdRef.current, '');
+        preloadTTS(ttsText(orderedLines[i]), lastKnownVoiceIdRef.current, '');
         found++;
       }
     }
@@ -837,7 +846,7 @@ export default function RehearsalPage() {
       const line = lines[idx];
       if (line && line.character_name === sess.ai_character) {
         setLastAiLine(line.text);
-        speakLineRef.current(stripStageDirections(line.text));
+        speakLineRef.current(ttsText(line));
       }
     }
   }, []);
