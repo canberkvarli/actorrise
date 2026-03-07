@@ -65,12 +65,43 @@ const LOADING_TEXTS = [
   "Cueing the spotlight...",
 ];
 
+const FEEDBACK_LOADING_TEXTS = [
+  "Reviewing your performance...",
+  "Checking the emotional beats...",
+  "Rewinding the tape...",
+  "Consulting the director...",
+  "Reading between the lines...",
+  "Studying your choices...",
+];
+
+function FeedbackLoadingText() {
+  const [idx, setIdx] = useState(() => Math.floor(Math.random() * FEEDBACK_LOADING_TEXTS.length));
+  useEffect(() => {
+    const t = setInterval(() => setIdx(i => (i + 1) % FEEDBACK_LOADING_TEXTS.length), 2500);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <AnimatePresence mode="wait">
+      <motion.p
+        key={idx}
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -6 }}
+        transition={{ duration: 0.3 }}
+        className="text-sm text-neutral-500 italic"
+      >
+        {FEEDBACK_LOADING_TEXTS[idx]}
+      </motion.p>
+    </AnimatePresence>
+  );
+}
+
 /* ─── Word match scoring ─────────────────────────────────────────────── */
 
 /** Returns fraction of expected words found in transcript (0–1). */
 function wordMatchScore(expected: string, transcript: string): number {
   const norm = (s: string) =>
-    s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+    s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s{2,}/g, ' ').trim();
   const expectedWords = norm(expected).split(/\s+/).filter(Boolean);
   if (!expectedWords.length) return 1;
   const transcriptWords = new Set(norm(transcript).split(/\s+/).filter(Boolean));
@@ -354,17 +385,16 @@ export default function RehearsalPage() {
 
   const handleTTSEnd = useCallback(() => {
     if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+    // Capture nextIdx NOW (not in the timer callback) to avoid race conditions
+    const nextIdx = (activeLineIndexRef.current ?? 0) + 1;
     const doAdvance = () => {
       setLastAiLine(null);
-      const nextIdx = (activeLineIndexRef.current ?? 0) + 1;
       advanceScriptRef.current(nextIdx);
     };
-    // Check if next line is also AI — skip pause for consecutive AI lines
-    const nextIdx = (activeLineIndexRef.current ?? 0) + 1;
+    // Check if next line is also AI — short pause for consecutive AI lines
     const lines = orderedLinesRef.current;
     const sess = sessionRef.current;
     const nextIsAlsoAI = sess && nextIdx < lines.length && lines[nextIdx].character_name === sess.ai_character;
-    // Short pause between consecutive AI lines, instant transition to user's turn
     const pauseMs = nextIsAlsoAI ? 200 : 0;
     if (pauseMs > 0) {
       pauseTimerRef.current = setTimeout(() => {
@@ -439,11 +469,11 @@ export default function RehearsalPage() {
     if (!sess || !lines.length) return;
 
     if (idx >= lines.length) {
-      // Scene complete — show review page instantly, load feedback in background
+      // Scene complete — brief pause so last line highlights are visible, then review
       setActiveLineIndex(lines.length - 1);
       setLastAiLine(null);
-      setShowFeedback(true);
       loadFeedback();
+      setTimeout(() => setShowFeedback(true), 600);
       return;
     }
 
@@ -693,7 +723,7 @@ export default function RehearsalPage() {
     if (!SR) return;
 
     const expected = stripStageDirections(currentUserLineText);
-    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s{2,}/g, ' ').trim();
     const expectedWords = norm(expected).split(/\s+/).filter(Boolean);
 
     let recognition: any;
@@ -1079,9 +1109,9 @@ export default function RehearsalPage() {
                 </p>
               </>
             ) : (
-              <div className="flex flex-col items-center gap-3 py-10">
+              <div className="flex flex-col items-center gap-4 py-12">
                 <div className="w-6 h-6 border-2 border-neutral-700 border-t-neutral-400 rounded-full animate-spin" />
-                <p className="text-sm text-neutral-500">Analyzing your performance...</p>
+                <FeedbackLoadingText />
               </div>
             )}
           </motion.div>
