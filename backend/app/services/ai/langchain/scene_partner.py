@@ -104,34 +104,36 @@ Example tts_instructions: "Deliver with quiet intensity and barely contained ang
 If the user significantly deviated from script, note this in feedback and still deliver your line."""
 
 
-COACHING_FEEDBACK_SYSTEM = """You are an expert acting coach providing performance feedback.
+COACHING_FEEDBACK_SYSTEM = """You are a sharp, honest acting coach. No fluff, no sugarcoating. You respect the actor enough to be real with them.
 
-The user just completed rehearsing a scene from "{scene_title}" ({play_title}).
+The actor just rehearsed a scene from "{scene_title}" ({play_title}).
 
-**SCENE CONTEXT:**
-- User played: {user_character}
+SCENE CONTEXT:
+- They played: {user_character}
 - Setting: {setting}
 - Relationship: {relationship_dynamic}
 
-**YOUR TASK:**
-Provide warm, constructive feedback on their performance.
-
-**FEEDBACK STRUCTURE:**
-1. **Strengths** - What they did well (2-3 specific observations)
-2. **Growth Areas** - What to work on (1-2 gentle suggestions)
-3. **Overall Assessment** - Brief encouraging summary
-
-**TONE:**
-- Supportive and encouraging
-- Specific and actionable
-- Balanced (acknowledge strengths before suggestions)
-- Professional but warm
-
-**DIALOGUE HISTORY:**
+DIALOGUE HISTORY:
 {dialogue_history}
 
-**NOTES FROM REHEARSAL:**
-{feedback_notes}"""
+NOTES FROM REHEARSAL:
+{feedback_notes}
+
+YOUR TASK:
+Analyze their performance and return ONLY valid JSON (no markdown, no extra text) in this exact format:
+
+{{
+  "overall_feedback": "2-3 sentences. Direct, specific, honest. What you genuinely noticed about their work. No generic praise. Reference specific moments from the dialogue.",
+  "strengths": ["Short specific observation 1", "Short specific observation 2"],
+  "areas_to_improve": ["Specific actionable suggestion 1", "Specific actionable suggestion 2"]
+}}
+
+RULES:
+- Be SPECIFIC. Reference actual lines or moments from the dialogue. Never say generic things like "great emotional depth" unless you can point to exactly where.
+- Strengths: 2-3 items. Each should be one short sentence about something concrete they did.
+- Areas to improve: 1-2 items. Each should be actionable and specific.
+- No markdown formatting anywhere. Plain text only.
+- If the dialogue is too short or unclear to give meaningful feedback, say so honestly."""
 
 
 # ============================================================================
@@ -332,20 +334,20 @@ class ScenePartnerGraph:
         ])
 
         prompt = ChatPromptTemplate.from_messages([
-            ("system", COACHING_FEEDBACK_SYSTEM.format(
-                scene_title=state["scene_title"],
-                play_title=state["play_title"],
-                user_character=state["user_character"],
-                setting=state["setting"],
-                relationship_dynamic=state["relationship_dynamic"],
-                dialogue_history=dialogue_summary,
-                feedback_notes="\n".join(state.get("feedback_notes", []))
-            )),
+            ("system", COACHING_FEEDBACK_SYSTEM),
             ("human", "Please provide your coaching feedback.")
         ])
 
         chain = prompt | self.llm
-        response = chain.invoke({})
+        response = chain.invoke({
+            "scene_title": state["scene_title"],
+            "play_title": state["play_title"],
+            "user_character": state["user_character"],
+            "setting": state["setting"],
+            "relationship_dynamic": state["relationship_dynamic"],
+            "dialogue_history": dialogue_summary,
+            "feedback_notes": "\n".join(state.get("feedback_notes", [])),
+        })
 
         state["messages"].append({
             "type": "coaching",

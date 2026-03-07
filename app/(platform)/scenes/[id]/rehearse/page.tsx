@@ -274,6 +274,8 @@ export default function RehearsalPage() {
   const liveRecognitionRef = useRef<any>(null);
   // Prevents double-advance when SR final result fires before Whisper returns
   const srAdvancedRef = useRef(false);
+  // Gate for Whisper: only allow transcription when SR has matched words from the line
+  const whisperGateRef = useRef(false);
 
   const {
     startListening,
@@ -286,8 +288,9 @@ export default function RehearsalPage() {
     resetTranscript,
     analyserRef,
   } = useWhisperSTT({
-    silenceThreshold: 50,
+    silenceThreshold: 30,
     silenceTimeoutMs: 3000,
+    speechGateRef: whisperGateRef,
     prompt: currentUserLineText ? stripStageDirections(currentUserLineText) : undefined,
     onResult: (text) => {
       if (srAdvancedRef.current) return; // SR already advanced this line — ignore late Whisper result
@@ -433,10 +436,11 @@ export default function RehearsalPage() {
     if (!sess || !lines.length) return;
 
     if (idx >= lines.length) {
-      // Scene complete
+      // Scene complete — show review page instantly, load feedback in background
       setActiveLineIndex(lines.length - 1);
       setLastAiLine(null);
-      loadFeedback().then(() => setShowFeedback(true));
+      setShowFeedback(true);
+      loadFeedback();
       return;
     }
 
@@ -673,12 +677,8 @@ export default function RehearsalPage() {
     // startListening intentionally omitted — accessed via startListeningRef
   ]);
 
-  // Safety net: stop recording after 8s max so mic never gets stuck
-  useEffect(() => {
-    if (!isListening) return;
-    const t = setTimeout(() => stopListening(), 8000);
-    return () => clearTimeout(t);
-  }, [isListening, stopListening]);
+  // No safety-net timeout — SR handles all line advances.
+  // Recording runs until the user finishes the line (even long monologues).
 
   // Live word highlighting: run SpeechRecognition in parallel while Whisper records
   useEffect(() => {
@@ -722,12 +722,15 @@ export default function RehearsalPage() {
           }
         }
         setLiveMatchedIndices(matched);
+        // Open Whisper gate once SR has matched enough sequential words (not coincidence)
+        const gateThreshold = Math.min(3, expectedWords.length);
+        if (matched.size >= gateThreshold) whisperGateRef.current = true;
 
-        // Instant advance: SR final result with ≥75% strict sequential match
-        // High threshold ensures user says most of the line before jumping
+        // Instant advance: SR final result with ≥80% strict sequential match
+        // High threshold ensures user finishes nearly all words before jumping
         if (hasFinal && !srAdvancedRef.current) {
           const score = expectedWords.length > 0 ? matched.size / expectedWords.length : 1;
-          if (score >= 0.75) {
+          if (score >= 0.85) {
             srAdvancedRef.current = true;
             try { recognition.stop(); liveRecognitionRef.current = null; } catch {}
             cancelTranscriptionRef.current();
@@ -771,6 +774,7 @@ export default function RehearsalPage() {
       toastTimerRef.current = null;
     }
     srAdvancedRef.current = false;
+    whisperGateRef.current = false;
     lastDeliveredIndexRef.current = null;
     setWordMatchResult(null);
     setSpeechError(null);
@@ -805,14 +809,20 @@ export default function RehearsalPage() {
     }
   }, [activeLineIndex, orderedLines, session?.user_character, session?.ai_character, preloadTTS]);
 
-  // Scroll to current line
+  // Scroll to keep active line centered in the scroll container
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (activeLineIndex != null) {
-      const t = setTimeout(() => {
-        currentLineRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 100);
-      return () => clearTimeout(t);
-    }
+    if (activeLineIndex == null) return;
+    const t = setTimeout(() => {
+      const el = currentLineRef.current;
+      const container = scrollContainerRef.current;
+      if (!el || !container) return;
+      const elRect = el.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      const offset = elRect.top - containerRect.top + container.scrollTop - containerRect.height / 2 + elRect.height / 2;
+      container.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' });
+    }, 150);
+    return () => clearTimeout(t);
   }, [activeLineIndex]);
 
   // Skip-if-silent timer
@@ -845,6 +855,7 @@ export default function RehearsalPage() {
   const stopAllAudio = useCallback(() => {
     cancelAI();
     window.speechSynthesis?.cancel();
+    cancelTranscription();
     if (isListening) stopListening();
     if (pauseTimerRef.current) {
       clearTimeout(pauseTimerRef.current);
@@ -858,7 +869,7 @@ export default function RehearsalPage() {
       clearTimeout(pendingAdvanceRef.current);
       pendingAdvanceRef.current = null;
     }
-  }, [cancelAI, isListening, stopListening]);
+  }, [cancelAI, cancelTranscription, isListening, stopListening]);
 
   const handleExit = useCallback(() => {
     stopAllAudio();
@@ -999,85 +1010,98 @@ export default function RehearsalPage() {
 
   /* ── Render: feedback ──────────────────────────────────────────── */
 
-  if (showFeedback && sessionFeedback) {
+  if (showFeedback) {
+    const sceneTitle = sceneWithLines?.title || '';
+    const playTitle = sceneWithLines?.play_title || '';
+    const showPlayTitle = playTitle && playTitle.toLowerCase() !== sceneTitle.toLowerCase();
+
     return (
       <div className="fixed inset-0 bg-neutral-950 text-neutral-100 flex flex-col z-[10050]">
-        <div className="flex-1 overflow-auto flex justify-center px-4 py-10">
+        <div className="flex-1 overflow-auto flex justify-center px-4 pt-10 pb-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-md space-y-8"
+            className="w-full max-w-lg space-y-6"
           >
             {/* Header */}
-            <div className="text-center space-y-1.5">
-              <p className="text-xs uppercase tracking-widest text-neutral-500">Scene Complete</p>
-              <h1 className="text-lg font-medium text-neutral-200">
-                {sceneWithLines?.title}{sceneWithLines?.play_title ? ` from ${sceneWithLines.play_title}` : ''}
-              </h1>
+            <div className="text-center space-y-2">
+              <p className="text-sm uppercase tracking-widest text-neutral-500 font-medium">Scene Complete</p>
+              <h1 className="text-2xl font-bold text-neutral-100">{sceneTitle}</h1>
+              {showPlayTitle && (
+                <p className="text-sm text-neutral-500">from {playTitle}</p>
+              )}
             </div>
 
-            {/* Overall feedback */}
-            <p className="text-sm text-neutral-300 leading-relaxed">
-              {sessionFeedback.overall_feedback}
-            </p>
+            {sessionFeedback ? (
+              <>
+                {/* Overall feedback */}
+                <p className="text-base text-neutral-300 leading-relaxed">
+                  {sessionFeedback.overall_feedback}
+                </p>
 
-            {/* Strengths + Areas in one clean section */}
-            {(sessionFeedback.strengths?.length > 0 || sessionFeedback.areas_to_improve?.length > 0) && (
-              <div className="space-y-5">
-                {sessionFeedback.strengths?.length > 0 && (
-                  <div className="space-y-2.5">
-                    <p className="text-xs uppercase tracking-widest text-neutral-500">What landed</p>
-                    <ul className="space-y-1.5">
-                      {sessionFeedback.strengths.map((s: string, i: number) => (
-                        <li key={i} className="text-sm text-neutral-300 leading-relaxed pl-3 border-l-2 border-emerald-700/50">
-                          {s}
-                        </li>
-                      ))}
-                    </ul>
+                {/* Strengths + Areas */}
+                {(sessionFeedback.strengths?.length > 0 || sessionFeedback.areas_to_improve?.length > 0) && (
+                  <div className="space-y-5">
+                    {sessionFeedback.strengths?.length > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-xs uppercase tracking-widest text-emerald-600 font-semibold">What landed</p>
+                        <ul className="space-y-2">
+                          {sessionFeedback.strengths.map((s: string, i: number) => (
+                            <li key={i} className="text-[15px] text-neutral-300 leading-relaxed pl-4 border-l-2 border-emerald-700/60">
+                              {s}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {sessionFeedback.areas_to_improve?.length > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-xs uppercase tracking-widest text-orange-600 font-semibold">To explore</p>
+                        <ul className="space-y-2">
+                          {sessionFeedback.areas_to_improve.map((a: string, i: number) => (
+                            <li key={i} className="text-[15px] text-neutral-300 leading-relaxed pl-4 border-l-2 border-orange-700/60">
+                              {a}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {sessionFeedback.areas_to_improve?.length > 0 && (
-                  <div className="space-y-2.5">
-                    <p className="text-xs uppercase tracking-widest text-neutral-500">To explore</p>
-                    <ul className="space-y-1.5">
-                      {sessionFeedback.areas_to_improve.map((a: string, i: number) => (
-                        <li key={i} className="text-sm text-neutral-300 leading-relaxed pl-3 border-l-2 border-orange-700/50">
-                          {a}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                {/* AI disclaimer */}
+                <p className="text-xs text-neutral-600 leading-relaxed">
+                  AI-generated analysis based on your voice input. Trust your instincts.
+                </p>
+              </>
+            ) : (
+              <div className="flex flex-col items-center gap-3 py-10">
+                <div className="w-6 h-6 border-2 border-neutral-700 border-t-neutral-400 rounded-full animate-spin" />
+                <p className="text-sm text-neutral-500">Analyzing your performance...</p>
               </div>
             )}
-
-            {/* Divider */}
-            <div className="border-t border-neutral-800/50" />
-
-            {/* AI disclaimer */}
-            <p className="text-xs text-neutral-600 leading-relaxed">
-              This is AI-generated analysis based on your voice input. It catches patterns, not truth. The audience doesn&apos;t want perfect, they want you. Trust your instincts, keep showing up, and let the work speak.
-            </p>
-
-            {/* Actions */}
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1 border-neutral-800 text-neutral-300 hover:bg-neutral-900"
-                onClick={handleExit}
-              >
-                Back to Script
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={handleRestart}
-                disabled={isRestarting}
-              >
-                {isRestarting ? 'Starting...' : 'Run It Again'}
-              </Button>
-            </div>
           </motion.div>
+        </div>
+
+        {/* Sticky bottom actions */}
+        <div className="shrink-0 px-4 pb-6 pt-3 border-t border-neutral-800/50 bg-neutral-950">
+          <div className="max-w-lg mx-auto flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1 border-neutral-800 text-neutral-300 hover:bg-neutral-900"
+              onClick={handleExit}
+            >
+              Back to Script
+            </Button>
+            <Button
+              className="flex-1"
+              onClick={handleRestart}
+              disabled={isRestarting}
+            >
+              {isRestarting ? 'Starting...' : 'Run It Again'}
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -1125,7 +1149,7 @@ export default function RehearsalPage() {
       </div>
 
       {/* Script parchment */}
-      <div className="flex-1 overflow-y-auto p-3 sm:p-6">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 sm:p-6 scroll-smooth">
         <div
           className="max-w-4xl mx-auto bg-white text-neutral-900 rounded-lg shadow-2xl border border-neutral-200 px-4 sm:px-6 py-5 sm:py-7"
           style={{ fontFamily: '"Courier New", Courier, monospace' }}
@@ -1161,11 +1185,15 @@ export default function RehearsalPage() {
                       key={line.id}
                       ref={isCurrent ? currentLineRef : undefined}
                       initial={false}
-                      animate={isCurrentUserLine && shouldShake ? { x: [-8, 8, -6, 6, -4, 4, 0] } : {}}
-                      transition={{ duration: 0.4, ease: 'easeInOut' }}
+                      animate={
+                        isCurrentUserLine && shouldShake
+                          ? { x: [-8, 8, -6, 6, -4, 4, 0], opacity: 1, scale: 1 }
+                          : { opacity: isCurrent ? 1 : 0.55, scale: isCurrent ? 1 : 0.98 }
+                      }
+                      transition={{ duration: 0.4, ease: 'easeOut' }}
                       className={cn(
-                        'rounded-lg px-3 sm:px-4 py-3 transition-all duration-200',
-                        !isCurrent && 'opacity-55 cursor-pointer hover:opacity-75',
+                        'rounded-lg px-3 sm:px-4 py-3 transition-colors duration-300',
+                        !isCurrent && 'cursor-pointer hover:opacity-75',
                         isCurrentUserLine && 'bg-orange-50/80 ring-1 ring-orange-200/60',
                         isCurrentAiLine && 'bg-neutral-100/60 ring-1 ring-neutral-200/60',
                       )}
