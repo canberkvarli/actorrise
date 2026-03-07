@@ -45,13 +45,16 @@ function ttsText(line: { text: string; stage_direction?: string | null }): strin
 }
 
 /** Build TTS instructions from stage directions so the voice ACTS on them
- *  instead of reading them aloud (e.g. "laughingly" → "Speak laughingly"). */
+ *  instead of reading them aloud (e.g. "laughingly" → "Speak laughingly").
+ *  Gives the AI voice dramatic, actorly instructions to fully commit. */
 function ttsInstructions(line: { text: string; stage_direction?: string | null }): string {
   const fieldDir = line.stage_direction?.trim();
   const inlineDirs = [...line.text.matchAll(/\(([^)]+)\)/g)].map(m => m[1].trim());
-  const allDirs = [fieldDir, ...inlineDirs].filter(Boolean);
-  if (!allDirs.length) return '';
-  return `Speak ${[...new Set(allDirs)].join(', ')}`;
+  const allDirs = [...new Set([fieldDir, ...inlineDirs].filter(Boolean))];
+  if (!allDirs.length) {
+    return 'You are a skilled actor performing a scene. Deliver this line with emotional truth and natural pacing. Commit fully to the moment.';
+  }
+  return `You are a skilled actor performing a scene. The stage direction says: ${allDirs.join('; ')}. Fully embody this direction — if it says "sighing", actually sigh; if "whispering", drop your voice; if "angrily", let real frustration come through. Commit completely.`;
 }
 
 const LOADING_TEXTS = [

@@ -404,6 +404,32 @@ export default function SceneEditPage() {
   const sceneRef = useRef(scene);
   sceneRef.current = scene;
 
+  // ── Page-scoped toast helper (replaces instead of stacking) ──────────────
+  // ── Page-scoped toast helper (replaces instead of stacking) ──────────────
+  const TOAST_ID = "scene-edit";
+  const pageToast = useMemo(() => ({
+    success: (msg: string) => toast.success(msg, { id: TOAST_ID }),
+    error: (msg: string) => toast.error(msg, { id: TOAST_ID }),
+  }), []);
+
+  // Reposition global toaster to top-right on this page
+  useEffect(() => {
+    const style = document.createElement("style");
+    style.setAttribute("data-scene-edit-toast", "");
+    style.textContent = `
+      [data-sonner-toaster] {
+        --offset: 16px !important;
+        top: 64px !important;
+        right: var(--offset) !important;
+        bottom: auto !important;
+        left: auto !important;
+        transform: none !important;
+      }
+    `;
+    document.head.appendChild(style);
+    return () => { style.remove(); };
+  }, []);
+
   // ── Auto-save infrastructure ─────────────────────────────────────────────
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastAutoSavedRef = useRef<Record<number, { character_name: string; text: string; stage_direction: string }>>({});
@@ -620,7 +646,7 @@ export default function SceneEditPage() {
       if (upgrade) {
         setUpgradeModal({ open: true, feature: "AI Voice", message: upgrade.message });
       } else {
-        toast.error(err instanceof Error ? err.message : "Voice preview failed");
+        pageToast.error(err instanceof Error ? err.message : "Voice preview failed");
       }
     },
   });
@@ -653,7 +679,7 @@ export default function SceneEditPage() {
       revalidateOnReconnect: false,
       dedupingInterval: 60000,
       onError: () => {
-        toast.error("Failed to load scene");
+        pageToast.error("Failed to load scene");
         router.push(`/my-scripts/${scriptId}`);
       },
     }
@@ -706,15 +732,14 @@ export default function SceneEditPage() {
       return updated;
     });
     setEditingSceneField(null);
+    pageToast.success("Saved");
 
-    setSaving(`scene-${field}`);
-    try {
-      await api.patch(`/api/scripts/${scriptId}/scenes/${sceneId}`, {
-        [field]: newVal,
-      });
-      pushUndo({ type: "scene_field", field, old: oldVal, cur: newVal });
-      toast.success("Scene updated");
-    } catch {
+    pushUndo({ type: "scene_field", field, old: oldVal, cur: newVal });
+
+    // Fire API in background
+    api.patch(`/api/scripts/${scriptId}/scenes/${sceneId}`, {
+      [field]: newVal,
+    }).catch(() => {
       // Revert optimistic update on failure
       setScene(prev => {
         if (!prev) return prev;
@@ -724,10 +749,8 @@ export default function SceneEditPage() {
         }
         return reverted;
       });
-      toast.error("Failed to update scene");
-    } finally {
-      setSaving(null);
-    }
+      pageToast.error("Failed to update scene");
+    });
   };
 
   /** Rename a character everywhere — scene field, ALL lines, lineEditValues, selectedCharacter. */
@@ -780,7 +803,7 @@ export default function SceneEditPage() {
         )
       );
       if (field) pushUndo({ type: "scene_field", field, old: oldName, cur: newName });
-      toast.success("Character renamed");
+      pageToast.success("Character renamed");
     } catch {
       // Revert on failure
       setScene(prev => {
@@ -802,7 +825,7 @@ export default function SceneEditPage() {
         return next;
       });
       if (selectedCharacter === newName) setSelectedCharacter(oldName);
-      toast.error("Failed to rename character");
+      pageToast.error("Failed to rename character");
     } finally {
       setSaving(null);
     }
@@ -830,36 +853,41 @@ export default function SceneEditPage() {
       stage_direction: trimmedStageDir,
       word_count: newWc,
     };
-    setSaving(`line-${line.id}`);
-    try {
-      await api.patch(
-        `/api/scripts/${scriptId}/scenes/${sceneId}/lines/${line.id}`,
-        {
-          character_name: trimmedCharName,
-          text: trimmedText,
-          stage_direction: trimmedStageDir,
-        }
-      );
-      pushUndo({ type: "line", lineId: line.id, old: oldVals, cur: newVals });
-      try { sessionStorage.removeItem(`actorrise_scene_${sceneId}`); } catch {}
+    // Optimistic: update UI immediately
+    pushUndo({ type: "line", lineId: line.id, old: oldVals, cur: newVals });
+    try { sessionStorage.removeItem(`actorrise_scene_${sceneId}`); } catch {}
+    setScene(prev => prev ? {
+      ...prev,
+      lines: prev.lines.map((l) =>
+        l.id === line.id ? { ...l, ...newVals } : l
+      ),
+    } : prev);
+    setEditingLineId(null);
+    setLineEditValues((prev) => {
+      const next = { ...prev };
+      delete next[line.id];
+      return next;
+    });
+    pageToast.success("Saved");
+
+    // Fire API in background
+    api.patch(
+      `/api/scripts/${scriptId}/scenes/${sceneId}/lines/${line.id}`,
+      {
+        character_name: trimmedCharName,
+        text: trimmedText,
+        stage_direction: trimmedStageDir,
+      }
+    ).catch(() => {
+      // Revert on failure
       setScene(prev => prev ? {
         ...prev,
         lines: prev.lines.map((l) =>
-          l.id === line.id ? { ...l, ...newVals } : l
+          l.id === line.id ? { ...l, ...oldVals } : l
         ),
       } : prev);
-      setEditingLineId(null);
-      setLineEditValues((prev) => {
-        const next = { ...prev };
-        delete next[line.id];
-        return next;
-      });
-      toast.success("Line updated");
-    } catch {
-      toast.error("Failed to update line");
-    } finally {
-      setSaving(null);
-    }
+      pageToast.error("Failed to update line");
+    });
   };
 
   const startEditScene = (field: SceneStringKey, current: string | null, location: "left" | "parchment" = "left") => {
@@ -915,7 +943,7 @@ export default function SceneEditPage() {
 
   const handleStartRehearsal = useCallback(async () => {
     if (!scene || !selectedCharacter) {
-      toast.error("Please select a character first");
+      pageToast.error("Please select a character first");
       return;
     }
     setStartingRehearsal(true);
@@ -943,7 +971,7 @@ export default function SceneEditPage() {
           err && typeof err === "object" && "response" in err
             ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
             : "Failed to start rehearsal";
-        toast.error(typeof message === "string" ? message : "Failed to start rehearsal");
+        pageToast.error(typeof message === "string" ? message : "Failed to start rehearsal");
       }
     }
   }, [scene, selectedCharacter, router, rehearsalStartLineIndex, charVoices]);
@@ -972,7 +1000,9 @@ export default function SceneEditPage() {
           const editVals = lineEditValues[playingLine.id];
           const text = editVals?.text || playingLine.text;
           const stageDir = editVals?.stage_direction || playingLine.stage_direction || "";
-          const instructions = stageDir ? `You are an actor performing a scene. The stage direction says: (${stageDir}). Deliver this line exactly as that direction demands. If it says "laughingly", laugh while speaking. If it says "whispering", whisper. If it says "angrily", sound genuinely angry. Fully commit to the direction in your vocal performance.` : "";
+          const instructions = stageDir
+            ? `You are a skilled actor performing a scene. The stage direction says: ${stageDir}. Fully embody this direction — if it says "sighing", actually sigh; if "whispering", drop your voice; if "angrily", let real frustration come through. Commit completely.`
+            : 'You are a skilled actor performing a scene. Deliver this line with emotional truth and natural pacing. Commit fully to the moment.';
           setTtsProgress(0);
           speakAI(text, voiceId || "coral", instructions);
         }
@@ -1014,24 +1044,31 @@ export default function SceneEditPage() {
     pendingDragLineRef.current = null;
     if (!scene) return;
     const currentOrder = dragLineOrderRef.current;
+    const prevOrder = sortedLineIds;
     // Check if order actually changed
-    if (JSON.stringify(currentOrder) === JSON.stringify(sortedLineIds)) return;
-    try {
-      await api.patch(`/api/scripts/${scriptId}/scenes/${sceneId}/lines/reorder`, {
-        line_ids: currentOrder,
-      });
-      pushUndo({ type: "reorder", oldOrder: sortedLineIds, curOrder: [...currentOrder] });
+    if (JSON.stringify(currentOrder) === JSON.stringify(prevOrder)) return;
+
+    // Optimistic: update UI + toast immediately
+    pushUndo({ type: "reorder", oldOrder: prevOrder, curOrder: [...currentOrder] });
+    setScene(prev => {
+      if (!prev) return prev;
+      return { ...prev, lines: prev.lines.map(l => ({ ...l, line_order: currentOrder.indexOf(l.id) })) };
+    });
+    pageToast.success("Lines reordered");
+
+    // Fire API in background
+    api.patch(`/api/scripts/${scriptId}/scenes/${sceneId}/lines/reorder`, {
+      line_ids: currentOrder,
+    }).catch(() => {
       setScene(prev => {
         if (!prev) return prev;
-        return { ...prev, lines: prev.lines.map(l => ({ ...l, line_order: currentOrder.indexOf(l.id) })) };
+        return { ...prev, lines: prev.lines.map(l => ({ ...l, line_order: prevOrder.indexOf(l.id) })) };
       });
-      toast.success("Lines reordered");
-    } catch {
-      toast.error("Failed to reorder lines");
-      setDragLineOrder(sortedLineIds);
-      dragLineOrderRef.current = sortedLineIds;
-    }
-  }, [scene, scriptId, sceneId, sortedLineIds]);
+      setDragLineOrder(prevOrder);
+      dragLineOrderRef.current = prevOrder;
+      pageToast.error("Failed to reorder lines");
+    });
+  }, [scene, scriptId, sceneId, sortedLineIds, pageToast]);
 
   // ---------------------------------------------------------------------------
   // Reset to original
@@ -1053,9 +1090,9 @@ export default function SceneEditPage() {
         redoStackRef.current = [];
         syncHistory();
         setShowResetConfirm(false);
-        toast.success("Scene reset to original");
+        pageToast.success("Scene reset to original");
       } catch {
-        toast.error("Failed to reset scene. Try again.");
+        pageToast.error("Failed to reset scene. Try again.");
       } finally {
         setResetting(false);
       }
@@ -1091,9 +1128,9 @@ export default function SceneEditPage() {
       pushUndo({ type: "reset", oldScene: currentSnapshot, curScene: JSON.parse(JSON.stringify(fresh)) });
       setScene(fresh);
       setShowResetConfirm(false);
-      toast.success("Script reset to original");
+      pageToast.success("Script reset to original");
     } catch {
-      toast.error("Failed to reset script");
+      pageToast.error("Failed to reset script");
     } finally {
       setResetting(false);
     }
@@ -1114,7 +1151,7 @@ export default function SceneEditPage() {
         await saveSceneField("description", data.synopsis);
       }
     } catch {
-      toast.error("Could not generate a description right now. Please try again or write one manually.");
+      pageToast.error("Could not generate a description right now. Please try again or write one manually.");
     } finally {
       setGeneratingSynopsis(false);
     }
@@ -1162,9 +1199,9 @@ export default function SceneEditPage() {
       });
       setScene(fresh);
       setShowAddLineModal(false);
-      toast.success("Line added");
+      pageToast.success("Line added");
     } catch {
-      toast.error("Failed to add line");
+      pageToast.error("Failed to add line");
     } finally {
       setAddingLine(false);
     }
@@ -1182,7 +1219,7 @@ export default function SceneEditPage() {
     // Optimistic: remove from UI instantly
     setScene(prev => prev ? { ...prev, lines: prev.lines.filter(l => l.id !== lineId) } : prev);
     pushUndo({ type: "delete_line", lineData: { ...lineToDelete }, insertAfterLineId: insertAfter });
-    toast.success("Line deleted");
+    pageToast.success("Line deleted");
 
     try {
       await api.delete(`/api/scripts/${scriptId}/scenes/${sceneId}/lines/${lineId}`);
@@ -1192,7 +1229,7 @@ export default function SceneEditPage() {
       // Remove the undo entry we just pushed since the delete failed
       undoStackRef.current.pop();
       syncHistory();
-      toast.error("Failed to delete line");
+      pageToast.error("Failed to delete line");
     }
   }, [scene, scriptId, sceneId]);
 
@@ -1308,7 +1345,7 @@ export default function SceneEditPage() {
         const { data: fresh } = await api.get<SceneDetail>(`/api/scenes/${sceneId}`);
         setScene(fresh);
       } catch { /* ignore */ }
-      toast.error("Failed to apply change");
+      pageToast.error("Failed to apply change");
     }
   }, [scene, scriptId, sceneId]);
 
@@ -1321,7 +1358,7 @@ export default function SceneEditPage() {
     syncHistory();
     try {
       await applyEntry(entry, "old");
-      toast.success("Undone");
+      pageToast.success("Undone");
     } finally {
       setApplyingHistory(false);
     }
@@ -1336,7 +1373,7 @@ export default function SceneEditPage() {
     syncHistory();
     try {
       await applyEntry(entry, "cur");
-      toast.success("Redone");
+      pageToast.success("Redone");
     } finally {
       setApplyingHistory(false);
     }
@@ -1397,7 +1434,7 @@ export default function SceneEditPage() {
 
     const printWindow = window.open("", "_blank");
     if (!printWindow) {
-      toast.error("Please allow popups to download as PDF");
+      pageToast.error("Please allow popups to download as PDF");
       return;
     }
     const synopsisHtml = scene.description
@@ -1581,7 +1618,7 @@ export default function SceneEditPage() {
               onChange={(e) => setCharNameEditValue(e.target.value)}
               className="h-6 text-sm font-medium bg-transparent border-neutral-700 text-neutral-100 px-1.5 py-0 w-full max-w-[160px] focus-visible:ring-1 focus-visible:ring-primary/50"
               autoFocus
-              maxLength={60}
+              maxLength={30}
               onClick={(e) => e.stopPropagation()}
               onKeyDown={(e) => {
                 e.stopPropagation();
@@ -1817,12 +1854,18 @@ export default function SceneEditPage() {
               </button>
             </div>
             {scene.description && (
-              <p className="text-sm text-neutral-200 break-words px-2 py-1.5 -mx-2">
+              <p
+                className="text-sm font-semibold text-neutral-200 break-words px-2 py-1.5 -mx-2 cursor-pointer hover:opacity-70 transition-opacity"
+                onClick={() => startEditScene("description", scene.description ?? "")}
+              >
                 {scene.description}
               </p>
             )}
             {!scene.description && (
-              <p className="text-sm text-neutral-400 italic px-2 py-1.5 -mx-2">
+              <p
+                className="text-sm text-neutral-400 italic px-2 py-1.5 -mx-2 cursor-pointer hover:text-neutral-300 transition-colors"
+                onClick={() => startEditScene("description", "")}
+              >
                 No description yet
               </p>
             )}
@@ -1832,21 +1875,21 @@ export default function SceneEditPage() {
 
       {/* Stats row — horizontal pills */}
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <div className="flex items-center gap-1.5 rounded-full bg-neutral-900/70 border border-neutral-800 px-3.5 py-2">
+        <div className="flex items-center gap-1.5 bg-neutral-900/70 border border-neutral-800 px-3.5 py-2">
           <FileText className="w-3.5 h-3.5 text-primary/70" />
           <span className="text-sm font-medium text-neutral-100 tabular-nums">{scene.line_count}</span>
           <span className="text-xs text-neutral-400">line{scene.line_count !== 1 ? "s" : ""}</span>
         </div>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex items-center gap-1.5 rounded-full bg-neutral-900/70 border border-neutral-800 px-3.5 py-2 cursor-default">
+            <div className="flex items-center gap-1.5 bg-neutral-900/70 border border-neutral-800 px-3.5 py-2 cursor-default">
               <Clock className="w-3.5 h-3.5 text-primary/70" />
               <span className="text-sm font-medium text-neutral-100 tabular-nums">{formatDuration(computedDuration)}</span>
             </div>
           </TooltipTrigger>
           <TooltipContent><p>Estimated at ~150 words per minute</p></TooltipContent>
         </Tooltip>
-        <div className="flex items-center gap-1.5 rounded-full bg-neutral-900/70 border border-neutral-800 px-3.5 py-2">
+        <div className="flex items-center gap-1.5 bg-neutral-900/70 border border-neutral-800 px-3.5 py-2">
           <Users className="w-3.5 h-3.5 text-primary/70" />
           <span className="text-sm font-medium text-neutral-100 tabular-nums">{scene.rehearsal_count}</span>
           <span className="text-xs text-neutral-400">rehearsal{scene.rehearsal_count !== 1 ? "s" : ""}</span>
@@ -2065,7 +2108,7 @@ export default function SceneEditPage() {
           <Input
             value={sceneEditValue}
             onChange={(e) => setSceneEditValue(e.target.value)}
-            className="text-xl font-bold uppercase tracking-wider text-center bg-transparent border-b-2 border-dashed border-neutral-400 border-x-0 border-t-0 rounded-none shadow-none focus-visible:ring-0 h-auto py-1"
+            className="text-2xl font-bold uppercase tracking-wider text-center bg-transparent border-b-2 border-dashed border-neutral-400 border-x-0 border-t-0 rounded-none shadow-none focus-visible:ring-0 h-auto py-1"
             maxLength={120}
             autoFocus
             disabled={saving !== null}
@@ -2084,11 +2127,11 @@ export default function SceneEditPage() {
             onClick={() => startEditScene("title", scene.title)}
             className="group inline-flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
-            <h2 className="text-xl font-bold uppercase tracking-wider break-words">{scene.title}</h2>
+            <h2 className="text-2xl font-bold uppercase tracking-wider break-words">{scene.title}</h2>
             <Edit2 className="w-3.5 h-3.5 text-neutral-300 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
           </button>
         )}
-        <div className="text-lg text-neutral-700 mt-2 break-words">
+        <div className="text-lg font-semibold text-neutral-700 mt-2 break-words">
           {editingSceneField === "play_title" && editingLocation === "parchment" ? (
             <Input
               value={sceneEditValue}
@@ -2114,7 +2157,7 @@ export default function SceneEditPage() {
                 onClick={() => startEditScene("play_title", scene.play_title, "parchment")}
                 className="hover:opacity-70 transition-opacity"
               >
-                <span className="text-neutral-900 font-medium break-words">{scene.play_title}</span>
+                <span className="text-neutral-900 font-semibold break-words">{scene.play_title}</span>
               </button>
               {"\u201D"}
               <button
@@ -2154,7 +2197,7 @@ export default function SceneEditPage() {
                 onClick={() => startEditScene("play_author", scene.play_author, "parchment")}
                 className="hover:opacity-70 transition-opacity"
               >
-                <span className="text-neutral-900 font-medium break-words">{scene.play_author}</span>
+                <span className="text-neutral-900 font-semibold break-words">{scene.play_author}</span>
               </button>
               <button
                 type="button"
@@ -2167,7 +2210,7 @@ export default function SceneEditPage() {
           ) : (
             <>
               {" by "}
-              <span className="text-neutral-900 font-medium break-words">{scene.play_author}</span>
+              <span className="text-neutral-900 font-semibold break-words">{scene.play_author}</span>
             </>
           )}
         </div>
@@ -2186,7 +2229,7 @@ export default function SceneEditPage() {
             <textarea
               value={sceneEditValue}
               onChange={(e) => setSceneEditValue(e.target.value)}
-              className="w-full text-sm italic text-neutral-600 bg-transparent border-b-2 border-dashed border-neutral-300 outline-none text-center py-1 px-2 resize-none leading-relaxed focus:border-neutral-400"
+              className="w-full text-sm font-medium italic text-neutral-500 bg-transparent border-b-2 border-dashed border-neutral-300 outline-none text-center py-1 px-2 resize-none leading-relaxed focus:border-neutral-400"
               rows={2}
               maxLength={500}
               autoFocus
@@ -2206,7 +2249,7 @@ export default function SceneEditPage() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="text-sm italic text-neutral-600 text-center mb-4 mt-1 leading-relaxed px-2 cursor-pointer hover:opacity-70 transition-opacity"
+            className="text-sm font-semibold italic text-neutral-500 text-center mb-4 mt-1 leading-relaxed px-2 cursor-pointer hover:opacity-70 transition-opacity"
             onClick={() => startEditScene("description", scene.description ?? "", "parchment")}
           >
             {scene.description}
@@ -2333,7 +2376,9 @@ export default function SceneEditPage() {
                             if (isPlayingThisLine) { cancelAI(); ttsLineIdRef.current = null; setTtsProgress(0); return; }
                             cancelAI();
                             const stageDir = values.stage_direction || line.stage_direction || "";
-                            const instructions = stageDir ? `You are an actor performing a scene. The stage direction says: (${stageDir}). Deliver this line exactly as that direction demands. If it says "laughingly", laugh while speaking. If it says "whispering", whisper. If it says "angrily", sound genuinely angry. Fully commit to the direction in your vocal performance.` : "";
+                            const instructions = stageDir
+            ? `You are a skilled actor performing a scene. The stage direction says: ${stageDir}. Fully embody this direction — if it says "sighing", actually sigh; if "whispering", drop your voice; if "angrily", let real frustration come through. Commit completely.`
+            : 'You are a skilled actor performing a scene. Deliver this line with emotional truth and natural pacing. Commit fully to the moment.';
                             ttsLineIdRef.current = line.id;
                             setTtsProgress(0);
                             speakAI(values.text || line.text, editVid || "coral", instructions);
@@ -2393,7 +2438,7 @@ export default function SceneEditPage() {
                                 {line.character_name[0]?.toUpperCase()}
                               </div>
                             ))}
-                            <span className="text-sm font-bold uppercase tracking-widest text-neutral-700">{line.character_name}</span>
+                            <span className="text-base font-bold uppercase tracking-widest text-neutral-700">{line.character_name}</span>
                             <ChevronDown className="w-3 h-3 text-neutral-400" />
                           </button>
                           {/* Dropdown reuses same pattern as parchment dropdown */}
@@ -2412,6 +2457,7 @@ export default function SceneEditPage() {
                                     key={line.character_name}
                                     type="text"
                                     defaultValue={line.character_name}
+                                    maxLength={30}
                                     className="w-full bg-neutral-50 border border-neutral-200 rounded-md px-2.5 py-1.5 text-sm text-neutral-800 focus:outline-none focus:border-neutral-400"
                                     onClick={(e) => e.stopPropagation()}
                                     onKeyDown={(e) => {
@@ -2473,7 +2519,8 @@ export default function SceneEditPage() {
                             );
                           })()}
                         </div>
-                        <textarea
+                        <input
+                          type="text"
                           value={values.stage_direction}
                           maxLength={120}
                           placeholder="Stage directions"
@@ -2483,8 +2530,7 @@ export default function SceneEditPage() {
                               [line.id]: { ...values, stage_direction: e.target.value },
                             }))
                           }
-                          rows={Math.max(1, Math.ceil((values.stage_direction?.length || 0) / 40))}
-                          className="text-xs italic text-neutral-500 bg-transparent border-b border-dashed border-neutral-300 outline-none text-center py-0.5 px-2 resize-none w-full sm:max-w-[300px] placeholder:italic placeholder:text-neutral-300"
+                          className="text-sm font-medium italic text-neutral-500 bg-transparent border-b border-dashed border-neutral-300 outline-none text-center py-0.5 px-2 w-full sm:max-w-[300px] placeholder:italic placeholder:font-medium placeholder:text-neutral-400"
                           disabled={saving !== null}
                           onBlur={handleLineBlur}
                           onKeyDown={handleLineKeyDown}
@@ -2507,7 +2553,7 @@ export default function SceneEditPage() {
                               role="button"
                               tabIndex={0}
                               onClick={() => { cancelAI(); ttsLineIdRef.current = null; setTtsProgress(0); }}
-                              className="text-base font-medium leading-relaxed w-full py-1 text-center break-words cursor-pointer"
+                              className="text-[17px] font-semibold leading-relaxed w-full py-1 text-center break-words cursor-pointer"
                               style={{ overflowWrap: "anywhere" }}
                               title="Click to stop and edit"
                             >
@@ -2600,7 +2646,7 @@ export default function SceneEditPage() {
                                   }));
                                 }}
                                 rows={Math.max(2, Math.ceil(values.text.length / 60))}
-                                className="text-base font-medium leading-relaxed w-full bg-transparent border-b-2 border-dashed border-neutral-300 outline-none py-1 resize-none text-neutral-800 break-words text-center"
+                                className="text-[17px] font-semibold leading-relaxed w-full bg-transparent border-b-2 border-dashed border-neutral-300 outline-none py-1 resize-none text-neutral-800 break-words text-center"
                                 disabled={saving !== null}
                                 onBlur={handleLineBlur}
                                 onKeyDown={handleLineKeyDown}
@@ -2655,7 +2701,7 @@ export default function SceneEditPage() {
                                 {line.character_name[0]?.toUpperCase()}
                               </div>
                             ))}
-                            <span className="text-sm font-bold uppercase tracking-widest text-neutral-900">
+                            <span className="text-base font-bold uppercase tracking-widest text-neutral-900">
                               {line.character_name}
                             </span>
                             <span className={cn("text-[11px] font-sans font-bold min-w-[30px]", isMine ? "text-orange-500" : "text-transparent select-none pointer-events-none")}>{isMine ? "(You)" : "\u00A0"}</span>
@@ -2676,6 +2722,7 @@ export default function SceneEditPage() {
                                     key={line.character_name}
                                     type="text"
                                     defaultValue={line.character_name}
+                                    maxLength={30}
                                     className="w-full bg-neutral-50 border border-neutral-200 rounded-md px-2.5 py-1.5 text-sm text-neutral-800 focus:outline-none focus:border-neutral-400"
                                     onClick={(e) => e.stopPropagation()}
                                     onKeyDown={(e) => {
@@ -2747,9 +2794,9 @@ export default function SceneEditPage() {
                             );
                           })()}
                         </div>
-                        {line.stage_direction && !isDragging && (
-                          <span className="text-xs italic text-neutral-600 normal-case break-words whitespace-pre-wrap max-w-[250px]" style={{ overflowWrap: "anywhere" }}>
-                            ({line.stage_direction})
+                        {line.stage_direction?.trim() && !isDragging && (
+                          <span className="text-sm font-semibold italic text-neutral-500 normal-case break-words max-w-[250px]" style={{ overflowWrap: "anywhere" }}>
+                            ({line.stage_direction.trim()})
                           </span>
                         )}
                         {!isDragging && (
@@ -2762,7 +2809,7 @@ export default function SceneEditPage() {
                       <motion.p
                         layout="position"
                         className={cn(
-                          "text-base font-medium leading-relaxed text-neutral-900 break-words whitespace-pre-wrap text-center w-full transition-colors duration-300",
+                          "text-[17px] font-semibold leading-relaxed text-neutral-900 break-words whitespace-pre-wrap text-center w-full transition-colors duration-300",
                           highlightMyLines && isMine && "bg-yellow-200/70 rounded px-1 -mx-1"
                         )}
                         style={{ overflowWrap: "anywhere" }}
