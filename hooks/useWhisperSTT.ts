@@ -27,6 +27,12 @@ interface UseWhisperSTTOptions {
    * theatrical/dramatic language. Improves accuracy at no extra cost.
    */
   prompt?: string;
+  /**
+   * External gate ref — silence countdown only starts when this is true.
+   * Lets the caller (e.g. SR word matching) control when Whisper should
+   * be allowed to transcribe. Without it, falls back to audio-level detection.
+   */
+  speechGateRef?: React.RefObject<boolean>;
 }
 
 export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
@@ -37,6 +43,7 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     silenceThreshold = 10,
     silenceTimeoutMs = 1500,
     prompt,
+    speechGateRef,
   } = options;
 
   const [isRecording, setIsRecording] = useState(false);
@@ -189,14 +196,20 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     const checkSilence = () => {
       if (stoppedRef.current) return;
       analyser.getByteFrequencyData(freqData);
-      const peak = Math.max(...Array.from(freqData));
 
+      // When speechGateRef is provided, SR handles all line advances.
+      // Never auto-stop — just keep the analyser running for the waveform.
+      if (speechGateRef) {
+        rafRef.current = requestAnimationFrame(checkSilence);
+        return;
+      }
+
+      // Fallback: audio-level silence detection (no SR available)
+      const peak = Math.max(...Array.from(freqData));
       if (peak >= silenceThreshold) {
-        // Speech detected — reset silence timer
         speechDetectedRef.current = true;
         silenceStartRef.current = null;
       } else if (speechDetectedRef.current) {
-        // Only start silence countdown AFTER speech was detected
         if (silenceStartRef.current === null) silenceStartRef.current = Date.now();
         else if (
           Date.now() - silenceStartRef.current >= silenceTimeoutMs &&
@@ -206,7 +219,6 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
           return;
         }
       }
-      // Before speech detected: keep listening indefinitely
       rafRef.current = requestAnimationFrame(checkSilence);
     };
     rafRef.current = requestAnimationFrame(checkSilence);

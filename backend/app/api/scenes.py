@@ -652,14 +652,24 @@ async def get_session_feedback(
         feedback_state = partner._provide_coaching(state)
         feedback_message = feedback_state["messages"][-1] if feedback_state["messages"] else {}
 
-        feedback_content = feedback_message.get("content", "Great work on the scene!")
-        session.overall_feedback = feedback_content  # type: ignore
-        session.strengths = ["Emotional authenticity", "Good pacing"]  # type: ignore
-        session.areas_to_improve = ["Try varying vocal dynamics"]  # type: ignore
-        session.overall_rating = 4.0  # type: ignore
+        feedback_content = feedback_message.get("content", "")
+
+        # Parse structured JSON from AI response
+        import json as _json
+        try:
+            parsed = _json.loads(feedback_content)
+            session.overall_feedback = parsed.get("overall_feedback", feedback_content)  # type: ignore
+            session.strengths = parsed.get("strengths", [])  # type: ignore
+            session.areas_to_improve = parsed.get("areas_to_improve", [])  # type: ignore
+        except (ValueError, _json.JSONDecodeError):
+            # Fallback: store raw text, no fake bullet points
+            session.overall_feedback = feedback_content  # type: ignore
+            session.strengths = []  # type: ignore
+            session.areas_to_improve = []  # type: ignore
+        session.overall_rating = None  # type: ignore
 
         db.commit()
-        overall_feedback_val = feedback_content
+        overall_feedback_val = str(session.overall_feedback) if session.overall_feedback else ""
 
     strengths_val = session.strengths  # type: ignore
     strengths_list = list(strengths_val) if strengths_val is not None else []  # type: ignore
