@@ -44,17 +44,20 @@ function ttsText(line: { text: string; stage_direction?: string | null }): strin
     .trim();
 }
 
-/** Build TTS instructions from stage directions so the voice ACTS on them
- *  instead of reading them aloud (e.g. "laughingly" → "Speak laughingly").
- *  Gives the AI voice dramatic, actorly instructions to fully commit. */
-function ttsInstructions(line: { text: string; stage_direction?: string | null }): string {
+/** Build TTS instructions from stage directions and scene context.
+ *  The voice ACTS on directions instead of reading them aloud. */
+function ttsInstructions(
+  line: { text: string; stage_direction?: string | null },
+  sceneContext?: string,
+): string {
   const fieldDir = line.stage_direction?.trim();
   const inlineDirs = [...line.text.matchAll(/\(([^)]+)\)/g)].map(m => m[1].trim());
   const allDirs = [...new Set([fieldDir, ...inlineDirs].filter(Boolean))];
+  const base = sceneContext || 'You are a skilled actor performing a scene.';
   if (!allDirs.length) {
-    return 'You are a skilled actor performing a scene. Deliver this line with emotional truth and natural pacing. Commit fully to the moment.';
+    return `${base} Deliver this line with emotional truth, natural pacing, and full commitment to the moment.`;
   }
-  return `You are a skilled actor performing a scene. The stage direction says: ${allDirs.join('; ')}. Fully embody this direction — if it says "sighing", actually sigh; if "whispering", drop your voice; if "angrily", let real frustration come through. Commit completely.`;
+  return `${base} Stage direction: ${allDirs.join('; ')}. Fully embody this — if it says "sighing", actually sigh; "whispering", drop your voice; "angrily", let real frustration through. Commit completely.`;
 }
 
 const LOADING_TEXTS = [
@@ -99,9 +102,17 @@ function FeedbackLoadingText() {
 /* ─── Word match scoring ─────────────────────────────────────────────── */
 
 /** Returns fraction of expected words found in transcript (0–1). */
+/** Normalize text for word matching: add space after sentence punctuation
+ *  (fixes "talk.We" → "talk we") but preserve contractions ("I've" → "ive"). */
+const normWords = (s: string) =>
+  s.toLowerCase()
+    .replace(/([.!?;:])([a-z])/gi, '$1 $2')  // space after sentence punct if missing
+    .replace(/[^a-z0-9\s]/g, '')               // strip remaining non-alpha
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+
 function wordMatchScore(expected: string, transcript: string): number {
-  const norm = (s: string) =>
-    s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s{2,}/g, ' ').trim();
+  const norm = normWords;
   const expectedWords = norm(expected).split(/\s+/).filter(Boolean);
   if (!expectedWords.length) return 1;
   const transcriptWords = new Set(norm(transcript).split(/\s+/).filter(Boolean));
@@ -271,6 +282,21 @@ export default function RehearsalPage() {
     [sceneWithLines?.lines],
   );
   const orderedLinesRef = useRef(orderedLines);
+
+  // Build rich voice context from scene metadata — reused in every TTS call
+  const sceneVoiceContext = useMemo(() => {
+    const s = sceneWithLines;
+    const ai = session?.ai_character;
+    if (!s || !ai) return '';
+    const parts = [`You are ${ai}, a character in "${s.title}"`];
+    if (s.play_title) parts[0] += ` from "${s.play_title}"`;
+    parts[0] += '.';
+    if (s.description) parts.push(`Scene context: ${s.description.slice(0, 150)}.`);
+    parts.push('You are a skilled actor. React naturally to the emotional stakes. Let pauses breathe. Commit fully.');
+    return parts.join(' ');
+  }, [sceneWithLines, session?.ai_character]);
+  const sceneVoiceContextRef = useRef(sceneVoiceContext);
+  sceneVoiceContextRef.current = sceneVoiceContext;
   orderedLinesRef.current = orderedLines;
 
   // Current user line text (derived from activeLineIndex)
@@ -484,7 +510,7 @@ export default function RehearsalPage() {
       // AI's turn — speak it from script (strip any inline [stage directions])
       setLastAiLine(line.text);
       setAutoListenLineKey(null);
-      speakLineRef.current(ttsText(line), ttsInstructions(line));
+      speakLineRef.current(ttsText(line), ttsInstructions(line, sceneVoiceContextRef.current));
     } else {
       // User's turn — set up for auto-listen
       setLastAiLine(null);
@@ -597,7 +623,7 @@ export default function RehearsalPage() {
         sceneData.lines
           .filter(l => l.character_name === data.ai_character)
           .slice(0, 5)
-          .forEach(l => preloadTTSRef.current(ttsText(l), voiceId, ttsInstructions(l)));
+          .forEach(l => preloadTTSRef.current(ttsText(l), voiceId, ttsInstructions(l, sceneVoiceContextRef.current)));
       } catch {
         // Non-fatal
       }
@@ -671,7 +697,7 @@ export default function RehearsalPage() {
 
     if (firstLine.character_name === session.ai_character) {
       setLastAiLine(firstLine.text);
-      speakLineRef.current(ttsText(firstLine), ttsInstructions(firstLine));
+      speakLineRef.current(ttsText(firstLine), ttsInstructions(firstLine, sceneVoiceContextRef.current));
     } else {
       // User's line — auto-listen will handle
       setLastAiLine(null);
@@ -723,7 +749,7 @@ export default function RehearsalPage() {
     if (!SR) return;
 
     const expected = stripStageDirections(currentUserLineText);
-    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s{2,}/g, ' ').trim();
+    const norm = normWords;
     const expectedWords = norm(expected).split(/\s+/).filter(Boolean);
 
     let recognition: any;
@@ -823,7 +849,7 @@ export default function RehearsalPage() {
     const aiLines = orderedLines
       .filter(l => l.character_name === session.ai_character)
       .slice(0, 5); // preload first 5 AI lines
-    aiLines.forEach(l => preloadTTS(ttsText(l), lastKnownVoiceIdRef.current, ttsInstructions(l)));
+    aiLines.forEach(l => preloadTTS(ttsText(l), lastKnownVoiceIdRef.current, ttsInstructions(l, sceneVoiceContextRef.current)));
   }, [session?.ai_character, orderedLines, preloadTTS]);
 
   // Preload next AI line while user speaks
@@ -836,7 +862,7 @@ export default function RehearsalPage() {
     let found = 0;
     for (let i = activeLineIndex + 1; i < orderedLines.length && found < 2; i++) {
       if (orderedLines[i].character_name === session.ai_character) {
-        preloadTTS(ttsText(orderedLines[i]), lastKnownVoiceIdRef.current, ttsInstructions(orderedLines[i]));
+        preloadTTS(ttsText(orderedLines[i]), lastKnownVoiceIdRef.current, ttsInstructions(orderedLines[i], sceneVoiceContextRef.current));
         found++;
       }
     }
@@ -930,7 +956,7 @@ export default function RehearsalPage() {
       const line = lines[idx];
       if (line && line.character_name === sess.ai_character) {
         setLastAiLine(line.text);
-        speakLineRef.current(ttsText(line), ttsInstructions(line));
+        speakLineRef.current(ttsText(line), ttsInstructions(line, sceneVoiceContextRef.current));
       }
     }
   }, []);
@@ -1109,7 +1135,7 @@ export default function RehearsalPage() {
                 </p>
               </>
             ) : (
-              <div className="flex flex-col items-center gap-4 py-12">
+              <div className="flex flex-col items-center justify-center gap-4 min-h-[40vh]">
                 <div className="w-6 h-6 border-2 border-neutral-700 border-t-neutral-400 rounded-full animate-spin" />
                 <FeedbackLoadingText />
               </div>
