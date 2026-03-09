@@ -208,9 +208,31 @@ export function LandingPageAnimated() {
             <div className="flex flex-col gap-2">
               <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} ActorRise</p>
               <p className="text-xs text-muted-foreground/80">Built by an actor, for actors.</p>
-              <a href="https://fazier.com/launches/www.actorrise.com" target="_blank" rel="noopener noreferrer">
-                <img src="https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=launched&theme=dark" width={120} alt="Fazier badge" />
-              </a>
+              <div className="flex items-center gap-3">
+                <a href="https://fazier.com/launches/www.actorrise.com" target="_blank" rel="noopener noreferrer">
+                  <img src="https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=launched&theme=dark" width={150} alt="Fazier badge" />
+                </a>
+                <a
+                  href="https://www.producthunt.com/products/actorrise?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-actorrise"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <img
+                    src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1078076&theme=dark&t=1772064638507"
+                    alt="ActorRise on Product Hunt"
+                    width={180}
+                    height={40}
+                    className="h-[40px] w-auto"
+                  />
+                </a>
+                <a href="https://peerlist.io/canberkvarli/project/actorrise" target="_blank" rel="noreferrer">
+                  <img
+                    src="https://peerlist.io/api/v1/projects/embed/PRJHKKDKE6P6NPEPG3DRRAQ68J9OBR?showUpvote=false&theme=dark"
+                    alt="ActorRise on Peerlist"
+                    style={{ width: "auto", height: "40px" }}
+                  />
+                </a>
+              </div>
             </div>
             <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-4">
               <Link href="/monologue-finder" className="hover:text-foreground transition-colors">

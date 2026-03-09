@@ -97,18 +97,6 @@ export function MarketingFooter() {
                 Contact
               </button>
             </nav>
-            <a
-              href="https://peerlist.io/canberkvarli/project/actorrise"
-              target="_blank"
-              rel="noreferrer"
-              className="shrink-0"
-            >
-              <img
-                src="https://peerlist.io/api/v1/projects/embed/PRJHKKDKE6P6NPEPG3DRRAQ68J9OBR?showUpvote=false&theme=dark"
-                alt="ActorRise on Peerlist"
-                style={{ width: "auto", height: "72px" }}
-              />
-            </a>
           </div>
         </div>
       </footer>
