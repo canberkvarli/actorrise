@@ -213,16 +213,16 @@ export function LandingPageAnimated() {
                   <img src="https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=launched&theme=dark" width={150} alt="Fazier badge" />
                 </a>
                 <a
-                  href="https://www.producthunt.com/products/actorrise/launches/actorrise?utm_source=other&utm_medium=social"
+                  href="https://www.producthunt.com/products/actorrise?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-actorrise"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
                   <img
-                    src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1078076&theme=dark&t=1772064638507"
-                    alt="ActorRise on Product Hunt"
-                    width={180}
-                    height={40}
-                    className="h-[40px] w-auto"
+                    src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1078076&theme=dark&t=1773031056919"
+                    alt="ActorRise - Find the perfect monologue in less than 20 seconds | Product Hunt"
+                    width={250}
+                    height={54}
+                    className="h-[54px] w-auto"
                   />
                 </a>
                 <a href="https://peerlist.io/canberkvarli/project/actorrise" target="_blank" rel="noreferrer">
