@@ -220,16 +220,16 @@ export function LandingPageAnimated() {
                   <img
                     src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1078076&theme=dark&t=1773031056919"
                     alt="ActorRise - Find the perfect monologue in less than 20 seconds | Product Hunt"
-                    width={250}
-                    height={54}
-                    className="h-[54px] w-auto"
+                    width={300}
+                    height={65}
+                    className="h-[65px] w-auto"
                   />
                 </a>
                 <a href="https://peerlist.io/canberkvarli/project/actorrise" target="_blank" rel="noreferrer">
                   <img
                     src="https://peerlist.io/api/v1/projects/embed/PRJHKKDKE6P6NPEPG3DRRAQ68J9OBR?showUpvote=false&theme=dark"
                     alt="ActorRise on Peerlist"
-                    style={{ width: "auto", height: "40px" }}
+                    style={{ width: "auto", height: "65px" }}
                   />
                 </a>
               </div>
