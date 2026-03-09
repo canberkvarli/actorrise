@@ -213,7 +213,7 @@ export function LandingPageAnimated() {
                   <img src="https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=launched&theme=dark" width={150} alt="Fazier badge" />
                 </a>
                 <a
-                  href="https://www.producthunt.com/products/actorrise?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-actorrise"
+                  href="https://www.producthunt.com/products/actorrise/launches/actorrise?utm_source=other&utm_medium=social"
                   target="_blank"
                   rel="noopener noreferrer"
                 >
