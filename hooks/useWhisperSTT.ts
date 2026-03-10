@@ -363,5 +363,7 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     error: null as string | null,
     // Expose analyser so callers can render a real-time waveform
     analyserRef,
+    streamRef,
+    audioCtxRef,
   };
 }

@@ -7,9 +7,10 @@ import json as _json
 from datetime import datetime
 from queue import Queue, Empty
 from typing import List, Optional
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
@@ -151,6 +152,100 @@ class BulkResetRequest(BaseModel):
     context_before: Optional[str] = None
     context_after: Optional[str] = None
     lines: List[BulkResetLineData]
+
+
+class ScriptScanResponse(BaseModel):
+    """Quick scan results for pre-extraction choice dialog"""
+    page_count: int
+    has_structure: bool
+    num_acts: int
+    num_sections: int
+    show_mode_choice: bool
+    estimated_quick_seconds: int
+    estimated_full_seconds: int
+
+
+# ============================================================================
+# Script Scan (instant, no AI)
+# ============================================================================
+
+@router.post("/scan", response_model=ScriptScanResponse)
+async def scan_script(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Quick scan: extract text + detect structure. No AI, no DB writes, no quota.
+    Returns info for the pre-extraction choice dialog.
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename provided")
+
+    file_ext = file.filename.split(".")[-1].lower()
+    if file_ext not in ["pdf", "txt", "text"]:
+        raise HTTPException(status_code=400, detail="Only PDF and TXT files are supported")
+
+    file_content = await file.read()
+    if len(file_content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+
+    # Extract text (no AI needed)
+    import io
+    import pdfplumber as _pdfplumber
+
+    try:
+        if file_ext == "pdf":
+            pdf_file = io.BytesIO(file_content)
+            raw_text = ""
+            with _pdfplumber.open(pdf_file) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        raw_text += page_text + "\n\n"
+            raw_text = raw_text.strip()
+        else:
+            try:
+                raw_text = file_content.decode("utf-8")
+            except UnicodeDecodeError:
+                raw_text = file_content.decode("latin-1")
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
+
+    if not raw_text or len(raw_text) < 100:
+        raise HTTPException(status_code=400, detail="File appears to be empty or too short")
+
+    # Detect structure (pure regex, instant)
+    from app.services.script_structure import detect_structure
+    from app.services.script_parser import parse_dialogue
+
+    chunks = detect_structure(raw_text)
+    has_structure = len(chunks) > 1 or (len(chunks) == 1 and chunks[0].act_label is not None)
+    num_acts = len(set(c.act_label for c in chunks if c.act_label))
+
+    # Count chunks that have dialogue (for time estimates)
+    dialogue_chunks = 0
+    for c in chunks:
+        if c.char_count >= 200:
+            sections = parse_dialogue(c.text)
+            if any(len(s["characters"]) >= 2 for s in sections):
+                dialogue_chunks += 1
+
+    page_count = max(1, len(raw_text) // 3000)
+
+    # Time estimates: metadata AI call (~8s) + per-chunk work
+    base_time = 10  # metadata extraction
+    est_quick = base_time + max(15, dialogue_chunks * 3)  # regex + batch AI analysis (~15-30s)
+    est_full = base_time + max(20, dialogue_chunks * 12)  # ~12s per AI chunk call
+
+    return ScriptScanResponse(
+        page_count=page_count,
+        has_structure=has_structure,
+        num_acts=num_acts,
+        num_sections=len(chunks),
+        show_mode_choice=has_structure and dialogue_chunks >= 8,
+        estimated_quick_seconds=est_quick,
+        estimated_full_seconds=est_full,
+    )
 
 
 # ============================================================================
@@ -334,6 +429,7 @@ async def upload_script(
             scene.original_snapshot = {
                 "character_1_name": scene_data.get("character_1", "Character 1"),
                 "character_2_name": scene_data.get("character_2", "Character 2"),
+                "description": scene.description,
                 "lines": original_lines,
             }
 
@@ -370,19 +466,23 @@ async def upload_script(
 
 @router.post("/upload-stream")
 async def upload_script_stream(
+    request: Request,
     file: UploadFile = File(...),
     title: Optional[str] = Form(None),
     author: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
+    mode: Optional[str] = Form("full"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _gate: bool = Depends(require_script_upload()),
 ):
     """
     Upload a script file with SSE progress streaming.
+    mode: "quick" (regex + batch AI, 2-person only) or "full" (AI per chunk, all scenes).
     Sends progress events as `data: {"step": "...", "type": "progress"}` lines,
     then a final `data: {"type": "done", ...}` or `data: {"type": "error", ...}`.
     """
+    extraction_mode = mode if mode in ("quick", "full") else "full"
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
@@ -411,6 +511,18 @@ async def upload_script_stream(
     def on_progress(msg: str):
         progress_queue.put(msg)
 
+    # Monitor client disconnect in a separate asyncio task (more reliable
+    # than checking inside the generator, which depends on yield/consume timing)
+    async def monitor_disconnect():
+        while not cancel_event.is_set():
+            if await request.is_disconnected():
+                cancel_event.set()
+                print("Client disconnected, cancelling extraction")
+                return
+            await asyncio.sleep(0.3)
+
+    monitor_task = asyncio.create_task(monitor_disconnect())
+
     async def event_stream():
         # Run extraction in a thread so we can stream progress
         extraction_result = {}
@@ -421,7 +533,8 @@ async def upload_script_stream(
                 parser = ScriptParser()
                 extraction_result["data"] = parser.parse_script(
                     file_content, file_ext, filename,
-                    on_progress=on_progress, cancel_event=cancel_event
+                    on_progress=on_progress, cancel_event=cancel_event,
+                    mode=extraction_mode,
                 )
             except InterruptedError:
                 extraction_error["msg"] = "cancelled"
@@ -436,11 +549,15 @@ async def upload_script_stream(
         # Stream progress events
         try:
             while True:
+                if cancel_event.is_set():
+                    thread.join(timeout=10)
+                    return
+
                 # Poll queue with async sleep to avoid blocking the event loop
                 try:
                     msg = progress_queue.get_nowait()
                 except Empty:
-                    await asyncio.sleep(0.1)
+                    await asyncio.sleep(0.2)
                     continue
 
                 if msg is None:
@@ -448,12 +565,13 @@ async def upload_script_stream(
 
                 event = _json.dumps({"type": "progress", "step": msg})
                 yield f"data: {event}\n\n"
-        except asyncio.CancelledError:
-            # Client disconnected — signal the extraction thread to stop
+        except (asyncio.CancelledError, GeneratorExit):
             cancel_event.set()
-            print("Client disconnected, cancelling extraction")
+            print("SSE generator killed, cancelling extraction")
             thread.join(timeout=10)
             return
+        finally:
+            monitor_task.cancel()
 
         thread.join(timeout=5)
 
@@ -467,8 +585,31 @@ async def upload_script_stream(
 
         result = extraction_result["data"]
 
-        # ---- Phase 2: DB writes (fresh connection) ----
-        fresh_db = SessionLocal()
+        # ---- Phase 2: DB writes (fresh connection with retry) ----
+        # Supabase PgBouncer can be temporarily overloaded after long extractions.
+        fresh_db = None
+        for attempt in range(3):
+            try:
+                fresh_db = SessionLocal()
+                # Test the connection is alive
+                fresh_db.execute(text("SELECT 1"))
+                break
+            except Exception as db_err:
+                if fresh_db:
+                    try:
+                        fresh_db.close()
+                    except Exception:
+                        pass
+                    fresh_db = None
+                if attempt < 2:
+                    import time as _time
+                    wait = 2 ** (attempt + 1)  # 2s, 4s
+                    print(f"DB connect failed (attempt {attempt+1}/3), retrying in {wait}s: {db_err}")
+                    await asyncio.sleep(wait)
+                else:
+                    event = _json.dumps({"type": "error", "detail": "Database temporarily unavailable. Your extraction completed — please try uploading again."})
+                    yield f"data: {event}\n\n"
+                    return
 
         try:
             metadata = result["metadata"]
@@ -580,6 +721,7 @@ async def upload_script_stream(
                 scene.original_snapshot = {
                     "character_1_name": scene_data.get("character_1", "Character 1"),
                     "character_2_name": scene_data.get("character_2", "Character 2"),
+                    "description": scene.description,
                     "lines": original_lines,
                 }
                 scenes_created.append(scene)
@@ -776,6 +918,7 @@ async def create_script_from_text(
             scene.original_snapshot = {
                 "character_1_name": scene_data.get("character_1", "Character 1"),
                 "character_2_name": scene_data.get("character_2", "Character 2"),
+                "description": scene.description,
                 "lines": original_lines,
             }
             scenes_created.append(scene)
@@ -918,6 +1061,7 @@ async def ensure_example_script(
     scene.original_snapshot = {
         "character_1_name": scene_data.get("character_1", "Character 1"),
         "character_2_name": scene_data.get("character_2", "Character 2"),
+        "description": scene.description,
         "lines": original_lines,
     }
 
@@ -1233,9 +1377,10 @@ async def reset_scene_to_original(
 
     snapshot = scene.original_snapshot
 
-    # Restore character names
+    # Restore character names and description
     scene.character_1_name = snapshot["character_1_name"]
     scene.character_2_name = snapshot["character_2_name"]
+    scene.description = snapshot.get("description")  # None for old snapshots = clears AI-generated description
 
     # Delete rehearsal line deliveries that reference these scene lines (FK constraint)
     line_ids = [row[0] for row in db.query(SceneLine.id).filter(SceneLine.scene_id == scene_id).all()]

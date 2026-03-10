@@ -167,7 +167,7 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      body: JSON.stringify({ text, voice, instructions, response_format: 'mp3' }),
+      body: JSON.stringify({ text: text.slice(0, 4096), voice, instructions: instructions.slice(0, 2000), response_format: 'mp3' }),
       signal,
     });
 

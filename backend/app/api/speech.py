@@ -40,7 +40,7 @@ CONTENT_TYPE_MAP = {
 class SpeechRequest(BaseModel):
     """Request to synthesize speech for a scene partner line."""
 
-    text: str = Field(..., min_length=1, max_length=2000)
+    text: str = Field(..., min_length=1, max_length=4096)
     voice: str = Field(default="coral")
     instructions: str = Field(default="", max_length=2000)
     response_format: str = Field(default="mp3")

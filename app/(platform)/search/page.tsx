@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { toastBookmark } from "@/lib/toast";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow, IconSend, IconFlag, IconDeviceTv, IconEdit, IconCheck } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow, IconSend, IconFlag, IconDeviceTv, IconEdit, IconCheck, IconBulb } from "@tabler/icons-react";
 
 // Fun loading messages for AI search (theater)
 const LOADING_MESSAGES = [
@@ -48,6 +48,15 @@ const SEARCH_LOADING_STEPS = [
   "Weighing every speech for emotional weight",
   "Finding the ones that'll stop the room",
   "Curating your shortlist",
+];
+
+const FILM_TV_LOADING_STEPS = [
+  "Scanning the IMDb archives",
+  "Checking with Scorsese's casting notes",
+  "Digging through iconic film scenes",
+  "Matching roles to your search",
+  "Pulling the best audition-worthy moments",
+  "Lining up your shortlist",
 ];
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
@@ -169,6 +178,7 @@ export default function SearchPage() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [correctedQuery, setCorrectedQuery] = useState<string | null>(null);
+  const [queryMayHaveTypos, setQueryMayHaveTypos] = useState(false);
   const PAGE_SIZE = 20;
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -243,28 +253,31 @@ export default function SearchPage() {
       ? LOADING_MESSAGES_FILM_TV[loadingMessageIndex % LOADING_MESSAGES_FILM_TV.length]
       : LOADING_MESSAGES[loadingMessageIndex % LOADING_MESSAGES.length];
 
-  // Build whimsical step-by-step loading list for plays search
+  // Build whimsical step-by-step loading list for both search modes
+  // Steps are spread evenly across the search duration (not fixed interval)
+  // so the last step never "gets stuck" — all 6 finish just before results arrive.
+  const loadingStartRef = useRef<number>(0);
   useEffect(() => {
-    if (!isLoading || searchMode !== "plays") {
+    if (!isLoading) {
       loadingStepsTimers.current.forEach(clearTimeout);
       loadingStepsTimers.current = [];
-      if (!isLoading) setLoadingSteps([]);
+      setLoadingSteps([]);
       return;
     }
+    loadingStartRef.current = Date.now();
     setLoadingSteps([]);
-    const timers = SEARCH_LOADING_STEPS.map((step, i) =>
-      setTimeout(() => setLoadingSteps((prev) => [...prev, step]), i * 850)
+    const steps = searchMode === "film_tv" ? FILM_TV_LOADING_STEPS : SEARCH_LOADING_STEPS;
+    // Steps spaced to feel synced with a real backend process (~3-8s search).
+    // Intervals increase so early steps feel quick, later ones feel like heavy work.
+    const delays = [0, 1200, 2800, 4800, 7000, 9500];
+    const timers = steps.map((step, i) =>
+      setTimeout(() => setLoadingSteps((prev) => [...prev, step]), delays[i])
     );
     loadingStepsTimers.current = timers;
     return () => timers.forEach(clearTimeout);
   }, [isLoading, searchMode]);
 
-  // Auto-scroll loading steps container to bottom as steps appear
-  useEffect(() => {
-    if (loadingScrollRef.current) {
-      loadingScrollRef.current.scrollTop = loadingScrollRef.current.scrollHeight;
-    }
-  }, [loadingSteps]);
+  // Auto-scroll: handled via ref callback on the latest step
 
   // Scroll panel to top when monologue is selected
   useEffect(() => {
@@ -601,6 +614,7 @@ export default function SearchPage() {
     page: number;
     page_size: number;
     corrected_query?: string | null;
+    query_may_have_typos?: boolean;
   };
 
   const performSearch = async (
@@ -622,6 +636,7 @@ export default function SearchPage() {
       setSearchError(null);
       setSearchUpgradeUrl(null);
       setCorrectedQuery(null);
+      setQueryMayHaveTypos(false);
     } else {
       setIsLoadingMore(true);
     }
@@ -647,6 +662,7 @@ export default function SearchPage() {
       } else {
         setResults(newResults);
         setCorrectedQuery(data.corrected_query ?? null);
+        setQueryMayHaveTypos(data.query_may_have_typos ?? false);
       }
       setTotal(data.total);
       setPage(data.page);
@@ -1161,8 +1177,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               }`}
               onClick={() => {
                 playsActionAtRef.current = Date.now();
+                // Abort any in-flight search cleanly (suppress error banner)
+                if (searchAbortRef.current) { userStoppedRef.current = true; searchAbortRef.current.abort(); }
                 setSearchMode("plays");
                 setIsLoading(false);
+                setSearchError(null);
                 setOutlineFlash("plays");
                 const params = new URLSearchParams();
                 params.set("mode", "plays");
@@ -1185,8 +1204,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
               }`}
               onClick={() => {
+                // Abort any in-flight search cleanly (suppress error banner)
+                if (searchAbortRef.current) { userStoppedRef.current = true; searchAbortRef.current.abort(); }
                 setSearchMode("film_tv");
                 setIsLoading(false);
+                setSearchError(null);
                 setOutlineFlash("film_tv");
                 const params = new URLSearchParams();
                 params.set("mode", "film_tv");
@@ -1700,33 +1722,62 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="py-16"
+                className="pt-6 pb-10"
               >
-                <div className="flex flex-col items-center justify-center gap-6 mb-12">
+                <div className="max-w-3xl mx-auto">
                   <div className="relative">
-                    <div className="h-16 w-16 rounded-full border-2 border-violet-400/30 border-t-violet-400 animate-spin" />
-                    <IconDeviceTv className="h-7 w-7 text-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                    {loadingSteps.length > 3 && (
+                      <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-background to-transparent z-10 pointer-events-none" />
+                    )}
+                    <div
+                      ref={loadingScrollRef}
+                      className="border-l-2 border-violet-400/40 pl-3 sm:pl-5 max-h-44 sm:max-h-64 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                    >
+                      <AnimatePresence initial={false}>
+                        {loadingSteps.map((step, i) => {
+                          const isLatest = i === loadingSteps.length - 1;
+                          const isCompleted = i < loadingSteps.length - 1;
+                          return (
+                            <motion.div
+                              key={`step-${i}`}
+                              initial={{ opacity: 0, height: 0, x: -8 }}
+                              animate={{ opacity: 1, height: "auto", x: 0 }}
+                              transition={{ duration: 0.35, ease: "easeOut" }}
+                              className="overflow-hidden"
+                              ref={isLatest ? (el: HTMLDivElement | null) => {
+                                if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "end" }), 150);
+                              } : undefined}
+                            >
+                              <div className="flex items-center gap-3 py-2.5">
+                                <div className="shrink-0">
+                                  {isCompleted ? (
+                                    <motion.div
+                                      initial={{ scale: 0 }}
+                                      animate={{ scale: 1 }}
+                                      transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                                    >
+                                      <IconCheck className="w-4 h-4 text-emerald-500" />
+                                    </motion.div>
+                                  ) : (
+                                    <IconLoader2 className="w-4 h-4 text-violet-400 animate-spin" />
+                                  )}
+                                </div>
+                                <span
+                                  className={`text-sm sm:text-base leading-snug ${
+                                    isLatest
+                                      ? "text-violet-400 font-medium"
+                                      : "text-muted-foreground"
+                                  }`}
+                                >
+                                  {step}{isLatest && <span className="animate-pulse">...</span>}
+                                </span>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
+                    </div>
                   </div>
-                  <motion.p
-                    key={loadingMessageIndex}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="text-lg font-medium text-foreground"
-                  >
-                    {currentLoadingMessage}
-                  </motion.p>
-                </div>
-                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <Card key={i} className="opacity-50">
-                      <CardContent className="pt-6 space-y-4">
-                        <Skeleton className="h-6 w-3/4" />
-                        <Skeleton className="h-4 w-1/2" />
-                        <Skeleton className="h-20 w-full" />
-                      </CardContent>
-                    </Card>
-                  ))}
                 </div>
               </motion.div>
             ) : !filmTvHasSearched ? (
@@ -1863,7 +1914,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   )}
                   <div
                     ref={loadingScrollRef}
-                    className="border-l-2 border-border/60 pl-5 max-h-56 overflow-hidden"
+                    className="border-l-2 border-border/60 pl-3 sm:pl-5 max-h-44 sm:max-h-64 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                   >
                     <AnimatePresence initial={false}>
                       {loadingSteps.map((step, i) => {
@@ -1876,6 +1927,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                             animate={{ opacity: 1, height: "auto", x: 0 }}
                             transition={{ duration: 0.35, ease: "easeOut" }}
                             className="overflow-hidden"
+                            ref={isLatest ? (el: HTMLDivElement | null) => {
+                              if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "end" }), 150);
+                            } : undefined}
                           >
                             <div className="flex items-center gap-3 py-2.5">
                               <div className="shrink-0">
@@ -1940,7 +1994,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             >
               <div className="pt-12 pb-12 text-center">
                 <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No monologues found</h3>
+                <h3 className="text-2xl font-semibold mb-2">No monologues found</h3>
                 <p className="text-sm text-muted-foreground">
                   Try different search terms or adjust filters
                 </p>
@@ -1950,19 +2004,31 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             <div id="search-results" className="space-y-4">
               {correctedQuery &&
                 (queryUsedForResults ?? "").trim().toLowerCase() !== correctedQuery.trim().toLowerCase() && (
-                <div className="rounded-lg border border-primary/30 bg-primary/5 px-4 py-3 text-sm text-foreground">
-                  Showing results for <span className="font-semibold">&ldquo;{correctedQuery}&rdquo;</span>.{" "}
-                  <button
-                    type="button"
-                    className="underline text-primary hover:text-primary/80 transition-colors"
-                    onClick={() => {
-                      setCorrectedQuery(null);
-                      setPlaysQuery(queryUsedForResults);
-                      performSearch(queryUsedForResults, filters);
-                    }}
-                  >
-                    Search instead for &ldquo;{queryUsedForResults}&rdquo;
-                  </button>
+                <div className="flex items-start gap-3 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-foreground max-w-lg">
+                  <IconBulb className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p>
+                      We searched for <span className="font-semibold">&ldquo;{correctedQuery}&rdquo;</span> since there might be a typo.
+                    </p>
+                    <button
+                      type="button"
+                      className="underline text-primary hover:text-primary/80 transition-colors mt-1"
+                      onClick={() => {
+                        setCorrectedQuery(null);
+                        setQueryMayHaveTypos(false);
+                        setPlaysQuery(queryUsedForResults);
+                        performSearch(queryUsedForResults, filters);
+                      }}
+                    >
+                      Search instead for &ldquo;{queryUsedForResults}&rdquo;
+                    </button>
+                  </div>
+                </div>
+              )}
+              {!correctedQuery && queryMayHaveTypos && (
+                <div className="flex items-start gap-3 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-foreground max-w-md">
+                  <IconBulb className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+                  <p>Your search may have typos. Try checking your spelling for better results.</p>
                 </div>
               )}
               {searchParams.get("ai") === "true" && (

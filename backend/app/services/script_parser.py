@@ -3,10 +3,10 @@ Script parsing service for extracting text from PDF/TXT files
 and extracting characters, scenes, and dialogue.
 
 Extraction strategy:
-  1. Regex parses dialogue (deterministic, lossless — zero lines lost)
-  2. Logic filters to two-person scenes
-  3. AI only analyzes metadata (title, tone, emotions, etc.)
-  4. AI fallback if regex finds no dialogue (unusual formatting)
+  1. Structural splitting via regex (acts/scenes)
+  2. AI extracts dialogue scenes (2+ characters) per chunk
+  3. AI analyzes metadata (title, tone, emotions, etc.)
+  4. character_1/character_2 = the two most prominent speakers
 """
 
 import io
@@ -705,14 +705,15 @@ Return ONLY valid JSON array."""
         max_chars = 80000
         truncated_text = script_text[:max_chars]
 
-        prompt = f"""Analyze this script and extract ALL two-person scenes (dialogue between exactly 2 characters).
+        prompt = f"""Analyze this script and extract ALL dialogue scenes (2 or more characters speaking).
 
 IMPORTANT RULES:
-- If the entire script is a conversation between 2 characters, treat it as ONE scene.
-- Include even very short exchanges (2+ lines).
+- If the entire script is a conversation between characters, treat it as ONE scene.
+- Only extract scenes with at least 4 lines of dialogue.
 - Every line of dialogue must be captured — do NOT skip or summarize lines.
 - If a character speaks multiple consecutive paragraphs, keep them as separate lines.
 - Stage directions in parentheses or brackets should go in "stage_direction", not in "text".
+- For character_1 and character_2, pick the two characters who speak the most lines.
 
 Script:
 ```
@@ -723,8 +724,8 @@ Known characters: {char_hint}
 
 For each scene, extract:
 1. title: Descriptive title for the scene
-2. character_1: First character name
-3. character_2: Second character name
+2. character_1: Character with the most lines
+3. character_2: Character with the second most lines
 4. description: Brief description (1-2 sentences)
 5. setting: Where the scene takes place (null if unclear)
 6. tone: One of: romantic, comedic, tragic, tense, dramatic, lighthearted, mysterious, melancholic
@@ -790,6 +791,106 @@ Return ONLY valid JSON array, no explanation."""
             return []
 
     # ------------------------------------------------------------------
+    # Combined extraction (small scripts — single AI call)
+    # ------------------------------------------------------------------
+
+    def extract_combined(self, script_text: str) -> Dict:
+        """
+        Single AI call that extracts metadata + scenes for short scripts (< 5 pages).
+        Returns {"metadata": {...}, "scenes": [...]}.
+        """
+        import time as _time
+
+        title_hint = self._detect_title_hint(script_text)
+        hint_line = f'\nHINT: The title is likely "{title_hint}".\n' if title_hint else ""
+
+        prompt = f"""Analyze this script and extract BOTH metadata and dialogue scenes in ONE response.
+{hint_line}
+Script text:
+```
+{script_text[:15000]}
+```
+
+Return a JSON object with two keys:
+
+1. "metadata": {{
+  "title": "The actual play/screenplay title",
+  "author": "Playwright or screenwriter name",
+  "characters": [
+    {{"name": "NAME", "gender": "male/female/non-binary/unknown", "age_range": "20s/30-40/teen/elderly", "description": "Brief 10-15 word description"}}
+  ],
+  "genre": "Drama/Comedy/Tragedy/etc",
+  "estimated_length_minutes": 60,
+  "synopsis": "2-3 sentence synopsis of the work"
+}}
+
+2. "scenes": An array of dialogue scenes. For each scene:
+{{
+  "title": "Brief descriptive title",
+  "character_1": "Character with most lines",
+  "character_2": "Character with second most lines",
+  "description": "1-2 sentence summary",
+  "setting": "Where it takes place (null if unclear)",
+  "tone": "romantic/comedic/tragic/tense/dramatic/lighthearted/mysterious/melancholic",
+  "primary_emotions": ["emotion1", "emotion2"],
+  "relationship_dynamic": "romantic/adversarial/familial/friendship/professional/mentor-student/strangers",
+  "lines": [
+    {{"character": "NAME", "text": "Full dialogue text", "stage_direction": null}},
+    ...
+  ]
+}}
+
+RULES for scenes:
+- Extract every stretch of dialogue between 2+ characters.
+- Include ALL spoken dialogue lines — do NOT skip, summarize, or paraphrase.
+- Do NOT include stage directions as dialogue text.
+- Merge consecutive lines by the same character into one entry.
+- Only extract scenes with at least 4 lines of dialogue.
+
+Return ONLY valid JSON."""
+
+        default = {
+            "metadata": {"title": "Untitled Script", "author": "Unknown", "characters": [], "genre": "Drama", "estimated_length_minutes": 60},
+            "scenes": []
+        }
+
+        for attempt in range(3):
+            try:
+                response = self.client.chat.completions.create(
+                    model="gpt-4o-mini",
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=0.2,
+                    max_tokens=min(16000, max(6000, len(script_text) // 2))
+                )
+
+                response_text = response.choices[0].message.content or ""
+                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                if not json_match:
+                    return default
+
+                result = json.loads(json_match.group())
+                # Validate structure
+                if "metadata" not in result or "scenes" not in result:
+                    return default
+
+                # Validate scenes
+                result["scenes"] = [
+                    s for s in result["scenes"]
+                    if isinstance(s, dict) and s.get("lines") and s.get("character_1") and s.get("character_2")
+                ]
+                return result
+
+            except Exception as e:
+                is_rate_limit = "429" in str(e) or "rate_limit" in str(e).lower()
+                if is_rate_limit and attempt < 2:
+                    _time.sleep((attempt + 1) * 2)
+                    continue
+                print(f"Error in combined extraction: {e}")
+                return default
+
+        return default
+
+    # ------------------------------------------------------------------
     # Main extraction pipeline
     # ------------------------------------------------------------------
 
@@ -805,15 +906,15 @@ Return ONLY valid JSON array, no explanation."""
             if on_progress:
                 on_progress(msg)
 
-        progress("Extracting dialogue with AI")
+        progress("Extracting dialogue with AI (this takes a few seconds)")
         scenes = self.extract_chunk_ai(text, characters, script_title, script_author)
-        progress(f"Found {len(scenes)} two-person scenes")
+        progress(f"Found {len(scenes)} scenes")
         return scenes
 
     def extract_chunk_ai(self, chunk_text: str, characters: List[Dict],
                          script_title: str = "", script_author: str = "") -> List[Dict]:
         """
-        Use AI to extract two-person scenes from a single structural chunk.
+        Use AI to extract dialogue scenes (2+ characters) from a single structural chunk.
         AI understands stage directions, verse format, character attribution natively.
 
         Returns list of scene dicts ready for DB insertion.
@@ -826,20 +927,20 @@ Return ONLY valid JSON array, no explanation."""
         # Truncate very large chunks (shouldn't happen after structural splitting)
         text = chunk_text[:40000]
 
-        prompt = f"""Extract ALL two-person dialogue scenes from this script excerpt{' from "' + script_title + '"' if script_title else ''}{' by ' + script_author if script_author else ''}.
+        prompt = f"""Extract ALL dialogue scenes from this script excerpt{' from "' + script_title + '"' if script_title else ''}{' by ' + script_author if script_author else ''}.
 
 Known characters: {char_hint}
 
 RULES:
-- Extract every stretch of back-and-forth dialogue between exactly 2 characters.
-- Even if a third character is present in the scene, extract the two-person exchanges within it (e.g. if A, B, and C are present but A and B have a 10-line exchange, extract that).
+- Extract every stretch of dialogue between 2 or more characters.
 - Include ALL spoken dialogue lines — do NOT skip, summarize, or paraphrase any line.
 - Do NOT include stage directions as dialogue (e.g. "Enter Oberon", "They exit", "He kneels").
 - Stage directions in brackets/parentheses go in the "stage_direction" field.
 - If one character gives a long speech (multiple sentences/verses), keep it as ONE line entry.
 - Merge consecutive lines by the same character into one entry.
 - If the entire chunk is one character's monologue with no second speaker, skip it.
-- Only extract exchanges with at least 4 lines of dialogue. Skip very short exchanges (2-3 lines) — they're not useful for rehearsal.
+- Only extract scenes with at least 4 lines of dialogue. Skip very short exchanges (2-3 lines).
+- For "character_1" and "character_2", pick the two characters who speak the most lines in the scene.
 
 Script text:
 ```
@@ -849,8 +950,8 @@ Script text:
 For each scene found, return a JSON object:
 {{
   "title": "Brief descriptive title",
-  "character_1": "First character name",
-  "character_2": "Second character name",
+  "character_1": "Character with the most lines",
+  "character_2": "Character with the second most lines",
   "description": "1-2 sentence summary",
   "setting": "Where it takes place (null if unclear)",
   "tone": "romantic/comedic/tragic/tense/dramatic/lighthearted/mysterious/melancholic",
@@ -862,7 +963,7 @@ For each scene found, return a JSON object:
   ]
 }}
 
-Return a JSON ARRAY. If no two-person scenes exist, return []. Return ONLY valid JSON."""
+Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
 
         # Output needs to be large enough to hold all dialogue as JSON.
         # Rule of thumb: output can be ~1.5x the input text length (dialogue + JSON overhead).
@@ -971,13 +1072,69 @@ Return a JSON ARRAY. If no two-person scenes exist, return []. Return ONLY valid
 
         return all_scenes
 
+    def extract_scenes_quick(self, chunks, characters: List[Dict],
+                             script_title: str = "", script_author: str = "",
+                             on_progress=None, cancel_event=None) -> List[Dict]:
+        """
+        Quick extraction: regex parsing + batch AI metadata (2-person scenes only).
+        Much faster than full AI extraction — 2-3 AI calls total vs ~20.
+        """
+        def progress(msg):
+            print(msg)
+            if on_progress:
+                on_progress(msg)
+
+        # Step 1: Regex-extract 2-person scenes from each chunk
+        all_sections = []
+        for chunk in chunks:
+            if chunk.char_count < 200:
+                continue
+            sections = parse_dialogue(chunk.text)
+            two_person = filter_two_person_scenes(sections, min_lines=4)
+            for section in two_person:
+                section["_act"] = chunk.act_label
+                section["_scene"] = chunk.scene_label
+            all_sections.extend(two_person)
+
+        progress(f"Regex parsed {len(all_sections)} two-person scenes")
+
+        if not all_sections:
+            return []
+
+        if cancel_event and cancel_event.is_set():
+            return []
+
+        # Step 2: Batch AI metadata analysis (1 AI call)
+        progress("Figuring out the tone, emotions, dynamics")
+        metadata_list = self.analyze_scenes_batch(
+            all_sections, script_title, script_author
+        )
+
+        if cancel_event and cancel_event.is_set():
+            return []
+
+        # Step 3: Build scene results
+        scenes = []
+        for section, meta in zip(all_sections, metadata_list):
+            result = self._build_scene_result(section, meta)
+            result["act"] = section.get("_act")
+            result["scene_number"] = section.get("_scene")
+            scenes.append(result)
+
+        # Step 4: AI cleanup (1 AI call)
+        progress("Cleaning up dialogue")
+        scenes = self.clean_scenes_batch(scenes, script_title)
+
+        return scenes
+
     def parse_script(self, file_content: bytes, file_type: str, filename: str,
-                     on_progress=None, cancel_event=None) -> Dict:
+                     on_progress=None, cancel_event=None, mode: str = "full") -> Dict:
         """
         Main entry point: parse a script file and extract all information.
 
         Args:
             on_progress: Optional callback(step_message: str) for real-time progress.
+            mode: "quick" (regex + batch AI, 2-person only) or "full" (AI per chunk).
 
         Returns:
         {
@@ -1012,40 +1169,61 @@ Return a JSON ARRAY. If no two-person scenes exist, return []. Return ONLY valid
         pages_est = max(1, len(raw_text) // 3000)
         progress(f"Read ~{pages_est} pages of text")
 
-        # Step 2: Extract metadata (title, author, characters)
-        check_cancelled()
-        progress("Learning who the characters are")
-        metadata = self.extract_script_metadata(raw_text)
-        script_title = metadata.get("title", "")
-        script_author = metadata.get("author", "")
-        characters = metadata.get('characters', [])
-        progress(f"Found {len(characters)} characters in \"{script_title}\"")
-
-        # Step 3: Detect act/scene structure (pure regex, zero AI cost)
-        check_cancelled()
-        progress("Mapping out the acts and scenes")
-        chunks = detect_structure(raw_text)
-        has_structure = len(chunks) > 1 or (len(chunks) == 1 and chunks[0].act_label is not None)
-        if has_structure:
-            act_chunks = [c for c in chunks if c.act_label]
-            progress(f"Detected {len(act_chunks)} acts, {len(chunks)} sections")
+        # Short scripts (< 5 pages): single AI call for metadata + scenes
+        if pages_est <= 5:
+            check_cancelled()
+            progress("Analyzing script and extracting scenes")
+            combined = self.extract_combined(raw_text)
+            metadata = combined.get("metadata", {})
+            scenes = combined.get("scenes", [])
+            script_title = metadata.get("title", "")
+            characters = metadata.get("characters", [])
+            progress(f"Found {len(characters)} characters, {len(scenes)} scenes in \"{script_title}\"")
         else:
-            progress("No act/scene structure found, treating as single script")
+            # Step 2: Extract metadata (title, author, characters)
+            check_cancelled()
+            progress("Learning who the characters are")
+            metadata = self.extract_script_metadata(raw_text)
+            script_title = metadata.get("title", "")
+            script_author = metadata.get("author", "")
+            characters = metadata.get('characters', [])
+            progress(f"Found {len(characters)} characters in \"{script_title}\"")
 
-        # Step 4: Extract scenes
-        check_cancelled()
-        progress("Pulling every line of dialogue")
+            # Step 3: Detect act/scene structure (pure regex, zero AI cost)
+            check_cancelled()
+            progress("Mapping out the acts and scenes")
+            chunks = detect_structure(raw_text)
+            has_structure = len(chunks) > 1 or (len(chunks) == 1 and chunks[0].act_label is not None)
+            if has_structure:
+                act_chunks = [c for c in chunks if c.act_label]
+                progress(f"Detected {len(act_chunks)} acts, {len(chunks)} sections")
+            else:
+                progress("No act/scene structure found, treating as single script")
 
-        if has_structure:
-            scenes = self.extract_scenes_chunked(
-                chunks, characters, script_title, script_author,
-                on_progress=on_progress, cancel_event=cancel_event
-            )
-        else:
-            scenes = self.extract_scenes_from_text(
-                raw_text, characters, script_title, script_author,
-                on_progress=on_progress
-            )
+            # Step 4: Extract scenes
+            check_cancelled()
+            progress("Pulling every line of dialogue")
+
+            if mode == "quick":
+                scenes = self.extract_scenes_quick(
+                    chunks, characters, script_title, script_author,
+                    on_progress=on_progress, cancel_event=cancel_event
+                )
+                if not scenes:
+                    progress("No scenes found with regex, falling back to AI extraction")
+                    mode = "full"
+
+            if mode == "full":
+                if has_structure:
+                    scenes = self.extract_scenes_chunked(
+                        chunks, characters, script_title, script_author,
+                        on_progress=on_progress, cancel_event=cancel_event
+                    )
+                else:
+                    scenes = self.extract_scenes_from_text(
+                        raw_text, characters, script_title, script_author,
+                        on_progress=on_progress
+                    )
 
         # Filter out scenes with fewer than 4 lines — too short for rehearsal
         before = len(scenes)
