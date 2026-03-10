@@ -107,7 +107,7 @@ export function FilmTvMonologueCard({
                 {toneTags.map((t) => (
                   <span
                     key={t}
-                    className="text-xs px-2 py-0.5 bg-secondary/10 text-secondary-foreground/90 rounded-md font-medium capitalize"
+                    className="text-xs px-2 py-0.5 bg-secondary/10 text-secondary-foreground/90 font-medium capitalize"
                   >
                     {t}
                   </span>
@@ -115,7 +115,7 @@ export function FilmTvMonologueCard({
                 {mono.themes?.slice(0, 2).map((theme) => (
                   <span
                     key={theme}
-                    className="text-xs px-2 py-0.5 bg-secondary/10 text-secondary-foreground/90 rounded-md font-medium capitalize"
+                    className="text-xs px-2 py-0.5 bg-secondary/10 text-secondary-foreground/90 font-medium capitalize"
                   >
                     {theme}
                   </span>

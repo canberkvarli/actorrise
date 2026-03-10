@@ -174,7 +174,8 @@ def admin_update_monologue(
     if "text" in update:
         text = update["text"]
         update["word_count"] = len(text.split())
-        update["estimated_duration_seconds"] = int((update["word_count"] / 150.0) * 60)
+        from app.utils.duration import estimate_duration_seconds
+        update["estimated_duration_seconds"] = estimate_duration_seconds(text)
 
     for key, value in update.items():
         setattr(mono, key, value)

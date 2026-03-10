@@ -26,8 +26,23 @@ function isStageDirection(raw: string): boolean {
   return raw.startsWith("(") || raw.startsWith("[");
 }
 
+/**
+ * Heuristic: returns true if the text looks like scraped bibliographic/catalog data
+ * rather than an actual monologue (e.g. "LASTNAME, Firstname Title . p 2m 1w").
+ */
+export function isBibliographicText(text: string): boolean {
+  if (!text) return false;
+  // Catalog lines have patterns like: ALLCAPS, Firstname Title . p Xm Xw
+  const catalogPattern = /\b[A-Z]{2,},\s+[A-Z][a-z]/g;
+  const matches = text.match(catalogPattern);
+  return (matches?.length ?? 0) >= 3;
+}
+
 export function parseMonologueText(text: string): MonologueSegment[] {
   if (!text || typeof text !== "string") return [{ type: "text", content: text || "" }];
+
+  // Strip orphaned leading ']' and trailing '[' left by mid-scene scraping cuts
+  text = text.replace(/^\s*\]\s*/, "").replace(/\s*\[\s*$/, "");
 
   const segments: MonologueSegment[] = [];
   let lastIndex = 0;

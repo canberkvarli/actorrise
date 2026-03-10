@@ -31,7 +31,7 @@ export function LandingFeatureShowcase() {
             <div className="relative rounded-2xl border border-border bg-card p-6 sm:p-8 md:p-10 flex flex-col">
               {/* Live Badge */}
               <div className="inline-flex items-center gap-2 mb-4 self-start">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 border border-green-500/20 px-3 py-1 text-xs font-medium text-green-600 dark:text-green-400">
+                <span className="inline-flex items-center gap-1.5 bg-green-500/10 px-3 py-1 text-xs font-medium text-green-600 dark:text-green-400">
                   <span className="size-1.5 rounded-full bg-green-500 animate-pulse" />
                   LIVE NOW
                 </span>
@@ -81,7 +81,7 @@ export function LandingFeatureShowcase() {
             <div className="relative rounded-2xl border border-border bg-card p-6 sm:p-8 md:p-10 flex flex-col">
               {/* Coming Soon Badge */}
               <div className="inline-flex items-center gap-2 mb-4 self-start">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 border border-primary/20 px-3 py-1 text-xs font-medium text-primary">
+                <span className="inline-flex items-center gap-1.5 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
                   COMING SOON
                 </span>
               </div>

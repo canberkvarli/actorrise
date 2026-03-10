@@ -13,15 +13,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ArrowLeft, Edit2, Check, X, Trash2, ChevronRight
+  ArrowLeft, Edit2, Check, X, Trash2, ChevronRight, ChevronDown, Flag, Settings
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { MicAccessWarning } from "@/components/scenepartner/MicAccessWarning";
 import { GenreSelect } from "@/components/ui/genre-select";
 import { ScenePreviewTooltip } from "@/components/scenepartner/ScenePreviewTooltip";
+import { SceneSettingsModal } from "@/components/scenepartner/SceneSettingsModal";
 
 interface Scene {
   id: number;
@@ -31,6 +32,57 @@ interface Scene {
   character_2_name: string;
   line_count: number;
   estimated_duration_seconds: number;
+  act?: string | null;
+  scene_number?: string | null;
+}
+
+interface ActGroup {
+  act: string | null;
+  scenes: Scene[];
+}
+
+function groupScenesByAct(scenes: Scene[]): ActGroup[] {
+  const hasActs = scenes.some(s => s.act);
+  if (!hasActs) {
+    return [{ act: null, scenes }];
+  }
+
+  // Group all scenes with the same act together (not just consecutive)
+  const actMap = new Map<string, Scene[]>();
+
+  for (const scene of scenes) {
+    const key = scene.act ?? "__none__";
+    if (!actMap.has(key)) {
+      actMap.set(key, []);
+    }
+    actMap.get(key)!.push(scene);
+  }
+
+  // Sort acts in play order: Prologue first, then Act 1-N, then Epilogue, then unknown
+  const actKeys = Array.from(actMap.keys());
+  actKeys.sort((a, b) => {
+    const rank = (key: string): number => {
+      const lower = key.toLowerCase();
+      if (lower === "__none__") return 9999;
+      if (lower.includes("prologue")) return -1;
+      if (lower.includes("epilogue")) return 1000;
+      // Extract act number: "Act 2" → 2, "Act III" → roman numeral
+      const numMatch = lower.match(/act\s+(\d+)/);
+      if (numMatch) return parseInt(numMatch[1]);
+      const romanMatch = lower.match(/act\s+([ivxlc]+)/i);
+      if (romanMatch) {
+        const roman: Record<string, number> = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10 };
+        return roman[romanMatch[1].toLowerCase()] ?? 500;
+      }
+      return 500; // unknown acts in the middle
+    };
+    return rank(a) - rank(b);
+  });
+
+  return actKeys.map(key => ({
+    act: key === "__none__" ? null : key,
+    scenes: actMap.get(key)!,
+  }));
 }
 
 interface UserScript {
@@ -73,8 +125,38 @@ export default function ScriptDetailPage() {
   const [selectedCharacter, setSelectedCharacter] = useState<Record<number, string>>({});
   const [startingRehearsalFor, setStartingRehearsalFor] = useState<number | null>(null);
   const [deleteSceneDialogOpen, setDeleteSceneDialogOpen] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [sceneToDelete, setSceneToDelete] = useState<number | null>(null);
+  const [expandedActs, setExpandedActs] = useState<Record<string, boolean | undefined>>({});
+  const [reportingSceneId, setReportingSceneId] = useState<number | null>(null);
+  const [reportCategory, setReportCategory] = useState("missing_lines");
+  const [reportComment, setReportComment] = useState("");
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [castPopoverOpen, setCastPopoverOpen] = useState(false);
+  const castHoverRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const deleteSceneTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleSubmitReport = async (sceneId: number) => {
+    setReportSubmitting(true);
+    try {
+      await api.post("/api/feedback", {
+        context: "scene_extraction",
+        rating: "negative",
+        scene_id: sceneId,
+        script_id: Number(scriptId),
+        category: reportCategory,
+        comment: reportComment || null,
+      });
+      toast.success("Report sent, thanks for the feedback!");
+      setReportingSceneId(null);
+      setReportComment("");
+      setReportCategory("missing_lines");
+    } catch {
+      toast.error("Failed to send report. Try again.");
+    } finally {
+      setReportSubmitting(false);
+    }
+  };
   const synopsisRef = useRef<HTMLTextAreaElement>(null);
 
   const startEditing = (field: string, currentValue: string) => {
@@ -87,33 +169,35 @@ export default function ScriptDetailPage() {
     setEditValue("");
   };
 
-  const saveField = async (field: string) => {
+  const saveField = (field: string) => {
     if (!script) return;
+    const value = editValue;
 
-    try {
-      const update: any = {};
-      update[field] = editValue;
+    // Update UI immediately
+    mutateScript((prev) => prev ? { ...prev, [field]: value } : prev, false);
+    setEditingField(null);
 
-      await api.patch(`/api/scripts/${scriptId}`, update);
-      toast.success("Updated successfully");
-
-      // Update SWR cache optimistically
-      mutateScript((prev) => prev ? { ...prev, [field]: editValue } : prev, false);
-      setEditingField(null);
-    } catch (error) {
+    // Fire API call in background
+    const update: any = {};
+    update[field] = value;
+    api.patch(`/api/scripts/${scriptId}`, update).catch((error) => {
       console.error("Update error:", error);
       toast.error("Failed to update");
-    }
+      // Revert on failure
+      mutateScript();
+    });
   };
 
   const handleStartRehearsal = async (scene: Scene) => {
     const userCharacter = selectedCharacter[scene.id] ?? scene.character_1_name;
     setStartingRehearsalFor(scene.id);
     try {
-      const { data } = await api.post<{ id: number }>('/api/scenes/rehearse/start', {
+      const { data } = await api.post<{ id: number } & Record<string, unknown>>('/api/scenes/rehearse/start', {
         scene_id: scene.id,
         user_character: userCharacter,
       });
+      // Cache session data so rehearsal page skips the GET round-trip
+      try { sessionStorage.setItem(`actorrise_session_${data.id}`, JSON.stringify(data)); } catch { /* quota */ }
       router.push(`/scenes/${scene.id}/rehearse?session=${data.id}`);
     } catch (err: unknown) {
       const message = err && typeof err === 'object' && 'response' in err
@@ -218,7 +302,6 @@ export default function ScriptDetailPage() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.25, ease: "easeOut" }}
     >
-      <MicAccessWarning />
       {/* Breadcrumb */}
       <nav className="mb-6 flex items-center gap-2 text-sm min-h-[44px] sm:min-h-0" aria-label="Breadcrumb">
         <Link
@@ -232,6 +315,14 @@ export default function ScriptDetailPage() {
         <span className="font-medium text-foreground truncate" aria-current="page">
           {script.title}
         </span>
+        <button
+          type="button"
+          onClick={() => setShowSettingsModal(true)}
+          className="ml-auto h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
+          title="Rehearsal settings"
+        >
+          <Settings className="w-4 h-4" />
+        </button>
       </nav>
 
       <div className="space-y-8 max-w-3xl">
@@ -301,7 +392,52 @@ export default function ScriptDetailPage() {
                 )}
               </AnimatePresence>
               <div className="flex flex-wrap items-center gap-1.5 mt-2 text-sm text-muted-foreground">
-                <span>{script.num_characters} characters</span>
+                <Popover open={castPopoverOpen} onOpenChange={setCastPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <span
+                      className="cursor-help underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors"
+                      onMouseEnter={() => {
+                        castHoverRef.current = setTimeout(() => setCastPopoverOpen(true), 200);
+                      }}
+                      onMouseLeave={() => {
+                        if (castHoverRef.current) { clearTimeout(castHoverRef.current); castHoverRef.current = null; }
+                        setCastPopoverOpen(false);
+                      }}
+                    >
+                      {script.num_characters} characters
+                    </span>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="start"
+                    className="w-80 max-h-[320px] overflow-y-auto p-0"
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                    onMouseEnter={() => { if (castHoverRef.current) clearTimeout(castHoverRef.current); }}
+                    onMouseLeave={() => setCastPopoverOpen(false)}
+                  >
+                    <div className="px-3 py-2 border-b border-border/60 sticky top-0 bg-popover z-10">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Cast ({script.characters.length})
+                      </p>
+                    </div>
+                    <div className="divide-y divide-border/40">
+                      {script.characters.map((char, i) => (
+                        <div key={i} className="px-3 py-2 hover:bg-muted/40 transition-colors">
+                          <div className="flex items-baseline justify-between gap-2">
+                            <span className="text-sm font-medium text-foreground">{char.name}</span>
+                            {(char.gender || char.age_range) && (
+                              <span className="text-[10px] text-muted-foreground/70 shrink-0">
+                                {[char.gender, char.age_range].filter(Boolean).join(" · ")}
+                              </span>
+                            )}
+                          </div>
+                          {char.description && (
+                            <p className="text-xs text-muted-foreground/80 mt-0.5 leading-snug">{char.description}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </PopoverContent>
+                </Popover>
                 <span className="text-muted-foreground/40">·</span>
                 <span>{script.num_scenes_extracted} scene{script.num_scenes_extracted !== 1 ? "s" : ""}</span>
                 {script.estimated_length_minutes != null && (
@@ -567,54 +703,172 @@ export default function ScriptDetailPage() {
             </Card>
           </>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
-            <AnimatePresence mode="popLayout">
-              {script.scenes.map((scene) => (
-                <motion.div
-                  key={scene.id}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  whileHover={{ y: -2, transition: { duration: 0.15 } }}
-                  whileTap={{ scale: 0.98, transition: { duration: 0.1 } }}
-                  transition={{ duration: 0.2 }}
-                  layout
-                  className="h-full"
-                >
-                  <Card
-                    className="overflow-hidden cursor-pointer transition-all h-full hover:shadow-md hover:border-primary/40"
-                    onClick={() => router.push(`/my-scripts/${scriptId}/scenes/${scene.id}/edit`)}
-                  >
-                    <CardContent className="p-5 space-y-3">
-                      <div>
-                        <h3 className="text-base font-semibold font-serif line-clamp-2" title={scene.title}>
-                          {scene.title}
-                        </h3>
-                        {scene.description && (
-                          <p className="text-sm text-muted-foreground/80 line-clamp-2 mt-1 leading-relaxed">
-                            {scene.description}
-                          </p>
-                        )}
-                      </div>
+          <div className="space-y-2">
+            {groupScenesByAct(script.scenes).map((group, groupIdx) => {
+              const actKey = group.act ? `${group.act}_${groupIdx}` : "__flat__";
+              // Acts default collapsed; flat (no acts) default expanded
+              const isExpanded = group.act ? expandedActs[actKey] === true : expandedActs[actKey] !== false;
+              const groupDuration = group.scenes.reduce((sum, s) => sum + s.estimated_duration_seconds, 0);
 
-                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                        <span>{scene.character_1_name}</span>
-                        <span className="text-muted-foreground/40">·</span>
-                        <span>{scene.character_2_name}</span>
-                        <span className="text-muted-foreground/40">·</span>
-                        <ScenePreviewTooltip sceneId={scene.id}>
-                          <span className="cursor-help underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors" onClick={(e) => e.stopPropagation()}>
-                            {scene.line_count} lines
-                          </span>
-                        </ScenePreviewTooltip>
-                        <span className="text-muted-foreground/40">·</span>
-                        <span>{formatDuration(scene.estimated_duration_seconds)}</span>
+              return (
+                <div key={actKey}>
+                  {/* Act header — only shown for scripts with acts */}
+                  {group.act && (
+                    <button
+                      onClick={() => setExpandedActs(prev => ({ ...prev, [actKey]: !isExpanded }))}
+                      className="w-full flex items-center justify-between py-3.5 px-4 bg-muted/50 border border-border/60 mb-0 text-left hover:bg-muted/80 transition-colors"
+                    >
+                      <h3 className="text-base font-semibold text-foreground font-serif">
+                        {group.act}
+                      </h3>
+                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                        <span>
+                          {group.scenes.length} {group.scenes.length === 1 ? "scene" : "scenes"}
+                          <span className="text-muted-foreground/40 mx-1.5">·</span>
+                          {formatDuration(groupDuration)}
+                        </span>
+                        <ChevronDown
+                          className={`w-4 h-4 text-muted-foreground/60 transition-transform duration-200 ${isExpanded ? "" : "-rotate-90"}`}
+                        />
                       </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                    </button>
+                  )}
+
+                  {/* Scene cards */}
+                  <AnimatePresence initial={false}>
+                    {isExpanded && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="grid grid-cols-1 gap-3 py-3 px-1">
+                          {group.scenes.map((scene) => (
+                            <motion.div
+                              key={scene.id}
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                              whileHover={{ y: -2, transition: { duration: 0.15 } }}
+                              whileTap={{ scale: 0.98, transition: { duration: 0.1 } }}
+                              transition={{ duration: 0.2 }}
+                              layout
+                              className="h-full"
+                            >
+                              <Card
+                                className="overflow-hidden cursor-pointer transition-all h-full hover:shadow-md hover:border-primary/40"
+                                onClick={() => router.push(`/my-scripts/${scriptId}/scenes/${scene.id}/edit`)}
+                              >
+                                <CardContent className="p-5 space-y-3">
+                                  <div>
+                                    <h3 className="text-base font-semibold font-serif line-clamp-2" title={scene.title}>
+                                      {scene.title}
+                                    </h3>
+                                    {scene.description && (
+                                      <p className="text-sm text-muted-foreground/80 line-clamp-2 mt-1 leading-relaxed">
+                                        {scene.description}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                                    {scene.scene_number && (
+                                      <>
+                                        <span className="text-muted-foreground/70">{scene.scene_number}</span>
+                                        <span className="text-muted-foreground/40">·</span>
+                                      </>
+                                    )}
+                                    <span>{scene.character_1_name}</span>
+                                    <span className="text-muted-foreground/40">·</span>
+                                    <span>{scene.character_2_name}</span>
+                                    <span className="text-muted-foreground/40">·</span>
+                                    <ScenePreviewTooltip sceneId={scene.id}>
+                                      <span className="cursor-help underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors" onClick={(e) => e.stopPropagation()}>
+                                        {scene.line_count} lines
+                                      </span>
+                                    </ScenePreviewTooltip>
+                                    <span className="text-muted-foreground/40">·</span>
+                                    <span>{formatDuration(scene.estimated_duration_seconds)}</span>
+
+                                    <span className="ml-auto">
+                                      <Popover
+                                        open={reportingSceneId === scene.id}
+                                        onOpenChange={(open) => {
+                                          if (open) {
+                                            setReportingSceneId(scene.id);
+                                          } else {
+                                            setReportingSceneId(null);
+                                            setReportComment("");
+                                            setReportCategory("missing_lines");
+                                          }
+                                        }}
+                                      >
+                                        <PopoverTrigger asChild>
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setReportingSceneId(scene.id);
+                                            }}
+                                            className="text-muted-foreground/40 hover:text-muted-foreground transition-colors p-0.5"
+                                            title="Report an issue"
+                                          >
+                                            <Flag className="w-3 h-3" />
+                                          </button>
+                                        </PopoverTrigger>
+                                        <PopoverContent
+                                          className="w-72 p-3"
+                                          align="end"
+                                          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                        >
+                                          <div className="space-y-3">
+                                            <p className="text-sm font-medium">Report an issue</p>
+                                            <select
+                                              value={reportCategory}
+                                              onChange={(e) => setReportCategory(e.target.value)}
+                                              className="w-full text-sm border border-border bg-background px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
+                                            >
+                                              <option value="missing_lines">Missing lines</option>
+                                              <option value="wrong_character">Wrong character name</option>
+                                              <option value="missing_scene">Missing scene</option>
+                                              <option value="wrong_metadata">Wrong info (tone, setting, etc.)</option>
+                                              <option value="other">Other</option>
+                                            </select>
+                                            <Textarea
+                                              placeholder="Details (optional)"
+                                              value={reportComment}
+                                              onChange={(e) => setReportComment(e.target.value)}
+                                              className="text-sm min-h-[60px] resize-none"
+                                              maxLength={500}
+                                            />
+                                            <Button
+                                              size="sm"
+                                              className="w-full"
+                                              disabled={reportSubmitting}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleSubmitReport(scene.id);
+                                              }}
+                                            >
+                                              {reportSubmitting ? "Sending..." : "Send report"}
+                                            </Button>
+                                          </div>
+                                        </PopoverContent>
+                                      </Popover>
+                                    </span>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            </motion.div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
@@ -631,6 +885,10 @@ export default function ScriptDetailPage() {
         description="This will permanently remove the scene. You can undo in the next few seconds after confirming."
         confirmLabel="Delete scene"
         onConfirm={handleConfirmDeleteScene}
+      />
+      <SceneSettingsModal
+        open={showSettingsModal}
+        onOpenChange={setShowSettingsModal}
       />
 
     </motion.div>

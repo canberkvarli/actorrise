@@ -12,11 +12,11 @@ import { isMeaningfulMonologueTitle } from "@/lib/utils";
 import { MatchIndicatorTag, accentTeal } from "@/components/search/MatchIndicatorTag";
 import { getEmotionBadgeClassName } from "@/lib/emotionColors";
 
-function getMatchLabel(score: number): string {
-  if (score >= 0.65) return "Great match";
-  if (score >= 0.5) return "Good match";
-  if (score >= 0.35) return "Worth a look";
-  return "Related";
+function getRankLabel(rank: number): string {
+  if (rank <= 1) return "Best pick";
+  if (rank <= 4) return "Great match";
+  if (rank <= 9) return "Good match";
+  return "Worth a look";
 }
 
 export interface MonologueResultCardProps {
@@ -44,9 +44,6 @@ export function MonologueResultCard({
   const isBestMatch = variant === "bestMatch";
   const [justBookmarked, setJustBookmarked] = useState(false);
 
-  const score = mono.relevance_score ?? 0;
-  const hasScore = showMatchBadge && score > 0.1;
-  const pct = Math.round(score * 100);
   const matchLabel =
     mono.match_type === "exact_quote"
       ? "Exact quote"
@@ -58,9 +55,9 @@ export function MonologueResultCard({
             ? "Character match"
             : mono.match_type === "play_match"
               ? "Play match"
-              : getMatchLabel(score);
-  const showIndicator = (hasScore || mono.match_type) && matchLabel;
-  const indicatorLabel = showIndicator ? `${matchLabel}${pct > 0 ? ` · ${pct}%` : ""}` : null;
+              : getRankLabel(index);
+  const showIndicator = showMatchBadge && matchLabel;
+  const indicatorLabel = showIndicator ? matchLabel : null;
 
   return (
     <motion.div

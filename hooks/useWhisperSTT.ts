@@ -33,6 +33,8 @@ interface UseWhisperSTTOptions {
    * be allowed to transcribe. Without it, falls back to audio-level detection.
    */
   speechGateRef?: React.RefObject<boolean>;
+  /** Specific mic device to use (from enumerateDevices). Falls back to default if not set. */
+  deviceId?: string;
 }
 
 export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
@@ -43,7 +45,7 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     silenceThreshold = 10,
     silenceTimeoutMs = 1500,
     prompt,
-    speechGateRef,
+    deviceId,
   } = options;
 
   const [isRecording, setIsRecording] = useState(false);
@@ -60,6 +62,7 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
   const mimeTypeRef = useRef<string>('audio/webm');
   const recordingStartRef = useRef<number>(0); // for minimum recording time guard
   const speechDetectedRef = useRef(false); // only start silence timer after speech is detected
+  const speechFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // arms silence detection for Bluetooth mics
   const skipNextTranscriptionRef = useRef(false); // set by cancelTranscription to skip the next blob
   const transcribeAbortRef = useRef<AbortController | null>(null); // abort in-flight Whisper request
 
@@ -68,6 +71,7 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
   const onEndRef = useRef(onEnd);
   const onErrorRef = useRef(onError);
   const promptRef = useRef(prompt);
+  const deviceIdRef = useRef(deviceId);
   useEffect(() => { onResultRef.current = onResult; }, [onResult]);
   useEffect(() => { onEndRef.current = onEnd; }, [onEnd]);
   useEffect(() => { onErrorRef.current = onError; }, [onError]);
@@ -75,12 +79,29 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
 
   const cleanup = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
-    audioCtxRef.current?.close();
-    audioCtxRef.current = null;
+    if (speechFallbackTimerRef.current) {
+      clearTimeout(speechFallbackTimerRef.current);
+      speechFallbackTimerRef.current = null;
+    }
+    // Keep AudioContext alive for reuse — closing and recreating it costs ~100ms.
+    // It gets closed on unmount or when the stream is released.
     analyserRef.current = null;
+  }, []);
+
+  // Fully releases the mic stream. Called on unmount or when deviceId changes.
+  const releaseStream = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop());
     streamRef.current = null;
   }, []);
+
+  useEffect(() => {
+    // If the device changes mid-session, release the old stream so the next
+    // startRecording acquires the correct mic.
+    if (deviceIdRef.current !== deviceId) {
+      releaseStream();
+    }
+    deviceIdRef.current = deviceId;
+  }, [deviceId, releaseStream]);
 
   const stopRecording = useCallback(() => {
     if (stoppedRef.current) return;
@@ -171,18 +192,36 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     chunksRef.current = [];
     skipNextTranscriptionRef.current = false; // clear any pending skip from a previous cancelTranscription
 
-    let stream: MediaStream;
-    try {
-      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    } catch {
-      onErrorRef.current?.('Mic access denied');
-      return;
+    // Reuse existing stream if tracks are still live — avoids getUserMedia latency (~500ms)
+    let stream = streamRef.current;
+    const tracksLive = stream?.getTracks().every(t => t.readyState === 'live') ?? false;
+    if (!tracksLive) {
+      releaseStream();
+      try {
+        const id = deviceIdRef.current;
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            ...(id ? { deviceId: { ideal: id } } : {}),
+            echoCancellation: true,   // still want this — prevents AI voice feedback
+            noiseSuppression: false,  // off: browser VAD clips word onsets (first word issue)
+            autoGainControl: true,    // boosts quiet speech
+          },
+        });
+      } catch {
+        onErrorRef.current?.('Mic access denied');
+        return;
+      }
+      streamRef.current = stream;
     }
-    streamRef.current = stream;
 
-    // Web Audio pipeline for silence detection
-    const audioCtx = new AudioContext();
-    audioCtxRef.current = audioCtx;
+    if (!stream) return;
+
+    // Web Audio pipeline for silence detection.
+    // Reuse existing AudioContext if available — creating a new one costs ~100ms.
+    if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+      audioCtxRef.current = new AudioContext();
+    }
+    const audioCtx = audioCtxRef.current;
     const source = audioCtx.createMediaStreamSource(stream);
     const analyser = audioCtx.createAnalyser();
     analyser.fftSize = 256;
@@ -191,20 +230,21 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     analyserRef.current = analyser;
     const freqData = new Uint8Array(analyser.frequencyBinCount);
     silenceStartRef.current = null;
+    // Start as false — silence detection only arms AFTER the user speaks.
+    // This prevents auto-stop firing before the user has said anything.
     speechDetectedRef.current = false;
+    // Fallback for Bluetooth/AirPods: their mic audio doesn't always register
+    // in the Web Audio analyser. After 10s with no detected speech, arm the
+    // silence detector anyway so Whisper eventually fires.
+    speechFallbackTimerRef.current = setTimeout(() => {
+      speechFallbackTimerRef.current = null;
+      speechDetectedRef.current = true;
+    }, 10000);
 
     const checkSilence = () => {
       if (stoppedRef.current) return;
       analyser.getByteFrequencyData(freqData);
 
-      // When speechGateRef is provided, SR handles all line advances.
-      // Never auto-stop — just keep the analyser running for the waveform.
-      if (speechGateRef) {
-        rafRef.current = requestAnimationFrame(checkSilence);
-        return;
-      }
-
-      // Fallback: audio-level silence detection (no SR available)
       const peak = Math.max(...Array.from(freqData));
       if (peak >= silenceThreshold) {
         speechDetectedRef.current = true;
@@ -221,7 +261,19 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
       }
       rafRef.current = requestAnimationFrame(checkSilence);
     };
-    rafRef.current = requestAnimationFrame(checkSilence);
+
+    // Don't start the silence loop until the AudioContext is actually running.
+    // When auto-listen fires via useEffect (not a direct tap), browsers suspend
+    // the AudioContext — getByteFrequencyData returns all zeros, the silence
+    // timer fires immediately, and recording stops before the user speaks.
+    const startSilenceLoop = () => {
+      if (!stoppedRef.current) rafRef.current = requestAnimationFrame(checkSilence);
+    };
+    if (audioCtx.state === 'running') {
+      startSilenceLoop();
+    } else {
+      audioCtx.resume().then(startSilenceLoop).catch(startSilenceLoop);
+    }
 
     // Pick best supported MIME type (includes mp4 for Safari)
     const preferredMime = ['audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus', 'audio/mp4', '']
@@ -248,6 +300,12 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     setIsRecording(true);
   }, [isRecording, isTranscribing, silenceThreshold, silenceTimeoutMs, stopRecording, transcribeBlob, cleanup]);
 
+  /** Snapshot current recorded chunks into a Blob (for playback/storage). */
+  const getRecordedBlob = useCallback((): Blob | null => {
+    if (chunksRef.current.length === 0) return null;
+    return new Blob(chunksRef.current, { type: mimeTypeRef.current });
+  }, []);
+
   // Cancel everything on unmount
   useEffect(() => {
     return () => {
@@ -255,13 +313,47 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
       cancelAnimationFrame(rafRef.current);
       mediaRecorderRef.current?.state !== 'inactive' && mediaRecorderRef.current?.stop();
       cleanup();
+      releaseStream();
+      // Close AudioContext on unmount (kept alive between recordings, only close here)
+      audioCtxRef.current?.close().catch(() => {});
+      audioCtxRef.current = null;
     };
-  }, [cleanup]);
+  }, [cleanup, releaseStream]);
+
+  /** Pre-warm the mic stream AND AudioContext so the first startListening call has no delay. */
+  const prewarmStream = useCallback(async () => {
+    const tracksLive = streamRef.current?.getTracks().every(t => t.readyState === 'live') ?? false;
+    if (!tracksLive) {
+      releaseStream();
+      try {
+        const id = deviceIdRef.current;
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            ...(id ? { deviceId: { ideal: id } } : {}),
+            echoCancellation: true,
+            noiseSuppression: false,
+            autoGainControl: true,
+          },
+        });
+        streamRef.current = stream;
+      } catch { /* ignore */ }
+    }
+    // Pre-create and resume the AudioContext — creating it costs ~100ms on first call.
+    // Keeping it alive between recordings avoids that delay on every startRecording.
+    if (!audioCtxRef.current || audioCtxRef.current.state === 'closed') {
+      audioCtxRef.current = new AudioContext();
+    }
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume().catch(() => {});
+    }
+  }, [releaseStream]);
 
   return {
     startListening: startRecording,   // drop-in replacement API
     stopListening: stopRecording,
     cancelTranscription,              // abort pending Whisper so auto-listen isn't blocked
+    getRecordedBlob,                  // snapshot audio for playback in session review
+    prewarmStream,                    // pre-acquire mic stream before first recording
     isListening: isRecording,
     isTranscribing,
     isSupported: typeof MediaRecorder !== 'undefined' && typeof AudioContext !== 'undefined',

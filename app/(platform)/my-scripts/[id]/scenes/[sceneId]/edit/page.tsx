@@ -638,7 +638,7 @@ export default function SceneEditPage() {
   const [ttsProgress, setTtsProgress] = useState(0);
   const ttsLineIdRef = useRef<number | null>(null);
 
-  const { speak: speakAI, cancel: cancelAI, isSpeaking: isSpeakingAI, isLoading: isLoadingAI, audioElementRef: aiAudioRef } = useOpenAITTS({
+  const { speak: speakAI, preload: preloadAI, cancel: cancelAI, isSpeaking: isSpeakingAI, isLoading: isLoadingAI, audioElementRef: aiAudioRef } = useOpenAITTS({
     onEnd: () => { setPreviewingVoice(null); ttsLineIdRef.current = null; setTtsProgress(0); },
     onError: (err) => {
       setPreviewingVoice(null); ttsLineIdRef.current = null; setTtsProgress(0);
@@ -948,12 +948,14 @@ export default function SceneEditPage() {
     }
     setStartingRehearsal(true);
     try {
-      const { data } = await api.post<{ id: number }>("/api/scenes/rehearse/start", {
+      const { data } = await api.post<{ id: number } & Record<string, unknown>>("/api/scenes/rehearse/start", {
         scene_id: scene.id,
         user_character: selectedCharacter,
         ...(rehearsalStartLineIndex !== null && { start_from_line_index: rehearsalStartLineIndex }),
       });
       setRehearsalStartLineIndex(null);
+      // Cache session data so rehearsal page skips the GET round-trip
+      try { sessionStorage.setItem(`actorrise_session_${data.id}`, JSON.stringify(data)); } catch { /* quota */ }
       // Determine AI character's voice to pass to rehearsal
       const aiCharVoice = selectedCharacter === scene.character_1_name
         ? charVoices.character_2_voice
@@ -2390,6 +2392,14 @@ export default function SceneEditPage() {
                               : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100"
                           )}
                           title={isPlayingThisLine ? "Stop playback" : "Listen to this line"}
+                          onMouseEnter={() => {
+                            if (isPlayingThisLine) return;
+                            const stageDir = values.stage_direction || line.stage_direction || "";
+                            const instructions = stageDir
+                              ? `You are a skilled actor performing a scene. The stage direction says: ${stageDir}. Fully embody this direction — if it says "sighing", actually sigh; if "whispering", drop your voice; if "angrily", let real frustration come through. Commit completely.`
+                              : 'You are a skilled actor performing a scene. Deliver this line with emotional truth and natural pacing. Commit fully to the moment.';
+                            preloadAI(values.text || line.text, editVid || "coral", instructions);
+                          }}
                         >
                           {isPlayingThisLine && isLoadingAI ? (
                             <><Loader2 className="w-3 h-3 animate-spin" /> Loading...</>
@@ -2704,7 +2714,7 @@ export default function SceneEditPage() {
                             <span className="text-base font-bold uppercase tracking-widest text-neutral-900">
                               {line.character_name}
                             </span>
-                            <span className={cn("text-[11px] font-sans font-bold min-w-[30px]", isMine ? "text-orange-500" : "text-transparent select-none pointer-events-none")}>{isMine ? "(You)" : "\u00A0"}</span>
+                            {isMine && <span className="text-[11px] font-sans font-bold text-orange-500">(You)</span>}
                           </button>
                           {/* Combined character settings dropdown */}
                           {voiceDropdownOpen === dropdownKey && (() => {
@@ -2795,8 +2805,8 @@ export default function SceneEditPage() {
                           })()}
                         </div>
                         {line.stage_direction?.trim() && !isDragging && (
-                          <span className="text-sm font-semibold italic text-neutral-500 normal-case break-words max-w-[250px]" style={{ overflowWrap: "anywhere" }}>
-                            ({line.stage_direction.trim()})
+                          <span className="text-xs italic text-neutral-600 normal-case truncate max-w-[200px]">
+                            {line.stage_direction.trim()}
                           </span>
                         )}
                         {!isDragging && (

@@ -11,7 +11,9 @@ import {
   ArrowLeft,
   Pause,
   Play,
+  Volume2,
   X,
+  Mic,
 } from 'lucide-react';
 import {
   Dialog,
@@ -26,6 +28,8 @@ import { renderTextWithStageDirections, stripStageDirections } from '@/lib/stage
 import { useOpenAITTS } from '@/hooks/useOpenAITTS';
 import {
   getRehearsalSettings,
+  getSelectedMicId,
+  setSelectedMicId as persistMicId,
   type RehearsalSettings,
 } from '@/lib/scenepartnerStorage';
 import { MicAccessWarning } from '@/components/scenepartner/MicAccessWarning';
@@ -99,9 +103,191 @@ function FeedbackLoadingText() {
   );
 }
 
+/* ─── Review waveform ────────────────────────────────────────────────── */
+
+/** Decode audio blob → waveform peaks, trimming leading silence. */
+function useWaveformData(blob: Blob | null) {
+  const [data, setData] = useState<{ peaks: number[]; speechStartRatio: number } | null>(null);
+
+  useEffect(() => {
+    if (!blob) { setData(null); return; }
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const arrayBuf = await blob.arrayBuffer();
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const decoded = await audioCtx.decodeAudioData(arrayBuf);
+        const raw = decoded.getChannelData(0);
+        audioCtx.close();
+
+        // Find speech start: first sample above noise floor
+        const noiseThreshold = 0.02;
+        let speechStart = 0;
+        for (let i = 0; i < raw.length; i++) {
+          if (Math.abs(raw[i]) > noiseThreshold) { speechStart = i; break; }
+        }
+        // Back up slightly so we don't clip the attack
+        speechStart = Math.max(0, speechStart - Math.floor(decoded.sampleRate * 0.05));
+        const speechStartRatio = speechStart / raw.length;
+
+        // Downsample to ~60 bars from speech start onward
+        const barCount = 60;
+        const usableLength = raw.length - speechStart;
+        const samplesPerBar = Math.floor(usableLength / barCount);
+        const peaks: number[] = [];
+        for (let i = 0; i < barCount; i++) {
+          let peak = 0;
+          const offset = speechStart + i * samplesPerBar;
+          for (let j = 0; j < samplesPerBar; j++) {
+            const abs = Math.abs(raw[offset + j] ?? 0);
+            if (abs > peak) peak = abs;
+          }
+          peaks.push(peak);
+        }
+        // Normalize to 0–1
+        const maxPeak = Math.max(...peaks, 0.01);
+        const normalized = peaks.map(p => p / maxPeak);
+
+        if (!cancelled) setData({ peaks: normalized, speechStartRatio });
+      } catch {
+        if (!cancelled) setData(null);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [blob]);
+
+  return data;
+}
+
+function ReviewWaveform({
+  blob,
+  isPlaying,
+  audioRef,
+  speechStartRatio,
+  peaks,
+  onToggle,
+}: {
+  blob: Blob;
+  isPlaying: boolean;
+  audioRef: React.RefObject<HTMLAudioElement | null>;
+  speechStartRatio: number;
+  peaks: number[];
+  onToggle: () => void;
+}) {
+  const barContainerRef = useRef<HTMLDivElement>(null);
+  const mutedOverlayRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef<number>(0);
+
+  // RAF loop — update clipPath on the muted overlay directly (no React re-render)
+  useEffect(() => {
+    const overlay = mutedOverlayRef.current;
+    if (!overlay) return;
+    if (!isPlaying || !audioRef.current) {
+      overlay.style.clipPath = 'inset(0 0 0 0%)';
+      return;
+    }
+    const audio = audioRef.current;
+    // Show start position immediately before duration is known
+    overlay.style.clipPath = `inset(0 0 0 ${speechStartRatio * 100}%)`;
+    cancelAnimationFrame(rafRef.current);
+    const tick = () => {
+      const dur = audio.duration;
+      if (isFinite(dur) && dur > 0) {
+        const pct = Math.min(1, audio.currentTime / dur) * 100;
+        overlay.style.clipPath = `inset(0 0 0 ${pct}%)`;
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [isPlaying, audioRef, speechStartRatio]);
+
+  // Click-to-seek on waveform
+  const handleBarClick = (e: React.MouseEvent) => {
+    const container = barContainerRef.current;
+    const audio = audioRef.current;
+    if (!container || !audio || !isFinite(audio.duration) || audio.duration <= 0) return;
+    const rect = container.getBoundingClientRect();
+    const clickRatio = (e.clientX - rect.left) / rect.width;
+    const trimmedStart = speechStartRatio * audio.duration;
+    const trimmedDuration = audio.duration - trimmedStart;
+    audio.currentTime = trimmedStart + clickRatio * trimmedDuration;
+    if (!isPlaying) onToggle();
+  };
+
+  return (
+    <div className="flex items-center gap-2 mt-2">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="w-6 h-6 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center shrink-0 transition-colors"
+      >
+        {isPlaying
+          ? <Pause className="w-3 h-3 text-neutral-300" />
+          : <Play className="w-3 h-3 text-neutral-300 ml-0.5" />
+        }
+      </button>
+      {/* Two stacked layers: orange bars below, muted overlay on top clipped from left */}
+      <div
+        ref={barContainerRef}
+        className="relative flex-1 h-8 cursor-pointer"
+        onClick={handleBarClick}
+      >
+        {/* Bottom: all bars in primary color (will show as "played" region) */}
+        <div className="absolute inset-0 flex items-center gap-[2px]">
+          {peaks.map((peak, i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-sm bg-primary"
+              style={{ height: `${Math.max(8, peak * 100)}%` }}
+            />
+          ))}
+        </div>
+        {/* Top: muted overlay, clip-path shrinks from left as audio plays */}
+        <div ref={mutedOverlayRef} className="absolute inset-0 flex items-center gap-[2px]" style={{ clipPath: 'inset(0 0 0 0%)' }}>
+          {peaks.map((peak, i) => (
+            <div
+              key={i}
+              className="flex-1 rounded-sm bg-neutral-700"
+              style={{ height: `${Math.max(8, peak * 100)}%` }}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** Wrapper that decodes a blob and renders a ReviewWaveform. */
+function LineWaveformPlayer({
+  blob,
+  isPlaying,
+  audioRef,
+  onToggle,
+}: {
+  blob: Blob;
+  isPlaying: boolean;
+  audioRef: React.RefObject<HTMLAudioElement | null>;
+  onToggle: (speechStartRatio: number) => void;
+}) {
+  const waveData = useWaveformData(blob);
+  if (!waveData) return null;
+  return (
+    <ReviewWaveform
+      blob={blob}
+      isPlaying={isPlaying}
+      audioRef={audioRef}
+      speechStartRatio={waveData.speechStartRatio}
+      peaks={waveData.peaks}
+      onToggle={() => onToggle(waveData.speechStartRatio)}
+    />
+  );
+}
+
 /* ─── Word match scoring ─────────────────────────────────────────────── */
 
-/** Returns fraction of expected words found in transcript (0–1). */
 /** Normalize text for word matching: add space after sentence punctuation
  *  (fixes "talk.We" → "talk we") but preserve contractions ("I've" → "ive"). */
 const normWords = (s: string) =>
@@ -111,12 +297,43 @@ const normWords = (s: string) =>
     .replace(/\s{2,}/g, ' ')
     .trim();
 
+/** Soundex encoder — phonetically groups homophones (soles↔souls, their↔there, etc.) */
+function soundex(s: string): string {
+  const map: Record<string, string> = {
+    b:'1',f:'1',p:'1',v:'1',
+    c:'2',g:'2',j:'2',k:'2',q:'2',s:'2',x:'2',z:'2',
+    d:'3',t:'3', l:'4', m:'5',n:'5', r:'6',
+  };
+  let code = s[0].toUpperCase();
+  let prev = map[s[0]] ?? '0';
+  for (let i = 1; i < s.length && code.length < 4; i++) {
+    const c = map[s[i]] ?? '0';
+    if (c !== '0' && c !== prev) code += c;
+    if (c !== '0') prev = c;
+  }
+  return code.padEnd(4, '0');
+}
+
+/** True if two normalized words are equivalent: exact match, or phonetically identical
+ *  for words of 3+ chars (guards against "be"↔"by" false positives on short words). */
+function wordsMatch(a: string, b: string): boolean {
+  return a === b || (a.length >= 3 && b.length >= 3 && soundex(a) === soundex(b));
+}
+
+/** Fuzzy indexOf — finds first position in haystack where wordsMatch(needle, haystack[i]). */
+function fuzzyIndexOf(haystack: string[], needle: string, from: number): number {
+  for (let i = from; i < haystack.length; i++) {
+    if (wordsMatch(needle, haystack[i])) return i;
+  }
+  return -1;
+}
+
+/** Returns fraction of expected words found in transcript (0–1). */
 function wordMatchScore(expected: string, transcript: string): number {
-  const norm = normWords;
-  const expectedWords = norm(expected).split(/\s+/).filter(Boolean);
+  const expectedWords = normWords(expected).split(/\s+/).filter(Boolean);
   if (!expectedWords.length) return 1;
-  const transcriptWords = new Set(norm(transcript).split(/\s+/).filter(Boolean));
-  const matched = expectedWords.filter(w => transcriptWords.has(w)).length;
+  const transcriptWords = normWords(transcript).split(/\s+/).filter(Boolean);
+  const matched = expectedWords.filter(w => transcriptWords.some(tw => wordsMatch(w, tw))).length;
   return matched / expectedWords.length;
 }
 
@@ -130,17 +347,21 @@ interface WordMatchResult {
  *  highlighted independently. Stage directions ([bracket]) are italic and don't
  *  consume word positions. */
 function renderLineWithWordHighlights(text: string, result: WordMatchResult) {
-  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-
   // wordPos tracks which result.words[i] we're consuming — positional, not text-keyed
   let wordPos = 0;
 
   const highlightToken = (token: string, key: string) => {
-    const normalized = norm(token);
-    if (!normalized) return <span key={key}>{token}</span>; // punctuation-only, no position consumed
-    const entry = result.words[wordPos++];
-    if (!entry) return <span key={key}>{token}</span>;
-    if (entry.matched) return <span key={key} className="text-primary">{token}</span>;
+    // Count how many normalized words this display token produces (e.g. "talk.We" → 2)
+    const normed = normWords(token).split(/\s+/).filter(Boolean);
+    if (normed.length === 0) return <span key={key}>{token}</span>; // punctuation-only, no position consumed
+    // Highlight if ANY of the sub-words are matched
+    let anyMatched = false;
+    for (let i = 0; i < normed.length; i++) {
+      const entry = result.words[wordPos + i];
+      if (entry?.matched) anyMatched = true;
+    }
+    wordPos += normed.length;
+    if (anyMatched) return <span key={key} className="text-primary">{token}</span>;
     return <span key={key} className="opacity-40">{token}</span>;
   };
 
@@ -241,8 +462,28 @@ export default function RehearsalPage() {
   });
   const [exiting, setExiting] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [showMicPicker, setShowMicPicker] = useState(false);
+  const [micDevices, setMicDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedMicId, setSelectedMicIdState] = useState<string | undefined>(() =>
+    typeof window !== 'undefined' ? (getSelectedMicId() || undefined) : undefined
+  );
+  const setSelectedMicId = useCallback((id: string) => {
+    setSelectedMicIdState(id || undefined);
+    persistMicId(id);
+  }, []);
   const [showPausePlayOverlay, setShowPausePlayOverlay] = useState<'pause' | 'play' | null>(null);
   const [loadingTextIdx, setLoadingTextIdx] = useState(0);
+  const [fadeToReview, setFadeToReview] = useState(false);
+
+  /* ── Session review: audio + transcript accumulation ─────────────── */
+
+  const lineAudioBlobsRef = useRef<Map<number, Blob>>(new Map());
+  const lineTranscriptsRef = useRef<Map<number, string>>(new Map());
+  const sessionStartTimeRef = useRef<number>(Date.now());
+  const [sessionDuration, setSessionDuration] = useState(0);
+  const [playingLineIdx, setPlayingLineIdx] = useState<number | null>(null);
+  const reviewAudioRef = useRef<HTMLAudioElement | null>(null);
+  const reviewAudioUrlRef = useRef<string | null>(null);
 
   /* ── Local script-following state ───────────────────────────────── */
 
@@ -255,6 +496,8 @@ export default function RehearsalPage() {
   const autoStartedRef = useRef(false);
   const gotResultRef = useRef(false);
   const lastKnownVoiceIdRef = useRef(voiceParam || 'coral');
+  // Maps each AI character name → assigned TTS voice ID (for multi-character scenes)
+  const characterVoiceMapRef = useRef<Map<string, string>>(new Map());
   const lastAiLineForFallbackRef = useRef<string | null>(null);
   const pauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipSilentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -323,6 +566,9 @@ export default function RehearsalPage() {
   const [shouldShake, setShouldShake] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [micSwitchToast, setMicSwitchToast] = useState<{ deviceId: string; label: string } | null>(null);
+  const micSwitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const knownMicIdsRef = useRef<Set<string>>(new Set());
   const srAdvanceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Per-line delivery guard — prevents the same line from being delivered twice,
   // without blocking delivery of subsequent lines (unlike isProcessing flag)
@@ -331,6 +577,7 @@ export default function RehearsalPage() {
 
   // Live word matching via SpeechRecognition (for real-time highlighting while Whisper records)
   const [liveMatchedIndices, setLiveMatchedIndices] = useState<Set<number>>(new Set());
+  const bestMatchedRef = useRef<Set<number>>(new Set()); // accumulates ever-matched indices so SR regressions don't un-highlight words
   const liveRecognitionRef = useRef<any>(null);
   // Prevents double-advance when SR final result fires before Whisper returns
   const srAdvancedRef = useRef(false);
@@ -341,6 +588,8 @@ export default function RehearsalPage() {
     startListening,
     stopListening,
     cancelTranscription,
+    getRecordedBlob,
+    prewarmStream,
     isListening,
     isTranscribing,
     isSupported: isSpeechRecognitionSupported,
@@ -348,9 +597,10 @@ export default function RehearsalPage() {
     resetTranscript,
     analyserRef,
   } = useWhisperSTT({
-    silenceThreshold: 30,
-    silenceTimeoutMs: 3000,
+    silenceThreshold: 10,
+    silenceTimeoutMs: 2000,
     speechGateRef: whisperGateRef,
+    deviceId: selectedMicId,
     prompt: currentUserLineText ? stripStageDirections(currentUserLineText) : undefined,
     onResult: (text) => {
       if (srAdvancedRef.current) return; // SR already advanced this line — ignore late Whisper result
@@ -358,13 +608,12 @@ export default function RehearsalPage() {
       setSpeechError(null);
       const expected = currentUserLineText ? stripStageDirections(currentUserLineText) : '';
       const score = wordMatchScore(expected, text);
-      const willAdvance = !expected || score >= 0.6;
+      const willAdvance = !expected || score >= 0.5;
 
-      // Build per-word match result from expected line words
-      const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-      const transcriptWords = new Set(norm(text).split(/\s+/).filter(Boolean));
+      // Build per-word match result from expected line words (fuzzy so homophones highlight correctly)
+      const transcriptWordArr = normWords(text).split(/\s+/).filter(Boolean);
       const words = expected
-        ? norm(expected).split(/\s+/).filter(Boolean).map(w => ({ word: w, matched: transcriptWords.has(w) }))
+        ? normWords(expected).split(/\s+/).filter(Boolean).map(w => ({ word: w, matched: transcriptWordArr.some(tw => wordsMatch(w, tw)) }))
         : [];
 
       setWordMatchResult({ words, willAdvance });
@@ -381,10 +630,11 @@ export default function RehearsalPage() {
         // Jitter animation to signal failed match
         setShouldShake(true);
         setTimeout(() => setShouldShake(false), 600);
-        // Toast notification
+        // Toast notification — tell user to run the full line
         if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-        setToast('Try that again');
-        toastTimerRef.current = setTimeout(() => setToast(null), 2500);
+        const missedCount = words.filter(w => !w.matched).length;
+        setToast(missedCount === 1 ? 'Missed a word — run the full line again' : `Missed ${missedCount} words — run the full line again`);
+        toastTimerRef.current = setTimeout(() => setToast(null), 3500);
         // Auto-retry after 2s — reset gate so auto-listen fires
         if (pendingRetryRef.current) clearTimeout(pendingRetryRef.current);
         pendingRetryRef.current = setTimeout(() => {
@@ -420,7 +670,7 @@ export default function RehearsalPage() {
     // Check if next line is also AI — short pause for consecutive AI lines
     const lines = orderedLinesRef.current;
     const sess = sessionRef.current;
-    const nextIsAlsoAI = sess && nextIdx < lines.length && lines[nextIdx].character_name === sess.ai_character;
+    const nextIsAlsoAI = sess && nextIdx < lines.length && lines[nextIdx].character_name !== sess.user_character;
     const pauseMs = nextIsAlsoAI ? 200 : 0;
     if (pauseMs > 0) {
       pauseTimerRef.current = setTimeout(() => {
@@ -473,11 +723,14 @@ export default function RehearsalPage() {
 
   /* ── Speak a line (AI or browser) ──────────────────────────────── */
 
-  const speakLine = useCallback((text: string, instructions: string = '') => {
+  const speakLine = useCallback((text: string, instructions: string = '', charName?: string) => {
     if (isListening) stopListening();
     lastAiLineForFallbackRef.current = text;
     if (useAIVoice) {
-      speakAI(text, lastKnownVoiceIdRef.current, instructions);
+      const voiceId = charName
+        ? (characterVoiceMapRef.current.get(charName) ?? lastKnownVoiceIdRef.current)
+        : lastKnownVoiceIdRef.current;
+      speakAI(text, voiceId, instructions);
     } else if (isSpeechSynthesisSupported) {
       speakBrowser(text);
     }
@@ -495,22 +748,26 @@ export default function RehearsalPage() {
     if (!sess || !lines.length) return;
 
     if (idx >= lines.length) {
-      // Scene complete — brief pause so last line highlights are visible, then review
+      // Scene complete — fade out rehearsal, then show review
       setActiveLineIndex(lines.length - 1);
       setLastAiLine(null);
       loadFeedback();
-      setTimeout(() => setShowFeedback(true), 600);
+      setSessionDuration(Math.floor((Date.now() - sessionStartTimeRef.current) / 1000));
+      // Brief pause so last line highlights are visible, then fade to black
+      setTimeout(() => setFadeToReview(true), 400);
+      // After fade completes, switch to review
+      setTimeout(() => setShowFeedback(true), 900);
       return;
     }
 
     setActiveLineIndex(idx);
     const line = lines[idx];
 
-    if (line.character_name === sess.ai_character) {
+    if (line.character_name !== sess.user_character) {
       // AI's turn — speak it from script (strip any inline [stage directions])
       setLastAiLine(line.text);
       setAutoListenLineKey(null);
-      speakLineRef.current(ttsText(line), ttsInstructions(line, sceneVoiceContextRef.current));
+      speakLineRef.current(ttsText(line), ttsInstructions(line, sceneVoiceContextRef.current), line.character_name);
     } else {
       // User's turn — set up for auto-listen
       setLastAiLine(null);
@@ -534,6 +791,11 @@ export default function RehearsalPage() {
       clearTimeout(skipSilentTimerRef.current);
       skipSilentTimerRef.current = null;
     }
+    // Capture audio blob + transcript for session review playback
+    const blob = getRecordedBlob();
+    if (blob) lineAudioBlobsRef.current.set(currentIdx, blob);
+    lineTranscriptsRef.current.set(currentIdx, toSend);
+
     if (isListening) stopListening();
     resetTranscript();
 
@@ -570,8 +832,10 @@ export default function RehearsalPage() {
       if (data.lines_remaining != null) setLinesRemaining(data.lines_remaining);
 
       if (data.session_status === 'completed') {
-        await loadFeedback();
-        setShowFeedback(true);
+        setSessionDuration(Math.floor((Date.now() - sessionStartTimeRef.current) / 1000));
+        loadFeedback(); // fire-and-forget — feedback loads while review is already visible
+        setFadeToReview(true);
+        setTimeout(() => setShowFeedback(true), 500);
       }
       setError(null);
     } catch (err: any) {
@@ -595,35 +859,74 @@ export default function RehearsalPage() {
 
   const loadSession = async () => {
     if (!sessionId) return;
+    // Reset all rehearsal state so "Run it again" starts fresh
+    setSession(null);
+    setSceneWithLines(null);
+    setShowFeedback(false);
+    setSessionFeedback(null);
+    setFadeToReview(false);
+    setActiveLineIndex(null);
+    setLastAiLine(null);
+    setFocusInitialized(false);
+    autoStartedRef.current = false;
+    lineAudioBlobsRef.current.clear();
+    lineTranscriptsRef.current.clear();
+    setSessionDuration(0);
     try {
-      const { data } = await api.get<RehearsalSession>(
-        `/api/scenes/rehearse/sessions/${sessionId}`
-      );
+      const sceneCacheKey = `actorrise_scene_${sceneId}`;
+      const sessionCacheKey = `actorrise_session_${sessionId}`;
+      const cachedScene = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(sceneCacheKey) : null;
+      const cachedSession = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(sessionCacheKey) : null;
+
+      const [sessionData, sceneRes] = await Promise.all([
+        cachedSession
+          ? Promise.resolve(JSON.parse(cachedSession) as RehearsalSession)
+          : api.get<RehearsalSession>(`/api/scenes/rehearse/sessions/${sessionId}`).then(r => r.data),
+        cachedScene
+          ? Promise.resolve(null)
+          : api.get<SceneWithLines>(`/api/scenes/${sceneId}`),
+      ]);
+      // Clear the one-time session cache entry (it was just for this load)
+      try { if (cachedSession) sessionStorage.removeItem(sessionCacheKey); } catch { /* ignore */ }
+
+      const data = sessionData;
       setSession(data);
       if (data.max_lines != null) {
         setLinesRemaining(Math.max(0, data.max_lines - (data.total_lines_delivered ?? 0)));
       }
-      // sceneWithLines is static — cache in sessionStorage so re-entry is instant
-      const cacheKey = `actorrise_scene_${data.scene_id}`;
+
       try {
-        const cached = typeof sessionStorage !== 'undefined'
-          ? sessionStorage.getItem(cacheKey)
-          : null;
         let sceneData: SceneWithLines;
-        if (cached) {
-          sceneData = JSON.parse(cached);
+        if (cachedScene) {
+          sceneData = JSON.parse(cachedScene);
         } else {
-          const sceneRes = await api.get<SceneWithLines>(`/api/scenes/${data.scene_id}`);
-          sceneData = sceneRes.data;
-          try { sessionStorage.setItem(cacheKey, JSON.stringify(sceneData)); } catch { /* quota */ }
+          sceneData = sceneRes!.data;
+          try { sessionStorage.setItem(sceneCacheKey, JSON.stringify(sceneData)); } catch { /* quota */ }
         }
         setSceneWithLines(sceneData);
         // Eagerly preload first AI lines during loading screen so they're cached before countdown ends
         const voiceId = voiceParam || data.ai_voice_id || 'coral';
+
+        // Build per-character voice map so each AI character gets a distinct voice
+        const voicePool = ['coral', 'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer', 'ash', 'ballad', 'sage'];
+        const aiChars = [...new Set(sceneData.lines.map(l => l.character_name))]
+          .filter(c => c !== data.user_character);
+        const newVoiceMap = new Map<string, string>();
+        newVoiceMap.set(data.ai_character, voiceId);
+        const remainingVoices = voicePool.filter(v => v !== voiceId);
+        let vIdx = 0;
+        for (const char of aiChars) {
+          if (!newVoiceMap.has(char)) {
+            newVoiceMap.set(char, remainingVoices[vIdx % remainingVoices.length]);
+            vIdx++;
+          }
+        }
+        characterVoiceMapRef.current = newVoiceMap;
+
         sceneData.lines
-          .filter(l => l.character_name === data.ai_character)
+          .filter(l => l.character_name !== data.user_character)
           .slice(0, 5)
-          .forEach(l => preloadTTSRef.current(ttsText(l), voiceId, ttsInstructions(l, sceneVoiceContextRef.current)));
+          .forEach(l => preloadTTSRef.current(ttsText(l), newVoiceMap.get(l.character_name) ?? voiceId, ttsInstructions(l, sceneVoiceContextRef.current)));
       } catch {
         // Non-fatal
       }
@@ -651,6 +954,30 @@ export default function RehearsalPage() {
   };
 
   /* ── Effects ───────────────────────────────────────────────────── */
+
+  // Detect newly connected mics and offer to switch
+  useEffect(() => {
+    const handler = async () => {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const mics = devices.filter(d => d.kind === 'audioinput' && d.deviceId !== 'default');
+        const newMic = mics.find(d => !knownMicIdsRef.current.has(d.deviceId));
+        // Update known set
+        mics.forEach(d => knownMicIdsRef.current.add(d.deviceId));
+        if (!newMic || newMic.deviceId === selectedMicId) return;
+        const label = newMic.label || 'New microphone';
+        setMicSwitchToast({ deviceId: newMic.deviceId, label });
+        if (micSwitchTimerRef.current) clearTimeout(micSwitchTimerRef.current);
+        micSwitchTimerRef.current = setTimeout(() => setMicSwitchToast(null), 8000);
+      } catch { /* ignore */ }
+    };
+    // Seed known mics on mount so first devicechange only fires for truly new devices
+    navigator.mediaDevices?.enumerateDevices().then(devices => {
+      devices.filter(d => d.kind === 'audioinput').forEach(d => knownMicIdsRef.current.add(d.deviceId));
+    }).catch(() => {});
+    navigator.mediaDevices?.addEventListener('devicechange', handler);
+    return () => navigator.mediaDevices?.removeEventListener('devicechange', handler);
+  }, [selectedMicId, setSelectedMicId]);
 
   // Kill audio when user navigates away (back button, bfcache, client-side route)
   useEffect(() => {
@@ -683,6 +1010,11 @@ export default function RehearsalPage() {
     return () => clearTimeout(t);
   }, [countdown]);
 
+  // Pre-warm mic stream during countdown so first recording has no getUserMedia delay
+  useEffect(() => {
+    if (focusInitialized) prewarmStream();
+  }, [focusInitialized]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Auto-start: begin from session.current_line_index (respects "Start from here")
   useEffect(() => {
     if (autoStartedRef.current) return;
@@ -691,13 +1023,14 @@ export default function RehearsalPage() {
     if (!focusInitialized || !session || !orderedLines.length) return;
 
     autoStartedRef.current = true;
+    sessionStartTimeRef.current = Date.now();
     const startIdx = Math.min(session.current_line_index ?? 0, orderedLines.length - 1);
     setActiveLineIndex(startIdx);
     const firstLine = orderedLines[startIdx];
 
-    if (firstLine.character_name === session.ai_character) {
+    if (firstLine.character_name !== session.user_character) {
       setLastAiLine(firstLine.text);
-      speakLineRef.current(ttsText(firstLine), ttsInstructions(firstLine, sceneVoiceContextRef.current));
+      speakLineRef.current(ttsText(firstLine), ttsInstructions(firstLine, sceneVoiceContextRef.current), firstLine.character_name);
     } else {
       // User's line — auto-listen will handle
       setLastAiLine(null);
@@ -743,6 +1076,7 @@ export default function RehearsalPage() {
   useEffect(() => {
     if (!isListening || !currentUserLineText) {
       setLiveMatchedIndices(new Set());
+      bestMatchedRef.current = new Set();
       return;
     }
     const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -759,60 +1093,87 @@ export default function RehearsalPage() {
       recognition.interimResults = true;
       recognition.lang = 'en-US';
       recognition.onresult = (event: any) => {
-        let transcript = '';
+        // Separate confirmed-final words from current interim prediction
+        let finalTranscript = '';
+        let fullTranscript = '';
         let hasFinal = false;
         for (let i = 0; i < event.results.length; i++) {
-          transcript += event.results[i][0].transcript + ' ';
-          if (event.results[i].isFinal) hasFinal = true;
+          const t = event.results[i][0].transcript;
+          fullTranscript += t + ' ';
+          if (event.results[i].isFinal) { finalTranscript += t + ' '; hasFinal = true; }
         }
-        // Sequential/greedy match — walk expected words left-to-right through spoken words
-        // so duplicate words only highlight the correct positional occurrence
-        // Strictly sequential match — can't highlight word N without saying word N-1 first
-        const spokenWords = norm(transcript).split(/\s+/).filter(Boolean);
+
+        // DISPLAY: match against full transcript (includes interim) for real-time word-by-word highlighting
+        const displayWords = norm(fullTranscript).split(/\s+/).filter(Boolean);
+        const displayMatched = new Set<number>();
+        let dc = 0;
+        for (let ei = 0; ei < expectedWords.length; ei++) {
+          const f = fuzzyIndexOf(displayWords, expectedWords[ei], dc);
+          if (f !== -1) { displayMatched.add(ei); dc = f + 1; }
+          // no break — skip misheard words so later words can still match
+        }
+        // Merge into best-seen set — prevents SR regressions from un-highlighting words
+        displayMatched.forEach(i => bestMatchedRef.current.add(i));
+        setLiveMatchedIndices(new Set(bestMatchedRef.current));
+
+        // ADVANCE: match against full transcript (including current interim)
+        const spokenWords = norm(fullTranscript).split(/\s+/).filter(Boolean);
         const matched = new Set<number>();
         let spokenCursor = 0;
         for (let ei = 0; ei < expectedWords.length; ei++) {
-          const found = spokenWords.indexOf(expectedWords[ei], spokenCursor);
-          if (found !== -1) {
-            matched.add(ei);
-            spokenCursor = found + 1;
-          } else {
-            break; // Stop at first unmatched word — no skipping ahead
-          }
+          const found = fuzzyIndexOf(spokenWords, expectedWords[ei], spokenCursor);
+          if (found !== -1) { matched.add(ei); spokenCursor = found + 1; }
+          // no break — allow matching past misheard words
         }
-        setLiveMatchedIndices(matched);
-        // Open Whisper gate once SR has matched enough sequential words (not coincidence)
+
+        // Open Whisper gate once SR has matched enough sequential words
         const gateThreshold = Math.min(3, expectedWords.length);
         if (matched.size >= gateThreshold) whisperGateRef.current = true;
 
-        // Instant advance: SR final result with ≥80% strict sequential match
-        // High threshold ensures user finishes nearly all words before jumping
+        // Instant advance: SR final result with ≥92% match so last word isn't skipped
         if (hasFinal && !srAdvancedRef.current) {
           const score = expectedWords.length > 0 ? matched.size / expectedWords.length : 1;
-          if (score >= 0.85) {
+          if (score >= 0.92) {
             srAdvancedRef.current = true;
             try { recognition.stop(); liveRecognitionRef.current = null; } catch {}
             cancelTranscriptionRef.current();
-            // Build final word-match result from the sequential match
-            const finalWords = expectedWords.map((w, i) => ({ word: w, matched: matched.has(i) }));
-            setLiveMatchedIndices(new Set()); // clear live highlights; wordMatchResult takes over
-            setWordMatchResult({ words: finalWords, willAdvance: true });
+            const wordResult = expectedWords.map((w, i) => ({ word: w, matched: matched.has(i) }));
+            setLiveMatchedIndices(new Set()); // wordMatchResult takes over
+            setWordMatchResult({ words: wordResult, willAdvance: true });
             srAdvanceTimerRef.current = setTimeout(() => {
               srAdvanceTimerRef.current = null;
-              handleDeliverLineRef.current(transcript.trim());
+              handleDeliverLineRef.current(fullTranscript.trim());
             }, 400);
           }
         }
       };
-      recognition.onerror = () => {};
-      recognition.onend = () => {};
+      let alive = true; // flipped in cleanup to prevent restarts after unmount
+      recognition.onerror = (ev: any) => {
+        // Fatal errors — don't attempt restart
+        if (ev.error === 'not-allowed' || ev.error === 'service-not-available') {
+          alive = false;
+        }
+      };
+      recognition.onend = () => {
+        // Chrome kills continuous SR after silence / timeout — auto-restart
+        if (alive && !srAdvancedRef.current) {
+          try { recognition.start(); } catch { alive = false; }
+        }
+      };
       recognition.start();
       liveRecognitionRef.current = recognition;
     } catch {
       // SpeechRecognition unavailable or conflicted — graceful degradation
     }
     return () => {
-      try { liveRecognitionRef.current?.stop(); } catch {}
+      try {
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        if (liveRecognitionRef.current) {
+          // Prevent onend from restarting
+          liveRecognitionRef.current.onend = () => {};
+          liveRecognitionRef.current.stop();
+        }
+      } catch {}
       liveRecognitionRef.current = null;
       setLiveMatchedIndices(new Set());
     };
@@ -847,9 +1208,9 @@ export default function RehearsalPage() {
     if (bulkPreloadedRef.current || !session || !orderedLines.length) return;
     bulkPreloadedRef.current = true;
     const aiLines = orderedLines
-      .filter(l => l.character_name === session.ai_character)
+      .filter(l => l.character_name !== session.user_character)
       .slice(0, 5); // preload first 5 AI lines
-    aiLines.forEach(l => preloadTTS(ttsText(l), lastKnownVoiceIdRef.current, ttsInstructions(l, sceneVoiceContextRef.current)));
+    aiLines.forEach(l => preloadTTS(ttsText(l), characterVoiceMapRef.current.get(l.character_name) ?? lastKnownVoiceIdRef.current, ttsInstructions(l, sceneVoiceContextRef.current)));
   }, [session?.ai_character, orderedLines, preloadTTS]);
 
   // Preload next AI line while user speaks
@@ -861,8 +1222,9 @@ export default function RehearsalPage() {
     // Preload next 2 AI lines ahead
     let found = 0;
     for (let i = activeLineIndex + 1; i < orderedLines.length && found < 2; i++) {
-      if (orderedLines[i].character_name === session.ai_character) {
-        preloadTTS(ttsText(orderedLines[i]), lastKnownVoiceIdRef.current, ttsInstructions(orderedLines[i], sceneVoiceContextRef.current));
+      const l = orderedLines[i];
+      if (l.character_name !== session.user_character) {
+        preloadTTS(ttsText(l), characterVoiceMapRef.current.get(l.character_name) ?? lastKnownVoiceIdRef.current, ttsInstructions(l, sceneVoiceContextRef.current));
         found++;
       }
     }
@@ -880,7 +1242,7 @@ export default function RehearsalPage() {
       const containerRect = container.getBoundingClientRect();
       const offset = elRect.top - containerRect.top + container.scrollTop - containerRect.height / 2 + elRect.height / 2;
       container.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' });
-    }, 150);
+    }, 50);
     return () => clearTimeout(t);
   }, [activeLineIndex]);
 
@@ -915,7 +1277,12 @@ export default function RehearsalPage() {
     cancelAI();
     window.speechSynthesis?.cancel();
     cancelTranscription();
-    if (isListening) stopListening();
+    stopListening(); // unconditional — isListening state can be stale
+    // Also abort live SR recognition so it can't fire a final result after pause
+    if (liveRecognitionRef.current) {
+      try { liveRecognitionRef.current.onend = () => {}; liveRecognitionRef.current.abort(); } catch {}
+      liveRecognitionRef.current = null;
+    }
     if (pauseTimerRef.current) {
       clearTimeout(pauseTimerRef.current);
       pauseTimerRef.current = null;
@@ -928,7 +1295,7 @@ export default function RehearsalPage() {
       clearTimeout(pendingAdvanceRef.current);
       pendingAdvanceRef.current = null;
     }
-  }, [cancelAI, cancelTranscription, isListening, stopListening]);
+  }, [cancelAI, cancelTranscription, stopListening]);
 
   const handleExit = useCallback(() => {
     stopAllAudio();
@@ -954,9 +1321,9 @@ export default function RehearsalPage() {
     const sess = sessionRef.current;
     if (idx != null && sess) {
       const line = lines[idx];
-      if (line && line.character_name === sess.ai_character) {
+      if (line && line.character_name !== sess.user_character) {
         setLastAiLine(line.text);
-        speakLineRef.current(ttsText(line), ttsInstructions(line, sceneVoiceContextRef.current));
+        speakLineRef.current(ttsText(line), ttsInstructions(line, sceneVoiceContextRef.current), line.character_name);
       }
     }
   }, []);
@@ -965,6 +1332,19 @@ export default function RehearsalPage() {
     if (!session || isRestarting) return;
     setIsRestarting(true);
     stopAllAudio();
+    // Immediately show the loading spinner (whimsical texts) before navigation
+    setSessionFeedback(null);
+    // Clear session review data
+    setFadeToReview(false);
+    lineAudioBlobsRef.current.clear();
+    lineTranscriptsRef.current.clear();
+    setPlayingLineIdx(null);
+    if (reviewAudioRef.current) {
+      reviewAudioRef.current.pause();
+      if (reviewAudioUrlRef.current) URL.revokeObjectURL(reviewAudioUrlRef.current);
+      reviewAudioRef.current = null;
+      reviewAudioUrlRef.current = null;
+    }
     try {
       const { data } = await api.post<{ id: number }>('/api/scenes/rehearse/start', {
         scene_id: session.scene_id,
@@ -994,21 +1374,46 @@ export default function RehearsalPage() {
     handleDeliverLine(currentUserLineText);
   }, [currentUserLineText, isProcessing, isListening, stopListening]);
 
+  /* ── Go back to previous line ───────────────────────────────────── */
+
+  const handleGoBack = useCallback(() => {
+    const idx = activeLineIndexRef.current;
+    if (idx == null || idx <= 0) return;
+    if (isListening) stopListening();
+    cancelTranscription();
+    setWordMatchResult(null);
+    setLiveMatchedIndices(new Set());
+    bestMatchedRef.current = new Set();
+    srAdvancedRef.current = false;
+    advanceScriptRef.current(idx - 1);
+  }, [isListening, stopListening, cancelTranscription]);
+
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
+
   /* ── Keyboard shortcuts ─────────────────────────────────────────── */
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.code !== 'Space') return;
-      // Don't capture space if user is typing in an input/textarea
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-      e.preventDefault();
-      if (paused) handleResume();
-      else handlePause();
+
+      if (e.code === 'Space') {
+        e.preventDefault();
+        if (paused) handleResume();
+        else handlePause();
+      } else if (e.code === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        handleGoBack();
+      } else if (e.code === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleManualAdvance();
+      } else if (e.key === '?') {
+        setShowShortcutsModal(v => !v);
+      }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [paused, handlePause, handleResume]);
+  }, [paused, handlePause, handleResume, handleGoBack, handleManualAdvance]);
 
   /* ── Derived state ─────────────────────────────────────────────── */
 
@@ -1017,9 +1422,8 @@ export default function RehearsalPage() {
   // Build a live WordMatchResult from SpeechRecognition interim results
   const liveWordResult: WordMatchResult | null = (() => {
     if (!isListening || liveMatchedIndices.size === 0 || !currentUserLineText) return null;
-    const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
     const expected = stripStageDirections(currentUserLineText);
-    const words = norm(expected).split(/\s+/).filter(Boolean)
+    const words = normWords(expected).split(/\s+/).filter(Boolean)
       .map((word, i) => ({ word, matched: liveMatchedIndices.has(i) }));
     return { words, willAdvance: true };
   })();
@@ -1033,6 +1437,85 @@ export default function RehearsalPage() {
     if (isUserTurn) return { text: 'Your turn', color: 'bg-orange-400', pulse: false };
     return { text: 'Waiting', color: 'bg-neutral-500', pulse: false };
   })();
+
+  /* ── Session review helpers ───────────────────────────────────── */
+
+  const formatDuration = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return m > 0 ? `${m}m ${s}s` : `${s}s`;
+  };
+
+  const overallAccuracy = useMemo(() => {
+    if (!showFeedback || !orderedLines.length || !session) return null;
+    const userLines = orderedLines.filter(l => l.character_name === session.user_character);
+    let totalScore = 0;
+    let delivered = 0;
+    userLines.forEach(line => {
+      const idx = orderedLines.indexOf(line);
+      const transcript = lineTranscriptsRef.current.get(idx);
+      if (transcript) {
+        totalScore += wordMatchScore(stripStageDirections(line.text), transcript);
+        delivered++;
+      }
+    });
+    return delivered > 0 ? Math.round((totalScore / delivered) * 100) : null;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showFeedback]);
+
+  const playLineAudio = useCallback((lineIdx: number, speechStartRatio = 0) => {
+    const blob = lineAudioBlobsRef.current.get(lineIdx);
+    if (!blob) return;
+
+    // Stop any currently playing audio
+    if (reviewAudioRef.current) {
+      reviewAudioRef.current.pause();
+      if (reviewAudioUrlRef.current) URL.revokeObjectURL(reviewAudioUrlRef.current);
+    }
+
+    // If tapping the same line that's playing, just stop
+    if (playingLineIdx === lineIdx) {
+      reviewAudioRef.current = null;
+      reviewAudioUrlRef.current = null;
+      setPlayingLineIdx(null);
+      return;
+    }
+
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    reviewAudioRef.current = audio;
+    reviewAudioUrlRef.current = url;
+    setPlayingLineIdx(lineIdx);
+    audio.onended = () => {
+      setPlayingLineIdx(null);
+      URL.revokeObjectURL(url);
+      reviewAudioRef.current = null;
+      reviewAudioUrlRef.current = null;
+    };
+    // Seek past leading silence once metadata loads
+    if (speechStartRatio > 0) {
+      audio.onloadedmetadata = () => {
+        const dur = audio.duration;
+        if (isFinite(dur) && dur > 0) {
+          audio.currentTime = speechStartRatio * dur;
+        }
+        audio.play();
+      };
+      audio.load();
+    } else {
+      audio.play();
+    }
+  }, [playingLineIdx]);
+
+  // Cleanup review audio on unmount
+  useEffect(() => {
+    return () => {
+      if (reviewAudioRef.current) {
+        reviewAudioRef.current.pause();
+        if (reviewAudioUrlRef.current) URL.revokeObjectURL(reviewAudioUrlRef.current);
+      }
+    };
+  }, []);
 
   /* ── Render: loading ───────────────────────────────────────────── */
 
@@ -1074,13 +1557,25 @@ export default function RehearsalPage() {
     const playTitle = sceneWithLines?.play_title || '';
     const showPlayTitle = playTitle && playTitle.toLowerCase() !== sceneTitle.toLowerCase();
 
+    // Loading state: centered spinner
+    if (!sessionFeedback) {
+      return (
+        <div className="fixed inset-0 bg-neutral-950 text-neutral-100 flex items-center justify-center z-[10050]">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-6 h-6 border-2 border-neutral-700 border-t-neutral-400 rounded-full animate-spin" />
+            <FeedbackLoadingText />
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="fixed inset-0 bg-neutral-950 text-neutral-100 flex flex-col z-[10050]">
         <div className="flex-1 overflow-auto flex justify-center px-4 pt-10 pb-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-lg space-y-6"
+            className="w-full max-w-3xl space-y-6"
           >
             {/* Header */}
             <div className="text-center space-y-2">
@@ -1091,75 +1586,163 @@ export default function RehearsalPage() {
               )}
             </div>
 
-            {sessionFeedback ? (
-              <>
-                {/* Overall feedback */}
-                <p className="text-base text-neutral-300 leading-relaxed">
-                  {sessionFeedback.overall_feedback}
-                </p>
+            {/* Stats bar */}
+            <div className="flex items-center justify-center gap-2 text-sm text-neutral-400 flex-wrap">
+              <span>{session.total_lines_delivered} lines delivered</span>
+              <span className="text-neutral-700">&middot;</span>
+              <span>{Math.round(session.completion_percentage)}% complete</span>
+              <span className="text-neutral-700">&middot;</span>
+              <span>{formatDuration(sessionDuration)}</span>
+              {overallAccuracy !== null && (
+                <>
+                  <span className="text-neutral-700">&middot;</span>
+                  <span>{overallAccuracy}% accuracy</span>
+                </>
+              )}
+            </div>
 
-                {/* Strengths + Areas */}
-                {(sessionFeedback.strengths?.length > 0 || sessionFeedback.areas_to_improve?.length > 0) && (
-                  <div className="space-y-5">
-                    {sessionFeedback.strengths?.length > 0 && (
-                      <div className="space-y-3">
-                        <p className="text-xs uppercase tracking-widest text-emerald-600 font-semibold">What landed</p>
-                        <ul className="space-y-2">
-                          {sessionFeedback.strengths.map((s: string, i: number) => (
-                            <li key={i} className="text-[15px] text-neutral-300 leading-relaxed pl-4 border-l-2 border-emerald-700/60">
-                              {s}
-                            </li>
-                          ))}
-                        </ul>
+            {/* Divider */}
+            <div className="border-t border-neutral-800/60" />
+
+            {/* AI Feedback */}
+            <div className="space-y-5">
+              <p className="text-base text-neutral-300 leading-relaxed">
+                {sessionFeedback.overall_feedback}
+              </p>
+
+              {(sessionFeedback.strengths?.length > 0 || sessionFeedback.areas_to_improve?.length > 0) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {sessionFeedback.strengths?.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-xs uppercase tracking-widest text-emerald-600 font-semibold">What landed</p>
+                      <ul className="space-y-2">
+                        {sessionFeedback.strengths.map((s: string, i: number) => (
+                          <li key={i} className="text-[15px] text-neutral-300 leading-relaxed pl-4 border-l-2 border-emerald-700/60">
+                            {s}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {sessionFeedback.areas_to_improve?.length > 0 && (
+                    <div className="space-y-3">
+                      <p className="text-xs uppercase tracking-widest text-orange-600 font-semibold">To explore</p>
+                      <ul className="space-y-2">
+                        {sessionFeedback.areas_to_improve.map((a: string, i: number) => (
+                          <li key={i} className="text-[15px] text-neutral-300 leading-relaxed pl-4 border-l-2 border-orange-700/60">
+                            {a}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <p className="text-xs text-neutral-600 leading-relaxed">
+                AI-generated analysis based on your voice input. Trust your instincts.
+              </p>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t border-neutral-800/60" />
+
+            {/* Transcript: line-by-line breakdown */}
+            <div className="space-y-5">
+              <p className="text-xs uppercase tracking-widest text-neutral-500 font-semibold">Your Performance</p>
+
+              <div className="space-y-3">
+                {orderedLines.map((line, idx) => {
+                  const isUserLine = line.character_name === session.user_character;
+                  const userTranscript = lineTranscriptsRef.current.get(idx);
+                  const audioBlob = lineAudioBlobsRef.current.get(idx);
+                  const wasDelivered = isUserLine && userTranscript;
+                  const wasSkipped = isUserLine && !userTranscript && idx <= (activeLineIndex ?? 0);
+
+                  if (!isUserLine) {
+                    // AI lines: compact, muted
+                    return (
+                      <div key={line.id} className="space-y-0.5">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-700">
+                          {line.character_name}
+                        </span>
+                        <p className="text-sm text-neutral-600 leading-snug">
+                          {renderTextWithStageDirections(line.text)}
+                        </p>
                       </div>
-                    )}
+                    );
+                  }
 
-                    {sessionFeedback.areas_to_improve?.length > 0 && (
-                      <div className="space-y-3">
-                        <p className="text-xs uppercase tracking-widest text-orange-600 font-semibold">To explore</p>
-                        <ul className="space-y-2">
-                          {sessionFeedback.areas_to_improve.map((a: string, i: number) => (
-                            <li key={i} className="text-[15px] text-neutral-300 leading-relaxed pl-4 border-l-2 border-orange-700/60">
-                              {a}
-                            </li>
-                          ))}
-                        </ul>
+                  const score = wasDelivered ? wordMatchScore(stripStageDirections(line.text), userTranscript!) : null;
+                  const pct = score !== null ? Math.round(score * 100) : null;
+
+                  return (
+                    <div key={line.id} className="pl-3 border-l border-neutral-800 space-y-1">
+                      {/* Character name + accuracy inline */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                          {line.character_name}
+                        </span>
+                        {pct !== null && (
+                          <span className={cn(
+                            "text-[10px] tabular-nums font-medium",
+                            pct >= 85 ? "text-emerald-500" : pct >= 60 ? "text-amber-500" : "text-red-500"
+                          )}>{pct}%</span>
+                        )}
+                        {wasSkipped && <span className="text-[10px] text-neutral-700 italic">skipped</span>}
                       </div>
-                    )}
-                  </div>
-                )}
 
-                {/* AI disclaimer */}
-                <p className="text-xs text-neutral-600 leading-relaxed">
-                  AI-generated analysis based on your voice input. Trust your instincts.
-                </p>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center gap-4 min-h-[40vh]">
-                <div className="w-6 h-6 border-2 border-neutral-700 border-t-neutral-400 rounded-full animate-spin" />
-                <FeedbackLoadingText />
+                      {/* Expected text */}
+                      <p className={cn(
+                        "text-[15px] leading-snug",
+                        wasDelivered ? "text-neutral-300" : "text-neutral-500"
+                      )}>
+                        {renderTextWithStageDirections(line.text)}
+                      </p>
+
+                      {/* Waveform + transcript */}
+                      {wasDelivered && (
+                        <>
+                          {audioBlob && (
+                            <LineWaveformPlayer
+                              blob={audioBlob}
+                              isPlaying={playingLineIdx === idx}
+                              audioRef={reviewAudioRef}
+                              onToggle={(speechStartRatio) => playLineAudio(idx, speechStartRatio)}
+                            />
+                          )}
+                          <p className="text-xs text-neutral-600 italic leading-snug">{userTranscript}</p>
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-            )}
+            </div>
           </motion.div>
         </div>
 
         {/* Sticky bottom actions */}
-        <div className="shrink-0 px-4 pb-6 pt-3 border-t border-neutral-800/50 bg-neutral-950">
-          <div className="max-w-lg mx-auto flex gap-3">
-            <Button
-              variant="outline"
-              className="flex-1 border-neutral-800 text-neutral-300 hover:bg-neutral-900"
+        <div className="shrink-0 px-4 pb-5 pt-3 bg-gradient-to-t from-neutral-950 via-neutral-950 to-neutral-950/0">
+          <div className="max-w-3xl mx-auto flex items-center justify-center gap-4">
+            <button
+              type="button"
               onClick={handleExit}
+              className="text-sm text-neutral-500 hover:text-neutral-300 transition-colors flex items-center gap-1.5"
             >
+              <ArrowLeft className="w-3.5 h-3.5" />
               Back to Script
-            </Button>
-            <Button
-              className="flex-1"
+            </button>
+            <span className="text-neutral-800">·</span>
+            <button
+              type="button"
               onClick={handleRestart}
               disabled={isRestarting}
+              className="text-sm text-neutral-400 hover:text-neutral-100 transition-colors disabled:opacity-50"
             >
               {isRestarting ? 'Starting...' : 'Run It Again'}
-            </Button>
+            </button>
           </div>
         </div>
       </div>
@@ -1170,6 +1753,15 @@ export default function RehearsalPage() {
 
   return (
     <div className={cn('fixed inset-0 bg-neutral-950 text-neutral-100 flex flex-col z-[10050] transition-opacity duration-150', exiting && 'opacity-0')}>
+      {/* Fade-to-review overlay */}
+      {fadeToReview && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5, ease: 'easeInOut' }}
+          className="absolute inset-0 z-40 bg-neutral-950"
+        />
+      )}
       {/* Loading cover */}
       {(!focusInitialized || (countdown !== null && countdown > 0)) && (
         <div className="absolute inset-0 z-20 flex items-center justify-center bg-neutral-950">
@@ -1246,10 +1838,16 @@ export default function RehearsalPage() {
                       initial={false}
                       animate={
                         isCurrentUserLine && shouldShake
-                          ? { x: [-8, 8, -6, 6, -4, 4, 0], opacity: 1, scale: 1 }
-                          : { opacity: isCurrent ? 1 : 0.55, scale: isCurrent ? 1 : 0.98 }
+                          ? { x: [-8, 8, -6, 6, -4, 4, 0], opacity: 1, scale: 1, y: 0 }
+                          : isCurrent
+                            ? { opacity: 1, scale: 1, y: 0 }
+                            : { opacity: 0.28, scale: 0.96, y: 0 }
                       }
-                      transition={{ duration: 0.4, ease: 'easeOut' }}
+                      transition={
+                        isCurrent && !shouldShake
+                          ? { type: 'spring', stiffness: 320, damping: 28 }
+                          : { duration: 0.25, ease: 'easeOut' }
+                      }
                       className={cn(
                         'rounded-lg px-3 sm:px-4 py-3 transition-colors duration-300',
                         !isCurrent && 'cursor-pointer hover:opacity-75',
@@ -1336,7 +1934,7 @@ export default function RehearsalPage() {
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); handleManualAdvance(); }}
-                            className="text-[11px] text-neutral-400 hover:text-neutral-600 transition-colors"
+                            className="text-[11px] text-neutral-500 hover:text-neutral-800 underline underline-offset-2 transition-colors"
                           >
                             Skip line
                           </button>
@@ -1369,6 +1967,41 @@ export default function RehearsalPage() {
               <p className="text-xs text-red-300 flex-1">{error}</p>
               <button onClick={() => setError(null)} className="text-red-400 hover:text-red-200">
                 <X className="h-3 w-3" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mic switch toast */}
+      <AnimatePresence>
+        {micSwitchToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="shrink-0 flex justify-center px-4 pb-2"
+          >
+            <div className="flex items-center gap-3 rounded-full bg-neutral-900/90 backdrop-blur-sm border border-neutral-700 px-4 py-2 text-xs text-neutral-300">
+              <span className="truncate max-w-[180px]">{micSwitchToast.label} detected</span>
+              <button
+                onClick={() => {
+                  setSelectedMicId(micSwitchToast.deviceId);
+                  setMicSwitchToast(null);
+                  if (micSwitchTimerRef.current) clearTimeout(micSwitchTimerRef.current);
+                }}
+                className="text-white font-medium hover:text-neutral-200 shrink-0"
+              >
+                Switch
+              </button>
+              <button
+                onClick={() => {
+                  setMicSwitchToast(null);
+                  if (micSwitchTimerRef.current) clearTimeout(micSwitchTimerRef.current);
+                }}
+                className="text-neutral-500 hover:text-neutral-400 shrink-0"
+              >
+                Dismiss
               </button>
             </div>
           </motion.div>
@@ -1428,6 +2061,61 @@ export default function RehearsalPage() {
               </span>
             </div>
           )}
+
+          {/* Mic picker */}
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={async () => {
+                if (showMicPicker) { setShowMicPicker(false); return; }
+                try {
+                  const all = await navigator.mediaDevices.enumerateDevices();
+                  setMicDevices(all.filter(d => d.kind === 'audioinput'));
+                } catch { setMicDevices([]); }
+                setShowMicPicker(true);
+              }}
+              className={cn(
+                'w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors',
+                showMicPicker && 'bg-neutral-700'
+              )}
+              title="Select microphone"
+            >
+              <Mic className="w-4 h-4 text-neutral-400" />
+            </button>
+            {showMicPicker && (
+              <div className="absolute bottom-full mb-2 right-0 w-60 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl py-1.5 z-50">
+                <p className="text-[10px] text-neutral-500 px-3 pb-1.5 uppercase tracking-wider font-medium">Microphone</p>
+                {micDevices.length === 0 ? (
+                  <p className="text-xs text-neutral-400 px-3 py-2">No devices found</p>
+                ) : micDevices.map((device, i) => {
+                  const isSelected = selectedMicId ? device.deviceId === selectedMicId : device.deviceId === 'default' || i === 0;
+                  return (
+                    <button
+                      key={device.deviceId}
+                      type="button"
+                      onClick={() => { setSelectedMicId(device.deviceId); setShowMicPicker(false); }}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-sm hover:bg-neutral-800 transition-colors"
+                    >
+                      <div className={cn('w-1.5 h-1.5 rounded-full shrink-0', isSelected ? 'bg-primary' : 'bg-neutral-600')} />
+                      <span className={cn('truncate', isSelected ? 'text-neutral-100' : 'text-neutral-400')}>
+                        {device.label || `Microphone ${i + 1}`}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Shortcuts */}
+          <button
+            type="button"
+            onClick={() => setShowShortcutsModal(true)}
+            className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors shrink-0"
+            title="Keyboard shortcuts"
+          >
+            <span className="text-[11px] font-semibold text-neutral-400">?</span>
+          </button>
 
           {/* Exit */}
           <button
@@ -1500,6 +2188,32 @@ export default function RehearsalPage() {
         feature={upgradeModal.feature}
         message={upgradeModal.message}
       />
+
+      {/* Keyboard shortcuts modal */}
+      <Dialog open={showShortcutsModal} onOpenChange={setShowShortcutsModal}>
+        <DialogContent className="bg-neutral-900 border-neutral-800 text-neutral-100 max-w-xs">
+          <DialogHeader>
+            <DialogTitle className="text-base">Keyboard Shortcuts</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 pt-1">
+            {[
+              { keys: ['Space'], label: 'Pause / Resume' },
+              { keys: ['Enter'], label: 'Skip current line' },
+              { keys: ['Shift', 'Enter'], label: 'Go back one line' },
+              { keys: ['?'], label: 'Show this menu' },
+            ].map(({ keys, label }) => (
+              <div key={label} className="flex items-center justify-between gap-4">
+                <span className="text-sm text-neutral-300">{label}</span>
+                <div className="flex items-center gap-1 shrink-0">
+                  {keys.map(k => (
+                    <kbd key={k} className="px-2 py-0.5 rounded bg-neutral-800 border border-neutral-700 text-[11px] font-mono text-neutral-300">{k}</kbd>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

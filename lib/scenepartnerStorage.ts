@@ -80,3 +80,15 @@ export function setRehearsalSettings(settings: Partial<RehearsalSettings>): void
     // ignore
   }
 }
+
+/** Persisted mic device ID (empty string = system default) */
+const KEY_SELECTED_MIC = "scene_partner_mic_device_id";
+
+export function getSelectedMicId(): string {
+  if (typeof window === "undefined") return "";
+  try { return localStorage.getItem(KEY_SELECTED_MIC) ?? ""; } catch { return ""; }
+}
+
+export function setSelectedMicId(deviceId: string): void {
+  try { localStorage.setItem(KEY_SELECTED_MIC, deviceId); } catch { /* ignore */ }
+}

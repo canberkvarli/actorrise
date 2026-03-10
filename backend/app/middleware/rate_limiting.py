@@ -127,17 +127,40 @@ class FeatureGate:
                         "upgrade_url": "/pricing",
                     },
                 )
-            current_count = (
-                db.query(func.count(UserScript.id))
-                .filter(UserScript.user_id == current_user.id)
-                .scalar()
-            )
+
+            # Determine if user is on a paid tier (monthly reset) or free (lifetime cap)
+            is_paid = False
+            if current_user.subscription and current_user.subscription.is_active:
+                tier = db.query(PricingTier).filter(
+                    PricingTier.id == current_user.subscription.tier_id
+                ).first()
+                if tier and tier.monthly_price_cents > 0:
+                    is_paid = True
+
+            if is_paid:
+                # Paid tiers: count scripts uploaded this calendar month
+                today = date.today()
+                month_start = today.replace(day=1)
+                current_count = (
+                    db.query(func.count(UserScript.id))
+                    .filter(
+                        UserScript.user_id == current_user.id,
+                        UserScript.created_at >= month_start,
+                    )
+                    .scalar()
+                )
+                period_label = "this month"
+            else:
+                # Free tier: use monotonic counter (survives deletes)
+                current_count = current_user.total_scripts_uploaded or 0
+                period_label = "total"
+
             if current_count >= limit:
                 raise HTTPException(
                     status_code=403,
                     detail={
                         "error": "script_upload_limit_exceeded",
-                        "message": f"You've reached your limit of {limit} scripts. Upgrade your plan for more.",
+                        "message": f"You've reached your limit of {limit} script{'s' if limit != 1 else ''} {period_label}. Upgrade your plan for more.",
                         "limit": limit,
                         "used": current_count,
                         "upgrade_url": "/pricing",

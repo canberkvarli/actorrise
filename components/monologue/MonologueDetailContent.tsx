@@ -10,6 +10,7 @@ import { Monologue } from "@/types/actor";
 import { isMeaningfulMonologueTitle } from "@/lib/utils";
 import { getEmotionBadgeClassName, getEmotionBarClassName } from "@/lib/emotionColors";
 import { MonologueText } from "@/components/monologue/MonologueText";
+import { isBibliographicText } from "@/lib/monologueText";
 
 export interface MonologueDetailContentProps {
   monologue: Monologue;
@@ -115,7 +116,7 @@ export function MonologueDetailContent({
                 {monologue.themes.map((theme) => (
                   <span
                     key={theme}
-                    className="px-2 py-0.5 bg-muted/80 text-muted-foreground rounded-md text-xs font-medium capitalize"
+                    className="px-2 py-0.5 bg-muted/80 text-muted-foreground text-xs font-medium capitalize"
                   >
                     {theme}
                   </span>
@@ -166,7 +167,7 @@ export function MonologueDetailContent({
                         <IconInfoCircle className="h-3.5 w-3.5 cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        <p className="text-sm">Estimated from word count at ~150 words per minute.</p>
+                        <p className="text-sm">Estimated at a performed pace (~130 WPM) with pauses for punctuation, breath, and beat changes.</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -216,11 +217,23 @@ export function MonologueDetailContent({
         <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
           Monologue Text
         </h3>
-        <div className="bg-muted/30 p-6 rounded-lg border border-border">
-          <p className="text-base leading-relaxed font-typewriter">
-            <MonologueText text={monologue.text} />
-          </p>
-        </div>
+        {isBibliographicText(monologue.text) ? (
+          <div className="bg-muted/40 p-4 border border-border text-sm text-muted-foreground">
+            <p className="font-medium text-foreground mb-1">Text not available</p>
+            <p>This entry appears to contain catalog data rather than the actual monologue text. The script may need to be sourced directly.</p>
+            {monologue.source_url && (
+              <a href={monologue.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-2 text-primary hover:underline text-xs">
+                View source
+              </a>
+            )}
+          </div>
+        ) : (
+          <div className="bg-muted/30 p-6 rounded-lg border border-border">
+            <p className="text-base leading-relaxed font-typewriter">
+              <MonologueText text={monologue.text} />
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Footer Stats */}

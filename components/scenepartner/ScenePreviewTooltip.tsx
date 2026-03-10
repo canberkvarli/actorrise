@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 
@@ -21,7 +21,7 @@ interface SceneWithLines {
   lines: SceneLine[];
 }
 
-const MAX_PREVIEW_LINES = 6;
+const MAX_PREVIEW_LINES = 20;
 
 // Simple in-memory cache so we don't re-fetch on every hover
 const lineCache = new Map<number, SceneLine[]>();
@@ -34,7 +34,11 @@ interface ScenePreviewTooltipProps {
 export function ScenePreviewTooltip({ sceneId, children }: ScenePreviewTooltipProps) {
   const [lines, setLines] = useState<SceneLine[] | null>(lineCache.get(sceneId) ?? null);
   const [loading, setLoading] = useState(false);
+  const [open, setOpen] = useState(false);
   const fetchedRef = useRef(false);
+  const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const [popoverAlign, setPopoverAlign] = useState<"start" | "end">("start");
 
   const fetchLines = useCallback(async () => {
     if (fetchedRef.current || lineCache.has(sceneId)) {
@@ -52,21 +56,58 @@ export function ScenePreviewTooltip({ sceneId, children }: ScenePreviewTooltipPr
       lineCache.set(sceneId, sorted);
       setLines(sorted);
     } catch {
-      // Silently fail — tooltip just won't show preview
+      // Silently fail — popover just won't show preview
     } finally {
       setLoading(false);
     }
   }, [sceneId, lines]);
 
+  const handleMouseEnter = useCallback(() => {
+    fetchLines();
+    // Detect if trigger is near bottom of viewport
+    if (triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      setPopoverAlign(spaceBelow < 280 ? "end" : "start");
+    }
+    hoverTimeoutRef.current = setTimeout(() => setOpen(true), 300);
+  }, [fetchLines]);
+
+  const handleMouseLeave = useCallback(() => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setOpen(false);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+    };
+  }, []);
+
   return (
-    <Tooltip delayDuration={300}>
-      <TooltipTrigger asChild onMouseEnter={fetchLines}>
-        {children}
-      </TooltipTrigger>
-      <TooltipContent
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <div
+          ref={triggerRef}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          {children}
+        </div>
+      </PopoverTrigger>
+      <PopoverContent
         side="right"
-        align="start"
-        className="max-w-sm p-3 bg-neutral-900 border-neutral-700"
+        align={popoverAlign}
+        sideOffset={8}
+        onMouseEnter={() => {
+          if (hoverTimeoutRef.current) clearTimeout(hoverTimeoutRef.current);
+        }}
+        onMouseLeave={handleMouseLeave}
+        className="max-w-sm w-72 p-3 bg-neutral-900 border-neutral-700 max-h-[280px] overflow-y-auto"
+        onOpenAutoFocus={(e) => e.preventDefault()}
       >
         {loading && !lines && (
           <div className="space-y-2 w-48">
@@ -93,14 +134,14 @@ export function ScenePreviewTooltip({ sceneId, children }: ScenePreviewTooltipPr
               </div>
             ))}
             {lines.length === MAX_PREVIEW_LINES && (
-              <p className="text-[10px] text-neutral-500 italic">...</p>
+              <p className="text-[10px] text-neutral-500 italic">Scroll for more...</p>
             )}
           </div>
         )}
         {lines && lines.length === 0 && (
           <p className="text-xs text-neutral-500 italic">No lines</p>
         )}
-      </TooltipContent>
-    </Tooltip>
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -27,6 +27,7 @@ export const TESTIMONIALS: TestimonialItem[] = [
     image: "/testimonials/canberk/canberk.jpg",
     isFounder: true,
     source: "direct",
+    slug: "canberk-varli",
     socialLinks: {
       instagram: "https://www.instagram.com/canberk.varli",
       x: "https://x.com/canberkvarli",

@@ -129,11 +129,13 @@ Analyze their performance and return ONLY valid JSON (no markdown, no extra text
 }}
 
 RULES:
-- Be SPECIFIC. Reference actual lines or moments from the dialogue. Never say generic things like "great emotional depth" unless you can point to exactly where.
-- Strengths: 2-3 items. Each should be one short sentence about something concrete they did.
-- Areas to improve: 1-2 items. Each should be actionable and specific.
+- Be SPECIFIC. Only reference lines that appear in NOTES FROM REHEARSAL — those are the only lines you actually heard. Never invent observations about lines that are not in the notes.
+- If the actor delivered very few lines (1-2), keep ALL feedback tightly scoped to exactly those lines. Do not pad with observations about a "full performance" or scenes you didn't hear.
+- If only 1-2 lines were delivered, the overall_feedback should honestly acknowledge you only heard a fragment of the scene, then comment on what you did hear.
+- Strengths: only list things you can point to from the delivered lines. Fewer is fine — 1 is enough if only 1 line was delivered.
+- Areas to improve: same — only what you actually heard. 1 item is fine.
 - No markdown formatting anywhere. Plain text only.
-- If the dialogue is too short or unclear to give meaningful feedback, say so honestly."""
+- CRITICAL: This is an AUDIO-ONLY rehearsal tool. You can only hear the actor's voice — you cannot see them. NEVER mention eye contact, body language, physicality, movement, facial expressions, or anything visual. Only comment on what can be heard: vocal delivery, pacing, emotional tone, word emphasis, and pauses."""
 
 
 # ============================================================================

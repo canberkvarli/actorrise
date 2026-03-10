@@ -258,7 +258,7 @@ export default function MySubmissionsPage() {
             <IconSparkles className="h-4 w-4" />
             Monologues
             {!isLoading && submissions.length > 0 && (
-              <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums">
+              <span className="ml-1 bg-muted px-2 py-0.5 text-xs font-medium tabular-nums">
                 {submissions.length}
               </span>
             )}
@@ -267,7 +267,7 @@ export default function MySubmissionsPage() {
             <IconFileText className="h-4 w-4" />
             Scripts
             {SCRIPTS_FEATURE_ENABLED && !isLoadingScripts && scripts.length > 0 && (
-              <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums">
+              <span className="ml-1 bg-muted px-2 py-0.5 text-xs font-medium tabular-nums">
                 {scripts.length}
               </span>
             )}

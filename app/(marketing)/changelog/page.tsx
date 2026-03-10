@@ -31,10 +31,10 @@ function formatDate(dateStr: string): string {
 function CategoryBadge({ category }: { category: ChangelogCategory }) {
   const styles: Record<ChangelogCategory, string> = {
     feature:
-      "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30 border rounded-full px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide",
+      "bg-green-500/15 text-green-700 dark:text-green-400 border-green-500/30 border px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide",
     improvement:
-      "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30 border rounded-full px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide",
-    fix: "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30 border rounded-full px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide",
+      "bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30 border px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide",
+    fix: "bg-orange-500/15 text-orange-700 dark:text-orange-400 border-orange-500/30 border px-2.5 py-0.5 text-xs font-medium uppercase tracking-wide",
   };
   const labels: Record<ChangelogCategory, string> = {
     feature: "Feature",

@@ -12,6 +12,8 @@ export type RequestOptions = RequestInit & { timeoutMs?: number };
 // In-memory session cache to reduce Supabase Auth egress (one getSession per TTL instead of per request).
 const SESSION_CACHE_TTL_MS = 60_000; // 60 seconds
 let cachedSession: { access_token: string; expires_at: number } | null = null;
+// Shared in-flight promise so concurrent queries don't each call supabase.auth.getSession()
+let inflightTokenPromise: Promise<string | undefined> | null = null;
 
 function isSessionCacheValid(): boolean {
   if (!cachedSession) return false;
@@ -21,24 +23,41 @@ function isSessionCacheValid(): boolean {
 async function getAuthToken(): Promise<string | undefined> {
   if (typeof window === "undefined") return undefined;
   if (isSessionCacheValid() && cachedSession) return cachedSession.access_token;
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.access_token;
-  const expiresAt = session?.expires_at;
-  if (token != null && expiresAt != null) {
-    // Cache until TTL or session expiry, whichever is sooner
-    const expiryMs = Math.min(
-      Date.now() + SESSION_CACHE_TTL_MS,
-      expiresAt * 1000
-    );
-    cachedSession = { access_token: token, expires_at: expiryMs };
-  } else {
-    cachedSession = null;
-  }
-  return token;
+  // Deduplicate: if a fetch is already in flight, reuse it
+  if (inflightTokenPromise) return inflightTokenPromise;
+  inflightTokenPromise = (async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const expiresAt = session?.expires_at;
+      if (token != null && expiresAt != null) {
+        const expiryMs = Math.min(
+          Date.now() + SESSION_CACHE_TTL_MS,
+          expiresAt * 1000
+        );
+        cachedSession = { access_token: token, expires_at: expiryMs };
+      } else {
+        cachedSession = null;
+      }
+      return token;
+    } finally {
+      inflightTokenPromise = null;
+    }
+  })();
+  return inflightTokenPromise;
 }
 
 function clearSessionCache(): void {
   cachedSession = null;
+}
+
+/** Prime the session cache from an already-fetched Supabase session (e.g. from AuthProvider). */
+export function primeSessionCache(accessToken: string, expiresAt: number): void {
+  const expiryMs = Math.min(
+    Date.now() + SESSION_CACHE_TTL_MS,
+    expiresAt * 1000,
+  );
+  cachedSession = { access_token: accessToken, expires_at: expiryMs };
 }
 
 // Fetch wrapper that mimics axios API for easy migration

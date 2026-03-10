@@ -382,7 +382,8 @@ async def approve_submission(
 
         # Calculate metrics
         word_count = len(submission.submitted_text.split())
-        duration_seconds = int((word_count / 150) * 60)
+        from app.utils.duration import estimate_duration_seconds
+        duration_seconds = estimate_duration_seconds(submission.submitted_text)
 
         # Generate search tags
         from scripts.backfill_search_tags import extract_enhanced_tags

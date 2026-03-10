@@ -7,7 +7,7 @@ import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import UnderConstructionScripts from "@/components/UnderConstructionScripts";
 import { ScenePartnerTutorial } from "@/components/scenepartner/ScenePartnerTutorial";
 import { ScenePartnerAudioCheck } from "@/components/scenepartner/ScenePartnerAudioCheck";
-import { MicAccessWarning } from "@/components/scenepartner/MicAccessWarning";
+import { SceneSettingsModal } from "@/components/scenepartner/SceneSettingsModal";
 import { getScenePartnerTutorialSeen, getScenePartnerAudioCheckDone } from "@/lib/scenepartnerStorage";
 import { NewSceneModal } from "@/components/scenepartner/NewSceneModal";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +24,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
@@ -37,21 +38,42 @@ import {
   Sparkles,
   ClipboardPaste,
   Plus,
+  Check,
+  Flag,
+  Settings,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api, { API_URL } from "@/lib/api";
 import { toast } from "sonner";
 
-// Fun loading messages while script is processing (like monologue search)
-const SCRIPT_LOADING_MESSAGES = [
-  "Reading your script...",
-  "Finding the characters...",
-  "Extracting scenes...",
-  "Consulting the drama gods...",
-  "Squeezing the script...",
-  "Almost there...",
-  "Getting ready to rehearse...",
+// Known backend progress prefixes and their friendly group labels.
+// Steps sharing the same group appear as sub-steps under one heading.
+const STEP_GROUPS: { match: string; label: string }[] = [
+  { match: "Opening", label: "Opening the script" },
+  { match: "Read ", label: "Reading through every page" },
+  { match: "Stripped", label: "Reading through every page" },
+  { match: "Learning", label: "Learning who the characters are" },
+  { match: "Found ", label: "Pulling every line of dialogue" },
+  { match: "Mapping", label: "Mapping out the acts and scenes" },
+  { match: "Detected", label: "Mapping out the acts and scenes" },
+  { match: "No act", label: "Mapping out the acts and scenes" },
+  { match: "Pulling", label: "Pulling every line of dialogue" },
+  { match: "Regex parsed", label: "Pulling every line of dialogue" },
+  { match: "No scenes", label: "Pulling every line of dialogue" },
+  { match: "Figuring", label: "Figuring out the tone, emotions, dynamics" },
+  { match: "Analyzed", label: "Figuring out the tone, emotions, dynamics" },
+  { match: "Extracted", label: "Assembling your rehearsal scenes" },
+  { match: "Cleaning", label: "Cleaning up dialogue" },
+  { match: "AI cleanup", label: "Cleaning up dialogue" },
+  { match: "rehearsal-ready", label: "Assembling your rehearsal scenes" },
 ];
+
+function groupLabel(raw: string): string {
+  for (const g of STEP_GROUPS) {
+    if (raw.startsWith(g.match)) return g.label;
+  }
+  return raw;
+}
 
 interface UserScript {
   id: number;
@@ -81,6 +103,52 @@ interface UserScript {
   scene_titles?: string[];
 }
 
+function CastHoverPopover({ characters, count }: { characters: { name: string; gender?: string; age_range?: string; description?: string }[]; count: number }) {
+  const [open, setOpen] = useState(false);
+  const hoverRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <span
+          className="cursor-help underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors"
+          onMouseEnter={() => { hoverRef.current = setTimeout(() => setOpen(true), 200); }}
+          onMouseLeave={() => { if (hoverRef.current) { clearTimeout(hoverRef.current); hoverRef.current = null; } setOpen(false); }}
+        >
+          {count} character{count !== 1 ? "s" : ""}
+        </span>
+      </PopoverTrigger>
+      <PopoverContent
+        align="start"
+        className="w-72 max-h-[280px] overflow-y-auto p-0"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onMouseEnter={() => { if (hoverRef.current) clearTimeout(hoverRef.current); }}
+        onMouseLeave={() => setOpen(false)}
+      >
+        <div className="px-3 py-2 border-b border-border/60 sticky top-0 bg-popover z-10">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Cast ({characters.length})</p>
+        </div>
+        <div className="divide-y divide-border/40">
+          {characters.map((c, i) => (
+            <div key={i} className="px-3 py-1.5 hover:bg-muted/40 transition-colors">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-sm font-medium text-foreground">{c.name}</span>
+                {(c.gender || c.age_range) && (
+                  <span className="text-[10px] text-muted-foreground/70 shrink-0">
+                    {[c.gender, c.age_range].filter(Boolean).join(" · ")}
+                  </span>
+                )}
+              </div>
+              {c.description && (
+                <p className="text-xs text-muted-foreground/80 leading-snug">{c.description}</p>
+              )}
+            </div>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export default function MyScriptsPage() {
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
@@ -95,11 +163,16 @@ export default function MyScriptsPage() {
   const [pasteAuthor, setPasteAuthor] = useState("");
   const [pasteDescription, setPasteDescription] = useState("");
   const [pasting, setPasting] = useState(false);
-  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  // SSE-driven progress steps: each entry is { group, detail }
+  const [progressSteps, setProgressSteps] = useState<{ group: string; detail: string }[]>([]);
+  const [extractionDone, setExtractionDone] = useState(false);
   const [showNewSceneModal, setShowNewSceneModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [deleteScriptDialogOpen, setDeleteScriptDialogOpen] = useState(false);
   const [scriptToDelete, setScriptToDelete] = useState<number | null>(null);
   const deleteScriptTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const progressScrollRef = useRef<HTMLDivElement>(null);
 
   const { data: scripts = [], isLoading, mutate: mutateScripts } = useSWR<UserScript[]>(
     "/api/scripts/",
@@ -112,18 +185,14 @@ export default function MyScriptsPage() {
     setShowAudioCheck(!getScenePartnerAudioCheckDone());
   }, []);
 
-  // Rotate loading message every 2s while uploading or pasting
+  // Auto-scroll progress to bottom when new steps arrive
   useEffect(() => {
-    if (!uploadingFile && !pasting) {
-      setLoadingMessageIndex(0);
-      return;
+    if (progressScrollRef.current) {
+      progressScrollRef.current.scrollTop = progressScrollRef.current.scrollHeight;
     }
-    const id = setInterval(
-      () => setLoadingMessageIndex((prev) => (prev + 1) % SCRIPT_LOADING_MESSAGES.length),
-      2000
-    );
-    return () => clearInterval(id);
-  }, [uploadingFile, pasting]);
+  }, [progressSteps]);
+
+
 
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -157,6 +226,11 @@ export default function MyScriptsPage() {
     }
 
     setUploadingFile(true);
+    setProgressSteps([{ group: "Uploading file", detail: "Uploading file" }]);
+    setExtractionDone(false);
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     try {
       const formData = new FormData();
@@ -169,12 +243,13 @@ export default function MyScriptsPage() {
         return;
       }
 
-      const response = await fetch(`${API_URL}/api/scripts/upload`, {
+      const response = await fetch(`${API_URL}/api/scripts/upload-stream`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
         },
         body: formData,
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -186,15 +261,63 @@ export default function MyScriptsPage() {
         throw new Error(message);
       }
 
-      const result = await response.json();
-      toast.success(`Script uploaded! Extracted ${result.num_scenes_extracted} scenes.`);
+      // Read SSE stream
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response body");
 
-      // Navigate to the script detail view (it will fetch its own data)
-      router.push(`/my-scripts/${result.id}`);
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process complete SSE lines
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || ""; // keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.startsWith("data: ")) continue;
+          try {
+            const event = JSON.parse(line.slice(6));
+
+            if (event.type === "progress") {
+              const group = groupLabel(event.step);
+              setProgressSteps((prev) => {
+                // If same group as last, update detail; otherwise add new group
+                const last = prev[prev.length - 1];
+                if (last && last.group === group) {
+                  return [...prev.slice(0, -1), { group, detail: event.step }];
+                }
+                return [...prev, { group, detail: event.step }];
+              });
+            } else if (event.type === "done") {
+              setExtractionDone(true);
+              const result = event.data;
+              toast.success(`Script uploaded! Extracted ${result.num_scenes_extracted} scenes.`);
+              mutateScripts();
+              // Brief pause so user sees the final state
+              await new Promise((r) => setTimeout(r, 800));
+              router.push(`/my-scripts/${result.id}`);
+            } else if (event.type === "error") {
+              throw new Error(event.detail || "Extraction failed");
+            }
+          } catch (parseErr: any) {
+            if (parseErr.message && !parseErr.message.includes("JSON")) throw parseErr;
+            // Ignore JSON parse errors from partial SSE data
+          }
+        }
+      }
     } catch (error: any) {
-      console.error("Upload error:", error);
-      toast.error(error.message || "Failed to upload script");
+      if (error.name === "AbortError") {
+        toast.info("Upload cancelled");
+      } else {
+        console.error("Upload error:", error);
+        toast.error(error.message || "Failed to upload script");
+      }
     } finally {
+      abortControllerRef.current = null;
       setUploadingFile(false);
       // Reset file input
       event.target.value = "";
@@ -320,7 +443,6 @@ export default function MyScriptsPage() {
   };
 
   const isProcessing = uploadingFile || pasting;
-  const currentLoadingMessage = SCRIPT_LOADING_MESSAGES[loadingMessageIndex];
 
   if (showTutorial === true) {
     return (
@@ -333,13 +455,14 @@ export default function MyScriptsPage() {
     return (
       <ScenePartnerAudioCheck
         onComplete={() => setShowAudioCheck(false)}
+        dismissible
+        onDismiss={() => setShowAudioCheck(false)}
       />
     );
   }
 
   return (
     <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8 max-w-5xl">
-      <MicAccessWarning />
       <input
         type="file"
         id="script-upload"
@@ -349,28 +472,111 @@ export default function MyScriptsPage() {
         disabled={uploadingFile}
       />
 
-      {/* Full-page fun loading state while processing script */}
-      {isProcessing && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 bg-background/95 backdrop-blur-sm"
-        >
-          <div className="relative">
-            <div className="h-16 w-16 rounded-full border-2 border-muted-foreground/30 border-t-foreground animate-spin" />
-            <Sparkles className="h-7 w-7 text-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-          </div>
-          <motion.p
-            key={loadingMessageIndex}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-lg font-medium text-foreground"
+      {/* Extraction progress — reasoning/thinking style */}
+      <AnimatePresence>
+        {isProcessing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm"
           >
-            {currentLoadingMessage}
-          </motion.p>
-        </motion.div>
-      )}
+            <div className="w-full max-w-sm mx-4">
+              <div className="relative">
+                {/* Fade-out gradient at top when scrollable */}
+                {progressSteps.length > 6 && (
+                  <div className="absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-background/95 to-transparent z-10 pointer-events-none" />
+                )}
+                <div
+                  ref={progressScrollRef}
+                  className="border-l-2 border-border/80 pl-4 space-y-0 max-h-[50vh] overflow-y-auto scrollbar-thin"
+                >
+                <AnimatePresence initial={false}>
+                  {progressSteps.map((step, i) => {
+                    const isLatest = i === progressSteps.length - 1 && !extractionDone;
+                    const isCompleted = i < progressSteps.length - 1 || extractionDone;
+                    const showDetail = step.detail !== step.group;
+                    return (
+                      <motion.div
+                        key={`${step.group}_${i}`}
+                        initial={{ opacity: 0, height: 0, x: -8 }}
+                        animate={{ opacity: 1, height: "auto", x: 0 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="flex items-start gap-2.5 py-2">
+                          <div className="mt-0.5">
+                            {isCompleted ? (
+                              <motion.div
+                                initial={{ scale: 0, rotate: -90 }}
+                                animate={{ scale: 1, rotate: 0 }}
+                                transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                              >
+                                <Check className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                              </motion.div>
+                            ) : (
+                              <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin shrink-0" />
+                            )}
+                          </div>
+                          <div>
+                            <span className={`text-[13px] leading-snug ${isCompleted ? "text-muted-foreground/70" : "text-foreground"}`}>
+                              {step.group}
+                              {isLatest && !showDetail && (
+                                <motion.span
+                                  animate={{ opacity: [0.2, 1, 0.2] }}
+                                  transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                                  className="text-muted-foreground"
+                                >
+                                  ...
+                                </motion.span>
+                              )}
+                            </span>
+                            {showDetail && (
+                              <motion.p
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                className={`text-[11px] leading-snug mt-0.5 ${isCompleted ? "text-muted-foreground/50" : "text-muted-foreground/80"}`}
+                              >
+                                {step.detail}
+                                {isLatest && (
+                                  <motion.span
+                                    animate={{ opacity: [0.2, 1, 0.2] }}
+                                    transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                                    className="text-muted-foreground"
+                                  >
+                                    ...
+                                  </motion.span>
+                                )}
+                              </motion.p>
+                            )}
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
+                {progressSteps.length === 0 && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex items-center gap-2.5 py-2"
+                  >
+                    <Loader2 className="w-3.5 h-3.5 text-muted-foreground animate-spin shrink-0" />
+                    <span className="text-[13px] text-foreground">Preparing...</span>
+                  </motion.div>
+                )}
+                </div>
+              </div>
+              <button
+                onClick={() => abortControllerRef.current?.abort()}
+                className="mt-6 text-xs text-muted-foreground/60 hover:text-foreground transition-colors"
+              >
+                Cancel upload
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Header */}
       <motion.header
@@ -396,6 +602,14 @@ export default function MyScriptsPage() {
                 <Plus className="w-3.5 h-3.5" />
                 New Script
               </Button>
+              <button
+                type="button"
+                onClick={() => setShowSettingsModal(true)}
+                className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                title="Rehearsal settings"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
               {uploadingFile ? (
                 <Button
                   disabled
@@ -547,16 +761,7 @@ export default function MyScriptsPage() {
                         <>
                           <div className="flex items-center flex-wrap gap-1.5 text-sm text-muted-foreground">
                             {script.characters?.length > 0 ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="cursor-help underline decoration-dotted underline-offset-2">
-                                    {script.num_characters} character{script.num_characters !== 1 ? "s" : ""}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                  {script.characters.map((c) => c.name).join(", ")}
-                                </TooltipContent>
-                              </Tooltip>
+                              <CastHoverPopover characters={script.characters} count={script.num_characters} />
                             ) : (
                               <span>{script.num_characters} character{script.num_characters !== 1 ? "s" : ""}</span>
                             )}
@@ -616,6 +821,23 @@ export default function MyScriptsPage() {
                         Open script
                         <ChevronRight className="w-4 h-4" />
                       </Button>
+                      <div className="flex items-center gap-1">
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/60"
+                            onClick={() => {
+                              toast("Report issues from the script detail page — open the script and use the flag on each scene.", { duration: 4000 });
+                            }}
+                            aria-label="Report issue"
+                          >
+                            <Flag className="w-3.5 h-3.5" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Report an issue</TooltipContent>
+                      </Tooltip>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -625,6 +847,7 @@ export default function MyScriptsPage() {
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
+                      </div>
                     </CardFooter>
                   </Card>
                 </motion.div>
@@ -640,6 +863,10 @@ export default function MyScriptsPage() {
         open={showNewSceneModal}
         onOpenChange={setShowNewSceneModal}
         onSuccess={() => mutateScripts()}
+      />
+      <SceneSettingsModal
+        open={showSettingsModal}
+        onOpenChange={setShowSettingsModal}
       />
       <ConfirmDeleteDialog
         open={deleteScriptDialogOpen}

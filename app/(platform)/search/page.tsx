@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { toastBookmark } from "@/lib/toast";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow, IconSend, IconFlag, IconDeviceTv, IconEdit } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow, IconSend, IconFlag, IconDeviceTv, IconEdit, IconCheck } from "@tabler/icons-react";
 
 // Fun loading messages for AI search (theater)
 const LOADING_MESSAGES = [
@@ -39,6 +39,15 @@ const LOADING_MESSAGES_FILM_TV = [
   "Reading the script supervisor's notes…",
   "Finding your scene…",
   "Checking the call sheet…",
+];
+
+const SEARCH_LOADING_STEPS = [
+  "Consulting the drama gods",
+  "Rifling through 9,500+ scripts and plays",
+  "Asking Shakespeare which one hits hardest",
+  "Weighing every speech for emotional weight",
+  "Finding the ones that'll stop the room",
+  "Curating your shortlist",
 ];
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
@@ -164,6 +173,9 @@ export default function SearchPage() {
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+  const [loadingSteps, setLoadingSteps] = useState<string[]>([]);
+  const loadingStepsTimers = useRef<NodeJS.Timeout[]>([]);
+  const loadingScrollRef = useRef<HTMLDivElement>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [jitter, setJitter] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -230,6 +242,29 @@ export default function SearchPage() {
     searchMode === "film_tv"
       ? LOADING_MESSAGES_FILM_TV[loadingMessageIndex % LOADING_MESSAGES_FILM_TV.length]
       : LOADING_MESSAGES[loadingMessageIndex % LOADING_MESSAGES.length];
+
+  // Build whimsical step-by-step loading list for plays search
+  useEffect(() => {
+    if (!isLoading || searchMode !== "plays") {
+      loadingStepsTimers.current.forEach(clearTimeout);
+      loadingStepsTimers.current = [];
+      if (!isLoading) setLoadingSteps([]);
+      return;
+    }
+    setLoadingSteps([]);
+    const timers = SEARCH_LOADING_STEPS.map((step, i) =>
+      setTimeout(() => setLoadingSteps((prev) => [...prev, step]), i * 850)
+    );
+    loadingStepsTimers.current = timers;
+    return () => timers.forEach(clearTimeout);
+  }, [isLoading, searchMode]);
+
+  // Auto-scroll loading steps container to bottom as steps appear
+  useEffect(() => {
+    if (loadingScrollRef.current) {
+      loadingScrollRef.current.scrollTop = loadingScrollRef.current.scrollHeight;
+    }
+  }, [loadingSteps]);
 
   // Scroll panel to top when monologue is selected
   useEffect(() => {
@@ -819,22 +854,18 @@ export default function SearchPage() {
     }
   };
 
-  const openMonologue = async (mono: Monologue) => {
+  const openMonologue = (mono: Monologue) => {
     setSelectedMonologue(mono);
-    setIsLoadingDetail(true);
+    setIsLoadingDetail(false);
+    setIsReadingMode(false);
     // Reflect the open monologue in the URL so it's shareable
     const params = new URLSearchParams(searchParams.toString());
     params.set("m", mono.id.toString());
     router.replace(`/search?${params.toString()}`, { scroll: false });
-    try {
-      // Fetch full details
-      const response = await api.get<Monologue>(`/api/monologues/${mono.id}`);
-      setSelectedMonologue(response.data);
-    } catch (error) {
-      console.error("Error fetching monologue:", error);
-    } finally {
-      setIsLoadingDetail(false);
-    }
+    // Fetch fresh data in background (view count, etc.)
+    api.get<Monologue>(`/api/monologues/${mono.id}`)
+      .then((response) => setSelectedMonologue(response.data))
+      .catch(() => {});
   };
 
   const closeMonologue = () => {
@@ -1819,39 +1850,85 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             )
           ) : isLoading ? (
             <motion.div
+              key="plays-loading"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="py-16"
+              className="pt-6 pb-10"
             >
-              {/* Fun Loading State */}
-              <div className="flex flex-col items-center justify-center gap-6 mb-12">
+              <div className="max-w-3xl mx-auto">
                 <div className="relative">
-                  <div className="h-16 w-16 rounded-full border-2 border-amber-400/30 border-t-amber-500 animate-spin" />
-                  <IconSparkles className="h-7 w-7 text-amber-500 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                  {loadingSteps.length > 3 && (
+                    <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-background to-transparent z-10 pointer-events-none" />
+                  )}
+                  <div
+                    ref={loadingScrollRef}
+                    className="border-l-2 border-border/60 pl-5 max-h-56 overflow-hidden"
+                  >
+                    <AnimatePresence initial={false}>
+                      {loadingSteps.map((step, i) => {
+                        const isLatest = i === loadingSteps.length - 1;
+                        const isCompleted = i < loadingSteps.length - 1;
+                        return (
+                          <motion.div
+                            key={`step-${i}`}
+                            initial={{ opacity: 0, height: 0, x: -8 }}
+                            animate={{ opacity: 1, height: "auto", x: 0 }}
+                            transition={{ duration: 0.35, ease: "easeOut" }}
+                            className="overflow-hidden"
+                          >
+                            <div className="flex items-center gap-3 py-2.5">
+                              <div className="shrink-0">
+                                {isCompleted ? (
+                                  <motion.div
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                                  >
+                                    <IconCheck className="w-4 h-4 text-emerald-500" />
+                                  </motion.div>
+                                ) : (
+                                  <IconLoader2 className="w-4 h-4 text-primary animate-spin" />
+                                )}
+                              </div>
+                              <span
+                                className={`text-sm sm:text-base leading-snug ${
+                                  isLatest
+                                    ? "text-primary font-medium"
+                                    : "text-muted-foreground/60"
+                                }`}
+                              >
+                                {step}
+                                {isLatest && (
+                                  <motion.span
+                                    animate={{ opacity: [0.3, 1, 0.3] }}
+                                    transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                                  >
+                                    ...
+                                  </motion.span>
+                                )}
+                              </span>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </AnimatePresence>
+                    {loadingSteps.length === 0 && (
+                      <div className="flex items-center gap-3 py-2.5">
+                        <IconLoader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
+                        <span className="text-sm sm:text-base text-primary font-medium">
+                          Waking the theater up
+                          <motion.span
+                            animate={{ opacity: [0.3, 1, 0.3] }}
+                            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+                          >
+                            ...
+                          </motion.span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <motion.p
-                  key={loadingMessageIndex}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="text-lg font-medium text-foreground"
-                >
-                  {currentLoadingMessage}
-                </motion.p>
-              </div>
-
-              {/* Skeleton cards */}
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[1, 2, 3, 4, 5, 6].map((i) => (
-                  <Card key={i} className="opacity-50">
-                    <CardContent className="pt-6 space-y-4">
-                      <Skeleton className="h-6 w-3/4" />
-                      <Skeleton className="h-4 w-1/2" />
-                      <Skeleton className="h-20 w-full" />
-                    </CardContent>
-                  </Card>
-                ))}
               </div>
             </motion.div>
           ) : hasSearched && results.length === 0 ? (
@@ -1861,15 +1938,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
             >
-              <Card>
-                <CardContent className="pt-12 pb-12 text-center">
-                  <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">No monologues found</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Try different search terms or adjust filters
-                  </p>
-                </CardContent>
-              </Card>
+              <div className="pt-12 pb-12 text-center">
+                <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No monologues found</h3>
+                <p className="text-sm text-muted-foreground">
+                  Try different search terms or adjust filters
+                </p>
+              </div>
             </motion.div>
           ) : results.length > 0 ? (
             <div id="search-results" className="space-y-4">
@@ -1898,30 +1973,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </p>
                 </div>
               )}
-              {(() => {
-                  const displayQuery = searchParams.get("q") ?? queryUsedForResults ?? "";
-                  return displayQuery.trim() && (activeFilters.length > 0 || hasFreshnessFilter) ? (
-                  <p className="text-sm text-muted-foreground">
-                  Showing monologues matching{" "}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSearchMode("plays");
-                      setPlaysQuery(displayQuery);
-                      document.getElementById("search-input")?.focus();
-                    }}
-                    className="font-semibold text-foreground hover:underline cursor-pointer rounded focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                  >
-                    &ldquo;{displayQuery}&rdquo;
-                  </button>
-                  {" in "}
-                  {[...activeFilters.map(([k, v]) => getFilterDisplay(k, v)), ...(hasFreshnessFilter ? [`Freshness: ${getFreshnessLabel(maxOverdoneScore)}`] : [])].join("; ")}. Filters narrow the set; search ranks by meaning.
-                  </p>
-                ) : null;
-                })()}
-              {/* Results header: count + bookmark on same row on mobile, feedback below */}
-              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 mb-8">
-                <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-0 min-w-0">
+              {/* Results header: 3-col grid on desktop so feedback is always truly centered */}
+              <div className="flex flex-col gap-3 mb-8 sm:grid sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-4">
+                {/* Left: count + mobile bookmark */}
+                <div className="flex items-center justify-between sm:justify-start gap-3 min-w-0">
                   <div className="flex flex-col gap-0.5 shrink-0">
                     <div className="flex items-baseline gap-2 flex-wrap">
                       <span className="text-2xl font-semibold tabular-nums text-foreground">
@@ -1934,6 +1989,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                      {!showBookmarkedOnly && queryUsedForResults && (
+                        <span className="text-muted-foreground/50">from 9,500+ in our library</span>
+                      )}
+                      {!showBookmarkedOnly && queryUsedForResults && !showConfidence && relatedResults.length > 0 && (
+                        <span aria-hidden className="text-border">·</span>
+                      )}
                       {!showBookmarkedOnly && !showConfidence && relatedResults.length > 0 && (
                         <span>Sorted by relevance</span>
                       )}
@@ -1957,18 +2018,20 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     Bookmarked
                   </Button>
                 </div>
-                <div className="flex-1 flex justify-center min-w-0">
+                {/* Center: feedback — flex justify-center fills the 1fr middle column */}
+                <div className="flex justify-center">
                   <ResultsFeedbackPrompt
                     context="search"
                     resultsViewCount={resultsViewCount}
                     onOpenContact={() => setContactOpen(true)}
                   />
                 </div>
+                {/* Right: desktop bookmark button */}
                 <Button
                   variant={showBookmarkedOnly ? "secondary" : "outline"}
                   size="sm"
                   onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
-                  className={`hidden sm:inline-flex gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
+                  className={`hidden sm:inline-flex gap-2 rounded-full shrink-0 justify-self-end ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
                 >
                   <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
                   Bookmarked only
@@ -1980,7 +2043,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 const relatedOrBookmarked = showBookmarkedOnly ? results.filter((m) => m.is_favorited) : relatedResults;
                 const hasCards = (!showBookmarkedOnly && bestMatches.length > 0) || relatedOrBookmarked.length > 0;
                 if (!hasCards) return null;
-                const showBadges = showConfidence && !showBookmarkedOnly;
+                // Show match badges for all semantic results (score > 0.1 check is in the card itself).
+                // showConfidence only gates the "Best Matches" section header, not individual badges.
+                const showBadges = !showBookmarkedOnly;
                 return (
                   <>
                     {!showBookmarkedOnly && showConfidence && bestMatches.length > 0 && (
@@ -2349,7 +2414,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     <div className="flex items-start gap-2 flex-wrap">
                       <h1 className="text-2xl font-bold text-foreground leading-tight">{selectedFilmTvRef.title}</h1>
                       {selectedFilmTvRef.is_best_match && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-muted/90 text-foreground border border-border">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-muted/90 text-foreground border border-border">
                           Best Match
                         </span>
                       )}
@@ -2396,7 +2461,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
                 {/* Confidence (informational tag, not a button) */}
                 {selectedFilmTvRef.confidence_score != null && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full tabular-nums w-fit bg-muted/90 text-foreground border border-border">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium tabular-nums w-fit bg-muted/90 text-foreground border border-border">
                     {Math.round(selectedFilmTvRef.confidence_score * 100)}% match
                   </span>
                 )}

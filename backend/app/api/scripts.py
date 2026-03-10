@@ -2,14 +2,18 @@
 API endpoints for user script management - upload, edit, manage scripts
 """
 
+import asyncio
+import json as _json
 from datetime import datetime
+from queue import Queue, Empty
 from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
-from app.core.database import get_db
+from app.core.database import SessionLocal, get_db
 from app.middleware.rate_limiting import require_script_upload
 from app.models.actor import (
     Play,
@@ -66,6 +70,8 @@ class SceneInScriptResponse(BaseModel):
     character_2_name: str
     line_count: int
     estimated_duration_seconds: int
+    act: Optional[str] = None
+    scene_number: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -188,41 +194,60 @@ async def upload_script(
     if file_size > 10 * 1024 * 1024:  # 10MB limit
         raise HTTPException(status_code=400, detail="File too large (max 10MB)")
 
-    # Create script record
+    # ---- Phase 1: Extract everything BEFORE touching DB ----
+    # This avoids DB connection timeouts during long AI extraction.
+    try:
+        parser = ScriptParser()
+        result = parser.parse_script(file_content, file_ext, file.filename)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to extract script: {str(e)}"
+        )
+
+    # ---- Phase 2: All DB writes happen quickly together ----
+    # Close the stale session (idle during extraction) and get a fresh one.
+    try:
+        db.close()
+    except Exception:
+        pass  # Connection already gone — that's fine
+    db = SessionLocal()
+
+    metadata = result["metadata"]
+    resolved_title = title or metadata.get("title", "Untitled Script")
+    resolved_author = author or metadata.get("author", "Unknown")
+    resolved_description = description or metadata.get("synopsis")
+
     user_script = UserScript(
         user_id=current_user.id,
-        title=title or "Untitled Script",
-        author=author or "Unknown",
-        description=description,
+        title=resolved_title,
+        author=resolved_author,
+        description=resolved_description,
         original_filename=file.filename,
         file_type=file_ext,
         file_size_bytes=file_size,
-        processing_status="processing"
+        processing_status="processing",
+        raw_text=result["raw_text"],
+        characters=metadata.get("characters", []),
+        genre=metadata.get("genre"),
+        estimated_length_minutes=metadata.get("estimated_length_minutes"),
+        num_characters=len(metadata.get("characters", [])),
     )
 
     db.add(user_script)
+
+    # Increment monotonic upload counter (survives deletes for free-tier gating)
+    current_user_fresh = db.query(User).filter(User.id == current_user.id).first()
+    if current_user_fresh:
+        current_user_fresh.total_scripts_uploaded = (current_user_fresh.total_scripts_uploaded or 0) + 1
+
     db.commit()
     db.refresh(user_script)
 
     try:
-        # Parse script with AI
-        parser = ScriptParser()
-        result = parser.parse_script(file_content, file_ext, file.filename)
-
-        # Update script with extracted data
-        metadata = result["metadata"]
-        user_script.raw_text = result["raw_text"]
-        user_script.title = title or metadata.get("title", "Untitled Script")
-        user_script.author = author or metadata.get("author", "Unknown")
-        user_script.characters = metadata.get("characters", [])
-        user_script.genre = metadata.get("genre")
-        user_script.estimated_length_minutes = metadata.get("estimated_length_minutes")
-        user_script.num_characters = len(metadata.get("characters", []))
-
-        # Create Play record for the script
         play = Play(
-            title=user_script.title,
-            author=user_script.author,
+            title=resolved_title,
+            author=resolved_author,
             year_written=None,
             genre=user_script.genre or "Drama",
             category="contemporary",
@@ -240,9 +265,11 @@ async def upload_script(
         scenes_created = []
         for scene_data in result["scenes"]:
             # Calculate metadata
+            from app.utils.duration import estimate_duration_seconds
             lines_count = len(scene_data.get("lines", []))
-            total_words = sum(len(line.get("text", "").split()) for line in scene_data.get("lines", []))
-            duration_seconds = int((total_words / 150) * 60)
+            all_line_text = "\n".join(line.get("text", "") for line in scene_data.get("lines", []))
+            total_words = len(all_line_text.split())
+            duration_seconds = estimate_duration_seconds(all_line_text)
 
             # Find character metadata
             char1_info = next(
@@ -263,6 +290,8 @@ async def upload_script(
                 user_script_id=user_script.id,
                 title=scene_data.get("title", "Untitled Scene"),
                 description=scene_data.get("description"),
+                act=scene_data.get("act"),
+                scene_number=scene_data.get("scene_number"),
                 character_1_name=scene_data.get("character_1", "Character 1"),
                 character_2_name=scene_data.get("character_2", "Character 2"),
                 character_1_gender=char1_info.get("gender"),
@@ -335,6 +364,269 @@ async def upload_script(
         )
 
 
+# ============================================================================
+# SSE Streaming Upload — real-time progress
+# ============================================================================
+
+@router.post("/upload-stream")
+async def upload_script_stream(
+    file: UploadFile = File(...),
+    title: Optional[str] = Form(None),
+    author: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _gate: bool = Depends(require_script_upload()),
+):
+    """
+    Upload a script file with SSE progress streaming.
+    Sends progress events as `data: {"step": "...", "type": "progress"}` lines,
+    then a final `data: {"type": "done", ...}` or `data: {"type": "error", ...}`.
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename provided")
+
+    file_ext = file.filename.split(".")[-1].lower()
+    if file_ext not in ["pdf", "txt", "text"]:
+        raise HTTPException(status_code=400, detail="Only PDF and TXT files are supported")
+
+    file_content = await file.read()
+    file_size = len(file_content)
+    if file_size > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+
+    filename = file.filename
+    user_id = current_user.id  # capture before closing db
+    progress_queue: Queue = Queue()
+    import threading
+    cancel_event = threading.Event()
+
+    # Release the DB connection immediately — extraction takes minutes
+    # and holding a connection during that time exhausts PgBouncer's pool.
+    try:
+        db.close()
+    except Exception:
+        pass
+
+    def on_progress(msg: str):
+        progress_queue.put(msg)
+
+    async def event_stream():
+        # Run extraction in a thread so we can stream progress
+        extraction_result = {}
+        extraction_error = {}
+
+        def run_extraction():
+            try:
+                parser = ScriptParser()
+                extraction_result["data"] = parser.parse_script(
+                    file_content, file_ext, filename,
+                    on_progress=on_progress, cancel_event=cancel_event
+                )
+            except InterruptedError:
+                extraction_error["msg"] = "cancelled"
+            except Exception as e:
+                extraction_error["msg"] = str(e)
+            finally:
+                progress_queue.put(None)  # sentinel
+
+        thread = threading.Thread(target=run_extraction, daemon=True)
+        thread.start()
+
+        # Stream progress events
+        try:
+            while True:
+                # Poll queue with async sleep to avoid blocking the event loop
+                try:
+                    msg = progress_queue.get_nowait()
+                except Empty:
+                    await asyncio.sleep(0.1)
+                    continue
+
+                if msg is None:
+                    break  # extraction done
+
+                event = _json.dumps({"type": "progress", "step": msg})
+                yield f"data: {event}\n\n"
+        except asyncio.CancelledError:
+            # Client disconnected — signal the extraction thread to stop
+            cancel_event.set()
+            print("Client disconnected, cancelling extraction")
+            thread.join(timeout=10)
+            return
+
+        thread.join(timeout=5)
+
+        # Check for errors or cancellation
+        if extraction_error:
+            if extraction_error["msg"] == "cancelled":
+                return  # Client already gone, no point sending error
+            event = _json.dumps({"type": "error", "detail": extraction_error["msg"]})
+            yield f"data: {event}\n\n"
+            return
+
+        result = extraction_result["data"]
+
+        # ---- Phase 2: DB writes (fresh connection) ----
+        fresh_db = SessionLocal()
+
+        try:
+            metadata = result["metadata"]
+            resolved_title = title or metadata.get("title", "Untitled Script")
+            resolved_author = author or metadata.get("author", "Unknown")
+            resolved_description = description or metadata.get("synopsis")
+
+            user_script = UserScript(
+                user_id=user_id,
+                title=resolved_title,
+                author=resolved_author,
+                description=resolved_description,
+                original_filename=filename,
+                file_type=file_ext,
+                file_size_bytes=file_size,
+                processing_status="processing",
+                raw_text=result["raw_text"],
+                characters=metadata.get("characters", []),
+                genre=metadata.get("genre"),
+                estimated_length_minutes=metadata.get("estimated_length_minutes"),
+                num_characters=len(metadata.get("characters", [])),
+            )
+            fresh_db.add(user_script)
+
+            # Increment monotonic upload counter (survives deletes for free-tier gating)
+            user_row = fresh_db.query(User).filter(User.id == user_id).first()
+            if user_row:
+                user_row.total_scripts_uploaded = (user_row.total_scripts_uploaded or 0) + 1
+
+            fresh_db.commit()
+            fresh_db.refresh(user_script)
+
+            play = Play(
+                title=resolved_title,
+                author=resolved_author,
+                year_written=None,
+                genre=user_script.genre or "Drama",
+                category="contemporary",
+                copyright_status="user_uploaded",
+                license_type="user_content",
+                source_url=None,
+                full_text=result["raw_text"],
+                text_format="plain"
+            )
+            fresh_db.add(play)
+            fresh_db.commit()
+            fresh_db.refresh(play)
+
+            scenes_created = []
+            for scene_data in result["scenes"]:
+                from app.utils.duration import estimate_duration_seconds
+                lines_count = len(scene_data.get("lines", []))
+                all_line_text = "\n".join(line.get("text", "") for line in scene_data.get("lines", []))
+                duration_seconds = estimate_duration_seconds(all_line_text)
+
+                char1_info = next(
+                    (c for c in user_script.characters if c.get("name") == scene_data.get("character_1")), {}
+                )
+                char2_info = next(
+                    (c for c in user_script.characters if c.get("name") == scene_data.get("character_2")), {}
+                )
+
+                raw_setting = scene_data.get("setting")
+                clean_setting = None if not raw_setting or raw_setting.strip().lower() == "unknown" else raw_setting
+
+                scene = Scene(
+                    play_id=play.id,
+                    user_script_id=user_script.id,
+                    title=scene_data.get("title", "Untitled Scene"),
+                    description=scene_data.get("description"),
+                    act=scene_data.get("act"),
+                    scene_number=scene_data.get("scene_number"),
+                    character_1_name=scene_data.get("character_1", "Character 1"),
+                    character_2_name=scene_data.get("character_2", "Character 2"),
+                    character_1_gender=char1_info.get("gender"),
+                    character_2_gender=char2_info.get("gender"),
+                    character_1_age_range=char1_info.get("age_range"),
+                    character_2_age_range=char2_info.get("age_range"),
+                    line_count=lines_count,
+                    estimated_duration_seconds=duration_seconds,
+                    setting=clean_setting,
+                    difficulty_level="intermediate",
+                    tone=scene_data.get("tone"),
+                    primary_emotions=scene_data.get("primary_emotions", []),
+                    relationship_dynamic=scene_data.get("relationship_dynamic"),
+                    is_verified=False
+                )
+                fresh_db.add(scene)
+                fresh_db.flush()
+
+                original_lines = []
+                for idx, line_data in enumerate(scene_data.get("lines", [])):
+                    scene_line = SceneLine(
+                        scene_id=scene.id,
+                        line_order=idx,
+                        character_name=line_data.get("character", "Unknown"),
+                        text=line_data.get("text", ""),
+                        stage_direction=line_data.get("stage_direction"),
+                        word_count=len(line_data.get("text", "").split())
+                    )
+                    fresh_db.add(scene_line)
+                    original_lines.append({
+                        "line_order": idx,
+                        "character_name": line_data.get("character", "Unknown"),
+                        "text": line_data.get("text", ""),
+                        "stage_direction": line_data.get("stage_direction"),
+                    })
+
+                scene.original_snapshot = {
+                    "character_1_name": scene_data.get("character_1", "Character 1"),
+                    "character_2_name": scene_data.get("character_2", "Character 2"),
+                    "lines": original_lines,
+                }
+                scenes_created.append(scene)
+
+            user_script.num_scenes_extracted = len(scenes_created)
+            user_script.processing_status = "completed"
+            user_script.ai_extraction_completed = True
+            fresh_db.commit()
+            fresh_db.refresh(user_script)
+
+            response_data = UserScriptDetailResponse(
+                **UserScriptResponse.model_validate(user_script).model_dump(),
+                scenes=[SceneInScriptResponse.model_validate(s) for s in scenes_created],
+            ).model_dump()
+
+            # Convert datetimes to strings for JSON serialization
+            for key in ("created_at", "updated_at"):
+                if response_data.get(key) and hasattr(response_data[key], "isoformat"):
+                    response_data[key] = response_data[key].isoformat()
+
+            event = _json.dumps({"type": "done", "data": response_data})
+            yield f"data: {event}\n\n"
+
+        except Exception as e:
+            try:
+                user_script.processing_status = "failed"
+                user_script.processing_error = str(e)
+                fresh_db.commit()
+            except Exception:
+                pass
+
+            event = _json.dumps({"type": "error", "detail": str(e)})
+            yield f"data: {event}\n\n"
+        finally:
+            fresh_db.close()
+
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
 @router.post("/from-text", response_model=UserScriptDetailResponse)
 async def create_script_from_text(
     request: CreateScriptFromTextRequest,
@@ -356,37 +648,59 @@ async def create_script_from_text(
     if len(text_bytes) > 10 * 1024 * 1024:  # 10MB
         raise HTTPException(status_code=400, detail="Text too long (max 10MB)")
 
+    # ---- Phase 1: Extract everything BEFORE touching DB ----
+    try:
+        parser = ScriptParser()
+        result = parser.parse_script(text_bytes, "txt", "Pasted script.txt")
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to extract script: {str(e)}"
+        )
+
+    # ---- Phase 2: All DB writes happen quickly together ----
+    # Close the stale session (idle during extraction) and get a fresh one.
+    try:
+        db.close()
+    except Exception:
+        pass  # Connection already gone — that's fine
+    db = SessionLocal()
+
+    metadata = result["metadata"]
+    resolved_title = request.title or metadata.get("title", "Pasted Script")
+    resolved_author = request.author or metadata.get("author", "Unknown")
+    resolved_description = request.description or metadata.get("synopsis")
+
     user_script = UserScript(
         user_id=current_user.id,
-        title=request.title or "Pasted Script",
-        author=request.author or "Unknown",
-        description=request.description,
+        title=resolved_title,
+        author=resolved_author,
+        description=resolved_description,
         original_filename="Pasted script",
         file_type="txt",
         file_size_bytes=len(text_bytes),
         file_path=None,
         processing_status="processing",
+        raw_text=result["raw_text"],
+        characters=metadata.get("characters", []),
+        genre=metadata.get("genre"),
+        estimated_length_minutes=metadata.get("estimated_length_minutes"),
+        num_characters=len(metadata.get("characters", [])),
     )
     db.add(user_script)
+
+    # Increment monotonic upload counter (survives deletes for free-tier gating)
+    current_user_fresh2 = db.query(User).filter(User.id == current_user.id).first()
+    if current_user_fresh2:
+        current_user_fresh2.total_scripts_uploaded = (current_user_fresh2.total_scripts_uploaded or 0) + 1
+
     db.commit()
     db.refresh(user_script)
 
     try:
-        parser = ScriptParser()
-        result = parser.parse_script(text_bytes, "txt", "Pasted script.txt")
-
-        metadata = result["metadata"]
-        user_script.raw_text = result["raw_text"]
-        user_script.title = request.title or metadata.get("title", "Pasted Script")
-        user_script.author = request.author or metadata.get("author", "Unknown")
-        user_script.characters = metadata.get("characters", [])
-        user_script.genre = metadata.get("genre")
-        user_script.estimated_length_minutes = metadata.get("estimated_length_minutes")
-        user_script.num_characters = len(metadata.get("characters", []))
-
         play = Play(
-            title=user_script.title,
-            author=user_script.author,
+            title=resolved_title,
+            author=resolved_author,
             year_written=None,
             genre=user_script.genre or "Drama",
             category="contemporary",
@@ -402,9 +716,11 @@ async def create_script_from_text(
 
         scenes_created = []
         for scene_data in result["scenes"]:
+            from app.utils.duration import estimate_duration_seconds
             lines_count = len(scene_data.get("lines", []))
-            total_words = sum(len(line.get("text", "").split()) for line in scene_data.get("lines", []))
-            duration_seconds = int((total_words / 150) * 60)
+            all_line_text = "\n".join(line.get("text", "") for line in scene_data.get("lines", []))
+            total_words = len(all_line_text.split())
+            duration_seconds = estimate_duration_seconds(all_line_text)
             char1_info = next(
                 (c for c in user_script.characters if c.get("name") == scene_data.get("character_1")),
                 {},
@@ -421,6 +737,8 @@ async def create_script_from_text(
                 user_script_id=user_script.id,
                 title=scene_data.get("title", "Untitled Scene"),
                 description=scene_data.get("description"),
+                act=scene_data.get("act"),
+                scene_number=scene_data.get("scene_number"),
                 character_1_name=scene_data.get("character_1", "Character 1"),
                 character_2_name=scene_data.get("character_2", "Character 2"),
                 character_1_gender=char1_info.get("gender"),
@@ -557,9 +875,11 @@ async def ensure_example_script(
 
     scene_data = metadata["scenes"][0]
     lines_list = scene_data.get("lines", [])
+    from app.utils.duration import estimate_duration_seconds
     line_count = len(lines_list)
-    total_words = sum(len(l.get("text", "").split()) for l in lines_list)
-    duration_seconds = max(30, int((total_words / 150) * 60))
+    all_line_text = "\n".join(l.get("text", "") for l in lines_list)
+    total_words = len(all_line_text.split())
+    duration_seconds = max(30, estimate_duration_seconds(all_line_text))
 
     scene = Scene(
         play_id=play.id,

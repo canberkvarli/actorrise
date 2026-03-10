@@ -171,20 +171,16 @@ export default function DashboardPage() {
   const headshotUrl = profile?.headshot_url ? cleanImageUrl(profile.headshot_url) : null;
   const displayName = profile?.name || user?.name || user?.email || "Actor";
 
-  const openMonologue = async (mono: Monologue) => {
+  const openMonologue = (mono: Monologue) => {
     setSelectedMonologue(mono);
     setIsReadingMode(false);
+    setIsLoadingDetail(false);
     // Demo mock monologues (negative IDs) already have all data — skip the API call
     if (mono.id < 0) return;
-    setIsLoadingDetail(true);
-    try {
-      const response = await api.get<Monologue>(`/api/monologues/${mono.id}`);
-      setSelectedMonologue(response.data);
-    } catch (error) {
-      console.error("Error fetching monologue:", error);
-    } finally {
-      setIsLoadingDetail(false);
-    }
+    // Fetch fresh data in background (view count, etc.)
+    api.get<Monologue>(`/api/monologues/${mono.id}`)
+      .then((response) => setSelectedMonologue(response.data))
+      .catch(() => {});
   };
 
   const closeMonologue = () => {
@@ -1036,7 +1032,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     <div className="flex flex-wrap gap-2">
                       <h1 className="text-2xl font-bold text-foreground leading-tight">{selectedFilmTvRef.title}</h1>
                       {selectedFilmTvRef.is_best_match && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-muted/90 text-foreground border border-border">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-muted/90 text-foreground border border-border">
                           Best Match
                         </span>
                       )}
@@ -1079,7 +1075,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 )}
 
                 {selectedFilmTvRef.confidence_score != null && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full tabular-nums bg-muted text-muted-foreground">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium tabular-nums bg-muted text-muted-foreground">
                     {Math.round(selectedFilmTvRef.confidence_score * 100)}% match
                   </span>
                 )}

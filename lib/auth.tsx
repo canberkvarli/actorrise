@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef, ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "./supabase";
-import api from "./api";
+import api, { primeSessionCache } from "./api";
 import { setStoredLastAuthMethod } from "./last-auth-method";
 
 interface User {
@@ -109,6 +109,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
+            // Prime the API session cache so dashboard queries don't re-fetch session
+            if (session.access_token && session.expires_at) {
+              primeSessionCache(session.access_token, session.expires_at);
+            }
             // Revalidate in background (no spinner if we had cached data)
             await syncUserWithBackend(!cached);
           } else {
@@ -128,6 +132,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "INITIAL_SESSION") return; // already handled above
       if (session) {
+        // Prime API session cache so subsequent requests use this token immediately
+        if (session.access_token && session.expires_at) {
+          primeSessionCache(session.access_token, session.expires_at);
+        }
         // Fire-and-forget — must catch to prevent unhandled promise rejection
         syncUserWithBackend(false).catch(() => {});
       } else {
