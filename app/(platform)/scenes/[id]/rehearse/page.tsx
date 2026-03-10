@@ -500,6 +500,7 @@ export default function RehearsalPage() {
   const characterVoiceMapRef = useRef<Map<string, string>>(new Map());
   const lastAiLineForFallbackRef = useRef<string | null>(null);
   const pauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const speakDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const skipSilentTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Refs to break stale closures — always point to latest versions
@@ -509,6 +510,9 @@ export default function RehearsalPage() {
 
   /* ── Settings ───────────────────────────────────────────────────── */
 
+  const [highlightMyLines] = useState(() =>
+    typeof window !== 'undefined' ? localStorage.getItem('scene_highlight_my_lines') === 'true' : false
+  );
   const [rehearsalSettings] = useState<RehearsalSettings>(() =>
     typeof window !== 'undefined'
       ? getRehearsalSettings()
@@ -596,6 +600,8 @@ export default function RehearsalPage() {
     liveTranscript,
     resetTranscript,
     analyserRef,
+    streamRef: whisperStreamRef,
+    audioCtxRef: whisperAudioCtxRef,
   } = useWhisperSTT({
     silenceThreshold: 10,
     silenceTimeoutMs: 2000,
@@ -667,19 +673,15 @@ export default function RehearsalPage() {
       setLastAiLine(null);
       advanceScriptRef.current(nextIdx);
     };
-    // Check if next line is also AI — short pause for consecutive AI lines
+    // Pause before advancing: short gap for consecutive AI lines, user setting otherwise
     const lines = orderedLinesRef.current;
     const sess = sessionRef.current;
     const nextIsAlsoAI = sess && nextIdx < lines.length && lines[nextIdx].character_name !== sess.user_character;
-    const pauseMs = nextIsAlsoAI ? 200 : 0;
-    if (pauseMs > 0) {
-      pauseTimerRef.current = setTimeout(() => {
-        pauseTimerRef.current = null;
-        doAdvance();
-      }, pauseMs);
-    } else {
+    const pauseMs = nextIsAlsoAI ? 300 : Math.max(600, rehearsalSettings.pauseBetweenLinesSeconds * 1000);
+    pauseTimerRef.current = setTimeout(() => {
+      pauseTimerRef.current = null;
       doAdvance();
-    }
+    }, pauseMs);
   }, [rehearsalSettings.pauseBetweenLinesSeconds]);
 
   /* ── Browser speech synthesis (fallback) ───────────────────────── */
@@ -764,10 +766,14 @@ export default function RehearsalPage() {
     const line = lines[idx];
 
     if (line.character_name !== sess.user_character) {
-      // AI's turn — speak it from script (strip any inline [stage directions])
+      // AI's turn — delay speech slightly so scroll + animation complete before voice starts
       setLastAiLine(line.text);
       setAutoListenLineKey(null);
-      speakLineRef.current(ttsText(line), ttsInstructions(line, sceneVoiceContextRef.current), line.character_name);
+      if (speakDelayRef.current) clearTimeout(speakDelayRef.current);
+      speakDelayRef.current = setTimeout(() => {
+        speakDelayRef.current = null;
+        speakLineRef.current(ttsText(line), ttsInstructions(line, sceneVoiceContextRef.current), line.character_name);
+      }, 220);
     } else {
       // User's turn — set up for auto-listen
       setLastAiLine(null);
@@ -1086,6 +1092,12 @@ export default function RehearsalPage() {
     const norm = normWords;
     const expectedWords = norm(expected).split(/\s+/).filter(Boolean);
 
+    // Kill any lingering SR instance from a previous line
+    if (liveRecognitionRef.current) {
+      try { liveRecognitionRef.current.onend = () => {}; liveRecognitionRef.current.stop(); } catch {}
+      liveRecognitionRef.current = null;
+    }
+
     let recognition: any;
     try {
       recognition = new SR();
@@ -1130,10 +1142,11 @@ export default function RehearsalPage() {
         const gateThreshold = Math.min(3, expectedWords.length);
         if (matched.size >= gateThreshold) whisperGateRef.current = true;
 
-        // Instant advance: SR final result with ≥92% match so last word isn't skipped
+        // Instant advance: SR final result — advance if score ≥70% OR last word of line matched
         if (hasFinal && !srAdvancedRef.current) {
           const score = expectedWords.length > 0 ? matched.size / expectedWords.length : 1;
-          if (score >= 0.92) {
+          const lastWordMatched = expectedWords.length > 0 && matched.has(expectedWords.length - 1);
+          if (score >= 0.70 || lastWordMatched) {
             srAdvancedRef.current = true;
             try { recognition.stop(); liveRecognitionRef.current = null; } catch {}
             cancelTranscriptionRef.current();
@@ -1209,7 +1222,7 @@ export default function RehearsalPage() {
     bulkPreloadedRef.current = true;
     const aiLines = orderedLines
       .filter(l => l.character_name !== session.user_character)
-      .slice(0, 5); // preload first 5 AI lines
+      .slice(0, 8); // preload first 8 AI lines
     aiLines.forEach(l => preloadTTS(ttsText(l), characterVoiceMapRef.current.get(l.character_name) ?? lastKnownVoiceIdRef.current, ttsInstructions(l, sceneVoiceContextRef.current)));
   }, [session?.ai_character, orderedLines, preloadTTS]);
 
@@ -1221,7 +1234,7 @@ export default function RehearsalPage() {
 
     // Preload next 2 AI lines ahead
     let found = 0;
-    for (let i = activeLineIndex + 1; i < orderedLines.length && found < 2; i++) {
+    for (let i = activeLineIndex + 1; i < orderedLines.length && found < 3; i++) {
       const l = orderedLines[i];
       if (l.character_name !== session.user_character) {
         preloadTTS(ttsText(l), characterVoiceMapRef.current.get(l.character_name) ?? lastKnownVoiceIdRef.current, ttsInstructions(l, sceneVoiceContextRef.current));
@@ -1234,17 +1247,59 @@ export default function RehearsalPage() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (activeLineIndex == null) return;
-    const t = setTimeout(() => {
-      const el = currentLineRef.current;
+    // Use rAF to ensure DOM has committed the ref/data-attr update after render
+    const raf = requestAnimationFrame(() => {
       const container = scrollContainerRef.current;
-      if (!el || !container) return;
+      if (!container) return;
+      // Find element by data attribute — avoids ref timing issues with motion.div
+      const el = container.querySelector<HTMLElement>(`[data-line-index="${activeLineIndex}"]`);
+      if (!el) return;
       const elRect = el.getBoundingClientRect();
       const containerRect = container.getBoundingClientRect();
-      const offset = elRect.top - containerRect.top + container.scrollTop - containerRect.height / 2 + elRect.height / 2;
-      container.scrollTo({ top: Math.max(0, offset), behavior: 'smooth' });
-    }, 50);
-    return () => clearTimeout(t);
+      const absoluteTop = container.scrollTop + (elRect.top - containerRect.top);
+      const target = absoluteTop - container.clientHeight / 2 + el.offsetHeight / 2;
+      container.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+    });
+    return () => cancelAnimationFrame(raf);
   }, [activeLineIndex]);
+
+
+  // Detect speech while paused — slide-in toast to remind user to resume
+  const pausedSpeechShownRef = useRef(false);
+  const [pausedSpeechToast, setPausedSpeechToast] = useState(false);
+  useEffect(() => {
+    if (!paused) { pausedSpeechShownRef.current = false; setPausedSpeechToast(false); return; }
+    if (pausedSpeechShownRef.current) return;
+    const stream = whisperStreamRef.current;
+    if (!stream || !stream.active) return;
+    let ctx: AudioContext | null = whisperAudioCtxRef.current;
+    if (!ctx || ctx.state === 'closed') ctx = new AudioContext();
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    let analyser: AnalyserNode;
+    let source: MediaStreamAudioSourceNode;
+    try {
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      source = ctx.createMediaStreamSource(stream);
+      source.connect(analyser);
+    } catch { return; }
+    const buf = new Uint8Array(analyser.frequencyBinCount);
+    let hits = 0;
+    const iv = setInterval(() => {
+      if (pausedSpeechShownRef.current) { clearInterval(iv); source.disconnect(); return; }
+      analyser.getByteFrequencyData(buf);
+      const avg = buf.reduce((a, b) => a + b, 0) / buf.length;
+      if (avg > 8) hits++; else hits = 0;
+      if (hits >= 3) {
+        pausedSpeechShownRef.current = true;
+        setPausedSpeechToast(true);
+        setTimeout(() => setPausedSpeechToast(false), 5000);
+        clearInterval(iv);
+        source.disconnect();
+      }
+    }, 300);
+    return () => { clearInterval(iv); try { source.disconnect(); } catch {} };
+  }, [paused]);
 
   // Skip-if-silent timer
   useEffect(() => {
@@ -1406,14 +1461,20 @@ export default function RehearsalPage() {
         handleGoBack();
       } else if (e.code === 'Enter' && !e.shiftKey) {
         e.preventDefault();
-        handleManualAdvance();
+        // Skip current line — works for both user and AI turns
+        if (currentUserLineText && !isProcessing) {
+          handleManualAdvance();
+        } else if (activeLineIndexRef.current != null) {
+          stopAllAudio();
+          advanceScriptRef.current(activeLineIndexRef.current + 1);
+        }
       } else if (e.key === '?') {
         setShowShortcutsModal(v => !v);
       }
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [paused, handlePause, handleResume, handleGoBack, handleManualAdvance]);
+  }, [paused, handlePause, handleResume, handleGoBack, handleManualAdvance, stopAllAudio, currentUserLineText, isProcessing]);
 
   /* ── Derived state ─────────────────────────────────────────────── */
 
@@ -1800,7 +1861,7 @@ export default function RehearsalPage() {
       </div>
 
       {/* Script parchment */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 sm:p-6 scroll-smooth">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 sm:p-6">
         <div
           className="max-w-4xl mx-auto bg-white text-neutral-900 rounded-lg shadow-2xl border border-neutral-200 px-4 sm:px-6 py-5 sm:py-7"
           style={{ fontFamily: '"Courier New", Courier, monospace' }}
@@ -1809,13 +1870,13 @@ export default function RehearsalPage() {
             <>
               {/* Script header */}
               <div className="text-center mb-6 pb-5 border-b border-neutral-200">
-                <h1 className="text-xl font-bold uppercase tracking-wider text-neutral-900">
+                <h1 className="text-2xl sm:text-3xl font-bold uppercase tracking-wider text-neutral-900">
                   {sceneWithLines.title}
                 </h1>
                 {sceneWithLines.description?.trim() && (
-                  <p className="text-sm italic text-neutral-600 mt-1">{sceneWithLines.description}</p>
+                  <p className="text-base italic text-neutral-600 mt-1.5">{sceneWithLines.description}</p>
                 )}
-                <p className="text-sm text-neutral-700 mt-1.5">
+                <p className="text-base text-neutral-700 mt-2">
                   from <span className="text-neutral-900 font-medium">{sceneWithLines.play_title}</span>
                   {sceneWithLines.play_author && (
                     <>{' '}by <span className="text-neutral-900 font-medium">{sceneWithLines.play_author}</span></>
@@ -1834,6 +1895,7 @@ export default function RehearsalPage() {
                   return (
                     <motion.div
                       key={line.id}
+                      data-line-index={lineIdx}
                       ref={isCurrent ? currentLineRef : undefined}
                       initial={false}
                       animate={
@@ -1853,6 +1915,7 @@ export default function RehearsalPage() {
                         !isCurrent && 'cursor-pointer hover:opacity-75',
                         isCurrentUserLine && 'bg-orange-50/80 ring-1 ring-orange-200/60',
                         isCurrentAiLine && 'bg-neutral-100/60 ring-1 ring-neutral-200/60',
+                        isUser && !isCurrent && highlightMyLines && 'bg-yellow-50/60',
                       )}
                       onClick={() => {
                         if (!isCurrent) handleJumpToLine(lineIdx);
@@ -2024,6 +2087,30 @@ export default function RehearsalPage() {
         )}
       </AnimatePresence>
 
+      {/* Paused speech toast — slides in from left */}
+      <AnimatePresence>
+        {pausedSpeechToast && (
+          <motion.div
+            initial={{ opacity: 0, x: -200 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -200 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            className="fixed bottom-24 left-4 z-[10060]"
+          >
+            <div className="flex items-center gap-3 rounded-lg bg-neutral-900/95 backdrop-blur-sm border border-neutral-700 pl-3 pr-2 py-2.5 shadow-2xl">
+              <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse shrink-0" />
+              <span className="text-sm text-neutral-200">Rehearsal paused</span>
+              <button
+                onClick={() => { setPausedSpeechToast(false); handleResume(); }}
+                className="ml-1 px-3 py-1 rounded-md bg-primary hover:bg-primary/80 text-xs font-medium text-white transition-colors"
+              >
+                Resume
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Floating control pill */}
       <div className="shrink-0 flex justify-center px-4 pb-4 safe-area-bottom">
         <div className="flex items-center gap-3 bg-neutral-900/90 backdrop-blur-sm border border-neutral-800 rounded-full shadow-2xl px-5 py-3 min-h-[52px]">
@@ -2088,7 +2175,8 @@ export default function RehearsalPage() {
                 {micDevices.length === 0 ? (
                   <p className="text-xs text-neutral-400 px-3 py-2">No devices found</p>
                 ) : micDevices.map((device, i) => {
-                  const isSelected = selectedMicId ? device.deviceId === selectedMicId : device.deviceId === 'default' || i === 0;
+                  const savedMicAvailable = micDevices.some(d => d.deviceId === selectedMicId);
+                  const isSelected = (selectedMicId && savedMicAvailable) ? device.deviceId === selectedMicId : i === 0;
                   return (
                     <button
                       key={device.deviceId}
@@ -2193,7 +2281,7 @@ export default function RehearsalPage() {
       <Dialog open={showShortcutsModal} onOpenChange={setShowShortcutsModal}>
         <DialogContent className="bg-neutral-900 border-neutral-800 text-neutral-100 max-w-xs">
           <DialogHeader>
-            <DialogTitle className="text-base">Keyboard Shortcuts</DialogTitle>
+            <DialogTitle className="text-xl">Keyboard Shortcuts</DialogTitle>
           </DialogHeader>
           <div className="space-y-2 pt-1">
             {[

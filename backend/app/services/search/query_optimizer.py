@@ -688,17 +688,18 @@ _FUZZY_SKIP: set = {
 }
 
 
-def correct_query_typos(raw: str) -> Tuple[str, bool, bool]:
+def correct_query_typos(raw: str) -> Tuple[str, bool, bool, bool]:
     """
     Two-layer typo correction for search queries.
 
     1. Exact dictionary lookup (fast, reliable for known misspellings)
     2. Fuzzy matching against theater vocabulary for unknown typos (words ≥4 chars)
 
-    Returns (corrected_query, was_corrected, show_banner).
+    Returns (corrected_query, was_corrected, show_banner, has_unrecognized).
     - was_corrected: True if any word was changed (always use corrected query for search)
     - show_banner: True only if the correction is clean enough to display to the user
       (i.e. every meaningful word was either already correct or successfully corrected)
+    - has_unrecognized: True if any word couldn't be matched/corrected (likely typos)
     """
     if not raw or not raw.strip():
         return (raw, False, False)
@@ -730,8 +731,15 @@ def correct_query_typos(raw: str) -> Tuple[str, bool, bool]:
                 changed = True
             continue
 
+        # Short words (1-3 chars) that aren't known common words are likely typos
+        if len(key) < 4:
+            if key not in _FUZZY_SKIP:
+                unfixable_count += 1
+            corrected_words.append(w)
+            continue
+
         # Layer 2: fuzzy match (only for words ≥4 chars, not in vocabulary already, not a skip word)
-        if len(key) >= 4 and key not in _THEATER_VOCABULARY and key not in _FUZZY_SKIP:
+        if key not in _THEATER_VOCABULARY and key not in _FUZZY_SKIP:
             matches = get_close_matches(key, _VOCAB_LIST, n=1, cutoff=0.8)
             if matches and matches[0] != key:
                 corrected_words.append(matches[0] + suffix)
@@ -747,5 +755,6 @@ def correct_query_typos(raw: str) -> Tuple[str, bool, bool]:
     # e.g. "shakespear mnonologeawewewe" → "mnonologeawewewe" unfixable → hide banner
     # The corrected query is still used for search either way (silent improvement).
     show_banner = changed and unfixable_count == 0
+    has_unrecognized = unfixable_count > 0
 
-    return (" ".join(corrected_words), changed, show_banner)
+    return (" ".join(corrected_words), changed, show_banner, has_unrecognized)

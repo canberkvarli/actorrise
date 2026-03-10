@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import useSWR from "swr";
+import useSWR, { mutate as globalMutate } from "swr";
 import { useRouter } from "next/navigation";
 import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import UnderConstructionScripts from "@/components/UnderConstructionScripts";
@@ -41,6 +41,8 @@ import {
   Check,
   Flag,
   Settings,
+  Zap,
+  BookOpen,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api, { API_URL } from "@/lib/api";
@@ -52,6 +54,7 @@ const STEP_GROUPS: { match: string; label: string }[] = [
   { match: "Opening", label: "Opening the script" },
   { match: "Read ", label: "Reading through every page" },
   { match: "Stripped", label: "Reading through every page" },
+  { match: "Analyzing", label: "Analyzing script and extracting scenes" },
   { match: "Learning", label: "Learning who the characters are" },
   { match: "Found ", label: "Pulling every line of dialogue" },
   { match: "Mapping", label: "Mapping out the acts and scenes" },
@@ -59,9 +62,12 @@ const STEP_GROUPS: { match: string; label: string }[] = [
   { match: "No act", label: "Mapping out the acts and scenes" },
   { match: "Pulling", label: "Pulling every line of dialogue" },
   { match: "Regex parsed", label: "Pulling every line of dialogue" },
+  { match: "Skipped", label: "Pulling every line of dialogue" },
   { match: "No scenes", label: "Pulling every line of dialogue" },
+  { match: "Filtered", label: "Assembling your rehearsal scenes" },
   { match: "Figuring", label: "Figuring out the tone, emotions, dynamics" },
   { match: "Analyzed", label: "Figuring out the tone, emotions, dynamics" },
+  { match: "Extracting", label: "Pulling every line of dialogue" },
   { match: "Extracted", label: "Assembling your rehearsal scenes" },
   { match: "Cleaning", label: "Cleaning up dialogue" },
   { match: "AI cleanup", label: "Cleaning up dialogue" },
@@ -170,6 +176,20 @@ export default function MyScriptsPage() {
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [deleteScriptDialogOpen, setDeleteScriptDialogOpen] = useState(false);
   const [scriptToDelete, setScriptToDelete] = useState<number | null>(null);
+  // Pre-extraction scan + choice dialog state
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState<{
+    page_count: number;
+    has_structure: boolean;
+    num_acts: number;
+    num_sections: number;
+    show_mode_choice: boolean;
+    estimated_quick_seconds: number;
+    estimated_full_seconds: number;
+  } | null>(null);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const pendingInputRef = useRef<HTMLInputElement | null>(null);
+
   const deleteScriptTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const progressScrollRef = useRef<HTMLDivElement>(null);
@@ -187,9 +207,16 @@ export default function MyScriptsPage() {
 
   // Auto-scroll progress to bottom when new steps arrive
   useEffect(() => {
-    if (progressScrollRef.current) {
-      progressScrollRef.current.scrollTop = progressScrollRef.current.scrollHeight;
-    }
+    // Delay to let framer-motion animation expand the element before scrolling
+    const t = setTimeout(() => {
+      if (progressScrollRef.current) {
+        progressScrollRef.current.scrollTo({
+          top: progressScrollRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    }, 400);
+    return () => clearTimeout(t);
   }, [progressSteps]);
 
 
@@ -198,6 +225,7 @@ export default function MyScriptsPage() {
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
+    pendingInputRef.current = event.target;
 
     // Block duplicate: already have a script with this filename
     if (scripts.some((s) => s.original_filename === file.name)) {
@@ -220,11 +248,66 @@ export default function MyScriptsPage() {
       return;
     }
 
-    // Soft warning for large files (2MB+)
-    if (file.size > 2 * 1024 * 1024) {
-      toast.info("Large file - we recommend one scene or short scripts (up to ~100 lines) for best results.");
-    }
+    // Phase 1: Quick scan to detect structure
+    setScanning(true);
+    try {
+      const { data: { session } } = await (await import("@/lib/supabase")).supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) {
+        toast.error("Please sign in again to upload.");
+        setScanning(false);
+        return;
+      }
 
+      const scanForm = new FormData();
+      scanForm.append("file", file);
+
+      const scanRes = await fetch(`${API_URL}/api/scripts/scan`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: scanForm,
+      });
+
+      if (!scanRes.ok) {
+        const err = await scanRes.json();
+        throw new Error(typeof err.detail === "string" ? err.detail : "Scan failed");
+      }
+
+      const scan = await scanRes.json();
+      setScanning(false);
+
+      if (scan.show_mode_choice) {
+        // Show choice dialog — extraction starts after user picks
+        setPendingFile(file);
+        setScanResult(scan);
+        return;
+      }
+
+      // Small/simple script — go straight to full extraction
+      await startExtraction(file, "full");
+    } catch (error: any) {
+      setScanning(false);
+      console.error("Scan error:", error);
+      toast.error(error.message || "Failed to scan script");
+      if (pendingInputRef.current) pendingInputRef.current.value = "";
+    }
+  };
+
+  const handleModeChoice = async (mode: "quick" | "full") => {
+    const file = pendingFile;
+    setScanResult(null);
+    setPendingFile(null);
+    if (!file) return;
+    await startExtraction(file, mode);
+  };
+
+  const dismissModeChoice = () => {
+    setScanResult(null);
+    setPendingFile(null);
+    if (pendingInputRef.current) pendingInputRef.current.value = "";
+  };
+
+  const startExtraction = async (file: File, mode: "quick" | "full") => {
     setUploadingFile(true);
     setProgressSteps([{ group: "Uploading file", detail: "Uploading file" }]);
     setExtractionDone(false);
@@ -235,6 +318,7 @@ export default function MyScriptsPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("mode", mode);
 
       const { data: { session } } = await (await import("@/lib/supabase")).supabase.auth.getSession();
       const token = session?.access_token;
@@ -297,6 +381,10 @@ export default function MyScriptsPage() {
               const result = event.data;
               toast.success(`Script uploaded! Extracted ${result.num_scenes_extracted} scenes.`);
               mutateScripts();
+              // Pre-populate SWR cache so detail page loads instantly (no skeletons)
+              globalMutate(`/api/scripts/${result.id}`, result, false);
+              // Close the reader before navigating to avoid "client disconnected" on backend
+              reader.cancel();
               // Brief pause so user sees the final state
               await new Promise((r) => setTimeout(r, 800));
               router.push(`/my-scripts/${result.id}`);
@@ -319,8 +407,7 @@ export default function MyScriptsPage() {
     } finally {
       abortControllerRef.current = null;
       setUploadingFile(false);
-      // Reset file input
-      event.target.value = "";
+      if (pendingInputRef.current) pendingInputRef.current.value = "";
     }
   };
 
@@ -414,6 +501,12 @@ export default function MyScriptsPage() {
     }, UNDO_SECONDS * 1000);
   };
 
+  const formatTime = (seconds: number) => {
+    if (seconds < 60) return `${seconds}s`;
+    const mins = Math.round(seconds / 60);
+    return `${mins} min`;
+  };
+
   const formatFileSize = (bytes?: number) => {
     if (!bytes) return "Unknown";
     const mb = bytes / (1024 * 1024);
@@ -469,8 +562,25 @@ export default function MyScriptsPage() {
         accept=".pdf,.txt"
         onChange={handleFileUpload}
         className="hidden"
-        disabled={uploadingFile}
+        disabled={uploadingFile || scanning}
       />
+
+      {/* Scanning overlay */}
+      <AnimatePresence>
+        {scanning && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm"
+          >
+            <div className="flex items-center gap-3">
+              <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+              <span className="text-sm text-muted-foreground">Scanning script...</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Extraction progress — reasoning/thinking style */}
       <AnimatePresence>
@@ -621,22 +731,16 @@ export default function MyScriptsPage() {
                   Uploading…
                 </Button>
               ) : (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={() => document.getElementById("script-upload")?.click()}
-                      size="sm"
-                      variant="outline"
-                      className="gap-1.5 h-8 px-3 font-normal"
-                    >
-                      <Upload className="w-3.5 h-3.5" />
-                      Upload
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-[260px]">
-                    PDF or TXT, max 15MB. We extract characters and scenes; best with one scene or up to ~100 lines.
-                  </TooltipContent>
-                </Tooltip>
+                <Button
+                  onClick={() => document.getElementById("script-upload")?.click()}
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5 h-8 px-3 font-normal"
+                  title="PDF or TXT, max 15MB"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Upload
+                </Button>
               )}
               {pasting ? (
                 <Button disabled size="sm" variant="outline" className="gap-1.5 h-8 px-3 font-normal">
@@ -644,22 +748,16 @@ export default function MyScriptsPage() {
                   Pasting…
                 </Button>
               ) : (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5 h-8 px-3 font-normal"
-                      onClick={() => setShowPasteModal(true)}
-                    >
-                      <ClipboardPaste className="w-3.5 h-3.5" />
-                      Paste
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="max-w-[260px]">
-                    Paste script text; we extract scenes and characters so you can rehearse with the AI.
-                  </TooltipContent>
-                </Tooltip>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5 h-8 px-3 font-normal"
+                  onClick={() => setShowPasteModal(true)}
+                  title="Paste script text to extract scenes"
+                >
+                  <ClipboardPaste className="w-3.5 h-3.5" />
+                  Paste
+                </Button>
               )}
             </div>
           </div>
@@ -879,6 +977,57 @@ export default function MyScriptsPage() {
         confirmLabel="Delete script"
         onConfirm={handleConfirmDeleteScript}
       />
+
+      {/* Extraction mode choice dialog */}
+      <Dialog open={scanResult !== null} onOpenChange={(open) => { if (!open) dismissModeChoice(); }}>
+        <DialogContent className="w-full max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-serif">How should we extract scenes?</DialogTitle>
+          </DialogHeader>
+          {scanResult && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                We found {scanResult.num_acts > 0 ? `${scanResult.num_acts} acts across ` : ""}{scanResult.num_sections} sections in ~{scanResult.page_count} pages.
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={() => handleModeChoice("quick")}
+                  className="w-full text-left border border-border hover:border-primary/50 hover:shadow-md p-4 transition-all group"
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <Zap className="w-4 h-4 text-amber-500" />
+                      <span className="font-medium text-foreground">Quick Extract</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">~{formatTime(scanResult.estimated_quick_seconds)}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-snug">
+                    Two-person scenes only. Fastest option, great for focused rehearsal.
+                  </p>
+                </button>
+                <button
+                  onClick={() => handleModeChoice("full")}
+                  className="w-full text-left border border-border hover:border-primary/50 hover:shadow-md p-4 transition-all group"
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="flex items-center gap-2">
+                      <BookOpen className="w-4 h-4 text-blue-500" />
+                      <span className="font-medium text-foreground">Full Extract</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">~{formatTime(scanResult.estimated_full_seconds)}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-snug">
+                    All dialogue scenes (2+ characters). Full coverage of the script.
+                  </p>
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground/70">
+                Both options use 1 upload from your quota. You can always re-upload later.
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showPasteModal} onOpenChange={setShowPasteModal}>
         <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">

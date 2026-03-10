@@ -1914,15 +1914,32 @@ export default function SceneEditPage() {
       </div>
 
       {/* Highlight toggle */}
-      <div className="flex items-center justify-between rounded-lg bg-neutral-900/50 border border-neutral-800 px-3 py-2.5">
-        <div className="flex items-center gap-2">
-          <Highlighter className="w-3.5 h-3.5 text-yellow-400" />
-          <span className="text-sm text-neutral-200">Highlight my lines</span>
+      <div className="rounded-lg bg-neutral-900/50 border border-neutral-800 overflow-hidden">
+        <div className="flex items-center justify-between px-3 py-2.5">
+          <div className="flex items-center gap-2">
+            <Highlighter className="w-3.5 h-3.5 text-yellow-400" />
+            <span className="text-sm text-neutral-200">Highlight my lines</span>
+          </div>
+          <Switch
+            checked={highlightMyLines}
+            onCheckedChange={toggleHighlight}
+          />
         </div>
-        <Switch
-          checked={highlightMyLines}
-          onCheckedChange={toggleHighlight}
-        />
+        <AnimatePresence>
+          {highlightMyLines && selectedCharacter && scene && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2, ease: 'easeInOut' }}
+              className="overflow-hidden"
+            >
+              <p className="text-xs text-yellow-500/80 text-center pb-2.5">
+                {scene.lines.filter(l => l.character_name === selectedCharacter).length} lines as {selectedCharacter}
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Rehearsal Settings — inline */}
@@ -2097,7 +2114,7 @@ export default function SceneEditPage() {
   // Right panel content (parchment script)
   // ---------------------------------------------------------------------------
 
-  const isMyLine = (charName: string) => charName === selectedCharacter;
+  const isMyLine = (charName: string) => charName.trim().toLowerCase() === selectedCharacter.trim().toLowerCase();
 
   const rightPanelContent = (
     <div
@@ -2684,7 +2701,10 @@ export default function SceneEditPage() {
                       tabIndex={0}
                       onClick={() => !isDragging && startEditLine(line)}
                       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); !isDragging && startEditLine(line); } }}
-                      className="group/line-btn inline-flex flex-col items-center w-full max-w-full overflow-hidden rounded-md px-3 sm:px-4 py-2.5 sm:py-2 transition-colors cursor-pointer"
+                      className={cn(
+                        "group/line-btn inline-flex flex-col items-center w-full max-w-full overflow-hidden rounded-md px-3 sm:px-4 py-2.5 sm:py-2 transition-colors cursor-pointer",
+                        isMine && "bg-orange-50/50"
+                      )}
                     >
                       {/* Character name + avatar + stage direction */}
                       {(() => {
@@ -2714,7 +2734,7 @@ export default function SceneEditPage() {
                             <span className="text-base font-bold uppercase tracking-widest text-neutral-900">
                               {line.character_name}
                             </span>
-                            {isMine && <span className="text-[11px] font-sans font-bold text-orange-500">(You)</span>}
+                            {isMine && <span className="text-xs font-sans font-bold text-primary">(You)</span>}
                           </button>
                           {/* Combined character settings dropdown */}
                           {voiceDropdownOpen === dropdownKey && (() => {

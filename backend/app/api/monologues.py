@@ -68,6 +68,7 @@ class SearchResponse(BaseModel):
     page: int
     page_size: int
     corrected_query: Optional[str] = None
+    query_may_have_typos: bool = False
 
 
 class LeadMagnetItem(BaseModel):
@@ -305,6 +306,7 @@ async def search_monologues(
         quote_match_types: dict[int, str] = {}
         actor_profile_for_search: dict | None = None
         corrected_q: Optional[str] = None
+        has_typos = False
         was_corrected = False
         if current_user.actor_profile:
             ap = current_user.actor_profile
@@ -315,10 +317,10 @@ async def search_monologues(
             }
         if q and q.strip():
             search_q = q.strip()
-            _corrected, was_corrected, show_banner = correct_query_typos(search_q)
+            _corrected, was_corrected, show_banner, has_unrecognized = correct_query_typos(search_q)
+            has_typos = has_unrecognized or was_corrected
             if was_corrected:
                 search_q = _corrected
-            if show_banner:
                 corrected_q = _corrected
             # Semantic search returns (list of (Monologue, score), quote_match_types)
             all_results_with_scores, quote_match_types = search_service.search(
@@ -367,6 +369,7 @@ async def search_monologues(
             page=page,
             page_size=limit,
             corrected_query=corrected_q,
+            query_may_have_typos=has_typos,
         )
     except HTTPException:
         raise  # Re-raise HTTP exceptions (e.g. from auth/rate-limiting) as-is

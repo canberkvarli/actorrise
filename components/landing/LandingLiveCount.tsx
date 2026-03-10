@@ -10,6 +10,9 @@ const UPDATE_DURATION_MS = 1200;
 
 /** Fallback library stats so the section isn’t empty while the API loads (avoids long dash). */
 const FALLBACK_LIBRARY = { monologues: 8600, filmTv: 14000 };
+/** Fallback search count shown immediately before API responds — prevents showing "0". */
+const FALLBACK_SEARCHES = 600;
+const FALLBACK_USERS = 120;
 
 const STATS_CACHE_KEY = "actorrise_public_stats_v1";
 
@@ -54,7 +57,7 @@ type PublicStats = {
 };
 
 export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps) {
-  // Initialize with null/0 to match server render; hydrate from cache in useEffect below
+  // Initialize with null to match server render; hydrate from cache/fallback in useEffect below
   const [totalSearches, setTotalSearches] = useState<number | null>(null);
   const [totalUsers, setTotalUsers] = useState<number | null>(null);
   const [libraryStats, setLibraryStats] = useState<{ monologues: number; filmTv: number } | null>(null);
@@ -180,7 +183,9 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
   }, [totalSearches]);
 
   const isLoading = totalSearches === null;
-  const valueToShow = totalSearches === null ? 0 : displayValue;
+  // Use fallback while API loads — never show 0 on first visit
+  const valueToShow = isLoading ? FALLBACK_SEARCHES : displayValue;
+  const usersToShow = totalUsers ?? FALLBACK_USERS;
   const formatted = valueToShow.toLocaleString("en-US", { maximumFractionDigits: 0 });
   const isInline = variant === "inline";
   const libraryToShow = libraryStats ?? FALLBACK_LIBRARY;
@@ -188,7 +193,7 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
   if (variant === "micro") {
     return (
       <span ref={containerRef} className="tabular-nums text-muted-foreground">
-        {isLoading ? null : <>{formatted}+ monologues found</>}
+        {formatted}+ monologues found
       </span>
     );
   }
@@ -214,23 +219,19 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
                 : "text-4xl sm:text-5xl md:text-5xl font-semibold tabular-nums tracking-tight text-foreground"
             }
           >
-            {isLoading ? (
-              <span className="inline-block min-w-[4ch] text-muted-foreground" aria-hidden>{formatted}+</span>
-            ) : (
-              <motion.span
-                key={totalSearches ?? 0}
-                initial={false}
-                animate={{ scale: isPulsing ? 1.12 : 1 }}
-                transition={{
-                  type: "spring",
-                  stiffness: 400,
-                  damping: 25,
-                }}
-                className={`inline-block origin-center ${isPulsing ? "text-primary" : "text-foreground"}`}
-              >
-                {formatted}+
-              </motion.span>
-            )}
+            <motion.span
+              key={totalSearches ?? 0}
+              initial={false}
+              animate={{ scale: isPulsing ? 1.12 : 1 }}
+              transition={{
+                type: "spring",
+                stiffness: 400,
+                damping: 25,
+              }}
+              className={`inline-block origin-center ${isPulsing ? "text-primary" : isLoading ? "text-muted-foreground" : "text-foreground"}`}
+            >
+              {formatted}+
+            </motion.span>
           </p>
           <p className={isInline ? "mt-1 text-muted-foreground text-sm" : "mt-1.5 text-muted-foreground text-base"}>
             monologues found by actors
@@ -257,7 +258,7 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
         </div>
 
         {/* Actors count */}
-        {totalUsers !== null && (
+        {usersToShow !== null && (
           <div
             className={
               isInline
@@ -276,7 +277,7 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
               }
             >
               <IconUsers size={isInline ? 20 : 24} className="text-primary" />
-              {totalUsers.toLocaleString("en-US")}+ actors
+              {usersToShow.toLocaleString("en-US")}+ actors
             </p>
             <p
               className={
