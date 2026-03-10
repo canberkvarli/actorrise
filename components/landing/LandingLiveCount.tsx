@@ -11,6 +11,25 @@ const UPDATE_DURATION_MS = 1200;
 /** Fallback library stats so the section isn’t empty while the API loads (avoids long dash). */
 const FALLBACK_LIBRARY = { monologues: 8600, filmTv: 14000 };
 
+const STATS_CACHE_KEY = "actorrise_public_stats_v1";
+
+function getCachedStats(): PublicStats | null {
+  try {
+    const raw = localStorage.getItem(STATS_CACHE_KEY);
+    return raw ? (JSON.parse(raw) as PublicStats) : null;
+  } catch {
+    return null;
+  }
+}
+
+function setCachedStats(stats: PublicStats) {
+  try {
+    localStorage.setItem(STATS_CACHE_KEY, JSON.stringify(stats));
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Ease-out so the number slows as it approaches the target.
  */
@@ -35,6 +54,7 @@ type PublicStats = {
 };
 
 export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps) {
+  // Initialize with null/0 to match server render; hydrate from cache in useEffect below
   const [totalSearches, setTotalSearches] = useState<number | null>(null);
   const [totalUsers, setTotalUsers] = useState<number | null>(null);
   const [libraryStats, setLibraryStats] = useState<{ monologues: number; filmTv: number } | null>(null);
@@ -44,32 +64,61 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
   const fromRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const applyStats = (data: PublicStats) => {
+    setCachedStats(data);
+    setTotalSearches(data.total_searches);
+    if (typeof data.total_users === "number") {
+      setTotalUsers(data.total_users);
+    }
+    if (
+      typeof data.total_monologues === "number" &&
+      typeof data.total_film_tv_references === "number"
+    ) {
+      setLibraryStats({
+        monologues: data.total_monologues,
+        filmTv: data.total_film_tv_references,
+      });
+    }
+  };
+
   const fetchStats = () => {
     const url = `${API_URL}/api/public/stats`;
     fetch(url, { method: "GET" })
       .then((res) => (res.ok ? res.json() : null))
       .then((data: PublicStats | null) => {
         if (!data || typeof data.total_searches !== "number") return;
-        setTotalSearches(data.total_searches);
-        if (typeof data.total_users === "number") {
-          setTotalUsers(data.total_users);
-        }
-        if (
-          typeof data.total_monologues === "number" &&
-          typeof data.total_film_tv_references === "number"
-        ) {
-          setLibraryStats({
-            monologues: data.total_monologues,
-            filmTv: data.total_film_tv_references,
-          });
-        }
+        applyStats(data);
       })
       .catch(() => {});
   };
 
-  // Start animation only when component is in viewport
+  // After hydration: seed from localStorage cache + fetch eagerly for above-the-fold variants
   useEffect(() => {
-    if (hasAnimated) return; // Only animate once
+    const cached = getCachedStats();
+    if (cached && typeof cached.total_searches === "number") {
+      // Show cached values instantly (no animation — skip straight to the number)
+      fromRef.current = cached.total_searches;
+      setDisplayValue(cached.total_searches);
+      setTotalSearches(cached.total_searches);
+      setHasAnimated(true);
+      if (cached.total_users != null) setTotalUsers(cached.total_users);
+      if (cached.total_monologues && cached.total_film_tv_references) {
+        setLibraryStats({ monologues: cached.total_monologues, filmTv: cached.total_film_tv_references });
+      }
+    }
+    // Always fetch fresh for inline/micro (hero). Section variant waits for IntersectionObserver.
+    if (variant !== "section") {
+      fetchStats();
+    }
+  }, [variant]);
+
+  // Start animation only when component is in viewport (section variant only)
+  useEffect(() => {
+    if (hasAnimated) return;
+    if (variant !== "section") {
+      setHasAnimated(true);
+      return;
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -87,7 +136,7 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
     }
 
     return () => observer.disconnect();
-  }, [hasAnimated]);
+  }, [hasAnimated, variant]);
 
   // Refetch immediately when a demo search completes on the landing page (live update)
   useEffect(() => {

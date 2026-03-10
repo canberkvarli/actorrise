@@ -330,14 +330,14 @@ export default function PricingPage() {
               >
                 {isHighlighted && !isUnlimited && (
                   <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    <span className="bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                       Most popular
                     </span>
                   </div>
                 )}
                 {isUnlimited && (
                   <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-                    <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                    <span className="bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                       Coming soon
                     </span>
                   </div>

@@ -826,8 +826,10 @@ async def upload_scene(
             db.refresh(play)
 
         # Calculate scene metadata
+        from app.utils.duration import estimate_duration_seconds
         total_words = sum(len(line.text.split()) for line in upload.lines)
-        estimated_duration = int((total_words / 150) * 60)  # ~150 words per minute
+        all_line_text = "\n".join(line.text for line in upload.lines)
+        estimated_duration = estimate_duration_seconds(all_line_text)
 
         # Create scene record
         scene = Scene(

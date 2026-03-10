@@ -10,7 +10,7 @@ import React from "react";
  */
 export function renderTextWithStageDirections(
   text: string,
-  directionClassName = "italic text-neutral-500 text-[0.85em]"
+  directionClassName = "italic font-semibold text-neutral-500 text-[0.85em]"
 ): React.ReactNode {
   // Fast path: no brackets at all
   if (!text.includes("[")) return text;

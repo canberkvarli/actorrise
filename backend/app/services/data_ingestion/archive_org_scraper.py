@@ -14,6 +14,8 @@ from sqlalchemy.orm import Session
 
 from app.models.actor import Monologue, Play
 from app.services.extraction.plain_text_parser import PlainTextParser
+from app.utils.duration import estimate_duration_seconds
+from app.utils.monologue_quality_guard import filter_monologues
 
 logger = logging.getLogger(__name__)
 
@@ -244,6 +246,9 @@ class ArchiveOrgScraper:
                 max_words=500
             )
 
+            # Filter out garbage (catalog listings, bibliographic data, etc.)
+            monologues = filter_monologues(monologues, text_key="text")
+
             count = 0
             for mono_data in monologues:
                 monologue = Monologue(
@@ -252,7 +257,7 @@ class ArchiveOrgScraper:
                     character_name=mono_data['character'],
                     text=mono_data['text'],
                     word_count=mono_data['word_count'],
-                    estimated_duration_seconds=int(mono_data['word_count'] / 150 * 60),
+                    estimated_duration_seconds=estimate_duration_seconds(mono_data['text']),
                     is_verified=False  # Will be enriched later
                 )
                 self.db.add(monologue)

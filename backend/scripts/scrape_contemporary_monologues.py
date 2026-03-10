@@ -325,8 +325,9 @@ class ContemporaryMonologueScraper:
                 f"{monologue_data['character_name']} from {monologue_data['play_title']}: {monologue_data['text'][:500]}"
             )
 
-            # Calculate duration (average speaking rate is 150 words/minute)
-            duration_seconds = int((monologue_data['word_count'] / 150) * 60)
+            # Calculate duration using performance-paced heuristic
+            from app.utils.duration import estimate_duration_seconds
+            duration_seconds = estimate_duration_seconds(monologue_data['text'])
 
             # Create monologue record
             monologue = Monologue(

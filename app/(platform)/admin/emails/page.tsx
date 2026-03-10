@@ -607,7 +607,7 @@ export default function AdminEmailsPage() {
                             {bulkRecipients.map((r) => (
                               <span
                                 key={r.email}
-                                className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-xs"
+                                className="inline-flex items-center gap-1 bg-muted px-2.5 py-1 text-xs"
                               >
                                 {r.name ? (
                                   <>
@@ -872,7 +872,7 @@ export default function AdminEmailsPage() {
                       <td className="px-3 py-2 text-muted-foreground truncate max-w-[200px]">{b.subject}</td>
                       <td className="px-3 py-2">
                         {b.campaign_key ? (
-                          <span className="inline-block bg-muted rounded-full px-2 py-0.5 text-xs">{b.campaign_key}</span>
+                          <span className="inline-block bg-muted px-2 py-0.5 text-xs">{b.campaign_key}</span>
                         ) : (
                           <span className="text-muted-foreground/40">—</span>
                         )}
@@ -882,7 +882,7 @@ export default function AdminEmailsPage() {
                       <td className="px-3 py-2 text-center">{clicked > 0 ? clicked : "—"}</td>
                       <td className="px-3 py-2 text-center">{bounced > 0 ? <span className="text-destructive">{bounced}</span> : "—"}</td>
                       <td className="px-3 py-2">
-                        <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                        <span className={`inline-block px-2 py-0.5 text-xs font-medium ${
                           b.status === "completed" ? "bg-green-500/10 text-green-600" :
                           b.status === "failed" ? "bg-destructive/10 text-destructive" :
                           b.status === "processing" ? "bg-primary/10 text-primary" :

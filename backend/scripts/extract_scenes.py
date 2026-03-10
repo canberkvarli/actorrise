@@ -333,9 +333,11 @@ Provide analysis as a JSON object with these exact fields:
                     else:
                         raise ValueError(f"Could not parse JSON from response: {response[:200]}")
 
-            # Calculate estimated duration (150 words per minute)
-            total_words = sum(len(line["text"].split()) for line in scene_data["lines"])
-            duration_seconds = int((total_words / 150) * 60)
+            # Calculate estimated duration using performance-paced heuristic
+            from app.utils.duration import estimate_duration_seconds
+            all_line_text = "\n".join(line["text"] for line in scene_data["lines"])
+            total_words = len(all_line_text.split())
+            duration_seconds = estimate_duration_seconds(all_line_text)
 
             return {
                 **analysis,

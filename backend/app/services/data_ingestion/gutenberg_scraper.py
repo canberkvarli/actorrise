@@ -5,6 +5,8 @@ from typing import List, Dict, Optional
 from sqlalchemy.orm import Session
 from app.services.extraction.plain_text_parser import PlainTextParser
 from app.models.actor import Play, Monologue
+from app.utils.duration import estimate_duration_seconds
+from app.utils.monologue_quality_guard import filter_monologues
 
 
 # Comprehensive list of classical playwrights and their notable works
@@ -324,6 +326,10 @@ class GutenbergScraper:
 
         print(f"  📝 Found {len(monologues)} potential monologues")
 
+        # Filter out garbage (catalog listings, bibliographic data, etc.)
+        monologues = filter_monologues(monologues, text_key="text")
+        print(f"  ✅ {len(monologues)} passed quality check")
+
         # Save monologues
         count = 0
         for mono in monologues:
@@ -335,7 +341,7 @@ class GutenbergScraper:
                     text=mono['text'],
                     stage_directions=mono.get('stage_directions'),
                     word_count=mono['word_count'],
-                    estimated_duration_seconds=int(mono['word_count'] / 150 * 60)  # 150 wpm
+                    estimated_duration_seconds=estimate_duration_seconds(mono['text'])
                 )
                 self.db.add(monologue)
                 count += 1

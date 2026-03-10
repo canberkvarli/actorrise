@@ -890,7 +890,8 @@ async def upload_monologue(
 
         # Calculate word count and duration
         word_count = len(upload.text.split())
-        duration_seconds = int((word_count / 150) * 60)
+        from app.utils.duration import estimate_duration_seconds
+        duration_seconds = estimate_duration_seconds(upload.text)
 
         # Use provided gender/age if available, otherwise use AI analysis
         character_gender = upload.character_gender or analysis.get('character_gender')

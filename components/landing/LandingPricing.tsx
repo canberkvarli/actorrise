@@ -93,7 +93,7 @@ export function LandingPricing() {
   return (
     <section id="pricing" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
       <div className="w-full max-w-[min(1400px,100%)] mx-auto">
-        <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium mb-4">
+        <div className="inline-flex items-center gap-2 border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium mb-4">
           Free forever · No credit card required
         </div>
         <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
@@ -115,7 +115,7 @@ export function LandingPricing() {
                 }`}
               >
                 {isUnlimited && (
-                  <span className="absolute top-4 right-4 rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  <span className="absolute top-4 right-4 bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                     Coming soon
                   </span>
                 )}

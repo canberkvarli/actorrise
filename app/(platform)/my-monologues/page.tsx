@@ -64,18 +64,14 @@ export default function MyMonologuesPage() {
     return [...favorites].sort(cmp);
   }, [favorites, sort]);
 
-  const openMonologue = async (mono: Monologue) => {
+  const openMonologue = (mono: Monologue) => {
     setSelectedMonologue(mono);
-    setIsLoadingDetail(true);
+    setIsLoadingDetail(false);
     setIsReadingMode(false);
-    try {
-      const response = await api.get<Monologue>(`/api/monologues/${mono.id}`);
-      setSelectedMonologue(response.data);
-    } catch (error) {
-      console.error("Error fetching monologue:", error);
-    } finally {
-      setIsLoadingDetail(false);
-    }
+    // Fetch fresh data in background (view count, etc.)
+    api.get<Monologue>(`/api/monologues/${mono.id}`)
+      .then((response) => setSelectedMonologue(response.data))
+      .catch(() => {});
   };
 
   const closeMonologue = () => {
@@ -240,7 +236,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             <IconBookmark className="h-4 w-4" />
             Theater
             {!isLoading && favorites.length > 0 && (
-              <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums">
+              <span className="ml-1 bg-muted px-2 py-0.5 text-xs font-medium tabular-nums">
                 {favorites.length}
               </span>
             )}
@@ -249,7 +245,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             <IconDeviceTv className="h-4 w-4" />
             Film & TV
             {!isLoadingFilmTv && filmTvFavorites.length > 0 && (
-              <span className="ml-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium tabular-nums">
+              <span className="ml-1 bg-muted px-2 py-0.5 text-xs font-medium tabular-nums">
                 {filmTvFavorites.length}
               </span>
             )}

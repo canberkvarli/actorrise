@@ -89,9 +89,9 @@ Provide professional, constructive feedback as if you were a casting director re
         Returns:
             Structured feedback dictionary
         """
-        # Estimate expected duration (rough: 150 words per minute)
-        word_count = len(monologue_text.split())
-        expected_duration = int((word_count / 150) * 60)
+        # Estimate expected duration using performance-paced heuristic
+        from app.utils.duration import estimate_duration_seconds
+        expected_duration = estimate_duration_seconds(monologue_text)
 
         # Prepare the chain
         chain = self.feedback_prompt | self.llm | self.parser

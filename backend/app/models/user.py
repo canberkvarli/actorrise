@@ -28,6 +28,9 @@ class User(Base):
     has_seen_search_tour = Column(Boolean, default=False, nullable=False)
     has_seen_profile_tour = Column(Boolean, default=False, nullable=False)
 
+    # Script upload tracking (monotonic counter — never decremented on delete)
+    total_scripts_uploaded = Column(Integer, default=0, nullable=False, server_default=text('0'))
+
     # Relationships
     actor_profile = relationship("ActorProfile", back_populates="user", uselist=False)
     subscription = relationship("UserSubscription", back_populates="user", uselist=False)
