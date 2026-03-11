@@ -36,9 +36,14 @@ export function LandingStickyCta() {
           className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
         >
           <div className="bg-background/95 backdrop-blur-sm border-t border-border shadow-lg p-4">
-            <Button asChild size="lg" className="w-full h-14 text-base font-semibold">
-              <Link href="/search">Try Free Search</Link>
-            </Button>
+            <div className="flex gap-2">
+              <Button asChild size="lg" className="flex-1 h-14 text-base font-semibold">
+                <Link href="/my-scripts">Start rehearsing</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="flex-1 h-14 text-base">
+                <Link href="/search">Find a piece</Link>
+              </Button>
+            </div>
           </div>
         </motion.div>
       )}

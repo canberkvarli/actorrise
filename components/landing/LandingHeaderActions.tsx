@@ -21,7 +21,7 @@ export function LandingHeaderActions() {
             <Link href="/dashboard">Dashboard</Link>
           </Button>
           <Button asChild size="sm" className="rounded-full px-3 sm:px-5 text-xs sm:text-sm whitespace-nowrap">
-            <Link href="/search">Search</Link>
+            <Link href="/my-scripts">ScenePartner</Link>
           </Button>
         </>
       ) : (
@@ -39,8 +39,8 @@ export function LandingHeaderActions() {
             className="rounded-full px-3 sm:px-5 text-xs sm:text-sm whitespace-nowrap"
             onClick={() => authModal?.openAuthModal("signup")}
           >
-            <span className="hidden sm:inline">Try Free Search</span>
-            <span className="sm:hidden">Try Free</span>
+            <span className="hidden sm:inline">Get started</span>
+            <span className="sm:hidden">Get started</span>
           </Button>
         </>
       )}
