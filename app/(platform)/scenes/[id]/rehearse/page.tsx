@@ -105,9 +105,9 @@ function FeedbackLoadingText() {
 
 /* ─── Review waveform ────────────────────────────────────────────────── */
 
-/** Decode audio blob → waveform peaks, trimming leading silence. */
+/** Decode audio blob → waveform peaks, trimming leading AND trailing silence. */
 function useWaveformData(blob: Blob | null) {
-  const [data, setData] = useState<{ peaks: number[]; speechStartRatio: number } | null>(null);
+  const [data, setData] = useState<{ peaks: number[]; speechStartRatio: number; speechEndRatio: number } | null>(null);
 
   useEffect(() => {
     if (!blob) { setData(null); return; }
@@ -121,20 +121,30 @@ function useWaveformData(blob: Blob | null) {
         const raw = decoded.getChannelData(0);
         audioCtx.close();
 
-        // Find speech start: first sample above noise floor
         const noiseThreshold = 0.02;
+        const pad = Math.floor(decoded.sampleRate * 0.05); // 50ms padding
+
+        // Find speech start: first sample above noise floor
         let speechStart = 0;
         for (let i = 0; i < raw.length; i++) {
           if (Math.abs(raw[i]) > noiseThreshold) { speechStart = i; break; }
         }
-        // Back up slightly so we don't clip the attack
-        speechStart = Math.max(0, speechStart - Math.floor(decoded.sampleRate * 0.05));
-        const speechStartRatio = speechStart / raw.length;
+        speechStart = Math.max(0, speechStart - pad);
 
-        // Downsample to ~60 bars from speech start onward
+        // Find speech end: last sample above noise floor
+        let speechEnd = raw.length;
+        for (let i = raw.length - 1; i >= speechStart; i--) {
+          if (Math.abs(raw[i]) > noiseThreshold) { speechEnd = i; break; }
+        }
+        speechEnd = Math.min(raw.length, speechEnd + pad);
+
+        const speechStartRatio = speechStart / raw.length;
+        const speechEndRatio = speechEnd / raw.length;
+
+        // Downsample to ~60 bars from speech region only
         const barCount = 60;
-        const usableLength = raw.length - speechStart;
-        const samplesPerBar = Math.floor(usableLength / barCount);
+        const usableLength = speechEnd - speechStart;
+        const samplesPerBar = Math.max(1, Math.floor(usableLength / barCount));
         const peaks: number[] = [];
         for (let i = 0; i < barCount; i++) {
           let peak = 0;
@@ -145,11 +155,10 @@ function useWaveformData(blob: Blob | null) {
           }
           peaks.push(peak);
         }
-        // Normalize to 0–1
         const maxPeak = Math.max(...peaks, 0.01);
         const normalized = peaks.map(p => p / maxPeak);
 
-        if (!cancelled) setData({ peaks: normalized, speechStartRatio });
+        if (!cancelled) setData({ peaks: normalized, speechStartRatio, speechEndRatio });
       } catch {
         if (!cancelled) setData(null);
       }
@@ -166,6 +175,7 @@ function ReviewWaveform({
   isPlaying,
   audioRef,
   speechStartRatio,
+  speechEndRatio,
   peaks,
   onToggle,
 }: {
@@ -173,12 +183,14 @@ function ReviewWaveform({
   isPlaying: boolean;
   audioRef: React.RefObject<HTMLAudioElement | null>;
   speechStartRatio: number;
+  speechEndRatio: number;
   peaks: number[];
   onToggle: () => void;
 }) {
   const barContainerRef = useRef<HTMLDivElement>(null);
   const mutedOverlayRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
+  const speechSpan = (speechEndRatio - speechStartRatio) || 1;
 
   // RAF loop — update clipPath on the muted overlay directly (no React re-render)
   useEffect(() => {
@@ -189,20 +201,29 @@ function ReviewWaveform({
       return;
     }
     const audio = audioRef.current;
-    // Show start position immediately before duration is known
-    overlay.style.clipPath = `inset(0 0 0 ${speechStartRatio * 100}%)`;
+    overlay.style.clipPath = 'inset(0 0 0 0%)';
     cancelAnimationFrame(rafRef.current);
     const tick = () => {
       const dur = audio.duration;
       if (isFinite(dur) && dur > 0) {
-        const pct = Math.min(1, audio.currentTime / dur) * 100;
-        overlay.style.clipPath = `inset(0 0 0 ${pct}%)`;
+        const rawPct = audio.currentTime / dur;
+        // Map [speechStartRatio..speechEndRatio] → [0..1]
+        const speechPct = Math.max(0, Math.min(1, (rawPct - speechStartRatio) / speechSpan));
+        overlay.style.clipPath = `inset(0 0 0 ${speechPct * 100}%)`;
+        // Auto-stop at speech end (skip trailing silence)
+        if (rawPct >= speechEndRatio) {
+          audio.pause();
+          audio.currentTime = speechStartRatio * dur;
+          overlay.style.clipPath = 'inset(0 0 0 0%)';
+          onToggle();
+          return; // stop RAF
+        }
       }
       rafRef.current = requestAnimationFrame(tick);
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [isPlaying, audioRef, speechStartRatio]);
+  }, [isPlaying, audioRef, speechStartRatio, speechEndRatio, speechSpan, onToggle]);
 
   // Click-to-seek on waveform
   const handleBarClick = (e: React.MouseEvent) => {
@@ -211,9 +232,8 @@ function ReviewWaveform({
     if (!container || !audio || !isFinite(audio.duration) || audio.duration <= 0) return;
     const rect = container.getBoundingClientRect();
     const clickRatio = (e.clientX - rect.left) / rect.width;
-    const trimmedStart = speechStartRatio * audio.duration;
-    const trimmedDuration = audio.duration - trimmedStart;
-    audio.currentTime = trimmedStart + clickRatio * trimmedDuration;
+    // Map click [0..1] → [speechStart..speechEnd] in audio time
+    audio.currentTime = (speechStartRatio + clickRatio * speechSpan) * audio.duration;
     if (!isPlaying) onToggle();
   };
 
@@ -270,7 +290,7 @@ function LineWaveformPlayer({
   blob: Blob;
   isPlaying: boolean;
   audioRef: React.RefObject<HTMLAudioElement | null>;
-  onToggle: (speechStartRatio: number) => void;
+  onToggle: (speechStartRatio: number, speechEndRatio: number) => void;
 }) {
   const waveData = useWaveformData(blob);
   if (!waveData) return null;
@@ -280,8 +300,9 @@ function LineWaveformPlayer({
       isPlaying={isPlaying}
       audioRef={audioRef}
       speechStartRatio={waveData.speechStartRatio}
+      speechEndRatio={waveData.speechEndRatio}
       peaks={waveData.peaks}
-      onToggle={() => onToggle(waveData.speechStartRatio)}
+      onToggle={() => onToggle(waveData.speechStartRatio, waveData.speechEndRatio)}
     />
   );
 }
@@ -510,14 +531,12 @@ export default function RehearsalPage() {
 
   /* ── Settings ───────────────────────────────────────────────────── */
 
-  const [highlightMyLines] = useState(() =>
-    typeof window !== 'undefined' ? localStorage.getItem('scene_highlight_my_lines') === 'true' : false
-  );
   const [rehearsalSettings] = useState<RehearsalSettings>(() =>
     typeof window !== 'undefined'
       ? getRehearsalSettings()
-      : { pauseBetweenLinesSeconds: 3, skipMyLineIfSilent: false, skipAfterSeconds: 10, countdownSeconds: 3, useAIVoice: true, autoAdvanceOnFinish: true }
+      : { pauseBetweenLinesSeconds: 3, skipMyLineIfSilent: false, skipAfterSeconds: 10, countdownSeconds: 3, useAIVoice: true, highlightMyLines: true, autoAdvanceOnFinish: true }
   );
+  const highlightMyLines = rehearsalSettings.highlightMyLines;
   const [useAIVoice] = useState(() =>
     typeof window !== 'undefined' ? getRehearsalSettings().useAIVoice !== false : true
   );
@@ -677,7 +696,9 @@ export default function RehearsalPage() {
     const lines = orderedLinesRef.current;
     const sess = sessionRef.current;
     const nextIsAlsoAI = sess && nextIdx < lines.length && lines[nextIdx].character_name !== sess.user_character;
-    const pauseMs = nextIsAlsoAI ? 300 : Math.max(600, rehearsalSettings.pauseBetweenLinesSeconds * 1000);
+    // AI→AI: brief 200ms gap. AI→User: minimal 150ms beat (just enough to feel natural),
+    // or user's configured pause if they set it higher than the minimum.
+    const pauseMs = nextIsAlsoAI ? 200 : Math.max(150, rehearsalSettings.pauseBetweenLinesSeconds * 1000);
     pauseTimerRef.current = setTimeout(() => {
       pauseTimerRef.current = null;
       doAdvance();
@@ -723,6 +744,41 @@ export default function RehearsalPage() {
 
   const anySpeaking = isSpeakingBrowser || isSpeakingAI || isLoadingAI;
 
+  /* ── AI word-by-word highlight (estimated from audio progress) ── */
+  const [aiHighlightedWords, setAiHighlightedWords] = useState(0);
+  const aiHighlightRafRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (!isSpeakingAI) {
+      // When speaking ends, highlight all words briefly then clear
+      if (aiHighlightedWords > 0) setAiHighlightedWords(0);
+      if (aiHighlightRafRef.current) cancelAnimationFrame(aiHighlightRafRef.current);
+      return;
+    }
+    const tick = () => {
+      const audio = aiAudioRef.current;
+      if (!audio || !audio.duration || audio.paused) {
+        aiHighlightRafRef.current = requestAnimationFrame(tick);
+        return;
+      }
+      const progress = audio.currentTime / audio.duration;
+      // Get word count from the current AI line text (strip stage dirs)
+      const lineText = lastAiLineRef.current;
+      if (!lineText) { aiHighlightRafRef.current = requestAnimationFrame(tick); return; }
+      const words = stripStageDirections(lineText).split(/\s+/).filter(Boolean);
+      // Use slightly ahead progress so highlight leads the audio naturally
+      const count = Math.min(words.length, Math.ceil(progress * words.length * 1.05));
+      setAiHighlightedWords(count);
+      aiHighlightRafRef.current = requestAnimationFrame(tick);
+    };
+    aiHighlightRafRef.current = requestAnimationFrame(tick);
+    return () => { if (aiHighlightRafRef.current) cancelAnimationFrame(aiHighlightRafRef.current); };
+  }, [isSpeakingAI]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Keep lastAiLine in a ref for the rAF callback
+  const lastAiLineRef = useRef(lastAiLine);
+  lastAiLineRef.current = lastAiLine;
+
   /* ── Speak a line (AI or browser) ──────────────────────────────── */
 
   const speakLine = useCallback((text: string, instructions: string = '', charName?: string) => {
@@ -753,6 +809,7 @@ export default function RehearsalPage() {
       // Scene complete — fade out rehearsal, then show review
       setActiveLineIndex(lines.length - 1);
       setLastAiLine(null);
+      stopAllAudioRef.current(); // kill mic + TTS before entering review
       loadFeedback();
       setSessionDuration(Math.floor((Date.now() - sessionStartTimeRef.current) / 1000));
       // Brief pause so last line highlights are visible, then fade to black
@@ -766,14 +823,14 @@ export default function RehearsalPage() {
     const line = lines[idx];
 
     if (line.character_name !== sess.user_character) {
-      // AI's turn — delay speech slightly so scroll + animation complete before voice starts
+      // AI's turn — tiny delay so scroll settles before voice starts
       setLastAiLine(line.text);
       setAutoListenLineKey(null);
       if (speakDelayRef.current) clearTimeout(speakDelayRef.current);
       speakDelayRef.current = setTimeout(() => {
         speakDelayRef.current = null;
         speakLineRef.current(ttsText(line), ttsInstructions(line, sceneVoiceContextRef.current), line.character_name);
-      }, 220);
+      }, 100);
     } else {
       // User's turn — set up for auto-listen
       setLastAiLine(null);
@@ -838,6 +895,7 @@ export default function RehearsalPage() {
       if (data.lines_remaining != null) setLinesRemaining(data.lines_remaining);
 
       if (data.session_status === 'completed') {
+        stopAllAudioRef.current(); // kill mic + TTS before entering review
         setSessionDuration(Math.floor((Date.now() - sessionStartTimeRef.current) / 1000));
         loadFeedback(); // fire-and-forget — feedback loads while review is already visible
         setFadeToReview(true);
@@ -1351,6 +1409,8 @@ export default function RehearsalPage() {
       pendingAdvanceRef.current = null;
     }
   }, [cancelAI, cancelTranscription, stopListening]);
+  const stopAllAudioRef = useRef(stopAllAudio);
+  stopAllAudioRef.current = stopAllAudio;
 
   const handleExit = useCallback(() => {
     stopAllAudio();
@@ -1383,13 +1443,14 @@ export default function RehearsalPage() {
     }
   }, []);
 
-  const handleRestart = useCallback(async () => {
+  const handleRestart = useCallback(() => {
     if (!session || isRestarting) return;
     setIsRestarting(true);
     stopAllAudio();
-    // Immediately show the loading spinner (whimsical texts) before navigation
+
+    // ── Instantly reset all UI — user sees countdown immediately ──
+    setShowFeedback(false);
     setSessionFeedback(null);
-    // Clear session review data
     setFadeToReview(false);
     lineAudioBlobsRef.current.clear();
     lineTranscriptsRef.current.clear();
@@ -1400,19 +1461,48 @@ export default function RehearsalPage() {
       reviewAudioRef.current = null;
       reviewAudioUrlRef.current = null;
     }
-    try {
-      const { data } = await api.post<{ id: number }>('/api/scenes/rehearse/start', {
-        scene_id: session.scene_id,
-        user_character: session.user_character,
-      });
-      const vp = lastKnownVoiceIdRef.current !== 'coral' ? `&voice=${lastKnownVoiceIdRef.current}` : '';
-      router.replace(`/scenes/${session.scene_id}/rehearse?session=${data.id}&script=${scriptId}${vp}`);
-    } catch {
-      setError('Failed to restart. Please try again.');
-    } finally {
-      setIsRestarting(false);
+    setActiveLineIndex(null);
+    setLastAiLine(null);
+    setAutoListenLineKey(null);
+    autoStartedRef.current = false;
+    bulkPreloadedRef.current = false;
+    sessionStartTimeRef.current = Date.now();
+    bestMatchedRef.current = new Set();
+    setWordMatchResult(null);
+    setLiveMatchedIndices(new Set());
+    setPaused(false);
+    setError(null);
+
+    // Reset the current session to line 0 so auto-start begins from the top
+    setSession(prev => prev ? { ...prev, current_line_index: 0 } : prev);
+
+    // Briefly toggle focusInitialized to re-trigger the auto-start effect
+    setFocusInitialized(false);
+
+    // Trigger countdown immediately (before API responds)
+    const countdownSec = rehearsalSettings.countdownSeconds;
+    if (countdownSec && countdownSec > 0) {
+      setCountdown(countdownSec);
+    } else {
+      setCountdown(null);
     }
-  }, [session, isRestarting, stopAllAudio, router, scriptId]);
+    // Re-enable on next tick so the auto-start effect sees the false→true transition
+    requestAnimationFrame(() => setFocusInitialized(true));
+    setIsRestarting(false);
+
+    // ── Fire API in background — session data arrives silently ──
+    api.post<{ id: number } & Record<string, unknown>>('/api/scenes/rehearse/start', {
+      scene_id: session.scene_id,
+      user_character: session.user_character,
+    }).then(({ data }) => {
+      try { sessionStorage.setItem(`actorrise_session_${data.id}`, JSON.stringify(data)); } catch {}
+      const vp = lastKnownVoiceIdRef.current !== 'coral' ? `&voice=${lastKnownVoiceIdRef.current}` : '';
+      window.history.replaceState(null, '', `/scenes/${session.scene_id}/rehearse?session=${data.id}&script=${scriptId}${vp}`);
+      setSession(data as any);
+    }).catch(() => {
+      setError('Failed to create new session. Please try again.');
+    });
+  }, [session, isRestarting, stopAllAudio, scriptId, rehearsalSettings.countdownSeconds]);
 
   const handleJumpToLine = useCallback((lineIndex: number) => {
     if (!sessionRef.current) return;
@@ -1524,7 +1614,7 @@ export default function RehearsalPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showFeedback]);
 
-  const playLineAudio = useCallback((lineIdx: number, speechStartRatio = 0) => {
+  const playLineAudio = useCallback((lineIdx: number, speechStartRatio = 0, speechEndRatio = 1) => {
     const blob = lineAudioBlobsRef.current.get(lineIdx);
     if (!blob) return;
 
@@ -1618,18 +1708,6 @@ export default function RehearsalPage() {
     const playTitle = sceneWithLines?.play_title || '';
     const showPlayTitle = playTitle && playTitle.toLowerCase() !== sceneTitle.toLowerCase();
 
-    // Loading state: centered spinner
-    if (!sessionFeedback) {
-      return (
-        <div className="fixed inset-0 bg-neutral-950 text-neutral-100 flex items-center justify-center z-[10050]">
-          <div className="flex flex-col items-center gap-4">
-            <div className="w-6 h-6 border-2 border-neutral-700 border-t-neutral-400 rounded-full animate-spin" />
-            <FeedbackLoadingText />
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div className="fixed inset-0 bg-neutral-950 text-neutral-100 flex flex-col z-[10050]">
         <div className="flex-1 overflow-auto flex justify-center px-4 pt-10 pb-4">
@@ -1660,50 +1738,6 @@ export default function RehearsalPage() {
                   <span>{overallAccuracy}% accuracy</span>
                 </>
               )}
-            </div>
-
-            {/* Divider */}
-            <div className="border-t border-neutral-800/60" />
-
-            {/* AI Feedback */}
-            <div className="space-y-5">
-              <p className="text-base text-neutral-300 leading-relaxed">
-                {sessionFeedback.overall_feedback}
-              </p>
-
-              {(sessionFeedback.strengths?.length > 0 || sessionFeedback.areas_to_improve?.length > 0) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {sessionFeedback.strengths?.length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-xs uppercase tracking-widest text-emerald-600 font-semibold">What landed</p>
-                      <ul className="space-y-2">
-                        {sessionFeedback.strengths.map((s: string, i: number) => (
-                          <li key={i} className="text-[15px] text-neutral-300 leading-relaxed pl-4 border-l-2 border-emerald-700/60">
-                            {s}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {sessionFeedback.areas_to_improve?.length > 0 && (
-                    <div className="space-y-3">
-                      <p className="text-xs uppercase tracking-widest text-orange-600 font-semibold">To explore</p>
-                      <ul className="space-y-2">
-                        {sessionFeedback.areas_to_improve.map((a: string, i: number) => (
-                          <li key={i} className="text-[15px] text-neutral-300 leading-relaxed pl-4 border-l-2 border-orange-700/60">
-                            {a}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <p className="text-xs text-neutral-600 leading-relaxed">
-                AI-generated analysis based on your voice input. Trust your instincts.
-              </p>
             </div>
 
             {/* Divider */}
@@ -1770,7 +1804,7 @@ export default function RehearsalPage() {
                               blob={audioBlob}
                               isPlaying={playingLineIdx === idx}
                               audioRef={reviewAudioRef}
-                              onToggle={(speechStartRatio) => playLineAudio(idx, speechStartRatio)}
+                              onToggle={(speechStartRatio, speechEndRatio) => playLineAudio(idx, speechStartRatio, speechEndRatio)}
                             />
                           )}
                           <p className="text-xs text-neutral-600 italic leading-snug">{userTranscript}</p>
@@ -1911,11 +1945,11 @@ export default function RehearsalPage() {
                           : { duration: 0.25, ease: 'easeOut' }
                       }
                       className={cn(
-                        'rounded-lg px-3 sm:px-4 py-3 transition-colors duration-300',
+                        'px-3 sm:px-4 py-2 transition-colors duration-300',
                         !isCurrent && 'cursor-pointer hover:opacity-75',
-                        isCurrentUserLine && 'bg-orange-50/80 ring-1 ring-orange-200/60',
-                        isCurrentAiLine && 'bg-neutral-100/60 ring-1 ring-neutral-200/60',
-                        isUser && !isCurrent && highlightMyLines && 'bg-yellow-50/60',
+                        isCurrentUserLine && 'border-l-2 border-orange-400/70',
+                        isCurrentAiLine && 'border-l-2 border-neutral-300',
+                        isUser && highlightMyLines && 'bg-orange-50/50',
                       )}
                       onClick={() => {
                         if (!isCurrent) handleJumpToLine(lineIdx);
@@ -1987,6 +2021,26 @@ export default function RehearsalPage() {
                           ? renderLineWithWordHighlights(line.text, wordMatchResult)
                           : isCurrentUserLine && liveWordResult
                           ? renderLineWithWordHighlights(line.text, liveWordResult)
+                          : isCurrentAiLine && isSpeakingAI && aiHighlightedWords > 0
+                          ? (() => {
+                              // Progressive word highlight synced to TTS playback
+                              const parts = line.text.split(/(\s+|\[[^\]]*\]|\([^)]*\))/);
+                              let wordIdx = 0;
+                              return parts.map((part, i) => {
+                                // Stage directions and whitespace are not "words"
+                                if (/^\s+$/.test(part) || /^\[.*\]$/.test(part) || /^\(.*\)$/.test(part)) {
+                                  const highlighted = wordIdx <= aiHighlightedWords;
+                                  return <span key={i} className={highlighted ? 'opacity-100' : 'opacity-25'} style={{ transition: 'opacity 0.15s ease' }}>{
+                                    /^\[.*\]$/.test(part) || /^\(.*\)$/.test(part)
+                                      ? <em className="text-neutral-500 font-normal">{part}</em>
+                                      : part
+                                  }</span>;
+                                }
+                                const isHighlighted = wordIdx < aiHighlightedWords;
+                                wordIdx++;
+                                return <span key={i} className={isHighlighted ? 'opacity-100' : 'opacity-25'} style={{ transition: 'opacity 0.15s ease' }}>{part}</span>;
+                              });
+                            })()
                           : renderTextWithStageDirections(line.text)
                         }
                       </p>

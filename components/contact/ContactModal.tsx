@@ -57,15 +57,15 @@ export function ContactModal({ open, onOpenChange, initialCategory }: ContactMod
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !email.trim() || !message.trim()) {
-      toast.error("Please fill in name, email, and message.");
+    if (!name.trim() || !message.trim()) {
+      toast.error("Please fill in name and message.");
       return;
     }
     setSending(true);
     try {
       const { data } = await api.post<{ ok: boolean; message: string }>(
         "/api/contact",
-        { name: name.trim(), email: email.trim(), category, message: message.trim() }
+        { name: name.trim(), email: email.trim() || undefined, category, message: message.trim() }
       );
       toast.success(data?.message ?? "Message sent! I'll get back to you soon.");
       reset();
@@ -105,7 +105,7 @@ export function ContactModal({ open, onOpenChange, initialCategory }: ContactMod
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="contact-email">Email</Label>
+            <Label htmlFor="contact-email">Email <span className="text-muted-foreground font-normal">(optional)</span></Label>
             <Input
               id="contact-email"
               type="email"

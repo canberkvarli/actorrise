@@ -37,6 +37,7 @@ import {
   Trash2,
   MessageSquare,
   Mic,
+  Settings,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
@@ -69,6 +70,7 @@ import {
 } from "@/lib/scenepartnerStorage";
 import { renderTextWithStageDirections } from "@/lib/stageDirections";
 import { ContactModal } from "@/components/contact/ContactModal";
+import { SceneSettingsModal } from "@/components/scenepartner/SceneSettingsModal";
 import { TTSWaveform } from "@/components/scenepartner/TTSWaveform";
 import { useMicPermission } from "@/hooks/useMicPermission";
 
@@ -526,14 +528,14 @@ export default function SceneEditPage() {
     }
   }, [editingLineId]);
 
-  // Highlight my lines
+  // Highlight my lines (synced with rehearsal settings)
   const [highlightMyLines, setHighlightMyLines] = useState(() => {
     if (typeof window === "undefined") return false;
-    return localStorage.getItem("scene_highlight_my_lines") === "true";
+    return getRehearsalSettings().highlightMyLines;
   });
   const toggleHighlight = (on: boolean) => {
     setHighlightMyLines(on);
-    localStorage.setItem("scene_highlight_my_lines", String(on));
+    persistRehearsalSettings({ highlightMyLines: on });
   };
 
   // Add / delete line
@@ -545,6 +547,7 @@ export default function SceneEditPage() {
   const [addingLine, setAddingLine] = useState(false);
   const [deletingLineId, setDeletingLineId] = useState<number | null>(null);
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [rehearsalStartLineIndex, setRehearsalStartLineIndex] = useState<number | null>(null);
   const [editingCharName, setEditingCharName] = useState<1 | 2 | null>(null);
   const [charNameEditValue, setCharNameEditValue] = useState("");
@@ -568,7 +571,7 @@ export default function SceneEditPage() {
   const [rehearsalSettings, setRehearsalSettingsLocal] = useState<RehearsalSettings>(() =>
     typeof window !== "undefined" ? getRehearsalSettings() : {
       pauseBetweenLinesSeconds: 3, skipMyLineIfSilent: false, skipAfterSeconds: 10,
-      countdownSeconds: 3, useAIVoice: true, autoAdvanceOnFinish: true,
+      countdownSeconds: 3, useAIVoice: true, autoAdvanceOnFinish: true, highlightMyLines: true,
     }
   );
   const updateRehearsalSetting = useCallback((partial: Partial<RehearsalSettings>) => {
@@ -3086,6 +3089,11 @@ export default function SceneEditPage() {
         )}
         <span className="hidden sm:inline">{startingRehearsal ? 'Starting...' : 'Rehearse'}</span>
       </Button>
+
+      <SceneSettingsModal
+        open={showSettingsModal}
+        onOpenChange={setShowSettingsModal}
+      />
 
       <UpgradeModal
         open={upgradeModal.open}

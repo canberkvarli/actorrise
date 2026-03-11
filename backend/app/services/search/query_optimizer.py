@@ -721,7 +721,7 @@ def correct_query_typos(raw: str) -> Tuple[str, bool, bool, bool]:
                 stripped = stripped[:len(stripped) - len(s)]
                 break
 
-        key = stripped.lower()
+        key = stripped.lower().strip("!?,.:;\"'()[]")
 
         # Layer 1: exact dictionary hit
         if key in QUERY_TYPO_CORRECTIONS:

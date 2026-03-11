@@ -39,9 +39,9 @@ export const HEIGHT_INCHES = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] as const;
 
 export const BUILD_OPTIONS = [
   "Slender",
-  "Average",
+  "Medium",
   "Athletic",
-  "Heavy",
+  "Curvy",
   "Other",
 ] as const;
 

@@ -47,6 +47,7 @@ export interface RehearsalSettings {
   skipAfterSeconds: number;
   countdownSeconds: number;
   useAIVoice: boolean;
+  highlightMyLines: boolean;
   autoAdvanceOnFinish: boolean;
 }
 
@@ -57,6 +58,7 @@ const DEFAULT_REHEARSAL_SETTINGS: RehearsalSettings = {
   skipAfterSeconds: 10,
   countdownSeconds: 3,
   useAIVoice: true,
+  highlightMyLines: true,
   autoAdvanceOnFinish: true,
 };
 

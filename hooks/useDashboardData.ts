@@ -184,6 +184,38 @@ const DEMO_FILM_TV: FilmTvReference[] = [
   },
 ];
 
+// Full profile response for the profile edit form (cached so revisits are instant)
+export interface FullProfileResponse {
+  name?: string | null;
+  age_range?: string | null;
+  gender?: string | null;
+  ethnicity?: string | null;
+  height?: string | null;
+  build?: string | null;
+  location?: string | null;
+  experience_level?: string | null;
+  type?: string | string[] | null;
+  training_background?: string | null;
+  union_status?: string | null;
+  preferred_genres?: string[] | null;
+  overdone_alert_sensitivity?: number | null;
+  profile_bias_enabled?: boolean | null;
+  headshot_url?: string | null;
+}
+
+export function useProfileFormData() {
+  return useQuery<FullProfileResponse>({
+    queryKey: ["profile-form"],
+    queryFn: async () => {
+      const response = await api.get<FullProfileResponse>("/api/profile", { timeoutMs: DASHBOARD_REQUEST_TIMEOUT_MS });
+      return response.data;
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes — show cached data instantly on revisit
+    gcTime: 10 * 60 * 1000,
+    retry: 1,
+  });
+}
+
 // Hook for profile stats
 export function useProfileStats(isDemoUser: boolean = false) {
   return useQuery<ProfileStats>({
@@ -194,7 +226,7 @@ export function useProfileStats(isDemoUser: boolean = false) {
     },
     enabled: !isDemoUser,
     ...(isDemoUser && { initialData: DEMO_STATS }),
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 30 * 1000, // 30 seconds — profile saves invalidate this, keep it fresh
     gcTime: 10 * 60 * 1000, // 10 minutes
     retry: 1,
   });

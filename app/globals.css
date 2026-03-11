@@ -222,8 +222,7 @@
     background-clip: text;
     color: transparent;
     text-shadow: none;
-    filter: drop-shadow(0 0 12px color-mix(in oklab, var(--primary) 35%, transparent))
-            drop-shadow(0 0 24px color-mix(in oklab, var(--primary) 18%, transparent));
+    filter: none;
   }
   .hero-keyword::selection {
     color: var(--primary-foreground);
