@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ArrowLeft, Edit2, Check, X, Trash2, ChevronRight, ChevronDown, Flag, Settings, Plus
+  ArrowLeft, Edit2, Check, X, Trash2, ChevronRight, ChevronDown, Flag, Plus
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,7 +22,6 @@ import { toast } from "sonner";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { GenreSelect } from "@/components/ui/genre-select";
 import { ScenePreviewTooltip } from "@/components/scenepartner/ScenePreviewTooltip";
-import { SceneSettingsModal } from "@/components/scenepartner/SceneSettingsModal";
 import { AddSceneToScriptModal } from "@/components/scenepartner/AddSceneToScriptModal";
 import { Badge } from "@/components/ui/badge";
 import { getGenreBadgeClassName, getGenreBorderClassName } from "@/lib/genreColors";
@@ -136,7 +135,6 @@ export default function ScriptDetailPage() {
   const [selectedCharacter, setSelectedCharacter] = useState<Record<number, string>>({});
   const [startingRehearsalFor, setStartingRehearsalFor] = useState<number | null>(null);
   const [deleteSceneDialogOpen, setDeleteSceneDialogOpen] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [sceneToDelete, setSceneToDelete] = useState<number | null>(null);
   const [expandedActs, setExpandedActs] = useState<Record<string, boolean | undefined>>({});
   const [reportingSceneId, setReportingSceneId] = useState<number | null>(null);
@@ -340,14 +338,6 @@ export default function ScriptDetailPage() {
         <span className="font-medium text-foreground truncate" aria-current="page">
           {script.title}
         </span>
-        <button
-          type="button"
-          onClick={() => setShowSettingsModal(true)}
-          className="ml-auto h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors shrink-0"
-          title="Rehearsal settings"
-        >
-          <Settings className="w-4 h-4" />
-        </button>
       </nav>
 
       <div className="space-y-8 max-w-3xl">
@@ -447,17 +437,7 @@ export default function ScriptDetailPage() {
                     <div className="divide-y divide-border/40">
                       {script.characters.map((char, i) => (
                         <div key={i} className="px-3 py-2 hover:bg-muted/40 transition-colors">
-                          <div className="flex items-baseline justify-between gap-2">
-                            <span className="text-sm font-medium text-foreground">{char.name}</span>
-                            {(char.gender || char.age_range) && (
-                              <span className="text-[10px] text-muted-foreground/70 shrink-0">
-                                {[char.gender, char.age_range].filter(Boolean).join(" · ")}
-                              </span>
-                            )}
-                          </div>
-                          {char.description && (
-                            <p className="text-xs text-muted-foreground/80 mt-0.5 leading-snug">{char.description}</p>
-                          )}
+                          <span className="text-sm font-medium text-foreground">{char.name}</span>
                         </div>
                       ))}
                     </div>
@@ -935,10 +915,6 @@ export default function ScriptDetailPage() {
         description="This will permanently remove the scene. You can undo in the next few seconds after confirming."
         confirmLabel="Delete scene"
         onConfirm={handleConfirmDeleteScene}
-      />
-      <SceneSettingsModal
-        open={showSettingsModal}
-        onOpenChange={setShowSettingsModal}
       />
 
     </motion.div>
