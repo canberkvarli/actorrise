@@ -11,6 +11,7 @@ import { Monologue } from "@/types/actor";
 import { isMeaningfulMonologueTitle } from "@/lib/utils";
 import { MatchIndicatorTag, accentTeal } from "@/components/search/MatchIndicatorTag";
 import { getEmotionBadgeClassName } from "@/lib/emotionColors";
+import type { QueryHighlights } from "@/lib/queryMatchHighlight";
 
 function getRankLabel(rank: number): string {
   if (rank <= 1) return "Best pick";
@@ -29,6 +30,10 @@ export interface MonologueResultCardProps {
   /** When true and onEdit is provided, show an Edit button (moderator only). */
   isModerator?: boolean;
   onEdit?: (id: number) => void;
+  /** Highlights extracted from the search query — matching badges get a visual ring. */
+  highlightFields?: QueryHighlights;
+  /** Profile match reasons from computeProfileMatch — first one shown as subtle annotation. */
+  profileReasons?: string[];
 }
 
 export function MonologueResultCard({
@@ -40,7 +45,10 @@ export function MonologueResultCard({
   showMatchBadge = true,
   isModerator = false,
   onEdit,
+  highlightFields,
+  profileReasons,
 }: MonologueResultCardProps) {
+  const hl = (match: boolean) => match ? "ring-2 ring-primary/40" : "";
   const isBestMatch = variant === "bestMatch";
   const [justBookmarked, setJustBookmarked] = useState(false);
 
@@ -133,7 +141,7 @@ export function MonologueResultCard({
               {mono.category && (
                 <Badge
                   variant="secondary"
-                  className={`font-normal capitalize ${
+                  className={`font-normal capitalize ${hl(highlightFields?.category === mono.category.toLowerCase())} ${
                     mono.category.toLowerCase() === "classical"
                       ? "bg-amber-500/10 text-amber-700 border-amber-300/40 dark:text-amber-400 dark:border-amber-500/30"
                       : mono.category.toLowerCase() === "contemporary"
@@ -145,17 +153,17 @@ export function MonologueResultCard({
                 </Badge>
               )}
               {mono.character_gender && (
-                <Badge variant="outline" className="font-normal capitalize">
+                <Badge variant="outline" className={`font-normal capitalize ${hl(highlightFields?.gender === mono.character_gender.toLowerCase())}`}>
                   {mono.character_gender}
                 </Badge>
               )}
               {mono.character_age_range && (
-                <Badge variant="outline" className="font-normal">
+                <Badge variant="outline" className={`font-normal ${hl(highlightFields?.age_range === mono.character_age_range.toLowerCase())}`}>
                   {mono.character_age_range}
                 </Badge>
               )}
               {mono.primary_emotion && (
-                <Badge variant="secondary" className={`font-normal capitalize ${getEmotionBadgeClassName(mono.primary_emotion)}`}>
+                <Badge variant="secondary" className={`font-normal capitalize ${hl(highlightFields?.emotion === mono.primary_emotion.toLowerCase())} ${getEmotionBadgeClassName(mono.primary_emotion)}`}>
                   {mono.primary_emotion}
                 </Badge>
               )}
@@ -172,7 +180,7 @@ export function MonologueResultCard({
                 {mono.themes.slice(0, 3).map((theme) => (
                   <span
                     key={theme}
-                    className="text-xs px-2 py-0.5 bg-secondary/10 text-secondary-foreground/90 rounded-md font-medium capitalize"
+                    className={`text-xs px-2 py-0.5 bg-secondary/10 text-secondary-foreground/90 rounded-md font-medium capitalize ${hl(!!highlightFields?.themes?.includes(theme.toLowerCase()))}`}
                   >
                     {theme}
                   </span>
@@ -196,6 +204,9 @@ export function MonologueResultCard({
               {mono.favorite_count}
             </span>
           </div>
+          {profileReasons && profileReasons.length > 0 && (
+            <p className="mt-1.5 text-xs text-muted-foreground/60 italic">{profileReasons[0]}</p>
+          )}
         </CardContent>
       </Card>
     </motion.div>

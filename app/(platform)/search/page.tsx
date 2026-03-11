@@ -77,11 +77,14 @@ import type { EditMonologueBody } from "@/components/admin/EditMonologueModal";
 import { Slider } from "@/components/ui/slider";
 import { ContactModal } from "@/components/contact/ContactModal";
 import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackPrompt";
+import { extractQueryHighlights } from "@/lib/queryMatchHighlight";
+import { ActiveFilterChips } from "@/components/search/ActiveFilterChips";
 import type { FilmTvReference } from "@/types/filmTv";
 import { getFilmTvScriptUrl } from "@/lib/utils";
 import { ScriptSourcePicker } from "@/components/search/ScriptSourcePicker";
 import { useFilmTvFavorites, useToggleFilmTvFavorite } from "@/hooks/useFilmTvFavorites";
-import { useProfileStats } from "@/hooks/useDashboardData";
+import { useProfileStats, useProfileFormData } from "@/hooks/useDashboardData";
+import { computeProfileMatch, type ProfileMatch } from "@/lib/profileMatch";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Dialog,
@@ -114,7 +117,8 @@ export default function SearchPage() {
   /** 0 = freshest only, 0.3 = fresh, 0.5 = some overdone OK, 1 = show all. Separate from filters for clearer UX. */
   const [maxOverdoneScore, setMaxOverdoneScore] = useState(1);
   const [results, setResults] = useState<Monologue[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPlaysLoading, setIsPlaysLoading] = useState(false);
+  const [isFilmTvLoading, setIsFilmTvLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showFiltersSheet, setShowFiltersSheet] = useState(false);
@@ -129,6 +133,7 @@ export default function SearchPage() {
   const panelRef = useRef<HTMLDivElement>(null);
   /** When set, restore effect skips Film & TV block to avoid acting on stale URL after a Plays action. */
   const playsActionAtRef = useRef<number>(0);
+  const filmTvActionAtRef = useRef<number>(0);
 
   /** "plays" = classic monologues; "film_tv" = film/TV reference (metadata-only). Init from URL or last mode to avoid flash. */
   const [searchMode, setSearchMode] = useState<"plays" | "film_tv">(() => {
@@ -138,6 +143,8 @@ export default function SearchPage() {
     if (p.get("mode") === "plays") return "plays";
     return sessionStorage.getItem("search_last_mode_v1") === "film_tv" ? "film_tv" : "plays";
   });
+  // Derived: reflects current mode's loading state (for shared UI like search button)
+  const isLoading = searchMode === "film_tv" ? isFilmTvLoading : isPlaysLoading;
   const [filmTvResults, setFilmTvResults] = useState<FilmTvReference[]>([]);
   const [filmTvTotal, setFilmTvTotal] = useState(0);
   const [filmTvHasSearched, setFilmTvHasSearched] = useState(false);
@@ -162,6 +169,7 @@ export default function SearchPage() {
   const [editMonologueSaving, setEditMonologueSaving] = useState(false);
   const [showProfileCompleteModal, setShowProfileCompleteModal] = useState(false);
   const { data: profileStats } = useProfileStats(isDemoUser);
+  const { data: profileData } = useProfileFormData();
 
   const LAST_SEARCH_KEY = "monologue_search_last_results_v1";
   const FILM_TV_LAST_SEARCH_KEY = "film_tv_search_last_results_v1";
@@ -190,6 +198,7 @@ export default function SearchPage() {
   const [jitter, setJitter] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const searchAbortRef = useRef<AbortController | null>(null);
+  const filmTvAbortRef = useRef<AbortController | null>(null);
 
   // Typewriter placeholder examples
   const PLAYS_EXAMPLES = useMemo(() => [
@@ -208,6 +217,8 @@ export default function SearchPage() {
     "war film, motivational speech",
   ], []);
 
+  const queryHighlights = useMemo(() => extractQueryHighlights(queryUsedForResults || playsQuery), [queryUsedForResults, playsQuery]);
+
   const currentQuery = searchMode === "plays" ? playsQuery : filmTvQuery;
   const typewriterExamples = searchMode === "plays" ? PLAYS_EXAMPLES : FILM_TV_EXAMPLES;
   const { placeholder: typewriterText, pause: pauseTypewriter, scheduleResume: resumeTypewriter } =
@@ -217,15 +228,25 @@ export default function SearchPage() {
     });
 
   const userStoppedRef = useRef(false);
+  const userStoppedModesRef = useRef<Set<"plays" | "film_tv">>(new Set());
   const stopSearch = useCallback(() => {
     userStoppedRef.current = true;
-    if (searchAbortRef.current) {
-      searchAbortRef.current.abort();
-      searchAbortRef.current = null;
+    userStoppedModesRef.current.add(searchMode);
+    if (searchMode === "plays") {
+      if (searchAbortRef.current) {
+        searchAbortRef.current.abort();
+        searchAbortRef.current = null;
+      }
+      setIsPlaysLoading(false);
+    } else {
+      if (filmTvAbortRef.current) {
+        filmTvAbortRef.current.abort();
+        filmTvAbortRef.current = null;
+      }
+      setIsFilmTvLoading(false);
     }
-    setIsLoading(false);
     setIsLoadingMore(false);
-  }, []);
+  }, [searchMode]);
 
   const { data: filmTvFavorites = [] } = useFilmTvFavorites();
   const toggleFilmTvFavoriteMutation = useToggleFilmTvFavorite();
@@ -257,8 +278,11 @@ export default function SearchPage() {
   // Steps are spread evenly across the search duration (not fixed interval)
   // so the last step never "gets stuck" — all 6 finish just before results arrive.
   const loadingStartRef = useRef<number>(0);
+  const searchModeRef = useRef(searchMode);
+  searchModeRef.current = searchMode;
+  const anyLoading = isPlaysLoading || isFilmTvLoading;
   useEffect(() => {
-    if (!isLoading) {
+    if (!anyLoading) {
       loadingStepsTimers.current.forEach(clearTimeout);
       loadingStepsTimers.current = [];
       setLoadingSteps([]);
@@ -266,7 +290,7 @@ export default function SearchPage() {
     }
     loadingStartRef.current = Date.now();
     setLoadingSteps([]);
-    const steps = searchMode === "film_tv" ? FILM_TV_LOADING_STEPS : SEARCH_LOADING_STEPS;
+    const steps = isFilmTvLoading ? FILM_TV_LOADING_STEPS : SEARCH_LOADING_STEPS;
     // Steps spaced to feel synced with a real backend process (~3-8s search).
     // Intervals increase so early steps feel quick, later ones feel like heavy work.
     const delays = [0, 1200, 2800, 4800, 7000, 9500];
@@ -275,7 +299,7 @@ export default function SearchPage() {
     );
     loadingStepsTimers.current = timers;
     return () => timers.forEach(clearTimeout);
-  }, [isLoading, searchMode]);
+  }, [anyLoading, isFilmTvLoading]);
 
   // Auto-scroll: handled via ref callback on the latest step
 
@@ -394,9 +418,18 @@ export default function SearchPage() {
       }
 
       const hasFilmTvParams = urlQuery.trim() !== "" || Object.values(urlFilmTvFilters).some((v) => v !== "");
+      // Skip re-triggering if user just manually stopped this search
+      if (userStoppedModesRef.current.has("film_tv")) {
+        userStoppedModesRef.current.delete("film_tv");
+        return;
+      }
       if (hasFilmTvParams) {
         (async () => {
-          setIsLoading(true);
+    
+          if (filmTvAbortRef.current) filmTvAbortRef.current.abort();
+          const ctrl = new AbortController();
+          filmTvAbortRef.current = ctrl;
+          setIsFilmTvLoading(true);
           setSearchError(null);
           try {
             const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: "1" });
@@ -404,7 +437,7 @@ export default function SearchPage() {
             Object.entries(urlFilmTvFilters).forEach(([key, value]) => {
               if (value) params.set(key, value);
             });
-            const res = await api.get<{ results: FilmTvReference[]; total: number }>(`/api/film-tv/search?${params.toString()}`);
+            const res = await api.get<{ results: FilmTvReference[]; total: number }>(`/api/film-tv/search?${params.toString()}`, { signal: ctrl.signal });
             setFilmTvResults(res.data.results);
             setFilmTvTotal(res.data.total);
             setFilmTvHasSearched(true);
@@ -413,11 +446,14 @@ export default function SearchPage() {
             sessionStorage.setItem(cacheKey, JSON.stringify({ results: res.data.results, total: res.data.total }));
             sessionStorage.setItem(SEARCH_LAST_MODE_KEY, "film_tv");
           } catch {
+            if (filmTvAbortRef.current !== ctrl) return;
             setFilmTvResults([]);
             setFilmTvTotal(0);
             setFilmTvHasSearched(true);
           } finally {
-            setIsLoading(false);
+            if (filmTvAbortRef.current === ctrl) {
+              setIsFilmTvLoading(false);
+            }
           }
         })();
         return;
@@ -436,6 +472,12 @@ export default function SearchPage() {
           console.error("Error restoring last film_tv search:", e);
         }
       }
+      return;
+    }
+
+    // Skip Plays restore if user just switched to Film & TV (URL may not have updated yet).
+    if (filmTvActionAtRef.current && Date.now() - filmTvActionAtRef.current < 1500) {
+      filmTvActionAtRef.current = 0;
       return;
     }
 
@@ -477,9 +519,12 @@ export default function SearchPage() {
 
       if (cachedResults) {
         try {
-          const parsed = JSON.parse(cachedResults) as Monologue[];
+          const cached = JSON.parse(cachedResults);
+          // Support both old format (array) and new format ({items, total})
+          const parsed: Monologue[] = Array.isArray(cached) ? cached : cached.items;
+          const cachedTotal: number = Array.isArray(cached) ? cached.length : cached.total;
           setResults(parsed);
-          setTotal(parsed.length);
+          setTotal(cachedTotal);
           // Restore typo correction banner from cache
           const correctionKey = `search_correction_${urlQuery}_${JSON.stringify(urlFilters)}_${initialMaxOverdone}`;
           const cachedCorrection = sessionStorage.getItem(correctionKey);
@@ -495,6 +540,11 @@ export default function SearchPage() {
           return;
         }
       } else {
+        // Skip re-triggering if user just manually stopped this search
+        if (userStoppedModesRef.current.has("plays")) {
+          userStoppedModesRef.current.delete("plays");
+          return;
+        }
         // If no cache but URL has query, perform fresh search
         performSearch(urlQuery, urlFilters, 1, false, initialMaxOverdone);
         return;
@@ -513,6 +563,7 @@ export default function SearchPage() {
             query: string;
             filters: typeof filters & { exclude_overdone?: string; max_overdone_score?: number };
             results: Monologue[];
+            total?: number;
           };
           setPlaysQuery(last.query);
           setFilters({
@@ -529,7 +580,7 @@ export default function SearchPage() {
           const m = last.filters.max_overdone_score;
           setMaxOverdoneScore(typeof m === "number" && m >= 0 && m <= 1 ? m : last.filters.exclude_overdone === "true" ? 0.3 : 1);
           setResults(last.results);
-          setTotal(last.results.length);
+          setTotal(last.total ?? last.results.length);
           setCorrectedQuery(null);
           setHasSearched(last.results.length > 0);
           setQueryUsedForResults(last.query);
@@ -567,6 +618,7 @@ export default function SearchPage() {
           query: string;
           filters: typeof filters & { exclude_overdone?: string; max_overdone_score?: number };
           results: Monologue[];
+          total?: number;
         };
         setPlaysQuery(last.query);
         setFilters({
@@ -583,7 +635,7 @@ export default function SearchPage() {
         const m = last.filters.max_overdone_score;
         setMaxOverdoneScore(typeof m === "number" && m >= 0 && m <= 1 ? m : last.filters.exclude_overdone === "true" ? 0.3 : 1);
         setResults(last.results);
-        setTotal(last.results.length);
+        setTotal(last.total ?? last.results.length);
         setCorrectedQuery(null);
         setHasSearched(last.results.length > 0);
         setQueryUsedForResults(last.query);
@@ -626,13 +678,14 @@ export default function SearchPage() {
   ) => {
     setShowFiltersSheet(false);
     userStoppedRef.current = false;
+
     // Cancel any in-flight search
     if (searchAbortRef.current) searchAbortRef.current.abort();
     const controller = new AbortController();
     searchAbortRef.current = controller;
     const effectiveMaxOverdone = maxOverdoneScoreOverride ?? maxOverdoneScore;
     if (!append) {
-      setIsLoading(true);
+      setIsPlaysLoading(true);
       setSearchError(null);
       setSearchUpgradeUrl(null);
       setCorrectedQuery(null);
@@ -672,7 +725,7 @@ export default function SearchPage() {
       if (pageNum === 1) {
         playsActionAtRef.current = Date.now();
         const storageKey = `search_results_${searchQuery}_${JSON.stringify(searchFilters)}_${effectiveMaxOverdone}`;
-        sessionStorage.setItem(storageKey, JSON.stringify(newResults));
+        sessionStorage.setItem(storageKey, JSON.stringify({ items: newResults, total: data.total }));
         // Persist correction alongside the cached results so it survives URL-driven restores
         const correctionKey = `search_correction_${searchQuery}_${JSON.stringify(searchFilters)}_${effectiveMaxOverdone}`;
         sessionStorage.setItem(correctionKey, data.corrected_query ?? "");
@@ -683,6 +736,7 @@ export default function SearchPage() {
             query: searchQuery,
             filters: savedFilters,
             results: newResults,
+            total: data.total,
           })
         );
         sessionStorage.setItem(SEARCH_LAST_MODE_KEY, "plays");
@@ -713,6 +767,8 @@ export default function SearchPage() {
       }
     } catch (error: unknown) {
       if (userStoppedRef.current) { userStoppedRef.current = false; return; }
+      // If a newer search replaced this one, ignore the abort error silently
+      if (searchAbortRef.current !== controller) return;
       const res = (error as { response?: { data?: { detail?: string | { message?: string; upgrade_url?: string } } } })?.response;
       const raw = res?.data?.detail;
       const message =
@@ -728,7 +784,11 @@ export default function SearchPage() {
       setSearchUpgradeUrl(upgradeUrl ?? null);
       if (!append) setResults([]);
     } finally {
-      setIsLoading(false);
+      // Only clear loading if this search is still the active one
+      // (a newer search may have replaced our controller)
+      if (searchAbortRef.current === controller) {
+        setIsPlaysLoading(false);
+      }
       setIsLoadingMore(false);
     }
   };
@@ -746,11 +806,12 @@ export default function SearchPage() {
       // Only set filmTvHasSearched and results when we actually run a fetch (query/filters or explicit "Browse all").
       // Cancel any in-flight search
       userStoppedRef.current = false;
-      if (searchAbortRef.current) searchAbortRef.current.abort();
+
+      if (filmTvAbortRef.current) filmTvAbortRef.current.abort();
       const controller = new AbortController();
-      searchAbortRef.current = controller;
+      filmTvAbortRef.current = controller;
       setFilmTvHasSearched(true);
-      setIsLoading(true);
+      setIsFilmTvLoading(true);
       setSearchError(null);
       try {
         const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: "1" });
@@ -795,13 +856,16 @@ export default function SearchPage() {
         router.replace(`/search?${urlParams.toString()}`, { scroll: false });
       } catch (err: unknown) {
         if (userStoppedRef.current) { userStoppedRef.current = false; return; }
+        if (filmTvAbortRef.current !== controller) return;
         const msg = err && typeof err === "object" && "response" in err
           ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
           : "Search failed.";
         setSearchError(typeof msg === "string" ? msg : "Search failed.");
         setFilmTvResults([]);
       } finally {
-        setIsLoading(false);
+        if (filmTvAbortRef.current === controller) {
+          setIsFilmTvLoading(false);
+        }
       }
       return;
     }
@@ -821,7 +885,7 @@ export default function SearchPage() {
       return;
     }
 
-    setIsLoading(true);
+    setIsPlaysLoading(true);
     setHasSearched(true);
     setPlaysQuery(""); // Clear query to show it's AI-based
     setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" }); // Clear filters
@@ -839,6 +903,7 @@ export default function SearchPage() {
           query: "",
           filters: { gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" },
           results: response.data,
+          total: response.data.length,
         })
       );
       sessionStorage.setItem(SEARCH_LAST_MODE_KEY, "plays");
@@ -866,7 +931,7 @@ export default function SearchPage() {
       }
       setResults([]);
     } finally {
-      setIsLoading(false);
+      setIsPlaysLoading(false);
     }
   };
 
@@ -1117,6 +1182,25 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     };
   }, [results]);
 
+  const isPersonalized = !!(
+    profileData?.profile_bias_enabled &&
+    ((profileData.preferred_genres?.length ?? 0) > 0 || profileData.experience_level || profileData.training_background)
+  );
+
+  const profileMatchMap = useMemo(() => {
+    if (!isPersonalized) return new Map<number, ProfileMatch>();
+    const map = new Map<number, ProfileMatch>();
+    results.forEach((mono) => map.set(mono.id, computeProfileMatch(mono, profileData)));
+    return map;
+  }, [results, profileData, isPersonalized]);
+
+  const sortedRelated = useMemo(() => {
+    if (!isPersonalized) return relatedResults;
+    return [...relatedResults].sort(
+      (a, b) => (profileMatchMap.get(b.id)?.score ?? 0) - (profileMatchMap.get(a.id)?.score ?? 0),
+    );
+  }, [relatedResults, profileMatchMap, isPersonalized]);
+
   // Portal: gentle hue-style highlight around the edges (no hard border), soft bloom
   const outlineOverlay =
     typeof document !== "undefined" &&
@@ -1177,10 +1261,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               }`}
               onClick={() => {
                 playsActionAtRef.current = Date.now();
-                // Abort any in-flight search cleanly (suppress error banner)
-                if (searchAbortRef.current) { userStoppedRef.current = true; searchAbortRef.current.abort(); }
                 setSearchMode("plays");
-                setIsLoading(false);
                 setSearchError(null);
                 setOutlineFlash("plays");
                 const params = new URLSearchParams();
@@ -1204,10 +1285,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
               }`}
               onClick={() => {
-                // Abort any in-flight search cleanly (suppress error banner)
-                if (searchAbortRef.current) { userStoppedRef.current = true; searchAbortRef.current.abort(); }
+                filmTvActionAtRef.current = Date.now();
                 setSearchMode("film_tv");
-                setIsLoading(false);
                 setSearchError(null);
                 setOutlineFlash("film_tv");
                 const params = new URLSearchParams();
@@ -1571,15 +1650,16 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               exit={{ opacity: 0, height: 0 }}
               className="hidden md:block mt-4 p-4 bg-card border border-border rounded-lg"
             >
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Row 1: Character filters */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-2.5">
                 {[
                   { key: "gender", label: "Gender", options: ["male", "female", "any"] },
                   { key: "age_range", label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
                   { key: "emotion", label: "Emotion", options: ["joy", "sadness", "anger", "fear", "melancholy", "hope"] },
                   { key: "tone", label: "Tone", options: ["dramatic", "comedic", "dark", "romantic", "philosophical", "contemplative"] },
                   { key: "theme", label: "Theme", options: ["love", "death", "betrayal", "identity", "power", "revenge"] },
-                  { key: "difficulty", label: "Difficulty", options: ["beginner", "intermediate", "advanced"] },
                   { key: "category", label: "Category", options: ["classical", "contemporary"] },
+                  { key: "difficulty", label: "Difficulty", options: ["beginner", "intermediate", "advanced"] },
                   { key: "max_duration", label: "Max Duration", options: [
                     { value: "60", label: "1 min" },
                     { value: "90", label: "1.5 min" },
@@ -1588,13 +1668,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     { value: "300", label: "5 min" },
                   ] },
                 ].map(({ key, label, options }) => (
-                  <div key={key} className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">{label}</Label>
+                  <div key={key} className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">{label}</Label>
                     <Select
                       value={filters[key as keyof typeof filters] || "__any__"}
                       onValueChange={(v) => setFilters({ ...filters, [key]: v === "__any__" ? "" : v })}
                     >
-                      <SelectTrigger className="w-full min-h-[44px] px-3 py-2 text-sm">
+                      <SelectTrigger className="w-full h-9 px-2.5 text-sm">
                         <SelectValue placeholder="Any" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1610,49 +1690,47 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     </Select>
                   </div>
                 ))}
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Author</Label>
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-muted-foreground">Author</Label>
                   <input
                     type="text"
                     placeholder="e.g. Shakespeare"
                     value={filters.author}
                     onChange={(e) => setFilters({ ...filters, author: e.target.value })}
-                    className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
+                    className="w-full h-9 px-2.5 text-sm rounded-md border border-input bg-background"
                   />
                 </div>
-              </div>
-
-              {/* Freshness – separate from category filters, stable layout so nothing shifts */}
-              <div className="mt-4 pt-4 border-t border-border/80 space-y-3">
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs font-medium text-muted-foreground shrink-0">Freshness</Label>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="inline-flex shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm"
-                        aria-label="Freshness filter info"
-                      >
-                        <IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" className="max-w-[260px]">
-                      Filter by how &quot;overdone&quot; a piece is (often used in auditions). Lower = only fresher, less common pieces; higher = include well-known ones.
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <div className="flex items-center gap-4 min-h-[28px]">
-                  <Slider
-                    min={0}
-                    max={1}
-                    step={0.1}
-                    value={maxOverdoneScore}
-                    onValueChange={setMaxOverdoneScore}
-                    className="flex-1 min-w-0"
-                  />
-                  <span className="text-xs text-muted-foreground shrink-0 w-[8.5rem] text-right tabular-nums">
-                    {getFreshnessLabel(maxOverdoneScore)}
-                  </span>
+                <div className="space-y-1 col-span-2 sm:col-span-3 lg:col-span-5">
+                  <div className="flex items-center gap-2">
+                    <Label className="text-[11px] text-muted-foreground shrink-0">Freshness</Label>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          className="inline-flex shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm"
+                          aria-label="Freshness filter info"
+                        >
+                          <IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[260px]">
+                        Filter by how &quot;overdone&quot; a piece is (often used in auditions). Lower = only fresher, less common pieces; higher = include well-known ones.
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Slider
+                      min={0}
+                      max={1}
+                      step={0.1}
+                      value={maxOverdoneScore}
+                      onValueChange={setMaxOverdoneScore}
+                      className="flex-1 min-w-0"
+                    />
+                    <span className="text-xs text-muted-foreground shrink-0 w-[8.5rem] text-right tabular-nums">
+                      {getFreshnessLabel(maxOverdoneScore)}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -1716,7 +1794,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         <AnimatePresence mode="wait">
           {searchMode === "film_tv" ? (
             /* Film & TV results */
-            isLoading ? (
+            isFilmTvLoading ? (
               <motion.div
                 key="film-tv-loading"
                 initial={{ opacity: 0 }}
@@ -1821,6 +1899,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </Card>
             ) : (
               <div id="search-results" className="space-y-4">
+                <ActiveFilterChips
+                  filters={filmTvFilters}
+                  labels={{ type: "Type", genre: "Genre", year_min: "From", year_max: "To", imdb_rating_min: "Min Rating", director: "Director" }}
+                  onRemove={(key) => setFilmTvFilters((f) => ({ ...f, [key]: "" }))}
+                  onClearAll={() => setFilmTvFilters({ type: "", genre: "", year_min: "", year_max: "", director: "", imdb_rating_min: "" })}
+                />
                 {/* Results header: count left, feedback center, Bookmarked only right (one row, same as plays) */}
                 {(() => {
                   const filmTvBookmarked = filmTvResults.filter((r) => savedFilmTvIds.has(r.id));
@@ -1899,7 +1983,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 })()}
               </div>
             )
-          ) : isLoading ? (
+          ) : isPlaysLoading ? (
             <motion.div
               key="plays-loading"
               initial={{ opacity: 0 }}
@@ -2002,6 +2086,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </motion.div>
           ) : results.length > 0 ? (
             <div id="search-results" className="space-y-4">
+              <ActiveFilterChips
+                filters={filters}
+                labels={{ gender: "Gender", age_range: "Age", emotion: "Emotion", theme: "Theme", category: "Category", tone: "Tone", difficulty: "Difficulty", author: "Author", max_duration: "Max Duration" }}
+                onRemove={(key) => setFilters((f) => ({ ...f, [key]: "" }))}
+                onClearAll={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" })}
+              />
               {correctedQuery &&
                 (queryUsedForResults ?? "").trim().toLowerCase() !== correctedQuery.trim().toLowerCase() && (
                 <div className="flex items-start gap-3 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-foreground max-w-lg">
@@ -2039,11 +2129,19 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </p>
                 </div>
               )}
+              {/* Profile completeness nudge — only when user has searched but has no personalization data */}
+              {hasSearched && results.length > 0 && profileData && !isPersonalized &&
+                !profileData.preferred_genres?.length && !profileData.experience_level && !isDemoUser && (
+                <div className="flex items-center gap-3 px-4 py-2.5 rounded border border-border bg-muted/30 text-sm text-muted-foreground">
+                  <span>Complete your profile to get personalized results.</span>
+                  <Link href="/profile" className="text-primary underline underline-offset-2 shrink-0">Set it up →</Link>
+                </div>
+              )}
               {/* Results header: 3-col grid on desktop so feedback is always truly centered */}
-              <div className="flex flex-col gap-3 mb-8 sm:grid sm:grid-cols-[auto_1fr_auto] sm:items-center sm:gap-4">
+              <div className="flex flex-col gap-3 mb-8 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4">
                 {/* Left: count + mobile bookmark */}
                 <div className="flex items-center justify-between sm:justify-start gap-3 min-w-0">
-                  <div className="flex flex-col gap-0.5 shrink-0">
+                  <div className="flex flex-col gap-0.5 min-w-0">
                     <div className="flex items-baseline gap-2 flex-wrap">
                       <span className="text-2xl font-semibold tabular-nums text-foreground">
                         {showBookmarkedOnly
@@ -2073,6 +2171,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         </>
                       )}
                     </div>
+                    {isPersonalized && !showBookmarkedOnly && (
+                      <span className="text-xs text-primary/60">Matched to your profile</span>
+                    )}
                   </div>
                   <Button
                     variant={showBookmarkedOnly ? "secondary" : "outline"}
@@ -2106,7 +2207,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
               {/* Unified results grid: Best Match + Related use same card layout; hide confidence for broad queries */}
               {(() => {
-                const relatedOrBookmarked = showBookmarkedOnly ? results.filter((m) => m.is_favorited) : relatedResults;
+                const relatedOrBookmarked = showBookmarkedOnly ? results.filter((m) => m.is_favorited) : sortedRelated;
                 const hasCards = (!showBookmarkedOnly && bestMatches.length > 0) || relatedOrBookmarked.length > 0;
                 if (!hasCards) return null;
                 // Show match badges for all semantic results (score > 0.1 check is in the card itself).
@@ -2137,6 +2238,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           showMatchBadge={showBadges}
                           isModerator={!!user?.is_moderator}
                           onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
+                          highlightFields={queryHighlights}
+                          profileReasons={(profileMatchMap.get(mono.id)?.score ?? 0) >= 2 ? profileMatchMap.get(mono.id)?.reasons : undefined}
                         />
                       ))}
                       {relatedOrBookmarked.map((mono, idx) => (
@@ -2150,6 +2253,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           showMatchBadge={showBadges}
                           isModerator={!!user?.is_moderator}
                           onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
+                          highlightFields={queryHighlights}
+                          profileReasons={(profileMatchMap.get(mono.id)?.score ?? 0) >= 2 ? profileMatchMap.get(mono.id)?.reasons : undefined}
                         />
                       ))}
                     </div>

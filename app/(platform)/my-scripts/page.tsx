@@ -7,7 +7,6 @@ import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import UnderConstructionScripts from "@/components/UnderConstructionScripts";
 import { ScenePartnerTutorial } from "@/components/scenepartner/ScenePartnerTutorial";
 import { ScenePartnerAudioCheck } from "@/components/scenepartner/ScenePartnerAudioCheck";
-import { SceneSettingsModal } from "@/components/scenepartner/SceneSettingsModal";
 import { getScenePartnerTutorialSeen, getScenePartnerAudioCheckDone } from "@/lib/scenepartnerStorage";
 import { NewSceneModal } from "@/components/scenepartner/NewSceneModal";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,7 +39,6 @@ import {
   Plus,
   Check,
   Flag,
-  Settings,
   Zap,
   BookOpen,
 } from "lucide-react";
@@ -175,7 +173,6 @@ export default function MyScriptsPage() {
   const [progressSteps, setProgressSteps] = useState<{ group: string; detail: string }[]>([]);
   const [extractionDone, setExtractionDone] = useState(false);
   const [showNewSceneModal, setShowNewSceneModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [deleteScriptDialogOpen, setDeleteScriptDialogOpen] = useState(false);
   const [scriptToDelete, setScriptToDelete] = useState<number | null>(null);
   // Pre-extraction scan + choice dialog state
@@ -707,13 +704,6 @@ export default function MyScriptsPage() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-serif">My Scripts</h1>
-              <button
-                onClick={() => setShowSettingsModal(true)}
-                className="text-muted-foreground/60 hover:text-foreground transition-colors p-1 rounded-md hover:bg-muted/50"
-                title="Settings"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
             </div>
             <p className="text-muted-foreground text-sm max-w-xl mt-1.5">
               Each script can have one or more scenes. <strong>New Script</strong>: create from scratch. <strong>Upload</strong> or <strong>Paste</strong>: we extract scenes from a file or text.
@@ -974,10 +964,6 @@ export default function MyScriptsPage() {
         open={showNewSceneModal}
         onOpenChange={setShowNewSceneModal}
         onSuccess={() => mutateScripts()}
-      />
-      <SceneSettingsModal
-        open={showSettingsModal}
-        onOpenChange={setShowSettingsModal}
       />
       <ConfirmDeleteDialog
         open={deleteScriptDialogOpen}

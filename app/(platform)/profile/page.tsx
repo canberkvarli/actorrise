@@ -21,7 +21,7 @@ export default function ProfilePage() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Actor Profile</h1>
         <p className="text-muted-foreground">
-          Better profile = better matches and recommendations. Saved automatically.
+          Better profile = better matches and recommendations.
         </p>
       </div>
       <ActorProfileForm />

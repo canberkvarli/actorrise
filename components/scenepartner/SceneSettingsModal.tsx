@@ -33,6 +33,7 @@ export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSet
       skipAfterSeconds: 10,
       countdownSeconds: 3,
       useAIVoice: true,
+      highlightMyLines: true,
       autoAdvanceOnFinish: true,
     }
   );
@@ -108,19 +109,6 @@ export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSet
           <div className="space-y-3">
             <h3 className="text-base font-semibold">Line Delivery</h3>
 
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <Label className="text-sm font-normal">Continue after I deliver my line</Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Automatically move to the next cue once you finish speaking.
-                </p>
-              </div>
-              <Switch
-                checked={settings.autoAdvanceOnFinish}
-                onCheckedChange={(v) => update({ autoAdvanceOnFinish: v })}
-              />
-            </div>
-
             <div className="space-y-2">
               <Label className="text-sm font-normal">Breathing room between lines</Label>
               <p className="text-xs text-muted-foreground">
@@ -167,6 +155,25 @@ export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSet
                 </div>
               </div>
             )}
+          </div>
+
+          <div className="border-t border-border/60" />
+
+          {/* Display */}
+          <div className="space-y-3">
+            <h3 className="text-base font-semibold">Display</h3>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <Label className="text-sm font-normal">Highlight my lines</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Adds a subtle background to your lines so they stand out in the script.
+                </p>
+              </div>
+              <Switch
+                checked={settings.highlightMyLines}
+                onCheckedChange={(v) => update({ highlightMyLines: v })}
+              />
+            </div>
           </div>
 
           <div className="border-t border-border/60" />

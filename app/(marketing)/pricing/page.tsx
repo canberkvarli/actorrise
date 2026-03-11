@@ -125,7 +125,8 @@ export default function PricingPage() {
   const { data: tiers = DEFAULT_PRICING_TIERS, isLoading } = usePricingTiers();
 
   const formatPrice = (cents: number) => {
-    return `$${(cents / 100).toFixed(0)}`;
+    const dollars = cents / 100;
+    return dollars % 1 === 0 ? `$${dollars.toFixed(0)}` : `$${dollars.toFixed(2)}`;
   };
 
   const calculateSavings = (monthly: number, annual: number) => {
@@ -228,7 +229,7 @@ export default function PricingPage() {
           animate={{ opacity: 1, y: 0 }}
           className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium mb-6"
         >
-          Free forever · No credit card required
+          Free while in early access · No credit card required
         </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: -20 }}
@@ -312,7 +313,6 @@ export default function PricingPage() {
               : null;
 
           const isHighlighted = tier.name === "plus";
-          const isUnlimited = tier.name === "unlimited";
           const features = getFeaturesList(tier);
 
           return (
@@ -325,20 +325,13 @@ export default function PricingPage() {
             >
               <Card
                 className={`h-full flex flex-col relative border border-border/50 shadow-none ${
-                  isUnlimited ? "bg-muted/20 opacity-75 grayscale-[0.4]" : isHighlighted ? "bg-muted/40" : "bg-muted/20"
+                  isHighlighted ? "bg-muted/40" : "bg-muted/20"
                 }`}
               >
-                {isHighlighted && !isUnlimited && (
+                {isHighlighted && (
                   <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
                     <span className="bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                       Most popular
-                    </span>
-                  </div>
-                )}
-                {isUnlimited && (
-                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-                    <span className="bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
-                      Coming soon
                     </span>
                   </div>
                 )}
@@ -350,22 +343,24 @@ export default function PricingPage() {
                   </div>
                   <CardDescription>{tier.description}</CardDescription>
 
-                  <div className="mt-4">
-                    <div className="flex items-baseline gap-1">
-                      <span className="text-4xl font-bold">{formatPrice(price)}</span>
-                      <span className="text-muted-foreground">/month</span>
+                  {price > 0 && (
+                    <div className="mt-4">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-4xl font-bold">{formatPrice(price)}</span>
+                        <span className="text-muted-foreground">/month</span>
+                      </div>
+                      {isAnnual && tier.annual_price_cents && tier.annual_price_cents > 0 && (
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Billed annually at {formatPrice(tier.annual_price_cents)}
+                        </p>
+                      )}
+                      {isAnnual && savings && savings.savings > 0 && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Save {formatPrice(savings.savings)}/year
+                        </p>
+                      )}
                     </div>
-                    {isAnnual && tier.annual_price_cents && tier.annual_price_cents > 0 && (
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Billed annually at {formatPrice(tier.annual_price_cents)}
-                      </p>
-                    )}
-                    {isAnnual && savings && (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        Save {formatPrice(savings.savings)}/year
-                      </p>
-                    )}
-                  </div>
+                  )}
                 </CardHeader>
 
                 <CardContent className="flex-1">
@@ -380,28 +375,22 @@ export default function PricingPage() {
                 </CardContent>
 
                 <CardFooter className="mt-auto">
-                  {isUnlimited ? (
-                    <Button variant="outline" size="lg" className="w-full" disabled>
-                      Coming soon
-                    </Button>
-                  ) : (
-                    <Button
-                      asChild
-                      variant="outline"
-                      size="lg"
-                      className="w-full"
+                  <Button
+                    asChild
+                    variant="outline"
+                    size="lg"
+                    className="w-full"
+                  >
+                    <Link
+                      href={
+                        tier.name === "free"
+                          ? "/signup"
+                          : `/checkout?tier=${tier.name}&period=${isAnnual ? "annual" : "monthly"}`
+                      }
                     >
-                      <Link
-                        href={
-                          tier.name === "free"
-                            ? "/signup"
-                            : `/checkout?tier=${tier.name}&period=${isAnnual ? "annual" : "monthly"}`
-                        }
-                      >
-                        {tier.name === "free" ? "Try Free Search" : "Subscribe"}
-                      </Link>
-                    </Button>
-                  )}
+                      {tier.name === "free" ? "Get started free" : "Subscribe"}
+                    </Link>
+                  </Button>
                 </CardFooter>
               </Card>
             </motion.div>

@@ -20,6 +20,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { IconLoader2, IconInfoCircle, IconPhoto, IconEdit, IconX, IconUser, IconBriefcase, IconSettings, IconSparkles, IconTrash, IconUpload } from "@tabler/icons-react";
 import { PhotoEditor } from "./PhotoEditor";
+import { useProfileFormData, type FullProfileResponse } from "@/hooks/useDashboardData";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -68,7 +69,9 @@ type ProfileFormData = z.infer<typeof profileSchema>;
 
 export function ActorProfileForm() {
   const queryClient = useQueryClient();
-  const [isFetching, setIsFetching] = useState(true);
+  const { data: cachedProfile, isLoading: isQueryLoading, isFetching: isQueryFetching } = useProfileFormData();
+  // Show skeleton only on very first load (no cached data at all). Revisits render instantly.
+  const isFetching = isQueryLoading && !cachedProfile;
   const [isLoading, setIsLoading] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | null>(null);
   const [headshotPreview, setHeadshotPreview] = useState<string | null>(null);
@@ -79,7 +82,8 @@ export function ActorProfileForm() {
   const [hasInitialized, setHasInitialized] = useState(false);
   /** Actor types - multi-select; when non-empty we save type as array */
   const [actorTypes, setActorTypes] = useState<string[]>([]);
-  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasPopulatedRef = useRef(false);
+  const saveAbortRef = useRef<AbortController | null>(null);
   const saveStatusTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const {
@@ -215,315 +219,217 @@ export function ActorProfileForm() {
 
   const heightParsed = useMemo(() => parseHeight(height), [height]);
 
-  const fetchProfile = useCallback(async () => {
-    try {
-      setIsFetching(true);
-      console.log("Fetching profile...");
-      type ProfileResponse = {
-        name?: string | null;
-        age_range?: string | null;
-        gender?: string | null;
-        ethnicity?: string | null;
-        height?: string | null;
-        build?: string | null;
-        location?: string | null;
-        experience_level?: string | null;
-        type?: string | string[] | null;
-        training_background?: string | null;
-        union_status?: string | null;
-        preferred_genres?: string[] | null;
-        overdone_alert_sensitivity?: number | null;
-        profile_bias_enabled?: boolean | null;
-        headshot_url?: string | null;
-      };
-      const response = await api.get<ProfileResponse>("/api/profile");
-      const profile = response.data;
-      
-      const rawType = profile.type;
-      let typeValue = "";
-      if (rawType) {
-        if (Array.isArray(rawType)) {
-          setActorTypes(rawType.map((t: unknown) => String(t)));
-          typeValue = "";
-        } else {
-          setActorTypes([]);
-          typeValue = String(rawType);
-        }
+  // Populate form from React Query cached data — runs only once per mount
+  useEffect(() => {
+    if (hasPopulatedRef.current || !cachedProfile) return;
+    hasPopulatedRef.current = true;
+    const profile = cachedProfile;
+
+    const rawType = profile.type;
+    let typeValue = "";
+    if (rawType) {
+      if (Array.isArray(rawType)) {
+        const allTypes = rawType.map((t: unknown) => String(t));
+        const actorTypeIds = ACTOR_TYPE_IDS as readonly string[];
+        const actorTypeValues = allTypes.filter((t) => actorTypeIds.includes(t));
+        const characterType = allTypes.find((t) => !actorTypeIds.includes(t));
+        setActorTypes(actorTypeValues);
+        typeValue = characterType || "";
       } else {
         setActorTypes([]);
+        typeValue = String(rawType);
       }
-
-      const formData = {
-        name: profile.name || "",
-        age_range: profile.age_range || "",
-        gender: profile.gender || "",
-        ethnicity: profile.ethnicity || "",
-        height: profile.height || "",
-        build: profile.build || "",
-        location: profile.location || "",
-        experience_level: profile.experience_level || "",
-        type: typeValue,
-        training_background: profile.training_background || "",
-        union_status: profile.union_status || "",
-        preferred_genres: Array.isArray(profile.preferred_genres) ? profile.preferred_genres : [],
-        overdone_alert_sensitivity: profile.overdone_alert_sensitivity ?? 0.5,
-        profile_bias_enabled: profile.profile_bias_enabled ?? true,
-        headshot_url: profile.headshot_url || "",
-      };
-      console.log("Resetting form with data:", formData);
-      reset(formData, {
-        keepDefaultValues: false,
-        keepDirty: false,
-        keepErrors: false,
-      });
-      
-      if (profile.headshot_url) {
-        // Clean the URL - remove trailing query params, fragments, and whitespace
-        const cleanUrl = profile.headshot_url.trim().split('?')[0].split('#')[0];
-        console.log("Setting headshot preview to:", cleanUrl);
-        setHeadshotPreview(cleanUrl);
-      } else {
-        console.log("No headshot_url in profile");
-        setHeadshotPreview(null);
-      }
-      
-      const loadedActorTypes = Array.isArray(rawType) ? rawType.map((t: unknown) => String(t)) : [];
-      prevValuesRef.current = {
-        name: profile.name || "",
-        ageRange: profile.age_range || "",
-        gender: profile.gender || "",
-        ethnicity: profile.ethnicity || "",
-        height: profile.height || "",
-        build: profile.build || "",
-        location: profile.location || "",
-        experienceLevel: profile.experience_level || "",
-        type: Array.isArray(profile.type) ? "" : (typeof profile.type === 'string' ? profile.type : ""),
-        actorTypes: loadedActorTypes,
-        trainingBackground: profile.training_background || "",
-        unionStatus: profile.union_status || "",
-        preferredGenres: Array.isArray(profile.preferred_genres) ? profile.preferred_genres : [],
-        overdoneSensitivity: profile.overdone_alert_sensitivity ?? 0.5,
-        profileBias: profile.profile_bias_enabled ?? true,
-        headshotUrl: profile.headshot_url || "",
-      };
-      
-      console.log("Profile loaded successfully");
-    } catch (err: unknown) {
-      const error = err as { response?: { status?: number } };
-      if (error.response?.status !== 404) {
-        console.error("Failed to load profile:", err);
-        toast.error("Failed to load profile");
-      } else {
-        console.log("No profile found (404), starting with empty form");
-        // Initialize with empty values
-        prevValuesRef.current = {
-          name: "",
-          ageRange: "",
-          gender: "",
-          ethnicity: "",
-          height: "",
-          build: "",
-          location: "",
-          experienceLevel: "",
-          type: "",
-          actorTypes: [],
-          trainingBackground: "",
-          unionStatus: "",
-          preferredGenres: [],
-          overdoneSensitivity: 0.5,
-          profileBias: true,
-          headshotUrl: "",
-        };
-        setActorTypes([]);
-      }
-    } finally {
-      setIsFetching(false);
-      // Mark as initialized after fetching - give time for form to update
-      setTimeout(() => {
-        setHasInitialized(true);
-      }, 300);
-    }
-  }, [reset]);
-
-  useEffect(() => {
-    fetchProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Only run once on mount
-
-
-  // Auto-save functionality with debouncing - only trigger when values actually change
-  useEffect(() => {
-    // Don't auto-save until profile is fetched and form is initialized
-    if (!hasInitialized || isFetching) {
-      return;
+    } else {
+      setActorTypes([]);
     }
 
-    const currentValues = {
-      name,
-      ageRange,
-      gender,
-      ethnicity,
-      height,
-      build,
-      location,
-      experienceLevel,
-      type,
-      actorTypes,
-      trainingBackground,
-      unionStatus,
-      preferredGenres: preferredGenresValue,
-      overdoneSensitivity,
-      profileBias,
-      headshotUrl,
+    const formData = {
+      name: profile.name || "",
+      age_range: profile.age_range || "",
+      gender: profile.gender || "",
+      ethnicity: profile.ethnicity || "",
+      height: profile.height || "",
+      build: profile.build || "",
+      location: profile.location || "",
+      experience_level: profile.experience_level || "",
+      type: typeValue,
+      training_background: profile.training_background || "",
+      union_status: profile.union_status || "",
+      preferred_genres: Array.isArray(profile.preferred_genres) ? profile.preferred_genres : [],
+      overdone_alert_sensitivity: profile.overdone_alert_sensitivity ?? 0.5,
+      profile_bias_enabled: profile.profile_bias_enabled ?? true,
+      headshot_url: profile.headshot_url || "",
+    };
+    reset(formData, { keepDefaultValues: false, keepDirty: false, keepErrors: false });
+
+    if (profile.headshot_url) {
+      const cleanUrl = profile.headshot_url.trim().split('?')[0].split('#')[0];
+      setHeadshotPreview(cleanUrl);
+    } else {
+      setHeadshotPreview(null);
+    }
+
+    const actorTypeIds = ACTOR_TYPE_IDS as readonly string[];
+    const loadedActorTypes = Array.isArray(rawType)
+      ? rawType.map((t: unknown) => String(t)).filter((t) => actorTypeIds.includes(t))
+      : [];
+    prevValuesRef.current = {
+      name: profile.name || "",
+      ageRange: profile.age_range || "",
+      gender: profile.gender || "",
+      ethnicity: profile.ethnicity || "",
+      height: profile.height || "",
+      build: profile.build || "",
+      location: profile.location || "",
+      experienceLevel: profile.experience_level || "",
+      type: typeValue,
+      actorTypes: loadedActorTypes,
+      trainingBackground: profile.training_background || "",
+      unionStatus: profile.union_status || "",
+      preferredGenres: Array.isArray(profile.preferred_genres) ? profile.preferred_genres : [],
+      overdoneSensitivity: profile.overdone_alert_sensitivity ?? 0.5,
+      profileBias: profile.profile_bias_enabled ?? true,
+      headshotUrl: profile.headshot_url || "",
     };
 
-    // Check if anything actually changed
-    const prevValues = prevValuesRef.current;
-    const hasChanged = Object.keys(currentValues).some(
-      (key) => {
-        const typedKey = key as keyof typeof currentValues;
-        return JSON.stringify(prevValues[typedKey as keyof PreviousValues]) !== JSON.stringify(currentValues[typedKey]);
-      }
-    );
+    // Mark initialized after React flushes form values
+    setTimeout(() => setHasInitialized(true), 30);
+  }, [cachedProfile, reset]);
 
-    if (!hasChanged) {
-      return; // No changes, don't save
+
+  // Build save payload from current form + actorTypes state
+  const buildSaveData = useCallback(() => {
+    const data = getValues();
+    type SaveData = {
+      name: string | null;
+      age_range: string | null;
+      gender: string | null;
+      ethnicity: string | null;
+      height: string | null;
+      build: string | null;
+      location: string | null;
+      experience_level: string | null;
+      type: string | string[] | null;
+      training_background: string | null;
+      union_status: string | null;
+      preferred_genres: string[];
+      overdone_alert_sensitivity: number;
+      profile_bias_enabled: boolean;
+      headshot_url: string | null;
+    };
+    const saveData: SaveData = {
+      name: data.name?.trim() || null,
+      age_range: data.age_range?.trim() || null,
+      gender: data.gender?.trim() || null,
+      location: data.location?.trim() || null,
+      experience_level: data.experience_level?.trim() || null,
+      union_status: data.union_status?.trim() || null,
+      type: null,
+      ethnicity: data.ethnicity?.trim() || null,
+      height: data.height?.trim() || null,
+      build: data.build?.trim() || null,
+      training_background: data.training_background?.trim() || null,
+      headshot_url: data.headshot_url?.trim() || null,
+      preferred_genres: Array.isArray(data.preferred_genres) ? data.preferred_genres : [],
+      overdone_alert_sensitivity: Number(data.overdone_alert_sensitivity ?? 0.5),
+      profile_bias_enabled: Boolean(data.profile_bias_enabled ?? true),
+    };
+    // Actor types + character type
+    if (actorTypes.length > 0) {
+      const charType = data.type?.trim();
+      saveData.type = charType && !actorTypes.includes(charType) ? [...actorTypes, charType] : actorTypes;
+    } else if (data.type && data.type.trim()) {
+      saveData.type = data.type.trim();
     }
+    return saveData;
+  }, [getValues, actorTypes]);
 
-    // Update previous values
+  // Auto-save: fires immediately on change, cancels previous in-flight request
+  useEffect(() => {
+    if (!hasInitialized || isQueryLoading) return;
+
+    const currentValues = {
+      name, ageRange, gender, ethnicity, height, build, location,
+      experienceLevel, type, actorTypes, trainingBackground, unionStatus,
+      preferredGenres: preferredGenresValue, overdoneSensitivity, profileBias, headshotUrl,
+    };
+
+    const prevValues = prevValuesRef.current;
+    const hasChanged = Object.keys(currentValues).some((key) => {
+      const typedKey = key as keyof typeof currentValues;
+      return JSON.stringify(prevValues[typedKey as keyof PreviousValues]) !== JSON.stringify(currentValues[typedKey]);
+    });
+
+    if (!hasChanged) return;
     prevValuesRef.current = currentValues;
 
-    // Clear existing timeout
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
+    // Cancel previous in-flight save
+    if (saveAbortRef.current) saveAbortRef.current.abort();
+    const abort = new AbortController();
+    saveAbortRef.current = abort;
 
-    // Set new timeout for auto-save (2 seconds after last change)
-    saveTimeoutRef.current = setTimeout(async () => {
-      const data = getValues();
-      console.log("Auto-save triggered, form data:", data);
+    const saveData = buildSaveData();
 
-      // Build save data - only include fields that have values (not empty strings)
-      // Convert empty strings to null for optional fields to avoid validation errors
-      type SaveData = Partial<{
-        name: string;
-        age_range: string;
-        gender: string;
-        ethnicity: string | null;
-        height: string | null;
-        build: string | null;
-        location: string;
-        experience_level: string;
-        type: string | string[];
-        training_background: string | null;
-        union_status: string;
-        preferred_genres: string[];
-        overdone_alert_sensitivity: number;
-        profile_bias_enabled: boolean;
-        headshot_url: string | null;
-      }>;
-      const saveData: SaveData = {};
-      if (data.name && data.name.trim()) saveData.name = data.name.trim();
-      if (data.age_range && data.age_range.trim()) saveData.age_range = data.age_range.trim();
-      if (data.gender && data.gender.trim()) saveData.gender = data.gender.trim();
-      if (data.ethnicity && data.ethnicity.trim()) saveData.ethnicity = data.ethnicity.trim();
-      else if (data.ethnicity === "") saveData.ethnicity = null;
-      if (data.height && data.height.trim()) saveData.height = data.height.trim();
-      else if (data.height === "") saveData.height = null;
-      if (data.build && data.build.trim()) saveData.build = data.build.trim();
-      else if (data.build === "") saveData.build = null;
-      if (data.location && data.location.trim()) saveData.location = data.location.trim();
-      if (data.experience_level && data.experience_level.trim()) saveData.experience_level = data.experience_level.trim();
-      if (actorTypes.length > 0) saveData.type = actorTypes;
-      else if (data.type && data.type.trim()) saveData.type = data.type.trim();
-      if (data.training_background && data.training_background.trim()) saveData.training_background = data.training_background.trim();
-      else if (data.training_background === "") saveData.training_background = null;
-      if (data.union_status && data.union_status.trim()) saveData.union_status = data.union_status.trim();
-      if (data.preferred_genres && Array.isArray(data.preferred_genres)) saveData.preferred_genres = data.preferred_genres;
-      if (data.overdone_alert_sensitivity !== undefined && data.overdone_alert_sensitivity !== null) {
-        saveData.overdone_alert_sensitivity = Number(data.overdone_alert_sensitivity);
-      }
-      if (data.profile_bias_enabled !== undefined && data.profile_bias_enabled !== null) {
-        saveData.profile_bias_enabled = Boolean(data.profile_bias_enabled);
-      }
-      if (data.headshot_url && data.headshot_url.trim()) saveData.headshot_url = data.headshot_url.trim();
-      else if (data.headshot_url === "") saveData.headshot_url = null;
+    // Optimistically update caches BEFORE the API call so navigation sees fresh data
+    queryClient.setQueryData<FullProfileResponse>(["profile-form"], (old) =>
+      old ? { ...old, ...saveData } : old
+    );
 
-      // Check if we have any data to save
-      if (Object.keys(saveData).length === 0) {
-        console.log("No data to save, skipping...");
-        return;
-      }
+    // Optimistically compute and set profile-stats so dashboard shows correct % instantly
+    const filled = (v: unknown) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0);
+    const reqFields = [saveData.name, saveData.age_range, saveData.gender, saveData.location, saveData.experience_level, saveData.type, saveData.union_status];
+    const optFields = [saveData.ethnicity, saveData.height, saveData.build, saveData.training_background, saveData.headshot_url];
+    const reqCount = reqFields.filter(filled).length;
+    const optCount = optFields.filter(filled).length;
+    const pct = Math.min(100, Math.round(((reqCount / 7) * 70 + (optCount / 5) * 30) * 10) / 10);
+    queryClient.setQueryData(["profile-stats"], () => ({
+      completion_percentage: pct,
+      has_headshot: Boolean(filled(saveData.headshot_url)),
+      preferred_genres_count: saveData.preferred_genres?.length ?? 0,
+      profile_bias_enabled: saveData.profile_bias_enabled ?? true,
+    }));
 
-      try {
-        setSaveStatus("saving");
-        
-        // If headshot_url is a base64 image, upload it first
-        let finalHeadshotUrl = saveData.headshot_url;
-        if (finalHeadshotUrl && finalHeadshotUrl.startsWith("data:image")) {
-          type HeadshotResponse = {
-            headshot_url: string;
-          };
-          const uploadResponse = await api.post<HeadshotResponse>("/api/profile/headshot", {
-            image: finalHeadshotUrl,
-          });
-          finalHeadshotUrl = uploadResponse.data.headshot_url;
-          saveData.headshot_url = finalHeadshotUrl;
-          // Invalidate cache after headshot upload
-          queryClient.invalidateQueries({ queryKey: ["profile"] });
-          queryClient.invalidateQueries({ queryKey: ["profile-stats"] });
-        }
+    setSaveStatus("saving");
 
-        await api.post("/api/profile", saveData);
+    // Fire-and-forget: the fetch completes even if the component unmounts
+    api.post("/api/profile", saveData)
+      .then(() => {
+        if (abort.signal.aborted) return;
         setSaveStatus("saved");
-        
-        // Invalidate profile-related cache
-        queryClient.invalidateQueries({ queryKey: ["profile"] });
-        queryClient.invalidateQueries({ queryKey: ["profile-stats"] });
-        queryClient.invalidateQueries({ queryKey: ["recommendations"] });
-        
-        // Clear saved status after 3 seconds
-        if (saveStatusTimeoutRef.current) {
-          clearTimeout(saveStatusTimeoutRef.current);
-        }
-        saveStatusTimeoutRef.current = setTimeout(() => {
-          setSaveStatus(null);
-        }, 3000);
-        } catch (err: unknown) {
-          console.error("❌ Save error:", err);
-          const error = err as { response?: { data?: { detail?: string | Array<{ msg?: string } | string> | Record<string, unknown> } } };
-          let errorMessage = "Failed to save profile";
-          if (error.response?.data?.detail) {
-            if (typeof error.response.data.detail === 'string') {
-              errorMessage = error.response.data.detail;
-            } else if (Array.isArray(error.response.data.detail)) {
-              errorMessage = error.response.data.detail.map((e) => 
-                typeof e === 'string' ? e : (typeof e === 'object' && e !== null && 'msg' in e ? String(e.msg) : JSON.stringify(e))
-              ).join(', ');
-            } else {
-              errorMessage = JSON.stringify(error.response.data.detail);
-            }
+        queryClient.invalidateQueries({ queryKey: ["profile"], refetchType: "all" });
+        queryClient.invalidateQueries({ queryKey: ["profile-stats"], refetchType: "all" });
+        queryClient.invalidateQueries({ queryKey: ["recommendations"], refetchType: "all" });
+        if (saveStatusTimeoutRef.current) clearTimeout(saveStatusTimeoutRef.current);
+        saveStatusTimeoutRef.current = setTimeout(() => setSaveStatus(null), 3000);
+      })
+      .catch((err: unknown) => {
+        if (abort.signal.aborted) return;
+        console.error("❌ Save error:", err);
+        const error = err as { response?: { data?: { detail?: string | Array<{ msg?: string } | string> | Record<string, unknown> } } };
+        let errorMessage = "Failed to save profile";
+        if (error.response?.data?.detail) {
+          if (typeof error.response.data.detail === 'string') {
+            errorMessage = error.response.data.detail;
+          } else if (Array.isArray(error.response.data.detail)) {
+            errorMessage = error.response.data.detail.map((e) =>
+              typeof e === 'string' ? e : (typeof e === 'object' && e !== null && 'msg' in e ? String(e.msg) : JSON.stringify(e))
+            ).join(', ');
+          } else {
+            errorMessage = JSON.stringify(error.response.data.detail);
           }
-          console.error("Error details:", errorMessage);
-          toast.error(errorMessage);
-          setSaveStatus(null);
-      }
-    }, 2000); // 2 second debounce
+        }
+        toast.error(errorMessage);
+        setSaveStatus(null);
+      });
 
-    // Cleanup function
     return () => {
-      if (saveTimeoutRef.current) {
-        clearTimeout(saveTimeoutRef.current);
-      }
-      if (saveStatusTimeoutRef.current) {
-        clearTimeout(saveStatusTimeoutRef.current);
-      }
+      if (saveStatusTimeoutRef.current) clearTimeout(saveStatusTimeoutRef.current);
     };
   }, [
     name, ageRange, gender, ethnicity, height, build, location,
     experienceLevel, type, actorTypes, trainingBackground, unionStatus,
     preferredGenresValue, overdoneSensitivity, profileBias, headshotUrl,
-    hasInitialized, isFetching, getValues
+    hasInitialized, isQueryLoading, buildSaveData, queryClient
   ]);
 
   const handleHeadshotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -964,7 +870,7 @@ export function ActorProfileForm() {
                         <div className="space-y-2">
                           <Label htmlFor="gender" className="">Gender Identity *</Label>
                         <Select
-                          value={watch("gender") || undefined}
+                          value={watch("gender")?.startsWith("Other") ? "Other" : watch("gender") || undefined}
                           onValueChange={(v) => setValue("gender", v)}
                         >
                           <SelectTrigger id="gender">
@@ -976,6 +882,14 @@ export function ActorProfileForm() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {(watch("gender") === "Other" || watch("gender")?.startsWith("Other:")) && (
+                          <Input
+                            placeholder="Please specify"
+                            className="mt-2"
+                            value={watch("gender")?.startsWith("Other:") ? watch("gender")?.slice(7).trim() : ""}
+                            onChange={(e) => setValue("gender", e.target.value ? `Other: ${e.target.value}` : "Other")}
+                          />
+                        )}
                           {errors.gender && (
                             <motion.p
                               initial={{ opacity: 0 }}
@@ -993,7 +907,7 @@ export function ActorProfileForm() {
                       <div className="space-y-2">
                         <Label htmlFor="ethnicity" className="">Ethnicity</Label>
                         <Select
-                          value={watch("ethnicity") || "__none__"}
+                          value={watch("ethnicity")?.startsWith("Other") ? "Other" : watch("ethnicity") || "__none__"}
                           onValueChange={(v) => setValue("ethnicity", v === "__none__" ? "" : v)}
                         >
                           <SelectTrigger id="ethnicity">
@@ -1006,6 +920,14 @@ export function ActorProfileForm() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {(watch("ethnicity") === "Other" || watch("ethnicity")?.startsWith("Other:")) && (
+                          <Input
+                            placeholder="Please specify"
+                            className="mt-2"
+                            value={watch("ethnicity")?.startsWith("Other:") ? watch("ethnicity")?.slice(7).trim() : ""}
+                            onChange={(e) => setValue("ethnicity", e.target.value ? `Other: ${e.target.value}` : "Other")}
+                          />
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1064,7 +986,7 @@ export function ActorProfileForm() {
                         <div className="space-y-2">
                           <Label htmlFor="build" className="">Build</Label>
                           <Select
-                            value={watch("build") || "__none__"}
+                            value={watch("build")?.startsWith("Other") ? "Other" : watch("build") || "__none__"}
                             onValueChange={(v) => setValue("build", v === "__none__" ? "" : v)}
                           >
                             <SelectTrigger id="build">
@@ -1077,13 +999,21 @@ export function ActorProfileForm() {
                               ))}
                             </SelectContent>
                           </Select>
+                          {(watch("build") === "Other" || watch("build")?.startsWith("Other:")) && (
+                            <Input
+                              placeholder="Please specify"
+                              className="mt-2"
+                              value={watch("build")?.startsWith("Other:") ? watch("build")?.slice(7).trim() : ""}
+                              onChange={(e) => setValue("build", e.target.value ? `Other: ${e.target.value}` : "Other")}
+                            />
+                          )}
                         </div>
                       </div>
 
                       <div className="space-y-2">
                         <Label htmlFor="location" className="">Location / market</Label>
                         <Select
-                          value={watch("location") || undefined}
+                          value={watch("location")?.startsWith("Other") ? "Other" : watch("location") || undefined}
                           onValueChange={(v) => setValue("location", v)}
                         >
                           <SelectTrigger id="location">
@@ -1095,6 +1025,14 @@ export function ActorProfileForm() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {(watch("location") === "Other" || watch("location")?.startsWith("Other:")) && (
+                          <Input
+                            placeholder="Please specify"
+                            className="mt-2"
+                            value={watch("location")?.startsWith("Other:") ? watch("location")?.slice(7).trim() : ""}
+                            onChange={(e) => setValue("location", e.target.value ? `Other: ${e.target.value}` : "Other")}
+                          />
+                        )}
                         {errors.location && (
                           <motion.p
                             initial={{ opacity: 0 }}
@@ -1195,21 +1133,29 @@ export function ActorProfileForm() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="type" className="">Type *</Label>
+                        <Label htmlFor="type" className="text-muted-foreground">Character Type</Label>
                         <Select
-                          value={watch("type") || "__none__"}
+                          value={typeof watch("type") === "string" && watch("type")?.startsWith("Other") ? "Other" : watch("type") || "__none__"}
                           onValueChange={(v) => setValue("type", v === "__none__" ? "" : v)}
                         >
                           <SelectTrigger id="type">
-                            <SelectValue placeholder="Character type (optional)" />
+                            <SelectValue placeholder="Select character type" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="__none__">Character type (optional)</SelectItem>
+                            <SelectItem value="__none__">None</SelectItem>
                             {CHARACTER_TYPES.map((t) => (
                               <SelectItem key={t} value={t}>{t}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
+                        {(watch("type") === "Other" || (typeof watch("type") === "string" && watch("type")?.startsWith("Other:"))) && (
+                          <Input
+                            placeholder="Please specify"
+                            className="mt-2"
+                            value={typeof watch("type") === "string" && watch("type")?.startsWith("Other:") ? (watch("type") as string)?.slice(7).trim() : ""}
+                            onChange={(e) => setValue("type", e.target.value ? `Other: ${e.target.value}` : "Other")}
+                          />
+                        )}
                         {errors.type && (
                           <motion.p
                             initial={{ opacity: 0 }}
@@ -1226,7 +1172,7 @@ export function ActorProfileForm() {
                       <div className="space-y-2">
                         <Label htmlFor="training_background" className="">Training background</Label>
                         <Select
-                          value={watch("training_background") || "__none__"}
+                          value={watch("training_background")?.startsWith("Other") ? "Other" : watch("training_background") || "__none__"}
                           onValueChange={(v) => setValue("training_background", v === "__none__" ? "" : v)}
                         >
                           <SelectTrigger id="training_background">
@@ -1239,6 +1185,14 @@ export function ActorProfileForm() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {(watch("training_background") === "Other" || watch("training_background")?.startsWith("Other:")) && (
+                          <Input
+                            placeholder="Please specify"
+                            className="mt-2"
+                            value={watch("training_background")?.startsWith("Other:") ? watch("training_background")?.slice(7).trim() : ""}
+                            onChange={(e) => setValue("training_background", e.target.value ? `Other: ${e.target.value}` : "Other")}
+                          />
+                        )}
                       </div>
 
                       <div className="space-y-2">
@@ -1264,7 +1218,7 @@ export function ActorProfileForm() {
                           </Tooltip>
                         </div>
                         <Select
-                          value={watch("union_status") || undefined}
+                          value={watch("union_status")?.startsWith("Other") ? "Other" : watch("union_status") || undefined}
                           onValueChange={(v) => setValue("union_status", v)}
                         >
                           <SelectTrigger id="union_status">
@@ -1276,6 +1230,14 @@ export function ActorProfileForm() {
                             ))}
                           </SelectContent>
                         </Select>
+                        {(watch("union_status") === "Other" || watch("union_status")?.startsWith("Other:")) && (
+                          <Input
+                            placeholder="Please specify"
+                            className="mt-2"
+                            value={watch("union_status")?.startsWith("Other:") ? watch("union_status")?.slice(7).trim() : ""}
+                            onChange={(e) => setValue("union_status", e.target.value ? `Other: ${e.target.value}` : "Other")}
+                          />
+                        )}
                         {errors.union_status && (
                           <motion.p
                             initial={{ opacity: 0 }}

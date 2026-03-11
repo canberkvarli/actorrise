@@ -175,8 +175,18 @@ def get_profile_stats(
         profile.headshot_url,
     ]
     
-    required_count = sum(1 for field in required_fields if field is not None)
-    optional_count = sum(1 for field in optional_fields if field is not None)
+    def _filled(field: object) -> bool:
+        """A field counts as filled if it's non-None, non-empty-string, non-empty-list."""
+        if field is None:
+            return False
+        if isinstance(field, str) and not field.strip():
+            return False
+        if isinstance(field, (list, tuple)) and len(field) == 0:
+            return False
+        return True
+
+    required_count = sum(1 for field in required_fields if _filled(field))
+    optional_count = sum(1 for field in optional_fields if _filled(field))
     
     # Required fields are 70% of completion, optional are 30%
     completion_percentage = min(100.0, (required_count / 7) * 70 + (optional_count / 5) * 30)

@@ -180,7 +180,7 @@ async def search_film_tv_references(
     if imdb_rating_min is not None:
         base = base.filter(FilmTvReference.imdb_rating >= imdb_rating_min)
     if genre:
-        base = base.filter(FilmTvReference.genre.any(genre.lower()))
+        base = base.filter(FilmTvReference.genre.any(genre.strip().capitalize()))
     if director:
         base = base.filter(FilmTvReference.director.ilike(f"%{director}%"))
     if title:

@@ -15,6 +15,7 @@ import {
   truncateQuery,
   removeSearchFromHistory,
   restoreSearchToHistory,
+  clearSearchHistory,
   SearchHistoryEntry,
 } from "@/lib/searchHistory";
 import MiniMonologueCard from "./MiniMonologueCard";
@@ -59,6 +60,23 @@ export default function RecentSearches({ maxSearches = 3, compact = false }: Rec
           restoreSearchToHistory(entryToRestore);
           loadHistory();
           toast.success("Search restored");
+        },
+      },
+    });
+  };
+
+  const handleClearAll = () => {
+    const allEntries = [...history];
+    clearSearchHistory();
+    setHistory([]);
+    toast("All searches cleared", {
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          allEntries.forEach((entry) => restoreSearchToHistory(entry));
+          loadHistory();
+          toast.success("Searches restored");
         },
       },
     });
@@ -143,6 +161,16 @@ export default function RecentSearches({ maxSearches = 3, compact = false }: Rec
     return (
       <Card className={compactCardClass}>
         <CardContent className={compactContentClass}>
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs text-muted-foreground">Recent searches</span>
+            <button
+              type="button"
+              onClick={handleClearAll}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
+            >
+              Clear all
+            </button>
+          </div>
           <div className="space-y-3">
             {history.map((entry) => (
               <div
@@ -161,7 +189,14 @@ export default function RecentSearches({ maxSearches = 3, compact = false }: Rec
                     {formatRelativeTime(entry.timestamp)}
                   </p>
                 </div>
-                <IconArrowRight className="h-4 w-4 text-muted-foreground/60 group-hover:text-primary group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                <button
+                  type="button"
+                  onClick={(e) => handleRemove(e, entry)}
+                  className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all flex-shrink-0 cursor-pointer"
+                  aria-label="Remove search"
+                >
+                  <IconX className="h-3.5 w-3.5" />
+                </button>
               </div>
             ))}
             {history.length >= maxSearches && (

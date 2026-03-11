@@ -239,18 +239,19 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
         </div>
 
         {/* Controls */}
-        <div className="p-4 border-t space-y-4">
+        <div className="p-4 border-t space-y-3">
           {/* Zoom Controls */}
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium min-w-[80px]">Zoom:</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground min-w-[60px]">Zoom</span>
             <div className="flex items-center gap-2 flex-1">
               <Button
-                variant="outline"
-                size="icon"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
                 onClick={handleZoomOut}
                 disabled={zoom <= 1}
               >
-                <IconZoomOut className="h-4 w-4" />
+                <IconZoomOut className="h-3.5 w-3.5" />
               </Button>
               <input
                 type="range"
@@ -262,29 +263,31 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
                 className="flex-1"
               />
               <Button
-                variant="outline"
-                size="icon"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
                 onClick={handleZoomIn}
                 disabled={zoom >= 3}
               >
-                <IconZoomIn className="h-4 w-4" />
+                <IconZoomIn className="h-3.5 w-3.5" />
               </Button>
-              <span className="text-sm text-muted-foreground min-w-[50px] text-right">
+              <span className="text-xs text-muted-foreground min-w-[40px] text-right">
                 {Math.round(zoom * 100)}%
               </span>
             </div>
           </div>
 
           {/* Rotation Control */}
-          <div className="flex items-center gap-4">
-            <span className="text-sm font-medium min-w-[80px]">Rotation:</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-muted-foreground min-w-[60px]">Rotate</span>
             <div className="flex items-center gap-2 flex-1">
               <Button
-                variant="outline"
-                size="icon"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
                 onClick={handleRotate}
               >
-                <IconRotateClockwise className="h-4 w-4" />
+                <IconRotateClockwise className="h-3.5 w-3.5" />
               </Button>
               <input
                 type="range"
@@ -295,7 +298,7 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
                 onChange={(e) => setRotation(Number(e.target.value))}
                 className="flex-1"
               />
-              <span className="text-sm text-muted-foreground min-w-[50px] text-right">
+              <span className="text-xs text-muted-foreground min-w-[40px] text-right">
                 {rotation}°
               </span>
             </div>
@@ -303,10 +306,10 @@ export function PhotoEditor({ image, onSave, onCancel, aspectRatio = 2 / 3 }: Ph
 
           {/* Action Buttons */}
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={onCancel} disabled={isSaving}>
+            <Button variant="ghost" size="sm" onClick={onCancel} disabled={isSaving}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={isSaving || !croppedAreaPixels}>
+            <Button size="sm" onClick={handleSave} disabled={isSaving || !croppedAreaPixels}>
               {isSaving ? (
                 <>
                   <IconLoader2 className="h-4 w-4 animate-spin" />
