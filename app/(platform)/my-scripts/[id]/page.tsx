@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import useSWR from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ArrowLeft, Edit2, Check, X, Trash2, ChevronRight, ChevronDown, Flag, Settings
+  ArrowLeft, Edit2, Check, X, Trash2, ChevronRight, ChevronDown, Flag, Settings, Plus
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { motion, AnimatePresence } from "framer-motion";
@@ -23,6 +23,9 @@ import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { GenreSelect } from "@/components/ui/genre-select";
 import { ScenePreviewTooltip } from "@/components/scenepartner/ScenePreviewTooltip";
 import { SceneSettingsModal } from "@/components/scenepartner/SceneSettingsModal";
+import { AddSceneToScriptModal } from "@/components/scenepartner/AddSceneToScriptModal";
+import { Badge } from "@/components/ui/badge";
+import { getGenreBadgeClassName, getGenreBorderClassName } from "@/lib/genreColors";
 
 interface Scene {
   id: number;
@@ -79,9 +82,16 @@ function groupScenesByAct(scenes: Scene[]): ActGroup[] {
     return rank(a) - rank(b);
   });
 
+  // Sort scenes within each act by scene_number
+  const sceneRank = (s: Scene): number => {
+    if (!s.scene_number) return 9999;
+    const num = s.scene_number.match(/(\d+)/);
+    return num ? parseInt(num[1]) : 9999;
+  };
+
   return actKeys.map(key => ({
     act: key === "__none__" ? null : key,
-    scenes: actMap.get(key)!,
+    scenes: actMap.get(key)!.sort((a, b) => sceneRank(a) - sceneRank(b)),
   }));
 }
 
@@ -113,6 +123,7 @@ export default function ScriptDetailPage() {
   const router = useRouter();
   const params = useParams();
   const scriptId = parseInt(params.id as string);
+  const { mutate: scopedMutate } = useSWRConfig();
 
   const { data: script, isLoading, mutate: mutateScript } = useSWR<UserScript>(
     scriptId ? `/api/scripts/${scriptId}` : null,
@@ -133,6 +144,8 @@ export default function ScriptDetailPage() {
   const [reportComment, setReportComment] = useState("");
   const [reportSubmitting, setReportSubmitting] = useState(false);
   const [castPopoverOpen, setCastPopoverOpen] = useState(false);
+  const [showAddSceneModal, setShowAddSceneModal] = useState(false);
+  const [addSceneToAct, setAddSceneToAct] = useState<string | null>(null);
   const castHoverRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const deleteSceneTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -169,12 +182,22 @@ export default function ScriptDetailPage() {
     setEditValue("");
   };
 
-  const saveField = (field: string) => {
+  /** Write updated script into the SWR list cache so My Scripts reflects changes instantly */
+  const patchListCache = (updater: (s: any) => any) => {
+    scopedMutate(
+      "/api/scripts/",
+      (prev: any) => Array.isArray(prev) ? prev.map((s: any) => s.id === scriptId ? updater(s) : s) : prev,
+      { revalidate: false },
+    );
+  };
+
+  const saveField = async (field: string) => {
     if (!script) return;
     const value = editValue;
 
-    // Update UI immediately
+    // Update both detail and list cache immediately (optimistic)
     mutateScript((prev) => prev ? { ...prev, [field]: value } : prev, false);
+    patchListCache((s: any) => ({ ...s, [field]: value }));
     setEditingField(null);
 
     // Fire API call in background
@@ -185,6 +208,7 @@ export default function ScriptDetailPage() {
       toast.error("Failed to update");
       // Revert on failure
       mutateScript();
+      scopedMutate("/api/scripts/");
     });
   };
 
@@ -214,6 +238,7 @@ export default function ScriptDetailPage() {
       await api.delete(`/api/scripts/${scriptId}/scenes/${sceneId}`);
       toast.success("Scene deleted");
       mutateScript();
+      patchListCache((s: any) => ({ ...s, num_scenes_extracted: Math.max(0, (s.num_scenes_extracted || 0) - 1) }));
     } catch (error) {
       console.error("Delete error:", error);
       toast.error("Failed to delete scene");
@@ -330,7 +355,7 @@ export default function ScriptDetailPage() {
       {/* Script Info */}
       <section className="space-y-4">
       {/* Script info card */}
-      <Card className="border-border/80 shadow-sm">
+      <Card className={`border-border/80 shadow-sm border-l-[3px] ${script.genre ? getGenreBorderClassName(script.genre) : "border-l-border/80"}`}>
         <CardContent className="p-5 sm:p-6 space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0 flex-1 relative">
@@ -547,8 +572,13 @@ export default function ScriptDetailPage() {
                   className="group inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
                   onClick={() => startEditing("genre", script.genre || "")}
                 >
-                  <span className="font-medium text-foreground/80">Genre</span>
-                  <span>{script.genre || "-"}</span>
+                  {script.genre ? (
+                    <span className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium border ${getGenreBadgeClassName(script.genre)}`}>
+                      {script.genre}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground/60">Add genre</span>
+                  )}
                   <Edit2 className="w-3 h-3 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
                 </motion.button>
               )}
@@ -681,9 +711,20 @@ export default function ScriptDetailPage() {
 
       {/* Extracted Scenes */}
       <section aria-label="Scenes in this script" className="space-y-4">
-        <h2 className="text-lg font-semibold text-foreground font-serif">
-          Extracted Scenes ({script.scenes.length})
-        </h2>
+        <div className="flex items-center justify-between border-b border-border/60 pb-2">
+          <h2 className="text-lg font-semibold text-foreground font-serif">
+            Extracted Scenes ({script.scenes.length})
+          </h2>
+          <Button
+            size="sm"
+            variant="outline"
+            className="gap-1.5 h-8 px-3 text-xs"
+            onClick={() => setShowAddSceneModal(true)}
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Add Scene
+          </Button>
+        </div>
 
         {script.scenes.length === 0 ? (
           <>
@@ -716,7 +757,7 @@ export default function ScriptDetailPage() {
                   {group.act && (
                     <button
                       onClick={() => setExpandedActs(prev => ({ ...prev, [actKey]: !isExpanded }))}
-                      className="w-full flex items-center justify-between py-3.5 px-4 bg-muted/50 border border-border/60 mb-0 text-left hover:bg-muted/80 transition-colors"
+                      className="w-full flex items-center justify-between py-3.5 px-4 bg-muted/50 border border-border/60 border-l-[3px] border-l-primary/60 mb-0 text-left hover:bg-muted/80 transition-colors"
                     >
                       <h3 className="text-base font-semibold text-foreground font-serif">
                         {group.act}
@@ -744,7 +785,7 @@ export default function ScriptDetailPage() {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <div className="grid grid-cols-1 gap-3 py-3 px-1">
+                        <div className="grid grid-cols-1 gap-3 py-3 px-1" role="list">
                           {group.scenes.map((scene) => (
                             <motion.div
                               key={scene.id}
@@ -763,9 +804,16 @@ export default function ScriptDetailPage() {
                               >
                                 <CardContent className="p-5 space-y-3">
                                   <div>
-                                    <h3 className="text-base font-semibold font-serif line-clamp-2" title={scene.title}>
-                                      {scene.title}
-                                    </h3>
+                                    <div className="flex items-center gap-2">
+                                      {scene.scene_number && (
+                                        <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium border bg-muted/60 text-muted-foreground border-border/60 shrink-0">
+                                          {scene.scene_number}
+                                        </span>
+                                      )}
+                                      <h3 className="text-base font-semibold font-serif line-clamp-2" title={scene.title}>
+                                        {scene.title}
+                                      </h3>
+                                    </div>
                                     {scene.description && (
                                       <p className="text-sm text-muted-foreground/80 line-clamp-2 mt-1 leading-relaxed">
                                         {scene.description}
@@ -774,15 +822,9 @@ export default function ScriptDetailPage() {
                                   </div>
 
                                   <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                                    {scene.scene_number && (
-                                      <>
-                                        <span className="text-muted-foreground/70">{scene.scene_number}</span>
-                                        <span className="text-muted-foreground/40">·</span>
-                                      </>
-                                    )}
-                                    <span>{scene.character_1_name}</span>
+                                    <span className="font-medium text-foreground/70">{scene.character_1_name}</span>
                                     <span className="text-muted-foreground/40">·</span>
-                                    <span>{scene.character_2_name}</span>
+                                    <span className="font-medium text-foreground/70">{scene.character_2_name}</span>
                                     <span className="text-muted-foreground/40">·</span>
                                     <ScenePreviewTooltip sceneId={scene.id}>
                                       <span className="cursor-help underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors" onClick={(e) => e.stopPropagation()}>
@@ -857,6 +899,14 @@ export default function ScriptDetailPage() {
                                         </PopoverContent>
                                       </Popover>
                                     </span>
+                                    <button
+                                      type="button"
+                                      className="ml-1 p-1 text-muted-foreground/40 hover:text-destructive transition-colors"
+                                      title="Delete scene"
+                                      onClick={(e) => { e.stopPropagation(); handleDeleteSceneClick(scene.id); }}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
                                   </div>
                                 </CardContent>
                               </Card>
@@ -890,6 +940,19 @@ export default function ScriptDetailPage() {
         open={showSettingsModal}
         onOpenChange={setShowSettingsModal}
       />
+      {script && (
+        <AddSceneToScriptModal
+          open={showAddSceneModal}
+          onOpenChange={(o) => { setShowAddSceneModal(o); if (!o) setAddSceneToAct(null); }}
+          scriptId={scriptId}
+          existingActs={[...new Set(script.scenes.map(s => s.act).filter((a): a is string => !!a))]}
+          defaultAct={addSceneToAct}
+          onSceneAdded={() => {
+            mutateScript();
+            patchListCache((s: any) => ({ ...s, num_scenes_extracted: (s.num_scenes_extracted || 0) + 1 }));
+          }}
+        />
+      )}
 
     </motion.div>
       )}

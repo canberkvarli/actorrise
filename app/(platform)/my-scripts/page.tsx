@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import useSWR, { mutate as globalMutate } from "swr";
+import useSWR, { useSWRConfig } from "swr";
 import { useRouter } from "next/navigation";
 import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import UnderConstructionScripts from "@/components/UnderConstructionScripts";
@@ -46,6 +46,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api, { API_URL } from "@/lib/api";
+import { getGenreBadgeClassName, getGenreBorderClassName } from "@/lib/genreColors";
 import { toast } from "sonner";
 
 // Known backend progress prefixes and their friendly group labels.
@@ -159,6 +160,7 @@ export default function MyScriptsPage() {
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
   const router = useRouter();
+  const { mutate: scopedMutate } = useSWRConfig();
   const [showTutorial, setShowTutorial] = useState<boolean | null>(null);
   const [showAudioCheck, setShowAudioCheck] = useState<boolean | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
@@ -197,7 +199,7 @@ export default function MyScriptsPage() {
   const { data: scripts = [], isLoading, mutate: mutateScripts } = useSWR<UserScript[]>(
     "/api/scripts/",
     () => api.get<UserScript[]>("/api/scripts/").then((r) => r.data),
-    { revalidateOnFocus: false, dedupingInterval: 30000 }
+    { revalidateOnFocus: true, dedupingInterval: 5000 }
   );
 
   useEffect(() => {
@@ -382,7 +384,7 @@ export default function MyScriptsPage() {
               toast.success(`Script uploaded! Extracted ${result.num_scenes_extracted} scenes.`);
               mutateScripts();
               // Pre-populate SWR cache so detail page loads instantly (no skeletons)
-              globalMutate(`/api/scripts/${result.id}`, result, false);
+              scopedMutate(`/api/scripts/${result.id}`, result, false);
               // Close the reader before navigating to avoid "client disconnected" on backend
               reader.cancel();
               // Brief pause so user sees the final state
@@ -693,12 +695,21 @@ export default function MyScriptsPage() {
         initial={{ opacity: 0, y: -8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="mb-6 sm:mb-8"
+        className="mb-8 sm:mb-10"
       >
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 sm:gap-6">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight mb-1.5 font-serif">My Scripts</h1>
-            <p className="text-muted-foreground text-sm max-w-xl">
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight font-serif">My Scripts</h1>
+              <button
+                onClick={() => setShowSettingsModal(true)}
+                className="text-muted-foreground/60 hover:text-foreground transition-colors p-1 rounded-md hover:bg-muted/50"
+                title="Settings"
+              >
+                <Settings className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-muted-foreground text-sm max-w-xl mt-1.5">
               Each script can have one or more scenes. <strong>New Script</strong>: create from scratch. <strong>Upload</strong> or <strong>Paste</strong>: we extract scenes from a file or text.
             </p>
           </div>
@@ -712,14 +723,6 @@ export default function MyScriptsPage() {
                 <Plus className="w-3.5 h-3.5" />
                 New Script
               </Button>
-              <button
-                type="button"
-                onClick={() => setShowSettingsModal(true)}
-                className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-                title="Rehearsal settings"
-              >
-                <Settings className="w-4 h-4" />
-              </button>
               {uploadingFile ? (
                 <Button
                   disabled
@@ -768,7 +771,7 @@ export default function MyScriptsPage() {
       <div className="relative min-h-[340px]">
         {/* Skeleton overlay: fades out when data is loaded */}
         <motion.div
-          className="absolute inset-0 z-10 grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6"
+          className="absolute inset-x-0 top-4 z-10 grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6"
           initial={false}
           animate={{ opacity: isLoading ? 1 : 0 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
@@ -806,7 +809,7 @@ export default function MyScriptsPage() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
-              className="border border-dashed border-border bg-muted/30 py-16 px-6 text-center"
+              className="border border-dashed border-primary/30 bg-muted/30 py-16 px-6 text-center"
             >
               <p className="text-muted-foreground text-base">No scripts yet. Use the buttons above to add one.</p>
             </motion.div>
@@ -827,12 +830,12 @@ export default function MyScriptsPage() {
                     transition={{ duration: 0.2, delay: Math.min(index * 0.03, 0.15) }}
                   >
                 <motion.div
-                  whileHover={{ scale: 1.01, y: -2 }}
+                  whileHover={{ scale: 1.005, y: -2 }}
                   transition={{ duration: 0.2 }}
                   className="touch-manipulation h-full"
                 >
                   <Card
-                    className="cursor-pointer group h-full flex flex-col border-border/80 hover:border-border hover:shadow-md transition-all duration-200 hover:border-primary/40 active:scale-[0.99]"
+                    className={`cursor-pointer group h-full flex flex-col border-border/80 hover:border-border hover:shadow-md transition-all duration-200 hover:border-primary/40 active:scale-[0.99] border-l-[3px] ${script.genre ? getGenreBorderClassName(script.genre) : "border-l-border/80"}`}
                     onClick={() => router.push(`/my-scripts/${script.id}`)}
                   >
                     <CardHeader className="pb-3 pt-5 px-5 sm:px-6">
@@ -841,9 +844,13 @@ export default function MyScriptsPage() {
                           <CardTitle className="text-lg font-semibold leading-tight line-clamp-2 font-serif">
                             {script.title}
                           </CardTitle>
-                          <CardDescription className="mt-1.5 text-sm text-muted-foreground">
-                            {script.author}
-                            {script.genre ? ` · ${script.genre}` : ""}
+                          <CardDescription className="mt-1.5 text-sm text-muted-foreground flex items-center gap-2 flex-wrap">
+                            <span>{script.author}</span>
+                            {script.genre && (
+                              <span className={`inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium border ${getGenreBadgeClassName(script.genre)}`}>
+                                {script.genre}
+                              </span>
+                            )}
                           </CardDescription>
                         </div>
                         <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end" onClick={(e) => e.stopPropagation()}>
@@ -896,10 +903,10 @@ export default function MyScriptsPage() {
                               </>
                             )}
                           </div>
-                          {(script.first_scene_description?.trim() || script.description?.trim()) && (
-                            <p className="text-sm text-muted-foreground/80 line-clamp-2 leading-relaxed">
-                              {(script.first_scene_description?.trim() || script.description?.trim() || "").slice(0, 160)}
-                              {(script.first_scene_description?.trim() || script.description?.trim() || "").length > 160 ? "…" : ""}
+                          {(script.description?.trim() || script.first_scene_description?.trim()) && (
+                            <p className="text-sm text-muted-foreground/80 line-clamp-2 leading-relaxed italic">
+                              {(script.description?.trim() || script.first_scene_description?.trim() || "").slice(0, 160)}
+                              {(script.description?.trim() || script.first_scene_description?.trim() || "").length > 160 ? "…" : ""}
                             </p>
                           )}
                         </>

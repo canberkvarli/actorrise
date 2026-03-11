@@ -91,6 +91,15 @@ class ScriptMetadataUpdate(BaseModel):
     genre: Optional[str] = None
 
 
+class AddSceneToScriptRequest(BaseModel):
+    """Add a manually-entered scene to an existing script"""
+    title: str = Field(..., max_length=200)
+    description: Optional[str] = Field(None, max_length=500)
+    act: Optional[str] = Field(None, max_length=100)
+    scene_number: Optional[str] = Field(None, max_length=50)
+    body: str = Field(..., min_length=10)  # "CHARACTER: line" format, one per line
+
+
 class SceneLineUpdate(BaseModel):
     """Update a scene line"""
     character_name: Optional[str] = Field(None, max_length=80)
@@ -1665,3 +1674,139 @@ async def delete_scene(
     db.commit()
 
     return {"message": "Scene deleted successfully"}
+
+
+# ============================================================================
+# Add Scene to Existing Script
+# ============================================================================
+
+@router.post("/{script_id}/scenes", response_model=SceneInScriptResponse)
+async def add_scene_to_script(
+    script_id: int,
+    request: AddSceneToScriptRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Add a manually-entered scene to an existing script.
+    Body format: one line per row, each as "CHARACTER: dialogue text".
+    """
+    import re
+
+    # Verify ownership
+    script = db.query(UserScript).filter(
+        UserScript.id == script_id,
+        UserScript.user_id == current_user.id
+    ).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="Script not found")
+
+    # Find the associated Play
+    play = db.query(Play).filter(Play.id == db.query(Scene.play_id).filter(
+        Scene.user_script_id == script_id
+    ).limit(1).scalar_subquery()).first()
+
+    # If no play exists yet (edge case: script with 0 scenes), create one
+    if not play:
+        play = Play(
+            title=script.title,
+            author=script.author,
+            genre=script.genre or "Drama",
+            category="contemporary",
+            copyright_status="user_uploaded",
+            license_type="user_content",
+            text_format="plain",
+        )
+        db.add(play)
+        db.commit()
+        db.refresh(play)
+
+    # Parse lines from body: "CHARACTER: text" format
+    line_pattern = re.compile(r"^([A-Za-z][A-Za-z\s'.\-]+?):\s*(.+)$")
+    parsed_lines = []
+    for raw_line in request.body.strip().split("\n"):
+        raw_line = raw_line.strip()
+        if not raw_line:
+            continue
+        m = line_pattern.match(raw_line)
+        if m:
+            char_name = m.group(1).strip()
+            text = m.group(2).strip()
+            if text:
+                parsed_lines.append({"character": char_name, "text": text})
+
+    if len(parsed_lines) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="Need at least 2 dialogue lines in CHARACTER: text format"
+        )
+
+    # Determine character_1 and character_2 (most frequent speakers)
+    from collections import Counter
+    char_counts = Counter(l["character"] for l in parsed_lines)
+    top_two = [name for name, _ in char_counts.most_common(2)]
+    char_1 = top_two[0] if len(top_two) > 0 else "Character 1"
+    char_2 = top_two[1] if len(top_two) > 1 else "Character 2"
+
+    # Look up character info from script metadata
+    char1_info = next((c for c in (script.characters or []) if c.get("name") == char_1), {})
+    char2_info = next((c for c in (script.characters or []) if c.get("name") == char_2), {})
+
+    # Estimate duration
+    from app.utils.duration import estimate_duration_seconds
+    all_text = "\n".join(l["text"] for l in parsed_lines)
+    duration_seconds = estimate_duration_seconds(all_text)
+
+    scene = Scene(
+        play_id=play.id,
+        user_script_id=script.id,
+        title=request.title,
+        description=request.description,
+        act=request.act if request.act else None,
+        scene_number=request.scene_number if request.scene_number else None,
+        character_1_name=char_1,
+        character_2_name=char_2,
+        character_1_gender=char1_info.get("gender"),
+        character_2_gender=char2_info.get("gender"),
+        character_1_age_range=char1_info.get("age_range"),
+        character_2_age_range=char2_info.get("age_range"),
+        line_count=len(parsed_lines),
+        estimated_duration_seconds=duration_seconds,
+        setting=None,
+        difficulty_level="intermediate",
+        is_verified=False,
+    )
+    db.add(scene)
+    db.flush()
+
+    # Create scene lines
+    original_lines = []
+    for idx, line_data in enumerate(parsed_lines):
+        scene_line = SceneLine(
+            scene_id=scene.id,
+            line_order=idx,
+            character_name=line_data["character"],
+            text=line_data["text"],
+            word_count=len(line_data["text"].split()),
+        )
+        db.add(scene_line)
+        original_lines.append({
+            "line_order": idx,
+            "character_name": line_data["character"],
+            "text": line_data["text"],
+        })
+
+    scene.original_snapshot = {
+        "character_1_name": char_1,
+        "character_2_name": char_2,
+        "description": scene.description,
+        "lines": original_lines,
+    }
+
+    # Update script scene count
+    script.num_scenes_extracted = (script.num_scenes_extracted or 0) + 1
+
+    db.commit()
+    db.refresh(scene)
+
+    return SceneInScriptResponse.model_validate(scene)
