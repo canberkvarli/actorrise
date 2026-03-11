@@ -1,5 +1,4 @@
 /**
- * Scripts/ScenePartner feature is under construction in production.
- * Enabled in development so you can work on it locally.
+ * ScenePartner is live.
  */
-export const SCRIPTS_FEATURE_ENABLED = process.env.NODE_ENV !== "production";
+export const SCRIPTS_FEATURE_ENABLED = true;
