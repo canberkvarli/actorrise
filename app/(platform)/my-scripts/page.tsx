@@ -250,7 +250,13 @@ export default function MyScriptsPage() {
       return;
     }
 
-    // Phase 1: Quick scan to detect structure
+    // Small files (<50KB / ~15 pages): skip scan, go straight to extraction
+    if (file.size < 50_000) {
+      await startExtraction(file, "full");
+      return;
+    }
+
+    // Phase 1: Quick scan to detect structure (large files only)
     setScanning(true);
     try {
       const { data: { session } } = await (await import("@/lib/supabase")).supabase.auth.getSession();
@@ -285,7 +291,7 @@ export default function MyScriptsPage() {
         return;
       }
 
-      // Small/simple script — go straight to full extraction
+      // Medium script without mode choice — go straight to full extraction
       await startExtraction(file, "full");
     } catch (error: any) {
       setScanning(false);
@@ -994,7 +1000,7 @@ export default function MyScriptsPage() {
           {scanResult && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                We found {scanResult.num_acts > 0 ? `${scanResult.num_acts} acts across ` : ""}{scanResult.num_sections} sections in ~{scanResult.page_count} pages.
+                We found {scanResult.num_acts > 0 ? `${scanResult.num_acts} acts with ` : ""}{scanResult.num_sections} scenes in {scanResult.page_count} pages.
               </p>
               <div className="space-y-3">
                 <button

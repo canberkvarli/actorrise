@@ -180,9 +180,9 @@ export default function PlatformLayout({
     <SWRConfig
       value={{
         provider: localStorageProvider,
-        revalidateOnFocus: false,
+        revalidateOnFocus: true,
         revalidateOnReconnect: true,
-        dedupingInterval: 60000, // 1 minute
+        dedupingInterval: 10000, // 10 seconds
       }}
     >
     <TooltipProvider>

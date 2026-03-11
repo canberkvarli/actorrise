@@ -17,6 +17,7 @@ from app.api.auth import get_current_user
 from app.core.database import SessionLocal, get_db
 from app.middleware.rate_limiting import require_script_upload
 from app.models.actor import (
+    ExtractionCache,
     Play,
     RehearsalLineDelivery,
     RehearsalSession,
@@ -202,11 +203,13 @@ async def scan_script(
     import io
     import pdfplumber as _pdfplumber
 
+    actual_pdf_pages = 0
     try:
         if file_ext == "pdf":
             pdf_file = io.BytesIO(file_content)
             raw_text = ""
             with _pdfplumber.open(pdf_file) as pdf:
+                actual_pdf_pages = len(pdf.pages)
                 for page in pdf.pages:
                     page_text = page.extract_text()
                     if page_text:
@@ -239,18 +242,23 @@ async def scan_script(
             if any(len(s["characters"]) >= 2 for s in sections):
                 dialogue_chunks += 1
 
-    page_count = max(1, len(raw_text) // 3000)
+    page_count = actual_pdf_pages if actual_pdf_pages > 0 else max(1, len(raw_text) // 3000)
 
-    # Time estimates: metadata AI call (~8s) + per-chunk work
-    base_time = 10  # metadata extraction
-    est_quick = base_time + max(15, dialogue_chunks * 3)  # regex + batch AI analysis (~15-30s)
-    est_full = base_time + max(20, dialogue_chunks * 12)  # ~12s per AI chunk call
+    # Time estimates
+    if page_count <= 5:
+        # Small scripts: single combined AI call (~5-10s)
+        est_quick = 8
+        est_full = 10
+    else:
+        base_time = 10  # metadata extraction
+        est_quick = base_time + max(10, dialogue_chunks * 3)
+        est_full = base_time + max(15, dialogue_chunks * 10)
 
     return ScriptScanResponse(
         page_count=page_count,
         has_structure=has_structure,
         num_acts=num_acts,
-        num_sections=len(chunks),
+        num_sections=dialogue_chunks,
         show_mode_choice=has_structure and dialogue_chunks >= 8,
         estimated_quick_seconds=est_quick,
         estimated_full_seconds=est_full,
@@ -504,11 +512,26 @@ async def upload_script_stream(
     if file_size > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large (max 10MB)")
 
+    # Compute file hash for extraction cache
+    import hashlib
+    file_hash = hashlib.sha256(file_content).hexdigest()
+
     filename = file.filename
     user_id = current_user.id  # capture before closing db
     progress_queue: Queue = Queue()
     import threading
     cancel_event = threading.Event()
+
+    # Check extraction cache before releasing DB
+    cached_result = None
+    try:
+        cache_entry = db.query(ExtractionCache).filter(
+            ExtractionCache.file_hash == file_hash
+        ).first()
+        if cache_entry:
+            cached_result = cache_entry.extraction_result
+    except Exception:
+        pass  # Cache miss on error is fine
 
     # Release the DB connection immediately — extraction takes minutes
     # and holding a connection during that time exhausts PgBouncer's pool.
@@ -533,68 +556,91 @@ async def upload_script_stream(
     monitor_task = asyncio.create_task(monitor_disconnect())
 
     async def event_stream():
-        # Run extraction in a thread so we can stream progress
-        extraction_result = {}
-        extraction_error = {}
-
-        def run_extraction():
-            try:
-                parser = ScriptParser()
-                extraction_result["data"] = parser.parse_script(
-                    file_content, file_ext, filename,
-                    on_progress=on_progress, cancel_event=cancel_event,
-                    mode=extraction_mode,
-                )
-            except InterruptedError:
-                extraction_error["msg"] = "cancelled"
-            except Exception as e:
-                extraction_error["msg"] = str(e)
-            finally:
-                progress_queue.put(None)  # sentinel
-
-        thread = threading.Thread(target=run_extraction, daemon=True)
-        thread.start()
-
-        # Stream progress events
-        try:
-            while True:
-                if cancel_event.is_set():
-                    thread.join(timeout=10)
-                    return
-
-                # Poll queue with async sleep to avoid blocking the event loop
-                try:
-                    msg = progress_queue.get_nowait()
-                except Empty:
-                    await asyncio.sleep(0.2)
-                    continue
-
-                if msg is None:
-                    break  # extraction done
-
-                event = _json.dumps({"type": "progress", "step": msg})
-                yield f"data: {event}\n\n"
-        except (asyncio.CancelledError, GeneratorExit):
-            cancel_event.set()
-            print("SSE generator killed, cancelling extraction")
-            thread.join(timeout=10)
-            return
-        finally:
-            monitor_task.cancel()
-
-        thread.join(timeout=5)
-
-        # Check for errors or cancellation
-        if extraction_error:
-            if extraction_error["msg"] == "cancelled":
-                return  # Client already gone, no point sending error
-            event = _json.dumps({"type": "error", "detail": extraction_error["msg"]})
+        # If we have a cached result, skip extraction entirely
+        if cached_result:
+            event = _json.dumps({"type": "progress", "step": "Found cached extraction, restoring..."})
             yield f"data: {event}\n\n"
-            return
+            monitor_task.cancel()
+            result = cached_result
+        else:
+            # Run extraction in a thread so we can stream progress
+            extraction_result = {}
+            extraction_error = {}
 
-        result = extraction_result["data"]
+            def run_extraction():
+                try:
+                    parser = ScriptParser()
+                    extraction_result["data"] = parser.parse_script(
+                        file_content, file_ext, filename,
+                        on_progress=on_progress, cancel_event=cancel_event,
+                        mode=extraction_mode,
+                    )
+                except InterruptedError:
+                    extraction_error["msg"] = "cancelled"
+                except Exception as e:
+                    extraction_error["msg"] = str(e)
+                finally:
+                    progress_queue.put(None)  # sentinel
+
+            thread = threading.Thread(target=run_extraction, daemon=True)
+            thread.start()
+
+            # Stream progress events
+            try:
+                while True:
+                    if cancel_event.is_set():
+                        thread.join(timeout=10)
+                        return
+
+                    # Poll queue with async sleep to avoid blocking the event loop
+                    try:
+                        msg = progress_queue.get_nowait()
+                    except Empty:
+                        await asyncio.sleep(0.2)
+                        continue
+
+                    if msg is None:
+                        break  # extraction done
+
+                    event = _json.dumps({"type": "progress", "step": msg})
+                    yield f"data: {event}\n\n"
+            except (asyncio.CancelledError, GeneratorExit):
+                cancel_event.set()
+                print("SSE generator killed, cancelling extraction")
+                thread.join(timeout=10)
+                return
+            finally:
+                monitor_task.cancel()
+
+            thread.join(timeout=5)
+
+            # Check for errors or cancellation
+            if extraction_error:
+                if extraction_error["msg"] == "cancelled":
+                    return  # Client already gone, no point sending error
+                event = _json.dumps({"type": "error", "detail": extraction_error["msg"]})
+                yield f"data: {event}\n\n"
+                return
+
+            result = extraction_result["data"]
+
+            # Store in extraction cache for future re-uploads
+            try:
+                cache_db = SessionLocal()
+                cache_db.add(ExtractionCache(
+                    file_hash=file_hash,
+                    extraction_result=result,
+                ))
+                cache_db.commit()
+                cache_db.close()
+            except Exception:
+                pass  # Non-critical — extraction still succeeds
 
         # ---- Phase 2: DB writes (fresh connection with retry) ----
+        # Abort if client disconnected during extraction
+        if cancel_event.is_set():
+            return
+
         # Supabase PgBouncer can be temporarily overloaded after long extractions.
         fresh_db = None
         for attempt in range(3):
@@ -1722,7 +1768,7 @@ async def add_scene_to_script(
         db.refresh(play)
 
     # Parse lines from body: "CHARACTER: text" format
-    line_pattern = re.compile(r"^([A-Za-z][A-Za-z\s'.\-]+?):\s*(.+)$")
+    line_pattern = re.compile(r"^([A-Za-z][A-Za-z\s'.\-]*?):\s*(.+)$")
     parsed_lines = []
     for raw_line in request.body.strip().split("\n"):
         raw_line = raw_line.strip()
@@ -1744,6 +1790,12 @@ async def add_scene_to_script(
     # Determine character_1 and character_2 (most frequent speakers)
     from collections import Counter
     char_counts = Counter(l["character"] for l in parsed_lines)
+
+    if len(char_counts) < 2:
+        raise HTTPException(
+            status_code=400,
+            detail="A scene needs at least 2 characters"
+        )
     top_two = [name for name, _ in char_counts.most_common(2)]
     char_1 = top_two[0] if len(top_two) > 0 else "Character 1"
     char_2 = top_two[1] if len(top_two) > 1 else "Character 2"
