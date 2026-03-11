@@ -335,6 +335,16 @@ class SceneFavorite(Base):
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
 
 
+class ExtractionCache(Base):
+    """Cache AI extraction results by file content hash to skip re-extraction on re-upload"""
+    __tablename__ = "extraction_cache"
+
+    id = Column(Integer, primary_key=True, index=True)
+    file_hash = Column(String, nullable=False, unique=True, index=True)  # SHA256 of file content
+    extraction_result = Column(JSON, nullable=False)  # Full extraction result (metadata + scenes)
+    created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
+
+
 class UserScript(Base):
     """User-uploaded scripts (PDF/text files)"""
     __tablename__ = "user_scripts"

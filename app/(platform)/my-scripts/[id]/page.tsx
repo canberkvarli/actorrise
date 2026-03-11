@@ -940,6 +940,9 @@ export default function ScriptDetailPage() {
         open={showSettingsModal}
         onOpenChange={setShowSettingsModal}
       />
+
+    </motion.div>
+      )}
       {script && (
         <AddSceneToScriptModal
           open={showAddSceneModal}
@@ -952,9 +955,6 @@ export default function ScriptDetailPage() {
             patchListCache((s: any) => ({ ...s, num_scenes_extracted: (s.num_scenes_extracted || 0) + 1 }));
           }}
         />
-      )}
-
-    </motion.div>
       )}
     </div>
   );

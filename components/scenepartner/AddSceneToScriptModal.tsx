@@ -122,10 +122,16 @@ export function AddSceneToScriptModal({
     }
 
     const lines = body.trim().split("\n").filter(l => l.trim());
+    const charPattern = /^([A-Za-z][A-Za-z\s'.\-]*?):\s*.+$/;
+    const parsedChars = new Set(
+      lines.map(l => { const m = l.match(charPattern); return m ? m[1].trim().toLowerCase() : null; }).filter(Boolean)
+    );
     if (!body.trim()) {
       newErrors.body = "Dialogue is required";
     } else if (lines.length < 2) {
       newErrors.body = "Enter at least 2 lines of dialogue";
+    } else if (parsedChars.size < 2) {
+      newErrors.body = "A scene needs at least 2 characters. Use CHARACTER: text format";
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -166,7 +172,15 @@ export function AddSceneToScriptModal({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
-      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-lg">
+        {/* Whimsical loading overlay */}
+        {submitting && (
+          <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-[2px] rounded-lg">
+            <Loader2 className="w-6 h-6 animate-spin text-primary mb-3" />
+            <p className="text-sm font-medium text-foreground">{submittingText}</p>
+          </div>
+        )}
+
         <DialogHeader>
           <DialogTitle className="font-serif">Add Scene</DialogTitle>
         </DialogHeader>
@@ -181,7 +195,7 @@ export function AddSceneToScriptModal({
           }
         `}</style>
 
-        <div className="space-y-4 pt-2">
+        <div className="space-y-4 pt-2 max-h-[60vh] overflow-y-auto px-0.5">
           {/* Title */}
           <div>
             <Label htmlFor="add-scene-title">Scene title</Label>
@@ -268,28 +282,29 @@ export function AddSceneToScriptModal({
               value={body}
               onChange={(e) => { setBody(e.target.value); if (errors.body) setErrors(prev => ({ ...prev, body: undefined })); }}
               placeholder={`HAMLET: To be or not to be, that is the question.\nHORATIO: My lord, I came to see your father's funeral.\nHAMLET: I pray thee, do not mock me, fellow student.`}
-              rows={8}
+              rows={6}
               className={`font-mono text-sm leading-relaxed resize-y ${errors.body ? "border-destructive" : ""}`}
             />
             <FieldError message={errors.body} />
           </div>
 
-          {/* Submit */}
-          <div className="flex justify-end gap-2 pt-1">
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                  {submittingText}
-                </>
-              ) : (
-                "Add scene"
-              )}
-            </Button>
-          </div>
+        </div>
+
+        {/* Submit — outside scrollable area */}
+        <div className="flex justify-end gap-2 pt-3">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
+                Adding...
+              </>
+            ) : (
+              "Add scene"
+            )}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

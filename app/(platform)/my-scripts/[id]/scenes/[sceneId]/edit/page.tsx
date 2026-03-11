@@ -2838,15 +2838,16 @@ export default function SceneEditPage() {
                       {/* Line text */}
                       <motion.p
                         layout="position"
-                        className={cn(
-                          "text-[17px] font-semibold leading-relaxed text-neutral-900 break-words whitespace-pre-wrap text-center w-full transition-colors duration-300",
-                          highlightMyLines && isMine && "bg-yellow-200/70 rounded px-1 -mx-1"
-                        )}
+                        className="text-[17px] font-semibold leading-relaxed text-neutral-900 break-words whitespace-pre-wrap text-center w-full transition-colors duration-300"
                         style={{ overflowWrap: "anywhere" }}
                         animate={highlightMyLines && isMine ? { scale: [1, 1.01, 1] } : { scale: 1 }}
                         transition={{ duration: 0.3 }}
                       >
-                        {renderTextWithStageDirections(line.text)}
+                        <span className={cn(
+                          highlightMyLines && isMine && "bg-yellow-200/70 rounded px-1 py-0.5 box-decoration-clone"
+                        )}>
+                          {renderTextWithStageDirections(line.text)}
+                        </span>
                       </motion.p>
                     </div>
                     </div>
