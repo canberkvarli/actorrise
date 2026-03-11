@@ -110,7 +110,7 @@ export function LandingPageAnimated() {
           <div className="max-w-4xl w-full mx-auto text-center">
             <div className="mb-4 sm:mb-6 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 px-3 py-1.5 text-xs text-muted-foreground">
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-              Monologues, scenes & film/TV
+              AI-powered audition prep
             </div>
             <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.05] tracking-[-0.03em] max-w-3xl mx-auto">
               Find your <span className="hero-keyword">monologue</span> in 20&nbsp;seconds.
