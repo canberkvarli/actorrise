@@ -43,7 +43,7 @@ export function ConfirmDeleteDialog({
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-destructive/10 text-destructive">
               <Trash2 className="h-5 w-5" />
             </div>
-            <DialogTitle className="text-lg">{title}</DialogTitle>
+            <DialogTitle className="text-xl font-semibold">{title}</DialogTitle>
           </div>
           <DialogDescription className="text-muted-foreground pt-1">
             {description}
