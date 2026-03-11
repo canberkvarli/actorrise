@@ -118,9 +118,14 @@ export function LandingPageAnimated() {
             </h1>
             {/* Large Primary CTA */}
             <div className="mt-8 sm:mt-10 flex flex-col items-center gap-3">
-              <Button asChild size="lg" className="h-14 sm:h-16 px-10 sm:px-14 text-base sm:text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all">
-                <Link href="/search">Try Free Search</Link>
-              </Button>
+              <div className="flex flex-col sm:flex-row items-center gap-3">
+                <Button asChild size="lg" className="h-14 sm:h-16 px-10 sm:px-14 text-base sm:text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all">
+                  <Link href="/my-scripts">Start rehearsing</Link>
+                </Button>
+                <Button asChild size="lg" variant="outline" className="h-14 sm:h-16 px-10 sm:px-14 text-base sm:text-lg rounded-full">
+                  <Link href="/search">Find a piece</Link>
+                </Button>
+              </div>
               <HeroProofBar />
             </div>
 

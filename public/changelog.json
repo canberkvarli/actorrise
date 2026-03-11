@@ -1,6 +1,18 @@
 {
   "updates": [
     {
+      "id": "scenepartner-launch-mar-2026",
+      "date": "2026-03-11",
+      "title": "ScenePartner is live",
+      "emoji": "🎭",
+      "description": "Rehearse with an AI scene partner. Upload your own script, extract scenes, and run your lines voice-to-voice. Available now.",
+      "category": "feature",
+      "show_modal": true,
+      "cta_text": "Try it now",
+      "cta_link": "/my-scripts",
+      "image_url": null
+    },
+    {
       "id": "film-tv-search-feb-2026",
       "date": "2026-02-20",
       "title": "Film & TV Search",
