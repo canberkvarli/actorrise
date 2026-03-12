@@ -1,5 +1,6 @@
 from app.core.database import get_db
 from app.core.security import verify_supabase_token
+from app.models.actor import ActorProfile
 from app.models.founding_actor import FoundingActor
 from app.models.user import User
 from app.services.email.marketing import verify_unsubscribe_token
@@ -163,6 +164,9 @@ def get_me(
     is_founding_actor = db.query(
         exists().where(FoundingActor.user_id == current_user.id)
     ).scalar()
+    headshot_url = db.query(ActorProfile.headshot_url).filter(
+        ActorProfile.user_id == current_user.id
+    ).scalar()
     return {
         "id": current_user.id,
         "email": current_user.email,
@@ -175,6 +179,7 @@ def get_me(
         "is_moderator": current_user.is_moderator,
         "can_approve_submissions": current_user.can_approve_submissions,
         "is_founding_actor": is_founding_actor,
+        "headshot_url": headshot_url,
     }
 
 

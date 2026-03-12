@@ -6,11 +6,13 @@ import { supabase } from "./supabase";
 import api, { primeSessionCache } from "./api";
 import { setStoredLastAuthMethod } from "./last-auth-method";
 import { clearSwrCache, clearReactQueryCache, clearUserSpecificQueryCache } from "./swrCache";
+import { suppressCachePersist } from "@/components/providers/AuthProviderWrapper";
 
 interface User {
   id: number;
   email: string;
   name?: string;
+  headshot_url?: string | null;
   has_seen_welcome?: boolean;
   has_seen_search_tour?: boolean;
   has_seen_profile_tour?: boolean;
@@ -110,6 +112,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         try {
           const { data: { session } } = await supabase.auth.getSession();
           if (session) {
+            // If the session belongs to a different user than what's cached,
+            // clear user-specific cache to prevent cross-user data leak (e.g. OAuth sign-in)
+            if (cached?.email && session.user.email && cached.email !== session.user.email) {
+              clearUserSpecificQueryCache();
+            }
             // Prime the API session cache so dashboard queries don't re-fetch session
             if (session.access_token && session.expires_at) {
               primeSessionCache(session.access_token, session.expires_at);
@@ -260,6 +267,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setCachedUser(null);
     clearSwrCache();
+    suppressCachePersist(); // prevent beforeunload from re-persisting stale cache
     clearReactQueryCache();
     setUser(null);
 

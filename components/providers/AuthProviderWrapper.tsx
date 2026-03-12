@@ -8,6 +8,14 @@ const REACT_QUERY_CACHE_KEY = "actorrise-react-query-cache";
 const PERSIST_CACHE_MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours
 const PERSIST_THROTTLE_MS = 1000; // max one write per second
 
+// When true, prevents beforeunload from re-persisting a cache that was just cleared (e.g. on sign-out).
+let persistSuppressed = false;
+
+/** Call before clearing the cache on sign-out so beforeunload doesn't re-persist stale data. */
+export function suppressCachePersist() {
+  persistSuppressed = true;
+}
+
 const defaultOptions = {
   queries: {
     staleTime: 2 * 60 * 1000,
@@ -18,6 +26,7 @@ const defaultOptions = {
 };
 
 function persistCache(client: QueryClient) {
+  if (persistSuppressed) return;
   try {
     const state = dehydrate(client);
     localStorage.setItem(

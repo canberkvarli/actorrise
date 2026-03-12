@@ -47,6 +47,8 @@ export default function PlatformLayout({
   const [showWelcome, setShowWelcome] = useState(false);
   const [showChangelogModal, setShowChangelogModal] = useState(false);
   const [changelogModalEntry, setChangelogModalEntry] = useState<ChangelogEntry | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [headshotFailed, setHeadshotFailed] = useState(false);
   const [minLoadReady] = useState(true); // No artificial delay — auth resolves fast
   const { count: bookmarkCount, isLoading: isLoadingBookmarks } = useBookmarkCount();
   const { count: filmTvFavoriteCount, isLoading: isLoadingFilmTvFavorites } = useFilmTvFavoriteCount();
@@ -54,18 +56,26 @@ export default function PlatformLayout({
   const { data: profile } = useProfile(isDemoUser);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
-  const displayName = profile?.name?.trim() || user?.name?.trim() || "";
+  const displayName = (mounted ? profile?.name?.trim() : null) || user?.name?.trim() || "";
   const profileLabel = displayName || "Account";
   const profileInitial = displayName
     ? displayName.trim().split(/\s+/).length >= 2
       ? `${displayName.trim().split(/\s+/)[0][0]}${displayName.trim().split(/\s+/)[1][0]}`.toUpperCase()
       : displayName.trim().slice(0, 2).toUpperCase()
     : (user?.email || "?").charAt(0).toUpperCase();
-  const headshotUrl = profile?.headshot_url ? cleanImageUrl(profile.headshot_url) : null;
+  const rawHeadshotUrl = profile?.headshot_url || user?.headshot_url;
+  const headshotUrl = mounted && rawHeadshotUrl && !headshotFailed ? cleanImageUrl(rawHeadshotUrl) : null;
 
   // Use SWR hook for cached subscription data - MUST be called before any early returns
   const { subscription } = useSubscription();
   const userTier = subscription?.tier_name || "free";
+
+  useEffect(() => setMounted(true), []);
+
+  // Reset headshot error when profile data changes (e.g., user uploads a new headshot)
+  useEffect(() => {
+    if (profile?.headshot_url) setHeadshotFailed(false);
+  }, [profile?.headshot_url]);
 
   // Close profile dropdown when clicking/tapping outside (mobile + desktop)
   useEffect(() => {
@@ -250,6 +260,8 @@ export default function PlatformLayout({
                         width={28}
                         height={28}
                         className="rounded-full object-cover h-full w-full"
+                        unoptimized
+                        onError={() => setHeadshotFailed(true)}
                       />
                     ) : (
                       profileInitial
@@ -277,6 +289,8 @@ export default function PlatformLayout({
                             width={44}
                             height={44}
                             className="rounded-full object-cover h-11 w-11"
+                            unoptimized
+                            onError={() => setHeadshotFailed(true)}
                           />
                         ) : (
                           <div className="flex items-center justify-center h-11 w-11 rounded-full bg-foreground text-background text-sm font-medium">
@@ -677,6 +691,8 @@ export default function PlatformLayout({
                 width={24}
                 height={24}
                 className="rounded-full object-cover h-6 w-6 shrink-0"
+                unoptimized
+                onError={() => setHeadshotFailed(true)}
               />
             ) : (
               <span className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground text-background text-[10px] font-medium shrink-0">
