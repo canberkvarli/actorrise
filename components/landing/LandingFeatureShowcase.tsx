@@ -11,13 +11,14 @@ export function LandingFeatureShowcase() {
 
         {/* Section Header */}
         <div className="mb-10 sm:mb-14 md:mb-18">
-          <p className="text-xs font-medium tracking-[0.15em] uppercase text-primary mb-3">
-            What's inside
-          </p>
-          <h2 className="text-3xl sm:text-4xl md:text-5xl font-serif tracking-[-0.03em] leading-[1.1] max-w-xl">
-            Walk into the room ready.
+          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-400 mb-4">
+            <span className="size-1.5 rounded-full bg-green-500 animate-pulse" />
+            New
+          </span>
+          <h2 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-serif tracking-[-0.03em] leading-[1.05]">
+            ScenePartner is live.
           </h2>
-          <p className="mt-3 text-base sm:text-lg text-muted-foreground max-w-md">
+          <p className="mt-4 text-base sm:text-lg text-muted-foreground max-w-md">
             Find the right piece. Rehearse it until it's yours.
           </p>
         </div>

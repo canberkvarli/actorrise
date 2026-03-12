@@ -14,8 +14,8 @@ export function LandingStickyCta() {
 
   useEffect(() => {
     const handleScroll = () => {
-      // Show after scrolling 600px (past hero section)
-      setVisible(window.scrollY > 600);
+      // Show after scrolling past hero section (~900px)
+      setVisible(window.scrollY > 900);
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
@@ -35,15 +35,10 @@ export function LandingStickyCta() {
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
           className="fixed bottom-0 left-0 right-0 z-50 md:hidden"
         >
-          <div className="bg-background/95 backdrop-blur-sm border-t border-border shadow-lg p-4">
-            <div className="flex gap-2">
-              <Button asChild size="lg" className="flex-1 h-14 text-base font-semibold">
-                <Link href="/my-scripts">Start rehearsing</Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="flex-1 h-14 text-base">
-                <Link href="/search">Find a piece</Link>
-              </Button>
-            </div>
+          <div className="bg-background/95 backdrop-blur-sm border-t border-border shadow-lg px-4 py-3">
+            <Button asChild className="w-full h-11 text-sm font-semibold">
+              <Link href="/my-scripts">Start rehearsing</Link>
+            </Button>
           </div>
         </motion.div>
       )}

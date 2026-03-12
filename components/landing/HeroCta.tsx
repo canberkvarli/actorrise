@@ -21,7 +21,7 @@ export function HeroCta() {
   return (
     <Button
       size="lg"
-      className="h-14 sm:h-16 px-10 sm:px-14 text-base sm:text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all"
+      className="h-12 sm:h-14 md:h-16 px-8 sm:px-12 md:px-14 text-sm sm:text-base md:text-lg font-semibold rounded-full shadow-lg hover:shadow-xl transition-all"
       onClick={handleClick}
     >
       Start rehearsing

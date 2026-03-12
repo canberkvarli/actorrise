@@ -5,6 +5,14 @@
 
 const STORAGE_KEY = "swr-cache-v1";
 
+export function clearSwrCache() {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 export function localStorageProvider() {
   // Hydrate from localStorage on init
   let map: Map<string, any>;

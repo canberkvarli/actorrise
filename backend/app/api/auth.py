@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
 from sqlalchemy import exists
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -93,8 +94,21 @@ def get_current_user(
             marketing_opt_in=True,
         )
         db.add(user)
-        db.commit()
-        db.refresh(user)
+        try:
+            db.commit()
+            db.refresh(user)
+        except IntegrityError:
+            # Race condition: another parallel request inserted the same email
+            # between our check and our insert. Roll back and re-fetch.
+            db.rollback()
+            user = db.query(User).filter(User.email == email).first()
+            if user:
+                if user.supabase_id != supabase_id:
+                    user.supabase_id = supabase_id
+                    db.commit()
+                    db.refresh(user)
+                return user
+            raise  # Unexpected — re-raise if we still can't find the user
         # Send welcome email (fire-and-forget; don't block auth response)
         try:
             send_welcome_email(user_email=user.email, user_name=user.name)
