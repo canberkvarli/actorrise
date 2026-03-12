@@ -40,7 +40,7 @@ const USER_CACHE_KEY = "actorrise_user_v1";
 
 function getCachedUser(): User | null {
   try {
-    const raw = sessionStorage.getItem(USER_CACHE_KEY);
+    const raw = localStorage.getItem(USER_CACHE_KEY);
     return raw ? (JSON.parse(raw) as User) : null;
   } catch {
     return null;
@@ -49,8 +49,8 @@ function getCachedUser(): User | null {
 
 function setCachedUser(user: User | null) {
   try {
-    if (user) sessionStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
-    else sessionStorage.removeItem(USER_CACHE_KEY);
+    if (user) localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user));
+    else localStorage.removeItem(USER_CACHE_KEY);
   } catch {
     // ignore
   }
