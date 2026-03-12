@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabase } from "./supabase";
 import api, { primeSessionCache } from "./api";
 import { setStoredLastAuthMethod } from "./last-auth-method";
-import { clearSwrCache } from "./swrCache";
+import { clearSwrCache, clearReactQueryCache } from "./swrCache";
 
 interface User {
   id: number;
@@ -172,6 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setStoredLastAuthMethod("email");
       clearSwrCache();
+      clearReactQueryCache();
 
       // Full page redirect so session cookies are sent on the next request (e.g. /search).
       // router.push() is client-only and can leave middleware without cookies on first nav.
@@ -222,6 +223,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         setStoredLastAuthMethod("email");
         clearSwrCache();
+        clearReactQueryCache();
         // Full page redirect so session cookies are sent on the next request and modal state is cleared
         // Using router.push() leaves the auth modal open because React state persists
         window.location.href = "/dashboard";
@@ -258,6 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setCachedUser(null);
     clearSwrCache();
+    clearReactQueryCache();
     setUser(null);
 
     // Brief delay so UI can play fade-out animation before redirect

@@ -24,17 +24,17 @@ const noopPersister: Persister = {
   removeClient: () => Promise.resolve(),
 };
 
-function createSessionStoragePersister(): Persister {
+function createLocalStoragePersister(): Persister {
   if (typeof window === "undefined") return noopPersister;
   return createAsyncStoragePersister({
     storage: {
-      getItem: (key: string) => Promise.resolve(window.sessionStorage.getItem(key)),
+      getItem: (key: string) => Promise.resolve(window.localStorage.getItem(key)),
       setItem: (key: string, value: string) => {
-        window.sessionStorage.setItem(key, value);
+        window.localStorage.setItem(key, value);
         return Promise.resolve();
       },
       removeItem: (key: string) => {
-        window.sessionStorage.removeItem(key);
+        window.localStorage.removeItem(key);
         return Promise.resolve();
       },
     },
@@ -45,7 +45,7 @@ function createSessionStoragePersister(): Persister {
 
 export function AuthProviderWrapper({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient({ defaultOptions }));
-  const persister = useMemo(() => createSessionStoragePersister(), []);
+  const persister = useMemo(() => createLocalStoragePersister(), []);
 
   return (
     <PersistQueryClientProvider
