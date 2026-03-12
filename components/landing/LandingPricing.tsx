@@ -7,7 +7,6 @@
 
 import { usePricingTiers, DEFAULT_PRICING_TIERS, type PricingTier } from "@/hooks/usePricingTiers";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 
 function getFeaturesList(tier: PricingTier): string[] {
@@ -72,29 +71,13 @@ function getFeaturesList(tier: PricingTier): string[] {
 }
 
 export function LandingPricing() {
-  const { data: tiers = DEFAULT_PRICING_TIERS, isLoading } = usePricingTiers();
+  const { data: tiers = DEFAULT_PRICING_TIERS } = usePricingTiers();
 
   const formatPrice = (cents: number) => {
     if (cents === 0) return "$0";
     const dollars = cents / 100;
     return dollars % 1 === 0 ? `$${dollars.toFixed(0)}` : `$${dollars.toFixed(2)}`;
   };
-
-  if (isLoading) {
-    return (
-      <section id="pricing" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
-        <div className="w-full max-w-[min(1400px,100%)] mx-auto">
-          <Skeleton className="h-10 w-48 mb-2" />
-          <Skeleton className="h-5 w-64 mb-12" />
-          <div className="grid md:grid-cols-3 gap-8">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-64 rounded-xl" />
-            ))}
-          </div>
-        </div>
-      </section>
-    );
-  }
 
   return (
     <section id="pricing" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
