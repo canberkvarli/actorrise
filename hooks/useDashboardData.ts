@@ -17,7 +17,7 @@ interface ActorProfile {
   headshot_url?: string | null;
 }
 
-const DASHBOARD_REQUEST_TIMEOUT_MS = 12_000; // avoid stuck loading after sign-in if API is slow
+const DASHBOARD_REQUEST_TIMEOUT_MS = 5_000; // fail fast — skeletons resolve to empty state quickly
 
 // ---------------------------------------------------------------------------
 // Demo account mock data – returned instantly so the dashboard never waits
