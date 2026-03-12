@@ -12,7 +12,7 @@ from app.models.user import User
 from app.services.ai.content_analyzer import ContentAnalyzer
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import or_
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/film-tv", tags=["film-tv"])
@@ -154,6 +154,7 @@ async def search_film_tv_references(
     title: Optional[str] = Query(None, description="Title fuzzy match"),
     imdb_rating_min: Optional[float] = Query(None),
     personalized: bool = Query(False, description="Personalize no-query results by actor preferred genres"),
+    include_count: bool = Query(True, description="Include total count in response (skip for dashboard discovers)"),
     limit: int = Query(20, le=100),
     page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
@@ -278,25 +279,18 @@ async def search_film_tv_references(
             p_total = personalized_base.count()
 
             if p_total > 0:
-                # Use ID-sampling instead of ORDER BY RANDOM() for performance
-                all_ids = [r[0] for r in personalized_base.with_entities(FilmTvReference.id).all()]
-                selected_ids = _random.sample(all_ids, min(limit, len(all_ids)))
-                rows = (
-                    personalized_base
-                    .filter(FilmTvReference.id.in_(selected_ids))
-                    .all()
-                )
+                rows = personalized_base.order_by(func.random()).limit(limit).all()
                 if rows:
                     record_total_search(current_user.id, db)
                 return FilmTvSearchResponse(
                     results=[_to_result(r) for r in rows],
-                    total=p_total,
+                    total=p_total if include_count else 0,
                     page=page,
                     page_size=limit,
                 )
             # Fall through to generic ordering if zero personalized results
 
-    total = base.count()
+    total = base.count() if include_count else 0
     offset = (page - 1) * limit
     rows = base.order_by(FilmTvReference.imdb_rating.desc().nullslast()).offset(offset).limit(limit).all()
     if rows:

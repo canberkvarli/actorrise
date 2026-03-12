@@ -292,7 +292,7 @@ export function useDiscoverFilmTv(enabled: boolean = true, personalized: boolean
   return useQuery<FilmTvReference[]>({
     queryKey: ["discover-film-tv", personalized],
     queryFn: async () => {
-      const params = new URLSearchParams({ limit: "6" });
+      const params = new URLSearchParams({ limit: "6", include_count: "false" });
       if (personalized) params.set("personalized", "true");
       const response = await api.get<{ results: FilmTvReference[]; total: number }>(
         `/api/film-tv/search?${params}`,
