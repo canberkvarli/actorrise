@@ -379,7 +379,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {showStatsSkeleton && (
                 <Skeleton className="h-4 w-44 rounded-md" />
               )}
-              {!showStatsSkeleton && stats && stats.completion_percentage < 100 && (
+              {mounted && !showStatsSkeleton && stats && stats.completion_percentage < 100 && (
                 <Link href="/profile" className="group flex items-center gap-2.5">
                   <span className="text-xs text-muted-foreground group-hover:text-foreground transition-colors">
                     Profile {stats.completion_percentage}%
