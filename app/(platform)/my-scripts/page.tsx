@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import useSWR, { useSWRConfig } from "swr";
+import { useQueryClient } from "@tanstack/react-query";
+import { useScripts, SCRIPTS_QUERY_KEY, type UserScript as UserScriptType } from "@/hooks/useScripts";
 import { useRouter } from "next/navigation";
 import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import UnderConstructionScripts from "@/components/UnderConstructionScripts";
@@ -44,6 +45,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import api, { API_URL } from "@/lib/api";
+import { UpgradeModal } from "@/components/billing/UpgradeModal";
 import { getGenreBadgeClassName, getGenreBorderClassName } from "@/lib/genreColors";
 import { toast } from "sonner";
 
@@ -80,33 +82,7 @@ function groupLabel(raw: string): string {
   return raw;
 }
 
-interface UserScript {
-  id: number;
-  title: string;
-  author: string;
-  description?: string;
-  original_filename: string;
-  file_type: string;
-  file_size_bytes?: number;
-  processing_status: "pending" | "processing" | "completed" | "failed";
-  processing_error?: string;
-  ai_extraction_completed: boolean;
-  genre?: string;
-  estimated_length_minutes?: number;
-  num_characters: number;
-  num_scenes_extracted: number;
-  characters: Array<{
-    name: string;
-    gender?: string;
-    age_range?: string;
-    description?: string;
-  }>;
-  created_at: string;
-  updated_at?: string;
-  first_scene_title?: string | null;
-  first_scene_description?: string | null;
-  scene_titles?: string[];
-}
+type UserScript = UserScriptType;
 
 function CastHoverPopover({ characters, count }: { characters: { name: string; gender?: string; age_range?: string; description?: string }[]; count: number }) {
   const [open, setOpen] = useState(false);
@@ -158,10 +134,11 @@ export default function MyScriptsPage() {
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
   const router = useRouter();
-  const { mutate: scopedMutate } = useSWRConfig();
+  const queryClient = useQueryClient();
   const [showTutorial, setShowTutorial] = useState<boolean | null>(null);
   const [showAudioCheck, setShowAudioCheck] = useState<boolean | null>(null);
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [showPasteModal, setShowPasteModal] = useState(false);
   const [pasteText, setPasteText] = useState("");
@@ -193,11 +170,8 @@ export default function MyScriptsPage() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const progressScrollRef = useRef<HTMLDivElement>(null);
 
-  const { data: scripts = [], isLoading, mutate: mutateScripts } = useSWR<UserScript[]>(
-    "/api/scripts/",
-    () => api.get<UserScript[]>("/api/scripts/").then((r) => r.data),
-    { revalidateOnFocus: true, dedupingInterval: 5000 }
-  );
+  const { data: scripts = [], isLoading } = useScripts();
+  const mutateScripts = () => queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY });
 
   useEffect(() => {
     setShowTutorial(!getScenePartnerTutorialSeen());
@@ -275,6 +249,12 @@ export default function MyScriptsPage() {
 
       if (!scanRes.ok) {
         const err = await scanRes.json();
+        if (err.detail?.error === "feature_not_available") {
+          setScanning(false);
+          event.target.value = "";
+          setShowUpgradeModal(true);
+          return;
+        }
         throw new Error(typeof err.detail === "string" ? err.detail : "Scan failed");
       }
 
@@ -344,6 +324,10 @@ export default function MyScriptsPage() {
       if (!response.ok) {
         const error = await response.json();
         const detail = error.detail;
+        if (detail?.error === "feature_not_available") {
+          setShowUpgradeModal(true);
+          return;
+        }
         const message = typeof detail === "string"
           ? detail
           : detail?.message || "Upload failed";
@@ -386,8 +370,8 @@ export default function MyScriptsPage() {
               const result = event.data;
               toast.success(`Script uploaded! Extracted ${result.num_scenes_extracted} scenes.`);
               mutateScripts();
-              // Pre-populate SWR cache so detail page loads instantly (no skeletons)
-              scopedMutate(`/api/scripts/${result.id}`, result, false);
+              // Pre-populate React Query cache so detail page loads instantly
+              queryClient.setQueryData(["scripts", result.id], result);
               // Close the reader before navigating to avoid "client disconnected" on backend
               reader.cancel();
               // Brief pause so user sees the final state
@@ -449,11 +433,16 @@ export default function MyScriptsPage() {
       mutateScripts();
       router.push(`/my-scripts/${data.id}`);
     } catch (err: unknown) {
-      const msg =
+      const detail =
         err && typeof err === "object" && "response" in err
-          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
-          : "Failed to create script";
-      toast.error(typeof msg === "string" ? msg : "Failed to create script");
+          ? (err as { response?: { data?: { detail?: any } } }).response?.data?.detail
+          : undefined;
+      if (detail?.error === "feature_not_available") {
+        setShowUpgradeModal(true);
+      } else {
+        const msg = typeof detail === "string" ? detail : "Failed to create script";
+        toast.error(msg);
+      }
     } finally {
       setPasting(false);
     }
@@ -461,7 +450,7 @@ export default function MyScriptsPage() {
 
   const performDeleteScript = async (scriptId: number) => {
     // Optimistic: remove from UI instantly
-    mutateScripts((prev) => (prev ?? []).filter((s) => s.id !== scriptId), false);
+    queryClient.setQueryData<UserScript[]>(SCRIPTS_QUERY_KEY, (prev) => (prev ?? []).filter((s) => s.id !== scriptId));
     try {
       await api.delete(`/api/scripts/${scriptId}`);
       localStorage.setItem("dismissed_example_script", "true");
@@ -1107,6 +1096,13 @@ export default function MyScriptsPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <UpgradeModal
+        open={showUpgradeModal}
+        onOpenChange={setShowUpgradeModal}
+        feature="Script uploads"
+        message="Upload and manage scripts with a Plus or Unlimited plan. Upgrade to get started."
+      />
     </div>
   );
 }

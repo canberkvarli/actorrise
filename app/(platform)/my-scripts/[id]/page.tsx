@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useRef } from "react";
-import useSWR, { useSWRConfig } from "swr";
+import { useQueryClient } from "@tanstack/react-query";
+import { useScript, SCRIPTS_QUERY_KEY, type UserScript as UserScriptImport } from "@/hooks/useScripts";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
@@ -94,27 +95,7 @@ function groupScenesByAct(scenes: Scene[]): ActGroup[] {
   }));
 }
 
-interface UserScript {
-  id: number;
-  title: string;
-  author: string;
-  description?: string;
-  original_filename: string;
-  file_type: string;
-  processing_status: string;
-  genre?: string;
-  estimated_length_minutes?: number;
-  num_characters: number;
-  num_scenes_extracted: number;
-  characters: Array<{
-    name: string;
-    gender?: string;
-    age_range?: string;
-    description?: string;
-  }>;
-  created_at: string;
-  scenes: Scene[];
-}
+type UserScript = UserScriptImport & { scenes: Scene[] };
 
 export default function ScriptDetailPage() {
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
@@ -122,13 +103,9 @@ export default function ScriptDetailPage() {
   const router = useRouter();
   const params = useParams();
   const scriptId = parseInt(params.id as string);
-  const { mutate: scopedMutate } = useSWRConfig();
-
-  const { data: script, isLoading, mutate: mutateScript } = useSWR<UserScript>(
-    scriptId ? `/api/scripts/${scriptId}` : null,
-    () => api.get<UserScript>(`/api/scripts/${scriptId}`).then((r) => r.data),
-    { revalidateOnFocus: false, dedupingInterval: 30000 }
-  );
+  const queryClient = useQueryClient();
+  const { data: script, isLoading } = useScript(scriptId || null) as { data: UserScript | undefined; isLoading: boolean };
+  const mutateScript = () => queryClient.invalidateQueries({ queryKey: ["scripts", scriptId] });
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   /** Which character the user will play per scene (sceneId -> character name) */
@@ -180,12 +157,10 @@ export default function ScriptDetailPage() {
     setEditValue("");
   };
 
-  /** Write updated script into the SWR list cache so My Scripts reflects changes instantly */
+  /** Write updated script into the React Query list cache so My Scripts reflects changes instantly */
   const patchListCache = (updater: (s: any) => any) => {
-    scopedMutate(
-      "/api/scripts/",
-      (prev: any) => Array.isArray(prev) ? prev.map((s: any) => s.id === scriptId ? updater(s) : s) : prev,
-      { revalidate: false },
+    queryClient.setQueryData<any[]>(SCRIPTS_QUERY_KEY, (prev) =>
+      Array.isArray(prev) ? prev.map((s) => s.id === scriptId ? updater(s) : s) : prev
     );
   };
 
@@ -194,7 +169,7 @@ export default function ScriptDetailPage() {
     const value = editValue;
 
     // Update both detail and list cache immediately (optimistic)
-    mutateScript((prev) => prev ? { ...prev, [field]: value } : prev, false);
+    queryClient.setQueryData<UserScript>(["scripts", scriptId], (prev) => prev ? { ...prev, [field]: value } : prev);
     patchListCache((s: any) => ({ ...s, [field]: value }));
     setEditingField(null);
 
@@ -206,7 +181,7 @@ export default function ScriptDetailPage() {
       toast.error("Failed to update");
       // Revert on failure
       mutateScript();
-      scopedMutate("/api/scripts/");
+      queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY });
     });
   };
 
