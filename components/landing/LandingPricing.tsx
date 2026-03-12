@@ -8,6 +8,7 @@
 import { usePricingTiers, DEFAULT_PRICING_TIERS, type PricingTier } from "@/hooks/usePricingTiers";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
 function getFeaturesList(tier: PricingTier): string[] {
   const features: string[] = [];
@@ -71,7 +72,10 @@ function getFeaturesList(tier: PricingTier): string[] {
 }
 
 export function LandingPricing() {
-  const { data: tiers = DEFAULT_PRICING_TIERS } = usePricingTiers();
+  const { data: apiTiers } = usePricingTiers();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const tiers = mounted && apiTiers ? apiTiers : DEFAULT_PRICING_TIERS;
 
   const formatPrice = (cents: number) => {
     if (cents === 0) return "$0";
