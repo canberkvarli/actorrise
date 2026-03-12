@@ -112,10 +112,10 @@ export function LandingPageAnimated() {
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
               AI-powered audition prep
             </div>
-            <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.05] tracking-[-0.03em] max-w-3xl mx-auto">
+            <h1 className="text-[2rem] sm:text-5xl md:text-6xl lg:text-7xl leading-[1.05] tracking-[-0.03em] max-w-3xl mx-auto">
               Find your <span className="hero-keyword">monologue</span> in 20&nbsp;seconds.
-              <br />
-              Spend your time <span className="hero-keyword">rehearsing</span>.
+              <br className="hidden sm:block" />
+              {" "}Spend your time <span className="hero-keyword">rehearsing</span>.
             </h1>
             {/* Large Primary CTA */}
             <div className="mt-8 sm:mt-10 flex flex-col items-center gap-3">
@@ -207,9 +207,9 @@ export function LandingPageAnimated() {
             <div className="flex flex-col gap-2">
               <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} ActorRise</p>
               <p className="text-xs text-muted-foreground/80">Built by an actor, for actors.</p>
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <a href="https://fazier.com/launches/www.actorrise.com" target="_blank" rel="noopener noreferrer">
-                  <img src="https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=launched&theme=dark" width={150} alt="Fazier badge" />
+                  <img src="https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=launched&theme=dark" width={150} alt="Fazier badge" className="h-[40px] w-auto" />
                 </a>
                 <a
                   href="https://www.producthunt.com/products/actorrise?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-actorrise"
@@ -219,16 +219,14 @@ export function LandingPageAnimated() {
                   <img
                     src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1078076&theme=dark&t=1773031056919"
                     alt="ActorRise - Find the perfect monologue in less than 20 seconds | Product Hunt"
-                    width={300}
-                    height={65}
-                    className="h-[65px] w-auto"
+                    className="h-[40px] w-auto max-w-[180px] sm:max-w-none sm:h-[54px]"
                   />
                 </a>
                 <a href="https://peerlist.io/canberkvarli/project/actorrise" target="_blank" rel="noreferrer">
                   <img
                     src="https://peerlist.io/api/v1/projects/embed/PRJHKKDKE6P6NPEPG3DRRAQ68J9OBR?showUpvote=false&theme=dark"
                     alt="ActorRise on Peerlist"
-                    style={{ width: "auto", height: "65px" }}
+                    className="h-[40px] w-auto sm:h-[54px]"
                   />
                 </a>
               </div>
