@@ -4,10 +4,19 @@
  */
 
 const STORAGE_KEY = "swr-cache-v1";
+const REACT_QUERY_CACHE_KEY = "actorrise-react-query-cache";
 
 export function clearSwrCache() {
   try {
     localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+export function clearReactQueryCache() {
+  try {
+    localStorage.removeItem(REACT_QUERY_CACHE_KEY);
   } catch {
     // ignore
   }
