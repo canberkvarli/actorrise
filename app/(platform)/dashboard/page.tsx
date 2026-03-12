@@ -89,8 +89,10 @@ export default function DashboardPage() {
   const [selectedMonologue, setSelectedMonologue] = useState<Monologue | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const mq = window.matchMedia("(max-width: 767px)");
     setIsMobile(mq.matches);
     const fn = () => setIsMobile(mq.matches);
@@ -120,9 +122,12 @@ export default function DashboardPage() {
   const { count: bookmarkCount } = useBookmarkCount();
   const isProfileComplete = stats && stats.completion_percentage >= 50;
   const { data: recommendations = [], isLoading: isLoadingRecommendations } = useRecommendations(isProfileComplete ?? false, true, isDemoUser);
-  const { data: discoverMonologues = [], isLoading: isLoadingDiscover } = useDiscover(!(isProfileComplete ?? false), isDemoUser);
-  const mainMonologues = isProfileComplete ? recommendations : discoverMonologues;
-  const isLoadingMain = isProfileComplete ? isLoadingRecommendations : isLoadingDiscover;
+  const { data: discoverMonologues = [], isLoading: isLoadingDiscover } = useDiscover(true, isDemoUser); // always enabled as fallback
+  // Use recommendations when available, fall back to discover so dashboard is never empty
+  const mainMonologues = isProfileComplete && recommendations.length > 0 ? recommendations : discoverMonologues;
+  const isLoadingMain = isProfileComplete
+    ? (isLoadingRecommendations && discoverMonologues.length === 0) // show discover while recommendations load
+    : isLoadingDiscover;
   const { data: discoverFilmTv = [], isLoading: isLoadingFilmTv } = useDiscoverFilmTv(
     true,
     isProfileComplete ?? false,
@@ -339,9 +344,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
   const currentMonologue = monologueDetail || selectedMonologue;
 
-  const greetingName = profile?.name?.trim().split(/\s+/)[0] || null;
+  const greetingName = mounted ? (profile?.name?.trim().split(/\s+/)[0] || user?.name?.trim().split(/\s+/)[0] || null) : null;
   const showWelcomeSkeleton = false; // show default greeting immediately; name updates when profile loads
-  const showStatsSkeleton = isLoadingStats && stats === undefined;
+  const showStatsSkeleton = mounted && isLoadingStats && stats === undefined;
 
   const sectionEase = [0.25, 0.1, 0.25, 1] as const;
   const sectionDuration = 0.4;
@@ -444,10 +449,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             <div className="flex items-end justify-between mb-6">
               <div>
                 <h2 className="text-2xl md:text-3xl font-bold text-foreground">
-                  {isProfileComplete ? "Recommended for you" : "Discover monologues"}
+                  {mounted && isProfileComplete ? "Recommended for you" : "Discover monologues"}
                 </h2>
                 <p className="text-muted-foreground mt-1">
-                  {isProfileComplete ? "Personalized picks based on your profile" : "Explore our curated collection"}
+                  {mounted && isProfileComplete ? "Personalized picks based on your profile" : "Explore our curated collection"}
                 </p>
               </div>
               <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:bg-neutral-100 dark:hover:bg-neutral-800 hover:text-foreground">
@@ -458,7 +463,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </Button>
             </div>
 
-            {isLoadingMain ? (
+            {(!mounted || isLoadingMain) ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[280px]">
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="p-6 bg-card border border-border rounded-xl min-h-[260px]">
@@ -565,7 +570,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   <span className="truncate">Film & TV</span>
                 </h2>
                 <p className="text-muted-foreground mt-1">
-                  {isProfileComplete
+                  {mounted && isProfileComplete
                     ? "Personalized picks based on your preferred genres"
                     : "Top picks by IMDb rating \u00b7 Search for more by scene or title"}
                 </p>
@@ -594,7 +599,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </div>
             )}
 
-            {isLoadingFilmTv ? (
+            {(!mounted || isLoadingFilmTv) ? (
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[240px]">
                 {[1, 2, 3, 4].map((i) => (
                   <div key={i} className="p-6 bg-card border border-border rounded-xl min-h-[200px]">
@@ -660,7 +665,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {/* Your Monologues */}
               <div className="min-w-0 flex flex-col w-full">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                  <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
                     <IconBookmark className={`h-5 w-5 shrink-0 ${accentTeal.text}`} />
                     Your Monologues
                   </h2>
@@ -679,7 +684,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {/* Your Scripts */}
               <div className="min-w-0 flex flex-col w-full">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                  <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
                     <IconFileText className="h-5 w-5 text-amber-500 shrink-0" />
                     Your Scripts
                   </h2>
@@ -698,7 +703,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {/* Recent Searches */}
               <div className="min-w-0 flex flex-col w-full">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold text-foreground flex items-center gap-2">
+                  <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
                     <IconHistory className="h-5 w-5 text-muted-foreground shrink-0" />
                     Recent Searches
                   </h2>
