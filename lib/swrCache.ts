@@ -22,6 +22,35 @@ export function clearReactQueryCache() {
   }
 }
 
+// User-specific query keys — must be cleared on login to prevent cross-user data leak.
+// Shared keys (discover, discover-film-tv) are intentionally kept so cards render
+// instantly from cache while fresh user-specific data loads in the background.
+const USER_SPECIFIC_QUERY_KEYS = new Set([
+  "profile",
+  "profile-stats",
+  "profile-form",
+  "recommendations",
+]);
+
+export function clearUserSpecificQueryCache() {
+  try {
+    const raw = localStorage.getItem(REACT_QUERY_CACHE_KEY);
+    if (!raw) return;
+    const cache = JSON.parse(raw) as {
+      clientState?: { queries?: Array<{ queryKey?: unknown[] }> };
+    };
+    if (cache?.clientState?.queries) {
+      cache.clientState.queries = cache.clientState.queries.filter(
+        (q) => !USER_SPECIFIC_QUERY_KEYS.has(q.queryKey?.[0] as string)
+      );
+      localStorage.setItem(REACT_QUERY_CACHE_KEY, JSON.stringify(cache));
+    }
+  } catch {
+    // If parsing fails, fall back to full clear
+    localStorage.removeItem(REACT_QUERY_CACHE_KEY);
+  }
+}
+
 export function localStorageProvider() {
   // Hydrate from localStorage on init
   let map: Map<string, any>;
