@@ -128,41 +128,6 @@ export default function PlatformLayout({
     };
   }, [loading, user, showWelcome]);
 
-  // Note: Route protection is handled by middleware
-  // Single branded loading state so post–sign-in feels like one flow
-  if (loading || !minLoadReady) {
-    const loadingLabel = pathname?.includes("/my-scripts")
-      ? "Opening ScenePartner…"
-      : pathname?.includes("/scenes")
-        ? "Preparing scene…"
-        : pathname?.includes("/search")
-          ? "Loading search…"
-          : pathname?.includes("/audition")
-            ? "Setting the stage…"
-            : "Loading…";
-
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-5 bg-background">
-        <motion.div
-          className="relative"
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-        >
-          <div className="h-10 w-10 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
-          <IconSparkles className="h-5 w-5 text-primary absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-        </motion.div>
-        <motion.p
-          className="text-sm text-muted-foreground/80"
-          initial={{ opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: 0.15 }}
-        >
-          {loadingLabel}
-        </motion.p>
-      </div>
-    );
-  }
 
   const navItems = [
     { href: "/dashboard", label: "Home", icon: IconHome },
