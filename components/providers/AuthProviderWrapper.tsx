@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 
 const REACT_QUERY_CACHE_KEY = "actorrise-react-query-cache";
 const PERSIST_CACHE_MAX_AGE = 1000 * 60 * 60 * 24; // 24 hours
+const PERSIST_THROTTLE_MS = 1000; // max one write per second
 
 const defaultOptions = {
   queries: {
@@ -15,6 +16,18 @@ const defaultOptions = {
     retry: 1,
   },
 };
+
+function persistCache(client: QueryClient) {
+  try {
+    const state = dehydrate(client);
+    localStorage.setItem(
+      REACT_QUERY_CACHE_KEY,
+      JSON.stringify({ clientState: state, timestamp: Date.now() })
+    );
+  } catch {
+    // Storage full or unavailable — ignore
+  }
+}
 
 function createQueryClient(): QueryClient {
   const client = new QueryClient({ defaultOptions });
@@ -33,6 +46,15 @@ function createQueryClient(): QueryClient {
     } catch {
       // Corrupt cache — ignore, start fresh
     }
+
+    // Subscribe to query cache and persist after each successful update (throttled)
+    let persistTimer: ReturnType<typeof setTimeout> | null = null;
+    client.getQueryCache().subscribe((event) => {
+      if (event.type === "updated" && event.query.state.status === "success") {
+        if (persistTimer) clearTimeout(persistTimer);
+        persistTimer = setTimeout(() => persistCache(client), PERSIST_THROTTLE_MS);
+      }
+    });
   }
 
   return client;
@@ -41,22 +63,11 @@ function createQueryClient(): QueryClient {
 export function AuthProviderWrapper({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(createQueryClient);
 
-  // Persist cache to localStorage before page unloads
+  // Also persist on page unload as a safety net
   useEffect(() => {
-    const persist = () => {
-      try {
-        const state = dehydrate(queryClient);
-        localStorage.setItem(
-          REACT_QUERY_CACHE_KEY,
-          JSON.stringify({ clientState: state, timestamp: Date.now() })
-        );
-      } catch {
-        // Storage full or unavailable — ignore
-      }
-    };
-
-    window.addEventListener("beforeunload", persist);
-    return () => window.removeEventListener("beforeunload", persist);
+    const onUnload = () => persistCache(queryClient);
+    window.addEventListener("beforeunload", onUnload);
+    return () => window.removeEventListener("beforeunload", onUnload);
   }, [queryClient]);
 
   return (
