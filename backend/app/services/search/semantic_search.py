@@ -13,7 +13,7 @@ from app.models.actor import Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
 from app.services.search.cache_manager import cache_manager
 from app.services.search.query_optimizer import QueryOptimizer
-from sqlalchemy import or_, text
+from sqlalchemy import func, or_, text
 from sqlalchemy.orm import Session
 
 # Module-level in-memory caches (Level 0 hot cache shared across SemanticSearch instances).
@@ -1096,33 +1096,28 @@ class SemanticSearch:
     def get_random_monologues(self, limit: int = 10, filters: Optional[Dict] = None) -> List[Monologue]:
         """Get random monologues (for "Discover" feature).
 
-        Uses a two-query approach instead of ORDER BY RANDOM() which is O(n log n)
-        on the full table. First fetches only IDs (lightweight), samples in Python,
-        then loads full objects by primary key.
+        Uses ORDER BY RANDOM() LIMIT directly in the DB — single query, no
+        Python-side ID fetch. For ~10k rows this is significantly faster than
+        fetching all IDs to Python and doing a second IN query.
         """
 
-        id_query = self.db.query(Monologue.id).join(Play)
+        query = self.db.query(Monologue).join(Play)
 
         # Apply filters
         if filters:
             if filters.get('category'):
-                id_query = id_query.filter(Play.category == filters['category'])
+                query = query.filter(Play.category == filters['category'])
 
             if filters.get('difficulty'):
-                id_query = id_query.filter(Monologue.difficulty_level == filters['difficulty'])
+                query = query.filter(Monologue.difficulty_level == filters['difficulty'])
 
             if filters.get('max_overdone_score') is not None:
                 threshold = float(filters['max_overdone_score'])
-                id_query = id_query.filter(
+                query = query.filter(
                     or_(
                         Monologue.overdone_score.is_(None),
                         Monologue.overdone_score <= threshold,
                     )
                 )
 
-        all_ids = [row[0] for row in id_query.all()]
-        if not all_ids:
-            return []
-
-        selected_ids = _random.sample(all_ids, min(limit, len(all_ids)))
-        return self.db.query(Monologue).filter(Monologue.id.in_(selected_ids)).all()
+        return query.order_by(func.random()).limit(limit).all()

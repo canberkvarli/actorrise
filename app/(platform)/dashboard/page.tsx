@@ -340,7 +340,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   const currentMonologue = monologueDetail || selectedMonologue;
 
   const greetingName = profile?.name?.trim().split(/\s+/)[0] || null;
-  const showWelcomeSkeleton = isLoadingProfile;
+  const showWelcomeSkeleton = false; // show default greeting immediately; name updates when profile loads
   const showStatsSkeleton = isLoadingStats && stats === undefined;
 
   const sectionEase = [0.25, 0.1, 0.25, 1] as const;
