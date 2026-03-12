@@ -9,13 +9,14 @@ import { useAuthModal } from "@/components/auth/AuthModalContext";
 import { ContactModal } from "@/components/contact/ContactModal";
 import { SocialLinkIcons } from "@/components/founding-actor/SocialLinkIcons";
 import {
+  TESTIMONIALS,
   type TestimonialItem,
 } from "@/data/testimonials";
 import { useTestimonials } from "@/hooks/useTestimonials";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight, UserPlus } from "lucide-react";
 
 export type { TestimonialItem };
@@ -184,7 +185,11 @@ function ThumbnailDot({
 }
 
 export function LandingTestimonials() {
-  const { testimonials: shuffled } = useTestimonials();
+  const { testimonials: apiTestimonials } = useTestimonials();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  // Use static data before mount to match SSR; switch to API data after hydration
+  const shuffled = mounted ? apiTestimonials : TESTIMONIALS;
 
   const [index, setIndex] = useState(0);
   const [contactOpen, setContactOpen] = useState(false);
