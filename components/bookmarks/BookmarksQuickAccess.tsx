@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,8 @@ const bookmarkRowBase =
   "hover:shadow-md hover:border-secondary/50 hover:bg-secondary/5 cursor-pointer";
 
 export default function BookmarksQuickAccess({ onSelectMonologue }: BookmarksQuickAccessProps = {}) {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const { count } = useBookmarkCount();
   const { data: allBookmarks = [], isLoading } = useBookmarks();
 
@@ -27,7 +30,7 @@ export default function BookmarksQuickAccess({ onSelectMonologue }: BookmarksQui
   return (
     <Card className="rounded-lg border border-border/50 min-h-[280px] flex flex-col">
       <CardContent className={`pt-4 pb-4 flex flex-col flex-1 ${cardContentMin}`}>
-        {isLoading ? (
+        {(!mounted || isLoading) ? (
           <div className="space-y-3 flex-1">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-14 bg-muted/50 animate-pulse rounded-lg" />

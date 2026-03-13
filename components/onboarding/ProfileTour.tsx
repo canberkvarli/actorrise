@@ -114,9 +114,9 @@ export function ProfileTour({ onDismiss }: ProfileTourProps) {
     return () => window.removeEventListener("resize", onResize);
   }, [currentStep.targetId]);
 
-  const dismiss = useCallback(async () => {
-    await markProfileTourSeen();
+  const dismiss = useCallback(() => {
     onDismiss();
+    markProfileTourSeen().catch(() => {}); // fire-and-forget — don't block modal close
   }, [onDismiss]);
 
   const next = useCallback(() => {

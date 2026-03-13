@@ -3,6 +3,7 @@
 import hashlib
 import json
 import logging
+import concurrent.futures
 import random as _random
 import re
 from collections import OrderedDict
@@ -21,9 +22,44 @@ from sqlalchemy.orm import Session
 # These are always available, even when Redis is not installed, and keep repeat
 # queries cheap within a single process. Keys use a *canonical* form of the query
 # so trivial variants like "Hamlet", "hamlet ", or "HAMLET!!!" all share entries.
+#
+# Max sizes are tuned for a 512 MB instance (~200 MB baseline from imports):
+#   - Embeddings: 500 × ~6 KB ≈ 3 MB
+#   - Query parse: 1000 × ~5 KB ≈ 5 MB
+#   - Search results: 300 × ~20 KB ≈ 6 MB
+_MAX_EMBEDDING_CACHE = 500
+_MAX_QUERY_PARSE_CACHE = 1000
+_MAX_SEARCH_RESULTS_CACHE = 300
+
 EMBEDDING_CACHE: OrderedDict[str, List[float]] = OrderedDict()
 QUERY_PARSE_CACHE: OrderedDict[str, Dict] = OrderedDict()
 SEARCH_RESULTS_CACHE: OrderedDict[str, List[Any]] = OrderedDict()
+
+
+_AGE_RANGE_ORDER = ['teens', '20s', '30s', '40s', '50s', '60s', '70s']
+
+def _expand_age_range(age_range: str) -> List[str]:
+    """Expand an age range to include adjacent ranges + 'any'.
+    e.g. '30s' → ['20s', '30s', '40s', 'any']
+    """
+    age_lower = age_range.lower().strip()
+    try:
+        idx = _AGE_RANGE_ORDER.index(age_lower)
+    except ValueError:
+        return [age_range, 'any']
+    adjacent = {_AGE_RANGE_ORDER[idx]}
+    if idx > 0:
+        adjacent.add(_AGE_RANGE_ORDER[idx - 1])
+    if idx < len(_AGE_RANGE_ORDER) - 1:
+        adjacent.add(_AGE_RANGE_ORDER[idx + 1])
+    adjacent.add('any')
+    return list(adjacent)
+
+
+def _evict_if_needed(cache: OrderedDict, max_size: int) -> None:
+    """Remove oldest entries until cache is within max_size."""
+    while len(cache) > max_size:
+        cache.popitem(last=False)
 
 # Minimum relevance (0–1) to show any results. Below this, the query is treated as no match
 # (e.g. unrelated language, gibberish) and we return empty instead of weak semantic hits.
@@ -133,6 +169,13 @@ def _filter_match_boost(mono: Monologue, merged_filters: Dict) -> float:
                 boost += 0.11
         except (TypeError, ValueError):
             pass
+    if merged_filters.get("min_duration"):
+        try:
+            min_sec = int(merged_filters["min_duration"])
+            if mono.estimated_duration_seconds >= min_sec:
+                boost += 0.11
+        except (TypeError, ValueError):
+            pass
     want_themes = merged_filters.get("themes")
     if not want_themes and merged_filters.get("theme"):
         want_themes = [merged_filters["theme"]]
@@ -172,10 +215,10 @@ def _calculate_relevance_score_multiplicative(
 
     # Weight constants (tuned for good results)
     WEIGHTS = {
-        'filter_gender': 0.15,
+        'filter_gender': 0.25,
         'filter_emotion': 0.15,
         'filter_tone': 0.12,
-        'filter_age_range': 0.10,
+        'filter_age_range': 0.20,
         'filter_duration': 0.12,
         'filter_theme': 0.08,
         'profile_gender': 0.10,
@@ -203,13 +246,23 @@ def _calculate_relevance_score_multiplicative(
     if merged_filters.get("age_range"):
         ca = (mono.character_age_range or "").lower()
         want_age = (merged_filters["age_range"] or "").lower()
-        if ca == want_age or ca == "any":
-            score *= (1 + WEIGHTS['filter_age_range'])
+        if ca == want_age:
+            score *= (1 + WEIGHTS['filter_age_range'])  # Full boost for exact match
+        elif ca == "any" or ca in [a for a in _expand_age_range(want_age) if a != want_age and a != 'any']:
+            score *= (1 + WEIGHTS['filter_age_range'] * 0.5)  # Half boost for adjacent/any
 
     if merged_filters.get("max_duration") and mono.estimated_duration_seconds:
         try:
             max_sec = int(merged_filters["max_duration"])
             if mono.estimated_duration_seconds <= max_sec:
+                score *= (1 + WEIGHTS['filter_duration'])
+        except (TypeError, ValueError):
+            pass
+
+    if merged_filters.get("min_duration") and mono.estimated_duration_seconds:
+        try:
+            min_sec = int(merged_filters["min_duration"])
+            if mono.estimated_duration_seconds >= min_sec:
                 score *= (1 + WEIGHTS['filter_duration'])
         except (TypeError, ValueError):
             pass
@@ -363,6 +416,44 @@ class SemanticSearch:
         logger.debug("Query tier: %s, optimized filters: %s", tier, optimized_filters)
 
         extracted_filters: Dict = {}
+
+        # --- Start embedding generation early (parallel with AI parsing) ---
+        # For cold-cache Tier 3 queries, this saves ~1-2s by running the
+        # embedding API call concurrently with the AI query parsing call.
+        embedding_model = "text-embedding-3-large"
+        embedding_dims = 3072
+        _emb_cache_suffix = f"_{embedding_model}_{embedding_dims}"
+        _emb_hash = hashlib.md5((canonical_query + _emb_cache_suffix).encode()).hexdigest()
+        _precomputed_embedding: Optional[List[float]] = None
+        _embedding_future: Optional[concurrent.futures.Future] = None
+        _emb_start: Optional[float] = None
+
+        if _emb_hash in EMBEDDING_CACHE:
+            _precomputed_embedding = EMBEDDING_CACHE[_emb_hash]
+            EMBEDDING_CACHE.move_to_end(_emb_hash)
+            logger.debug("Embedding pre-check: in-memory cache hit for: %s", query)
+        else:
+            _emb_cache_query = canonical_query + _emb_cache_suffix
+            _cached_emb = self.cache.get_embedding(_emb_cache_query)
+            if _cached_emb:
+                _precomputed_embedding = _cached_emb
+                EMBEDDING_CACHE[_emb_hash] = _precomputed_embedding
+                EMBEDDING_CACHE.move_to_end(_emb_hash)
+                _evict_if_needed(EMBEDDING_CACHE, _MAX_EMBEDDING_CACHE)
+                logger.debug("Embedding pre-check: Redis cache hit for: %s", query)
+            else:
+                # No cache hit — start embedding generation in background thread
+                # so it runs in parallel with AI query parsing (Tier 3) or
+                # filter merging + result cache check (Tier 1/2).
+                from app.services.ai.langchain.embeddings import generate_embedding as _gen_emb
+                logger.debug("Embedding pre-check: cache miss, starting background generation")
+                _emb_start = time.time()
+                _emb_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                _embedding_future = _emb_executor.submit(
+                    _gen_emb, text=query, model=embedding_model,
+                    dimensions=embedding_dims, api_key=self.analyzer.api_key
+                )
+
         if explicit_filters:
             # If the user provided explicit filters, skip AI parsing entirely to save cost.
             logger.debug("Using explicit filters, skipping AI query parsing")
@@ -397,10 +488,7 @@ class SemanticSearch:
                         QUERY_PARSE_CACHE.move_to_end(query_hash)  # Mark as recently used
                         self.cache.set_parsed_filters(canonical_query, extracted_filters)
 
-                        # Limit in-memory cache size to prevent memory issues
-                        # LRU eviction: remove least recently used item
-                        if len(QUERY_PARSE_CACHE) > 1000:
-                            QUERY_PARSE_CACHE.popitem(last=False)  # Remove LRU item
+                        _evict_if_needed(QUERY_PARSE_CACHE, _MAX_QUERY_PARSE_CACHE)
 
         logger.debug("Extracted filters (AI): %s", extracted_filters)
 
@@ -411,12 +499,14 @@ class SemanticSearch:
 
         # IMPORTANT: Separate hard SQL filters from boost-only filters.
         # Filters derived from natural language (keyword extraction / AI parsing) for
-        # subjective attributes like emotion, tone, age_range, theme should only BOOST
+        # subjective attributes like tone, age_range, theme should only BOOST
         # results, not eliminate them via SQL WHERE clauses. Only explicit UI-selected
         # filters should be hard constraints for these attributes.
-        # This prevents "funny piece for a middle aged woman" from returning 0 results
-        # when no monologue matches ALL of tone=comedic AND age_range=40s AND gender=female.
-        BOOST_ONLY_KEYS = {'emotion', 'tone', 'age_range', 'theme', 'themes', 'gender'}
+        # Exceptions: emotion and gender are ALWAYS hard filters —
+        # "funny monologue" must return joy, "for a woman" must return female/any.
+        # These are unambiguous user intent. Age, tone, themes stay as boosts
+        # since they're fuzzier (embedding handles the nuance).
+        BOOST_ONLY_KEYS = {'tone', 'age_range', 'theme', 'themes'}
         hard_filters = {}
         for k, v in merged_filters.items():
             if k in BOOST_ONLY_KEYS:
@@ -473,50 +563,43 @@ class SemanticSearch:
                 quote_types = {item[0]: item[2] for item in cached if len(item) >= 3 and item[2]}
             return (ordered_with_scores[:limit], quote_types)
 
-        # Production: text-embedding-3-large (3072 dims)
-        embedding_model = "text-embedding-3-large"
-        embedding_dims = 3072
-        logger.debug("Using production embeddings (text-embedding-3-large, 3072 dims)")
-
-        # Generate embedding for query (with caching at multiple levels)
-        cache_key_suffix = f"_{embedding_model}_{embedding_dims}"
-        query_hash = hashlib.md5((canonical_query + cache_key_suffix).encode()).hexdigest()
-        if query_hash in EMBEDDING_CACHE:
-            logger.debug("Using cached embedding for: %s", query)
-            query_embedding = EMBEDDING_CACHE[query_hash]
-            EMBEDDING_CACHE.move_to_end(query_hash)  # Mark as recently used (LRU)
+        # Retrieve embedding from early parallel fetch or cache (started before AI parsing)
+        query_embedding: Optional[List[float]] = None
+        if _precomputed_embedding is not None:
+            query_embedding = _precomputed_embedding
+            logger.debug("Using pre-checked cached embedding for: %s", query)
+        elif _embedding_future is not None:
+            # Wait for the background embedding generation to complete
+            try:
+                query_embedding = _embedding_future.result()
+            except Exception as e:
+                logger.warning("Background embedding generation failed: %s", e)
+                query_embedding = None
+            if _emb_start is not None:
+                logger.debug("Embedding generation (parallel) took %.2fs", time.time() - _emb_start)
+            if query_embedding:
+                # Store in in-memory and Redis caches
+                _emb_cache_query_store = canonical_query + _emb_cache_suffix
+                EMBEDDING_CACHE[_emb_hash] = query_embedding
+                EMBEDDING_CACHE.move_to_end(_emb_hash)
+                self.cache.set_embedding(_emb_cache_query_store, query_embedding)
+                _evict_if_needed(EMBEDDING_CACHE, _MAX_EMBEDDING_CACHE)
         else:
-            # Try Redis-backed embedding cache first
-            # Use different cache key for v2 embeddings
-            cache_query = canonical_query + cache_key_suffix
-            cached_embedding = self.cache.get_embedding(cache_query)
-            if cached_embedding:
-                logger.debug("Using Redis cached embedding for: %s", query)
-                query_embedding = cached_embedding
-                EMBEDDING_CACHE[query_hash] = query_embedding
-                EMBEDDING_CACHE.move_to_end(query_hash)  # Mark as recently used
-            else:
-                emb_start = time.time()
-                logger.debug("Generating embedding for query (AI) with %s: %s", embedding_model, query)
-                # Use the appropriate model for query embedding
-                from app.services.ai.langchain.embeddings import generate_embedding
-                query_embedding = generate_embedding(
-                    text=query,
-                    model=embedding_model,
-                    dimensions=embedding_dims,
-                    api_key=self.analyzer.api_key
-                )
-                emb_time = time.time() - emb_start
-                logger.debug("Embedding generation took %.2fs", emb_time)
-                if query_embedding:
-                    # Store in in-memory and Redis caches
-                    EMBEDDING_CACHE[query_hash] = query_embedding
-                    EMBEDDING_CACHE.move_to_end(query_hash)  # Mark as recently used
-                    self.cache.set_embedding(cache_query, query_embedding)
-                    # Limit in-memory cache size to prevent memory issues
-                    # LRU eviction: remove least recently used item
-                    if len(EMBEDDING_CACHE) > 1000:
-                        EMBEDDING_CACHE.popitem(last=False)  # Remove LRU item
+            # Fallback: generate embedding synchronously (shouldn't normally reach here)
+            logger.debug("Generating embedding synchronously (fallback): %s", query)
+            from app.services.ai.langchain.embeddings import generate_embedding
+            _emb_start_sync = time.time()
+            query_embedding = generate_embedding(
+                text=query, model=embedding_model,
+                dimensions=embedding_dims, api_key=self.analyzer.api_key
+            )
+            logger.debug("Embedding generation (sync fallback) took %.2fs", time.time() - _emb_start_sync)
+            if query_embedding:
+                _emb_cache_query_store = canonical_query + _emb_cache_suffix
+                EMBEDDING_CACHE[_emb_hash] = query_embedding
+                EMBEDDING_CACHE.move_to_end(_emb_hash)
+                self.cache.set_embedding(_emb_cache_query_store, query_embedding)
+                _evict_if_needed(EMBEDDING_CACHE, _MAX_EMBEDDING_CACHE)
 
         if not query_embedding:
             logger.info("Failed to generate embedding, falling back to text search")
@@ -535,7 +618,7 @@ class SemanticSearch:
         # Soft filters (emotion, tone, age_range, theme from NL query) are applied
         # as score boosts in _calculate_relevance_score_multiplicative instead.
         if hard_filters:
-            if hard_filters.get('gender') and explicit_filters.get('gender'):
+            if hard_filters.get('gender'):
                 base_query = base_query.filter(
                     or_(
                         Monologue.character_gender == hard_filters['gender'],
@@ -544,8 +627,9 @@ class SemanticSearch:
                 )
 
             if hard_filters.get('age_range'):
+                expanded_ages = _expand_age_range(hard_filters['age_range'])
                 base_query = base_query.filter(
-                    Monologue.character_age_range == hard_filters['age_range']
+                    Monologue.character_age_range.in_(expanded_ages)
                 )
 
             if hard_filters.get('emotion'):
@@ -608,6 +692,11 @@ class SemanticSearch:
             if hard_filters.get('max_duration'):
                 base_query = base_query.filter(
                     Monologue.estimated_duration_seconds <= hard_filters['max_duration']
+                )
+
+            if hard_filters.get('min_duration'):
+                base_query = base_query.filter(
+                    Monologue.estimated_duration_seconds >= hard_filters['min_duration']
                 )
 
             if hard_filters.get('act'):
@@ -827,6 +916,7 @@ class SemanticSearch:
                 )
             else:
                 SEARCH_RESULTS_CACHE[results_cache_key] = cache_payload
+                _evict_if_needed(SEARCH_RESULTS_CACHE, _MAX_SEARCH_RESULTS_CACHE)
 
             overall_time = time.time() - overall_start
             logger.debug("Total search time: %.2fs, final results: %s", overall_time, len(final_results))
@@ -857,6 +947,7 @@ class SemanticSearch:
             )
         else:
             SEARCH_RESULTS_CACHE[results_cache_key] = cache_payload
+            _evict_if_needed(SEARCH_RESULTS_CACHE, _MAX_SEARCH_RESULTS_CACHE)
 
         return (list(top_results), quote_match_type_by_id)
 
@@ -903,8 +994,9 @@ class SemanticSearch:
                     Monologue.character_age_range.in_(filters['age_ranges'])
                 )
             elif filters.get('age_range'):
+                expanded_ages = _expand_age_range(filters['age_range'])
                 base_query = base_query.filter(
-                    Monologue.character_age_range == filters['age_range']
+                    Monologue.character_age_range.in_(expanded_ages)
                 )
 
             if filters.get('emotion'):
@@ -956,6 +1048,11 @@ class SemanticSearch:
             if filters.get('max_duration'):
                 base_query = base_query.filter(
                     Monologue.estimated_duration_seconds <= filters['max_duration']
+                )
+
+            if filters.get('min_duration'):
+                base_query = base_query.filter(
+                    Monologue.estimated_duration_seconds >= filters['min_duration']
                 )
 
             # Act/scene filters for classical plays

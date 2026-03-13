@@ -2105,35 +2105,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 onRemove={(key) => setFilters((f) => ({ ...f, [key]: "" }))}
                 onClearAll={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" })}
               />
-              {correctedQuery &&
-                (queryUsedForResults ?? "").trim().toLowerCase() !== correctedQuery.trim().toLowerCase() && (
-                <div className="flex items-start gap-3 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-foreground max-w-lg">
-                  <IconBulb className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p>
-                      We searched for <span className="font-semibold">&ldquo;{correctedQuery}&rdquo;</span> since there might be a typo.
-                    </p>
-                    <button
-                      type="button"
-                      className="underline text-primary hover:text-primary/80 transition-colors mt-1"
-                      onClick={() => {
-                        setCorrectedQuery(null);
-                        setQueryMayHaveTypos(false);
-                        setPlaysQuery(queryUsedForResults);
-                        performSearch(queryUsedForResults, filters);
-                      }}
-                    >
-                      Search instead for &ldquo;{queryUsedForResults}&rdquo;
-                    </button>
-                  </div>
-                </div>
-              )}
-              {!correctedQuery && queryMayHaveTypos && (
-                <div className="flex items-start gap-3 rounded-lg border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-foreground max-w-md">
-                  <IconBulb className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                  <p>Your search may have typos. Try checking your spelling for better results.</p>
-                </div>
-              )}
               {searchParams.get("ai") === "true" && (
                 <div className="flex items-center gap-2 p-4 bg-secondary/10 border border-secondary/30 rounded-lg">
                   <IconSparkles className="h-5 w-5 text-foreground flex-shrink-0" />

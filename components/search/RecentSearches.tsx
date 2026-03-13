@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,9 +27,13 @@ interface RecentSearchesProps {
 
 export default function RecentSearches({ maxSearches = 3, compact = false }: RecentSearchesProps) {
   const router = useRouter();
-  const [history, setHistory] = useState<SearchHistoryEntry[]>(() =>
-    getSearchHistory().slice(0, maxSearches)
-  );
+  const [mounted, setMounted] = useState(false);
+  const [history, setHistory] = useState<SearchHistoryEntry[]>([]);
+
+  useEffect(() => {
+    setMounted(true);
+    setHistory(getSearchHistory().slice(0, maxSearches));
+  }, [maxSearches]);
 
   const loadHistory = () => {
     const allHistory = getSearchHistory();
@@ -85,7 +89,7 @@ export default function RecentSearches({ maxSearches = 3, compact = false }: Rec
   const compactCardClass = "rounded-lg border border-border/50 min-h-[280px] flex flex-col";
   const compactContentClass = "pt-4 pb-4 flex flex-col flex-1 min-h-[252px]";
 
-  if (history.length === 0) {
+  if (!mounted || history.length === 0) {
     if (compact) {
       return (
         <Card className={compactCardClass}>

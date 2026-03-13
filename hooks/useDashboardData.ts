@@ -17,7 +17,7 @@ interface ActorProfile {
   headshot_url?: string | null;
 }
 
-const DASHBOARD_REQUEST_TIMEOUT_MS = 5_000; // fail fast — skeletons resolve to empty state quickly
+const DASHBOARD_REQUEST_TIMEOUT_MS = 25_000; // 25s — remote Supabase DB can take 6s+ per query under load
 
 // ---------------------------------------------------------------------------
 // Demo account mock data – returned instantly so the dashboard never waits
@@ -247,7 +247,7 @@ export function useProfile(isDemoUser: boolean = false) {
     },
     enabled: !isDemoUser,
     ...(isDemoUser && { initialData: DEMO_PROFILE }),
-    staleTime: 10 * 60 * 1000, // 10 minutes
+    staleTime: 30 * 1000, // 30 seconds — ensures headshot/name update quickly after profile changes
     gcTime: 30 * 60 * 1000, // 30 minutes
     retry: 1,
   });

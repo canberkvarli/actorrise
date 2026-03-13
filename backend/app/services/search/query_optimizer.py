@@ -144,6 +144,9 @@ class KeywordExtractor:
         'themes': {
             # Core themes
             'love': 'love', 'romance': 'love', 'romantic': 'love', 'passion': 'love',
+            'dating': 'love', 'relationship': 'love', 'relationships': 'love',
+            'heartbreak': 'love', 'breakup': 'love', 'crush': 'love', 'flirting': 'love',
+            'marriage': 'love', 'divorce': 'love', 'sex': 'love', 'desire': 'love',
             'death': 'death', 'dying': 'death', 'mortality': 'death',
             'power': 'power', 'authority': 'power', 'control': 'power',
             'betrayal': 'betrayal', 'treachery': 'betrayal', 'backstab': 'betrayal',
@@ -386,7 +389,18 @@ class KeywordExtractor:
 
         # Extract duration from natural language patterns like:
         # "1 minute", "2 min", "under 3 minutes", "1-2 min", "90 seconds", "short"
-        if 'max_duration' not in filters:
+        # "at least 1 min", "over 2 minutes", "more than 1 min", "longer than 2 min"
+        if 'min_duration' not in filters and 'max_duration' not in filters:
+            # Match "at least X min" / "over X min" / "more than X min" / "longer than X min"
+            min_dur_match = re.search(
+                r'(?:at\s+least|over|more\s+than|longer\s+than|minimum)\s+(\d+)\s*(?:minute|min)\b',
+                query_lower
+            )
+            if min_dur_match:
+                minutes = int(min_dur_match.group(1))
+                filters['min_duration'] = minutes * 60
+
+        if 'max_duration' not in filters and 'min_duration' not in filters:
             # Match "X minute(s)" / "X min"
             dur_match = re.search(
                 r'(?:under\s+|less\s+than\s+|max\s+)?(\d+)\s*(?:minute|min)\b',
@@ -657,6 +671,7 @@ _FUZZY_SKIP: set = {
     "she", "sit", "six", "ten", "the", "too", "top", "try", "two", "use",
     "via", "war", "was", "way", "who", "why", "win", "won", "yet", "you",
     "age", "ago", "act", "add", "aim", "air", "art", "ate", "bed", "bet",
+    "min", "sec", "hrs",
     # 4+ letter common English words that aren't theater-specific
     "about", "above", "after", "aged", "also", "back", "been", "best",
     "both", "came", "come", "could", "does", "done", "down", "each",
@@ -678,7 +693,8 @@ _FUZZY_SKIP: set = {
     "nothing", "everything", "somewhere", "between", "another", "because",
     "before", "being", "best", "black", "white", "whole", "under",
     "every", "those", "these", "their", "there", "three", "through",
-    "today", "night", "story", "movie", "film", "book", "actor",
+    "today", "night", "story", "movie", "film", "book", "actor", "least",
+    "dating", "relationship", "relationships", "breakup", "marriage", "divorce",
     "actress", "role", "cast", "line", "lines", "type", "style",
     "like", "hate", "want", "need", "find", "give", "girl", "wife",
     "husband", "mother", "father", "sister", "brother", "daughter", "son",
@@ -729,6 +745,11 @@ def correct_query_typos(raw: str) -> Tuple[str, bool, bool, bool]:
             corrected_words.append(repl + suffix)
             if repl.lower() != key:
                 changed = True
+            continue
+
+        # Numbers are never typos (e.g. "20", "2" in "under 2 min")
+        if key.isdigit():
+            corrected_words.append(w)
             continue
 
         # Short words (1-3 chars) that aren't known common words are likely typos
