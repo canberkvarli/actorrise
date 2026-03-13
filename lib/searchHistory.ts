@@ -22,6 +22,7 @@ const MAX_ENTRIES = 10;
  * Get all search history entries, sorted by most recent first
  */
 export function getSearchHistory(): SearchHistoryEntry[] {
+  if (typeof window === "undefined") return [];
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return [];
