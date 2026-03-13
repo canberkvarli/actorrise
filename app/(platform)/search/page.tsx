@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { Suspense, useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { SearchTour } from "@/components/onboarding/SearchTour";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
@@ -97,6 +97,19 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function SearchPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-8 max-w-5xl">
+        <Skeleton className="h-10 w-full mb-6" />
+        <Skeleton className="h-96" />
+      </div>
+    }>
+      <SearchContent />
+    </Suspense>
+  );
+}
+
+function SearchContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, isDemoUser, refreshUser } = useAuth();
@@ -2315,10 +2328,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               <div className={`sticky top-0 bg-background/95 backdrop-blur-sm border-b z-[10002] ${
                 isReadingMode ? "border-b-0" : ""
               }`}>
-                <div className="flex items-center justify-between p-6">
-                  {!isReadingMode && <h2 className="hidden sm:block text-3xl font-bold">Monologue Details</h2>}
-                  <div className="flex-1 min-w-0" aria-hidden="true" />
-                  <div className="flex items-center gap-2 shrink-0 ml-auto">
+                <div className="flex items-center justify-end px-4 py-3">
+                  <div className="flex items-center gap-1 shrink-0">
                     {/* Download button - show in both modes; 44px touch target on mobile */}
                     <div className="relative z-[10002]">
                       <Button
@@ -2328,10 +2339,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           e.stopPropagation();
                           setShowDownloadMenu(!showDownloadMenu);
                         }}
-                        className="hover:bg-muted relative z-[10002] min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
+                        className="hover:bg-muted relative z-[10002] h-9 w-9"
                         title="Download monologue"
                       >
-                        <IconDownload className="h-5 w-5" />
+                        <IconDownload className="h-4 w-4" />
                       </Button>
                       <AnimatePresence>
                         {showDownloadMenu && (
@@ -2388,7 +2399,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           e.stopPropagation();
                           toggleFavorite(e, selectedMonologue);
                         }}
-                        className={`relative z-[10002] active:scale-95 transition-all duration-200 ease-out min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 ${
+                        className={`relative z-[10002] active:scale-95 transition-all duration-200 ease-out h-9 w-9 ${
                           selectedMonologue.is_favorited
                             ? `${accentTeal.bg} ${accentTeal.bgHover} ${accentTeal.text}`
                             : `${accentTeal.hoverBg} ${accentTeal.textHover} text-muted-foreground`
@@ -2406,11 +2417,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           e.stopPropagation();
                           setReportOpen(true);
                         }}
-                        className="hover:bg-muted relative z-[10002] min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 text-muted-foreground hover:text-foreground"
+                        className="hover:bg-muted relative z-[10002] h-9 w-9 text-muted-foreground hover:text-foreground"
                         title="Report an issue"
                         aria-label="Report an issue with this monologue"
                       >
-                        <IconFlag className="h-5 w-5" />
+                        <IconFlag className="h-4 w-4" />
                       </Button>
                     )}
                     <Button
@@ -2420,21 +2431,21 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         e.stopPropagation();
                         setIsReadingMode(!isReadingMode);
                       }}
-                      className="hover:bg-muted relative z-[10002] min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
+                      className="hover:bg-muted relative z-[10002] h-9 w-9"
                     >
                       {isReadingMode ? (
-                        <IconEyeOff className="h-5 w-5" />
+                        <IconEyeOff className="h-4 w-4" />
                       ) : (
-                        <IconEye className="h-5 w-5" />
+                        <IconEye className="h-4 w-4" />
                       )}
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={closeMonologue}
-                      className="relative z-[10002] min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
+                      className="relative z-[10002] h-9 w-9"
                     >
-                      <IconX className="h-5 w-5" />
+                      <IconX className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
