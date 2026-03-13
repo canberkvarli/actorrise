@@ -61,9 +61,9 @@ export function WelcomeFlow({ onDismiss }: WelcomeFlowProps) {
   const [direction, setDirection] = useState(1);
   const router = useRouter();
 
-  const dismiss = useCallback(async () => {
-    await markWelcomeSeen();
+  const dismiss = useCallback(() => {
     onDismiss();
+    markWelcomeSeen().catch(() => {}); // fire-and-forget — don't block modal close
   }, [onDismiss]);
 
   const next = useCallback(() => {
@@ -73,9 +73,9 @@ export function WelcomeFlow({ onDismiss }: WelcomeFlowProps) {
     }
   }, [currentSlide]);
 
-  const goToProfile = useCallback(async () => {
-    await markWelcomeSeen();
+  const goToProfile = useCallback(() => {
     onDismiss();
+    markWelcomeSeen().catch(() => {}); // fire-and-forget
     router.push("/profile");
   }, [onDismiss, router]);
 

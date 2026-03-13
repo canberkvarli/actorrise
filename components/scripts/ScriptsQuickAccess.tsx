@@ -1,10 +1,11 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { IconFileText, IconArrowRight, IconUpload, IconDeviceTv } from "@tabler/icons-react";
+import { IconFileText, IconArrowRight, IconUpload } from "@tabler/icons-react";
 import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import api from "@/lib/api";
 import { useQuery } from "@tanstack/react-query";
@@ -28,6 +29,8 @@ const scriptRowBase =
   "hover:shadow-md hover:border-secondary/50 hover:bg-secondary/5 cursor-pointer";
 
 export default function ScriptsQuickAccess() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const router = useRouter();
   const { data: scripts = [], isLoading } = useQuery({
     queryKey: ["scripts-list"],
@@ -67,7 +70,7 @@ export default function ScriptsQuickAccess() {
   return (
     <Card className={cardClass}>
       <CardContent className={contentClass}>
-        {isLoading ? (
+        {(!mounted || isLoading) ? (
           <div className="space-y-3 flex-1">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-14 bg-muted/50 animate-pulse rounded-lg" />
@@ -80,19 +83,13 @@ export default function ScriptsQuickAccess() {
             </div>
             <p className="text-sm font-medium text-foreground">No scripts yet</p>
             <p className="text-xs text-muted-foreground mt-1">
-              Upload or paste scripts from film & TV to edit and rehearse with Scene Partner.
+              Upload or paste your scripts to rehearse with Scene Partner.
             </p>
             <div className="flex flex-wrap justify-center gap-2 mt-4">
               <Button asChild size="sm" variant="default" className="gap-1.5 rounded-lg">
                 <Link href="/my-scripts">
                   <IconUpload className="h-3.5 w-3.5" />
                   Add script
-                </Link>
-              </Button>
-              <Button asChild size="sm" variant="outline" className="gap-1.5 rounded-lg">
-                <Link href="/search?mode=film_tv">
-                  <IconDeviceTv className="h-3.5 w-3.5" />
-                  Film & TV
                 </Link>
               </Button>
             </div>

@@ -95,6 +95,10 @@ export function LandingPricing() {
         <p className="mt-3 text-muted-foreground max-w-2xl">
           Cancel anytime. <strong>Founding member offer:</strong> 100% off for 12 months. Apply your code at checkout.
         </p>
+        <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 border border-primary/30 bg-primary/5 text-sm font-medium">
+          <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+          50 founding member spots remaining
+        </div>
         <div className="mt-12 grid md:grid-cols-3 gap-8">
           {tiers.map((tier) => {
             const features = getFeaturesList(tier);

@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { motion } from "framer-motion";
 import { LandingPricing } from "@/components/landing/LandingPricing";
 import { LandingTestimonials } from "@/components/landing/LandingTestimonials";
-import { LandingFeatureShowcase } from "@/components/landing/LandingFeatureShowcase";
+import { LandingVideoShowcase } from "@/components/landing/LandingVideoShowcase";
 import { LandingStickyCta } from "@/components/landing/LandingStickyCta";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions";
@@ -78,26 +77,6 @@ export function LandingPageAnimated() {
         </div>
       </header>
 
-      {/* Founding Member Urgency Banner */}
-      <motion.div
-        variants={item}
-        initial="hidden"
-        animate="visible"
-        transition={{ duration, ease: easing }}
-        className="border-b border-primary/20 bg-primary/5 py-3"
-      >
-        <div className="container mx-auto px-4 sm:px-6 text-center">
-          <p className="text-sm font-medium">
-            <span className="hidden sm:inline">🔥 Limited: </span>
-            <span className="font-semibold">50 founding member spots remaining.</span>
-            {" "}100% off for 12 months.{" "}
-            <Link href="/pricing" className="underline hover:no-underline font-semibold">
-              Claim your spot →
-            </Link>
-          </p>
-        </div>
-      </motion.div>
-
       <main>
         <motion.section
           id="suite"
@@ -130,56 +109,11 @@ export function LandingPageAnimated() {
           </div>
         </motion.section>
 
-        {/* Testimonials - moved up for better social proof placement */}
+        <LandingVideoShowcase />
+
+        {/* Testimonials */}
         <RevealSection id="testimonials">
           <LandingTestimonials />
-        </RevealSection>
-
-        <RevealSection id="how" className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
-          <div className="max-w-5xl">
-            <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
-              Get back to what matters: <span className="italic underline underline-offset-2 decoration-primary/60">performing.</span>
-            </h2>
-            <p className="mt-2 text-muted-foreground text-lg">Three steps.</p>
-            <div className="mt-12 grid md:grid-cols-3 gap-6">
-              <div className="rounded-xl border border-border p-8">
-                <div className="text-base text-foreground/80">01</div>
-                <h3 className="mt-3 text-2xl tracking-[-0.02em]">Search</h3>
-                <p className="mt-3 text-foreground/85">
-                  Describe what you need. Get a shortlist.
-                </p>
-              </div>
-              <div className="rounded-xl border border-border p-8">
-                <div className="text-base text-foreground/80">02</div>
-                <h3 className="mt-3 text-2xl tracking-[-0.02em]">Save</h3>
-                <p className="mt-3 text-foreground/85">
-                  Bookmark what you like.
-                </p>
-              </div>
-              <div className="rounded-xl border border-border p-8">
-                <div className="text-base text-foreground/80">03</div>
-                <h3 className="mt-3 text-2xl tracking-[-0.02em]">Rehearse</h3>
-                <p className="mt-3 text-foreground/85">
-                  Walk in ready.
-                </p>
-              </div>
-            </div>
-          </div>
-        </RevealSection>
-
-        <RevealSection className="container mx-auto px-4 sm:px-6 py-20 md:py-28 border-t border-border/60">
-          <div className="max-w-3xl">
-            <h2 className="text-3xl md:text-4xl tracking-[-0.03em]">
-              Give casting directors <span className="font-semibold text-primary">something different.</span>
-            </h2>
-            <p className="mt-4 text-muted-foreground text-lg">
-              The Overdone filter helps you show up with pieces they haven’t seen a hundred times.
-            </p>
-          </div>
-        </RevealSection>
-
-        <RevealSection as="div">
-          <LandingFeatureShowcase />
         </RevealSection>
 
         <RevealSection as="div">
@@ -192,57 +126,19 @@ export function LandingPageAnimated() {
       </main>
 
       <footer className="border-t border-border/60">
-        <div className="container mx-auto px-4 sm:px-6 py-10 flex flex-col gap-4">
-          <p className="text-xs text-muted-foreground/90 max-w-xl">
-            All text from public domain and licensed sources (e.g.{" "}
-            <Link href="/sources" className="underline hover:no-underline text-foreground/80">
-              Project Gutenberg
-            </Link>
-            ); we don&apos;t distribute copyrighted play text.
-          </p>
-          <p className="text-xs text-muted-foreground/90 max-w-xl">
-            We don&apos;t sell your data. Your searches are private.
-          </p>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-col gap-2">
+        <div className="container mx-auto px-4 sm:px-6 py-8 flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
               <p className="text-sm text-muted-foreground">© {new Date().getFullYear()} ActorRise</p>
-              <p className="text-xs text-muted-foreground/80">Built by an actor, for actors.</p>
-              <div className="flex flex-wrap items-center gap-3">
-                <a href="https://fazier.com/launches/www.actorrise.com" target="_blank" rel="noopener noreferrer">
-                  <img src="https://fazier.com/api/v1//public/badges/launch_badges.svg?badge_type=launched&theme=dark" width={150} alt="Fazier badge" className="h-[40px] w-auto" />
-                </a>
-                <a
-                  href="https://www.producthunt.com/products/actorrise?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-actorrise"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <img
-                    src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1078076&theme=dark&t=1773031056919"
-                    alt="ActorRise - Find the perfect monologue in less than 20 seconds | Product Hunt"
-                    className="h-[40px] w-auto max-w-[180px] sm:max-w-none sm:h-[54px]"
-                  />
-                </a>
-                <a href="https://peerlist.io/canberkvarli/project/actorrise" target="_blank" rel="noreferrer">
-                  <img
-                    src="https://peerlist.io/api/v1/projects/embed/PRJHKKDKE6P6NPEPG3DRRAQ68J9OBR?showUpvote=false&theme=dark"
-                    alt="ActorRise on Peerlist"
-                    className="h-[40px] w-auto sm:h-[54px]"
-                  />
-                </a>
-              </div>
+              <span className="text-muted-foreground/40">·</span>
+              <p className="text-sm text-muted-foreground/70">Built by an actor, for actors.</p>
             </div>
             <div className="text-sm text-muted-foreground flex flex-wrap items-center gap-4">
-              <Link href="/monologue-finder" className="hover:text-foreground transition-colors">
-                Monologue finder
-              </Link>
-              <Link href="/audition-monologues" className="hover:text-foreground transition-colors">
-                Audition monologues
-              </Link>
-              <Link href="/audition-ai" className="hover:text-foreground transition-colors">
-                Audition AI
-              </Link>
               <Link href="/about" className="hover:text-foreground transition-colors">
                 About
+              </Link>
+              <Link href="/pricing" className="hover:text-foreground transition-colors">
+                Pricing
               </Link>
               <Link href="/privacy" className="hover:text-foreground transition-colors">
                 Privacy
@@ -250,23 +146,19 @@ export function LandingPageAnimated() {
               <Link href="/terms" className="hover:text-foreground transition-colors">
                 Terms
               </Link>
-              <Link href="/sources" className="hover:text-foreground transition-colors">
-                Sources & copyright
-              </Link>
-              <Link href="/pricing" className="hover:text-foreground transition-colors">
-                Pricing
-              </Link>
-              <Link href="/for-students" className="hover:text-foreground transition-colors">
-                For students
-              </Link>
-              <Link href="/for-teachers" className="hover:text-foreground transition-colors">
-                For teachers
-              </Link>
               <ContactModalTrigger className="hover:text-foreground">
                 Contact
               </ContactModalTrigger>
               <LandingFooterAuthLink />
             </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground/50">
+            <Link href="/monologue-finder" className="hover:text-muted-foreground transition-colors">Monologue finder</Link>
+            <Link href="/audition-monologues" className="hover:text-muted-foreground transition-colors">Audition monologues</Link>
+            <Link href="/audition-ai" className="hover:text-muted-foreground transition-colors">Audition AI</Link>
+            <Link href="/sources" className="hover:text-muted-foreground transition-colors">Sources & copyright</Link>
+            <Link href="/for-students" className="hover:text-muted-foreground transition-colors">For students</Link>
+            <Link href="/for-teachers" className="hover:text-muted-foreground transition-colors">For teachers</Link>
           </div>
         </div>
       </footer>

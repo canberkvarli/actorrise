@@ -152,12 +152,12 @@ export function MonologueResultCard({
                   {mono.category}
                 </Badge>
               )}
-              {mono.character_gender && (
+              {mono.character_gender && mono.character_gender.toLowerCase() !== "any" && (
                 <Badge variant="outline" className={`font-normal capitalize ${hl(highlightFields?.gender === mono.character_gender.toLowerCase())}`}>
                   {mono.character_gender}
                 </Badge>
               )}
-              {mono.character_age_range && (
+              {mono.character_age_range && mono.character_age_range.toLowerCase() !== "any" && (
                 <Badge variant="outline" className={`font-normal ${hl(highlightFields?.age_range === mono.character_age_range.toLowerCase())}`}>
                   {mono.character_age_range}
                 </Badge>

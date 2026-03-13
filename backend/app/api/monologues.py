@@ -296,8 +296,7 @@ async def search_monologues(
 
     try:
         search_service = SemanticSearch(db)
-        # Fetch more results than requested to get accurate total for pagination (capped to reduce DB egress)
-        fetch_limit = min(max(limit * 2, 50), 60)
+        fetch_limit = limit
 
         # Track whether we have relevance scores (semantic search vs random/discover)
         has_scores = False
@@ -305,9 +304,6 @@ async def search_monologues(
 
         quote_match_types: dict[int, str] = {}
         actor_profile_for_search: dict | None = None
-        corrected_q: Optional[str] = None
-        has_typos = False
-        was_corrected = False
         if current_user.actor_profile:
             ap = current_user.actor_profile
             actor_profile_for_search = {
@@ -317,11 +313,6 @@ async def search_monologues(
             }
         if q and q.strip():
             search_q = q.strip()
-            _corrected, was_corrected, show_banner, has_unrecognized = correct_query_typos(search_q)
-            has_typos = has_unrecognized or was_corrected
-            if was_corrected:
-                search_q = _corrected
-                corrected_q = _corrected
             # Semantic search returns (list of (Monologue, score), quote_match_types)
             all_results_with_scores, quote_match_types = search_service.search(
                 search_q,
@@ -368,8 +359,8 @@ async def search_monologues(
             total=total,
             page=page,
             page_size=limit,
-            corrected_query=corrected_q,
-            query_may_have_typos=has_typos,
+            corrected_query=None,
+            query_may_have_typos=False,
         )
     except HTTPException:
         raise  # Re-raise HTTP exceptions (e.g. from auth/rate-limiting) as-is

@@ -61,7 +61,7 @@ export function MonologueDetailContent({
       {/* Details */}
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-foreground">Details</h3>
+          <h3 className="text-xl font-bold text-foreground">Details</h3>
           {onEdit && (
             <Button
               variant="outline"
@@ -77,16 +77,16 @@ export function MonologueDetailContent({
         </div>
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-xs text-muted-foreground mr-1">Character:</span>
+            <span className="text-sm text-muted-foreground mr-1">Character:</span>
             <Badge variant="outline" className="font-normal font-typewriter">
               {monologue.character_name}
             </Badge>
-            {monologue.character_gender && (
+            {monologue.character_gender && monologue.character_gender.toLowerCase() !== "any" && (
               <Badge variant="outline" className="font-normal capitalize">
                 {monologue.character_gender}
               </Badge>
             )}
-            {monologue.character_age_range && (
+            {monologue.character_age_range && monologue.character_age_range.toLowerCase() !== "any" && (
               <Badge variant="outline" className="font-normal">
                 {monologue.character_age_range}
               </Badge>
@@ -94,7 +94,7 @@ export function MonologueDetailContent({
           </div>
           {monologue.category && (
             <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-xs text-muted-foreground mr-1">Genre:</span>
+              <span className="text-sm text-muted-foreground mr-1">Genre:</span>
               <Badge
                 variant="secondary"
                 className={`font-normal capitalize ${
@@ -111,7 +111,7 @@ export function MonologueDetailContent({
           )}
           {monologue.themes && monologue.themes.length > 0 && (
             <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-xs text-muted-foreground mr-1">Themes:</span>
+              <span className="text-sm text-muted-foreground mr-1">Themes:</span>
               <div className="flex flex-wrap gap-1.5">
                 {monologue.themes.map((theme) => (
                   <span
@@ -135,13 +135,13 @@ export function MonologueDetailContent({
         (monologue.emotion_scores && Object.keys(monologue.emotion_scores).length > 0)) && (
         <>
           <div className="space-y-3">
-            <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+            <h3 className="text-xl font-bold text-foreground">
               AI Analysis
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               {monologue.primary_emotion && (
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Primary Emotion:</p>
+                  <p className="text-sm text-muted-foreground mb-1">Primary Emotion:</p>
                   <Badge
                     variant="outline"
                     className={`font-normal capitalize ${getEmotionBadgeClassName(monologue.primary_emotion)}`}
@@ -152,14 +152,14 @@ export function MonologueDetailContent({
               )}
               {monologue.tone && (
                 <div>
-                  <p className="text-xs text-muted-foreground mb-1">Tone:</p>
+                  <p className="text-sm text-muted-foreground mb-1">Tone:</p>
                   <Badge variant="outline" className={`font-normal capitalize ${getEmotionBadgeClassName(monologue.tone)}`}>
                     {monologue.tone}
                   </Badge>
                 </div>
               )}
               <div>
-                <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                <p className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
                   Duration
                   <TooltipProvider>
                     <Tooltip>
@@ -177,7 +177,7 @@ export function MonologueDetailContent({
                 </Badge>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground mb-1">Word Count:</p>
+                <p className="text-sm text-muted-foreground mb-1">Word Count:</p>
                 <Badge variant="outline" className="font-normal">
                   {monologue.word_count} words
                 </Badge>
@@ -187,13 +187,13 @@ export function MonologueDetailContent({
             {/* Emotion Scores */}
             {monologue.emotion_scores && Object.keys(monologue.emotion_scores).length > 0 && (
               <div className="pt-2">
-                <p className="text-xs text-muted-foreground mb-2">Emotion Breakdown:</p>
+                <p className="text-sm text-muted-foreground mb-2">Emotion Breakdown:</p>
                 <div className="flex flex-wrap gap-2">
                   {Object.entries(monologue.emotion_scores)
                     .sort(([, a], [, b]) => b - a)
                     .slice(0, 5)
                     .map(([emotion, score]) => (
-                      <div key={emotion} className="flex items-center gap-2 text-xs">
+                      <div key={emotion} className="flex items-center gap-2 text-sm">
                         <span className="capitalize text-muted-foreground">{emotion}:</span>
                         <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
                           <div
@@ -214,7 +214,7 @@ export function MonologueDetailContent({
 
       {/* Monologue Text */}
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+        <h3 className="text-xl font-bold text-foreground">
           Monologue Text
         </h3>
         {isBibliographicText(monologue.text) ? (
