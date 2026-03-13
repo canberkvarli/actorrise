@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useScript, SCRIPTS_QUERY_KEY, type UserScript as UserScriptImport } from "@/hooks/useScripts";
 import Link from "next/link";
@@ -104,7 +104,11 @@ export default function ScriptDetailPage() {
   const params = useParams();
   const scriptId = parseInt(params.id as string);
   const queryClient = useQueryClient();
-  const { data: script, isLoading } = useScript(scriptId || null) as { data: UserScript | undefined; isLoading: boolean };
+  const { data: script, isLoading: isLoadingQuery } = useScript(scriptId || null) as { data: UserScript | undefined; isLoading: boolean };
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  // Treat as loading until mounted so server/client render the same skeleton
+  const isLoading = !mounted || isLoadingQuery;
   const mutateScript = () => queryClient.invalidateQueries({ queryKey: ["scripts", scriptId] });
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
