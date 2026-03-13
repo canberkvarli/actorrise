@@ -7,7 +7,7 @@
  * Parses tier and billing period from URL query params.
  */
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,19 @@ interface PricingTier {
 }
 
 export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-16 max-w-2xl">
+        <Skeleton className="h-12 w-64 mb-8" />
+        <Skeleton className="h-96" />
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
+  );
+}
+
+function CheckoutContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [tier, setTier] = useState<PricingTier | null>(null);
