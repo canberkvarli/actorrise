@@ -228,7 +228,6 @@ export default function PlatformLayout({
                   </Button>
                 );
               })}
-              {/* TEMPORARILY HIDDEN FOR VIDEO RECORDING
               {user?.is_moderator && (
                 <Button
                   asChild
@@ -242,7 +241,6 @@ export default function PlatformLayout({
                   </Link>
                 </Button>
               )}
-              */}
             </div>
 
             {/* Desktop Profile Dropdown - right aligned */}
@@ -379,7 +377,6 @@ export default function PlatformLayout({
                         <IconFileText className="h-4 w-4 text-muted-foreground" />
                         <span>My submissions</span>
                       </Link>
-                      {/* TEMPORARILY HIDDEN FOR VIDEO RECORDING
                       {user?.is_moderator && (
                         <Link
                           href="/admin"
@@ -390,7 +387,6 @@ export default function PlatformLayout({
                           <span>Admin</span>
                         </Link>
                       )}
-                      */}
 
                       <p className="px-2 py-1.5 mt-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                         Billing & settings
@@ -515,7 +511,6 @@ export default function PlatformLayout({
                     </Button>
                   );
                 })}
-                {/* TEMPORARILY HIDDEN FOR VIDEO RECORDING
                 {user?.is_moderator && (
                   <Button
                     asChild
@@ -529,7 +524,6 @@ export default function PlatformLayout({
                     </Link>
                   </Button>
                 )}
-                */}
 
                 {/* Secondary links only in hamburger; Account is in bottom nav */}
                 {/* Bookmarks Link */}

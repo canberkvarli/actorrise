@@ -9,7 +9,7 @@ import {
 } from "framer-motion";
 import { IconPlayerPlayFilled } from "@tabler/icons-react";
 
-const YOUTUBE_ID = "IdVTZvjrGDU";
+const YOUTUBE_ID = "TTZxo3bZPI4";
 
 const spring = { stiffness: 100, damping: 30, restDelta: 0.001 };
 
