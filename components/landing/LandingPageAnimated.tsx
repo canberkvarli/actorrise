@@ -51,10 +51,6 @@ export function LandingPageAnimated() {
             {/* Center: primary nav (desktop only), gets flexible space so it can truly center */}
             <div className="hidden lg:flex lg:flex-1 items-center justify-center min-w-0">
               <div className="inline-flex items-center gap-0.5 rounded-full border border-border/60 bg-card/60 px-1.5 py-1 whitespace-nowrap">
-                <Link href="#suite" className="px-2.5 py-1.5 text-xs lg:text-sm text-foreground/90 hover:text-foreground transition-colors">
-                  Search
-                </Link>
-                <span className="h-4 w-px bg-border/60" />
                 <Link href="#pricing" className="px-2.5 py-1.5 text-xs lg:text-sm text-foreground/90 hover:text-foreground transition-colors">
                   Pricing
                 </Link>

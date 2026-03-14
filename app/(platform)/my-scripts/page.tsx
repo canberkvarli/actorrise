@@ -173,6 +173,9 @@ export default function MyScriptsPage() {
   const { data: scripts = [], isLoading } = useScripts();
   const mutateScripts = () => queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY });
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
   useEffect(() => {
     setShowTutorial(!getScenePartnerTutorialSeen());
     setShowAudioCheck(!getScenePartnerAudioCheckDone());
@@ -758,10 +761,10 @@ export default function MyScriptsPage() {
         <motion.div
           className="absolute inset-x-0 top-4 z-10 grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6"
           initial={false}
-          animate={{ opacity: isLoading ? 1 : 0 }}
+          animate={{ opacity: !mounted || isLoading ? 1 : 0 }}
           transition={{ duration: 0.25, ease: "easeOut" }}
-          style={{ pointerEvents: isLoading ? "auto" : "none" }}
-          aria-hidden={!isLoading}
+          style={{ pointerEvents: !mounted || isLoading ? "auto" : "none" }}
+          aria-hidden={mounted && !isLoading}
         >
           {[1, 2].map((i) => (
             <Card key={i}>
@@ -788,7 +791,7 @@ export default function MyScriptsPage() {
         </motion.div>
 
         {/* Actual content: fades in when loaded */}
-        {!isLoading && (
+        {mounted && !isLoading && (
           scripts.length === 0 ? (
             <motion.div
               initial={{ opacity: 0 }}

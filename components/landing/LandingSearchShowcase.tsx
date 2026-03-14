@@ -127,7 +127,7 @@ export function LandingSearchShowcase() {
                 rotateX: videoRotateX,
               }}
             >
-              <div className="rounded-2xl border border-border/60 overflow-hidden shadow-lg bg-black">
+              <div className="rounded-2xl border border-border/60 overflow-hidden shadow-lg bg-black" style={{ aspectRatio: "16/9" }}>
                 <video
                   ref={videoRef}
                   src="https://fplmwdr338fbphw9.public.blob.vercel-storage.com/videos/MonologueSearch.mp4"
@@ -135,7 +135,7 @@ export function LandingSearchShowcase() {
                   loop
                   playsInline
                   preload="metadata"
-                  className="w-full h-auto"
+                  className="w-full h-full object-cover"
                 />
               </div>
             </motion.div>
