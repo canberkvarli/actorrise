@@ -20,4 +20,4 @@ ENV PORT=8000
 EXPOSE 8000
 
 # Run from /app so `app.main` resolves (PORT set by Render at runtime)
-CMD ["sh", "-c", ".venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --max-requests 1000 --max-requests-jitter 50"]
+CMD ["sh", "-c", ".venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT} --limit-max-requests 1000"]
