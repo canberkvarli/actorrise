@@ -130,7 +130,7 @@ export function LandingSearchShowcase() {
               <div className="rounded-2xl border border-border/60 overflow-hidden shadow-lg bg-black">
                 <video
                   ref={videoRef}
-                  src="/videos/MonologueSearch.mp4"
+                  src="https://fplmwdr338fbphw9.public.blob.vercel-storage.com/videos/MonologueSearch.mp4"
                   muted
                   loop
                   playsInline
