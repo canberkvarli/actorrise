@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { LandingPricing } from "@/components/landing/LandingPricing";
 import { LandingTestimonials } from "@/components/landing/LandingTestimonials";
 import { LandingVideoShowcase } from "@/components/landing/LandingVideoShowcase";
+import { LandingSearchShowcase } from "@/components/landing/LandingSearchShowcase";
 import { LandingStickyCta } from "@/components/landing/LandingStickyCta";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
 import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions";
@@ -108,6 +109,8 @@ export function LandingPageAnimated() {
             </div>
           </div>
         </motion.section>
+
+        <LandingSearchShowcase />
 
         <LandingVideoShowcase />
 
