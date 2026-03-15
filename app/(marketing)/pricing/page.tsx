@@ -200,7 +200,6 @@ export default function PricingPage() {
           transition={{ delay: 0.05 }}
           className="text-lg text-muted-foreground max-w-2xl mx-auto"
         >
-          Every plan includes AI recommendations, PDF &amp; DOCX downloads, and full search.
           Start free, upgrade when you need more.
         </motion.p>
 
@@ -350,13 +349,6 @@ export default function PricingPage() {
             </motion.div>
           );
         })}
-      </div>
-
-      {/* All plans include */}
-      <div className="text-center mb-16">
-        <p className="text-sm text-muted-foreground">
-          All plans include AI recommendations, PDF &amp; DOCX downloads, unlimited reruns per scene, and email support.
-        </p>
       </div>
 
       {/* FAQ Section */}

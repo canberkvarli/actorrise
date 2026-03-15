@@ -134,7 +134,6 @@ export function LandingPricing() {
             Simple pricing, no surprises.
           </h2>
           <p className="mt-3 text-sm sm:text-base text-muted-foreground">
-            Every plan includes AI recommendations, PDF &amp; DOCX downloads, and full search.
             Upgrade when you need more.
           </p>
         </div>
