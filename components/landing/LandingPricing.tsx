@@ -13,59 +13,43 @@ import { useState, useEffect, useCallback } from "react";
 function getFeaturesList(tier: PricingTier): string[] {
   const features: string[] = [];
 
+  // AI searches
   if (tier.features.ai_searches_per_month === -1) {
     features.push("Unlimited AI searches");
   } else {
-    features.push(`${tier.features.ai_searches_per_month} AI searches/month`);
+    features.push(`${tier.features.ai_searches_per_month} AI searches/mo`);
   }
 
+  // ScenePartner
+  if (tier.features.scene_partner_trial_only) {
+    features.push("1 ScenePartner trial");
+  } else {
+    const scenes = tier.features.scene_partner_sessions;
+    if (scenes === -1) {
+      features.push("Unlimited ScenePartner scenes");
+    } else if (scenes && scenes > 0) {
+      features.push(`${scenes} ScenePartner scenes/mo`);
+    }
+  }
+
+  // Script uploads
+  const scripts = tier.features.scene_partner_scripts;
+  if (scripts === -1) {
+    features.push("Unlimited script uploads");
+  } else if (scripts && scripts > 0) {
+    features.push(`${scripts} script upload${scripts > 1 ? "s" : ""}`);
+  }
+
+  // Bookmarks
   if (tier.features.bookmarks_limit === -1) {
     features.push("Unlimited bookmarks");
   } else {
-    features.push(`Up to ${tier.features.bookmarks_limit} bookmarks`);
+    features.push(`${tier.features.bookmarks_limit} bookmarks`);
   }
 
-  if (tier.features.recommendations) {
-    features.push("Personalized recommendations");
-    features.push("AI fit to your type & casting scenario");
-    features.push("Overdone filter: fresh pieces casting directors want to see");
-  } else {
-    features.push("Basic browsing");
-  }
-
-  features.push(`Download as ${tier.features.download_formats.join(", ").toUpperCase()}`);
-
-  // ScenePartner
-  const scripts = tier.features.scene_partner_scripts;
-  const sessions = tier.features.scene_partner_sessions;
-  if (scripts !== undefined) {
-    if (scripts === -1) {
-      features.push("Unlimited script uploads");
-    } else if (scripts > 0) {
-      features.push(`Up to ${scripts} script uploads`);
-    }
-  }
-  if (tier.features.scene_partner_trial_only) {
-    features.push("1 trial rehearsal (example script)");
-  } else if (sessions !== undefined && sessions > 0) {
-    features.push(`${sessions} ScenePartner AI sessions/month`);
-  }
-  if (tier.features.advanced_analytics) {
-    features.push("Advanced analytics & insights");
-  }
-  if (tier.features.collections) {
-    features.push("Collections & organization");
-  }
-  if (tier.features.collaboration) {
-    features.push("Collaboration & sharing");
-  }
-  if (tier.features.white_label_export) {
-    features.push("White-label export (no branding)");
-  }
-  if (tier.features.priority_support) {
-    features.push("Priority email support");
-  } else {
-    features.push("Community support");
+  // Overdone filter
+  if (tier.name !== "free") {
+    features.push("Overdone filter");
   }
 
   return features;
@@ -73,7 +57,7 @@ function getFeaturesList(tier: PricingTier): string[] {
 
 const MOBILE_VISIBLE_FEATURES = 4;
 
-function PricingCard({ tier, formatPrice }: { tier: PricingTier; formatPrice: (cents: number) => string }) {
+function PricingCard({ tier, formatPrice, isHighlighted }: { tier: PricingTier; formatPrice: (cents: number) => string; isHighlighted: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const features = getFeaturesList(tier);
   const isFree = tier.name === "free";
@@ -82,25 +66,31 @@ function PricingCard({ tier, formatPrice }: { tier: PricingTier; formatPrice: (c
   const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
 
   return (
-    <div className="rounded-xl border border-border/60 p-5 sm:p-8 flex flex-col relative bg-card/40">
+    <div className={`border p-5 sm:p-6 flex flex-col relative ${isHighlighted ? "border-primary/40 bg-primary/[0.03]" : "border-border/60 bg-card/40"}`}>
+      {isHighlighted && (
+        <div className="absolute -top-2.5 left-4">
+          <span className="bg-primary px-2 py-0.5 text-[11px] font-medium text-white">
+            Founding member tier
+          </span>
+        </div>
+      )}
       <div className="flex items-baseline justify-between sm:block">
-        <h3 className="text-xl sm:text-2xl md:text-3xl font-semibold tracking-tight">{tier.display_name}</h3>
-        {!isFree && (
-          <p className="sm:mt-1 text-xl sm:text-2xl font-bold">
-            {formatPrice(tier.monthly_price_cents)}
-            <span className="text-sm font-normal text-muted-foreground">/mo</span>
-          </p>
-        )}
+        <h3 className="text-lg sm:text-xl font-semibold tracking-tight">{tier.display_name}</h3>
+        <p className="sm:mt-1 text-lg sm:text-xl font-bold">
+          {isFree ? "$0" : formatPrice(tier.monthly_price_cents)}
+          <span className="text-xs font-normal text-muted-foreground">/mo</span>
+        </p>
       </div>
-      <ul className="mt-4 sm:mt-5 space-y-2 sm:space-y-3 flex-1">
+      <p className="mt-1 text-xs text-muted-foreground">{tier.description}</p>
+      <ul className="mt-4 space-y-2 flex-1">
         {features.map((f, i) => (
           <li
             key={i}
-            className={`text-sm sm:text-base md:text-lg text-muted-foreground flex items-start gap-2 sm:gap-3 ${
+            className={`text-sm text-muted-foreground flex items-start gap-2 ${
               !expanded && i >= MOBILE_VISIBLE_FEATURES ? "hidden sm:flex" : ""
             }`}
           >
-            <span className="text-primary mt-0.5 text-base sm:text-lg md:text-xl shrink-0">✓</span>
+            <span className="text-primary mt-0.5 text-sm shrink-0">&#10003;</span>
             <span>{f}</span>
           </li>
         ))}
@@ -111,10 +101,10 @@ function PricingCard({ tier, formatPrice }: { tier: PricingTier; formatPrice: (c
           onClick={toggleExpanded}
           className="sm:hidden mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
         >
-          {expanded ? "Show less" : `+${features.length - MOBILE_VISIBLE_FEATURES} more features`}
+          {expanded ? "Show less" : `+${features.length - MOBILE_VISIBLE_FEATURES} more`}
         </button>
       )}
-      <Button asChild variant="outline" className="mt-4 sm:mt-6 w-full">
+      <Button asChild variant={isHighlighted ? "default" : "outline"} className="mt-4 w-full">
         <Link href={isFree ? "/signup" : "/pricing"}>
           {isFree ? "Get started free" : "Subscribe"}
         </Link>
@@ -138,30 +128,47 @@ export function LandingPricing() {
   return (
     <section id="pricing" className="container mx-auto px-4 sm:px-6 py-14 sm:py-20 md:py-28 border-t border-border/60">
       <div className="w-full max-w-[min(1400px,100%)] mx-auto">
-        <div className="inline-flex items-center gap-2 border border-primary/20 bg-primary/5 px-3 sm:px-4 py-1.5 text-xs sm:text-sm font-medium mb-4">
-          Free while in early access · No credit card required
+        {/* Header */}
+        <div className="max-w-2xl">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl tracking-[-0.03em]">
+            Simple pricing, no surprises.
+          </h2>
+          <p className="mt-3 text-sm sm:text-base text-muted-foreground">
+            Every plan includes AI recommendations, PDF &amp; DOCX downloads, and full search.
+            Upgrade when you need more.
+          </p>
         </div>
-        <h2 className="text-2xl sm:text-3xl md:text-4xl tracking-[-0.03em]">
-          Start free. Upgrade when you need more.
-        </h2>
-        <p className="mt-3 text-sm sm:text-base text-muted-foreground max-w-2xl">
-          Cancel anytime. <strong>Founding member offer:</strong> 100% off for 12 months. Apply your code at checkout.
-        </p>
-        <div className="mt-4 inline-flex items-center gap-2 px-3 sm:px-4 py-2 border border-primary/30 bg-primary/5 text-xs sm:text-sm font-medium">
-          <span className="h-2 w-2 rounded-full bg-primary animate-pulse" />
-          50 founding member spots remaining
+
+        {/* Founding member banner */}
+        <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 px-4 sm:px-5 py-3 sm:py-4 border border-primary/20 bg-primary/[0.03]">
+          <div className="flex items-center gap-2">
+            <span className="h-2 w-2 bg-primary animate-pulse" />
+            <span className="text-sm font-medium">50 founding member spots</span>
+          </div>
+          <span className="hidden sm:block h-4 w-px bg-border/60" />
+          <p className="text-sm text-muted-foreground">
+            100% off Plus for 12 months. No credit card until your trial ends.
+          </p>
         </div>
-        <div className="mt-8 sm:mt-12 grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-8">
+
+        {/* Pricing cards */}
+        <div className="mt-10 sm:mt-12 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {tiers.map((tier) => (
-            <PricingCard key={tier.id} tier={tier} formatPrice={formatPrice} />
+            <PricingCard
+              key={tier.id}
+              tier={tier}
+              formatPrice={formatPrice}
+              isHighlighted={tier.name === "plus"}
+            />
           ))}
         </div>
+
         <p className="mt-6 text-center">
           <Link
             href="/pricing"
             className="text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            See all plans & features →
+            Compare all plans &amp; FAQ &#8594;
           </Link>
         </p>
       </div>
