@@ -60,8 +60,8 @@ def seed_pricing_tiers():
                 description="For actors getting started",
                 monthly_price_cents=700,  # $7.00
                 annual_price_cents=5900,  # $59.00 ($4.92/mo, ~30% savings)
-                stripe_monthly_price_id=None,  # TODO: Add Stripe price ID
-                stripe_annual_price_id=None,  # TODO: Add Stripe price ID
+                stripe_monthly_price_id="price_1TB9sHRg9rz1StUqgZ4y46hb",
+                stripe_annual_price_id="price_1TB9uJRg9rz1StUqRQMbqKz2",
                 features={
                     "ai_searches_per_month": 25,
                     "bookmarks_limit": 15,
@@ -81,8 +81,8 @@ def seed_pricing_tiers():
                 description="For working actors and students",
                 monthly_price_cents=1200,  # $12.00
                 annual_price_cents=9900,  # $99.00 ($8.25/mo, 31% savings)
-                stripe_monthly_price_id=None,  # TODO: Add Stripe price ID
-                stripe_annual_price_id=None,  # TODO: Add Stripe price ID
+                stripe_monthly_price_id="price_1SyWoMRg9rz1StUqUqj3ltC1",
+                stripe_annual_price_id="price_1SyWpsRg9rz1StUqRVhstl9N",
                 features={
                     "ai_searches_per_month": -1,  # unlimited
                     "bookmarks_limit": -1,  # unlimited
@@ -102,8 +102,8 @@ def seed_pricing_tiers():
                 description="For professionals and coaches",
                 monthly_price_cents=2400,  # $24.00
                 annual_price_cents=19900,  # $199.00 ($16.58/mo, 31% savings)
-                stripe_monthly_price_id=None,  # TODO: Add Stripe price ID
-                stripe_annual_price_id=None,  # TODO: Add Stripe price ID
+                stripe_monthly_price_id="price_1TBA1XRg9rz1StUqlOP5Ox4O",
+                stripe_annual_price_id="price_1TBA1zRg9rz1StUqI8dDx47x",
                 features={
                     "ai_searches_per_month": -1,  # unlimited
                     "bookmarks_limit": -1,  # unlimited
@@ -130,6 +130,10 @@ def seed_pricing_tiers():
                 existing.features = tier.features
                 existing.sort_order = tier.sort_order
                 existing.is_active = tier.is_active
+                if tier.stripe_monthly_price_id:
+                    existing.stripe_monthly_price_id = tier.stripe_monthly_price_id
+                if tier.stripe_annual_price_id:
+                    existing.stripe_annual_price_id = tier.stripe_annual_price_id
                 print(f"Updated tier: {tier.display_name} (${tier.monthly_price_cents/100:.2f}/month)")
                 continue
 
