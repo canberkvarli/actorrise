@@ -9,6 +9,7 @@ import { usePricingTiers, DEFAULT_PRICING_TIERS, type PricingTier } from "@/hook
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
+import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 
 function getFeaturesList(tier: PricingTier): string[] {
   const features: string[] = [];
@@ -139,14 +140,11 @@ export function LandingPricing() {
         </div>
 
         {/* Founding member banner */}
-        <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6 px-4 sm:px-5 py-3 sm:py-4 border border-primary/20 bg-primary/[0.03]">
-          <div className="flex items-center gap-2">
-            <span className="h-2 w-2 bg-primary animate-pulse" />
-            <span className="text-sm font-medium">50 founding member spots</span>
-          </div>
-          <span className="hidden sm:block h-4 w-px bg-border/60" />
-          <p className="text-sm text-muted-foreground">
-            100% off Plus for 12 months. No credit card until your trial ends.
+        <div className="mt-6 inline-flex items-center gap-3 px-4 py-2.5 border border-primary/20 bg-primary/[0.03]">
+          <span className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />
+          <p className="text-sm">
+            <span className="font-medium">50 founding member spots.</span>{" "}
+            <span className="text-muted-foreground">100% off Plus for 12 months. <ContactModalTrigger className="underline underline-offset-2 hover:text-foreground transition-colors">Contact Canberk</ContactModalTrigger> to claim yours.</span>
           </p>
         </div>
 

@@ -210,10 +210,10 @@ export default function PricingPage() {
           transition={{ delay: 0.1 }}
           className="mt-6 mx-auto max-w-lg flex items-center justify-center gap-3 px-5 py-3 border border-primary/20 bg-primary/[0.03]"
         >
-          <span className="h-2 w-2 bg-primary animate-pulse" />
+          <span className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />
           <p className="text-sm">
             <span className="font-medium">50 founding member spots.</span>{" "}
-            <span className="text-muted-foreground">100% off Plus for 12 months.</span>
+            <span className="text-muted-foreground">100% off Plus for 12 months. <Link href="/contact" className="underline underline-offset-2 hover:text-foreground transition-colors">Contact Canberk</Link> to claim yours.</span>
           </p>
         </motion.div>
 
