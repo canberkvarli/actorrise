@@ -9,7 +9,8 @@ import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 const MOBILE_LINKS = [
   { href: "#suite", label: "Search" },
   { href: "#pricing", label: "Pricing" },
-  { href: "/for-students", label: "Students & educators" },
+  { href: "/for-students", label: "For students" },
+  { href: "/for-teachers", label: "For teachers" },
 ] as const;
 
 export function LandingMobileNav() {
