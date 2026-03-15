@@ -11,27 +11,11 @@
 import { useState } from "react";
 import { usePricingTiers, DEFAULT_PRICING_TIERS, type PricingTier } from "@/hooks/usePricingTiers";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IconCheck, IconSparkles, IconRocket, IconCrown } from "@tabler/icons-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-
-const tierIcons: Record<string, React.ReactNode> = {
-  free: <IconSparkles className="h-6 w-6" />,
-  plus: <IconRocket className="h-6 w-6" />,
-  unlimited: <IconCrown className="h-6 w-6" />,
-};
 
 const faqs = [
   {
@@ -41,6 +25,10 @@ const faqs = [
   {
     question: "What happens when I reach my search limit?",
     answer: "You'll see a friendly upgrade prompt. You can still browse monologues manually, but AI-powered searches will be paused until next month or you upgrade."
+  },
+  {
+    question: "What counts as a ScenePartner scene?",
+    answer: "Each unique scene you start rehearsing counts as one scene. You can re-run the same scene as many times as you want without it counting again."
   },
   {
     question: "Is there a student discount?",
@@ -62,6 +50,51 @@ const faqs = [
   }
 ];
 
+function getFeaturesList(tier: PricingTier): string[] {
+  const features: string[] = [];
+
+  // AI searches
+  if (tier.features.ai_searches_per_month === -1) {
+    features.push("Unlimited AI searches");
+  } else {
+    features.push(`${tier.features.ai_searches_per_month} AI searches/mo`);
+  }
+
+  // ScenePartner
+  if (tier.features.scene_partner_trial_only) {
+    features.push("1 ScenePartner trial");
+  } else {
+    const scenes = tier.features.scene_partner_sessions;
+    if (scenes === -1) {
+      features.push("Unlimited ScenePartner scenes");
+    } else if (scenes && scenes > 0) {
+      features.push(`${scenes} ScenePartner scenes/mo`);
+    }
+  }
+
+  // Script uploads
+  const scripts = tier.features.scene_partner_scripts;
+  if (scripts === -1) {
+    features.push("Unlimited script uploads");
+  } else if (scripts && scripts > 0) {
+    features.push(`${scripts} script upload${scripts > 1 ? "s" : ""}`);
+  }
+
+  // Bookmarks
+  if (tier.features.bookmarks_limit === -1) {
+    features.push("Unlimited bookmarks");
+  } else {
+    features.push(`${tier.features.bookmarks_limit} bookmarks`);
+  }
+
+  // Overdone filter
+  if (tier.name !== "free") {
+    features.push("Overdone filter");
+  }
+
+  return features;
+}
+
 function FAQAccordion() {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
 
@@ -77,7 +110,7 @@ function FAQAccordion() {
         >
           <button
             onClick={() => setOpenIndex(openIndex === index ? null : index)}
-            className="w-full text-left py-4 px-6 bg-muted/30 hover:bg-muted/50 transition-colors rounded-lg"
+            className="w-full text-left py-4 px-6 bg-muted/30 hover:bg-muted/50 transition-colors"
           >
             <div className="flex items-center justify-between gap-4">
               <h3 className="text-lg font-semibold">{faq.question}</h3>
@@ -136,82 +169,12 @@ export default function PricingPage() {
     return { savings, percentOff };
   };
 
-  const getFeaturesList = (tier: PricingTier) => {
-    const features = [];
-
-    // AI Searches
-    if (tier.features.ai_searches_per_month === -1) {
-      features.push("Unlimited AI searches");
-    } else {
-      features.push(`${tier.features.ai_searches_per_month} AI searches/month`);
-    }
-
-    // Bookmarks
-    if (tier.features.bookmarks_limit === -1) {
-      features.push("Unlimited bookmarks");
-    } else {
-      features.push(`Up to ${tier.features.bookmarks_limit} bookmarks`);
-    }
-
-    // Recommendations
-    if (tier.features.recommendations) {
-      features.push("Personalized recommendations");
-      features.push("AI fit to your type & casting scenario");
-      features.push("Overdone filter: fresh pieces casting directors want to see");
-    } else {
-      features.push("Basic browsing");
-    }
-
-    // Download formats
-    features.push(`Download as ${tier.features.download_formats.join(", ").toUpperCase()}`);
-
-    // ScenePartner
-    const scripts = tier.features.scene_partner_scripts;
-    const sessions = tier.features.scene_partner_sessions;
-    if (scripts !== undefined) {
-      if (scripts === -1) {
-        features.push("Unlimited script uploads");
-      } else if (scripts > 0) {
-        features.push(`Up to ${scripts} script uploads`);
-      }
-    }
-    if (tier.features.scene_partner_trial_only) {
-      features.push("1 trial rehearsal (example script)");
-    } else if (sessions !== undefined && sessions > 0) {
-      features.push(`${sessions} ScenePartner AI sessions/month`);
-    }
-
-    // Advanced Analytics
-    if (tier.features.advanced_analytics) {
-      features.push("Advanced analytics & insights");
-    }
-
-    // Collections & collaboration (Unlimited)
-    if (tier.features.collections) {
-      features.push("Collections & organization");
-    }
-    if (tier.features.collaboration) {
-      features.push("Collaboration & sharing");
-    }
-    if (tier.features.white_label_export) {
-      features.push("White-label export (no branding)");
-    }
-
-    // Support
-    if (tier.features.priority_support) {
-      features.push("Priority email support");
-    } else {
-      features.push("Community support");
-    }
-
-    return features;
-  };
-
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-16 max-w-7xl">
         <Skeleton className="h-12 w-64 mb-8 mx-auto" />
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid md:grid-cols-4 gap-6">
+          <Skeleton className="h-96" />
           <Skeleton className="h-96" />
           <Skeleton className="h-96" />
           <Skeleton className="h-96" />
@@ -224,51 +187,42 @@ export default function PricingPage() {
     <div className="container mx-auto px-4 py-16 max-w-7xl">
       {/* Header */}
       <div className="text-center mb-12">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium mb-6"
-        >
-          Free while in early access · No credit card required
-        </motion.div>
         <motion.h1
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
           className="text-4xl lg:text-5xl font-bold mb-4"
         >
-          Choose Your Plan
+          Simple pricing, no surprises.
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="text-lg text-muted-foreground max-w-2xl mx-auto"
+        >
+          Every plan includes AI recommendations, PDF &amp; DOCX downloads, and full search.
+          Start free, upgrade when you need more.
+        </motion.p>
+
+        {/* Founding member banner */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="text-xl text-muted-foreground max-w-2xl mx-auto"
+          className="mt-6 mx-auto max-w-lg flex items-center justify-center gap-3 px-5 py-3 border border-primary/20 bg-primary/[0.03]"
         >
-          Start free. Upgrade when you need more. Cancel anytime.
-        </motion.p>
-        <motion.p
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="mt-3 text-sm text-muted-foreground max-w-2xl mx-auto"
-        >
-          <strong>Founding member offer:</strong> 100% off for 12 months. Apply your code at checkout.
-        </motion.p>
-        <motion.p
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.18 }}
-          className="mt-3 text-xs text-muted-foreground/80 max-w-xl mx-auto"
-        >
-          Subscriptions support AI costs, hosting, and development to keep a generous free plan for actors and students.
-        </motion.p>
+          <span className="h-2 w-2 bg-primary animate-pulse" />
+          <p className="text-sm">
+            <span className="font-medium">50 founding member spots.</span>{" "}
+            <span className="text-muted-foreground">100% off Plus for 12 months.</span>
+          </p>
+        </motion.div>
 
         {/* Annual/Monthly Toggle */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.15 }}
           className="flex flex-col items-center gap-2 mt-8"
         >
           <div className="flex items-center justify-center gap-4">
@@ -300,7 +254,7 @@ export default function PricingPage() {
       </div>
 
       {/* Pricing Cards */}
-      <div className="grid md:grid-cols-3 gap-8 mb-16 items-stretch">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-16 items-stretch">
         {tiers.map((tier, index) => {
           const price =
             isAnnual && tier.annual_price_cents
@@ -314,88 +268,95 @@ export default function PricingPage() {
 
           const isHighlighted = tier.name === "plus";
           const features = getFeaturesList(tier);
+          const isFree = tier.name === "free";
 
           return (
             <motion.div
               key={tier.id}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              transition={{ delay: index * 0.08 }}
               className="h-full"
             >
-              <Card
-                className={`h-full flex flex-col relative border border-border/50 shadow-none ${
-                  isHighlighted ? "bg-muted/40" : "bg-muted/20"
+              <div
+                className={`h-full flex flex-col relative border p-5 sm:p-7 ${
+                  isHighlighted
+                    ? "border-primary/40 bg-primary/[0.03]"
+                    : "border-border/50 bg-card/30"
                 }`}
               >
                 {isHighlighted && (
-                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2">
-                    <span className="bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
+                  <div className="absolute -top-2.5 left-4">
+                    <span className="bg-primary px-2 py-0.5 text-[11px] font-medium text-white">
                       Most popular
                     </span>
                   </div>
                 )}
 
-                <CardHeader>
-                  <div className="flex items-center gap-2 mb-2">
-                    {tierIcons[tier.name]}
-                    <CardTitle className="text-2xl">{tier.display_name}</CardTitle>
-                  </div>
-                  <CardDescription>{tier.description}</CardDescription>
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-semibold">{tier.display_name}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">{tier.description}</p>
+                </div>
 
-                  {price > 0 && (
-                    <div className="mt-4">
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-4xl font-bold">{formatPrice(price)}</span>
-                        <span className="text-muted-foreground">/month</span>
-                      </div>
-                      {isAnnual && tier.annual_price_cents && tier.annual_price_cents > 0 && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Billed annually at {formatPrice(tier.annual_price_cents)}
-                        </p>
-                      )}
-                      {isAnnual && savings && savings.savings > 0 && (
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Save {formatPrice(savings.savings)}/year
-                        </p>
-                      )}
+                {price > 0 ? (
+                  <div className="mt-4">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl sm:text-4xl font-bold">{formatPrice(price)}</span>
+                      <span className="text-muted-foreground text-sm">/mo</span>
                     </div>
-                  )}
-                </CardHeader>
+                    {isAnnual && tier.annual_price_cents && tier.annual_price_cents > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Billed annually at {formatPrice(tier.annual_price_cents)}
+                      </p>
+                    )}
+                    {isAnnual && savings && savings.savings > 0 && (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Save {formatPrice(savings.savings)}/year
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="mt-4">
+                    <span className="text-3xl sm:text-4xl font-bold">$0</span>
+                    <span className="text-muted-foreground text-sm">/mo</span>
+                  </div>
+                )}
 
-                <CardContent className="flex-1">
-                  <ul className="space-y-4">
-                    {features.map((feature, idx) => (
-                      <li key={idx} className="flex items-start gap-3">
-                        <IconCheck className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
-                        <span className="text-base md:text-lg text-muted-foreground">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </CardContent>
+                <ul className="mt-5 space-y-2.5 flex-1">
+                  {features.map((feature, idx) => (
+                    <li key={idx} className="flex items-start gap-2">
+                      <span className="text-primary text-sm mt-0.5 shrink-0">&#10003;</span>
+                      <span className="text-sm text-muted-foreground">{feature}</span>
+                    </li>
+                  ))}
+                </ul>
 
-                <CardFooter className="mt-auto">
-                  <Button
-                    asChild
-                    variant="outline"
-                    size="lg"
-                    className="w-full"
+                <Button
+                  asChild
+                  variant={isHighlighted ? "default" : "outline"}
+                  className="mt-6 w-full"
+                >
+                  <Link
+                    href={
+                      isFree
+                        ? "/signup"
+                        : `/checkout?tier=${tier.name}&period=${isAnnual ? "annual" : "monthly"}`
+                    }
                   >
-                    <Link
-                      href={
-                        tier.name === "free"
-                          ? "/signup"
-                          : `/checkout?tier=${tier.name}&period=${isAnnual ? "annual" : "monthly"}`
-                      }
-                    >
-                      {tier.name === "free" ? "Get started free" : "Subscribe"}
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </Card>
+                    {isFree ? "Get started free" : "Subscribe"}
+                  </Link>
+                </Button>
+              </div>
             </motion.div>
           );
         })}
+      </div>
+
+      {/* All plans include */}
+      <div className="text-center mb-16">
+        <p className="text-sm text-muted-foreground">
+          All plans include AI recommendations, PDF &amp; DOCX downloads, unlimited reruns per scene, and email support.
+        </p>
       </div>
 
       {/* FAQ Section */}
