@@ -106,9 +106,9 @@ export function LandingPageAnimated() {
           </div>
         </motion.section>
 
-        <LandingSearchShowcase />
-
         <LandingVideoShowcase />
+
+        <LandingSearchShowcase />
 
         {/* Testimonials */}
         <RevealSection id="testimonials">
