@@ -14,17 +14,18 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
-  ArrowLeft, Edit2, Check, X, Trash2, ChevronRight, ChevronDown, Flag, Plus
+  ArrowLeft, Edit2, Check, X, Trash2, ChevronRight, ChevronDown, Flag, Plus, MoreHorizontal
 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { motion, AnimatePresence } from "framer-motion";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import { parseUpgradeError } from "@/lib/upgradeError";
+import { UpgradeModal } from "@/components/billing/UpgradeModal";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { GenreSelect } from "@/components/ui/genre-select";
 import { ScenePreviewTooltip } from "@/components/scenepartner/ScenePreviewTooltip";
 import { AddSceneToScriptModal } from "@/components/scenepartner/AddSceneToScriptModal";
-import { Badge } from "@/components/ui/badge";
 import { getGenreBadgeClassName, getGenreBorderClassName } from "@/lib/genreColors";
 
 interface Scene {
@@ -115,6 +116,9 @@ export default function ScriptDetailPage() {
   /** Which character the user will play per scene (sceneId -> character name) */
   const [selectedCharacter, setSelectedCharacter] = useState<Record<number, string>>({});
   const [startingRehearsalFor, setStartingRehearsalFor] = useState<number | null>(null);
+  const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string; message: string }>({
+    open: false, feature: "ScenePartner", message: "",
+  });
   const [deleteSceneDialogOpen, setDeleteSceneDialogOpen] = useState(false);
   const [sceneToDelete, setSceneToDelete] = useState<number | null>(null);
   const [expandedActs, setExpandedActs] = useState<Record<string, boolean | undefined>>({});
@@ -122,10 +126,8 @@ export default function ScriptDetailPage() {
   const [reportCategory, setReportCategory] = useState("missing_lines");
   const [reportComment, setReportComment] = useState("");
   const [reportSubmitting, setReportSubmitting] = useState(false);
-  const [castPopoverOpen, setCastPopoverOpen] = useState(false);
   const [showAddSceneModal, setShowAddSceneModal] = useState(false);
   const [addSceneToAct, setAddSceneToAct] = useState<string | null>(null);
-  const castHoverRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const deleteSceneTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSubmitReport = async (sceneId: number) => {
@@ -201,10 +203,15 @@ export default function ScriptDetailPage() {
       try { sessionStorage.setItem(`actorrise_session_${data.id}`, JSON.stringify(data)); } catch { /* quota */ }
       router.push(`/scenes/${scene.id}/rehearse?session=${data.id}`);
     } catch (err: unknown) {
-      const message = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
-        : 'Failed to start rehearsal';
-      toast.error(typeof message === 'string' ? message : 'Failed to start rehearsal');
+      const upgrade = parseUpgradeError(err);
+      if (upgrade) {
+        setUpgradeModal({ open: true, feature: "ScenePartner", message: upgrade.message });
+      } else {
+        const message = err && typeof err === 'object' && 'response' in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : 'Failed to start rehearsal';
+        toast.error(typeof message === 'string' ? message : 'Failed to start rehearsal');
+      }
     } finally {
       setStartingRehearsalFor(null);
     }
@@ -319,10 +326,10 @@ export default function ScriptDetailPage() {
         </span>
       </nav>
 
-      <div className="space-y-8 max-w-3xl">
+      <div className="space-y-8">
 
       {/* Script Info */}
-      <section className="space-y-4">
+      <section className="space-y-4 max-w-3xl">
       {/* Script info card */}
       <Card className={`border-border/80 shadow-sm border-l-[3px] ${script.genre ? getGenreBorderClassName(script.genre) : "border-l-border/80"}`}>
         <CardContent className="p-5 sm:p-6 space-y-4">
@@ -375,53 +382,22 @@ export default function ScriptDetailPage() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.15 }}
-                    className="group flex items-center gap-2 cursor-pointer border border-transparent rounded-md px-2.5 py-1.5 -mx-2.5 hover:border-border/50 transition-colors"
-                    onClick={() => startEditing("title", script.title)}
+                    className={`group flex items-center gap-2 border border-transparent rounded-md px-2.5 py-1.5 -mx-2.5 transition-colors ${script.is_sample ? "" : "cursor-pointer hover:border-border/50"}`}
+                    onClick={() => !script.is_sample && startEditing("title", script.title)}
                   >
                     <h1 className="text-xl font-semibold text-foreground truncate font-serif">
                       {script.title}
                     </h1>
-                    <Edit2 className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors flex-shrink-0" />
+                    {script.is_sample ? (
+                      <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 border border-border shrink-0">Sample</span>
+                    ) : (
+                      <Edit2 className="w-4 h-4 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors flex-shrink-0" />
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
               <div className="flex flex-wrap items-center gap-1.5 mt-2 text-sm text-muted-foreground">
-                <Popover open={castPopoverOpen} onOpenChange={setCastPopoverOpen}>
-                  <PopoverTrigger asChild>
-                    <span
-                      className="cursor-help underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors"
-                      onMouseEnter={() => {
-                        castHoverRef.current = setTimeout(() => setCastPopoverOpen(true), 200);
-                      }}
-                      onMouseLeave={() => {
-                        if (castHoverRef.current) { clearTimeout(castHoverRef.current); castHoverRef.current = null; }
-                        setCastPopoverOpen(false);
-                      }}
-                    >
-                      {script.num_characters} characters
-                    </span>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    align="start"
-                    className="w-80 max-h-[320px] overflow-y-auto p-0"
-                    onOpenAutoFocus={(e) => e.preventDefault()}
-                    onMouseEnter={() => { if (castHoverRef.current) clearTimeout(castHoverRef.current); }}
-                    onMouseLeave={() => setCastPopoverOpen(false)}
-                  >
-                    <div className="px-3 py-2 border-b border-border/60 sticky top-0 bg-popover z-10">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                        Cast ({script.characters.length})
-                      </p>
-                    </div>
-                    <div className="divide-y divide-border/40">
-                      {script.characters.map((char, i) => (
-                        <div key={i} className="px-3 py-2 hover:bg-muted/40 transition-colors">
-                          <span className="text-sm font-medium text-foreground">{char.name}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <span>{script.num_characters} character{script.num_characters !== 1 ? "s" : ""}</span>
                 <span className="text-muted-foreground/40">·</span>
                 <span>{script.num_scenes_extracted} scene{script.num_scenes_extracted !== 1 ? "s" : ""}</span>
                 {script.estimated_length_minutes != null && (
@@ -479,12 +455,12 @@ export default function ScriptDetailPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.95 }}
                   transition={{ duration: 0.15 }}
-                  className="group inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors max-w-full min-w-0"
-                  onClick={() => startEditing("author", script.author)}
+                  className={`group inline-flex items-center gap-2 text-muted-foreground transition-colors max-w-full min-w-0 ${script.is_sample ? "" : "hover:text-foreground"}`}
+                  onClick={() => !script.is_sample && startEditing("author", script.author)}
                 >
                   <span className="font-medium text-foreground/80 shrink-0">Author</span>
                   <span className="truncate max-w-[200px]">{script.author}</span>
-                  <Edit2 className="w-3 h-3 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />
+                  {!script.is_sample && <Edit2 className="w-3 h-3 text-muted-foreground/40 group-hover:text-muted-foreground transition-colors" />}
                 </motion.button>
               )}
             </AnimatePresence>
@@ -674,15 +650,30 @@ export default function ScriptDetailPage() {
           <h2 className="text-lg font-semibold text-foreground font-serif">
             Extracted Scenes ({script.scenes.length})
           </h2>
-          <Button
-            size="sm"
-            variant="outline"
-            className="gap-1.5 h-8 px-3 text-xs"
-            onClick={() => setShowAddSceneModal(true)}
-          >
-            <Plus className="w-3.5 h-3.5" />
-            Add Scene
-          </Button>
+          <div className="flex items-center gap-2">
+            {process.env.NODE_ENV === "development" && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="gap-1.5 h-8 px-3 text-xs text-orange-500 hover:text-orange-400"
+                onClick={async () => {
+                  await api.delete("/api/scripts/dev/clear-extraction-cache");
+                  toast.success("Extraction cache cleared — re-upload to force fresh extraction");
+                }}
+              >
+                Clear Cache
+              </Button>
+            )}
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1.5 h-8 px-3 text-xs"
+              onClick={() => setShowAddSceneModal(true)}
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Add Scene
+            </Button>
+          </div>
         </div>
 
         {script.scenes.length === 0 ? (
@@ -716,21 +707,21 @@ export default function ScriptDetailPage() {
                   {group.act && (
                     <button
                       onClick={() => setExpandedActs(prev => ({ ...prev, [actKey]: !isExpanded }))}
-                      className="w-full flex items-center justify-between py-3.5 px-4 bg-muted/50 border border-border/60 border-l-[3px] border-l-primary/60 mb-0 text-left hover:bg-muted/80 transition-colors"
+                      className="w-full flex items-center justify-between py-3.5 px-5 bg-muted/40 border border-border/60 text-left hover:bg-muted/70 transition-colors"
                     >
-                      <h3 className="text-base font-semibold text-foreground font-serif">
-                        {group.act}
-                      </h3>
-                      <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                        <span>
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-base font-semibold text-foreground font-serif">
+                          {group.act}
+                        </h3>
+                        <span className="text-sm text-muted-foreground">
                           {group.scenes.length} {group.scenes.length === 1 ? "scene" : "scenes"}
                           <span className="text-muted-foreground/40 mx-1.5">·</span>
                           {formatDuration(groupDuration)}
                         </span>
-                        <ChevronDown
-                          className={`w-4 h-4 text-muted-foreground/60 transition-transform duration-200 ${isExpanded ? "" : "-rotate-90"}`}
-                        />
                       </div>
+                      <ChevronDown
+                        className={`w-4 h-4 text-muted-foreground/60 transition-transform duration-200 shrink-0 ${isExpanded ? "" : "-rotate-90"}`}
+                      />
                     </button>
                   )}
 
@@ -744,131 +735,156 @@ export default function ScriptDetailPage() {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <div className="grid grid-cols-1 gap-3 py-3 px-1" role="list">
+                        <div className="divide-y divide-border/60 py-2" role="list">
                           {group.scenes.map((scene) => (
                             <motion.div
                               key={scene.id}
-                              initial={{ opacity: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, scale: 1 }}
-                              exit={{ opacity: 0, scale: 0.95 }}
-                              whileHover={{ y: -2, transition: { duration: 0.15 } }}
-                              whileTap={{ scale: 0.98, transition: { duration: 0.1 } }}
-                              transition={{ duration: 0.2 }}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.15 }}
                               layout
-                              className="h-full"
+                              className="group/row"
                             >
-                              <Card
-                                className="overflow-hidden cursor-pointer transition-all h-full hover:shadow-md hover:border-primary/40"
+                              <div
+                                className="flex items-center gap-3 px-3 py-3 cursor-pointer hover:bg-muted/50 transition-colors sm:gap-4"
                                 onClick={() => router.push(`/my-scripts/${scriptId}/scenes/${scene.id}/edit`)}
+                                role="listitem"
                               >
-                                <CardContent className="p-5 space-y-3">
-                                  <div>
-                                    <div className="flex items-center gap-2">
-                                      {scene.scene_number && (
-                                        <span className="inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium border bg-muted/60 text-muted-foreground border-border/60 shrink-0">
-                                          {scene.scene_number}
-                                        </span>
-                                      )}
-                                      <h3 className="text-base font-semibold font-serif line-clamp-2" title={scene.title}>
-                                        {scene.title}
-                                      </h3>
-                                    </div>
-                                    {scene.description && (
-                                      <p className="text-sm text-muted-foreground/80 line-clamp-2 mt-1 leading-relaxed">
-                                        {scene.description}
-                                      </p>
+                                {/* Left: scene number + title */}
+                                <div className="min-w-0 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    {scene.scene_number && (
+                                      <span className="text-xs text-muted-foreground/70 shrink-0">
+                                        {scene.scene_number}
+                                      </span>
                                     )}
+                                    <h3 className="text-lg font-semibold text-foreground truncate font-serif" title={scene.title}>
+                                      {scene.title}
+                                    </h3>
                                   </div>
-
-                                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                                    <span className="font-medium text-foreground/70">{scene.character_1_name}</span>
-                                    <span className="text-muted-foreground/40">·</span>
-                                    <span className="font-medium text-foreground/70">{scene.character_2_name}</span>
+                                  {/* Mobile: metadata below title */}
+                                  <div className="flex items-center gap-1.5 mt-0.5 text-xs text-muted-foreground sm:hidden">
+                                    <span>{scene.character_1_name}, {scene.character_2_name}</span>
                                     <span className="text-muted-foreground/40">·</span>
                                     <ScenePreviewTooltip sceneId={scene.id}>
-                                      <span className="cursor-help underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors" onClick={(e) => e.stopPropagation()}>
+                                      <span className="cursor-help underline decoration-dotted underline-offset-2" onClick={(e) => e.stopPropagation()}>
                                         {scene.line_count} lines
                                       </span>
                                     </ScenePreviewTooltip>
                                     <span className="text-muted-foreground/40">·</span>
                                     <span>{formatDuration(scene.estimated_duration_seconds)}</span>
+                                  </div>
+                                </div>
 
-                                    <span className="ml-auto">
-                                      <Popover
-                                        open={reportingSceneId === scene.id}
-                                        onOpenChange={(open) => {
-                                          if (open) {
-                                            setReportingSceneId(scene.id);
-                                          } else {
-                                            setReportingSceneId(null);
-                                            setReportComment("");
-                                            setReportCategory("missing_lines");
-                                          }
+                                {/* Right: characters + stats (desktop) */}
+                                <div className="hidden sm:flex items-center gap-4 text-xs text-muted-foreground shrink-0">
+                                  <span className="w-40 truncate text-right" title={`${scene.character_1_name}, ${scene.character_2_name}`}>
+                                    {scene.character_1_name}, {scene.character_2_name}
+                                  </span>
+                                  <span className="w-16 text-right">
+                                    <ScenePreviewTooltip sceneId={scene.id}>
+                                      <span className="cursor-help underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors" onClick={(e) => e.stopPropagation()}>
+                                        {scene.line_count} lines
+                                      </span>
+                                    </ScenePreviewTooltip>
+                                  </span>
+                                  <span className="w-12 text-right">{formatDuration(scene.estimated_duration_seconds)}</span>
+                                </div>
+
+                                {/* Overflow menu (hidden for sample scripts) */}
+                                {!script?.is_sample && <Popover
+                                  open={reportingSceneId === scene.id}
+                                  onOpenChange={(open) => {
+                                    if (open) {
+                                      setReportingSceneId(scene.id);
+                                    } else {
+                                      setReportingSceneId(null);
+                                      setReportComment("");
+                                      setReportCategory("missing_lines");
+                                    }
+                                  }}
+                                >
+                                  <PopoverTrigger asChild>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setReportingSceneId(scene.id);
+                                      }}
+                                      className="p-1.5 text-muted-foreground/40 hover:text-muted-foreground transition-colors opacity-0 group-hover/row:opacity-100 focus:opacity-100 shrink-0"
+                                      title="More actions"
+                                    >
+                                      <MoreHorizontal className="w-4 h-4" />
+                                    </button>
+                                  </PopoverTrigger>
+                                  <PopoverContent
+                                    className="w-72 p-0"
+                                    align="end"
+                                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                  >
+                                    <div className="p-1">
+                                      <button
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-muted/80 transition-colors"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          // Close the menu popover and open report flow
+                                          setReportingSceneId(null);
+                                          setTimeout(() => setReportingSceneId(scene.id), 50);
                                         }}
                                       >
-                                        <PopoverTrigger asChild>
-                                          <button
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              setReportingSceneId(scene.id);
-                                            }}
-                                            className="text-muted-foreground/40 hover:text-muted-foreground transition-colors p-0.5"
-                                            title="Report an issue"
-                                          >
-                                            <Flag className="w-3 h-3" />
-                                          </button>
-                                        </PopoverTrigger>
-                                        <PopoverContent
-                                          className="w-72 p-3"
-                                          align="end"
-                                          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                                        <Flag className="w-3.5 h-3.5 text-muted-foreground" />
+                                        Report an issue
+                                      </button>
+                                      <button
+                                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-destructive hover:bg-destructive/10 transition-colors"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setReportingSceneId(null);
+                                          handleDeleteSceneClick(scene.id);
+                                        }}
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                        Delete scene
+                                      </button>
+                                    </div>
+                                    {/* Report form - shown when reporting */}
+                                    {reportingSceneId === scene.id && (
+                                      <div className="border-t border-border/60 p-3 space-y-3">
+                                        <p className="text-sm font-medium">Report an issue</p>
+                                        <select
+                                          value={reportCategory}
+                                          onChange={(e) => setReportCategory(e.target.value)}
+                                          className="w-full text-sm border border-border bg-background px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
                                         >
-                                          <div className="space-y-3">
-                                            <p className="text-sm font-medium">Report an issue</p>
-                                            <select
-                                              value={reportCategory}
-                                              onChange={(e) => setReportCategory(e.target.value)}
-                                              className="w-full text-sm border border-border bg-background px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-primary"
-                                            >
-                                              <option value="missing_lines">Missing lines</option>
-                                              <option value="wrong_character">Wrong character name</option>
-                                              <option value="missing_scene">Missing scene</option>
-                                              <option value="wrong_metadata">Wrong info (tone, setting, etc.)</option>
-                                              <option value="other">Other</option>
-                                            </select>
-                                            <Textarea
-                                              placeholder="Details (optional)"
-                                              value={reportComment}
-                                              onChange={(e) => setReportComment(e.target.value)}
-                                              className="text-sm min-h-[60px] resize-none"
-                                              maxLength={500}
-                                            />
-                                            <Button
-                                              size="sm"
-                                              className="w-full"
-                                              disabled={reportSubmitting}
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleSubmitReport(scene.id);
-                                              }}
-                                            >
-                                              {reportSubmitting ? "Sending..." : "Send report"}
-                                            </Button>
-                                          </div>
-                                        </PopoverContent>
-                                      </Popover>
-                                    </span>
-                                    <button
-                                      type="button"
-                                      className="ml-1 p-1 text-muted-foreground/40 hover:text-destructive transition-colors"
-                                      title="Delete scene"
-                                      onClick={(e) => { e.stopPropagation(); handleDeleteSceneClick(scene.id); }}
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </button>
-                                  </div>
-                                </CardContent>
-                              </Card>
+                                          <option value="missing_lines">Missing lines</option>
+                                          <option value="wrong_character">Wrong character name</option>
+                                          <option value="missing_scene">Missing scene</option>
+                                          <option value="wrong_metadata">Wrong info (tone, setting, etc.)</option>
+                                          <option value="other">Other</option>
+                                        </select>
+                                        <Textarea
+                                          placeholder="Details (optional)"
+                                          value={reportComment}
+                                          onChange={(e) => setReportComment(e.target.value)}
+                                          className="text-sm min-h-[60px] resize-none"
+                                          maxLength={500}
+                                        />
+                                        <Button
+                                          size="sm"
+                                          className="w-full"
+                                          disabled={reportSubmitting}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleSubmitReport(scene.id);
+                                          }}
+                                        >
+                                          {reportSubmitting ? "Sending..." : "Send report"}
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </PopoverContent>
+                                </Popover>}
+                              </div>
                             </motion.div>
                           ))}
                         </div>
@@ -911,6 +927,12 @@ export default function ScriptDetailPage() {
           }}
         />
       )}
+      <UpgradeModal
+        open={upgradeModal.open}
+        onOpenChange={(open) => setUpgradeModal((prev) => ({ ...prev, open }))}
+        feature={upgradeModal.feature}
+        message={upgradeModal.message}
+      />
     </div>
   );
 }

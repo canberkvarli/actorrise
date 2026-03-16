@@ -70,7 +70,11 @@ _STAGE_DIR_LINE = re.compile(
 _INLINE_STAGE_DIR = re.compile(
     r'^.{0,60}\b(exit|exits|exeunt|leads|enters|kneels|falls|rises|draws|'
     r'weeps|kisses|stabs|dies|sleeps|wakes|reads|sings|dances|fights|'
-    r'aside|apart|within|takes|gives|turns|picks up|puts on|throws)\b',
+    r'aside|apart|within|takes|gives|turns|picks up|puts on|throws|'
+    r'spreads|crows|crow|sounds|rings|strikes|beats|blows|flourishes|'
+    r'withdraws|advances|retreats|beckons|gestures|points|bows|curtsies|'
+    r'stumbles|staggers|rushes|runs|walks|marches|creeps|hides|appears|'
+    r'vanishes|fades|speaks|whispers|shouts|cries|laughs|weeping)\b',
     re.IGNORECASE
 )
 
@@ -124,6 +128,166 @@ def _preprocess_text(text: str) -> str:
         # Only do this when FTLN was detected (confirms it's a Folger text)
         text = re.sub(r'\s+\d{2,4}\s*$', '', text, flags=re.MULTILINE)
     return text
+
+
+def _split_inline_speakers(text: str, character_names: List[str]) -> str:
+    """
+    Split inline speaker tags that got concatenated during PDF text extraction.
+
+    PDF extractors often collapse line breaks, turning:
+        HORATIO
+        Where, my lord?
+        HAMLET
+        In my mind's eye, Horatio.
+    into:
+        HORATIO
+        Where, my lord? HAMLET In my mind's eye, Horatio.
+
+    This function detects known character names appearing inline after
+    sentence-ending punctuation and inserts newlines to restore the structure,
+    so the AI receives properly separated speaker turns.
+
+    Only applies when character names are ALL-CAPS (theatrical speaker-tag format).
+    Skips correction for sentence-case scripts to avoid false positives.
+    """
+    if not character_names:
+        return text
+
+    # Only apply to ALL-CAPS speaker-tag format (e.g. Shakespeare, stage plays).
+    # Sentence-case scripts (e.g. "Hamlet:") are handled fine by the AI as-is.
+    upper_names = [n.strip().upper() for n in character_names if n.strip()]
+    if not upper_names or not all(n == n.upper() for n in upper_names):
+        return text
+
+    # Longest names first to avoid partial matches (e.g. "LADY ANNE" before "ANNE")
+    upper_names.sort(key=len, reverse=True)
+    name_pattern = '|'.join(re.escape(n) for n in upper_names)
+
+    # Match: sentence-ending punct, up to 20 non-newline chars (handles "?— Marcellus?"),
+    # then a known character name, then whitespace before their dialogue.
+    # The 20-char window is wide enough for em-dash + word between punct and speaker tag.
+    inline_re = re.compile(rf'([.!?])[^\n]{{0,20}}({name_pattern})[ \t]+(?=\S)')
+    result = inline_re.sub(r'\1\n\2\n', text)
+
+    if result != text:
+        hits = len(inline_re.findall(text))
+        print(f"Split {hits} inline speaker tag(s) before AI extraction")
+
+    return result
+
+
+def _fix_merged_lines(scenes: List[Dict], character_names: List[str]) -> List[Dict]:
+    """
+    Post-processing: detect and split lines where the AI still merged multiple speakers.
+
+    Even after preprocessing, gpt-4o-mini sometimes returns:
+      {"character": "HORATIO", "text": "Where, my lord? HAMLET In my mind's eye."}
+
+    This splits them into separate line entries based on known character names
+    appearing after sentence-ending punctuation.
+    """
+    if not character_names:
+        return scenes
+
+    upper_names = sorted(
+        {n.strip().upper() for n in character_names if n.strip()},
+        key=len, reverse=True
+    )
+    if not upper_names:
+        return scenes
+
+    name_pattern = '|'.join(re.escape(n) for n in upper_names)
+    # Match a known ALL-CAPS character name after sentence-ending punctuation + whitespace
+    inline_re = re.compile(rf'(?<=[.!?])\s+({name_pattern})\s+(?=\S)')
+    # Patterns to normalize before main split: em/en-dash and newline speaker separators
+    # e.g. "text—HAMLET more"  →  "text. HAMLET more"
+    #      "text\nHAMLET\nmore" →  "text. HAMLET more"
+    dash_norm_re = re.compile(rf'[—–]\s*({name_pattern})(?=\s)', re.UNICODE)
+    newline_norm_re = re.compile(rf'\n({name_pattern})(?=[\s\n])', re.MULTILINE)
+
+    def split_line(line: Dict) -> List[Dict]:
+        raw = line.get('text', '').strip()
+        # Normalize em-dash and newline speaker separators so inline_re can catch them
+        raw = dash_norm_re.sub(r'. \1 ', raw)
+        raw = newline_norm_re.sub(r'. \1 ', raw)
+        text = _strip_embedded_stage_directions(raw)
+        current_char = line.get('character', '')
+        stage_dir = line.get('stage_direction')
+        parts = []
+
+        while True:
+            m = inline_re.search(text)
+            if not m:
+                if text:
+                    parts.append({
+                        'character': current_char,
+                        'text': text,
+                        'stage_direction': stage_dir if not parts else None,
+                    })
+                break
+            # Everything up to and including the punctuation belongs to current_char
+            before = text[:m.start() + 1].strip()
+            if before:
+                parts.append({
+                    'character': current_char,
+                    'text': before,
+                    'stage_direction': stage_dir if not parts else None,
+                })
+            current_char = m.group(1)
+            text = text[m.end():]
+
+        return parts if len(parts) > 1 else [line]
+
+    total_fixed = 0
+    fixed_scenes = []
+    for scene in scenes:
+        new_lines = []
+        for line in scene.get('lines', []):
+            split = split_line(line)
+            if len(split) > 1:
+                total_fixed += 1
+            new_lines.extend(split)
+        scene_copy = dict(scene)
+        scene_copy['lines'] = new_lines
+        fixed_scenes.append(scene_copy)
+
+    if total_fixed:
+        print(f"Post-processing: fixed {total_fixed} merged line(s) in AI output")
+
+    return fixed_scenes
+
+
+def _strip_embedded_stage_directions(text: str) -> str:
+    """
+    Wrap stage-direction sentences embedded within dialogue text in [brackets]
+    so the frontend can render them as italic and TTS can use them as context.
+
+    e.g. "I will, my Hermia. Hermia exits. Helena, adieu."
+         → "I will, my Hermia. [Hermia exits.] Helena, adieu."
+
+    Preserves the original text if all sentences would be bracketed.
+    """
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    result_parts = []
+    changed = False
+    for s in sentences:
+        if not s:
+            continue
+        if _is_stage_direction_line(s):
+            # Wrap in brackets if not already
+            if not (s.startswith('[') and s.endswith(']')):
+                result_parts.append(f'[{s}]')
+                changed = True
+            else:
+                result_parts.append(s)
+        else:
+            result_parts.append(s)
+    if not result_parts:
+        return text
+    result = ' '.join(result_parts)
+    if changed:
+        print(f"Bracketed embedded stage direction in: {text[:60]!r}")
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -896,7 +1060,7 @@ Return ONLY valid JSON."""
 
     def extract_scenes_from_text(self, text: str, characters: List[Dict],
                                   script_title: str = "", script_author: str = "",
-                                  on_progress=None) -> List[Dict]:
+                                  on_progress=None, cancel_event=None) -> List[Dict]:
         """
         Extract two-person scenes from script text (single chunk / unstructured).
         Uses AI to understand dialogue, stage directions, and character attribution.
@@ -906,8 +1070,15 @@ Return ONLY valid JSON."""
             if on_progress:
                 on_progress(msg)
 
+        if cancel_event and cancel_event.is_set():
+            return []
+
         progress("Extracting dialogue with AI (this takes a few seconds)")
         scenes = self.extract_chunk_ai(text, characters, script_title, script_author)
+
+        if cancel_event and cancel_event.is_set():
+            return []
+
         progress(f"Found {len(scenes)} scenes")
         return scenes
 
@@ -927,6 +1098,10 @@ Return ONLY valid JSON."""
         # Truncate very large chunks (shouldn't happen after structural splitting)
         text = chunk_text[:40000]
 
+        # Fix collapsed line breaks from PDF extraction: "dialogue. HAMLET response."
+        # → "dialogue.\nHAMLET\nresponse." so the AI sees clean speaker turns.
+        text = _split_inline_speakers(text, character_names)
+
         prompt = f"""Extract ALL dialogue scenes from this script excerpt{' from "' + script_title + '"' if script_title else ''}{' by ' + script_author if script_author else ''}.
 
 Known characters: {char_hint}
@@ -941,6 +1116,9 @@ RULES:
 - If the entire chunk is one character's monologue with no second speaker, skip it.
 - Only extract scenes with at least 4 lines of dialogue. Skip very short exchanges (2-3 lines).
 - For "character_1" and "character_2", pick the two characters who speak the most lines in the scene.
+- CRITICAL: Each line in the "lines" array must belong to EXACTLY ONE character. Never merge multiple characters' dialogue into a single line entry.
+- If a third character speaks between character_1 and character_2, include that line with the correct character name — do NOT fold it into another character's line.
+- Every "character" field in a line must match the actual speaker. Do not attribute one character's words to another.
 
 Script text:
 ```
@@ -968,17 +1146,30 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         # Output needs to be large enough to hold all dialogue as JSON.
         # Rule of thumb: output can be ~1.5x the input text length (dialogue + JSON overhead).
         max_tokens = min(16000, max(6000, len(text) // 2))
+        current_text = text
 
-        for attempt in range(3):
+        for attempt in range(4):
             try:
+                # Rebuild prompt with potentially reduced text on retry after truncation
+                if current_text is not text:
+                    retry_prompt = prompt.replace(f"```\n{text}\n```", f"```\n{current_text}\n```")
+                else:
+                    retry_prompt = prompt
                 response = self.client.chat.completions.create(
                     model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": prompt}],
+                    messages=[{"role": "user", "content": retry_prompt}],
                     temperature=0.2,
                     max_tokens=max_tokens
                 )
                 response_text = response.choices[0].message.content or ""
                 finish_reason = response.choices[0].finish_reason
+
+                # If output was truncated, retry with half the input text
+                if finish_reason == "length" and attempt < 2:
+                    print(f"AI output truncated (chunk {len(current_text)} chars), retrying with half")
+                    current_text = current_text[:len(current_text) // 2]
+                    max_tokens = min(16000, max(6000, len(current_text) // 2))
+                    continue
 
                 json_match = re.search(r'\[.*\]', response_text, re.DOTALL)
                 if not json_match:
@@ -1003,6 +1194,8 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
                     s for s in scenes
                     if isinstance(s, dict) and s.get("lines") and s.get("character_1") and s.get("character_2")
                 ]
+                # Post-process: split any lines where AI still merged multiple speakers
+                valid = _fix_merged_lines(valid, character_names)
                 return valid
 
             except Exception as e:
@@ -1125,6 +1318,10 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         progress("Cleaning up dialogue")
         scenes = self.clean_scenes_batch(scenes, script_title)
 
+        # Step 5: Deterministic post-processing (merged speakers + embedded stage directions)
+        character_names = [c['name'] for c in characters if c.get('name')]
+        scenes = _fix_merged_lines(scenes, character_names)
+
         return scenes
 
     def parse_script(self, file_content: bytes, file_type: str, filename: str,
@@ -1222,7 +1419,7 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
                 else:
                     scenes = self.extract_scenes_from_text(
                         raw_text, characters, script_title, script_author,
-                        on_progress=on_progress
+                        on_progress=on_progress, cancel_event=cancel_event
                     )
 
         # Filter out scenes with fewer than 4 lines — too short for rehearsal

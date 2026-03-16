@@ -322,15 +322,19 @@ async def start_rehearsal(
             detail="Scene not found"
         )
 
-    # Enforce custom-script-only: rehearsal only for scenes from user's scripts
+    # Enforce custom-script-only: rehearsal only for scenes from user's scripts or sample scripts
     if not scene.user_script_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Rehearsal is only available for scenes from your own scripts. Upload or paste a script in My Scripts first."
         )
+    from sqlalchemy import or_
     script = db.query(UserScript).filter(
         UserScript.id == scene.user_script_id,
-        UserScript.user_id == current_user.id
+        or_(
+            UserScript.user_id == current_user.id,
+            UserScript.is_sample == True,
+        )
     ).first()
     if not script:
         raise HTTPException(
@@ -346,7 +350,7 @@ async def start_rehearsal(
     )
     benefits = get_effective_benefits(db, current_user.id, subscription)
     if benefits.get("scene_partner_trial_only", False):
-        if not script.title.startswith("Example:"):
+        if not script.is_sample and not script.title.startswith("Example:"):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail={

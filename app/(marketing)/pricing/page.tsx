@@ -110,10 +110,10 @@ function FAQAccordion() {
         >
           <button
             onClick={() => setOpenIndex(openIndex === index ? null : index)}
-            className="w-full text-left py-4 px-6 bg-muted/30 hover:bg-muted/50 transition-colors"
+            className="w-full text-left py-3 sm:py-4 px-4 sm:px-6 bg-muted/30 hover:bg-muted/50 transition-colors"
           >
             <div className="flex items-center justify-between gap-4">
-              <h3 className="text-lg font-semibold">{faq.question}</h3>
+              <h3 className="text-base sm:text-lg font-semibold">{faq.question}</h3>
               <motion.div
                 animate={{ rotate: openIndex === index ? 180 : 0 }}
                 transition={{ duration: 0.2 }}
@@ -142,7 +142,7 @@ function FAQAccordion() {
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <p className="text-muted-foreground mt-3 pr-12">
+              <p className="text-sm sm:text-base text-muted-foreground mt-2 sm:mt-3 pr-4 sm:pr-12">
                 {faq.answer}
               </p>
             </motion.div>
@@ -184,21 +184,21 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-16 max-w-7xl">
+    <div className="container mx-auto px-4 py-10 sm:py-16 max-w-7xl">
       {/* Header */}
-      <div className="text-center mb-12">
+      <div className="text-center mb-8 sm:mb-12">
         <motion.h1
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-4xl lg:text-5xl font-bold mb-4"
+          className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4"
         >
-          Simple pricing, no surprises.
+          Your craft, your plan.
         </motion.h1>
         <motion.p
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
-          className="text-lg text-muted-foreground max-w-2xl mx-auto"
+          className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto"
         >
           Start free, upgrade when you need more.
         </motion.p>
@@ -208,10 +208,10 @@ export default function PricingPage() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="mt-6 mx-auto max-w-lg flex items-center justify-center gap-3 px-5 py-3 border border-primary/20 bg-primary/[0.03]"
+          className="mt-5 sm:mt-6 mx-auto max-w-lg flex items-start sm:items-center justify-center gap-2.5 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-3 border border-primary/20 bg-primary/[0.03]"
         >
-          <span className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />
-          <p className="text-sm">
+          <span className="h-2 w-2 mt-1.5 sm:mt-0 rounded-full bg-primary animate-pulse shrink-0" />
+          <p className="text-xs sm:text-sm text-left sm:text-center">
             <span className="font-medium">50 founding member spots.</span>{" "}
             <span className="text-muted-foreground">100% off Plus for 12 months. <Link href="/contact" className="underline underline-offset-2 hover:text-foreground transition-colors">Contact Canberk</Link> to claim yours.</span>
           </p>
@@ -222,9 +222,9 @@ export default function PricingPage() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.15 }}
-          className="flex flex-col items-center gap-2 mt-8"
+          className="flex flex-col items-center gap-2 mt-6 sm:mt-8"
         >
-          <div className="flex items-center justify-center gap-4">
+          <div className="flex items-center justify-center gap-3 sm:gap-4">
             <Label htmlFor="billing-toggle" className={!isAnnual ? "font-semibold" : ""}>
               Monthly
             </Label>
@@ -253,7 +253,7 @@ export default function PricingPage() {
       </div>
 
       {/* Pricing Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-16 items-stretch">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-12 sm:mb-16 items-stretch">
         {tiers.map((tier, index) => {
           const price =
             isAnnual && tier.annual_price_cents
@@ -278,7 +278,7 @@ export default function PricingPage() {
               className="h-full"
             >
               <div
-                className={`h-full flex flex-col relative border p-5 sm:p-7 ${
+                className={`h-full flex flex-col relative border p-4 sm:p-7 ${
                   isHighlighted
                     ? "border-primary/40 bg-primary/[0.03]"
                     : "border-border/50 bg-card/30"
@@ -293,39 +293,39 @@ export default function PricingPage() {
                 )}
 
                 <div>
-                  <h3 className="text-xl sm:text-2xl font-semibold">{tier.display_name}</h3>
+                  <h3 className="text-lg sm:text-2xl font-semibold">{tier.display_name}</h3>
                   <p className="text-xs text-muted-foreground mt-0.5">{tier.description}</p>
                 </div>
 
                 {price > 0 ? (
-                  <div className="mt-4">
+                  <div className="mt-3 sm:mt-4">
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl sm:text-4xl font-bold">{formatPrice(price)}</span>
-                      <span className="text-muted-foreground text-sm">/mo</span>
+                      <span className="text-2xl sm:text-4xl font-bold">{formatPrice(price)}</span>
+                      <span className="text-muted-foreground text-xs sm:text-sm">/mo</span>
                     </div>
                     {isAnnual && tier.annual_price_cents && tier.annual_price_cents > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1">
+                      <p className="text-[11px] sm:text-xs text-muted-foreground mt-1">
                         Billed annually at {formatPrice(tier.annual_price_cents)}
                       </p>
                     )}
                     {isAnnual && savings && savings.savings > 0 && (
-                      <p className="mt-1 text-xs text-muted-foreground">
+                      <p className="mt-1 text-[11px] sm:text-xs text-muted-foreground">
                         Save {formatPrice(savings.savings)}/year
                       </p>
                     )}
                   </div>
                 ) : (
-                  <div className="mt-4">
-                    <span className="text-3xl sm:text-4xl font-bold">$0</span>
-                    <span className="text-muted-foreground text-sm">/mo</span>
+                  <div className="mt-3 sm:mt-4">
+                    <span className="text-2xl sm:text-4xl font-bold">$0</span>
+                    <span className="text-muted-foreground text-xs sm:text-sm">/mo</span>
                   </div>
                 )}
 
-                <ul className="mt-5 space-y-2.5 flex-1">
+                <ul className="mt-4 sm:mt-5 space-y-2 sm:space-y-2.5 flex-1">
                   {features.map((feature, idx) => (
-                    <li key={idx} className="flex items-start gap-2">
-                      <span className="text-primary text-sm mt-0.5 shrink-0">&#10003;</span>
-                      <span className="text-sm text-muted-foreground">{feature}</span>
+                    <li key={idx} className="flex items-start gap-1.5 sm:gap-2">
+                      <span className="text-primary text-xs sm:text-sm mt-0.5 shrink-0">&#10003;</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground">{feature}</span>
                     </li>
                   ))}
                 </ul>
@@ -333,7 +333,7 @@ export default function PricingPage() {
                 <Button
                   asChild
                   variant={isHighlighted ? "default" : "outline"}
-                  className="mt-6 w-full"
+                  className="mt-4 sm:mt-6 w-full"
                 >
                   <Link
                     href={
@@ -357,7 +357,7 @@ export default function PricingPage() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-3xl font-bold mb-12 text-center"
+          className="text-2xl sm:text-3xl font-bold mb-8 sm:mb-12 text-center"
         >
           Frequently Asked Questions
         </motion.h2>

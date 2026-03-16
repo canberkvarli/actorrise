@@ -11,6 +11,7 @@ from app.api.admin.founding_actors import router as admin_founding_actors_router
 from app.api.admin.users import router as admin_users_router
 from app.api.audition import router as audition_router
 from app.api.auth import router as auth_router
+from app.api.tapes import router as tapes_router
 from app.api.contact import router as contact_router
 from app.api.feedback import router as feedback_router
 from app.api.film_tv import router as film_tv_router
@@ -30,6 +31,7 @@ from app.core.seed import ensure_pricing_tiers
 from app.models.feedback import ResultFeedback  # noqa: F401; register with Base for create_all
 from app.models.moderation import (  # noqa: F401; register with Base for create_all
     ModerationLog, MonologueSubmission)
+from app.models.tape import UserTape  # noqa: F401; register with Base for create_all
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -122,6 +124,7 @@ app.include_router(scenes_router)
 app.include_router(speech_router)
 app.include_router(scripts_router)
 app.include_router(audition_router)
+app.include_router(tapes_router)
 app.include_router(public_router)
 app.include_router(pricing_router)
 app.include_router(subscriptions_router)

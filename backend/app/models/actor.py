@@ -350,7 +350,8 @@ class UserScript(Base):
     __tablename__ = "user_scripts"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # NULL for sample scripts
+    is_sample = Column(Boolean, default=False, nullable=False)  # True for system sample scripts
 
     # Script Info
     title = Column(String, nullable=False)  # Script title

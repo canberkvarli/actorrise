@@ -11,8 +11,9 @@ from typing import Any
 from app.core.database import get_db
 from app.models.actor import FilmTvReference, Monologue, Play
 from app.models.billing import UsageMetrics
+from app.models.tape import UserTape
 from app.models.user import User
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from sqlalchemy.sql.functions import count as sql_count
@@ -77,3 +78,32 @@ def get_public_stats(db: Session = Depends(get_db)) -> dict[str, Any]:
     }
     _CACHE["public_stats"] = (payload, now + _CACHE_TTL_SEC)
     return payload
+
+
+@router.get("/tape/{share_uuid}")
+def get_public_tape(share_uuid: str, db: Session = Depends(get_db)) -> dict:
+    """
+    Get a publicly shared tape by its share UUID. No auth required.
+    Only returns tapes that have been explicitly shared by a Pro user.
+    """
+    tape = db.query(UserTape).filter(
+        UserTape.share_uuid == share_uuid,
+        UserTape.is_shared.is_(True),
+    ).first()
+
+    if not tape:
+        raise HTTPException(status_code=404, detail="Tape not found")
+
+    # Get actor name if available
+    actor_name = None
+    if tape.user and tape.user.name:
+        actor_name = tape.user.name
+
+    return {
+        "id": tape.id,
+        "title": tape.title,
+        "duration_seconds": tape.duration_seconds,
+        "file_path": tape.file_path,
+        "created_at": tape.created_at.isoformat() if tape.created_at else None,
+        "actor_name": actor_name,
+    }

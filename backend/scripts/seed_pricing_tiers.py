@@ -140,15 +140,18 @@ def seed_pricing_tiers():
             db.add(tier)
             print(f"Created tier: {tier.display_name} (${tier.monthly_price_cents/100:.2f}/month)")
 
+        # Deactivate any tiers not in the current list
+        active_names = {t.name for t in tiers}
+        stale = db.query(PricingTier).filter(
+            PricingTier.name.notin_(active_names),
+            PricingTier.is_active == True,
+        ).all()
+        for old_tier in stale:
+            old_tier.is_active = False
+            print(f"Deactivated tier: {old_tier.display_name}")
+
         db.commit()
         print("\nPricing tiers seeded successfully!")
-        print("\nNext steps:")
-        print("1. Create products in Stripe Dashboard:")
-        print("   - Solo: $7/month and $59/year")
-        print("   - Plus: $12/month and $99/year")
-        print("   - Pro: $24/month and $199/year")
-        print("2. Copy the Stripe price IDs (price_xxxxx)")
-        print("3. Update the database with the Stripe price IDs")
 
     except IntegrityError as e:
         db.rollback()

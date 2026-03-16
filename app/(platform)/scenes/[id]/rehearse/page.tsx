@@ -519,6 +519,8 @@ export default function RehearsalPage() {
   const lastKnownVoiceIdRef = useRef(voiceParam || 'coral');
   // Maps each AI character name → assigned TTS voice ID (for multi-character scenes)
   const characterVoiceMapRef = useRef<Map<string, string>>(new Map());
+  // Maps each AI character name → voice avatar info { label, color } for display
+  const [characterVoiceMeta, setCharacterVoiceMeta] = useState<Map<string, { label: string; color: string }>>(new Map());
   const lastAiLineForFallbackRef = useRef<string | null>(null);
   const pauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const speakDelayRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -972,17 +974,46 @@ export default function RehearsalPage() {
         const voiceId = voiceParam || data.ai_voice_id || 'coral';
 
         // Build per-character voice map so each AI character gets a distinct voice
-        const voicePool = ['coral', 'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer', 'ash', 'ballad', 'sage'];
+        // First try to load user-assigned voices from sessionStorage (set by edit page)
+        const savedVoiceMap = (() => {
+          try {
+            const raw = sessionStorage.getItem(`actorrise_voice_map_${data.id}`);
+            if (raw) {
+              sessionStorage.removeItem(`actorrise_voice_map_${data.id}`);
+              return JSON.parse(raw) as Record<string, { id: string; label: string; color: string } | string>;
+            }
+          } catch { /* ignore */ }
+          return null;
+        })();
+
         const aiChars = [...new Set(sceneData.lines.map(l => l.character_name))]
           .filter(c => c !== data.user_character);
         const newVoiceMap = new Map<string, string>();
-        newVoiceMap.set(data.ai_character, voiceId);
-        const remainingVoices = voicePool.filter(v => v !== voiceId);
-        let vIdx = 0;
-        for (const char of aiChars) {
-          if (!newVoiceMap.has(char)) {
-            newVoiceMap.set(char, remainingVoices[vIdx % remainingVoices.length]);
-            vIdx++;
+        const newMeta = new Map<string, { label: string; color: string }>();
+
+        if (savedVoiceMap) {
+          // Use user-assigned voices from the edit page (includes label + color metadata)
+          for (const char of aiChars) {
+            const entry = savedVoiceMap[char];
+            if (entry && typeof entry === 'object') {
+              newVoiceMap.set(char, entry.id);
+              newMeta.set(char, { label: entry.label, color: entry.color });
+            } else {
+              newVoiceMap.set(char, (typeof entry === 'string' ? entry : null) ?? voiceId);
+            }
+          }
+          setCharacterVoiceMeta(newMeta);
+        } else {
+          // Fallback: assign primary AI char the URL voice, cycle pool for the rest
+          const voicePool = ['coral', 'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer', 'ash', 'ballad', 'sage'];
+          newVoiceMap.set(data.ai_character, voiceId);
+          const remainingVoices = voicePool.filter(v => v !== voiceId);
+          let vIdx = 0;
+          for (const char of aiChars) {
+            if (!newVoiceMap.has(char)) {
+              newVoiceMap.set(char, remainingVoices[vIdx % remainingVoices.length]);
+              vIdx++;
+            }
           }
         }
         characterVoiceMapRef.current = newVoiceMap;
@@ -1757,11 +1788,17 @@ export default function RehearsalPage() {
 
                   if (!isUserLine) {
                     // AI lines: compact, muted
+                    const meta = characterVoiceMeta.get(line.character_name);
                     return (
                       <div key={line.id} className="space-y-0.5">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-700">
-                          {line.character_name}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <div className={cn("w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-[8px] font-bold text-white", meta?.color ?? 'bg-neutral-500')}>
+                            {(meta?.label ?? line.character_name).charAt(0).toUpperCase()}
+                          </div>
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-700">
+                            {line.character_name}
+                          </span>
+                        </div>
                         <p className="text-sm text-neutral-600 leading-snug">
                           {renderTextWithStageDirections(line.text)}
                         </p>
@@ -1937,7 +1974,7 @@ export default function RehearsalPage() {
                           ? { x: [-8, 8, -6, 6, -4, 4, 0], opacity: 1, scale: 1, y: 0 }
                           : isCurrent
                             ? { opacity: 1, scale: 1, y: 0 }
-                            : { opacity: 0.28, scale: 0.96, y: 0 }
+                            : { opacity: 0.45, scale: 0.97, y: 0 }
                       }
                       transition={
                         isCurrent && !shouldShake
@@ -1972,11 +2009,19 @@ export default function RehearsalPage() {
                     >
                       {/* Character name row */}
                       <div className="flex items-center justify-center gap-2 mb-1">
-                        {!isUser && isCurrent && (
-                          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center shrink-0 text-[9px] font-bold text-white">
+                        {isUser ? (
+                          <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center shrink-0 text-[9px] font-bold text-white">
                             {line.character_name.charAt(0).toUpperCase()}
                           </div>
-                        )}
+                        ) : (() => {
+                          const meta = characterVoiceMeta.get(line.character_name);
+                          const bgColor = meta?.color ?? 'bg-neutral-500';
+                          return (
+                            <div className={cn("w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[9px] font-bold text-white", bgColor)}>
+                              {(meta?.label ?? line.character_name).charAt(0).toUpperCase()}
+                            </div>
+                          );
+                        })()}
                         <span className="text-base font-extrabold uppercase tracking-widest text-black">
                           {line.character_name}
                         </span>

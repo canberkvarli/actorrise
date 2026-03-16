@@ -137,5 +137,6 @@ export function usePricingTiers() {
     queryKey: QUERY_KEY,
     queryFn: fetchPricingTiers,
     staleTime: STALE_TIME_MS,
+    initialData: DEFAULT_PRICING_TIERS,
   });
 }
