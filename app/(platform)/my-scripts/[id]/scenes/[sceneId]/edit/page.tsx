@@ -2802,7 +2802,7 @@ export default function SceneEditPage() {
                                       <button
                                         key={v.id}
                                         type="button"
-                                        onClick={(e) => { e.stopPropagation(); handleVoiceChange(charNum, v.id); setVoiceDropdownOpen(null); }}
+                                        onClick={(e) => { e.stopPropagation(); handleVoiceChange(line.character_name, v.id); setVoiceDropdownOpen(null); }}
                                         className={cn("w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-neutral-50 transition-colors text-left", vid === v.id && "bg-neutral-100")}
                                       >
                                         <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0", v.color)}>{v.label[0]}</div>
@@ -3331,7 +3331,7 @@ export default function SceneEditPage() {
                           <button
                             key={v.id}
                             type="button"
-                            onClick={() => { handleVoiceChange(charNum as 1 | 2, v.id); setVoiceDropdownOpen(null); }}
+                            onClick={() => { handleVoiceChange(newLineCharacter, v.id); setVoiceDropdownOpen(null); }}
                             className={cn(
                               "w-full flex items-center gap-2 px-2.5 py-1.5 text-sm hover:bg-accent transition-colors text-left",
                               currentVoice === v.id && "bg-accent/50"
