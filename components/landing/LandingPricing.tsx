@@ -132,7 +132,7 @@ export function LandingPricing() {
         {/* Header */}
         <div className="max-w-2xl">
           <h2 className="text-2xl sm:text-3xl md:text-4xl tracking-[-0.03em]">
-            Simple pricing, no surprises.
+            Your craft, your plan.
           </h2>
           <p className="mt-3 text-sm sm:text-base text-muted-foreground">
             Upgrade when you need more.

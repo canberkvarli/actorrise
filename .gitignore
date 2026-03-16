@@ -63,3 +63,4 @@ backend/data/perseus/canonical-latinLit/
 
 # supabase
 supabase/.temp/
+.env*.local

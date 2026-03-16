@@ -135,7 +135,7 @@ def send_campaign(
         "sent": 0,
         "skipped": 0,
         "errors": [],
-        "recipients": [u.email for u in recipients],
+        "recipients": [f"{u.name}, {u.email}" if u.name else u.email for u in recipients],
     }
 
     if dry_run:
@@ -221,7 +221,7 @@ def _get_ai_search_limit(db: Session, user_id: int) -> int:
 def _send_upgrade_nudge_campaign(db: Session, target: str, dry_run: bool) -> dict:
     """Send upgrade nudge with real per-user usage data."""
     recipients = _get_marketing_recipients(db, target)
-    result: dict = {"sent": 0, "skipped": 0, "errors": [], "recipients": [u.email for u in recipients]}
+    result: dict = {"sent": 0, "skipped": 0, "errors": [], "recipients": [f"{u.name}, {u.email}" if u.name else u.email for u in recipients]}
 
     if dry_run:
         for user in recipients:

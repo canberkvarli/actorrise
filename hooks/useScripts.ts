@@ -26,6 +26,7 @@ export interface UserScript {
   }>;
   created_at: string;
   updated_at?: string;
+  is_sample?: boolean;
   first_scene_title?: string | null;
   first_scene_description?: string | null;
   scene_titles?: string[];
@@ -40,7 +41,7 @@ export function useScripts() {
       const response = await api.get<UserScript[]>("/api/scripts/");
       return response.data;
     },
-    staleTime: 30 * 1000,
+    staleTime: 0,
     gcTime: 10 * 60 * 1000,
     retry: 1,
   });

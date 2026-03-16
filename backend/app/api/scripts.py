@@ -55,6 +55,7 @@ class UserScriptResponse(BaseModel):
     characters: List[dict]
     created_at: datetime
     updated_at: Optional[datetime]
+    is_sample: bool = False
     first_scene_title: Optional[str] = None
     first_scene_description: Optional[str] = None
     scene_titles: List[str] = []
@@ -521,6 +522,7 @@ async def upload_script_stream(
     progress_queue: Queue = Queue()
     import threading
     cancel_event = threading.Event()
+    extraction_completed = [False]  # flag to suppress false-positive disconnect log after success
 
     # Check extraction cache before releasing DB
     cached_result = None
@@ -548,8 +550,9 @@ async def upload_script_stream(
     async def monitor_disconnect():
         while not cancel_event.is_set():
             if await request.is_disconnected():
-                cancel_event.set()
-                print("Client disconnected, cancelling extraction")
+                if not extraction_completed[0]:
+                    cancel_event.set()
+                    print("Client disconnected, cancelling extraction")
                 return
             await asyncio.sleep(0.3)
 
@@ -797,6 +800,7 @@ async def upload_script_stream(
                 if response_data.get(key) and hasattr(response_data[key], "isoformat"):
                     response_data[key] = response_data[key].isoformat()
 
+            extraction_completed[0] = True
             event = _json.dumps({"type": "done", "data": response_data})
             yield f"data: {event}\n\n"
 
@@ -1137,10 +1141,14 @@ async def list_user_scripts(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get all scripts uploaded by the current user"""
+    """Get all scripts uploaded by the current user, plus sample scripts"""
+    from sqlalchemy import or_
     scripts = db.query(UserScript).filter(
-        UserScript.user_id == current_user.id
-    ).order_by(UserScript.created_at.desc()).all()
+        or_(
+            UserScript.user_id == current_user.id,
+            UserScript.is_sample == True,
+        )
+    ).order_by(UserScript.is_sample.desc(), UserScript.created_at.desc()).all()
 
     if not scripts:
         return []
@@ -1176,9 +1184,13 @@ async def get_script(
     current_user: User = Depends(get_current_user)
 ):
     """Get detailed script with all scenes"""
+    from sqlalchemy import or_
     script = db.query(UserScript).filter(
         UserScript.id == script_id,
-        UserScript.user_id == current_user.id
+        or_(
+            UserScript.user_id == current_user.id,
+            UserScript.is_sample == True,
+        )
     ).first()
 
     if not script:
@@ -1862,3 +1874,14 @@ async def add_scene_to_script(
     db.refresh(scene)
 
     return SceneInScriptResponse.model_validate(scene)
+
+
+@router.delete("/dev/clear-extraction-cache")
+async def dev_clear_extraction_cache(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """DEV ONLY: Clears the entire extraction cache so scripts get re-extracted on next upload."""
+    deleted = db.query(ExtractionCache).delete()
+    db.commit()
+    return {"deleted": deleted}

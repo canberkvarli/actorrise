@@ -46,6 +46,7 @@ import api, { API_URL } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useOpenAITTS } from "@/hooks/useOpenAITTS";
+import { useScript } from "@/hooks/useScripts";
 
 import { parseUpgradeError } from "@/lib/upgradeError";
 import { UpgradeModal } from "@/components/billing/UpgradeModal";
@@ -175,6 +176,8 @@ interface SceneDetail {
   play_title: string;
   play_author: string;
   title: string;
+  act: string | null;
+  scene_number: string | null;
   description: string | null;
   character_1_name: string;
   character_2_name: string;
@@ -248,6 +251,7 @@ type UndoEntry =
       type: "voice";
       old: CharacterVoices;
       cur: CharacterVoices;
+      // keyed by character name
     }
   | {
       type: "selected_character";
@@ -269,29 +273,29 @@ const AI_VOICES = [
   { id: "sage", label: "Sage", desc: "Calm, measured", gender: "female", color: "bg-rose-600" },
   { id: "shimmer", label: "Shimmer", desc: "Light, youthful", gender: "female", color: "bg-pink-400" },
   { id: "alloy", label: "Alloy", desc: "Balanced, clear", gender: "neutral", color: "bg-slate-500" },
-  { id: "ballad", label: "Ballad", desc: "Melodic, gentle", gender: "neutral", color: "bg-slate-600" },
+  { id: "ballad", label: "Ballad", desc: "Melodic, theatrical", gender: "neutral", color: "bg-violet-600" },
 ] as const;
 
 // ---------------------------------------------------------------------------
 // Voice storage helpers (localStorage, keyed by scene ID)
 // ---------------------------------------------------------------------------
 
-const VOICE_STORAGE_KEY = "scene_partner_character_voices_v2";
+const VOICE_STORAGE_KEY = "scene_partner_voices_v3";
 
-interface CharacterVoices {
-  character_1_voice: string | null;
-  character_2_voice: string | null;
-}
+// Map from character name → voice ID
+type CharacterVoices = Record<string, string | null>;
+
+const DEFAULT_VOICE_CYCLE = ["coral", "ash", "ballad", "sage", "onyx", "nova", "fable", "shimmer", "alloy", "echo"];
 
 function getCharacterVoices(sceneId: number): CharacterVoices {
-  if (typeof window === "undefined") return { character_1_voice: null, character_2_voice: null };
+  if (typeof window === "undefined") return {};
   try {
     const raw = localStorage.getItem(VOICE_STORAGE_KEY);
-    if (!raw) return { character_1_voice: null, character_2_voice: null };
+    if (!raw) return {};
     const all = JSON.parse(raw) as Record<string, CharacterVoices>;
-    return all[String(sceneId)] ?? { character_1_voice: null, character_2_voice: null };
+    return all[String(sceneId)] ?? {};
   } catch {
-    return { character_1_voice: null, character_2_voice: null };
+    return {};
   }
 }
 
@@ -389,12 +393,9 @@ export default function SceneEditPage() {
   // Mobile tab
   const [mobileTab, setMobileTab] = useState<"details" | "script">("script");
 
-  // Voice
-  const [charVoices, setCharVoices] = useState<CharacterVoices>({
-    character_1_voice: null,
-    character_2_voice: null,
-  });
-  const [previewingVoice, setPreviewingVoice] = useState<1 | 2 | null>(null);
+  // Voice — keyed by character name
+  const [charVoices, setCharVoices] = useState<CharacterVoices>({});
+  const [previewingVoice, setPreviewingVoice] = useState<string | null>(null);
 
   const autoFocusTextRef = useRef<HTMLTextAreaElement>(null);
 
@@ -673,6 +674,10 @@ export default function SceneEditPage() {
     }
   }, [sortedLineIds]);
 
+  // Parent script data — used to populate the character assignment dropdown
+  const { data: scriptData } = useScript(scriptId);
+  const allScriptCharacters = scriptData?.characters?.map(c => c.name) ?? [];
+
   // Fetch scene via SWR for instant revisits (cached data shows immediately)
   const { data: swrScene } = useSWR<SceneDetail>(
     sceneId ? `/api/scenes/${sceneId}` : null,
@@ -699,17 +704,19 @@ export default function SceneEditPage() {
     originalSceneRef.current = JSON.parse(JSON.stringify(swrScene));
     // Default character selection to character_1
     setSelectedCharacter(swrScene.character_1_name);
-    // Load saved voices — auto-assign defaults if none set
+    // Load saved voices; assign cycling defaults for any character without one
     const saved = getCharacterVoices(sceneId);
-    if (!saved.character_1_voice || !saved.character_2_voice) {
-      const updated = { ...saved };
-      if (!updated.character_1_voice) updated.character_1_voice = "coral";
-      if (!updated.character_2_voice) updated.character_2_voice = "ash";
-      setCharacterVoices(sceneId, updated);
-      setCharVoices(updated);
-    } else {
-      setCharVoices(saved);
+    const uniqueChars = [...new Set(swrScene.lines.map(l => l.character_name))];
+    const updated = { ...saved };
+    let voiceIdx = 0;
+    for (const charName of uniqueChars) {
+      if (!updated[charName]) {
+        updated[charName] = DEFAULT_VOICE_CYCLE[voiceIdx % DEFAULT_VOICE_CYCLE.length];
+        voiceIdx++;
+      }
     }
+    setCharacterVoices(sceneId, updated);
+    setCharVoices(updated);
   }, [swrScene, sceneId]);
 
   // ---------------------------------------------------------------------------
@@ -959,10 +966,17 @@ export default function SceneEditPage() {
       setRehearsalStartLineIndex(null);
       // Cache session data so rehearsal page skips the GET round-trip
       try { sessionStorage.setItem(`actorrise_session_${data.id}`, JSON.stringify(data)); } catch { /* quota */ }
+      // Store full character→voice map so rehearsal page uses user-assigned voices
+      // Include voice metadata (label, color) so rehearsal can show avatars
+      const voiceMapWithMeta: Record<string, { id: string; label: string; color: string }> = {};
+      for (const [char, vid] of Object.entries(charVoices)) {
+        const v = AI_VOICES.find(x => x.id === vid);
+        voiceMapWithMeta[char] = { id: vid ?? 'coral', label: v?.label ?? 'Coral', color: v?.color ?? 'bg-rose-500' };
+      }
+      try { sessionStorage.setItem(`actorrise_voice_map_${data.id}`, JSON.stringify(voiceMapWithMeta)); } catch { /* quota */ }
       // Determine AI character's voice to pass to rehearsal
-      const aiCharVoice = selectedCharacter === scene.character_1_name
-        ? charVoices.character_2_voice
-        : charVoices.character_1_voice;
+      const primaryAiChar = allSceneCharacters.find(c => c !== selectedCharacter);
+      const aiCharVoice = primaryAiChar ? (charVoices[primaryAiChar] ?? "coral") : "coral";
       const voiceParam = aiCharVoice ? `&voice=${aiCharVoice}` : '';
       // Navigate immediately — no animation delay
       router.push(`/scenes/${scene.id}/rehearse?session=${data.id}&script=${scriptId}${voiceParam}`);
@@ -985,12 +999,9 @@ export default function SceneEditPage() {
   // Voice helpers
   // ---------------------------------------------------------------------------
 
-  const handleVoiceChange = (charNum: 1 | 2, voiceId: string) => {
+  const handleVoiceChange = (charName: string, voiceId: string) => {
     const oldVoices = { ...charVoices };
-    const updated = {
-      ...charVoices,
-      [`character_${charNum}_voice`]: voiceId || null,
-    } as CharacterVoices;
+    const updated: CharacterVoices = { ...charVoices, [charName]: voiceId || null };
     pushUndo({ type: "voice", old: oldVoices, cur: updated });
     setCharVoices(updated);
     setCharacterVoices(sceneId, updated);
@@ -998,25 +1009,49 @@ export default function SceneEditPage() {
     // If TTS is playing a line by this character, restart with the new voice
     if ((isSpeakingAI || isLoadingAI) && ttsLineIdRef.current !== null && scene) {
       const playingLine = scene.lines.find(l => l.id === ttsLineIdRef.current);
-      if (playingLine) {
-        const playingCharNum = playingLine.character_name === scene.character_1_name ? 1 : 2;
-        if (playingCharNum === charNum) {
-          cancelAI();
-          const editVals = lineEditValues[playingLine.id];
-          const text = editVals?.text || playingLine.text;
-          const stageDir = editVals?.stage_direction || playingLine.stage_direction || "";
-          const instructions = stageDir
-            ? `You are a skilled actor performing a scene. The stage direction says: ${stageDir}. Fully embody this direction — if it says "sighing", actually sigh; if "whispering", drop your voice; if "angrily", let real frustration come through. Commit completely.`
-            : 'You are a skilled actor performing a scene. Deliver this line with emotional truth and natural pacing. Commit fully to the moment.';
-          setTtsProgress(0);
-          speakAI(text, voiceId || "coral", instructions);
-        }
+      if (playingLine && playingLine.character_name === charName) {
+        cancelAI();
+        const editVals = lineEditValues[playingLine.id];
+        const text = editVals?.text || playingLine.text;
+        const stageDir = editVals?.stage_direction || playingLine.stage_direction || "";
+        const instructions = buildActorInstructions(playingLine.character_name, stageDir || undefined);
+        setTtsProgress(0);
+        speakAI(text, voiceId || "coral", instructions);
       }
     }
   };
 
-  const previewVoice = (charNum: 1 | 2, voiceIdOverride?: string) => {
-    if ((isSpeakingAI || isLoadingAI) && previewingVoice === charNum) {
+  /** Build rich TTS instructions that give the voice an actual character to embody. */
+  const buildActorInstructions = (charName: string, stageDir?: string): string => {
+    const title = scene?.play_title || scene?.title || "this scene";
+    const tone = scene?.tone;
+    const emotions = scene?.primary_emotions?.length ? scene.primary_emotions.join(", ") : null;
+    const dynamic = scene?.relationship_dynamic;
+    const description = scene?.description;
+
+    const context = [
+      `You are ${charName} in "${title}".`,
+      description ? description : null,
+      tone ? `The scene is ${tone}.` : null,
+      emotions ? `The emotional core is: ${emotions}.` : null,
+      dynamic ? `The relationship between the characters is ${dynamic}.` : null,
+    ].filter(Boolean).join(" ");
+
+    const stagePart = stageDir
+      ? `The stage direction says: "${stageDir}" — commit to it completely, let it transform your delivery.`
+      : `Fully inhabit this character. React to the moment, the scene, the other characters. Let the context shape every word.`;
+
+    const author = scene?.play_author?.toLowerCase() ?? "";
+    const isVerse = author.includes("shakespeare") || author.includes("marlowe") || author.includes("jonson");
+    const versePart = isVerse
+      ? `\nThis is verse drama — speak with classical theatrical gravitas. Honor the natural rhythm of the lines, let the metre breathe. Treat archaic words (thee, thou, hath, dost) as completely natural speech, not affectations. Pause meaningfully at line breaks. Think RSC, not audiobook.`
+      : "";
+
+    return `${context}\n\nYou are a skilled, committed actor. Do not sound like a text-to-speech system. ${stagePart}${versePart}\n\nIf the dialogue contains [bracketed text], those are stage directions — do NOT read them aloud. Use them silently to inform your delivery and emotional state.`;
+  };
+
+  const previewVoice = (charName: string, voiceIdOverride?: string) => {
+    if ((isSpeakingAI || isLoadingAI) && previewingVoice === charName) {
       cancelAI();
       setPreviewingVoice(null);
       return;
@@ -1024,13 +1059,15 @@ export default function SceneEditPage() {
     cancelAI();
     if (!scene) return;
 
-    const voiceId = voiceIdOverride ??
-      (charNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice);
-    const voiceLabel = AI_VOICES.find((v) => v.id === voiceId)?.label ?? "your scene partner";
-    const intro = `Hi, I'm ${voiceLabel}. I'll be your scene partner today.`;
+    const voiceId = voiceIdOverride ?? charVoices[charName];
+    const title = scene?.play_title || scene?.title;
+    const intro = title
+      ? `I'll be playing ${charName} from "${title}". Ready when you are.`
+      : `I'll be playing ${charName}. Ready when you are.`;
+    const instructions = buildActorInstructions(charName);
 
-    setPreviewingVoice(charNum);
-    speakAI(intro, voiceId || "coral");
+    setPreviewingVoice(charName);
+    speakAI(intro, voiceId || "coral", instructions);
   };
 
   // ---------------------------------------------------------------------------
@@ -1413,6 +1450,18 @@ export default function SceneEditPage() {
     return `~${m} min`;
   };
 
+  // All unique characters who speak in this scene (sorted by line count descending)
+  const allSceneCharacters = useMemo(() => {
+    if (!scene) return [];
+    const counts: Record<string, number> = {};
+    for (const l of scene.lines) {
+      counts[l.character_name] = (counts[l.character_name] ?? 0) + 1;
+    }
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([name]) => name);
+  }, [scene]);
+
   // Recalculate duration client-side from actual lines (~150 wpm)
   const computedDuration = useMemo(() => {
     if (!scene) return 0;
@@ -1464,7 +1513,7 @@ export default function SceneEditPage() {
 <body>
   <div class="header">
     <div class="title">${scene.title.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</div>
-    <div class="attribution">from &ldquo;${scene.play_title.replace(/&/g, "&amp;").replace(/</g, "&lt;")}&rdquo; by ${scene.play_author.replace(/&/g, "&amp;").replace(/</g, "&lt;")}</div>
+    <div class="attribution">from &ldquo;${scene.play_title.replace(/&/g, "&amp;").replace(/</g, "&lt;")}&rdquo; by ${scene.play_author.replace(/&/g, "&amp;").replace(/</g, "&lt;")}${scene.act || scene.scene_number ? ` &middot; ${[scene.act, scene.scene_number].filter(Boolean).join(", ")}` : ""}</div>
     ${synopsisHtml}
   </div>
   ${linesHtml}
@@ -1585,170 +1634,6 @@ export default function SceneEditPage() {
   // Character card renderer
   // ---------------------------------------------------------------------------
 
-  const renderCharacterCard = (charNum: 1 | 2) => {
-    const nameField = charNum === 1 ? "character_1_name" : "character_2_name";
-    const name = charNum === 1 ? scene.character_1_name : scene.character_2_name;
-    const gender = charNum === 1 ? scene.character_1_gender : scene.character_2_gender;
-    const ageRange = charNum === 1 ? scene.character_1_age_range : scene.character_2_age_range;
-    const isSelected = selectedCharacter === name;
-    const voiceId =
-      charNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice;
-    const isPreviewing = (isSpeakingAI || isLoadingAI) && previewingVoice === charNum;
-    const isEditingName = editingCharName === charNum;
-
-    return (
-      <div
-        key={charNum}
-        role="button"
-        tabIndex={0}
-        onClick={() => setSelectedCharacter(name)}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedCharacter(name); }}
-        className={cn(
-          "w-full text-left rounded-lg border p-3 transition-all cursor-pointer",
-          isSelected
-            ? "border-primary bg-primary/10 ring-1 ring-primary/30"
-            : "border-neutral-800 hover:border-neutral-600 bg-neutral-900/50"
-        )}
-      >
-        <div className="flex items-center gap-2 mb-2">
-          <div
-            className={cn(
-              "w-3 h-3 rounded-full border-2 flex-shrink-0",
-              isSelected ? "border-primary bg-primary" : "border-neutral-600"
-            )}
-          />
-          {isEditingName ? (
-            <Input
-              value={charNameEditValue}
-              onChange={(e) => setCharNameEditValue(e.target.value)}
-              className="h-6 text-sm font-medium bg-transparent border-neutral-700 text-neutral-100 px-1.5 py-0 w-full max-w-[160px] focus-visible:ring-1 focus-visible:ring-primary/50"
-              autoFocus
-              maxLength={30}
-              onClick={(e) => e.stopPropagation()}
-              onKeyDown={(e) => {
-                e.stopPropagation();
-                if (e.key === "Enter") {
-                  const newName = charNameEditValue.trim();
-                  if (newName && newName !== name) renameCharacter(name, newName);
-                  setEditingCharName(null);
-                }
-                if (e.key === "Escape") setEditingCharName(null);
-              }}
-              onBlur={() => {
-                const newName = charNameEditValue.trim();
-                if (newName && newName !== name) renameCharacter(name, newName);
-                setEditingCharName(null);
-              }}
-            />
-          ) : (
-            <span className="font-medium text-sm text-neutral-100 group/charname inline-flex items-center gap-1 min-w-0">
-              <span className="truncate">{name}</span>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setEditingCharName(charNum);
-                  setCharNameEditValue(name);
-                }}
-                className="text-neutral-500 hover:text-neutral-300 transition-colors opacity-100 sm:opacity-0 sm:group-hover/charname:opacity-100"
-              >
-                <Edit2 className="w-3 h-3" />
-              </button>
-            </span>
-          )}
-          {isSelected && (
-            <Badge className="text-[10px] px-1.5 py-0 h-4 bg-primary/20 text-primary border-0">
-              You
-            </Badge>
-          )}
-        </div>
-        {(() => {
-          const cleanGender = gender && gender.toLowerCase() !== "unknown" ? gender : null;
-          const cleanAge = ageRange && ageRange.toLowerCase() !== "unknown" ? ageRange : null;
-          const meta = [cleanGender, cleanAge].filter(Boolean);
-          return meta.length > 0 ? (
-            <div className="text-xs text-neutral-400 ml-5 mb-2">
-              {meta.join(" · ")}
-            </div>
-          ) : null;
-        })()}
-        {/* Voice selector — only for the AI scene partner, not for "You" */}
-        {!isSelected && (
-          <div className="mt-2 space-y-2" onClick={(e) => e.stopPropagation()}>
-            <label className="text-[11px] text-neutral-400 uppercase tracking-wider ml-5">
-              Your scene partner
-            </label>
-            <div className="flex items-center gap-2 ml-5">
-              {/* Custom voice dropdown */}
-              <div className="flex-1 relative" data-voice-dropdown>
-                <button
-                  type="button"
-                  onClick={() => setVoiceDropdownOpen(voiceDropdownOpen === charNum ? null : charNum)}
-                  className="w-full flex items-center gap-2 rounded-md bg-neutral-800 border border-neutral-700 text-sm text-neutral-200 px-2.5 py-1.5 hover:border-neutral-500 transition-colors text-left"
-                >
-                  {voiceId ? (
-                    <>
-                      <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0", AI_VOICES.find(v => v.id === voiceId)?.color ?? "bg-neutral-600")}>
-                        {AI_VOICES.find(v => v.id === voiceId)?.label[0] ?? "?"}
-                      </div>
-                      <span className="flex-1 truncate">{AI_VOICES.find(v => v.id === voiceId)?.label} — {AI_VOICES.find(v => v.id === voiceId)?.desc}</span>
-                    </>
-                  ) : (
-                    <>
-                      <div className="w-5 h-5 rounded-full bg-neutral-700 flex items-center justify-center text-[10px] text-neutral-500 shrink-0">?</div>
-                      <span className="flex-1 text-neutral-500">Select a voice...</span>
-                    </>
-                  )}
-                  <ChevronDown className={cn("w-3.5 h-3.5 text-neutral-500 shrink-0 transition-transform", voiceDropdownOpen === charNum && "rotate-180")} />
-                </button>
-                {voiceDropdownOpen === charNum && (
-                  <div className="absolute z-20 mt-1 w-full rounded-md bg-neutral-800 border border-neutral-700 shadow-lg py-1 max-h-[40vh] sm:max-h-48 overflow-y-auto">
-                    {AI_VOICES.map((v) => (
-                      <button
-                        key={v.id}
-                        type="button"
-                        onClick={() => { handleVoiceChange(charNum, v.id); setVoiceDropdownOpen(null); }}
-                        className={cn(
-                          "w-full flex items-center gap-2 px-2.5 py-1.5 text-sm hover:bg-neutral-700/60 transition-colors text-left",
-                          voiceId === v.id && "bg-neutral-700/40"
-                        )}
-                      >
-                        <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0", v.color)}>
-                          {v.label[0]}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <span className="text-neutral-200">{v.label}</span>
-                          <span className="text-neutral-500 ml-1">— {v.desc}</span>
-                        </div>
-                        {voiceId === v.id && <Check className="w-3.5 h-3.5 text-primary shrink-0" />}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {voiceId && (
-                <button
-                  type="button"
-                  onClick={() => previewVoice(charNum)}
-                  className="p-1.5 rounded-md bg-neutral-800 border border-neutral-700 hover:border-neutral-500 hover:bg-neutral-700 transition-colors text-neutral-300 hover:text-neutral-100"
-                  title="Preview voice"
-                >
-                  {isPreviewing && isLoadingAI ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : isPreviewing ? (
-                    <Square className="w-4 h-4" />
-                  ) : (
-                    <Volume2 className="w-4 h-4" />
-                  )}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  };
-
   // ---------------------------------------------------------------------------
   // Left panel content
   // ---------------------------------------------------------------------------
@@ -1825,6 +1710,12 @@ export default function SceneEditPage() {
               {" by "}
               <span className="text-neutral-300 font-medium break-words">{scene.play_author}</span>
             </>
+          )}
+          {(scene.act || scene.scene_number) && (
+            <span className="text-neutral-500 ml-1">
+              {" \u00B7 "}
+              {[scene.act, scene.scene_number].filter(Boolean).join(", ")}
+            </span>
           )}
         </div>
         {/* Description — icon-based controls */}
@@ -1907,12 +1798,112 @@ export default function SceneEditPage() {
           <Theater className="w-4 h-4 text-primary" />
           <h3 className="text-lg font-semibold text-neutral-100">Characters</h3>
         </div>
-        <p className="text-[11px] text-neutral-400 -mt-1">
-          Select who you&apos;ll play
-        </p>
+        <p className="text-[11px] text-neutral-400 -mt-1">Select who you&apos;ll play</p>
         <div className="space-y-2">
-          {renderCharacterCard(1)}
-          {renderCharacterCard(2)}
+          {allSceneCharacters.map((charName) => {
+            const isMe = selectedCharacter === charName;
+            const voiceId = charVoices[charName] ?? null;
+            const voiceData = AI_VOICES.find(v => v.id === voiceId);
+            const dropKey = `voice-${charName}`;
+            const isPreviewing = (isSpeakingAI || isLoadingAI) && previewingVoice === charName;
+            return (
+              <div
+                key={charName}
+                onClick={() => setSelectedCharacter(charName)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedCharacter(charName); }}
+                className={cn(
+                  "rounded-lg border p-3 transition-all cursor-pointer",
+                  isMe
+                    ? "border-neutral-600 bg-neutral-800/60"
+                    : "border-neutral-700/50 bg-transparent hover:border-neutral-600"
+                )}
+              >
+                {/* Character name row */}
+                <div className="flex items-center gap-2 mb-2">
+                  <div
+                    className={cn(
+                      "w-3 h-3 rounded-full border-2 flex-shrink-0 transition-colors",
+                      isMe ? "border-primary bg-primary" : "border-neutral-600"
+                    )}
+                  />
+                  <span className="text-sm font-medium text-neutral-100">
+                    {charName}
+                  </span>
+                  {isMe && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary border border-primary/20">You</span>
+                  )}
+                </div>
+                {/* Voice selector — only for AI characters */}
+                {!isMe && (
+                  <div className="ml-5 space-y-1.5" onClick={(e) => { e.stopPropagation(); e.preventDefault(); }}>
+                    <div className="flex items-center gap-1.5">
+                      <div className="relative flex-1" data-voice-dropdown>
+                        <button
+                          type="button"
+                          onClick={() => setVoiceDropdownOpen(voiceDropdownOpen === dropKey ? null : dropKey)}
+                          className="w-full flex items-center gap-2 rounded-md bg-neutral-800 border border-neutral-700 text-sm text-neutral-200 px-2.5 py-1.5 hover:border-neutral-500 transition-colors text-left"
+                        >
+                          {voiceData ? (
+                            <>
+                              <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0", voiceData.color)}>
+                                {voiceData.label[0]}
+                              </div>
+                              <span className="flex-1 truncate">{voiceData.label} — {voiceData.desc}</span>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-5 h-5 rounded-full bg-neutral-700 flex items-center justify-center text-[10px] text-neutral-500 shrink-0">?</div>
+                              <span className="flex-1 text-neutral-500">Select a voice...</span>
+                            </>
+                          )}
+                          <ChevronDown className={cn("w-3.5 h-3.5 text-neutral-500 shrink-0 transition-transform", voiceDropdownOpen === dropKey && "rotate-180")} />
+                        </button>
+                        {voiceDropdownOpen === dropKey && (
+                          <div className="absolute z-20 mt-1 w-full rounded-md bg-neutral-800 border border-neutral-700 shadow-lg py-1 max-h-[40vh] sm:max-h-48 overflow-y-auto">
+                            {AI_VOICES.map((v) => (
+                              <button
+                                key={v.id}
+                                type="button"
+                                onClick={() => { handleVoiceChange(charName, v.id); setVoiceDropdownOpen(null); }}
+                                className={cn(
+                                  "w-full flex items-center gap-2 px-2.5 py-1.5 text-sm hover:bg-neutral-700/60 transition-colors text-left",
+                                  voiceId === v.id && "bg-neutral-700/40"
+                                )}
+                              >
+                                <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0", v.color)}>
+                                  {v.label[0]}
+                                </div>
+                                <div className="flex flex-col min-w-0">
+                                  <span className="font-medium truncate">{v.label}</span>
+                                  <span className="text-[11px] text-neutral-400 truncate">{v.desc}</span>
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      {/* Preview voice button */}
+                      <button
+                        type="button"
+                        onClick={() => previewVoice(charName)}
+                        className={cn(
+                          "p-1.5 rounded-md border transition-colors",
+                          isPreviewing
+                            ? "bg-primary/20 border-primary/40 text-primary"
+                            : "bg-neutral-800 border-neutral-700 hover:border-neutral-500 text-neutral-300 hover:text-neutral-100"
+                        )}
+                        title="Preview voice"
+                      >
+                        {isPreviewing ? <Square className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -2236,6 +2227,11 @@ export default function SceneEditPage() {
             </>
           )}
         </div>
+        {(scene.act || scene.scene_number) && (
+          <div className="text-sm text-neutral-500 mt-1">
+            {[scene.act, scene.scene_number].filter(Boolean).join(", ")}
+          </div>
+        )}
       </div>
 
       {/* Description on parchment — editable */}
@@ -2374,8 +2370,7 @@ export default function SceneEditPage() {
                   )}
                   {isEditing && values ? (
                     (() => {
-                      const editCharNum = line.character_name === scene.character_1_name ? 1 : 2;
-                      const editVid = editCharNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice;
+                      const editVid = charVoices[line.character_name] ?? null;
                       const editVoice = AI_VOICES.find(v => v.id === editVid);
                       const editDropdownKey = `edit-${lineId}`;
                       const isPlayingThisLine = (isSpeakingAI || isLoadingAI) && ttsLineIdRef.current === line.id;
@@ -2398,9 +2393,7 @@ export default function SceneEditPage() {
                             if (isPlayingThisLine) { cancelAI(); ttsLineIdRef.current = null; setTtsProgress(0); return; }
                             cancelAI();
                             const stageDir = values.stage_direction || line.stage_direction || "";
-                            const instructions = stageDir
-            ? `You are a skilled actor performing a scene. The stage direction says: ${stageDir}. Fully embody this direction — if it says "sighing", actually sigh; if "whispering", drop your voice; if "angrily", let real frustration come through. Commit completely.`
-            : 'You are a skilled actor performing a scene. Deliver this line with emotional truth and natural pacing. Commit fully to the moment.';
+                            const instructions = buildActorInstructions(line.character_name, stageDir || undefined);
                             ttsLineIdRef.current = line.id;
                             setTtsProgress(0);
                             speakAI(values.text || line.text, editVid || "coral", instructions);
@@ -2415,10 +2408,8 @@ export default function SceneEditPage() {
                           onMouseEnter={() => {
                             if (isPlayingThisLine) return;
                             const stageDir = values.stage_direction || line.stage_direction || "";
-                            const instructions = stageDir
-                              ? `You are a skilled actor performing a scene. The stage direction says: ${stageDir}. Fully embody this direction — if it says "sighing", actually sigh; if "whispering", drop your voice; if "angrily", let real frustration come through. Commit completely.`
-                              : 'You are a skilled actor performing a scene. Deliver this line with emotional truth and natural pacing. Commit fully to the moment.';
-                            preloadAI(values.text || line.text, editVid || "coral", instructions);
+                            const preloadInstructions = buildActorInstructions(line.character_name, stageDir || undefined);
+                            preloadAI(values.text || line.text, editVid || "coral", preloadInstructions);
                           }}
                         >
                           {isPlayingThisLine && isLoadingAI ? (
@@ -2711,8 +2702,7 @@ export default function SceneEditPage() {
                     >
                       {/* Character name + avatar + stage direction */}
                       {(() => {
-                        const charNum = line.character_name === scene.character_1_name ? 1 : 2;
-                        const vid = charNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice;
+                        const vid = charVoices[line.character_name] ?? null;
                         const voice = AI_VOICES.find(v => v.id === vid);
                         const dropdownKey = `parchment-${lineId}`;
                         return (
@@ -3113,8 +3103,7 @@ export default function SceneEditPage() {
         <DialogContent className="max-w-xs sm:max-w-sm p-0 overflow-hidden">
           {scene && (() => {
             const partner = selectedCharacter === scene.character_1_name ? scene.character_2_name : scene.character_1_name;
-            const partnerNum = partner === scene.character_1_name ? 1 : 2;
-            const vid = partnerNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice;
+            const vid = charVoices[partner] ?? null;
             const voice = AI_VOICES.find(v => v.id === vid);
             return (
               <>
@@ -3274,8 +3263,7 @@ export default function SceneEditPage() {
                   {[scene.character_1_name, scene.character_2_name].map((charName) => {
                     const isUser = charName === selectedCharacter;
                     const isSelected = newLineCharacter === charName;
-                    const charNum = charName === scene.character_1_name ? 1 : 2;
-                    const vid = charNum === 1 ? charVoices.character_1_voice : charVoices.character_2_voice;
+                    const vid = charVoices[charName] ?? null;
                     const voice = AI_VOICES.find(v => v.id === vid);
                     return (
                       <button
@@ -3314,9 +3302,7 @@ export default function SceneEditPage() {
             </div>
             {/* Voice selector for scene partner lines — custom dropdown */}
             {scene && newLineCharacter && newLineCharacter !== selectedCharacter && (() => {
-              const charNum = newLineCharacter === scene.character_1_name ? 1 : 2;
-              const voiceKey = charNum === 1 ? "character_1_voice" : "character_2_voice";
-              const currentVoice = charVoices[voiceKey];
+              const currentVoice = charVoices[newLineCharacter] ?? null;
               const selectedVoice = AI_VOICES.find(v => v.id === currentVoice);
               return (
                 <div className="space-y-1.5">

@@ -24,7 +24,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipContent,
@@ -84,49 +83,27 @@ function groupLabel(raw: string): string {
 
 type UserScript = UserScriptType;
 
-function CastHoverPopover({ characters, count }: { characters: { name: string; gender?: string; age_range?: string; description?: string }[]; count: number }) {
-  const [open, setOpen] = useState(false);
-  const hoverRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+function CastTooltip({ characters, count }: { characters: { name: string }[]; count: number }) {
+  const shown = characters.slice(0, 6);
+  const extra = characters.length - shown.length;
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <span
-          className="cursor-help underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors"
-          onMouseEnter={() => { hoverRef.current = setTimeout(() => setOpen(true), 200); }}
-          onMouseLeave={() => { if (hoverRef.current) { clearTimeout(hoverRef.current); hoverRef.current = null; } setOpen(false); }}
-        >
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="cursor-help underline decoration-dotted underline-offset-2 hover:text-foreground transition-colors">
           {count} character{count !== 1 ? "s" : ""}
         </span>
-      </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        className="w-72 max-h-[280px] overflow-y-auto p-0"
-        onOpenAutoFocus={(e) => e.preventDefault()}
-        onMouseEnter={() => { if (hoverRef.current) clearTimeout(hoverRef.current); }}
-        onMouseLeave={() => setOpen(false)}
-      >
-        <div className="px-3 py-2 border-b border-border/60 sticky top-0 bg-popover z-10">
-          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Cast ({characters.length})</p>
-        </div>
-        <div className="divide-y divide-border/40">
-          {characters.map((c, i) => (
-            <div key={i} className="px-3 py-1.5 hover:bg-muted/40 transition-colors">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-sm font-medium text-foreground">{c.name}</span>
-                {(c.gender || c.age_range) && (
-                  <span className="text-[10px] text-muted-foreground/70 shrink-0">
-                    {[c.gender, c.age_range].filter(Boolean).join(" · ")}
-                  </span>
-                )}
-              </div>
-              {c.description && (
-                <p className="text-xs text-muted-foreground/80 leading-snug">{c.description}</p>
-              )}
-            </div>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" align="start" className="max-w-[260px]">
+        <div className="flex flex-wrap gap-1">
+          {shown.map((c, i) => (
+            <span key={i} className="text-xs bg-muted border border-border/60 px-1.5 py-0.5">{c.name}</span>
           ))}
+          {extra > 0 && (
+            <span className="text-xs text-muted-foreground px-1 py-0.5">+{extra} more</span>
+          )}
         </div>
-      </PopoverContent>
-    </Popover>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -727,7 +704,6 @@ export default function MyScriptsPage() {
                   size="sm"
                   variant="outline"
                   className="gap-1.5 h-8 px-3 font-normal"
-                  title="PDF or TXT, max 15MB"
                 >
                   <Upload className="w-3.5 h-3.5" />
                   Upload
@@ -842,8 +818,25 @@ export default function MyScriptsPage() {
                           </CardDescription>
                         </div>
                         <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end" onClick={(e) => e.stopPropagation()}>
-                          {script.title.startsWith("Example:") && (
+                          {(script.is_sample || script.title.startsWith("Example:")) && (
                             <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 border border-border">Sample</span>
+                          )}
+                          {script.num_scenes_extracted > 0 && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 border cursor-default ${script.ai_extraction_completed ? "text-blue-400 bg-blue-400/10 border-blue-400/30" : "text-amber-500 bg-amber-500/10 border-amber-500/30"}`}>
+                                  {script.ai_extraction_completed ? <BookOpen className="w-3 h-3" /> : <Zap className="w-3 h-3" />}
+                                  {script.ai_extraction_completed ? "Full Extract" : "Quick Extract"}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <p className="text-sm font-medium">{script.ai_extraction_completed ? "Full Extract" : "Quick Extract"}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {script.num_scenes_extracted} scene{script.num_scenes_extracted !== 1 ? "s" : ""} extracted
+                                  {script.ai_extraction_completed ? " — all dialogue scenes" : " — two-person scenes only"}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
                           )}
                           {getStatusBadge(script.processing_status)}
                         </div>
@@ -854,7 +847,7 @@ export default function MyScriptsPage() {
                         <>
                           <div className="flex items-center flex-wrap gap-1.5 text-sm text-muted-foreground">
                             {script.characters?.length > 0 ? (
-                              <CastHoverPopover characters={script.characters} count={script.num_characters} />
+                              <CastTooltip characters={script.characters} count={script.num_characters} />
                             ) : (
                               <span>{script.num_characters} character{script.num_characters !== 1 ? "s" : ""}</span>
                             )}
@@ -914,6 +907,7 @@ export default function MyScriptsPage() {
                         Open script
                         <ChevronRight className="w-4 h-4" />
                       </Button>
+                      {!script.is_sample && (
                       <div className="flex items-center gap-1">
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -941,6 +935,7 @@ export default function MyScriptsPage() {
                         <Trash2 className="w-4 h-4" />
                       </Button>
                       </div>
+                      )}
                     </CardFooter>
                   </Card>
                 </motion.div>

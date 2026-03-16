@@ -21,18 +21,18 @@ interface UpgradeModalProps {
 }
 
 const PLUS_BENEFITS = [
-  "150 AI searches/month",
-  "Up to 10 script uploads",
-  "30 ScenePartner AI sessions/month",
+  "Unlimited AI searches",
+  "Up to 5 script uploads",
+  "10 ScenePartner sessions/month",
   "AI Voice with expressive delivery",
 ];
 
-const UNLIMITED_BENEFITS = [
+const PRO_BENEFITS = [
   "Unlimited AI searches",
   "Unlimited script uploads",
-  "100 ScenePartner AI sessions/month",
+  "Unlimited ScenePartner sessions",
   "AI Voice with expressive delivery",
-  "Advanced analytics & collections",
+  "Priority support",
 ];
 
 export function UpgradeModal({
@@ -44,13 +44,13 @@ export function UpgradeModal({
   const { subscription } = useSubscription();
   const currentTier = subscription?.tier_name ?? "free";
 
-  // If already on Plus, suggest Unlimited. Otherwise suggest Plus.
+  // If already on Plus, suggest Pro. Otherwise suggest Plus.
   const isPlus = currentTier === "plus";
-  const targetTier = isPlus ? "unlimited" : "plus";
-  const targetLabel = isPlus ? "Unlimited" : "Plus";
-  const price = isPlus ? "$39" : "$12";
-  const yearlyNote = isPlus ? "or $324/year (save 31%)" : "or $99/year (save 31%)";
-  const benefits = isPlus ? UNLIMITED_BENEFITS : PLUS_BENEFITS;
+  const targetTier = isPlus ? "pro" : "plus";
+  const targetLabel = isPlus ? "Pro" : "Plus";
+  const price = isPlus ? "$24" : "$12";
+  const yearlyNote = isPlus ? "or $199/year (save 31%)" : "or $99/year (save 31%)";
+  const benefits = isPlus ? PRO_BENEFITS : PLUS_BENEFITS;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

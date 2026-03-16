@@ -21,6 +21,29 @@ export class TTSError extends Error {
   }
 }
 
+// ── Preload concurrency limiter ───────────────────────────────────────────
+// Limits parallel preload fetches so they don't saturate the connection and
+// starve actual speak() requests. speak() bypasses this queue entirely.
+const MAX_CONCURRENT_PRELOADS = 2;
+let _activePreloads = 0;
+const _preloadQueue: Array<() => void> = [];
+
+function enqueuePreload(): Promise<void> {
+  if (_activePreloads < MAX_CONCURRENT_PRELOADS) {
+    _activePreloads++;
+    return Promise.resolve();
+  }
+  return new Promise<void>((resolve) => {
+    _preloadQueue.push(() => { _activePreloads++; resolve(); });
+  });
+}
+
+function releasePreload(): void {
+  _activePreloads--;
+  const next = _preloadQueue.shift();
+  if (next) next();
+}
+
 // ── Client-side audio blob cache ──────────────────────────────────────────
 // Keyed by "text|voice|instructions". Survives across hook instances within
 // the same page load. Entries auto-expire after 10 minutes.
@@ -187,15 +210,19 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
     return audioBlob;
   }, []);
 
-  /** Preload audio into cache without playing. Failures are silent. */
+  /** Preload audio into cache without playing. Failures are silent.
+   *  Concurrency-limited so preloads don't starve speak() requests. */
   const preload = useCallback(
     async (text: string, voice: string = 'coral', instructions: string = '') => {
       const key = cacheKey(text, voice, instructions);
       if (getCached(key)) return; // Already cached
+      await enqueuePreload();
       try {
         await fetchAudioBlob(text, voice, instructions);
       } catch {
         // Preload failures are silent
+      } finally {
+        releasePreload();
       }
     },
     [fetchAudioBlob],

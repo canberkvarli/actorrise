@@ -143,8 +143,9 @@ export default function PlatformLayout({
     { href: "/dashboard", label: "Home", icon: IconHome },
     { href: "/search", label: "MonologueMatch", icon: IconSearch },
     { href: "/my-scripts", label: "ScenePartner", icon: IconMask },
+    { href: "/audition", label: "Audition", icon: IconVideo },
   ];
-  const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/my-scripts\/[^/]+\/scenes\/[^/]+\/edit$/.test(pathname || "");
+  const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/my-scripts\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$/.test(pathname || "");
 
   return (
     <>
@@ -377,6 +378,16 @@ export default function PlatformLayout({
                         <IconFileText className="h-4 w-4 text-muted-foreground" />
                         <span>My submissions</span>
                       </Link>
+                      {(userTier === "plus" || userTier === "pro") && (
+                        <Link
+                          href="/my-tapes"
+                          onClick={() => setProfileDropdownOpen(false)}
+                          className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                        >
+                          <IconVideo className="h-4 w-4 text-muted-foreground" />
+                          <span>My tapes</span>
+                        </Link>
+                      )}
                       {user?.is_moderator && (
                         <Link
                           href="/admin"
