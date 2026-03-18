@@ -9,7 +9,6 @@ import { usePricingTiers, DEFAULT_PRICING_TIERS, type PricingTier } from "@/hook
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
-import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 
 function getFeaturesList(tier: PricingTier): string[] {
   const features: string[] = [];
@@ -143,7 +142,7 @@ export function LandingPricing() {
           <span className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />
           <p className="text-sm">
             <span className="font-medium">50 founding member spots.</span>{" "}
-            <span className="text-muted-foreground">100% off Plus for 12 months. <ContactModalTrigger className="underline underline-offset-2 hover:text-foreground transition-colors">Contact Canberk</ContactModalTrigger> to claim yours.</span>
+            <span className="text-muted-foreground">100% off Plus for 12 months. Enter code <span className="font-semibold">FOUNDER</span> at checkout.</span>
           </p>
         </div>
 

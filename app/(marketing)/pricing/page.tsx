@@ -213,7 +213,7 @@ export default function PricingPage() {
           <span className="h-2 w-2 mt-1.5 sm:mt-0 rounded-full bg-primary animate-pulse shrink-0" />
           <p className="text-xs sm:text-sm text-left sm:text-center">
             <span className="font-medium">50 founding member spots.</span>{" "}
-            <span className="text-muted-foreground">100% off Plus for 12 months. <Link href="/contact" className="underline underline-offset-2 hover:text-foreground transition-colors">Contact Canberk</Link> to claim yours.</span>
+            <span className="text-muted-foreground">100% off Plus for 12 months. Enter code <span className="font-semibold">FOUNDER</span> at checkout.</span>
           </p>
         </motion.div>
 
