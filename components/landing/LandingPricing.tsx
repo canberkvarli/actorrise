@@ -82,7 +82,6 @@ function PricingCard({ tier, formatPrice, isHighlighted }: { tier: PricingTier; 
           <span className="text-xs font-normal text-muted-foreground">/mo</span>
         </p>
       </div>
-      <p className="mt-1 text-xs text-muted-foreground">{tier.description}</p>
       <ul className="mt-4 space-y-2 flex-1">
         {features.map((f, i) => (
           <li

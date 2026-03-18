@@ -294,7 +294,6 @@ export default function PricingPage() {
 
                 <div>
                   <h3 className="text-lg sm:text-2xl font-semibold">{tier.display_name}</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">{tier.description}</p>
                 </div>
 
                 {price > 0 ? (
