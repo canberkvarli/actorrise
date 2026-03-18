@@ -50,6 +50,8 @@ function CheckoutContent() {
   const [error, setError] = useState<string | null>(null);
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState<string | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoShake, setPromoShake] = useState(false);
   const [promoModalOpen, setPromoModalOpen] = useState(false);
   const [promoModalContext, setPromoModalContext] = useState<"review" | null>(null);
 
@@ -77,39 +79,44 @@ function CheckoutContent() {
 
   const applyPromo = () => {
     const code = promoCode.trim().toUpperCase();
+    const triggerShake = (msg: string) => {
+      setPromoApplied(null);
+      setPromoError(msg);
+      setPromoShake(true);
+      setTimeout(() => setPromoShake(false), 500);
+    };
+
     if (code === "FOUNDER") {
       if (tier?.name !== "plus") {
-        setPromoApplied(null);
-        setError("The FOUNDER code is only valid for the Plus plan.");
+        triggerShake("FOUNDER is only valid for the Plus plan.");
         return;
       }
       setPromoApplied("FOUNDER");
-      setError(null);
+      setPromoError(null);
     } else if (code === "STARTUPS" || code === "STARTUPS24") {
       setPromoApplied("STARTUPS");
-      setError(null);
+      setPromoError(null);
     } else if (code === "BUSINESS" || code === "ACTINGTEACHER26") {
       setPromoApplied("BUSINESS");
-      setError(null);
+      setPromoError(null);
     } else if (code === "STUDENT" || code === "STUDENTACTOR26") {
       setPromoApplied("STUDENT");
-      setError(null);
+      setPromoError(null);
     } else if (code === "STXQ5NU4" || code === "STUDENT50") {
       setPromoApplied("STUDENT50");
-      setError(null);
+      setPromoError(null);
     } else if (code) {
-      setPromoApplied(null);
-      setError("Invalid promo code.");
+      triggerShake("Invalid promo code.");
     } else {
       setPromoApplied(null);
-      setError(null);
+      setPromoError(null);
     }
   };
 
   const removePromo = () => {
     setPromoCode("");
     setPromoApplied(null);
-    setError(null);
+    setPromoError(null);
   };
 
   const handleCheckout = async () => {
@@ -285,18 +292,21 @@ function CheckoutContent() {
                 </div>
               ) : (
                 <>
-                  <div className="flex gap-2">
+                  <div className={`flex gap-2${promoShake ? " animate-shake" : ""}`}>
                     <Input
                       placeholder="Promo code"
                       value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      onChange={(e) => { setPromoCode(e.target.value.toUpperCase()); setPromoError(null); }}
                       onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), applyPromo())}
-                      className="flex-1"
+                      className={`flex-1${promoError ? " border-destructive focus-visible:ring-destructive/30" : ""}`}
                     />
                     <Button type="button" variant="outline" onClick={applyPromo}>
                       Apply
                     </Button>
                   </div>
+                  {promoError && (
+                    <p className="text-sm text-destructive font-medium">{promoError}</p>
+                  )}
                   <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4">
                     <p className="text-base font-semibold text-foreground mb-1">
                       Student or teacher / school / acting coach?

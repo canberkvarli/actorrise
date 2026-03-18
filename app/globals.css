@@ -263,6 +263,9 @@
 .search-jitter {
   animation: search-jitter 0.45s ease-in-out;
 }
+.animate-shake {
+  animation: search-jitter 0.45s ease-in-out;
+}
 
 /* Mobile: minimum touch target 44px for primary actions (accessibility) */
 @layer utilities {
