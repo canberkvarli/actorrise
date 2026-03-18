@@ -500,7 +500,8 @@ export default function MyScriptsPage() {
     if (status === "failed") {
       return <Badge variant="destructive" className="font-normal text-xs">Failed</Badge>;
     }
-    const text = { pending: "Pending", processing: "Processing…", completed: "Ready" }[status];
+    if (status === "completed") return null;
+    const text = { pending: "Pending", processing: "Processing…" }[status];
     return (
       <span className={tagClass}>
         {status === "processing" && <Loader2 className="w-3 h-3 animate-spin shrink-0" />}

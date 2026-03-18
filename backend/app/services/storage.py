@@ -1,10 +1,13 @@
 import base64
 import io
+import uuid
 from typing import Optional
 
 from app.core.config import settings
 from PIL import Image
 from supabase import Client, create_client
+
+TAPES_BUCKET = "tapes"
 
 
 def get_supabase_client() -> Optional[Client]:
@@ -175,6 +178,67 @@ def delete_founding_actor_headshot(user_id: int, index: int) -> bool:
     try:
         file_path = f"founding-actors/{user_id}/headshot-{index}.jpg"
         supabase.storage.from_(settings.supabase_storage_bucket).remove([file_path])
+        return True
+    except Exception:
+        return False
+
+
+def upload_tape(video_bytes: bytes, user_id: int, content_type: str = "video/webm") -> str:
+    """
+    Upload a self-tape video to Supabase Storage.
+
+    Args:
+        video_bytes: Raw video file bytes
+        user_id: User ID for organizing files
+        content_type: MIME type of the video
+
+    Returns:
+        The storage file path (not full URL) for storing in UserTape.file_path
+
+    Raises:
+        ValueError: If Supabase is not configured or upload fails
+    """
+    if not settings.supabase_url or not settings.supabase_service_role_key:
+        raise ValueError("Supabase storage is not configured")
+
+    ext = "mp4" if "mp4" in content_type else "webm"
+    file_path = f"{user_id}/{uuid.uuid4().hex[:12]}.{ext}"
+
+    supabase_client = get_supabase_client()
+    if not supabase_client:
+        raise ValueError("Failed to create Supabase client")
+
+    try:
+        supabase_client.storage.from_(TAPES_BUCKET).upload(
+            file_path,
+            video_bytes,
+            file_options={"content-type": content_type, "upsert": "false"},
+        )
+        return file_path
+    except Exception as e:
+        raise ValueError(f"Failed to upload tape: {str(e)}")
+
+
+def get_tape_public_url(file_path: str) -> str:
+    """Get the public URL for a tape file."""
+    supabase_client = get_supabase_client()
+    if not supabase_client:
+        raise ValueError("Failed to create Supabase client")
+
+    public_url = supabase_client.storage.from_(TAPES_BUCKET).get_public_url(file_path)
+    if not public_url.startswith("http"):
+        supabase_url = settings.supabase_url.rstrip("/")
+        public_url = f"{supabase_url}/storage/v1/object/public/{TAPES_BUCKET}/{file_path}"
+    return public_url
+
+
+def delete_tape_file(file_path: str) -> bool:
+    """Delete a tape file from Supabase Storage."""
+    supabase_client = get_supabase_client()
+    if not supabase_client:
+        return False
+    try:
+        supabase_client.storage.from_(TAPES_BUCKET).remove([file_path])
         return True
     except Exception:
         return False

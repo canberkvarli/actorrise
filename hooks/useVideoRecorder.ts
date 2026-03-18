@@ -143,11 +143,18 @@ export function useVideoRecorder(
       setIsAudioOnly(audioOnly);
       chunksRef.current = [];
 
-      // Create MediaRecorder - use audio mime type if audio-only
-      const mimeType = audioOnly 
-        ? 'audio/webm' 
-        : 'video/webm;codecs=vp9'; // Use VP9 codec if available
-      
+      // Create MediaRecorder - prefer mp4 (Safari), fall back to webm
+      let mimeType: string;
+      if (audioOnly) {
+        mimeType = 'audio/webm';
+      } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+        mimeType = 'video/mp4';
+      } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) {
+        mimeType = 'video/webm;codecs=vp9';
+      } else {
+        mimeType = 'video/webm';
+      }
+
       const mediaRecorder = new MediaRecorder(mediaStream, {
         mimeType: mimeType
       });
@@ -161,8 +168,11 @@ export function useVideoRecorder(
         }
       };
 
+      // Capture mimeType in closure for onstop
+      const recordingMimeType = mimeType;
+
       mediaRecorder.onstop = () => {
-        const blobType = isAudioOnlyRecording ? 'audio/webm' : 'video/webm';
+        const blobType = isAudioOnlyRecording ? 'audio/webm' : recordingMimeType;
         const blob = new Blob(chunksRef.current, { type: blobType });
         const url = URL.createObjectURL(blob);
 

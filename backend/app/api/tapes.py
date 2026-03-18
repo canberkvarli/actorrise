@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import Optional
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -19,6 +19,7 @@ from app.models.billing import UserSubscription
 from app.models.tape import UserTape
 from app.models.user import User
 from app.services.benefits import get_effective_benefits
+from app.services.storage import upload_tape
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -166,6 +167,70 @@ async def create_tape(
         file_size_bytes=tape_data.file_size_bytes,
         monologue_id=tape_data.monologue_id,
         script_id=tape_data.script_id,
+    )
+    db.add(tape)
+    db.commit()
+    db.refresh(tape)
+
+    return tape
+
+
+@router.post("/upload", response_model=TapeResponse, status_code=status.HTTP_201_CREATED)
+async def upload_and_create_tape(
+    file: UploadFile = File(...),
+    title: Optional[str] = Form(None),
+    duration_seconds: Optional[int] = Form(None),
+    ai_feedback: Optional[str] = Form(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Upload a video file and create a tape in one step.
+
+    Accepts multipart form data with the video file and metadata.
+    Uploads to Supabase Storage, then creates the UserTape record.
+    """
+    tier = _get_user_tier(db, current_user)
+    save_limit = SAVE_LIMITS.get(tier, 0)
+
+    if save_limit == 0:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Saving tapes requires Plus or Pro plan",
+        )
+
+    current_count = _get_tape_count(db, current_user.id)
+    if current_count >= save_limit:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Tape limit reached ({current_count}/{save_limit}). Delete a tape or upgrade your plan.",
+        )
+
+    # Read and upload video
+    video_bytes = await file.read()
+    content_type = file.content_type or "video/webm"
+
+    try:
+        file_path = upload_tape(video_bytes, current_user.id, content_type)
+    except ValueError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    # Parse AI feedback JSON if provided
+    import json
+    feedback_dict = None
+    if ai_feedback:
+        try:
+            feedback_dict = json.loads(ai_feedback)
+        except json.JSONDecodeError:
+            pass
+
+    tape = UserTape(
+        user_id=current_user.id,
+        title=title or f"Self-tape {datetime.now(timezone.utc).strftime('%b %d, %Y')}",
+        duration_seconds=duration_seconds,
+        file_path=file_path,
+        file_size_bytes=len(video_bytes),
+        ai_feedback=feedback_dict,
     )
     db.add(tape)
     db.commit()
