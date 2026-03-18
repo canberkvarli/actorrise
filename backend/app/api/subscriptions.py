@@ -245,6 +245,11 @@ async def create_checkout_session(
     if request.promo_code:
         promo = request.promo_code.strip().upper()
         if promo == "FOUNDER":
+            if tier.name != "plus":
+                raise HTTPException(
+                    status_code=400,
+                    detail="The FOUNDER promo code is only valid for the Plus plan.",
+                )
             founder_coupon_id = os.getenv("STRIPE_FOUNDER_COUPON_ID")
             if founder_coupon_id:
                 discounts = [{"coupon": founder_coupon_id}]

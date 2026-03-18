@@ -78,6 +78,11 @@ function CheckoutContent() {
   const applyPromo = () => {
     const code = promoCode.trim().toUpperCase();
     if (code === "FOUNDER") {
+      if (tier?.name !== "plus") {
+        setPromoApplied(null);
+        setError("The FOUNDER code is only valid for the Plus plan.");
+        return;
+      }
       setPromoApplied("FOUNDER");
       setError(null);
     } else if (code === "STARTUPS" || code === "STARTUPS24") {
