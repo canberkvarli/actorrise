@@ -32,6 +32,7 @@ from app.models.feedback import ResultFeedback  # noqa: F401; register with Base
 from app.models.moderation import (  # noqa: F401; register with Base for create_all
     ModerationLog, MonologueSubmission)
 from app.models.tape import UserTape  # noqa: F401; register with Base for create_all
+from app.models.audition_usage import AuditionFeedbackUsage  # noqa: F401; register with Base for create_all
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse

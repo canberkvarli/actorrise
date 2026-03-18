@@ -2,6 +2,7 @@
 Audition Mode API Endpoints
 
 Self-tape recording analysis with AI casting director feedback.
+Uses GPT-4o Vision to analyze actual video frames.
 Tier-limited: Free (1/mo), Solo (10/mo), Plus (30/mo), Pro (60/mo).
 """
 
@@ -10,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy import func, extract
 from sqlalchemy.orm import Session
 
@@ -19,6 +20,7 @@ from app.core.database import get_db
 from app.models.actor import Monologue
 from app.models.billing import UserSubscription
 from app.models.user import User
+from app.models.audition_usage import AuditionFeedbackUsage
 from app.services.ai.langchain.audition_coach import get_audition_coach
 
 logger = logging.getLogger("uvicorn.error")
@@ -37,10 +39,15 @@ FEEDBACK_LIMITS = {
 # --- Pydantic models ---
 
 class AnalyzeAuditionRequest(BaseModel):
-    """Request to analyze an audition performance."""
+    """Request to analyze an audition performance with video frames."""
+    frames: list[str] = Field(
+        ...,
+        min_length=1,
+        max_length=10,
+        description="Base64-encoded JPEG frames from the video (1-10 frames)",
+    )
+    duration: int = Field(..., ge=30, description="Recording duration in seconds (min 30)")
     monologue_id: Optional[int] = None
-    duration: int  # Performance duration in seconds
-    # Future: transcription text from Whisper, frame analysis from GPT-4o vision
 
 
 class AuditionFeedbackResponse(BaseModel):
@@ -78,14 +85,21 @@ def _get_user_tier(db: Session, user: User) -> str:
 
 
 def _get_feedback_usage_this_month(db: Session, user_id: int) -> int:
-    """
-    Count AI feedback uses for the current calendar month.
+    """Count AI feedback uses for the current calendar month."""
+    now = datetime.now(timezone.utc)
+    count = db.query(func.count(AuditionFeedbackUsage.id)).filter(
+        AuditionFeedbackUsage.user_id == user_id,
+        extract("year", AuditionFeedbackUsage.created_at) == now.year,
+        extract("month", AuditionFeedbackUsage.created_at) == now.month,
+    ).scalar()
+    return count or 0
 
-    For now, we track via a simple counter approach.
-    TODO: Create a dedicated usage tracking table for audition feedback.
-    """
-    # Placeholder — will be replaced with actual usage tracking
-    return 0
+
+def _record_feedback_usage(db: Session, user_id: int) -> None:
+    """Record a feedback usage event."""
+    usage = AuditionFeedbackUsage(user_id=user_id)
+    db.add(usage)
+    db.commit()
 
 
 # --- Endpoints ---
@@ -115,21 +129,13 @@ async def analyze_audition(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Analyze an audition performance and provide AI casting director feedback.
+    Analyze a self-tape using GPT-4o Vision on actual video frames.
 
-    Tier limits: Free 1/mo, Solo 10/mo, Plus 30/mo, Pro 60/mo.
+    The client extracts 6 frames from the recorded video and sends them as base64 JPEGs.
+    GPT-4o Vision analyzes framing, lighting, body language, expressions, and overall performance.
 
-    Current implementation: text + timing analysis via GPT-4o-mini (~$0.001).
-    Future: Whisper transcription + GPT-4o vision frame analysis (~$0.05).
+    Cost: ~$0.03 per analysis (6 frames at low detail).
     """
-    # Minimum recording duration — don't waste a credit on very short takes
-    MIN_DURATION_SECONDS = 30
-    if request.duration < MIN_DURATION_SECONDS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Recording must be at least {MIN_DURATION_SECONDS} seconds for AI feedback.",
-        )
-
     # Check tier limits
     tier = _get_user_tier(db, current_user)
     limit = FEEDBACK_LIMITS.get(tier, 1)
@@ -141,39 +147,24 @@ async def analyze_audition(
             detail=f"AI feedback limit reached ({used}/{limit} this month). Upgrade your plan for more.",
         )
 
-    # Get the monologue if provided
+    # Get optional monologue context
     monologue = None
     if request.monologue_id:
         monologue = db.query(Monologue).filter(Monologue.id == request.monologue_id).first()
-        if not monologue:
-            raise HTTPException(status_code=404, detail="Monologue not found")
 
-    # Get audition coach
     coach = get_audition_coach()
 
     try:
-        if monologue:
-            feedback = coach.analyze_audition(
-                monologue_title=monologue.title,
-                character_name=monologue.character_name,
-                play_title=monologue.play_title,
-                monologue_text=monologue.text,
-                duration=request.duration,
-                genre=monologue.genre or "Drama",
-            )
-        else:
-            # Generic feedback without monologue context
-            feedback = coach.analyze_audition(
-                monologue_title="Self-tape",
-                character_name="Unknown",
-                play_title="Unknown",
-                monologue_text="",
-                duration=request.duration,
-                genre="Drama",
-            )
+        feedback = coach.analyze_with_frames(
+            frames_base64=request.frames,
+            duration=request.duration,
+            monologue_title=monologue.title if monologue else None,
+            monologue_text=monologue.text if monologue else None,
+            character_name=monologue.character_name if monologue else None,
+        )
 
-        # TODO: Increment usage counter
-        # _record_feedback_usage(db, current_user.id)
+        # Record usage
+        _record_feedback_usage(db, current_user.id)
 
         return AuditionFeedbackResponse(**feedback)
 
