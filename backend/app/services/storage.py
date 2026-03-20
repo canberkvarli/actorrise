@@ -54,9 +54,14 @@ def upload_headshot(base64_image: str, user_id: int) -> str:
             rgb_image.paste(image)
         image = rgb_image
     
+    # Resize if larger than 400x400 (keeps aspect ratio)
+    MAX_HEADSHOT_SIZE = (400, 400)
+    if image.width > MAX_HEADSHOT_SIZE[0] or image.height > MAX_HEADSHOT_SIZE[1]:
+        image.thumbnail(MAX_HEADSHOT_SIZE, Image.LANCZOS)
+
     # Convert to JPEG format for consistency
     output = io.BytesIO()
-    image.save(output, format="JPEG", quality=85, optimize=True)
+    image.save(output, format="JPEG", quality=80, optimize=True)
     image_bytes = output.getvalue()
     
     # Generate filename
@@ -140,8 +145,12 @@ def upload_founding_actor_headshot(base64_image: str, user_id: int, index: int) 
             rgb_image.paste(image)
         image = rgb_image
 
+    # Resize if larger than 400x400
+    if image.width > 400 or image.height > 400:
+        image.thumbnail((400, 400), Image.LANCZOS)
+
     output = io.BytesIO()
-    image.save(output, format="JPEG", quality=85, optimize=True)
+    image.save(output, format="JPEG", quality=80, optimize=True)
     image_bytes = output.getvalue()
 
     file_path = f"founding-actors/{user_id}/headshot-{index}.jpg"
