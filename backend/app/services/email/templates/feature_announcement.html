@@ -1,36 +1,23 @@
-{% extends "base.html" %}
+{% extends "base_personal.html" %}
 
-{% block title %}{{ feature_title }} | ActorRise{% endblock %}
+{% block title %}{{ feature_title }}{% endblock %}
 
 {% block content %}
-                <h1>{{ feature_title }}</h1>
+        <p>Hey {{ user_name }},</p>
 
-                <p class="greeting">Hi {{ user_name }},</p>
+        <p>{{ feature_description }}</p>
 
-                <p>{{ feature_description }}</p>
+        {% if video_url %}
+        <p>Here's a quick demo: <a href="{{ video_url }}">watch the video</a></p>
+        {% endif %}
 
-                {% if video_url %}
-                <div style="margin: 24px 0; text-align: center;">
-                    <a href="{{ video_url }}" style="display: block; text-decoration: none;">
-                        <div style="background-color: #242424; border-radius: 12px; padding: 48px 24px; text-align: center;">
-                            <div style="display: inline-block; width: 56px; height: 56px; background-color: #CB4B00; border-radius: 50%; line-height: 56px; text-align: center;">
-                                <span style="color: #ffffff; font-size: 24px;">&#9654;</span>
-                            </div>
-                            <p style="color: #ffffff; font-size: 14px; margin: 16px 0 0;">Watch the demo</p>
-                        </div>
-                    </a>
-                </div>
-                {% endif %}
+        <p><a href="{{ cta_url }}">{{ cta_text }}</a></p>
 
-                <div class="cta-wrap">
-                    <a href="{{ cta_url }}" class="cta">{{ cta_text }}</a>
-                </div>
+        <p>If you have feedback or questions, just reply to this email.</p>
 
-                <p>As always, if you have feedback or questions, just reply to this email.</p>
-
-                <p class="signature">
-                    Best,<br>
-                    <strong>Canberk</strong><br>
-                    <span style="font-size:14px; color:#616161;">Founder, ActorRise</span>
-                </p>
+        <div class="sig">
+            Canberk<br>
+            Founder | Actor<br>
+            <a href="https://actorrise.com">actorrise.com</a>
+        </div>
 {% endblock %}

@@ -1,54 +1,25 @@
-{% extends "base.html" %}
+{% extends "base_personal.html" %}
 
 {% block title %}Welcome to ActorRise{% endblock %}
 
-{% block extra_styles %}
-        .welcome-tagline {
-            text-align: center; font-size: 13px; font-weight: 600;
-            letter-spacing: 0.18em; text-transform: uppercase;
-            color: #616161; margin: 0; padding: 20px 32px 0;
-        }
-        .testimonial-cta {
-            display: inline-block; margin-top: 14px;
-            font-size: 14px; font-weight: 600; color: #CB4B00; text-decoration: none;
-        }
-        .testimonial-note {
-            font-size: 12px; color: #616161; font-style: italic; margin-top: 10px;
-        }
-{% endblock %}
-
 {% block content %}
-                <p class="welcome-tagline" style="padding: 0 0 20px; margin: 0;">Welcome</p>
+        <p>Hey {{ user_name }},</p>
 
-                <h1>You're in. Let's get started.</h1>
+        <p>Welcome to ActorRise. Really glad you signed up.</p>
 
-                <p class="greeting">Hi {{ user_name }},</p>
+        <p>Here's what you can do right now:</p>
 
-                <p>Thanks for signing up. You're all set to explore 8,600+ theater monologues and film/TV scene references, use AI-powered search that understands plain English, and rehearse with ScenePartner.</p>
+        <p>1. Search 8,600+ monologues with AI (way faster than flipping through books)<br>
+        2. Upload scripts and rehearse scenes with an AI scene partner<br>
+        3. Build your actor profile page</p>
 
-                <p><strong>Quick next steps:</strong></p>
-                <ul class="steps">
-                    <li><span class="bullet" style="color:#CB4B00; margin-right:8px;">&#8226;</span> Complete your actor profile so I can tailor monologue suggestions</li>
-                    <li><span class="bullet" style="color:#CB4B00; margin-right:8px;">&#8226;</span> Browse the library and save pieces you love</li>
-                    <li><span class="bullet" style="color:#CB4B00; margin-right:8px;">&#8226;</span> Submit your own monologues for review</li>
-                </ul>
+        <p>Head to <a href="https://actorrise.com/dashboard">your dashboard</a> and start exploring.</p>
 
-                <div class="cta-wrap">
-                    <a href="https://actorrise.com/dashboard" class="cta">Go to your dashboard</a>
-                </div>
+        <p>If you have feedback, questions, or ideas, just reply to this email. I read everything.</p>
 
-                <p>If you have any questions, just reply to this email.</p>
-
-                <div class="accent-box accent-box-orange">
-                    <p class="accent-title">&#9733; Love ActorRise? I'd love to hear from you</p>
-                    <p>If you're an actor and you've had a good experience, reply to this email with your feedback. I'm happy to feature your testimonial on the ActorRise homepage, with your headshot if you'd like. This offer won't last forever.</p>
-                    <a href="mailto:canberk@actorrise.com?subject=ActorRise%20feedback%20%26%20testimonial" class="testimonial-cta">Email your feedback &rarr;</a>
-                    <p class="testimonial-note">Optional: include your name, a short quote, and a headshot if you want to be featured.</p>
-                </div>
-
-                <p class="signature">
-                    Best,<br>
-                    <strong>Canberk</strong><br>
-                    <span style="font-size:14px; color:#616161;">Actor &amp; Founder, ActorRise</span>
-                </p>
+        <div class="sig">
+            Canberk<br>
+            Founder | Actor<br>
+            <a href="https://actorrise.com">actorrise.com</a>
+        </div>
 {% endblock %}
