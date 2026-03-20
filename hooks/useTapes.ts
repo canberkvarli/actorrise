@@ -32,7 +32,16 @@ export interface TapeListResponse {
   limit: number;
 }
 
+export interface StorageUsage {
+  storage_used_bytes: number;
+  storage_quota_bytes: number;
+  tape_count: number;
+  tape_limit: number;
+  tier: string;
+}
+
 export const TAPES_QUERY_KEY = ["tapes"] as const;
+export const STORAGE_USAGE_KEY = ["tapes", "usage"] as const;
 
 export function useTapes() {
   return useQuery<TapeListResponse>({
@@ -42,6 +51,19 @@ export function useTapes() {
       return response.data;
     },
     staleTime: 0,
+    gcTime: 10 * 60 * 1000,
+    retry: 1,
+  });
+}
+
+export function useStorageUsage() {
+  return useQuery<StorageUsage>({
+    queryKey: STORAGE_USAGE_KEY,
+    queryFn: async () => {
+      const response = await api.get<StorageUsage>("/api/tapes/usage");
+      return response.data;
+    },
+    staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 1,
   });
@@ -79,6 +101,7 @@ export function useCreateTape() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TAPES_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: STORAGE_USAGE_KEY });
     },
   });
 }
@@ -113,6 +136,7 @@ export function useDeleteTape() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TAPES_QUERY_KEY });
+      queryClient.invalidateQueries({ queryKey: STORAGE_USAGE_KEY });
     },
   });
 }

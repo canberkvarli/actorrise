@@ -143,7 +143,7 @@ export default function PlatformLayout({
     { href: "/dashboard", label: "Home", icon: IconHome },
     { href: "/search", label: "MonologueMatch", icon: IconSearch },
     { href: "/my-scripts", label: "ScenePartner", icon: IconMask },
-    { href: "/audition", label: "Audition", icon: IconVideo },
+    // { href: "/audition", label: "Audition", icon: IconVideo }, // Hidden for now — under construction
   ];
   const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/my-scripts\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$/.test(pathname || "");
 

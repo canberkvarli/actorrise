@@ -19,7 +19,7 @@ from app.models.billing import UserSubscription
 from app.models.tape import UserTape
 from app.models.user import User
 from app.services.benefits import get_effective_benefits
-from app.services.storage import upload_tape
+from app.services.storage import delete_tape_file, upload_tape
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -32,6 +32,16 @@ SAVE_LIMITS = {
     "plus": 15,
     "pro": 50,
 }
+
+# Storage quota per tier (in bytes)
+STORAGE_QUOTAS = {
+    "free": 0,
+    "solo": 0,
+    "plus": 2 * 1024 * 1024 * 1024,    # 2 GB
+    "pro": 5 * 1024 * 1024 * 1024,      # 5 GB
+}
+
+MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB per upload
 
 
 # --- Pydantic models ---
@@ -104,6 +114,15 @@ def _get_tape_count(db: Session, user_id: int) -> int:
     return db.query(UserTape).filter(UserTape.user_id == user_id).count()
 
 
+def _get_storage_used(db: Session, user_id: int) -> int:
+    """Sum of file_size_bytes for all user tapes."""
+    from sqlalchemy import func
+    result = db.query(func.coalesce(func.sum(UserTape.file_size_bytes), 0)).filter(
+        UserTape.user_id == user_id
+    ).scalar()
+    return int(result)
+
+
 # --- Endpoints ---
 
 @router.get("", response_model=TapeListResponse)
@@ -133,6 +152,27 @@ async def list_tapes(
         count=len(tapes),
         limit=save_limit,
     )
+
+
+@router.get("/usage")
+async def get_storage_usage(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get the user's tape storage usage and quota."""
+    tier = _get_user_tier(db, current_user)
+    storage_used = _get_storage_used(db, current_user.id)
+    storage_quota = STORAGE_QUOTAS.get(tier, 0)
+    tape_count = _get_tape_count(db, current_user.id)
+    tape_limit = SAVE_LIMITS.get(tier, 0)
+
+    return {
+        "storage_used_bytes": storage_used,
+        "storage_quota_bytes": storage_quota,
+        "tape_count": tape_count,
+        "tape_limit": tape_limit,
+        "tier": tier,
+    }
 
 
 @router.post("", response_model=TapeResponse, status_code=status.HTTP_201_CREATED)
@@ -209,6 +249,25 @@ async def upload_and_create_tape(
     # Read and upload video
     video_bytes = await file.read()
     content_type = file.content_type or "video/webm"
+
+    # Check file size limit (50 MB)
+    if len(video_bytes) > MAX_FILE_SIZE:
+        size_mb = len(video_bytes) / (1024 * 1024)
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large ({size_mb:.0f} MB). Maximum is 50 MB per upload.",
+        )
+
+    # Check storage quota
+    storage_quota = STORAGE_QUOTAS.get(tier, 0)
+    storage_used = _get_storage_used(db, current_user.id)
+    if storage_used + len(video_bytes) > storage_quota:
+        used_mb = storage_used / (1024 * 1024)
+        quota_mb = storage_quota / (1024 * 1024)
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Storage limit reached ({used_mb:.0f} MB / {quota_mb:.0f} MB). Delete old tapes or upgrade your plan.",
+        )
 
     try:
         file_path = upload_tape(video_bytes, current_user.id, content_type)
@@ -298,8 +357,8 @@ async def delete_tape(
     if not tape:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tape not found")
 
-    # TODO: Delete file from Supabase Storage
-    # storage.remove(tape.file_path)
+    # Delete file from Supabase Storage
+    delete_tape_file(tape.file_path)
 
     db.delete(tape)
     db.commit()

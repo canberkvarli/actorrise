@@ -156,7 +156,9 @@ export function useVideoRecorder(
       }
 
       const mediaRecorder = new MediaRecorder(mediaStream, {
-        mimeType: mimeType
+        mimeType: mimeType,
+        // Compress video to ~2.5 Mbps (good 1080p talking-head quality, ~20 MB/min)
+        ...(audioOnly ? {} : { videoBitsPerSecond: 2_500_000 }),
       });
 
       // Capture audioOnly in closure
