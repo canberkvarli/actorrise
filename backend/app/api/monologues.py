@@ -354,6 +354,23 @@ async def search_monologues(
         if monologue_responses:
             record_total_search(current_user.id, db)
 
+        # Log search for analytics
+        if q and q.strip():
+            try:
+                from app.models.search_log import SearchLog
+                all_result_ids = [int(m.id) for m, _ in all_results_with_scores]
+                db.add(SearchLog(
+                    query=q.strip(),
+                    filters_used=filters if filters else None,
+                    results_count=total,
+                    result_ids=all_result_ids,
+                    user_id=int(current_user.id),
+                    source="search",
+                ))
+                db.commit()
+            except Exception:
+                db.rollback()
+
         return SearchResponse(
             results=monologue_responses,
             total=total,
@@ -450,6 +467,23 @@ async def search_demo(
 
     if results:
         record_demo_search()
+
+    # Log demo search for analytics
+    try:
+        from app.models.search_log import SearchLog
+        all_result_ids = [int(m.id) for m, _ in all_results_with_scores[:5]]
+        db.add(SearchLog(
+            query=q.strip(),
+            filters_used=None,
+            results_count=len(results),
+            result_ids=all_result_ids,
+            user_id=int(current_user.id) if current_user else None,
+            source="demo",
+        ))
+        db.commit()
+    except Exception:
+        db.rollback()
+
     return DemoSearchResponse(results=results, corrected_query=corrected_for_demo)
 
 
