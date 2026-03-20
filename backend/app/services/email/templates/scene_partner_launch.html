@@ -1,0 +1,29 @@
+{% extends "base_personal.html" %}
+
+{% block title %}ScenePartner{% endblock %}
+
+{% block content %}
+        <p>Hey {{ user_name }},</p>
+
+        <p>Just finished building something I think you'll actually use. It's called ScenePartner.</p>
+
+        <p>Basically, you upload a script (or pick one from the library), choose your character, and the AI reads the other parts with you. You can run it over and over. It listens to you and responds in real time.</p>
+
+        <p>I built it because I got tired of asking friends to read with me at weird hours. Now I just open it and go.</p>
+
+        {% if video_url %}
+        <p>Here's a quick demo if you want to see it in action: <a href="{{ video_url }}">watch the video</a></p>
+        {% endif %}
+
+        <p>It's part of the Plus plan. I'm giving 12 months free to the first 50 people who use the code <strong>{{ promo_code }}</strong> at checkout. No catch, just want early feedback from real actors.</p>
+
+        <p><a href="{{ cta_url }}">{{ cta_text }}</a></p>
+
+        <p>Let me know what you think. Seriously, just reply to this.</p>
+
+        <div class="sig">
+            Canberk<br>
+            Founder | Actor<br>
+            <a href="https://actorrise.com">actorrise.com</a>
+        </div>
+{% endblock %}

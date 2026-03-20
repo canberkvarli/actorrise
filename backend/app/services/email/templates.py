@@ -253,6 +253,26 @@ class EmailTemplates:
             unsubscribe_url=unsubscribe_url,
         )
 
+    def render_scene_partner_launch(
+        self,
+        user_name: str,
+        promo_code: str = "FOUNDER",
+        cta_text: str = "Try ScenePartner",
+        cta_url: str = "https://actorrise.com/my-scripts",
+        video_url: Optional[str] = None,
+        unsubscribe_url: Optional[str] = None,
+    ) -> str:
+        """Render ScenePartner launch email for free users."""
+        template = self.env.get_template('scene_partner_launch.html')
+        return template.render(
+            user_name=user_name or "there",
+            promo_code=promo_code,
+            cta_text=cta_text,
+            cta_url=cta_url,
+            video_url=video_url,
+            unsubscribe_url=unsubscribe_url,
+        )
+
     def render_cold_outreach(
         self,
         user_name: str,
