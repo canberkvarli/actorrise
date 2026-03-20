@@ -24,6 +24,11 @@ import {
   IconUsersGroup,
   IconX,
   IconClock,
+  IconChevronDown,
+  IconChevronUp,
+  IconMailOpened,
+  IconClick,
+  IconBounceRight,
 } from "@tabler/icons-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────
@@ -102,7 +107,7 @@ export default function AdminEmailsPage() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   // Send mode
-  const [mode, setMode] = useState<"single" | "bulk" | "campaign">("single");
+  const [mode, setMode] = useState<"single" | "bulk" | "campaign">("campaign");
   const [recipientEmail, setRecipientEmail] = useState("");
   const [bulkRecipients, setBulkRecipients] = useState<{ email: string; name: string }[]>([]);
   const [bulkInput, setBulkInput] = useState("");
@@ -122,6 +127,9 @@ export default function AdminEmailsPage() {
   const [historySearch, setHistorySearch] = useState("");
   const [expandedBatch, setExpandedBatch] = useState<number | null>(null);
   const [expandedSends, setExpandedSends] = useState<BatchSend[]>([]);
+
+  // Compose section toggle
+  const [composeOpen, setComposeOpen] = useState(false);
 
   // Dialogs
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -210,7 +218,6 @@ export default function AdminEmailsPage() {
     }
   }
 
-  // Write HTML into iframe and auto-resize to fit content
   useEffect(() => {
     if (previewHtml && iframeRef.current) {
       const iframe = iframeRef.current;
@@ -219,12 +226,11 @@ export default function AdminEmailsPage() {
         doc.open();
         doc.write(previewHtml);
         doc.close();
-        // Wait for content to render, then resize iframe to fit
         setTimeout(() => {
           const body = doc.body;
           if (body) {
             const height = body.scrollHeight + 40;
-            iframe.style.height = `${Math.max(600, height)}px`;
+            iframe.style.height = `${Math.max(400, height)}px`;
           }
         }, 100);
       }
@@ -237,38 +243,23 @@ export default function AdminEmailsPage() {
   function parseBulkLines(raw: string): { email: string; name: string }[] {
     const results: { email: string; name: string }[] = [];
     const lines = raw.split(/\n/).map((l) => l.trim()).filter(Boolean);
-
     for (const line of lines) {
-      // Format: Name <email>
       const angleMatch = line.match(/^(.+?)\s*<([^>]+)>\s*$/);
       if (angleMatch) {
         const email = angleMatch[2].trim().toLowerCase();
-        if (emailRegex.test(email)) {
-          results.push({ email, name: angleMatch[1].trim() });
-        }
+        if (emailRegex.test(email)) results.push({ email, name: angleMatch[1].trim() });
         continue;
       }
-
-      // Format: tab-separated (from spreadsheets) or comma-separated: Name, email OR email, Name
       const parts = line.includes("\t")
         ? line.split("\t").map((p) => p.trim())
         : line.split(",").map((p) => p.trim());
-
       if (parts.length >= 2) {
-        // Figure out which part is the email
-        if (emailRegex.test(parts[1].toLowerCase())) {
-          results.push({ email: parts[1].toLowerCase(), name: parts[0] });
-        } else if (emailRegex.test(parts[0].toLowerCase())) {
-          results.push({ email: parts[0].toLowerCase(), name: parts[1] });
-        }
+        if (emailRegex.test(parts[1].toLowerCase())) results.push({ email: parts[1].toLowerCase(), name: parts[0] });
+        else if (emailRegex.test(parts[0].toLowerCase())) results.push({ email: parts[0].toLowerCase(), name: parts[1] });
         continue;
       }
-
-      // Just an email
       const solo = parts[0].toLowerCase();
-      if (emailRegex.test(solo)) {
-        results.push({ email: solo, name: "" });
-      }
+      if (emailRegex.test(solo)) results.push({ email: solo, name: "" });
     }
     return results;
   }
@@ -290,14 +281,8 @@ export default function AdminEmailsPage() {
 
   // Send
   function openConfirm() {
-    if (mode === "single" && !recipientEmail.trim()) {
-      toast.error("Enter a recipient email");
-      return;
-    }
-    if (mode === "bulk" && bulkRecipients.length === 0) {
-      toast.error("Add at least one recipient");
-      return;
-    }
+    if (mode === "single" && !recipientEmail.trim()) { toast.error("Enter a recipient email"); return; }
+    if (mode === "bulk" && bulkRecipients.length === 0) { toast.error("Add at least one recipient"); return; }
     setConfirmOpen(true);
   }
 
@@ -308,69 +293,37 @@ export default function AdminEmailsPage() {
     try {
       if (mode === "single") {
         await api.post("/api/admin/emails/send", {
-          template_id: selectedId,
-          to: recipientEmail.trim(),
-          subject: subjectOverride || undefined,
-          variables,
+          template_id: selectedId, to: recipientEmail.trim(),
+          subject: subjectOverride || undefined, variables,
         });
         toast.success(`Email sent to ${recipientEmail.trim()}`);
       } else if (mode === "bulk") {
         const { data } = await api.post<{ batch_id: number; status: string; total: number }>(
-          "/api/admin/emails/bulk-send",
-          {
-            template_id: selectedId,
-            recipients: bulkRecipients,
-            subject: subjectOverride || undefined,
-            variables,
+          "/api/admin/emails/bulk-send", {
+            template_id: selectedId, recipients: bulkRecipients,
+            subject: subjectOverride || undefined, variables,
             campaign_key: campaignKey.trim() || undefined,
             scheduled_at: scheduledAt || undefined,
           }
         );
         toast.success(scheduledAt ? `Scheduled ${data.total} emails` : `Sending ${data.total} emails...`);
-        // Start polling for batch progress
-        setBatchStatus({
-          batch_id: data.batch_id,
-          status: data.status as BatchStatus["status"],
-          total: data.total,
-          sent: 0,
-          skipped: 0,
-          errors: [],
-          sends: [],
-        });
+        setBatchStatus({ batch_id: data.batch_id, status: data.status as BatchStatus["status"], total: data.total, sent: 0, skipped: 0, errors: [], sends: [] });
         startBatchPolling(data.batch_id);
       } else {
         if (dryRun) {
-          const { data } = await api.post<CampaignResult>(
-            "/api/admin/emails/campaign",
-            {
-              template_id: selectedId,
-              target,
-              dry_run: true,
-              variables,
-            }
-          );
+          const { data } = await api.post<CampaignResult>("/api/admin/emails/campaign", {
+            template_id: selectedId, target, dry_run: true, variables,
+          });
           setCampaignResult(data);
           toast.success(`Dry run: ${data.recipients.length} recipients`);
         } else {
           const { data } = await api.post<{ batch_id: number; status: string; total: number }>(
-            "/api/admin/emails/campaign",
-            {
-              template_id: selectedId,
-              target,
-              dry_run: false,
-              variables,
+            "/api/admin/emails/campaign", {
+              template_id: selectedId, target, dry_run: false, variables,
             }
           );
           toast.success(`Campaign started: sending to ${data.total} users...`);
-          setBatchStatus({
-            batch_id: data.batch_id,
-            status: data.status as BatchStatus["status"],
-            total: data.total,
-            sent: 0,
-            skipped: 0,
-            errors: [],
-            sends: [],
-          });
+          setBatchStatus({ batch_id: data.batch_id, status: data.status as BatchStatus["status"], total: data.total, sent: 0, skipped: 0, errors: [], sends: [] });
           startBatchPolling(data.batch_id);
         }
       }
@@ -387,516 +340,91 @@ export default function AdminEmailsPage() {
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
       try {
-        const { data } = await api.get<BatchStatus>(
-          `/api/admin/emails/batch/${batchId}`
-        );
+        const { data } = await api.get<BatchStatus>(`/api/admin/emails/batch/${batchId}`);
         setBatchStatus(data);
         if (data.status === "completed" || data.status === "failed") {
           if (pollRef.current) clearInterval(pollRef.current);
           pollRef.current = null;
           fetchBatchHistory();
         }
-      } catch {
-        // silently retry
-      }
+      } catch { /* retry */ }
     }, 2000);
   }
 
-  // Cleanup polling on unmount
-  useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
+  useEffect(() => { return () => { if (pollRef.current) clearInterval(pollRef.current); }; }, []);
 
   const canSend = user?.can_approve_submissions === true;
 
+  // Aggregate stats from batch history
+  const totalSent = batchHistory.reduce((sum, b) => sum + b.sent, 0);
+  const totalOpened = batchHistory.reduce((sum, b) => sum + (b.status_counts["opened"] || 0) + (b.status_counts["clicked"] || 0), 0);
+  const totalClicked = batchHistory.reduce((sum, b) => sum + (b.status_counts["clicked"] || 0), 0);
+  const totalBounced = batchHistory.reduce((sum, b) => sum + (b.status_counts["bounced"] || 0), 0);
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <IconMail className="h-5 w-5 text-primary" />
-        <h2 className="text-lg font-semibold">Email Templates</h2>
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <IconMail className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Campaigns</h2>
+        </div>
+        <Button
+          variant={composeOpen ? "default" : "outline"}
+          size="sm"
+          className="gap-2"
+          onClick={() => setComposeOpen(!composeOpen)}
+        >
+          <IconSend className="h-4 w-4" />
+          {composeOpen ? "Close composer" : "New email"}
+        </Button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* ── Sidebar: template list ── */}
-        <div className="lg:col-span-3 space-y-2">
-          {templates.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => selectTemplate(t.id)}
-              className={`w-full text-left rounded-lg border p-3 transition-colors ${
-                selectedId === t.id
-                  ? "border-primary bg-primary/5"
-                  : "border-border hover:border-primary/40"
-              }`}
-            >
-              <p className="font-medium text-sm">{t.name}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {t.description}
-              </p>
-            </button>
-          ))}
+      {/* ── Overview stats ── */}
+      <div className="grid grid-cols-4 gap-4">
+        <div className="rounded-lg border border-border p-4">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+            <IconSend className="h-3.5 w-3.5" />
+            Total sent
+          </div>
+          <p className="text-2xl font-semibold">{totalSent}</p>
         </div>
-
-        {/* ── Main area ── */}
-        <div className="lg:col-span-9 space-y-6">
-          {selected ? (
-            <>
-              {/* Variable form + Preview side by side */}
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                {/* Variable form */}
-                <div className="space-y-4 rounded-lg border border-border p-4">
-                  <p className="font-medium text-sm">
-                    Variables — {selected.name}
-                  </p>
-
-                  {/* Subject override */}
-                  <div>
-                    <Label htmlFor="subject" className="text-xs">
-                      Subject line
-                    </Label>
-                    <Input
-                      id="subject"
-                      placeholder={selected.subject}
-                      value={subjectOverride}
-                      onChange={(e) => setSubjectOverride(e.target.value)}
-                      className="mt-1"
-                    />
-                  </div>
-
-                  {selected.variables.map((v) => (
-                    <div key={v.name}>
-                      <Label htmlFor={v.name} className="text-xs">
-                        {v.label}
-                        {v.required && (
-                          <span className="text-destructive ml-0.5">*</span>
-                        )}
-                      </Label>
-                      {v.type === "text" &&
-                      String(v.default).length > 60 ? (
-                        <Textarea
-                          id={v.name}
-                          rows={3}
-                          value={variables[v.name] ?? ""}
-                          onChange={(e) =>
-                            setVariables((prev) => ({
-                              ...prev,
-                              [v.name]: e.target.value,
-                            }))
-                          }
-                          className="mt-1"
-                        />
-                      ) : (
-                        <Input
-                          id={v.name}
-                          type={v.type === "number" ? "number" : "text"}
-                          value={variables[v.name] ?? ""}
-                          onChange={(e) =>
-                            setVariables((prev) => ({
-                              ...prev,
-                              [v.name]: e.target.value,
-                            }))
-                          }
-                          className="mt-1"
-                        />
-                      )}
-                    </div>
-                  ))}
-
-                  <Button
-                    onClick={handlePreview}
-                    disabled={previewing}
-                    className="w-full gap-2"
-                    variant="secondary"
-                  >
-                    <IconEye className="h-4 w-4" />
-                    {previewing ? "Rendering..." : "Preview"}
-                  </Button>
-                </div>
-
-                {/* Preview pane */}
-                <div className="rounded-lg border border-border overflow-hidden">
-                  {previewHtml ? (
-                    <div className="flex flex-col h-full">
-                      <div className="bg-muted/40 px-3 py-2 border-b border-border text-xs text-muted-foreground">
-                        Subject: <span className="text-foreground font-medium">{previewSubject}</span>
-                      </div>
-                      <iframe
-                        ref={iframeRef}
-                        title="Email preview"
-                        className="w-full flex-1 bg-white"
-                        style={{ minHeight: 700 }}
-                        sandbox="allow-same-origin"
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-center h-64 text-muted-foreground text-sm">
-                      Click &ldquo;Preview&rdquo; to render the template
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* ── Send controls ── */}
-              {canSend && (
-                <div className="rounded-lg border border-border p-4 space-y-4">
-                  <p className="font-medium text-sm">Send</p>
-
-                  {/* Mode toggle */}
-                  <div className="flex gap-2">
-                    <Button
-                      variant={mode === "single" ? "default" : "outline"}
-                      size="sm"
-                      className="gap-2"
-                      onClick={() => setMode("single")}
-                    >
-                      <IconUser className="h-4 w-4" />
-                      Single
-                    </Button>
-                    <Button
-                      variant={mode === "bulk" ? "default" : "outline"}
-                      size="sm"
-                      className="gap-2"
-                      onClick={() => setMode("bulk")}
-                    >
-                      <IconUsersGroup className="h-4 w-4" />
-                      Bulk
-                    </Button>
-                    <Button
-                      variant={mode === "campaign" ? "default" : "outline"}
-                      size="sm"
-                      className="gap-2"
-                      onClick={() => setMode("campaign")}
-                    >
-                      <IconUsers className="h-4 w-4" />
-                      Campaign
-                    </Button>
-                  </div>
-
-                  {mode === "single" ? (
-                    <div className="flex gap-3 items-end">
-                      <div className="flex-1">
-                        <Label htmlFor="recipient" className="text-xs">
-                          Recipient email
-                        </Label>
-                        <Input
-                          id="recipient"
-                          type="email"
-                          placeholder="user@example.com"
-                          value={recipientEmail}
-                          onChange={(e) => setRecipientEmail(e.target.value)}
-                          className="mt-1"
-                        />
-                      </div>
-                      <Button
-                        onClick={openConfirm}
-                        disabled={sending}
-                        className="gap-2"
-                      >
-                        <IconSend className="h-4 w-4" />
-                        Send
-                      </Button>
-                    </div>
-                  ) : mode === "bulk" ? (
-                    <div className="space-y-3">
-                      <div>
-                        <Label className="text-xs">
-                          Paste recipients (one per line)
-                        </Label>
-                        <p className="text-[11px] text-muted-foreground mt-0.5 mb-1.5">
-                          Supports: <code className="bg-muted px-1 rounded">Name, email</code>{" "}
-                          <code className="bg-muted px-1 rounded">email</code>{" "}
-                          <code className="bg-muted px-1 rounded">{"Name <email>"}</code>{" "}
-                          or tab-separated from a spreadsheet
-                        </p>
-                        <div className="flex gap-2 items-end">
-                          <Textarea
-                            placeholder={"Jane Doe, jane@example.com\njohn@example.com\nAlex Smith <alex@example.com>"}
-                            value={bulkInput}
-                            onChange={(e) => setBulkInput(e.target.value)}
-                            rows={3}
-                            className="text-sm font-mono"
-                          />
-                          <Button
-                            variant="secondary"
-                            onClick={() => addBulkRecipients(bulkInput)}
-                            disabled={!bulkInput.trim()}
-                          >
-                            Add
-                          </Button>
-                        </div>
-                      </div>
-
-                      {bulkRecipients.length > 0 && (
-                        <div className="rounded-lg border border-border p-3 space-y-2">
-                          <div className="flex items-center justify-between">
-                            <p className="text-xs text-muted-foreground">
-                              {bulkRecipients.length} recipient{bulkRecipients.length !== 1 && "s"}
-                            </p>
-                            <button
-                              onClick={() => setBulkRecipients([])}
-                              className="text-xs text-destructive hover:underline"
-                            >
-                              Clear all
-                            </button>
-                          </div>
-                          <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
-                            {bulkRecipients.map((r) => (
-                              <span
-                                key={r.email}
-                                className="inline-flex items-center gap-1 bg-muted px-2.5 py-1 text-xs"
-                              >
-                                {r.name ? (
-                                  <>
-                                    <span className="font-medium">{r.name}</span>
-                                    <span className="text-muted-foreground">{r.email}</span>
-                                  </>
-                                ) : (
-                                  r.email
-                                )}
-                                <button
-                                  onClick={() => removeBulkRecipient(r.email)}
-                                  className="text-muted-foreground hover:text-destructive transition-colors ml-0.5"
-                                >
-                                  <IconX className="h-3 w-3" />
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Campaign key & scheduling */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <Label htmlFor="campaign-key" className="text-xs">
-                            Campaign key (optional)
-                          </Label>
-                          <Input
-                            id="campaign-key"
-                            placeholder="e.g. backstage-march-2026"
-                            value={campaignKey}
-                            onChange={(e) => setCampaignKey(e.target.value)}
-                            className="mt-1"
-                          />
-                          <p className="text-[10px] text-muted-foreground mt-0.5">
-                            Prevents sending the same campaign to the same person twice
-                          </p>
-                        </div>
-                        <div>
-                          <Label htmlFor="scheduled-at" className="text-xs flex items-center gap-1">
-                            <IconClock className="h-3 w-3" />
-                            Schedule for later (optional)
-                          </Label>
-                          <Input
-                            id="scheduled-at"
-                            type="datetime-local"
-                            value={scheduledAt}
-                            onChange={(e) => setScheduledAt(e.target.value)}
-                            className="mt-1"
-                          />
-                        </div>
-                      </div>
-
-                      <Button
-                        onClick={openConfirm}
-                        disabled={sending || bulkRecipients.length === 0}
-                        className="gap-2"
-                      >
-                        <IconSend className="h-4 w-4" />
-                        {scheduledAt
-                          ? `Schedule ${bulkRecipients.length} email${bulkRecipients.length !== 1 ? "s" : ""}`
-                          : `Send to ${bulkRecipients.length} recipient${bulkRecipients.length !== 1 ? "s" : ""}`}
-                      </Button>
-
-                      {/* Batch progress */}
-                      {batchStatus && (
-                        <div className="rounded-lg border border-border p-3 space-y-3">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="font-medium">
-                              {batchStatus.status === "completed"
-                                ? "Batch complete"
-                                : batchStatus.status === "failed"
-                                  ? "Batch failed"
-                                  : batchStatus.status === "processing"
-                                    ? "Sending..."
-                                    : "Pending..."}
-                            </span>
-                            <span className="text-muted-foreground text-xs">
-                              {batchStatus.sent} / {batchStatus.total} sent
-                              {batchStatus.skipped > 0 && ` | ${batchStatus.skipped} skipped`}
-                            </span>
-                          </div>
-
-                          {/* Progress bar */}
-                          {batchStatus.total > 0 && (
-                            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all duration-500 ${
-                                  batchStatus.status === "failed"
-                                    ? "bg-destructive"
-                                    : batchStatus.status === "completed"
-                                      ? "bg-green-500"
-                                      : "bg-primary"
-                                }`}
-                                style={{
-                                  width: `${Math.round(
-                                    ((batchStatus.sent + batchStatus.skipped) /
-                                      batchStatus.total) *
-                                      100
-                                  )}%`,
-                                }}
-                              />
-                            </div>
-                          )}
-
-                          {/* Tracking stats (after completion) */}
-                          {batchStatus.status === "completed" &&
-                            batchStatus.sends.length > 0 && (
-                              <div className="grid grid-cols-4 gap-2 text-center text-xs">
-                                <div className="rounded-lg bg-muted/50 p-2">
-                                  <p className="text-lg font-semibold text-foreground">
-                                    {batchStatus.sends.filter((s) => s.status === "sent" || s.status === "delivered" || s.status === "opened" || s.status === "clicked").length}
-                                  </p>
-                                  <p className="text-muted-foreground">Delivered</p>
-                                </div>
-                                <div className="rounded-lg bg-muted/50 p-2">
-                                  <p className="text-lg font-semibold text-foreground">
-                                    {batchStatus.sends.filter((s) => s.status === "opened" || s.status === "clicked").length}
-                                  </p>
-                                  <p className="text-muted-foreground">Opened</p>
-                                </div>
-                                <div className="rounded-lg bg-muted/50 p-2">
-                                  <p className="text-lg font-semibold text-foreground">
-                                    {batchStatus.sends.filter((s) => s.status === "clicked").length}
-                                  </p>
-                                  <p className="text-muted-foreground">Clicked</p>
-                                </div>
-                                <div className="rounded-lg bg-muted/50 p-2">
-                                  <p className="text-lg font-semibold text-foreground">
-                                    {batchStatus.sends.filter((s) => s.status === "bounced").length}
-                                  </p>
-                                  <p className="text-muted-foreground">Bounced</p>
-                                </div>
-                              </div>
-                            )}
-
-                          {/* Errors */}
-                          {batchStatus.errors.length > 0 && (
-                            <div className="text-destructive text-xs space-y-0.5">
-                              {batchStatus.errors.map((e, i) => (
-                                <p key={i}>{e}</p>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      <div className="flex gap-3 items-end">
-                        <div>
-                          <Label htmlFor="target" className="text-xs">
-                            Target audience
-                          </Label>
-                          <select
-                            id="target"
-                            value={target}
-                            onChange={(e) => setTarget(e.target.value)}
-                            className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                          >
-                            <option value="all">All users</option>
-                            <option value="free">Free tier</option>
-                            <option value="paid">Paid tier</option>
-                          </select>
-                        </div>
-                        <label className="flex items-center gap-2 text-sm cursor-pointer pb-2">
-                          <input
-                            type="checkbox"
-                            checked={dryRun}
-                            onChange={(e) => setDryRun(e.target.checked)}
-                            className="rounded border-border"
-                          />
-                          Dry run
-                        </label>
-                        <Button
-                          onClick={openConfirm}
-                          disabled={sending}
-                          className="gap-2"
-                          variant={dryRun ? "secondary" : "default"}
-                        >
-                          <IconSend className="h-4 w-4" />
-                          {dryRun ? "Preview recipients" : "Send campaign"}
-                        </Button>
-                      </div>
-
-                      {/* Campaign dry-run result */}
-                      {campaignResult && dryRun && (
-                        <div className="rounded-lg bg-muted/40 p-3 text-sm space-y-1">
-                          <p className="font-medium">
-                            Would send to {campaignResult.recipients.length}{" "}
-                            recipients:
-                          </p>
-                          <ul className="text-xs text-muted-foreground max-h-40 overflow-y-auto space-y-0.5">
-                            {campaignResult.recipients.map((r) => (
-                              <li key={r}>{r}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {/* Campaign batch progress (after real send) */}
-                      {batchStatus && (
-                        <div className="rounded-lg border border-border p-3 space-y-3">
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="font-medium">
-                              {batchStatus.status === "completed"
-                                ? "Campaign complete"
-                                : batchStatus.status === "failed"
-                                  ? "Campaign failed"
-                                  : batchStatus.status === "processing"
-                                    ? "Sending..."
-                                    : "Pending..."}
-                            </span>
-                            <span className="text-muted-foreground text-xs">
-                              {batchStatus.sent} / {batchStatus.total} sent
-                              {batchStatus.skipped > 0 && ` | ${batchStatus.skipped} skipped`}
-                            </span>
-                          </div>
-                          {batchStatus.total > 0 && (
-                            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-                              <div
-                                className={`h-full rounded-full transition-all duration-500 ${
-                                  batchStatus.status === "failed" ? "bg-destructive" :
-                                  batchStatus.status === "completed" ? "bg-green-500" : "bg-primary"
-                                }`}
-                                style={{ width: `${Math.round(((batchStatus.sent + batchStatus.skipped) / batchStatus.total) * 100)}%` }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          ) : (
-            <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
-              Select a template from the sidebar
-            </div>
-          )}
+        <div className="rounded-lg border border-border p-4">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+            <IconMailOpened className="h-3.5 w-3.5" />
+            Opened
+          </div>
+          <p className="text-2xl font-semibold">
+            {totalOpened}
+            {totalSent > 0 && <span className="text-sm text-muted-foreground ml-1.5">{Math.round((totalOpened / totalSent) * 100)}%</span>}
+          </p>
+        </div>
+        <div className="rounded-lg border border-border p-4">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+            <IconClick className="h-3.5 w-3.5" />
+            Clicked
+          </div>
+          <p className="text-2xl font-semibold">
+            {totalClicked}
+            {totalSent > 0 && <span className="text-sm text-muted-foreground ml-1.5">{Math.round((totalClicked / totalSent) * 100)}%</span>}
+          </p>
+        </div>
+        <div className="rounded-lg border border-border p-4">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+            <IconBounceRight className="h-3.5 w-3.5" />
+            Bounced
+          </div>
+          <p className="text-2xl font-semibold">
+            {totalBounced}
+            {totalSent > 0 && <span className="text-sm text-muted-foreground ml-1.5">{Math.round((totalBounced / totalSent) * 100)}%</span>}
+          </p>
         </div>
       </div>
 
-      {/* ── Recent sends ── */}
+      {/* ── Campaign history ── */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            <IconSend className="h-4 w-4 text-muted-foreground" />
-            Recent sends
-          </h3>
+          <h3 className="text-sm font-semibold">Send history</h3>
           <div className="flex items-center gap-2">
             <Input
               placeholder="Search campaigns..."
@@ -905,26 +433,17 @@ export default function AdminEmailsPage() {
               onKeyDown={(e) => e.key === "Enter" && fetchBatchHistory(historySearch)}
               className="h-8 w-56 text-xs"
             />
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-xs"
-              onClick={() => fetchBatchHistory(historySearch)}
-            >
+            <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => fetchBatchHistory(historySearch)}>
               Search
             </Button>
             {historySearch && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 text-xs"
-                onClick={() => { setHistorySearch(""); fetchBatchHistory(); }}
-              >
+              <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { setHistorySearch(""); fetchBatchHistory(); }}>
                 Clear
               </Button>
             )}
           </div>
         </div>
+
         {batchHistory.length > 0 ? (
           <div className="rounded-lg border border-border overflow-hidden">
             <table className="w-full text-sm">
@@ -952,7 +471,7 @@ export default function AdminEmailsPage() {
                     <React.Fragment key={b.batch_id}>
                       <tr
                         onClick={() => toggleBatchDrilldown(b.batch_id)}
-                        className="border-b border-border last:border-0 hover:bg-muted/20 cursor-pointer"
+                        className={`border-b border-border hover:bg-muted/20 cursor-pointer ${isExpanded ? "bg-muted/10" : ""}`}
                       >
                         <td className="px-3 py-2 font-medium">{tmplName}</td>
                         <td className="px-3 py-2 text-muted-foreground truncate max-w-[200px]">{b.subject}</td>
@@ -984,7 +503,7 @@ export default function AdminEmailsPage() {
                         </td>
                       </tr>
                       {isExpanded && (
-                        <tr key={`${b.batch_id}-detail`}>
+                        <tr>
                           <td colSpan={9} className="px-0 py-0">
                             <div className="bg-muted/20 px-4 py-3 border-b border-border">
                               <p className="text-xs font-medium text-muted-foreground mb-2">
@@ -1010,8 +529,7 @@ export default function AdminEmailsPage() {
                                           <span className={`inline-block px-1.5 py-0.5 text-[10px] font-medium ${
                                             s.status === "opened" || s.status === "clicked" ? "bg-green-500/10 text-green-600" :
                                             s.status === "sent" || s.status === "delivered" ? "bg-blue-500/10 text-blue-600" :
-                                            s.status === "bounced" ? "bg-destructive/10 text-destructive" :
-                                            s.status === "failed" ? "bg-destructive/10 text-destructive" :
+                                            s.status === "bounced" || s.status === "failed" ? "bg-destructive/10 text-destructive" :
                                             "bg-muted text-muted-foreground"
                                           }`}>
                                             {s.status}
@@ -1035,61 +553,272 @@ export default function AdminEmailsPage() {
             </table>
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">No sends yet.</p>
+          <p className="text-sm text-muted-foreground py-8 text-center">No campaigns sent yet. Click &ldquo;New email&rdquo; to get started.</p>
         )}
       </div>
+
+      {/* ── Compose section (collapsible) ── */}
+      {composeOpen && canSend && (
+        <div className="rounded-lg border border-border p-5 space-y-5">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Compose</h3>
+            <button onClick={() => setComposeOpen(false)} className="text-muted-foreground hover:text-foreground">
+              <IconX className="h-4 w-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Template picker */}
+            <div className="lg:col-span-3 space-y-2">
+              <Label className="text-xs text-muted-foreground">Template</Label>
+              {templates.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => selectTemplate(t.id)}
+                  className={`w-full text-left rounded-lg border p-2.5 transition-colors ${
+                    selectedId === t.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/40"
+                  }`}
+                >
+                  <p className="font-medium text-xs">{t.name}</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{t.description}</p>
+                </button>
+              ))}
+            </div>
+
+            {/* Variables + Preview */}
+            <div className="lg:col-span-9 space-y-5">
+              {selected && (
+                <>
+                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+                    {/* Variable form */}
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="subject" className="text-xs">Subject line</Label>
+                        <Input
+                          id="subject"
+                          placeholder={selected.subject}
+                          value={subjectOverride}
+                          onChange={(e) => setSubjectOverride(e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                      {selected.variables.map((v) => (
+                        <div key={v.name}>
+                          <Label htmlFor={v.name} className="text-xs">
+                            {v.label}
+                            {v.required && <span className="text-destructive ml-0.5">*</span>}
+                          </Label>
+                          {v.type === "text" && String(v.default).length > 60 ? (
+                            <Textarea
+                              id={v.name} rows={2}
+                              value={variables[v.name] ?? ""}
+                              onChange={(e) => setVariables((prev) => ({ ...prev, [v.name]: e.target.value }))}
+                              className="mt-1"
+                            />
+                          ) : (
+                            <Input
+                              id={v.name} type={v.type === "number" ? "number" : "text"}
+                              value={variables[v.name] ?? ""}
+                              onChange={(e) => setVariables((prev) => ({ ...prev, [v.name]: e.target.value }))}
+                              className="mt-1"
+                            />
+                          )}
+                        </div>
+                      ))}
+                      <Button onClick={handlePreview} disabled={previewing} className="w-full gap-2" variant="secondary">
+                        <IconEye className="h-4 w-4" />
+                        {previewing ? "Rendering..." : "Preview"}
+                      </Button>
+                    </div>
+
+                    {/* Preview pane */}
+                    <div className="rounded-lg border border-border overflow-hidden">
+                      {previewHtml ? (
+                        <div className="flex flex-col h-full">
+                          <div className="bg-muted/40 px-3 py-2 border-b border-border text-xs text-muted-foreground">
+                            Subject: <span className="text-foreground font-medium">{previewSubject}</span>
+                          </div>
+                          <iframe
+                            ref={iframeRef}
+                            title="Email preview"
+                            className="w-full flex-1 bg-white"
+                            style={{ minHeight: 400 }}
+                            sandbox="allow-same-origin"
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
+                          Click &ldquo;Preview&rdquo; to render
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Send controls */}
+                  <div className="rounded-lg border border-border p-4 space-y-4">
+                    <div className="flex gap-2">
+                      <Button variant={mode === "single" ? "default" : "outline"} size="sm" className="gap-2" onClick={() => setMode("single")}>
+                        <IconUser className="h-4 w-4" /> Single
+                      </Button>
+                      <Button variant={mode === "bulk" ? "default" : "outline"} size="sm" className="gap-2" onClick={() => setMode("bulk")}>
+                        <IconUsersGroup className="h-4 w-4" /> Bulk
+                      </Button>
+                      <Button variant={mode === "campaign" ? "default" : "outline"} size="sm" className="gap-2" onClick={() => setMode("campaign")}>
+                        <IconUsers className="h-4 w-4" /> Campaign
+                      </Button>
+                    </div>
+
+                    {mode === "single" ? (
+                      <div className="flex gap-3 items-end">
+                        <div className="flex-1">
+                          <Label htmlFor="recipient" className="text-xs">Recipient email</Label>
+                          <Input id="recipient" type="email" placeholder="user@example.com" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} className="mt-1" />
+                        </div>
+                        <Button onClick={openConfirm} disabled={sending} className="gap-2">
+                          <IconSend className="h-4 w-4" /> Send
+                        </Button>
+                      </div>
+                    ) : mode === "bulk" ? (
+                      <div className="space-y-3">
+                        <div>
+                          <Label className="text-xs">Paste recipients (one per line)</Label>
+                          <p className="text-[11px] text-muted-foreground mt-0.5 mb-1.5">
+                            Supports: <code className="bg-muted px-1 rounded">Name, email</code>{" "}
+                            <code className="bg-muted px-1 rounded">email</code>{" "}
+                            <code className="bg-muted px-1 rounded">{"Name <email>"}</code>{" "}
+                            or tab-separated
+                          </p>
+                          <div className="flex gap-2 items-end">
+                            <Textarea placeholder={"Jane Doe, jane@example.com\njohn@example.com"} value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} rows={3} className="text-sm font-mono" />
+                            <Button variant="secondary" onClick={() => addBulkRecipients(bulkInput)} disabled={!bulkInput.trim()}>Add</Button>
+                          </div>
+                        </div>
+                        {bulkRecipients.length > 0 && (
+                          <div className="rounded-lg border border-border p-3 space-y-2">
+                            <div className="flex items-center justify-between">
+                              <p className="text-xs text-muted-foreground">{bulkRecipients.length} recipient{bulkRecipients.length !== 1 && "s"}</p>
+                              <button onClick={() => setBulkRecipients([])} className="text-xs text-destructive hover:underline">Clear all</button>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto">
+                              {bulkRecipients.map((r) => (
+                                <span key={r.email} className="inline-flex items-center gap-1 bg-muted px-2.5 py-1 text-xs">
+                                  {r.name ? <><span className="font-medium">{r.name}</span> <span className="text-muted-foreground">{r.email}</span></> : r.email}
+                                  <button onClick={() => removeBulkRecipient(r.email)} className="text-muted-foreground hover:text-destructive transition-colors ml-0.5"><IconX className="h-3 w-3" /></button>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          <div>
+                            <Label htmlFor="campaign-key" className="text-xs">Campaign key (optional)</Label>
+                            <Input id="campaign-key" placeholder="e.g. scenepartner-launch" value={campaignKey} onChange={(e) => setCampaignKey(e.target.value)} className="mt-1" />
+                          </div>
+                          <div>
+                            <Label htmlFor="scheduled-at" className="text-xs flex items-center gap-1"><IconClock className="h-3 w-3" /> Schedule (optional)</Label>
+                            <Input id="scheduled-at" type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="mt-1" />
+                          </div>
+                        </div>
+                        <Button onClick={openConfirm} disabled={sending || bulkRecipients.length === 0} className="gap-2">
+                          <IconSend className="h-4 w-4" />
+                          {scheduledAt ? `Schedule ${bulkRecipients.length}` : `Send to ${bulkRecipients.length}`} email{bulkRecipients.length !== 1 ? "s" : ""}
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex gap-3 items-end">
+                          <div>
+                            <Label htmlFor="target" className="text-xs">Target audience</Label>
+                            <select id="target" value={target} onChange={(e) => setTarget(e.target.value)} className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
+                              <option value="all">All users</option>
+                              <option value="free">Free tier</option>
+                              <option value="paid">Paid tier</option>
+                            </select>
+                          </div>
+                          <label className="flex items-center gap-2 text-sm cursor-pointer pb-2">
+                            <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} className="rounded border-border" />
+                            Dry run
+                          </label>
+                          <Button onClick={openConfirm} disabled={sending} className="gap-2" variant={dryRun ? "secondary" : "default"}>
+                            <IconSend className="h-4 w-4" />
+                            {dryRun ? "Preview recipients" : "Send campaign"}
+                          </Button>
+                        </div>
+
+                        {campaignResult && dryRun && (
+                          <div className="rounded-lg bg-muted/40 p-3 text-sm space-y-1">
+                            <p className="font-medium">Would send to {campaignResult.recipients.length} recipients:</p>
+                            <ul className="text-xs text-muted-foreground max-h-40 overflow-y-auto space-y-0.5">
+                              {campaignResult.recipients.map((r) => <li key={r}>{r}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Batch progress (shared across modes) */}
+                    {batchStatus && (
+                      <div className="rounded-lg border border-border p-3 space-y-3">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="font-medium">
+                            {batchStatus.status === "completed" ? "Complete" : batchStatus.status === "failed" ? "Failed" : batchStatus.status === "processing" ? "Sending..." : "Pending..."}
+                          </span>
+                          <span className="text-muted-foreground text-xs">
+                            {batchStatus.sent} / {batchStatus.total} sent
+                            {batchStatus.skipped > 0 && ` | ${batchStatus.skipped} skipped`}
+                          </span>
+                        </div>
+                        {batchStatus.total > 0 && (
+                          <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                batchStatus.status === "failed" ? "bg-destructive" : batchStatus.status === "completed" ? "bg-green-500" : "bg-primary"
+                              }`}
+                              style={{ width: `${Math.round(((batchStatus.sent + batchStatus.skipped) / batchStatus.total) * 100)}%` }}
+                            />
+                          </div>
+                        )}
+                        {batchStatus.errors.length > 0 && (
+                          <div className="text-destructive text-xs space-y-0.5">
+                            {batchStatus.errors.map((e, i) => <p key={i}>{e}</p>)}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Confirm dialog ── */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {mode === "single"
-                ? "Confirm send"
-                : mode === "bulk"
-                  ? `Send to ${bulkRecipients.length} recipients?`
-                  : dryRun
-                    ? "Run dry-run?"
-                    : "Confirm campaign send"}
+              {mode === "single" ? "Confirm send" : mode === "bulk" ? `Send to ${bulkRecipients.length} recipients?` : dryRun ? "Run dry-run?" : "Confirm campaign send"}
             </DialogTitle>
           </DialogHeader>
           <div className="text-sm space-y-2 py-2">
-            <p>
-              <span className="text-muted-foreground">Template:</span>{" "}
-              {selected?.name}
-            </p>
+            <p><span className="text-muted-foreground">Template:</span> {selected?.name}</p>
             {mode === "single" ? (
-              <p>
-                <span className="text-muted-foreground">To:</span>{" "}
-                {recipientEmail}
-              </p>
+              <p><span className="text-muted-foreground">To:</span> {recipientEmail}</p>
             ) : mode === "bulk" ? (
               <div>
                 <p className="text-muted-foreground mb-1">To:</p>
                 <div className="max-h-28 overflow-y-auto text-xs space-y-0.5">
-                  {bulkRecipients.map((r) => (
-                    <p key={r.email}>
-                      {r.name ? `${r.name} (${r.email})` : r.email}
-                    </p>
-                  ))}
+                  {bulkRecipients.map((r) => <p key={r.email}>{r.name ? `${r.name} (${r.email})` : r.email}</p>)}
                 </div>
               </div>
             ) : (
-              <p>
-                <span className="text-muted-foreground">Target:</span> {target}{" "}
-                {dryRun && "(dry run)"}
-              </p>
+              <p><span className="text-muted-foreground">Target:</span> {target} {dryRun && "(dry run)"}</p>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSend}
-              disabled={sending}
-              variant={(mode === "campaign" && !dryRun) || mode === "bulk" ? "destructive" : "default"}
-            >
+            <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+            <Button onClick={handleSend} disabled={sending} variant={(mode === "campaign" && !dryRun) || mode === "bulk" ? "destructive" : "default"}>
               {sending ? "Sending..." : "Confirm"}
             </Button>
           </DialogFooter>

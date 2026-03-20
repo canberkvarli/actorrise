@@ -1,60 +1,21 @@
-{% extends "base.html" %}
+{% extends "base_personal.html" %}
 
-{% block title %}Unlock more with ActorRise Plus{% endblock %}
+{% block title %}You're getting close{% endblock %}
 
 {% block content %}
-                <h1>You're getting close to your limit</h1>
+        <p>Hey {{ user_name }},</p>
 
-                <p class="greeting">Hi {{ user_name }},</p>
+        <p>You've used {{ searches_used }} of your {{ searches_limit }} AI searches this month. That tells me you're finding value in ActorRise, which is awesome.</p>
 
-                <p>You've used <strong>{{ searches_used }} of {{ searches_limit }}</strong> AI searches this month. That tells me you're finding value in ActorRise, and I love that.</p>
+        <p>With Plus you get 150 searches/month, unlimited saved monologues, 30 ScenePartner sessions, and PDF downloads. It's $12/mo or $99/year (2 months free).</p>
 
-                <p>With <strong>ActorRise Plus</strong>, you get a lot more room to work:</p>
+        <p>If you want to upgrade: <a href="https://actorrise.com/pricing">actorrise.com/pricing</a></p>
 
-                <div class="accent-box accent-box-orange">
-                    <table style="width:100%; border-collapse:collapse;">
-                        <tr>
-                            <td style="padding:8px 0; font-size:14px; color:#616161; width:50%;">Feature</td>
-                            <td style="padding:8px 0; font-size:14px; color:#616161; text-align:center;">Free</td>
-                            <td style="padding:8px 0; font-size:14px; color:#CB4B00; font-weight:600; text-align:center;">Plus</td>
-                        </tr>
-                        <tr style="border-top:1px solid #fed7aa;">
-                            <td style="padding:8px 0; font-size:14px; color:#292929;">AI searches / month</td>
-                            <td style="padding:8px 0; font-size:14px; color:#374151; text-align:center;">10</td>
-                            <td style="padding:8px 0; font-size:14px; color:#292929; font-weight:600; text-align:center;">150</td>
-                        </tr>
-                        <tr style="border-top:1px solid #fed7aa;">
-                            <td style="padding:8px 0; font-size:14px; color:#292929;">Saved monologues</td>
-                            <td style="padding:8px 0; font-size:14px; color:#374151; text-align:center;">5</td>
-                            <td style="padding:8px 0; font-size:14px; color:#292929; font-weight:600; text-align:center;">Unlimited</td>
-                        </tr>
-                        <tr style="border-top:1px solid #fed7aa;">
-                            <td style="padding:8px 0; font-size:14px; color:#292929;">ScenePartner sessions</td>
-                            <td style="padding:8px 0; font-size:14px; color:#374151; text-align:center;">1 trial</td>
-                            <td style="padding:8px 0; font-size:14px; color:#292929; font-weight:600; text-align:center;">30 / month</td>
-                        </tr>
-                        <tr style="border-top:1px solid #fed7aa;">
-                            <td style="padding:8px 0; font-size:14px; color:#292929;">PDF downloads</td>
-                            <td style="padding:8px 0; font-size:14px; color:#374151; text-align:center;">&#10007;</td>
-                            <td style="padding:8px 0; font-size:14px; color:#292929; font-weight:600; text-align:center;">&#10003;</td>
-                        </tr>
-                        <tr style="border-top:1px solid #fed7aa;">
-                            <td style="padding:8px 0; font-size:14px; color:#292929;">Smart recommendations</td>
-                            <td style="padding:8px 0; font-size:14px; color:#374151; text-align:center;">&#10007;</td>
-                            <td style="padding:8px 0; font-size:14px; color:#292929; font-weight:600; text-align:center;">&#10003;</td>
-                        </tr>
-                    </table>
-                </div>
+        <p>No pressure at all. Just wanted to let you know before you hit the limit.</p>
 
-                <div class="cta-wrap">
-                    <a href="https://actorrise.com/pricing" class="cta">Upgrade to Plus ($12/mo)</a>
-                </div>
-
-                <p style="text-align:center; font-size:13px; color:#616161;">Or save with the annual plan at $99/year (2 months free).</p>
-
-                <p class="signature">
-                    Best,<br>
-                    <strong>Canberk</strong><br>
-                    <span style="font-size:14px; color:#616161;">Founder, ActorRise</span>
-                </p>
+        <div class="sig">
+            Canberk<br>
+            Founder | Actor<br>
+            <a href="https://actorrise.com">actorrise.com</a>
+        </div>
 {% endblock %}
