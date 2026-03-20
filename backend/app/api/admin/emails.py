@@ -150,6 +150,19 @@ TEMPLATES = [
         ],
     },
     {
+        "id": "scene_partner_launch",
+        "name": "ScenePartner Launch",
+        "description": "Announce ScenePartner to free users with FOUNDER promo code",
+        "subject": "New: rehearse lines with a scene partner that never flakes",
+        "variables": [
+            {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
+            {"name": "promo_code", "label": "Promo code", "type": "text", "default": "FOUNDER", "required": True},
+            {"name": "cta_text", "label": "CTA button text", "type": "text", "default": "Try ScenePartner", "required": True},
+            {"name": "cta_url", "label": "CTA button URL", "type": "url", "default": "https://actorrise.com/my-scripts", "required": True},
+            {"name": "video_url", "label": "Video URL (optional)", "type": "url", "default": "https://www.youtube.com/watch?v=TTZxo3bZPI4", "required": False},
+        ],
+    },
+    {
         "id": "weekly_engagement",
         "name": "Weekly Engagement",
         "description": "Weekly digest with a featured monologue and acting tip",
@@ -260,6 +273,7 @@ def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, 
         "actor_page": templates.render_actor_page,
         "cold_outreach": templates.render_cold_outreach,
         "weekly_engagement": templates.render_weekly_engagement,
+        "scene_partner_launch": templates.render_scene_partner_launch,
     }
 
     render_fn = render_map.get(template_id)
@@ -525,14 +539,22 @@ def get_batch_status(
 
 @router.get("/batches")
 def list_batches(
+    search: Optional[str] = None,
     _user: User = Depends(require_moderator),
     db: Session = Depends(get_db),
 ):
-    """List recent email batches (newest first)."""
+    """List recent email batches (newest first). Optional search by campaign_key or subject."""
+    query = db.query(EmailBatch)
+    if search:
+        query = query.filter(
+            EmailBatch.campaign_key.ilike(f"%{search}%")
+            | EmailBatch.subject.ilike(f"%{search}%")
+            | EmailBatch.template_id.ilike(f"%{search}%")
+        )
     batches = (
-        db.query(EmailBatch)
+        query
         .order_by(EmailBatch.created_at.desc())
-        .limit(20)
+        .limit(50)
         .all()
     )
 
@@ -566,51 +588,193 @@ def list_batches(
     return results
 
 
-@router.post("/campaign", response_model=CampaignResponse)
+@router.post("/campaign")
 def send_campaign_endpoint(
     body: CampaignRequest,
     admin: User = Depends(require_approval_permission),
     db: Session = Depends(get_db),
 ):
-    """Send a campaign to a user segment."""
+    """Send a campaign to a user segment. Creates a tracked batch."""
     if body.target not in ("all", "free", "paid"):
         raise HTTPException(status_code=400, detail="target must be all, free, or paid")
 
     campaign_type = body.template_id
 
-    # Upgrade nudge uses per-user real usage data
+    # Upgrade nudge uses per-user real usage data — keep old path for now
     if campaign_type == "upgrade_nudge":
         result = _send_upgrade_nudge_campaign(db, body.target, body.dry_run)
-    else:
-        # Map variable names to what send_campaign expects
-        kwargs = dict(body.variables)
-        result = send_campaign(
-            db=db,
-            campaign_type=campaign_type,
-            target=body.target,
-            dry_run=body.dry_run,
-            **kwargs,
+        return CampaignResponse(
+            sent=result.get("sent", 0),
+            skipped=result.get("skipped", 0),
+            errors=result.get("errors", []),
+            recipients=result.get("recipients", []),
         )
 
-    # Audit log for non-dry-run campaigns
-    if not body.dry_run and result.get("sent", 0) > 0:
-        audit = AdminAuditLog(
-            actor_admin_id=admin.id,
-            target_user_id=admin.id,  # self-ref for campaigns
-            action_type="campaign_sent",
-            after_json={
-                "template": campaign_type,
-                "target": body.target,
-                "sent": result["sent"],
-                "skipped": result["skipped"],
-            },
-        )
-        db.add(audit)
-        db.commit()
+    # Get recipients
+    recipients = _get_marketing_recipients(db, body.target)
 
-    return CampaignResponse(
-        sent=result.get("sent", 0),
-        skipped=result.get("skipped", 0),
-        errors=result.get("errors", []),
-        recipients=result.get("recipients", []),
+    if body.dry_run:
+        return CampaignResponse(
+            sent=0,
+            skipped=0,
+            errors=[],
+            recipients=[f"{u.name}, {u.email}" if u.name else u.email for u in recipients],
+        )
+
+    # Build campaign_key from template + target + date for dedup
+    from datetime import date as date_type
+    campaign_key = f"{campaign_type}-{body.target}-{date_type.today().isoformat()}"
+
+    # Resolve subject
+    meta = next((t for t in TEMPLATES if t["id"] == campaign_type), None)
+    subject_map = {
+        "scene_partner_launch": "New: rehearse lines with a scene partner that never flakes",
+    }
+    subject = subject_map.get(campaign_type, meta["subject"] if meta else "News from ActorRise")
+
+    # Create batch record
+    batch = EmailBatch(
+        template_id=campaign_type,
+        campaign_key=campaign_key,
+        subject=subject,
+        status="pending",
+        total=len(recipients),
+        created_by=admin.id,
     )
+    db.add(batch)
+    db.flush()
+
+    default_name = body.variables.get("user_name", "there")
+    skipped_dupes = 0
+
+    for user in recipients:
+        email_addr = user.email.strip().lower()
+
+        # Cross-batch dedup on campaign_key
+        existing = (
+            db.query(EmailSend)
+            .join(EmailBatch)
+            .filter(
+                EmailSend.to_email == email_addr,
+                EmailBatch.campaign_key == campaign_key,
+                EmailSend.status.notin_(["failed"]),
+            )
+            .first()
+        )
+        if existing:
+            skipped_dupes += 1
+            continue
+
+        send = EmailSend(
+            batch_id=batch.id,
+            to_email=email_addr,
+            to_name=user.name or default_name,
+            status="queued",
+        )
+        db.add(send)
+
+    batch.skipped = skipped_dupes
+    batch.total = batch.total - skipped_dupes
+    db.commit()
+
+    batch_id = batch.id
+    template_id = campaign_type
+    variables = dict(body.variables)
+
+    # Process in background thread
+    def _process_campaign():
+        db2 = SessionLocal()
+        try:
+            b = db2.query(EmailBatch).filter(EmailBatch.id == batch_id).first()
+            if not b:
+                return
+            b.status = "processing"
+            db2.commit()
+
+            client = ResendEmailClient()
+            templates_svc = EmailTemplates()
+
+            sends = db2.query(EmailSend).filter(
+                EmailSend.batch_id == batch_id,
+                EmailSend.status == "queued",
+            ).all()
+
+            render_map = {
+                "upgrade_nudge": templates_svc.render_upgrade_nudge,
+                "feature_announcement": templates_svc.render_feature_announcement,
+                "founder_offer": templates_svc.render_founder_offer,
+                "actor_page": templates_svc.render_actor_page,
+                "cold_outreach": templates_svc.render_cold_outreach,
+                "weekly_engagement": templates_svc.render_weekly_engagement,
+                "scene_partner_launch": templates_svc.render_scene_partner_launch,
+            }
+            render_fn = render_map.get(template_id)
+            if not render_fn:
+                b.status = "failed"
+                b.errors_json = [f"Unknown template: {template_id}"]
+                db2.commit()
+                return
+
+            for send_row in sends:
+                try:
+                    vars_copy = dict(variables)
+                    vars_copy["unsubscribe_url"] = build_unsubscribe_url(send_row.to_email)
+                    vars_copy["user_name"] = send_row.to_name or default_name
+
+                    html = render_fn(**vars_copy)
+
+                    response = client.send_email(
+                        to=send_row.to_email,
+                        subject=subject,
+                        html=html,
+                    )
+
+                    send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
+                    send_row.status = "sent"
+                    b.sent += 1
+                except Exception as e:
+                    send_row.status = "failed"
+                    b.skipped += 1
+                    errors = list(b.errors_json or [])
+                    errors.append(f"{send_row.to_email}: {e}")
+                    b.errors_json = errors
+                    logger.warning("Campaign send failed for %s: %s", send_row.to_email, e)
+
+                db2.commit()
+                time.sleep(0.5)
+
+            b.status = "completed"
+            db2.commit()
+
+            if b.sent > 0:
+                audit = AdminAuditLog(
+                    actor_admin_id=b.created_by,
+                    target_user_id=b.created_by,
+                    action_type="campaign_sent",
+                    after_json={
+                        "template": template_id,
+                        "target": body.target,
+                        "sent": b.sent,
+                        "total": b.total,
+                        "campaign_key": campaign_key,
+                    },
+                )
+                db2.add(audit)
+                db2.commit()
+
+        except Exception as e:
+            logger.exception("Campaign batch %s failed: %s", batch_id, e)
+            try:
+                b = db2.query(EmailBatch).filter(EmailBatch.id == batch_id).first()
+                if b:
+                    b.status = "failed"
+                    db2.commit()
+            except Exception:
+                pass
+        finally:
+            db2.close()
+
+    t = threading.Thread(target=_process_campaign, daemon=True)
+    t.start()
+
+    return {"batch_id": batch_id, "status": "pending", "total": batch.total}

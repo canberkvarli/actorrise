@@ -151,6 +151,7 @@ def send_campaign(
         "actor_page": "Your actor page on ActorRise",
         "cold_outreach": "hey from ActorRise",
         "weekly_engagement": "Your weekly pick from ActorRise",
+        "scene_partner_launch": "New: rehearse lines with a scene partner that never flakes",
     }
     subject = subject_map.get(campaign_type, "News from ActorRise")
 
@@ -161,6 +162,7 @@ def send_campaign(
         "actor_page": templates.render_actor_page,
         "cold_outreach": templates.render_cold_outreach,
         "weekly_engagement": templates.render_weekly_engagement,
+        "scene_partner_launch": templates.render_scene_partner_launch,
     }
     render_fn = render_map.get(campaign_type)
     if not render_fn:

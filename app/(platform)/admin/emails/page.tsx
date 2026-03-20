@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -119,6 +119,9 @@ export default function AdminEmailsPage() {
 
   // Sent history
   const [batchHistory, setBatchHistory] = useState<BatchHistoryItem[]>([]);
+  const [historySearch, setHistorySearch] = useState("");
+  const [expandedBatch, setExpandedBatch] = useState<number | null>(null);
+  const [expandedSends, setExpandedSends] = useState<BatchSend[]>([]);
 
   // Dialogs
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -143,11 +146,27 @@ export default function AdminEmailsPage() {
     fetchBatchHistory();
   }, []);
 
-  function fetchBatchHistory() {
+  function fetchBatchHistory(search?: string) {
+    const params = search ? `?search=${encodeURIComponent(search)}` : "";
     api
-      .get<BatchHistoryItem[]>("/api/admin/emails/batches")
+      .get<BatchHistoryItem[]>(`/api/admin/emails/batches${params}`)
       .then(({ data }) => setBatchHistory(data))
       .catch(() => {});
+  }
+
+  async function toggleBatchDrilldown(batchId: number) {
+    if (expandedBatch === batchId) {
+      setExpandedBatch(null);
+      setExpandedSends([]);
+      return;
+    }
+    try {
+      const { data } = await api.get<BatchStatus>(`/api/admin/emails/batch/${batchId}`);
+      setExpandedBatch(batchId);
+      setExpandedSends(data.sends);
+    } catch {
+      toast.error("Failed to load batch details");
+    }
   }
 
   function _initVars(tmpl: TemplateMeta) {
@@ -320,20 +339,39 @@ export default function AdminEmailsPage() {
         });
         startBatchPolling(data.batch_id);
       } else {
-        const { data } = await api.post<CampaignResult>(
-          "/api/admin/emails/campaign",
-          {
-            template_id: selectedId,
-            target,
-            dry_run: dryRun,
-            variables,
-          }
-        );
-        setCampaignResult(data);
         if (dryRun) {
+          const { data } = await api.post<CampaignResult>(
+            "/api/admin/emails/campaign",
+            {
+              template_id: selectedId,
+              target,
+              dry_run: true,
+              variables,
+            }
+          );
+          setCampaignResult(data);
           toast.success(`Dry run: ${data.recipients.length} recipients`);
         } else {
-          toast.success(`Campaign sent: ${data.sent} emails`);
+          const { data } = await api.post<{ batch_id: number; status: string; total: number }>(
+            "/api/admin/emails/campaign",
+            {
+              template_id: selectedId,
+              target,
+              dry_run: false,
+              variables,
+            }
+          );
+          toast.success(`Campaign started: sending to ${data.total} users...`);
+          setBatchStatus({
+            batch_id: data.batch_id,
+            status: data.status as BatchStatus["status"],
+            total: data.total,
+            sent: 0,
+            skipped: 0,
+            errors: [],
+            sends: [],
+          });
+          startBatchPolling(data.batch_id);
         }
       }
     } catch (err: unknown) {
@@ -793,35 +831,49 @@ export default function AdminEmailsPage() {
                         </Button>
                       </div>
 
-                      {/* Campaign result */}
-                      {campaignResult && (
+                      {/* Campaign dry-run result */}
+                      {campaignResult && dryRun && (
                         <div className="rounded-lg bg-muted/40 p-3 text-sm space-y-1">
-                          {dryRun ? (
-                            <>
-                              <p className="font-medium">
-                                Would send to {campaignResult.recipients.length}{" "}
-                                recipients:
-                              </p>
-                              <ul className="text-xs text-muted-foreground max-h-40 overflow-y-auto space-y-0.5">
-                                {campaignResult.recipients.map((r) => (
-                                  <li key={r}>{r}</li>
-                                ))}
-                              </ul>
-                            </>
-                          ) : (
-                            <>
-                              <p>
-                                Sent: {campaignResult.sent} | Skipped:{" "}
-                                {campaignResult.skipped}
-                              </p>
-                              {campaignResult.errors.length > 0 && (
-                                <div className="text-destructive text-xs">
-                                  {campaignResult.errors.map((e, i) => (
-                                    <p key={i}>{e}</p>
-                                  ))}
-                                </div>
-                              )}
-                            </>
+                          <p className="font-medium">
+                            Would send to {campaignResult.recipients.length}{" "}
+                            recipients:
+                          </p>
+                          <ul className="text-xs text-muted-foreground max-h-40 overflow-y-auto space-y-0.5">
+                            {campaignResult.recipients.map((r) => (
+                              <li key={r}>{r}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Campaign batch progress (after real send) */}
+                      {batchStatus && (
+                        <div className="rounded-lg border border-border p-3 space-y-3">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="font-medium">
+                              {batchStatus.status === "completed"
+                                ? "Campaign complete"
+                                : batchStatus.status === "failed"
+                                  ? "Campaign failed"
+                                  : batchStatus.status === "processing"
+                                    ? "Sending..."
+                                    : "Pending..."}
+                            </span>
+                            <span className="text-muted-foreground text-xs">
+                              {batchStatus.sent} / {batchStatus.total} sent
+                              {batchStatus.skipped > 0 && ` | ${batchStatus.skipped} skipped`}
+                            </span>
+                          </div>
+                          {batchStatus.total > 0 && (
+                            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  batchStatus.status === "failed" ? "bg-destructive" :
+                                  batchStatus.status === "completed" ? "bg-green-500" : "bg-primary"
+                                }`}
+                                style={{ width: `${Math.round(((batchStatus.sent + batchStatus.skipped) / batchStatus.total) * 100)}%` }}
+                              />
+                            </div>
                           )}
                         </div>
                       )}
@@ -839,12 +891,41 @@ export default function AdminEmailsPage() {
       </div>
 
       {/* ── Recent sends ── */}
-      {batchHistory.length > 0 && (
-        <div className="space-y-3">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <IconSend className="h-4 w-4 text-muted-foreground" />
             Recent sends
           </h3>
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="Search campaigns..."
+              value={historySearch}
+              onChange={(e) => setHistorySearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && fetchBatchHistory(historySearch)}
+              className="h-8 w-56 text-xs"
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-xs"
+              onClick={() => fetchBatchHistory(historySearch)}
+            >
+              Search
+            </Button>
+            {historySearch && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => { setHistorySearch(""); fetchBatchHistory(); }}
+              >
+                Clear
+              </Button>
+            )}
+          </div>
+        </div>
+        {batchHistory.length > 0 ? (
           <div className="rounded-lg border border-border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
@@ -866,44 +947,97 @@ export default function AdminEmailsPage() {
                   const opened = (b.status_counts["opened"] || 0) + (b.status_counts["clicked"] || 0);
                   const clicked = b.status_counts["clicked"] || 0;
                   const bounced = b.status_counts["bounced"] || 0;
+                  const isExpanded = expandedBatch === b.batch_id;
                   return (
-                    <tr key={b.batch_id} className="border-b border-border last:border-0 hover:bg-muted/20">
-                      <td className="px-3 py-2 font-medium">{tmplName}</td>
-                      <td className="px-3 py-2 text-muted-foreground truncate max-w-[200px]">{b.subject}</td>
-                      <td className="px-3 py-2">
-                        {b.campaign_key ? (
-                          <span className="inline-block bg-muted px-2 py-0.5 text-xs">{b.campaign_key}</span>
-                        ) : (
-                          <span className="text-muted-foreground/40">—</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-center">{b.sent}</td>
-                      <td className="px-3 py-2 text-center">{opened > 0 ? opened : "—"}</td>
-                      <td className="px-3 py-2 text-center">{clicked > 0 ? clicked : "—"}</td>
-                      <td className="px-3 py-2 text-center">{bounced > 0 ? <span className="text-destructive">{bounced}</span> : "—"}</td>
-                      <td className="px-3 py-2">
-                        <span className={`inline-block px-2 py-0.5 text-xs font-medium ${
-                          b.status === "completed" ? "bg-green-500/10 text-green-600" :
-                          b.status === "failed" ? "bg-destructive/10 text-destructive" :
-                          b.status === "processing" ? "bg-primary/10 text-primary" :
-                          "bg-muted text-muted-foreground"
-                        }`}>
-                          {b.status}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-muted-foreground text-xs">
-                        {b.created_at ? new Date(b.created_at).toLocaleDateString("en-US", {
-                          month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
-                        }) : "—"}
-                      </td>
-                    </tr>
+                    <React.Fragment key={b.batch_id}>
+                      <tr
+                        onClick={() => toggleBatchDrilldown(b.batch_id)}
+                        className="border-b border-border last:border-0 hover:bg-muted/20 cursor-pointer"
+                      >
+                        <td className="px-3 py-2 font-medium">{tmplName}</td>
+                        <td className="px-3 py-2 text-muted-foreground truncate max-w-[200px]">{b.subject}</td>
+                        <td className="px-3 py-2">
+                          {b.campaign_key ? (
+                            <span className="inline-block bg-muted px-2 py-0.5 text-xs">{b.campaign_key}</span>
+                          ) : (
+                            <span className="text-muted-foreground/40">&mdash;</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-center">{b.sent}</td>
+                        <td className="px-3 py-2 text-center">{opened > 0 ? opened : <span className="text-muted-foreground/40">&mdash;</span>}</td>
+                        <td className="px-3 py-2 text-center">{clicked > 0 ? clicked : <span className="text-muted-foreground/40">&mdash;</span>}</td>
+                        <td className="px-3 py-2 text-center">{bounced > 0 ? <span className="text-destructive">{bounced}</span> : <span className="text-muted-foreground/40">&mdash;</span>}</td>
+                        <td className="px-3 py-2">
+                          <span className={`inline-block px-2 py-0.5 text-xs font-medium ${
+                            b.status === "completed" ? "bg-green-500/10 text-green-600" :
+                            b.status === "failed" ? "bg-destructive/10 text-destructive" :
+                            b.status === "processing" ? "bg-primary/10 text-primary" :
+                            "bg-muted text-muted-foreground"
+                          }`}>
+                            {b.status}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2 text-muted-foreground text-xs">
+                          {b.created_at ? new Date(b.created_at).toLocaleDateString("en-US", {
+                            month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
+                          }) : <span className="text-muted-foreground/40">&mdash;</span>}
+                        </td>
+                      </tr>
+                      {isExpanded && (
+                        <tr key={`${b.batch_id}-detail`}>
+                          <td colSpan={9} className="px-0 py-0">
+                            <div className="bg-muted/20 px-4 py-3 border-b border-border">
+                              <p className="text-xs font-medium text-muted-foreground mb-2">
+                                {expandedSends.length} recipient{expandedSends.length !== 1 ? "s" : ""}
+                              </p>
+                              <div className="max-h-64 overflow-y-auto">
+                                <table className="w-full text-xs">
+                                  <thead>
+                                    <tr className="text-muted-foreground">
+                                      <th className="text-left py-1 pr-3 font-medium">Email</th>
+                                      <th className="text-left py-1 pr-3 font-medium">Name</th>
+                                      <th className="text-left py-1 pr-3 font-medium">Status</th>
+                                      <th className="text-left py-1 pr-3 font-medium">Opened</th>
+                                      <th className="text-left py-1 font-medium">Clicked</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody>
+                                    {expandedSends.map((s) => (
+                                      <tr key={s.email} className="border-t border-border/30">
+                                        <td className="py-1.5 pr-3 font-mono">{s.email}</td>
+                                        <td className="py-1.5 pr-3">{s.name || <span className="text-muted-foreground/40">&mdash;</span>}</td>
+                                        <td className="py-1.5 pr-3">
+                                          <span className={`inline-block px-1.5 py-0.5 text-[10px] font-medium ${
+                                            s.status === "opened" || s.status === "clicked" ? "bg-green-500/10 text-green-600" :
+                                            s.status === "sent" || s.status === "delivered" ? "bg-blue-500/10 text-blue-600" :
+                                            s.status === "bounced" ? "bg-destructive/10 text-destructive" :
+                                            s.status === "failed" ? "bg-destructive/10 text-destructive" :
+                                            "bg-muted text-muted-foreground"
+                                          }`}>
+                                            {s.status}
+                                          </span>
+                                        </td>
+                                        <td className="py-1.5 pr-3">{s.opened_at ? new Date(s.opened_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : <span className="text-muted-foreground/40">&mdash;</span>}</td>
+                                        <td className="py-1.5">{s.clicked_at ? new Date(s.clicked_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : <span className="text-muted-foreground/40">&mdash;</span>}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="text-sm text-muted-foreground">No sends yet.</p>
+        )}
+      </div>
 
       {/* ── Confirm dialog ── */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
