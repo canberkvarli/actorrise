@@ -12,12 +12,14 @@ import { isMeaningfulMonologueTitle } from "@/lib/utils";
 import { MatchIndicatorTag, accentTeal } from "@/components/search/MatchIndicatorTag";
 import { getEmotionBadgeClassName } from "@/lib/emotionColors";
 import type { QueryHighlights } from "@/lib/queryMatchHighlight";
+import type { MatchReason } from "@/lib/matchReasons";
+import { MatchReasonTooltip } from "@/components/search/MatchReasonTooltip";
 
-function getRankLabel(rank: number): string {
+function getRankLabel(rank: number): string | null {
   if (rank <= 1) return "Best pick";
   if (rank <= 4) return "Great match";
   if (rank <= 9) return "Good match";
-  return "Worth a look";
+  return null;
 }
 
 export interface MonologueResultCardProps {
@@ -32,8 +34,8 @@ export interface MonologueResultCardProps {
   onEdit?: (id: number) => void;
   /** Highlights extracted from the search query — matching badges get a visual ring. */
   highlightFields?: QueryHighlights;
-  /** Profile match reasons from computeProfileMatch — first one shown as subtle annotation. */
-  profileReasons?: string[];
+  /** Match reasons for the "why you got this" tooltip. */
+  matchReasons?: MatchReason[];
 }
 
 export function MonologueResultCard({
@@ -46,9 +48,8 @@ export function MonologueResultCard({
   isModerator = false,
   onEdit,
   highlightFields,
-  profileReasons,
+  matchReasons,
 }: MonologueResultCardProps) {
-  const hl = (match: boolean) => match ? "ring-2 ring-primary/40" : "";
   const isBestMatch = variant === "bestMatch";
   const [justBookmarked, setJustBookmarked] = useState(false);
 
@@ -86,7 +87,7 @@ export function MonologueResultCard({
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-bold text-2xl mb-1 group-hover:text-foreground transition-colors">
+                  <h3 className="font-bold text-lg sm:text-xl lg:text-2xl mb-1 group-hover:text-foreground transition-colors line-clamp-2 break-words">
                     {mono.character_name}
                   </h3>
                   {mono.is_favorited && (
@@ -137,56 +138,21 @@ export function MonologueResultCard({
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              {mono.category && (
-                <Badge
-                  variant="secondary"
-                  className={`font-normal capitalize ${hl(highlightFields?.category === mono.category.toLowerCase())} ${
-                    mono.category.toLowerCase() === "classical"
-                      ? "bg-amber-500/10 text-amber-700 border-amber-300/40 dark:text-amber-400 dark:border-amber-500/30"
-                      : mono.category.toLowerCase() === "contemporary"
-                      ? "bg-teal-500/10 text-teal-700 border-teal-300/40 dark:text-teal-400 dark:border-teal-500/30"
-                      : ""
-                  }`}
-                >
-                  {mono.category}
-                </Badge>
-              )}
-              {mono.character_gender && mono.character_gender.toLowerCase() !== "any" && (
-                <Badge variant="outline" className={`font-normal capitalize ${hl(highlightFields?.gender === mono.character_gender.toLowerCase())}`}>
-                  {mono.character_gender}
-                </Badge>
-              )}
-              {mono.character_age_range && mono.character_age_range.toLowerCase() !== "any" && (
-                <Badge variant="outline" className={`font-normal ${hl(highlightFields?.age_range === mono.character_age_range.toLowerCase())}`}>
-                  {mono.character_age_range}
-                </Badge>
-              )}
+            {/* Compact metadata line + emotion badge */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground capitalize">
+                {[
+                  mono.character_gender && mono.character_gender.toLowerCase() !== "any" ? mono.character_gender : null,
+                  mono.character_age_range && mono.character_age_range.toLowerCase() !== "any" ? mono.character_age_range : null,
+                  mono.category,
+                ].filter(Boolean).join(", ")}
+              </span>
               {mono.primary_emotion && (
-                <Badge variant="secondary" className={`font-normal capitalize ${hl(highlightFields?.emotion === mono.primary_emotion.toLowerCase())} ${getEmotionBadgeClassName(mono.primary_emotion)}`}>
+                <Badge variant="secondary" className={`font-normal capitalize text-xs border-transparent ${getEmotionBadgeClassName(mono.primary_emotion)}`}>
                   {mono.primary_emotion}
                 </Badge>
               )}
             </div>
-
-            {mono.scene_description && (
-              <div className="bg-secondary/10 px-3 py-2 rounded-md border-l-2 border-secondary/40">
-                <p className="text-xs italic text-muted-foreground line-clamp-2">{mono.scene_description}</p>
-              </div>
-            )}
-
-            {mono.themes && mono.themes.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {mono.themes.slice(0, 3).map((theme) => (
-                  <span
-                    key={theme}
-                    className={`text-xs px-2 py-0.5 bg-secondary/10 text-secondary-foreground/90 rounded-md font-medium capitalize ${hl(!!highlightFields?.themes?.includes(theme.toLowerCase()))}`}
-                  >
-                    {theme}
-                  </span>
-                ))}
-              </div>
-            )}
 
             <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
               &ldquo;{mono.text.substring(0, 120)}...&rdquo;
@@ -204,8 +170,8 @@ export function MonologueResultCard({
               {mono.favorite_count}
             </span>
           </div>
-          {profileReasons && profileReasons.length > 0 && (
-            <p className="mt-1.5 text-xs text-muted-foreground/60 italic">{profileReasons[0]}</p>
+          {matchReasons && matchReasons.length > 0 && (
+            <MatchReasonTooltip reasons={matchReasons} />
           )}
         </CardContent>
       </Card>

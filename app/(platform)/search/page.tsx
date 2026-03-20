@@ -74,11 +74,13 @@ import { FilmTvInfoModal } from "@/components/search/FilmTvInfoModal";
 import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
 import { EditMonologueModal } from "@/components/admin/EditMonologueModal";
 import type { EditMonologueBody } from "@/components/admin/EditMonologueModal";
-import { Slider } from "@/components/ui/slider";
+import { FreshnessToggle } from "@/components/search/FreshnessToggle";
 import { ContactModal } from "@/components/contact/ContactModal";
 import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackPrompt";
 import { extractQueryHighlights } from "@/lib/queryMatchHighlight";
 import { ActiveFilterChips } from "@/components/search/ActiveFilterChips";
+import { computeMatchReasons } from "@/lib/matchReasons";
+import { QuickFilterChips } from "@/components/search/QuickFilterChips";
 import type { FilmTvReference } from "@/types/filmTv";
 import { getFilmTvScriptUrl } from "@/lib/utils";
 import { ScriptSourcePicker } from "@/components/search/ScriptSourcePicker";
@@ -1163,8 +1165,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
   const hasFreshnessFilter = maxOverdoneScore < 1;
   const getFilterDisplay = (key: string, value: string) => `${key.replace(/_/g, " ")}: ${key === "max_duration" ? getDurationLabel(value) : value}`;
-  const getFreshnessLabel = (score: number) =>
-    score <= 0 ? "Freshest only" : score <= 0.3 ? "Fresh" : score <= 0.5 ? "Some overdone OK" : score <= 0.7 ? "More OK" : "Show all";
 
   // Sort by confidence score (desc). Best match = only actual quote matches (exact_quote/fuzzy_quote); rest are related.
   const HIGH_SCORE_CAP_FOR_CONFIDENCE = 10; // If more than this many have score >= 0.80, treat as broad query and hide confidence
@@ -1529,6 +1529,16 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             )}
           </div>
 
+          {/* Quick filter chips — one-tap popular filters (Plays only) */}
+          {searchMode === "plays" && (
+            <div className="mt-3">
+              <QuickFilterChips
+                filters={filters}
+                onToggle={(key, value) => setFilters({ ...filters, [key]: value })}
+              />
+            </div>
+          )}
+
           {/* Mobile: filters in sheet (SearchFiltersSheet). Desktop: expandable inline filters (Plays only) */}
           {searchMode === "plays" && (
             <SearchFiltersSheet
@@ -1663,113 +1673,140 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               exit={{ opacity: 0, height: 0 }}
               className="hidden md:block mt-4 p-4 bg-card border border-border rounded-lg"
             >
-              {/* Row 1: Character filters */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-x-3 gap-y-2.5">
-                {[
-                  { key: "gender", label: "Gender", options: ["male", "female", "any"] },
-                  { key: "age_range", label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
-                  { key: "emotion", label: "Emotion", options: ["joy", "sadness", "anger", "fear", "melancholy", "hope"] },
-                  { key: "tone", label: "Tone", options: ["dramatic", "comedic", "dark", "romantic", "philosophical", "contemplative"] },
-                  { key: "theme", label: "Theme", options: ["love", "death", "betrayal", "identity", "power", "revenge"] },
-                  { key: "category", label: "Category", options: ["classical", "contemporary"] },
-                  { key: "difficulty", label: "Difficulty", options: ["beginner", "intermediate", "advanced"] },
-                  { key: "max_duration", label: "Max Duration", options: [
-                    { value: "60", label: "1 min" },
-                    { value: "90", label: "1.5 min" },
-                    { value: "120", label: "2 min" },
-                    { value: "180", label: "3 min" },
-                    { value: "300", label: "5 min" },
-                  ] },
-                ].map(({ key, label, options }) => (
-                  <div key={key} className="space-y-1">
-                    <Label className="text-[11px] text-muted-foreground">{label}</Label>
-                    <Select
-                      value={filters[key as keyof typeof filters] || "__any__"}
-                      onValueChange={(v) => setFilters({ ...filters, [key]: v === "__any__" ? "" : v })}
-                    >
-                      <SelectTrigger className="w-full h-9 px-2.5 text-sm">
-                        <SelectValue placeholder="Any" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__any__">Any</SelectItem>
-                        {(options as Array<string | { value: string; label: string }>).map((opt) =>
-                          typeof opt === "string" ? (
+              {/* 3-section grouped layout: Character | Mood & Style | Practical */}
+              <div className="grid grid-cols-3 gap-6">
+                {/* Character */}
+                <div className="space-y-2.5">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground/80">Character</h4>
+                  {[
+                    { key: "gender", label: "Gender", options: ["male", "female", "any"] },
+                    { key: "age_range", label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
+                  ].map(({ key, label, options }) => (
+                    <div key={key} className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">{label}</Label>
+                      <Select
+                        value={filters[key as keyof typeof filters] || "__any__"}
+                        onValueChange={(v) => setFilters({ ...filters, [key]: v === "__any__" ? "" : v })}
+                      >
+                        <SelectTrigger className="w-full h-9 px-2.5 text-sm">
+                          <SelectValue placeholder="Any" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__any__">Any</SelectItem>
+                          {options.map((opt) => (
                             <SelectItem key={opt} value={opt} className="capitalize">{opt}</SelectItem>
-                          ) : (
-                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                          )
-                        )}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ))}
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">Author</Label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Shakespeare"
-                    value={filters.author}
-                    onChange={(e) => setFilters({ ...filters, author: e.target.value })}
-                    className="w-full h-9 px-2.5 text-sm rounded-md border border-input bg-background"
-                  />
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
                 </div>
-                <div className="space-y-1 col-span-2 sm:col-span-3 lg:col-span-5">
-                  <div className="flex items-center gap-2">
-                    <Label className="text-[11px] text-muted-foreground shrink-0">Freshness</Label>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <button
-                          type="button"
-                          className="inline-flex shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm"
-                          aria-label="Freshness filter info"
-                        >
-                          <IconInfoCircle className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-[260px]">
-                        Filter by how &quot;overdone&quot; a piece is (often used in auditions). Lower = only fresher, less common pieces; higher = include well-known ones.
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Slider
-                      min={0}
-                      max={1}
-                      step={0.1}
-                      value={maxOverdoneScore}
-                      onValueChange={setMaxOverdoneScore}
-                      className="flex-1 min-w-0"
+
+                {/* Mood & Style */}
+                <div className="space-y-2.5">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground/80">Mood & Style</h4>
+                  {[
+                    { key: "emotion", label: "Emotion", options: ["joy", "sadness", "anger", "fear", "melancholy", "hope"] },
+                    { key: "tone", label: "Tone", options: ["dramatic", "comedic", "dark", "romantic", "philosophical", "contemplative"] },
+                    { key: "theme", label: "Theme", options: ["love", "death", "betrayal", "identity", "power", "revenge"] },
+                  ].map(({ key, label, options }) => (
+                    <div key={key} className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">{label}</Label>
+                      <Select
+                        value={filters[key as keyof typeof filters] || "__any__"}
+                        onValueChange={(v) => setFilters({ ...filters, [key]: v === "__any__" ? "" : v })}
+                      >
+                        <SelectTrigger className="w-full h-9 px-2.5 text-sm">
+                          <SelectValue placeholder="Any" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__any__">Any</SelectItem>
+                          {options.map((opt) => (
+                            <SelectItem key={opt} value={opt} className="capitalize">{opt}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Practical */}
+                <div className="space-y-2.5">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground/80">Practical</h4>
+                  {[
+                    { key: "category", label: "Category", options: ["classical", "contemporary"] },
+                    { key: "difficulty", label: "Difficulty", options: ["beginner", "intermediate", "advanced"] },
+                    { key: "max_duration", label: "Max Duration", options: [
+                      { value: "60", label: "1 min" },
+                      { value: "90", label: "1.5 min" },
+                      { value: "120", label: "2 min" },
+                      { value: "180", label: "3 min" },
+                      { value: "300", label: "5 min" },
+                    ] },
+                  ].map(({ key, label, options }) => (
+                    <div key={key} className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">{label}</Label>
+                      <Select
+                        value={filters[key as keyof typeof filters] || "__any__"}
+                        onValueChange={(v) => setFilters({ ...filters, [key]: v === "__any__" ? "" : v })}
+                      >
+                        <SelectTrigger className="w-full h-9 px-2.5 text-sm">
+                          <SelectValue placeholder="Any" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__any__">Any</SelectItem>
+                          {(options as Array<string | { value: string; label: string }>).map((opt) =>
+                            typeof opt === "string" ? (
+                              <SelectItem key={opt} value={opt} className="capitalize">{opt}</SelectItem>
+                            ) : (
+                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                            )
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Author</Label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Shakespeare"
+                      value={filters.author}
+                      onChange={(e) => setFilters({ ...filters, author: e.target.value })}
+                      className="w-full h-9 px-2.5 text-sm rounded-md border border-input bg-background"
                     />
-                    <span className="text-xs text-muted-foreground shrink-0 w-[8.5rem] text-right tabular-nums">
-                      {getFreshnessLabel(maxOverdoneScore)}
-                    </span>
                   </div>
                 </div>
               </div>
 
+              {/* Originality toggle — full width below the 3 columns */}
+              <div className="mt-4 pt-4 border-t border-border/60">
+                <FreshnessToggle value={maxOverdoneScore} onChange={setMaxOverdoneScore} />
+              </div>
+
               {(activeFilters.length > 0 || hasFreshnessFilter) && (
-                <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t">
+                <div className="flex flex-wrap items-center gap-1.5 mt-4 pt-4 border-t">
                   {activeFilters.map(([key, value]) => (
-                    <Badge key={key} variant="secondary" className="gap-1 capitalize">
-                      {getFilterDisplay(key, value)}
+                    <span key={key} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted/80 text-foreground border border-border/40 capitalize">
+                      <span className="text-muted-foreground">{key.replace(/_/g, " ")}:</span> {getFilterDisplay(key, value).split(": ").pop()}
                       <button
                         onClick={() => setFilters({ ...filters, [key]: "" })}
-                        className="ml-1 hover:text-destructive"
+                        className="ml-0.5 hover:text-destructive"
                       >
                         <IconX className="h-3 w-3" />
                       </button>
-                    </Badge>
+                    </span>
                   ))}
                   {hasFreshnessFilter && (
-                    <Badge variant="secondary" className="gap-1">
-                      Freshness: {getFreshnessLabel(maxOverdoneScore)}
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted/80 text-foreground border border-border/40">
+                      <span className="text-muted-foreground">originality:</span> {maxOverdoneScore <= 0.3 ? "Fresh picks" : "Popular too"}
                       <button
                         onClick={() => setMaxOverdoneScore(1)}
-                        className="ml-1 hover:text-destructive"
+                        className="ml-0.5 hover:text-destructive"
                       >
                         <IconX className="h-3 w-3" />
                       </button>
-                    </Badge>
+                    </span>
                   )}
                   <button
                     onClick={() => { setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" }); setMaxOverdoneScore(1); }}
@@ -2156,7 +2193,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       )}
                     </div>
                     {isPersonalized && !showBookmarkedOnly && (
-                      <span className="text-xs text-muted-foreground">Matched to your profile</span>
+                      <span className="text-xs text-primary dark:text-orange-400">Matched to your profile</span>
                     )}
                   </div>
                   <Button
@@ -2223,7 +2260,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           isModerator={!!user?.is_moderator}
                           onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
                           highlightFields={queryHighlights}
-                          profileReasons={(profileMatchMap.get(mono.id)?.score ?? 0) >= 2 ? profileMatchMap.get(mono.id)?.reasons : undefined}
+                          matchReasons={computeMatchReasons(mono, queryHighlights, filters, profileMatchMap.get(mono.id))}
                         />
                       ))}
                       {relatedOrBookmarked.map((mono, idx) => (
@@ -2238,7 +2275,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           isModerator={!!user?.is_moderator}
                           onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
                           highlightFields={queryHighlights}
-                          profileReasons={(profileMatchMap.get(mono.id)?.score ?? 0) >= 2 ? profileMatchMap.get(mono.id)?.reasons : undefined}
+                          matchReasons={computeMatchReasons(mono, queryHighlights, filters, profileMatchMap.get(mono.id))}
                         />
                       ))}
                     </div>

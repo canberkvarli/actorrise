@@ -1,33 +1,29 @@
 /**
  * Emotion → color scale for badges and UI.
- * Negative/angry → red; frustration/drama → purple; positive/joy → blue–green.
+ * 4 semantic groups: warm (anger/fear), cool (sadness/melancholy),
+ * positive (joy/hope/love), neutral (everything else).
+ * Subtler palette with border-transparent for a calmer look.
  */
+const WARM = "bg-red-500/8 text-red-700 border-transparent dark:text-red-400";
+const COOL = "bg-violet-500/8 text-violet-700 border-transparent dark:text-violet-400";
+const POSITIVE = "bg-emerald-500/8 text-emerald-700 border-transparent dark:text-emerald-400";
+const NEUTRAL = "bg-muted/60 text-muted-foreground border-transparent";
+
 const EMOTION_COLOR_MAP: Record<string, string> = {
-  // Angry / intense (red)
-  anger: "bg-red-500/10 text-red-700 border-red-300/40 dark:text-red-400 dark:border-red-500/30",
-  rage: "bg-red-500/10 text-red-700 border-red-300/40 dark:text-red-400 dark:border-red-500/30",
-  fury: "bg-red-500/10 text-red-700 border-red-300/40 dark:text-red-400 dark:border-red-500/30",
-  frustration: "bg-red-500/10 text-red-700 border-red-300/40 dark:text-red-400 dark:border-red-500/30",
-  fear: "bg-red-600/10 text-red-800 border-red-400/40 dark:text-red-500 dark:border-red-600/30",
-  anxiety: "bg-red-600/10 text-red-800 border-red-400/40 dark:text-red-500 dark:border-red-600/30",
-  // Sad / heavy (purple–slate)
-  sadness: "bg-violet-500/10 text-violet-700 border-violet-300/40 dark:text-violet-400 dark:border-violet-500/30",
-  grief: "bg-violet-500/10 text-violet-700 border-violet-300/40 dark:text-violet-400 dark:border-violet-500/30",
-  despair: "bg-violet-600/10 text-violet-800 border-violet-400/40 dark:text-violet-500 dark:border-violet-600/30",
-  melancholy: "bg-violet-500/10 text-violet-700 border-violet-300/40 dark:text-violet-400 dark:border-violet-500/30",
-  drama: "bg-purple-500/10 text-purple-700 border-purple-300/40 dark:text-purple-400 dark:border-purple-500/30",
-  tension: "bg-purple-500/10 text-purple-700 border-purple-300/40 dark:text-purple-400 dark:border-purple-500/30",
-  // Positive / hopeful (green–teal–blue)
-  joy: "bg-emerald-500/10 text-emerald-700 border-emerald-300/40 dark:text-emerald-400 dark:border-emerald-500/30",
-  happiness: "bg-emerald-500/10 text-emerald-700 border-emerald-300/40 dark:text-emerald-400 dark:border-emerald-500/30",
-  hope: "bg-sky-500/10 text-sky-700 border-sky-300/40 dark:text-sky-400 dark:border-sky-500/30",
-  excitement: "bg-teal-500/10 text-teal-700 border-teal-300/40 dark:text-teal-400 dark:border-teal-500/30",
-  love: "bg-rose-500/10 text-rose-700 border-rose-300/40 dark:text-rose-400 dark:border-rose-500/30",
+  // Warm: anger, fear, intensity
+  anger: WARM, rage: WARM, fury: WARM, frustration: WARM,
+  fear: WARM, anxiety: WARM,
+  // Cool: sadness, melancholy, heaviness
+  sadness: COOL, grief: COOL, despair: COOL, melancholy: COOL,
+  drama: COOL, tension: COOL,
+  // Positive: joy, hope, excitement, love
+  joy: POSITIVE, happiness: POSITIVE, hope: POSITIVE,
+  excitement: POSITIVE, love: POSITIVE,
 };
 
 export function getEmotionBadgeClassName(emotion: string): string {
   const key = emotion.toLowerCase().trim();
-  return EMOTION_COLOR_MAP[key] ?? "bg-primary/10 text-primary border-primary/20";
+  return EMOTION_COLOR_MAP[key] ?? NEUTRAL;
 }
 
 const EMOTION_BAR_COLOR: Record<string, string> = {

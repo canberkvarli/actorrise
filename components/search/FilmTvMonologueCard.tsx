@@ -39,13 +39,13 @@ export function FilmTvMonologueCard({
         className="hover:shadow-xl transition-all cursor-pointer h-full flex flex-col group rounded-lg hover:border-secondary/50"
         onClick={onSelect}
       >
-        <CardContent className="pt-6 flex-1 flex flex-col">
+        <CardContent className="pt-4 sm:pt-6 px-4 sm:px-6 flex-1 flex flex-col">
           <div className="space-y-4 flex-1">
             {/* Top: character + source (same hierarchy as plays) (character = title, play_title = source) */}
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-bold text-2xl mb-1 group-hover:text-foreground transition-colors">
+                  <h3 className="font-bold text-lg sm:text-xl lg:text-2xl mb-1 group-hover:text-foreground transition-colors line-clamp-2 break-words">
                     {mono.character_name}
                   </h3>
                   <Badge

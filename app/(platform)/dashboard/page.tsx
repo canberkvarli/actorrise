@@ -353,8 +353,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   const sectionStagger = 0.06;
 
   return (
-    <div className="container mx-auto px-4 lg:px-8 py-6 md:py-8 max-w-7xl">
-      <div className="space-y-16">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-8 max-w-7xl">
+      <div className="space-y-10 md:space-y-16">
           {/* ========== HERO: greeting, actions, profile progress ========== */}
           <motion.section
             initial={{ opacity: 0, y: 6 }}
@@ -464,9 +464,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </div>
 
             {(!mounted || isLoadingMain) ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[280px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 min-h-[280px]">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="p-6 bg-card border border-border rounded-xl min-h-[260px]">
+                  <div key={i} className="p-5 sm:p-6 bg-card border border-border rounded-xl min-h-[220px] sm:min-h-[260px]">
                     <Skeleton className="h-6 w-3/4 mb-3 rounded-md" />
                     <Skeleton className="h-4 w-1/2 mb-2 rounded-md" />
                     <Skeleton className="h-4 w-1/3 mb-4 rounded-md" />
@@ -476,7 +476,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </div>
             ) : mainMonologues.length > 0 ? (
               <AnimatePresence mode="popLayout">
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[280px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 min-h-[280px]">
                 {mainMonologues.slice(0, 4).map((mono, idx) => (
                   <motion.div
                     key={mono.id}
@@ -485,12 +485,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.35, delay: idx * 0.05, ease: [0.25, 0.1, 0.25, 1] }}
-                    className="group p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col min-h-[260px]"
+                    className="group p-4 sm:p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col min-h-[200px] sm:min-h-[260px]"
                     onClick={() => openMonologue(mono)}
                   >
                       <div className="flex items-start justify-between gap-2 mb-4">
                         <div className="flex-1 min-w-0">
-                          <h3 className="font-bold text-lg sm:text-xl text-foreground group-hover:text-primary transition-colors break-words">
+                          <h3 className="font-bold text-base sm:text-lg lg:text-xl text-foreground group-hover:text-primary transition-colors break-words line-clamp-2">
                             {mono.character_name}
                           </h3>
                           <p className="text-sm text-muted-foreground line-clamp-1 mt-1">
@@ -600,9 +600,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             )}
 
             {(!mounted || isLoadingFilmTv) ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[240px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 min-h-[240px]">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="p-6 bg-card border border-border rounded-xl min-h-[200px]">
+                  <div key={i} className="p-5 sm:p-6 bg-card border border-border rounded-xl min-h-[200px]">
                     <Skeleton className="h-6 w-3/4 mb-3 rounded-md" />
                     <Skeleton className="h-4 w-1/2 mb-2 rounded-md" />
                     <Skeleton className="h-4 w-1/3 mb-4 rounded-md" />
@@ -612,7 +612,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </div>
             ) : discoverFilmTv.length > 0 ? (
               <AnimatePresence mode="popLayout">
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 min-h-[240px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 min-h-[240px]">
                 {discoverFilmTv.slice(0, 4).map((ref, idx) => (
                   <motion.div
                     key={ref.id}
@@ -661,11 +661,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: sectionDuration, delay: sectionStagger * 4, ease: sectionEase }}
           >
-            <div className="w-full grid grid-cols-1 md:grid-cols-[repeat(3,minmax(0,1fr))] gap-8 items-stretch">
+            <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 items-stretch">
               {/* Your Monologues */}
               <div className="min-w-0 flex flex-col w-full">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                  <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
                     <IconBookmark className={`h-5 w-5 shrink-0 ${accentTeal.text}`} />
                     Your Monologues
                   </h2>
@@ -684,7 +684,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {/* Your Scripts */}
               <div className="min-w-0 flex flex-col w-full">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                  <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
                     <IconFileText className="h-5 w-5 text-amber-500 shrink-0" />
                     Your Scripts
                   </h2>
@@ -703,7 +703,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {/* Recent Searches */}
               <div className="min-w-0 flex flex-col w-full">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+                  <h2 className="text-xl sm:text-2xl font-bold text-foreground flex items-center gap-2">
                     <IconHistory className="h-5 w-5 text-muted-foreground shrink-0" />
                     Recent Searches
                   </h2>

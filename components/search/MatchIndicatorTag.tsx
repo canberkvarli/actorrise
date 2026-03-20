@@ -16,17 +16,16 @@ export const accentTeal = {
 } as const;
 
 function getTagStyle(label: string): string {
-  const base = "inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold border shadow-sm";
-  if (label === "Best pick")
-    return `${base} bg-primary/15 text-primary border-primary/40 dark:text-orange-400 dark:border-primary/35`;
-  if (label === "Great match")
-    return `${base} bg-amber-500/15 text-amber-700 border-amber-400/40 dark:text-amber-400 dark:border-amber-500/30`;
-  if (label === "Good match")
-    return `${base} bg-teal-500/15 text-teal-700 border-teal-500/30 dark:text-teal-400 dark:border-teal-500/25`;
-  if (label === "Worth a look")
-    return `${base} bg-muted/60 text-muted-foreground border-border/50`;
+  const base = "inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold border shadow-sm rounded-md";
+  // Strong: top picks and special match types (exact quote, fuzzy quote, title/character/play match)
+  const strong = `${base} bg-primary/15 text-primary border-primary/40 dark:text-orange-400 dark:border-primary/35`;
+  // Muted: general ranking tiers
+  const muted = `${base} bg-muted/60 text-muted-foreground border-border/50`;
+
+  if (label === "Best pick") return strong;
+  if (label === "Great match" || label === "Good match") return muted;
   // Special match types (Exact quote, This is the one, Character match, etc.)
-  return `${base} bg-violet-500/15 text-violet-700 border-violet-400/35 dark:text-violet-400 dark:border-violet-500/30`;
+  return strong;
 }
 
 export const matchIndicatorTagClass = getTagStyle("Good match");

@@ -53,11 +53,11 @@ export function FilmTvReferenceCard({
       >
         {indicatorAbove && <MatchIndicatorTag label={indicatorAbove} />}
         <div
-          className="w-full group p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col min-h-[320px]"
+          className="w-full group p-4 sm:p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col min-h-[280px] sm:min-h-[320px]"
           onClick={onSelect}
         >
-          <div className="flex items-start gap-3 mb-4">
-            <div className="shrink-0 w-16 h-24 rounded overflow-hidden bg-muted flex items-center justify-center">
+          <div className="flex items-start gap-2 sm:gap-3 mb-4">
+            <div className="shrink-0 w-12 h-18 sm:w-16 sm:h-24 rounded overflow-hidden bg-muted flex items-center justify-center">
               {ref_item.poster_url && !posterError ? (
                 <Image
                   src={ref_item.poster_url}
@@ -74,7 +74,7 @@ export function FilmTvReferenceCard({
             </div>
             <div className="flex-1 min-w-0 flex flex-col gap-0.5">
               <div className="flex items-start justify-between gap-2">
-                <h3 className="font-bold text-base sm:text-lg text-foreground group-hover:text-primary transition-colors break-words min-w-0 flex-1">
+                <h3 className="font-bold text-base sm:text-lg text-foreground group-hover:text-primary transition-colors break-words min-w-0 flex-1 line-clamp-2">
                   {ref_item.title}
                 </h3>
                 <div className="shrink-0 flex items-center gap-1.5 min-w-[4.5rem] justify-end">
@@ -136,8 +136,8 @@ export function FilmTvReferenceCard({
       >
         <CardContent className="pt-6 flex-1 flex flex-col">
           <div className="space-y-3 flex-1">
-            <div className="flex items-start gap-3 min-w-0">
-              <div className="shrink-0 rounded overflow-hidden bg-muted flex items-center justify-center w-20 h-28">
+            <div className="flex items-start gap-2 sm:gap-3 min-w-0">
+              <div className="shrink-0 rounded overflow-hidden bg-muted flex items-center justify-center w-14 h-20 sm:w-20 sm:h-28">
                 {ref_item.poster_url && !posterError ? (
                   <Image
                     src={ref_item.poster_url}
@@ -154,7 +154,7 @@ export function FilmTvReferenceCard({
               </div>
               <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                 <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-bold text-lg sm:text-xl leading-tight group-hover:text-primary transition-colors break-words min-w-0 flex-1">
+                  <h3 className="font-bold text-base sm:text-lg lg:text-xl leading-tight group-hover:text-primary transition-colors break-words min-w-0 flex-1 line-clamp-2">
                     {ref_item.title}
                   </h3>
                   <div className="shrink-0 flex items-center gap-1.5 min-w-[4.5rem] justify-end">
