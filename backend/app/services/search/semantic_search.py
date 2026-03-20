@@ -676,12 +676,12 @@ class SemanticSearch:
 
             if hard_filters.get('author'):
                 base_query = base_query.filter(
-                    Play.author == hard_filters['author']
+                    Play.author.ilike(f"%{hard_filters['author']}%")
                 )
 
             if hard_filters.get('exclude_author'):
                 base_query = base_query.filter(
-                    Play.author != hard_filters['exclude_author']
+                    ~Play.author.ilike(f"%{hard_filters['exclude_author']}%")
                 )
 
             if hard_filters.get('character_name'):
@@ -1035,13 +1035,13 @@ class SemanticSearch:
 
             if filters.get('author'):
                 base_query = base_query.filter(
-                    Play.author == filters['author']
+                    Play.author.ilike(f"%{filters['author']}%")
                 )
 
             # Exclude author filter (e.g., "not Shakespeare")
             if filters.get('exclude_author'):
                 base_query = base_query.filter(
-                    Play.author != filters['exclude_author']
+                    ~Play.author.ilike(f"%{filters['exclude_author']}%")
                 )
 
             # Duration filter
@@ -1200,13 +1200,63 @@ class SemanticSearch:
 
         query = self.db.query(Monologue).join(Play)
 
-        # Apply filters
+        # Apply filters — same set as semantic search so UI toggles work in browse mode
         if filters:
+            if filters.get('gender'):
+                query = query.filter(
+                    or_(
+                        Monologue.character_gender == filters['gender'],
+                        Monologue.character_gender == 'any'
+                    )
+                )
+
+            if filters.get('age_range'):
+                expanded_ages = _expand_age_range(filters['age_range'])
+                query = query.filter(
+                    Monologue.character_age_range.in_(expanded_ages)
+                )
+
+            if filters.get('emotion'):
+                query = query.filter(Monologue.primary_emotion == filters['emotion'])
+
+            if filters.get('theme'):
+                theme = filters['theme']
+                query = query.filter(
+                    text("monologues.themes @> ARRAY[:theme_val]::character varying[]").bindparams(theme_val=theme)
+                )
+
             if filters.get('category'):
-                query = query.filter(Play.category == filters['category'])
+                category = filters['category']
+                if isinstance(category, list):
+                    category_conditions = [Play.category.ilike(f'%{cat}%') for cat in category]
+                    query = query.filter(or_(*category_conditions))
+                else:
+                    query = query.filter(Play.category.ilike(f'%{category}%'))
 
             if filters.get('difficulty'):
                 query = query.filter(Monologue.difficulty_level == filters['difficulty'])
+
+            if filters.get('author'):
+                query = query.filter(Play.author.ilike(f"%{filters['author']}%"))
+
+            if filters.get('tone'):
+                query = query.filter(Monologue.tone == filters['tone'])
+
+            if filters.get('max_duration'):
+                query = query.filter(
+                    Monologue.estimated_duration_seconds <= filters['max_duration']
+                )
+
+            if filters.get('min_duration'):
+                query = query.filter(
+                    Monologue.estimated_duration_seconds >= filters['min_duration']
+                )
+
+            if filters.get('act'):
+                query = query.filter(Monologue.act == filters['act'])
+
+            if filters.get('scene'):
+                query = query.filter(Monologue.scene == filters['scene'])
 
             if filters.get('max_overdone_score') is not None:
                 threshold = float(filters['max_overdone_score'])
