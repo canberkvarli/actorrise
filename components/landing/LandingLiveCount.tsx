@@ -193,7 +193,7 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
   if (variant === "micro") {
     return (
       <span ref={containerRef} className="tabular-nums text-muted-foreground">
-        {formatted}+ monologues found
+        {formatted} monologues found
       </span>
     );
   }
@@ -230,7 +230,7 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
               }}
               className={`inline-block origin-center ${isPulsing ? "text-primary" : isLoading ? "text-muted-foreground" : "text-foreground"}`}
             >
-              {formatted}+
+              {formatted}
             </motion.span>
           </p>
           <p className={isInline ? "mt-1 text-muted-foreground text-sm" : "mt-1.5 text-muted-foreground text-base"}>
@@ -250,10 +250,10 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
             Library
           </p>
           <p className={isInline ? "text-xl sm:text-2xl font-semibold tabular-nums text-foreground" : "text-2xl sm:text-3xl font-semibold tabular-nums text-foreground"}>
-            <span className={libraryStats ? "" : "text-muted-foreground"}>{libraryToShow.monologues.toLocaleString("en-US")}+ monologues</span>
+            <span className={libraryStats ? "" : "text-muted-foreground"}>{libraryToShow.monologues.toLocaleString("en-US")} monologues</span>
           </p>
           <p className={isInline ? "mt-0.5 text-muted-foreground text-sm" : "mt-1 text-muted-foreground text-sm"}>
-            <span className={libraryStats ? "" : "text-muted-foreground"}>{libraryToShow.filmTv.toLocaleString("en-US")}+ film & TV</span>
+            <span className={libraryStats ? "" : "text-muted-foreground"}>{libraryToShow.filmTv.toLocaleString("en-US")} film & TV</span>
           </p>
         </div>
 

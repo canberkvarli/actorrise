@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSubscription } from '@/hooks/useSubscription';
-import { useTapes, useDeleteTape, useShareTape } from '@/hooks/useTapes';
+import { useTapes, useDeleteTape, useShareTape, useStorageUsage } from '@/hooks/useTapes';
 import type { Tape } from '@/hooks/useTapes';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +45,14 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes === 0) return '0 MB';
+  const gb = bytes / (1024 * 1024 * 1024);
+  if (gb >= 1) return `${gb.toFixed(1)} GB`;
+  const mb = bytes / (1024 * 1024);
+  return `${mb.toFixed(0)} MB`;
+}
+
 export default function MyTapesPage() {
   const { subscription } = useSubscription();
   const userTier = subscription?.tier_name || 'free';
@@ -53,12 +61,19 @@ export default function MyTapesPage() {
   const canShare = userTier === 'pro';
 
   const { data: tapesData, isLoading } = useTapes();
+  const { data: storageUsage } = useStorageUsage();
   const deleteTape = useDeleteTape();
   const shareTape = useShareTape();
 
   const tapes = tapesData?.tapes || [];
   const tapeCount = tapesData?.count || 0;
   const tapeLimit = tapesData?.limit || saveLimit;
+
+  const storageUsed = storageUsage?.storage_used_bytes || 0;
+  const storageQuota = storageUsage?.storage_quota_bytes || 1;
+  const storagePercent = Math.min((storageUsed / storageQuota) * 100, 100);
+  const storageWarning = storagePercent >= 80;
+  const storageFull = storagePercent >= 100;
 
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -159,20 +174,44 @@ export default function MyTapesPage() {
           </Button>
         </motion.div>
 
-        {/* Storage Bar */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.1 }}
-          className="mb-6"
-        >
-          <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
-            <div
-              className="h-full bg-primary rounded-full transition-all duration-500"
-              style={{ width: `${Math.min((tapeCount / tapeLimit) * 100, 100)}%` }}
-            />
-          </div>
-        </motion.div>
+        {/* Storage Usage Bar */}
+        {storageUsage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="mb-6"
+          >
+            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
+              <span>{formatBytes(storageUsed)} / {formatBytes(storageQuota)} used</span>
+              <span>{tapeCount}/{tapeLimit} tapes</span>
+            </div>
+            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-500 ${
+                  storageFull ? 'bg-destructive' : storageWarning ? 'bg-yellow-500' : 'bg-primary'
+                }`}
+                style={{ width: `${storagePercent}%` }}
+              />
+            </div>
+            {storageWarning && !storageFull && (
+              <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-1.5">
+                Running low on storage. Delete old tapes or upgrade your plan.
+              </p>
+            )}
+            {storageFull && (
+              <div className="flex items-center justify-between mt-2">
+                <p className="text-xs text-destructive">Storage full. Delete tapes to free up space or upgrade.</p>
+                <Button asChild size="sm" variant="outline" className="h-6 text-xs gap-1 shrink-0 ml-3">
+                  <Link href="/pricing">
+                    Upgrade
+                    <IconArrowRight className="w-3 h-3" />
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </motion.div>
+        )}
 
         {/* Loading State */}
         {isLoading && (
