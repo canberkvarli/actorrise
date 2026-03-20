@@ -35,7 +35,7 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="flex-1">
-                <CardTitle className="text-xl mb-2">
+                <CardTitle className="text-base sm:text-lg lg:text-xl mb-2 line-clamp-2 break-words">
                 {isMeaningfulMonologueTitle(monologue.title, monologue.character_name)
                   ? monologue.title
                   : monologue.character_name}
