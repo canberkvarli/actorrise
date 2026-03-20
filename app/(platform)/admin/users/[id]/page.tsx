@@ -298,19 +298,42 @@ export default function AdminUserDetailPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 md:flex-row md:items-center md:justify-between">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-semibold tracking-tight">{summary?.label != null ? String(summary.label) : ""}</h2>
-          <p className="text-sm text-muted-foreground">{data.user.email}</p>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Badge variant="secondary" className="gap-1">
-              <IconShield className="h-3 w-3" />
-              {summary?.roleLabel != null ? String(summary.roleLabel) : ""}
-            </Badge>
-            <Badge variant="outline" className={getTierBadgeClass(summary?.subscriptionTierName ?? "free")}>
-              {summary?.subscriptionTierDisplay != null ? String(summary.subscriptionTierDisplay) : ""}
-            </Badge>
-            <Badge variant="outline">Joined {formattedCreatedAt}</Badge>
+      <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 md:flex-row md:items-start md:justify-between">
+        <div className="flex gap-4">
+          {data.profile?.headshot_url ? (
+            <img
+              src={String(data.profile.headshot_url)}
+              alt={String(summary?.label ?? "User")}
+              className="h-20 w-20 shrink-0 rounded-lg object-cover border border-border"
+            />
+          ) : (
+            <div className="h-20 w-20 shrink-0 rounded-lg bg-muted flex items-center justify-center text-2xl font-bold text-muted-foreground">
+              {(String(summary?.label ?? "?"))[0]?.toUpperCase()}
+            </div>
+          )}
+          <div className="space-y-1">
+            <h2 className="text-2xl font-semibold tracking-tight">{summary?.label != null ? String(summary.label) : ""}</h2>
+            <p className="text-sm text-muted-foreground">{data.user.email}</p>
+            {data.profile && (
+              <p className="text-sm text-muted-foreground">
+                {[
+                  data.profile.gender,
+                  data.profile.age_range,
+                  data.profile.ethnicity,
+                  data.profile.location,
+                ].filter(Boolean).join(" · ") || "No profile details"}
+              </p>
+            )}
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="gap-1">
+                <IconShield className="h-3 w-3" />
+                {summary?.roleLabel != null ? String(summary.roleLabel) : ""}
+              </Badge>
+              <Badge variant="outline" className={getTierBadgeClass(summary?.subscriptionTierName ?? "free")}>
+                {summary?.subscriptionTierDisplay != null ? String(summary.subscriptionTierDisplay) : ""}
+              </Badge>
+              <Badge variant="outline">Joined {formattedCreatedAt}</Badge>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -322,6 +345,38 @@ export default function AdminUserDetailPage() {
           </Button>
         </div>
       </div>
+
+      {/* Actor profile snapshot */}
+      {data.profile && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Actor Profile</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2 lg:grid-cols-3">
+              {([
+                ["Gender", data.profile.gender],
+                ["Age Range", data.profile.age_range],
+                ["Ethnicity", data.profile.ethnicity],
+                ["Height", data.profile.height],
+                ["Build", data.profile.build],
+                ["Type", data.profile.type],
+                ["Location", data.profile.location],
+                ["Experience", data.profile.experience_level],
+                ["Union", data.profile.union_status],
+                ["Preferred Genres", Array.isArray(data.profile.preferred_genres) ? (data.profile.preferred_genres as string[]).join(", ") : data.profile.preferred_genres],
+                ["Training", data.profile.training_background],
+                ["Profile Bias", data.profile.profile_bias_enabled ? "On" : "Off"],
+              ] as [string, unknown][]).map(([label, value]) => (
+                <div key={label} className="flex justify-between py-1 border-b border-border/40">
+                  <span className="text-muted-foreground">{label}</span>
+                  <span className="font-medium text-right">{value ? String(value) : "-"}</span>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Tabs defaultValue="overview" className="space-y-3">
         <TabsList className="w-full justify-start overflow-x-auto">
