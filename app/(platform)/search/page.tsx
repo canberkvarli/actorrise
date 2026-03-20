@@ -2156,7 +2156,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       )}
                     </div>
                     {isPersonalized && !showBookmarkedOnly && (
-                      <span className="text-xs text-primary/60">Matched to your profile</span>
+                      <span className="text-xs text-muted-foreground">Matched to your profile</span>
                     )}
                   </div>
                   <Button
