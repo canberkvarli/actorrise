@@ -7,13 +7,144 @@ import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { IconSearch, IconEdit, IconLoader2, IconTrash } from "@tabler/icons-react";
 import { EditMonologueModal, type AdminMonologueItem, type EditMonologueBody } from "@/components/admin/EditMonologueModal";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { getFilmTvScriptUrl } from "@/lib/utils";
 
 export type { AdminMonologueItem };
 
-export default function AdminMonologuesPage() {
+type Tab = "monologues" | "film-tv";
+
+// ---------- Film/TV Section ----------
+
+interface FilmTvAdminItem {
+  id: number;
+  title: string;
+  year: number | null;
+  type: string | null;
+  imdb_id: string;
+  imsdb_url: string | null;
+}
+
+function FilmTvSection() {
+  const [idInput, setIdInput] = useState("");
+  const [item, setItem] = useState<FilmTvAdminItem | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [scriptUrlValue, setScriptUrlValue] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function runLookup() {
+    const raw = idInput.trim();
+    if (!raw || !/^\d+$/.test(raw)) {
+      setError("Enter a numeric Film/TV reference ID.");
+      setItem(null);
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const res = await api.get<FilmTvAdminItem>(`/api/admin/film-tv?id=${raw}`);
+      setItem(res.data);
+      setScriptUrlValue(res.data.imsdb_url?.trim() ?? getFilmTvScriptUrl(res.data));
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : "Lookup failed.";
+      setError(String(message));
+      setItem(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSave() {
+    if (!item) return;
+    setSaving(true);
+    try {
+      const res = await api.patch<FilmTvAdminItem>(`/api/admin/film-tv/${item.id}`, {
+        imsdb_url: scriptUrlValue.trim() || null,
+      });
+      setItem(res.data);
+      setScriptUrlValue(res.data.imsdb_url?.trim() ?? getFilmTvScriptUrl(res.data));
+      toast.success("Script link updated");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Update failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Film/TV script links</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Look up a film/TV reference by ID and set or clear the IMSDb script URL override.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2 flex-wrap">
+            <Input
+              placeholder="Film/TV reference ID (e.g. 42)"
+              type="number"
+              value={idInput}
+              onChange={(e) => setIdInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && runLookup()}
+              className="max-w-xs"
+            />
+            <Button onClick={runLookup} disabled={loading}>
+              {loading ? (
+                <IconLoader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <IconSearch className="h-4 w-4" />
+              )}
+              <span className="ml-2">Look up</span>
+            </Button>
+          </div>
+          {error && <p className="text-sm text-destructive">{error}</p>}
+        </CardContent>
+      </Card>
+
+      {item && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">{item.title}</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              {item.year ?? "-"} · {item.type ?? "-"} · IMDb {item.imdb_id}
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-2">
+              <Label htmlFor="admin-film-tv-script-url">Script URL (IMSDb override)</Label>
+              <Input
+                id="admin-film-tv-script-url"
+                value={scriptUrlValue}
+                onChange={(e) => setScriptUrlValue(e.target.value)}
+                placeholder="https://imsdb.com/scripts/Godfather.html"
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty to use the auto-generated URL from the title. Set a full URL to override.
+              </p>
+            </div>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? <IconLoader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Save
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+    </>
+  );
+}
+
+// ---------- Monologues Section ----------
+
+function MonologuesSection() {
   const queryClient = useQueryClient();
   const [searchInput, setSearchInput] = useState("");
   const [results, setResults] = useState<AdminMonologueItem[]>([]);
@@ -91,18 +222,18 @@ export default function AdminMonologuesPage() {
   });
 
   return (
-    <div className="space-y-6">
+    <>
       <Card>
         <CardHeader>
           <CardTitle>Find &amp; edit monologues</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Search by monologue ID, title, character name, or play title. Use this to fix corrupted data or respond to user reports.
+            Search by monologue ID, title, character name, or play title.
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex gap-2 flex-wrap">
             <Input
-              placeholder="e.g. 12345 or sadf or Hamlet"
+              placeholder="e.g. 12345 or Hamlet"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && runSearch()}
@@ -195,7 +326,37 @@ export default function AdminMonologuesPage() {
         onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
         isLoading={deleteMutation.isPending}
       />
-    </div>
+    </>
   );
 }
 
+// ---------- Main Page ----------
+
+export default function AdminContentPage() {
+  const [tab, setTab] = useState<Tab>("monologues");
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2 border-b border-border pb-3">
+        <Button
+          variant={tab === "monologues" ? "secondary" : "ghost"}
+          size="sm"
+          onClick={() => setTab("monologues")}
+        >
+          Monologues
+        </Button>
+        <Button
+          variant={tab === "film-tv" ? "secondary" : "ghost"}
+          size="sm"
+          onClick={() => setTab("film-tv")}
+        >
+          Film/TV
+        </Button>
+      </div>
+
+      <div className="space-y-6">
+        {tab === "monologues" ? <MonologuesSection /> : <FilmTvSection />}
+      </div>
+    </div>
+  );
+}

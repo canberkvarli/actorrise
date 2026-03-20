@@ -31,7 +31,7 @@ const DEMO_STATS: ProfileStats = {
 
 const DEMO_PROFILE: ActorProfile = {
   name: "Dev User",
-  headshot_url: "/transparent_icon_logo.png",
+  headshot_url: "/transparent_logo.png",
 };
 
 const DEMO_MONOLOGUES: Monologue[] = [
