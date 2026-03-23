@@ -112,6 +112,16 @@ Extract the following information if present in the query (return null if not me
    - Only extract when user explicitly says NOT/NO/EXCEPT + author name
    - Return author's full name or null
 
+9. intended_play: Is the user looking for a SPECIFIC play, movie, or show?
+   - Extract the full title of the specific work they want (e.g., "Death of a Salesman", "Hamlet", "A Streetcar Named Desire")
+   - Only set this when the user clearly wants a specific work, NOT for generic queries like "funny monologue" or "sad piece for a woman"
+   - Return the canonical/full title or null
+
+10. intended_author: Is the user looking for a SPECIFIC playwright or author?
+   - Extract the author/playwright name if mentioned (e.g., "Arthur Miller", "Tennessee Williams")
+   - Also infer the author if the user mentions a well-known play (e.g., "Death of a Salesman" → "Arthur Miller")
+   - Return the author's full name or null
+
 Return ONLY valid JSON with these keys. Use null for any filter not mentioned in the query."""
 
 QUERY_PARSING_TEMPLATE = ChatPromptTemplate.from_messages([

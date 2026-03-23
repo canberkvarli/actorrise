@@ -366,6 +366,7 @@ class SemanticSearch:
         self.query_optimizer = QueryOptimizer()
         # Global cache manager: Level 1 Redis if available, otherwise memory-only.
         self.cache = cache_manager
+        self.last_content_gap: Optional[Dict] = None
 
     def search(
         self,
@@ -506,7 +507,7 @@ class SemanticSearch:
         # "funny monologue" must return joy, "for a woman" must return female/any.
         # These are unambiguous user intent. Age, tone, themes stay as boosts
         # since they're fuzzier (embedding handles the nuance).
-        BOOST_ONLY_KEYS = {'tone', 'age_range', 'theme', 'themes'}
+        BOOST_ONLY_KEYS = {'tone', 'age_range', 'theme', 'themes', 'intended_play', 'intended_author'}
         hard_filters = {}
         for k, v in merged_filters.items():
             if k in BOOST_ONLY_KEYS:
@@ -517,6 +518,10 @@ class SemanticSearch:
                 hard_filters[k] = v
         logger.debug("Hard filters (SQL WHERE): %s", hard_filters)
         logger.debug("Boost-only filters (scoring): %s", {k: v for k, v in merged_filters.items() if k not in hard_filters})
+
+        # Store intended play/author for content gap detection by the caller
+        self._intended_play = merged_filters.get('intended_play')
+        self._intended_author = merged_filters.get('intended_author')
 
         # Optional: check cache for full search results for this (query, filters, user)
         cache_filters_for_results: Dict = dict(merged_filters)

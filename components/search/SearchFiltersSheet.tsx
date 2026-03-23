@@ -39,7 +39,7 @@ export const getDurationLabel = (seconds: string) =>
   DURATION_OPTIONS.find((d) => d.value === seconds)?.label ?? `${seconds}s`;
 
 const CHARACTER_FILTERS = [
-  { key: "gender" as const, label: "Gender", options: ["male", "female", "any"] },
+  { key: "gender" as const, label: "Gender", options: ["male", "female", "non-binary", "any"] },
   { key: "age_range" as const, label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
 ];
 

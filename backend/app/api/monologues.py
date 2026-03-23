@@ -69,6 +69,7 @@ class SearchResponse(BaseModel):
     page_size: int
     corrected_query: Optional[str] = None
     query_may_have_typos: bool = False
+    content_gap: Optional[dict] = None
 
 
 class LeadMagnetItem(BaseModel):
@@ -354,6 +355,28 @@ async def search_monologues(
         if monologue_responses:
             record_total_search(current_user.id, db)
 
+        # Content gap detection: check if the user wanted a specific play/author we don't have
+        content_gap = None
+        intended_play = getattr(search_service, '_intended_play', None)
+        intended_author = getattr(search_service, '_intended_author', None)
+        if intended_play or intended_author:
+            # Check if any result actually matches the intended play/author
+            found_match = False
+            for m, _ in all_results_with_scores:
+                play_title = (m.play.title or "").lower()
+                author_name = (m.play.author or "").lower()
+                if intended_play and intended_play.lower() in play_title:
+                    found_match = True
+                    break
+                if intended_author and intended_author.lower() in author_name:
+                    found_match = True
+                    break
+            if not found_match:
+                content_gap = {
+                    "play": intended_play,
+                    "author": intended_author,
+                }
+
         # Log search for analytics
         if q and q.strip():
             try:
@@ -366,6 +389,7 @@ async def search_monologues(
                     result_ids=all_result_ids,
                     user_id=int(current_user.id),
                     source="search",
+                    content_gap=content_gap,
                 ))
                 db.commit()
             except Exception:
@@ -378,6 +402,7 @@ async def search_monologues(
             page_size=limit,
             corrected_query=None,
             query_may_have_typos=False,
+            content_gap=content_gap,
         )
     except HTTPException:
         raise  # Re-raise HTTP exceptions (e.g. from auth/rate-limiting) as-is
@@ -391,6 +416,42 @@ async def search_monologues(
                 "message": "Search is temporarily unavailable. Please try again in a moment.",
             },
         )
+
+
+class ContentRequestBody(BaseModel):
+    play_title: str
+    author: Optional[str] = None
+    character_name: Optional[str] = None
+
+
+@router.post("/content-request")
+async def request_content(
+    body: ContentRequestBody,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Request a play/author that we don't have yet."""
+    from datetime import datetime
+
+    from app.models.content_request import ContentRequest
+    from sqlalchemy import func
+
+    existing = db.query(ContentRequest).filter(
+        func.lower(ContentRequest.play_title) == body.play_title.strip().lower(),
+        func.lower(func.coalesce(ContentRequest.author, "")) == (body.author or "").strip().lower(),
+    ).first()
+
+    if existing:
+        existing.request_count += 1
+        existing.last_requested_at = datetime.utcnow()
+    else:
+        db.add(ContentRequest(
+            play_title=body.play_title.strip(),
+            author=body.author.strip() if body.author else None,
+            character_name=body.character_name.strip() if body.character_name else None,
+        ))
+    db.commit()
+    return {"status": "ok"}
 
 
 @router.get("/search-demo", response_model=DemoSearchResponse)

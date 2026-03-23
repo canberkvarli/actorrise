@@ -180,6 +180,7 @@ def send_campaign(
                 to=user.email,
                 subject=subject,
                 html=html,
+                unsubscribe_url=unsub_url,
             )
             result["sent"] += 1
         except Exception as e:
@@ -250,6 +251,7 @@ def _send_upgrade_nudge_campaign(db: Session, target: str, dry_run: bool) -> dic
                 to=user.email,
                 subject="Unlock more with ActorRise Plus",
                 html=html,
+                unsubscribe_url=unsub_url,
             )
             result["sent"] += 1
         except Exception as e:
@@ -314,6 +316,7 @@ def maybe_send_upgrade_nudge(db: Session, user_id: int) -> None:
                 to=email,
                 subject="Unlock more with ActorRise Plus",
                 html=html,
+                unsubscribe_url=unsub_url,
             )
         except Exception as e:
             print(f"Error sending upgrade nudge to {email}: {e}")

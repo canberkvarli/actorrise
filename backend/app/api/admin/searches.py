@@ -6,9 +6,11 @@ from typing import Any, Optional
 from app.api.admin.stats import require_moderator
 from app.core.database import get_db
 from app.models.actor import Monologue, Play
+from app.models.content_request import ContentRequest
 from app.models.search_log import SearchLog
 from app.models.user import User
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import Date, cast as sa_cast, desc, func
 from sqlalchemy.orm import Session
 
@@ -172,3 +174,56 @@ def get_search_result_monologues(
             for m in monologues
         ],
     }
+
+
+# ── Content Requests ──────────────────────────────────────────────────────────
+
+
+@router.get("/content-requests")
+def get_content_requests(
+    db: Session = Depends(get_db),
+    _mod: User = Depends(require_moderator),
+) -> dict[str, Any]:
+    """All content requests sorted by most requested."""
+    requests = (
+        db.query(ContentRequest)
+        .order_by(desc(ContentRequest.request_count))
+        .all()
+    )
+    return {
+        "requests": [
+            {
+                "id": r.id,
+                "play_title": r.play_title,
+                "author": r.author,
+                "character_name": r.character_name,
+                "request_count": r.request_count,
+                "first_requested_at": r.first_requested_at.isoformat(),
+                "last_requested_at": r.last_requested_at.isoformat(),
+                "status": r.status,
+            }
+            for r in requests
+        ],
+    }
+
+
+class ContentRequestStatusUpdate(BaseModel):
+    status: str  # "requested" | "planned" | "added"
+
+
+@router.patch("/content-requests/{request_id}")
+def update_content_request_status(
+    request_id: int,
+    body: ContentRequestStatusUpdate,
+    db: Session = Depends(get_db),
+    _mod: User = Depends(require_moderator),
+) -> dict[str, str]:
+    """Update a content request's status."""
+    req = db.query(ContentRequest).filter(ContentRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Content request not found")
+    if body.status not in ("requested", "planned", "added"):
+        raise HTTPException(status_code=400, detail="Status must be requested, planned, or added")
+    req.status = body.status
+    db.commit()
+    return {"status": "ok"}
