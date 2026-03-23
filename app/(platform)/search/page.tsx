@@ -2132,10 +2132,25 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             >
               <div className="pt-12 pb-12 text-center">
                 <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-                <h3 className="text-2xl font-semibold mb-2">No monologues found</h3>
-                <p className="text-sm text-muted-foreground">
-                  Try different search terms or adjust filters
-                </p>
+                {contentGap ? (
+                  <>
+                    <ContentGapBanner play={contentGap.play} author={contentGap.author} />
+                  </>
+                ) : queryUsedForResults && !/[a-z]{2,}/i.test(queryUsedForResults) ? (
+                  <>
+                    <h3 className="text-2xl font-semibold mb-2">We couldn&apos;t understand that search</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Try describing what you&apos;re looking for, like &quot;funny monologue for a woman in her 20s&quot;
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h3 className="text-2xl font-semibold mb-2">Nothing matched your search</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Try different words or remove some filters to see more results
+                    </p>
+                  </>
+                )}
               </div>
             </motion.div>
           ) : results.length > 0 ? (
