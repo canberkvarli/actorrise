@@ -10,7 +10,7 @@ interface FilterGroup {
 const GROUPS: FilterGroup[] = [
   { key: "tone", options: [{ label: "Comedic", value: "comedic" }, { label: "Dramatic", value: "dramatic" }] },
   { key: "category", options: [{ label: "Classical", value: "classical" }, { label: "Contemporary", value: "contemporary" }] },
-  { key: "gender", options: [{ label: "Female", value: "female" }, { label: "Male", value: "male" }] },
+  { key: "gender", options: [{ label: "Female", value: "female" }, { label: "Male", value: "male" }, { label: "Non-binary", value: "non-binary" }] },
   { key: "max_duration", options: [{ label: "Under 2 min", value: "120" }] },
 ];
 

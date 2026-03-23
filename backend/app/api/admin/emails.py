@@ -449,6 +449,7 @@ def bulk_send_email(
                         subject=subject,
                         html=html,
                         scheduled_at=body.scheduled_at or None,
+                        unsubscribe_url=vars_copy["unsubscribe_url"],
                     )
 
                     send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
@@ -727,6 +728,7 @@ def send_campaign_endpoint(
                         to=send_row.to_email,
                         subject=subject,
                         html=html,
+                        unsubscribe_url=vars_copy["unsubscribe_url"],
                     )
 
                     send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None

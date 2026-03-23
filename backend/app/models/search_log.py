@@ -16,6 +16,7 @@ class SearchLog(Base):
     result_ids = Column(JSONB, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     source = Column(String(20), nullable=False, default="search")
+    content_gap = Column(JSONB, nullable=True)  # {play: "...", author: "...", character: "..."}
     created_at = Column(DateTime, server_default=sql_text("now()"), nullable=False)
 
     __table_args__ = (

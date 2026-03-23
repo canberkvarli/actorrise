@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { Fragment, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconSearch, IconRefresh, IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 
 import api from "@/lib/api";
@@ -120,7 +120,95 @@ function ExpandableResults({ logId }: { logId: number }) {
   );
 }
 
+interface ContentRequestItem {
+  id: number;
+  play_title: string;
+  author: string | null;
+  character_name: string | null;
+  request_count: number;
+  first_requested_at: string;
+  last_requested_at: string;
+  status: string;
+}
+
+function statusBadgeClass(status: string): string {
+  if (status === "added") return "bg-green-50 text-green-700 border-green-200";
+  if (status === "planned") return "bg-blue-50 text-blue-700 border-blue-200";
+  return "";
+}
+
+function ContentRequestsTab() {
+  const queryClient = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-content-requests"],
+    queryFn: async () => {
+      const res = await api.get<{ requests: ContentRequestItem[] }>("/api/admin/content-requests");
+      return res.data;
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      await api.patch(`/api/admin/content-requests/${id}`, { status });
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-content-requests"] }),
+  });
+
+  const requests = data?.requests ?? [];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Content Requests</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <p className="py-8 text-center text-muted-foreground">Loading...</p>
+        ) : requests.length === 0 ? (
+          <p className="py-8 text-center text-muted-foreground">No content requests yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="py-2 text-left font-medium">Play</th>
+                  <th className="py-2 text-left font-medium">Author</th>
+                  <th className="py-2 text-left font-medium">Requests</th>
+                  <th className="py-2 text-left font-medium">Last Requested</th>
+                  <th className="py-2 text-left font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {requests.map((r) => (
+                  <tr key={r.id} className="border-b border-border/60 hover:bg-muted/30">
+                    <td className="py-2 font-medium">{r.play_title}</td>
+                    <td className="py-2 text-muted-foreground">{r.author || "-"}</td>
+                    <td className="py-2 font-semibold">{r.request_count}</td>
+                    <td className="py-2 text-muted-foreground">{timeAgo(r.last_requested_at)}</td>
+                    <td className="py-2">
+                      <select
+                        value={r.status}
+                        onChange={(e) => statusMutation.mutate({ id: r.id, status: e.target.value })}
+                        className={`rounded border border-input bg-background px-2 py-1 text-xs ${statusBadgeClass(r.status)}`}
+                      >
+                        <option value="requested">requested</option>
+                        <option value="planned">planned</option>
+                        <option value="added">added</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function AdminSearchesPage() {
+  const [tab, setTab] = useState<"logs" | "requests">("logs");
   const [q, setQ] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [zeroOnly, setZeroOnly] = useState(false);
@@ -152,6 +240,19 @@ export default function AdminSearchesPage() {
 
   return (
     <div className="space-y-4">
+      <div className="flex gap-2 border-b border-border pb-3">
+        <Button variant={tab === "logs" ? "secondary" : "ghost"} size="sm" onClick={() => setTab("logs")}>
+          Search Logs
+        </Button>
+        <Button variant={tab === "requests" ? "secondary" : "ghost"} size="sm" onClick={() => setTab("requests")}>
+          Content Requests
+        </Button>
+      </div>
+
+      {tab === "requests" ? (
+        <ContentRequestsTab />
+      ) : (
+      <>
       {/* Summary cards */}
       {summary && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -290,9 +391,8 @@ export default function AdminSearchesPage() {
                   </thead>
                   <tbody>
                     {data?.searches.map((entry) => (
-                      <>
+                      <Fragment key={entry.id}>
                         <tr
-                          key={entry.id}
                           className="border-b border-border/60 hover:bg-muted/30 cursor-pointer"
                           onClick={() =>
                             setExpandedId(expandedId === entry.id ? null : entry.id)
@@ -313,9 +413,10 @@ export default function AdminSearchesPage() {
                                   <Badge
                                     key={k}
                                     variant="outline"
-                                    className="text-[10px] px-1.5 py-0"
+                                    className="text-xs px-2 py-0.5"
                                   >
-                                    {k}: {String(v)}
+                                    <span className="font-semibold text-foreground">{k}:</span>{" "}
+                                    {String(v)}
                                   </Badge>
                                 ))}
                               </div>
@@ -364,7 +465,7 @@ export default function AdminSearchesPage() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -400,6 +501,8 @@ export default function AdminSearchesPage() {
           )}
         </CardContent>
       </Card>
+      </>
+      )}
     </div>
   );
 }

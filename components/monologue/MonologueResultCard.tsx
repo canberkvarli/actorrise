@@ -171,7 +171,12 @@ export function MonologueResultCard({
             </span>
           </div>
           {matchReasons && matchReasons.length > 0 && (
-            <MatchReasonTooltip reasons={matchReasons} />
+            <div className="mt-2 flex items-center gap-2">
+              <p className="text-[11px] text-muted-foreground/70 leading-relaxed truncate flex-1">
+                {matchReasons.map((r) => r.label).join(" · ")}
+              </p>
+              <MatchReasonTooltip reasons={matchReasons} />
+            </div>
           )}
         </CardContent>
       </Card>

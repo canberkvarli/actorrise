@@ -41,8 +41,9 @@ class ResendEmailClient:
         to: str,
         subject: str,
         html: str,
-        from_email: str = "ActorRise <notifications@actorrise.com>",
+        from_email: str = "Canberk from ActorRise <notifications@actorrise.com>",
         scheduled_at: Optional[str] = None,
+        unsubscribe_url: Optional[str] = None,
     ) -> dict:
         """
         Send an email via Resend.
@@ -53,6 +54,7 @@ class ResendEmailClient:
             html: HTML email body
             from_email: Sender email (default: notifications@actorrise.com)
             scheduled_at: ISO datetime string to schedule send (max 72h ahead)
+            unsubscribe_url: If provided, adds List-Unsubscribe headers
 
         Returns:
             Resend response dict with email ID
@@ -69,6 +71,11 @@ class ResendEmailClient:
             }
             if scheduled_at:
                 params["scheduled_at"] = scheduled_at
+            if unsubscribe_url:
+                params["headers"] = {
+                    "List-Unsubscribe": f"<{unsubscribe_url}>",
+                    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+                }
 
             response = resend.Emails.send(params)
 

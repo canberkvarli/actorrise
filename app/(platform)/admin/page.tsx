@@ -29,13 +29,10 @@ import type { ChangelogEntry } from "@/lib/changelog";
 import {
   LineChart,
   Line,
-  BarChart,
-  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 
@@ -298,9 +295,6 @@ export default function AdminOverviewPage() {
     },
   ];
 
-  const submissionStatusData = Object.entries(stats.submissions.by_status).map(
-    ([name, value]) => ({ name: name.replace("_", " "), value })
-  );
 
   return (
     <div className="space-y-6">
@@ -460,116 +454,6 @@ export default function AdminOverviewPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Feedback over time</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={stats.feedback.by_day}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis
-                  dataKey="date"
-                  tick={{ fontSize: 12 }}
-                  tickFormatter={(v) => v.slice(5)}
-                />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip
-                  labelFormatter={(v) => v}
-                  contentStyle={chartTooltipStyle}
-                />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="positive"
-                  name="Positive"
-                  stroke="var(--chart-1)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="negative"
-                  name="Negative"
-                  stroke="var(--destructive)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Submissions by status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={submissionStatusData}
-                  layout="vertical"
-                  margin={{ left: 60 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis type="number" tick={{ fontSize: 12 }} />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    tick={{ fontSize: 12 }}
-                    width={55}
-                  />
-                  <Tooltip contentStyle={chartTooltipStyle} />
-                  <Bar
-                    dataKey="value"
-                    name="Count"
-                    fill="var(--primary)"
-                    radius={[0, 4, 4, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Submissions over time</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={stats.submissions.by_day}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(v) => v.slice(5)}
-                  />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip
-                    labelFormatter={(v) => v}
-                    contentStyle={chartTooltipStyle}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="count"
-                    name="Submissions"
-                    stroke="var(--primary)"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
           <CardTitle className="text-base">
             Usage: all users ({stats.from} → {stats.to})
           </CardTitle>
@@ -592,12 +476,6 @@ export default function AdminOverviewPage() {
                 {stats.usage.scene_partner_sessions}
               </p>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Craft coach sessions</p>
-              <p className="text-xl font-semibold">
-                {stats.usage.craft_coach_sessions}
-              </p>
-            </div>
           </div>
           {stats.usage.current_user && (
             <div className="rounded-md border border-dashed bg-muted/30 px-3 py-2">
@@ -606,7 +484,6 @@ export default function AdminOverviewPage() {
                 <span>Total: <strong>{(stats.usage.current_user.total_searches ?? stats.usage.current_user.ai_searches).toLocaleString()}</strong></span>
                 <span>AI: <strong>{stats.usage.current_user.ai_searches}</strong></span>
                 <span>Scene partner: <strong>{stats.usage.current_user.scene_partner_sessions}</strong></span>
-                <span>Craft coach: <strong>{stats.usage.current_user.craft_coach_sessions}</strong></span>
               </div>
             </div>
           )}

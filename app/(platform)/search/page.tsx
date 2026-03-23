@@ -81,6 +81,7 @@ import { extractQueryHighlights } from "@/lib/queryMatchHighlight";
 import { ActiveFilterChips } from "@/components/search/ActiveFilterChips";
 import { computeMatchReasons } from "@/lib/matchReasons";
 import { QuickFilterChips } from "@/components/search/QuickFilterChips";
+import { ContentGapBanner } from "@/components/search/ContentGapBanner";
 import type { FilmTvReference } from "@/types/filmTv";
 import { getFilmTvScriptUrl } from "@/lib/utils";
 import { ScriptSourcePicker } from "@/components/search/ScriptSourcePicker";
@@ -202,6 +203,7 @@ function SearchContent() {
   const [page, setPage] = useState(1);
   const [correctedQuery, setCorrectedQuery] = useState<string | null>(null);
   const [queryMayHaveTypos, setQueryMayHaveTypos] = useState(false);
+  const [contentGap, setContentGap] = useState<{ play: string | null; author: string | null } | null>(null);
   const PAGE_SIZE = 20;
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -682,6 +684,7 @@ function SearchContent() {
     page_size: number;
     corrected_query?: string | null;
     query_may_have_typos?: boolean;
+    content_gap?: { play: string | null; author: string | null } | null;
   };
 
   const performSearch = async (
@@ -731,6 +734,7 @@ function SearchContent() {
         setResults(newResults);
         setCorrectedQuery(data.corrected_query ?? null);
         setQueryMayHaveTypos(data.query_may_have_typos ?? false);
+        setContentGap(data.content_gap ?? null);
       }
       setTotal(data.total);
       setPage(data.page);
@@ -797,7 +801,7 @@ function SearchContent() {
       const upgradeUrl = raw && typeof raw === "object" && "upgrade_url" in raw ? (raw as { upgrade_url: string }).upgrade_url : null;
       setSearchError(message);
       setSearchUpgradeUrl(upgradeUrl ?? null);
-      if (!append) setResults([]);
+      if (!append) { setResults([]); setContentGap(null); }
     } finally {
       // Only clear loading if this search is still the active one
       // (a newer search may have replaced our controller)
@@ -2157,6 +2161,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   <span>Complete your profile to get personalized results.</span>
                   <Link href="/profile" className="text-primary underline underline-offset-2 shrink-0">Set it up →</Link>
                 </div>
+              )}
+              {contentGap && (
+                <ContentGapBanner play={contentGap.play} author={contentGap.author} />
               )}
               {/* Results header: 3-col grid on desktop so feedback is always truly centered */}
               <div className="flex flex-col gap-3 mb-8 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4">
