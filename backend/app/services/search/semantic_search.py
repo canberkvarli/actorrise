@@ -879,16 +879,19 @@ class SemanticSearch:
         top_results = boosted_results
 
         # No real match: if best score is below threshold (e.g. unrelated language / gibberish), return empty
+        no_semantic_match = False
         if top_results:
             best_score = max(s for _, s in top_results)
             if best_score < MIN_RELEVANCE_TO_SHOW:
                 logger.debug("Best relevance %.3f below threshold %.2f; returning no results", best_score, MIN_RELEVANCE_TO_SHOW)
                 return ([], {})
             top_results = [(m, s) for m, s in top_results if s >= MIN_RELEVANCE_TO_SHOW]
+        else:
+            no_semantic_match = True
 
-        # FALLBACK: If we don't have enough semantic results, supplement with text search
-        # This ensures users get results even when embeddings aren't available
-        if len(top_results) < limit:
+        # FALLBACK: If we don't have enough semantic results, supplement with text search.
+        # Skip fallback if semantic search explicitly returned nothing (gibberish/no match).
+        if len(top_results) < limit and not no_semantic_match:
             needed = limit - len(top_results)
             logger.debug("Only %s semantic results, supplementing with %s text search", len(top_results), needed)
 
