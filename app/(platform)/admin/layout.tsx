@@ -13,6 +13,7 @@ import {
   IconMail,
   IconStar,
   IconSearch,
+  IconMicrophone,
 } from "@tabler/icons-react";
 
 export default function AdminLayout({
@@ -57,6 +58,7 @@ export default function AdminLayout({
     { href: "/admin/moderation", label: "Moderation", icon: IconShieldCheck },
     { href: "/admin/content", label: "Content", icon: IconFileSearch },
     { href: "/admin/searches", label: "Searches", icon: IconSearch },
+    { href: "/admin/sessions", label: "Sessions", icon: IconMicrophone },
     { href: "/admin/emails", label: "Emails", icon: IconMail },
     { href: "/admin/founding-actors", label: "Founding Actors", icon: IconStar },
   ];
