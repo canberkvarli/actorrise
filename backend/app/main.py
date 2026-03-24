@@ -9,6 +9,7 @@ from app.api.admin.stats import router as admin_stats_router
 from app.api.admin.emails import router as admin_emails_router
 from app.api.admin.founding_actors import router as admin_founding_actors_router
 from app.api.admin.searches import router as admin_searches_router
+from app.api.admin.sessions import router as admin_sessions_router
 from app.api.admin.users import router as admin_users_router
 from app.api.audition import router as audition_router
 from app.api.auth import router as auth_router
@@ -138,6 +139,7 @@ app.include_router(admin_stats_router)
 app.include_router(admin_users_router)
 app.include_router(admin_emails_router)
 app.include_router(admin_searches_router)
+app.include_router(admin_sessions_router)
 app.include_router(founding_actors_router)
 app.include_router(admin_founding_actors_router)
 
