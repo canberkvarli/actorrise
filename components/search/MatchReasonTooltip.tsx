@@ -19,26 +19,33 @@ export function MatchReasonTooltip({ reasons }: MatchReasonTooltipProps) {
             type="button"
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
-            className="inline-flex items-center text-muted-foreground/50 hover:text-foreground transition-colors cursor-pointer shrink-0"
+            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors cursor-pointer shrink-0"
             aria-label="Why this result matched"
           >
-            <IconInfoCircle className="h-3.5 w-3.5" />
+            <IconInfoCircle className="h-3 w-3" />
+            <span>Why this?</span>
           </button>
         </TooltipTrigger>
         <TooltipContent
           side="top"
           align="start"
-          className="max-w-[260px] p-3"
+          className="max-w-[280px] p-3"
           onPointerDownOutside={(e) => e.stopPropagation()}
         >
-          <ul className="space-y-1">
+          <div className="flex flex-wrap gap-1.5">
             {reasons.map((reason, i) => (
-              <li key={i} className="flex items-start gap-2 text-xs">
-                <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${reason.type === "profile" ? "bg-violet-500" : "bg-primary"}`} />
-                <span className="leading-relaxed">{reason.label}</span>
-              </li>
+              <span
+                key={i}
+                className={`inline-flex px-2 py-0.5 text-[11px] leading-tight ${
+                  reason.type === "profile"
+                    ? "bg-violet-500/10 text-violet-700 dark:text-violet-400"
+                    : "bg-primary/10 text-primary dark:text-orange-400"
+                }`}
+              >
+                {reason.label}
+              </span>
             ))}
-          </ul>
+          </div>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
