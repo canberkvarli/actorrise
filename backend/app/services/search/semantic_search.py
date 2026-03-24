@@ -367,6 +367,8 @@ class SemanticSearch:
         # Global cache manager: Level 1 Redis if available, otherwise memory-only.
         self.cache = cache_manager
         self.last_content_gap: Optional[Dict] = None
+        self._ai_is_valid_search: Optional[bool] = None
+        self._ai_corrected_query: Optional[str] = None
 
     def search(
         self,
@@ -490,6 +492,15 @@ class SemanticSearch:
                         self.cache.set_parsed_filters(canonical_query, extracted_filters)
 
                         _evict_if_needed(QUERY_PARSE_CACHE, _MAX_QUERY_PARSE_CACHE)
+
+        # Extract AI validation fields before merging
+        if extracted_filters:
+            ai_valid = extracted_filters.pop('is_valid_search', None)
+            ai_corrected = extracted_filters.pop('corrected_query', None)
+            if ai_valid is not None:
+                self._ai_is_valid_search = ai_valid
+            if ai_corrected:
+                self._ai_corrected_query = ai_corrected
 
         logger.debug("Extracted filters (AI): %s", extracted_filters)
 

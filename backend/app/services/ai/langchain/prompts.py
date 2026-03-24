@@ -122,6 +122,17 @@ Extract the following information if present in the query (return null if not me
    - Also infer the author if the user mentions a well-known play (e.g., "Death of a Salesman" → "Arthur Miller")
    - Return the author's full name or null
 
+11. is_valid_search: Is this a meaningful search for monologues/plays/theatre?
+   - true: any real search intent, even with typos (e.g., "funni monolog" = true)
+   - false: gibberish, random keyboard smashing, nonsense (e.g., "jkdsahvlkadsg" = false)
+   - When in doubt, return true
+
+12. corrected_query: If the query has typos or misspellings, return the corrected version.
+   - Examples: "funni monolog for womn" → "funny monologue for woman"
+   - "shakspere" → "shakespeare"
+   - "hamlat" → "hamlet"
+   - Return null if the query has no typos or is gibberish
+
 Return ONLY valid JSON with these keys. Use null for any filter not mentioned in the query."""
 
 QUERY_PARSING_TEMPLATE = ChatPromptTemplate.from_messages([
