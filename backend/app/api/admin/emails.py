@@ -28,7 +28,19 @@ from app.services.email.marketing import (
     send_campaign,
 )
 from app.services.email.resend_client import ResendEmailClient
+from app.services.email.smtp_client import SmtpEmailClient
 from app.services.email.templates import EmailTemplates
+
+
+def _get_email_client(send_via: str = "smtp"):
+    """Get the appropriate email client based on send_via preference."""
+    if send_via == "smtp":
+        try:
+            return SmtpEmailClient()
+        except ValueError:
+            logger.warning("SMTP not configured, falling back to Resend")
+            return ResendEmailClient()
+    return ResendEmailClient()
 
 logger = logging.getLogger(__name__)
 
@@ -112,7 +124,6 @@ TEMPLATES = [
             {"name": "sender_name", "label": "Sender name", "type": "text", "default": "Canberk", "required": True},
             {"name": "sender_title", "label": "Sender title", "type": "text", "default": "Founder, ActorRise", "required": True},
             {"name": "share_text", "label": "Share blurb (optional)", "type": "text", "default": "", "required": False},
-            {"name": "share_url", "label": "Share URL (optional)", "type": "url", "default": "https://actorrise.com", "required": False},
         ],
     },
     {
@@ -156,7 +167,6 @@ TEMPLATES = [
         "subject": "New: rehearse lines with a scene partner that never flakes",
         "variables": [
             {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
-            {"name": "video_url", "label": "Video URL (optional)", "type": "url", "default": "https://www.youtube.com/watch?v=TTZxo3bZPI4", "required": False},
         ],
     },
     {
@@ -195,6 +205,7 @@ class SendRequest(BaseModel):
     to: str
     subject: Optional[str] = None
     variables: dict[str, Any] = {}
+    send_via: str = "smtp"  # "smtp" (Google Workspace) or "resend"
 
 
 class BulkRecipient(BaseModel):
@@ -209,6 +220,7 @@ class BulkSendRequest(BaseModel):
     variables: dict[str, Any] = {}
     campaign_key: Optional[str] = None
     scheduled_at: Optional[str] = None  # ISO datetime string
+    send_via: str = "smtp"  # "smtp" (Google Workspace) or "resend"
 
 
 class BatchStatusResponse(BaseModel):
@@ -226,6 +238,7 @@ class CampaignRequest(BaseModel):
     target: str = "all"
     dry_run: bool = False
     variables: dict[str, Any] = {}
+    send_via: str = "smtp"  # "smtp" (Google Workspace) or "resend"
 
 
 class CampaignResponse(BaseModel):
@@ -239,8 +252,12 @@ class CampaignResponse(BaseModel):
 # Rendering helper
 # ========================================
 
-def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, str]:
-    """Render a template by ID, returning (html, subject)."""
+def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, str, Optional[str]]:
+    """Render a template by ID, returning (html, subject, plain_text).
+
+    plain_text is non-None for templates that should send as plain text
+    to avoid Gmail Promotions tab.
+    """
     templates = EmailTemplates()
     meta = next((t for t in TEMPLATES if t["id"] == template_id), None)
     if not meta:
@@ -273,6 +290,11 @@ def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, 
         "scene_partner_launch": templates.render_scene_partner_launch,
     }
 
+    # Templates that send as plain text for better inbox placement
+    plain_text_map = {
+        "scene_partner_launch": templates.render_scene_partner_launch_plain,
+    }
+
     render_fn = render_map.get(template_id)
     if not render_fn:
         raise HTTPException(status_code=400, detail=f"No renderer for template: {template_id}")
@@ -280,7 +302,12 @@ def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, 
     html = render_fn(**kwargs)
     subject = variables.get("subject") or meta["subject"]
 
-    return html, subject
+    plain_text = None
+    plain_fn = plain_text_map.get(template_id)
+    if plain_fn:
+        plain_text = plain_fn(**kwargs)
+
+    return html, subject, plain_text
 
 
 # ========================================
@@ -301,7 +328,7 @@ def preview_template(
     _user: User = Depends(require_moderator),
 ):
     """Render a template preview with the given variables."""
-    html, subject = _render_template(body.template_id, body.variables)
+    html, subject, _ = _render_template(body.template_id, body.variables)
     return PreviewResponse(html=html, subject=subject)
 
 
@@ -312,16 +339,16 @@ def send_email(
     db: Session = Depends(get_db),
 ):
     """Send an email to a single user."""
-    html, default_subject = _render_template(body.template_id, body.variables)
+    html, default_subject, _ = _render_template(body.template_id, body.variables)
     subject = body.subject or default_subject
 
     # Use real unsubscribe URL for the recipient
     unsub_url = build_unsubscribe_url(body.to)
     body.variables["unsubscribe_url"] = unsub_url
-    html, _ = _render_template(body.template_id, body.variables)
+    html, _, plain_text = _render_template(body.template_id, body.variables)
 
-    client = ResendEmailClient()
-    result = client.send_email(to=body.to, subject=subject, html=html)
+    client = _get_email_client(body.send_via)
+    result = client.send_email(to=body.to, subject=subject, html=html, plain_text=plain_text)
 
     # Audit log
     target_user = db.query(User).filter(User.email == body.to).first()
@@ -348,7 +375,7 @@ def bulk_send_email(
     if not body.recipients:
         raise HTTPException(status_code=400, detail="No recipients provided")
 
-    _, default_subject = _render_template(body.template_id, body.variables)
+    _, default_subject, _ = _render_template(body.template_id, body.variables)
     subject = body.subject or default_subject
 
     # Create batch
@@ -427,7 +454,7 @@ def bulk_send_email(
             b.status = "processing"
             db2.commit()
 
-            client = ResendEmailClient()
+            client = _get_email_client(body.send_via)
             sends = db2.query(EmailSend).filter(
                 EmailSend.batch_id == batch_id,
                 EmailSend.status == "queued",
@@ -439,14 +466,14 @@ def bulk_send_email(
                     vars_copy["unsubscribe_url"] = build_unsubscribe_url(send_row.to_email)
                     vars_copy["user_name"] = send_row.to_name or default_name
 
-                    html, _ = _render_template(body.template_id, vars_copy)
+                    html, _, plain_text = _render_template(body.template_id, vars_copy)
 
                     response = client.send_email(
                         to=send_row.to_email,
                         subject=subject,
                         html=html,
                         scheduled_at=body.scheduled_at or None,
-                        unsubscribe_url=vars_copy["unsubscribe_url"],
+                        plain_text=plain_text,
                     )
 
                     send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
@@ -556,17 +583,34 @@ def list_batches(
         .all()
     )
 
+    # Aggregate status counts in a single query instead of N+1
+    from sqlalchemy import func
+
+    batch_ids = [b.id for b in batches]
+    counts_query = (
+        db.query(
+            EmailSend.batch_id,
+            EmailSend.status,
+            func.count(EmailSend.id),
+        )
+        .filter(EmailSend.batch_id.in_(batch_ids))
+        .group_by(EmailSend.batch_id, EmailSend.status)
+        .all()
+    ) if batch_ids else []
+
+    # Build {batch_id: {status: count}} map
+    counts_map: dict[int, dict[str, int]] = {}
+    for batch_id, send_status, cnt in counts_query:
+        counts_map.setdefault(batch_id, {})[send_status] = cnt
+
     results = []
     for b in batches:
-        sends = db.query(EmailSend).filter(EmailSend.batch_id == b.id).all()
-        status_counts: dict[str, int] = {}
-        for s in sends:
-            status_counts[s.status] = status_counts.get(s.status, 0) + 1
+        status_counts = counts_map.get(b.id, {})
 
         # Auto-recover stuck batches: if no queued sends remain but status is still processing
-        if b.status == "processing" and status_counts.get("queued", 0) == 0 and sends:
+        if b.status == "processing" and status_counts.get("queued", 0) == 0 and status_counts:
             b.status = "completed"
-            b.sent = sum(1 for s in sends if s.status not in ("failed", "queued"))
+            b.sent = sum(c for s, c in status_counts.items() if s not in ("failed", "queued"))
             db.commit()
 
         results.append({
@@ -689,7 +733,7 @@ def send_campaign_endpoint(
             b.status = "processing"
             db2.commit()
 
-            client = ResendEmailClient()
+            client = _get_email_client(body.send_via)
             templates_svc = EmailTemplates()
 
             sends = db2.query(EmailSend).filter(
@@ -706,7 +750,12 @@ def send_campaign_endpoint(
                 "weekly_engagement": templates_svc.render_weekly_engagement,
                 "scene_partner_launch": templates_svc.render_scene_partner_launch,
             }
+            # Templates that send as plain text for better inbox placement
+            plain_text_map = {
+                "scene_partner_launch": templates_svc.render_scene_partner_launch_plain,
+            }
             render_fn = render_map.get(template_id)
+            plain_fn = plain_text_map.get(template_id)
             if not render_fn:
                 b.status = "failed"
                 b.errors_json = [f"Unknown template: {template_id}"]
@@ -720,12 +769,13 @@ def send_campaign_endpoint(
                     vars_copy["user_name"] = send_row.to_name or default_name
 
                     html = render_fn(**vars_copy)
+                    plain_text = plain_fn(**vars_copy) if plain_fn else None
 
                     response = client.send_email(
                         to=send_row.to_email,
                         subject=subject,
                         html=html,
-                        unsubscribe_url=vars_copy["unsubscribe_url"],
+                        plain_text=plain_text,
                     )
 
                     send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
