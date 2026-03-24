@@ -17,15 +17,24 @@ export type MonologueSegment =
 
 /**
  * Matches (in order):
- * - ALL CAPS NAME (2+ uppercase words) followed by text → character cue (stage direction)
- * - _italic text_ → stage direction (common in Ibsen, classical formatting)
+ * - ALL CAPS NAME + _short action_ → character cue + stage direction (e.g. "EKDAL _mutters_")
+ * - _short text_ (under 60 chars) → likely a stage direction (e.g. "_exits_", "_pause_")
+ *   BUT: long _text_ is likely verse/italic formatting, NOT a stage direction
  * - ( ... ) or [ ... ] → stage direction
  * - " ... " → quoted dialogue (double quotes only; single quotes stay plain text)
  */
-const SEGMENT_RE = /(\b[A-Z][A-Z]+(?:\s+[A-Z][A-Z]+)*\s+_[^_]+_\.?|_[^_]+_|\([^)]*\)|\[[^\]]*\]|"[^"]*")/g;
+const SEGMENT_RE = /(\b[A-Z][A-Z]+(?:\s+[A-Z][A-Z]+)*\s+_[^_]{1,80}_\.?|_[^_]{1,50}_|\([^)]*\)|\[[^\]]*\]|"[^"]*")/g;
 
 function isStageDirection(raw: string): boolean {
-  return raw.startsWith("(") || raw.startsWith("[") || raw.includes("_");
+  if (raw.startsWith("(") || raw.startsWith("[")) return true;
+  if (raw.includes("_")) {
+    // Extract the content between underscores
+    const inner = raw.replace(/^[A-Z\s]*_/, "").replace(/_\.?$/, "");
+    // Short italic text = stage direction (_exits_, _pause_, _weeping_)
+    // Long italic text = verse/formatting, not a stage direction
+    return inner.length < 50;
+  }
+  return false;
 }
 
 /**
