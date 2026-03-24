@@ -6,12 +6,26 @@ import { Button } from "@/components/ui/button"
 import { IconSun, IconMoon } from "@tabler/icons-react"
 
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme()
+  const { setTheme, resolvedTheme } = useTheme()
   const [mounted, setMounted] = React.useState(false)
 
   React.useEffect(() => {
     setMounted(true)
   }, [])
+
+  const handleToggle = React.useCallback(() => {
+    const next = resolvedTheme === "dark" ? "light" : "dark"
+
+    // If View Transitions API is available, use it for a smooth diagonal wipe
+    if (document.startViewTransition) {
+      document.startViewTransition(() => {
+        setTheme(next)
+      })
+    } else {
+      // Fallback: instant swap
+      setTheme(next)
+    }
+  }, [resolvedTheme, setTheme])
 
   if (!mounted) {
     return (
@@ -26,9 +40,9 @@ export function ThemeToggle() {
       variant="ghost"
       size="icon"
       className="h-9 w-9"
-      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      onClick={handleToggle}
     >
-      {theme === "dark" ? (
+      {resolvedTheme === "dark" ? (
         <IconSun className="h-4 w-4" />
       ) : (
         <IconMoon className="h-4 w-4" />
@@ -36,6 +50,3 @@ export function ThemeToggle() {
     </Button>
   )
 }
-
-
-

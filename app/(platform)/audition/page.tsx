@@ -345,7 +345,7 @@ export default function AuditionModePage() {
   }
 
   return (
-    <div className="min-h-screen bg-black relative overflow-hidden">
+    <div className="dark min-h-screen bg-black relative overflow-hidden">
       {/* Studio atmosphere */}
       <div className="pointer-events-none absolute -top-32 -left-32 w-[500px] h-[500px] rounded-full bg-orange-500/[0.04] blur-[120px]" />
       <div className="pointer-events-none absolute -top-24 -right-24 w-[400px] h-[400px] rounded-full bg-blue-400/[0.03] blur-[100px]" />

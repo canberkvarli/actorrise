@@ -2904,7 +2904,7 @@ export default function SceneEditPage() {
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex flex-col">
+    <div className="dark min-h-screen bg-neutral-950 flex flex-col">
       {/* Top bar */}
       <motion.header
         initial={{ opacity: 0, y: -16 }}

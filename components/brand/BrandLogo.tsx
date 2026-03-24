@@ -1,19 +1,23 @@
 "use client";
 
 import Image from "next/image";
+import { useTheme } from "next-themes";
+import { useEffect, useState } from "react";
 
 /** Icon-only logo (e.g. favicon, auth). Use transparent_logo.png for icon-only. */
 const LOGO_ICON = "/transparent_logo.png";
-/** Full logo with "ActorRise" wordmark for web (transparent bg, blends with theme). */
+/** Full logo with "ActorRise" wordmark -- white text for dark bg. */
 const LOGO_WITH_TEXT = "/transparent_textlogo.png";
+/** Full logo with "ActorRise" wordmark -- dark text for light bg. */
+const LOGO_WITH_TEXT_DARK = "/transparent_textlogo_dark.png";
 
 type Size = "header" | "auth";
 
-/* Icon: square (e.g. 273×273). Same asset used for auth and for other platforms (social, etc.). */
+/* Icon: square (e.g. 273x273). Same asset used for auth and for other platforms (social, etc.). */
 const LOGO_ICON_ASPECT = { w: 273, h: 273 };
 const LOGO_TEXT_ASPECT = { w: 320, h: 80 };
 
-/* Larger logo, mobile-friendly: prominent on small screens so header isn’t just “dropdown on the left”. */
+/* Larger logo, mobile-friendly: prominent on small screens so header isn't just "dropdown on the left". */
 const sizes: Record<Size, { iconClass: string; fullLogoClass: string }> = {
   header: {
     iconClass: "h-11 sm:h-12 md:h-14 w-auto max-w-full min-h-10 shrink-0 object-contain",
@@ -32,6 +36,10 @@ export function BrandLogo({
   size?: Size;
   iconOnly?: boolean;
 }) {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const { iconClass, fullLogoClass } = sizes[size];
 
   if (iconOnly) {
@@ -48,9 +56,11 @@ export function BrandLogo({
     );
   }
 
+  const logoSrc = mounted && resolvedTheme === "light" ? LOGO_WITH_TEXT_DARK : LOGO_WITH_TEXT;
+
   return (
     <Image
-      src={LOGO_WITH_TEXT}
+      src={logoSrc}
       alt="ActorRise"
       width={LOGO_TEXT_ASPECT.w}
       height={LOGO_TEXT_ASPECT.h}

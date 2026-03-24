@@ -8,6 +8,7 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { MarketingFooter } from "@/components/contact/MarketingFooter";
 import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { PageTransitionWithKey } from "@/components/transition/PageTransition";
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -65,6 +66,7 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               </Link>
             </nav>
             <div className="flex items-center gap-2">
+              <ThemeToggle />
               <LandingHeaderActions />
             </div>
           </div>
