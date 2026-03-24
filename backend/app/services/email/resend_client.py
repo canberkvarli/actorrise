@@ -41,7 +41,7 @@ class ResendEmailClient:
         to: str,
         subject: str,
         html: str,
-        from_email: str = "Canberk from ActorRise <notifications@actorrise.com>",
+        from_email: str = "Canberk <canberk@actorrise.com>",
         scheduled_at: Optional[str] = None,
         unsubscribe_url: Optional[str] = None,
     ) -> dict:

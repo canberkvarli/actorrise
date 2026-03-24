@@ -346,7 +346,8 @@ export default function AdminSearchesPage() {
               className="rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="all">All sources</option>
-              <option value="search">Search (auth)</option>
+              <option value="search">Plays</option>
+              <option value="film_tv">Film/TV</option>
               <option value="demo">Demo (landing)</option>
             </select>
             <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -441,10 +442,12 @@ export default function AdminSearchesPage() {
                               className={
                                 entry.source === "demo"
                                   ? "bg-blue-50 text-blue-700 border-blue-200"
-                                  : ""
+                                  : entry.source === "film_tv"
+                                    ? "bg-purple-50 text-purple-700 border-purple-200"
+                                    : ""
                               }
                             >
-                              {entry.source}
+                              {entry.source === "film_tv" ? "Film/TV" : entry.source === "search" ? "Plays" : entry.source}
                             </Badge>
                           </td>
                           <td className="py-2 text-muted-foreground whitespace-nowrap">
