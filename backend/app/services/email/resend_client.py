@@ -70,6 +70,7 @@ class ResendEmailClient:
                 "from": from_email,
                 "to": to,
                 "subject": subject,
+                "reply_to": "canberk@actorrise.com",
             }
             if plain_text:
                 params["text"] = plain_text

@@ -88,7 +88,7 @@ TEMPLATES = [
         "id": "upgrade_nudge",
         "name": "Upgrade Nudge",
         "description": "Encourages free-tier users to upgrade when nearing their search limit",
-        "subject": "Unlock more with ActorRise Plus",
+        "subject": "You're getting close to your search limit",
         "variables": [
             {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
             {"name": "searches_used", "label": "Searches used", "type": "number", "default": 8, "required": True},
@@ -113,7 +113,7 @@ TEMPLATES = [
         "id": "founder_offer",
         "name": "Founder Offer",
         "description": "12 months of Plus free for early users, asks for testimony + audience share",
-        "subject": "A special offer just for you",
+        "subject": "A personal note from me",
         "variables": [
             {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
             {"name": "intro_text", "label": "Main message", "type": "text", "default": "I wanted to reach out personally. I'm an actor too, and I built ActorRise because I couldn't find the tools I needed. You signed up early and that means a lot to me.", "required": True},
@@ -290,8 +290,15 @@ def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, 
         "scene_partner_launch": templates.render_scene_partner_launch,
     }
 
-    # Templates that send as plain text for better inbox placement
+    # All marketing templates send as plain text for better inbox placement
     plain_text_map = {
+        "welcome": templates.render_welcome_plain,
+        "upgrade_nudge": templates.render_upgrade_nudge_plain,
+        "feature_announcement": templates.render_feature_announcement_plain,
+        "founder_offer": templates.render_founder_offer_plain,
+        "actor_page": templates.render_actor_page_plain,
+        "cold_outreach": templates.render_cold_outreach_plain,
+        "weekly_engagement": templates.render_weekly_engagement_plain,
         "scene_partner_launch": templates.render_scene_partner_launch_plain,
     }
 
@@ -750,8 +757,15 @@ def send_campaign_endpoint(
                 "weekly_engagement": templates_svc.render_weekly_engagement,
                 "scene_partner_launch": templates_svc.render_scene_partner_launch,
             }
-            # Templates that send as plain text for better inbox placement
+            # All marketing templates send as plain text for better inbox placement
             plain_text_map = {
+                "welcome": templates_svc.render_welcome_plain,
+                "upgrade_nudge": templates_svc.render_upgrade_nudge_plain,
+                "feature_announcement": templates_svc.render_feature_announcement_plain,
+                "founder_offer": templates_svc.render_founder_offer_plain,
+                "actor_page": templates_svc.render_actor_page_plain,
+                "cold_outreach": templates_svc.render_cold_outreach_plain,
+                "weekly_engagement": templates_svc.render_weekly_engagement_plain,
                 "scene_partner_launch": templates_svc.render_scene_partner_launch_plain,
             }
             render_fn = render_map.get(template_id)

@@ -340,3 +340,142 @@ class EmailTemplates:
             tip_body=tip_body,
             unsubscribe_url=unsubscribe_url,
         )
+
+    # ── Plain text renderers (for Gmail Primary tab placement) ──
+
+    def render_welcome_plain(self, user_name: str, **kwargs) -> str:
+        name = user_name or "there"
+        return "\n".join([
+            f"Hey {name},",
+            "",
+            "Welcome to ActorRise. Really glad you signed up.",
+            "",
+            "Here's what you can do right now:",
+            "",
+            "1. Search 8,600+ monologues with AI (way faster than flipping through books)",
+            "2. Upload scripts and rehearse scenes with an AI scene partner",
+            "3. Build your actor profile page",
+            "",
+            "Head to actorrise.com/dashboard and start exploring.",
+            "",
+            "If you have feedback, questions, or ideas, just reply to this email. I read everything.",
+            "",
+            "Canberk",
+            "Founder | Actor",
+            "actorrise.com",
+        ])
+
+    def render_upgrade_nudge_plain(self, user_name: str, searches_used: int = 8, searches_limit: int = 10, **kwargs) -> str:
+        name = user_name or "there"
+        return "\n".join([
+            f"Hey {name},",
+            "",
+            f"You've used {searches_used} of your {searches_limit} AI searches this month. That tells me you're finding value in ActorRise, which is awesome.",
+            "",
+            "With Plus you get 150 searches/month, unlimited saved monologues, 30 ScenePartner sessions, and PDF downloads. It's $12/mo or $99/year (2 months free).",
+            "",
+            "If you want to upgrade: actorrise.com/pricing",
+            "",
+            "No pressure at all. Just wanted to let you know before you hit the limit. If you have any questions, just reply to this.",
+            "",
+            "Canberk",
+            "Founder | Actor",
+            "actorrise.com",
+        ])
+
+    def render_feature_announcement_plain(self, user_name: str, feature_title: str = "", feature_description: str = "", **kwargs) -> str:
+        name = user_name or "there"
+        return "\n".join([
+            f"Hey {name},",
+            "",
+            feature_description,
+            "",
+            "If you have feedback or questions, just reply to this email.",
+            "",
+            "Canberk",
+            "Founder | Actor",
+            "actorrise.com",
+        ])
+
+    def render_founder_offer_plain(self, user_name: str, intro_text: str = "", body_text: str = "", promo_code: str = "FOUNDER", upgrade_url: str = "actorrise.com/pricing", sender_name: str = "Canberk", sender_title: str = "Founder, ActorRise", **kwargs) -> str:
+        name = (user_name or "there").split()[0]
+        lines = [
+            f"hey {name},",
+            "",
+            intro_text,
+        ]
+        if body_text:
+            lines += ["", body_text]
+        lines += [
+            "",
+            f"Your code: {promo_code}",
+            f"Use it at checkout: {upgrade_url}",
+            "",
+            "Appreciate you being here. If you have any questions, just reply to this email.",
+            "",
+            sender_name,
+            sender_title,
+        ]
+        return "\n".join(lines)
+
+    def render_actor_page_plain(self, user_name: str, intro_text: str = "", step_1: str = "", step_2: str = "", step_3: str = "", sender_name: str = "Canberk", sender_title: str = "Founder | Actor, ActorRise", **kwargs) -> str:
+        name = user_name or "there"
+        return "\n".join([
+            f"Hey {name},",
+            "",
+            intro_text,
+            "",
+            "Here's how to set it up:",
+            "",
+            f"1. {step_1}",
+            f"2. {step_2}",
+            f"3. {step_3}",
+            "",
+            "If you have any questions, just reply to this email.",
+            "",
+            sender_name,
+            sender_title,
+        ])
+
+    def render_cold_outreach_plain(self, user_name: str, intro_text: str = "", body_text: str = "", closing_text: str = "", sender_name: str = "Canberk", sender_title: str = "Founder | Actor, ActorRise", **kwargs) -> str:
+        name = (user_name or "there").split()[0]
+        lines = [
+            f"Hey {name},",
+            "",
+            intro_text,
+        ]
+        if body_text:
+            lines += ["", body_text]
+        if closing_text:
+            lines += ["", closing_text]
+        lines += [
+            "",
+            "If you have any questions, just reply to this email.",
+            "",
+            sender_name,
+            sender_title,
+        ]
+        return "\n".join(lines)
+
+    def render_weekly_engagement_plain(self, user_name: str, monologue_title: str = "", monologue_snippet: str = "", tip_title: str = "", tip_body: str = "", **kwargs) -> str:
+        name = user_name or "there"
+        lines = [
+            f"Hey {name},",
+            "",
+            "Here's what caught my eye this week.",
+        ]
+        if monologue_title:
+            lines += ["", f"This week's pick: {monologue_title}"]
+            if monologue_snippet:
+                lines += ["", f'"{monologue_snippet}"']
+        if tip_title:
+            lines += ["", f"{tip_title}", tip_body]
+        lines += [
+            "",
+            "If something caught your eye, just reply and let me know.",
+            "",
+            "Canberk",
+            "Founder | Actor",
+            "actorrise.com",
+        ]
+        return "\n".join(lines)
