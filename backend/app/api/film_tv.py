@@ -8,6 +8,7 @@ from app.api.auth import get_current_user
 from app.core.database import get_db
 from app.middleware.rate_limiting import record_total_search
 from app.models.actor import FilmTvFavorite, FilmTvReference
+from app.models.search_log import SearchLog
 from app.models.user import User
 from app.services.ai.content_analyzer import ContentAnalyzer
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -251,6 +252,23 @@ async def search_film_tv_references(
 
         if results:
             record_total_search(current_user.id, db)
+
+        # Log film/TV search
+        try:
+            filters_used = {k: v for k, v in {"type": type, "genre": genre, "director": director, "year_min": year_min, "year_max": year_max}.items() if v}
+            result_ids = [r.id for r in results[:20]]
+            db.add(SearchLog(
+                query=q_clean,
+                filters_used=filters_used or None,
+                results_count=total,
+                result_ids=result_ids,
+                user_id=int(current_user.id),
+                source="film_tv",
+            ))
+            db.commit()
+        except Exception:
+            db.rollback()
+
         return FilmTvSearchResponse(results=results, total=total, page=page, page_size=limit)
 
     # No query: filter-only
