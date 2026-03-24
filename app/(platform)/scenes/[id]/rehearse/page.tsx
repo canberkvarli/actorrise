@@ -1884,7 +1884,7 @@ export default function RehearsalPage() {
   /* ── Render: main rehearsal view ───────────────────────────────── */
 
   return (
-    <div className={cn('fixed inset-0 bg-neutral-950 text-neutral-100 flex flex-col z-[10050] transition-opacity duration-150', exiting && 'opacity-0')}>
+    <div className={cn('dark fixed inset-0 bg-neutral-950 text-neutral-100 flex flex-col z-[10050] transition-opacity duration-150', exiting && 'opacity-0')}>
       {/* Fade-to-review overlay */}
       {fadeToReview && (
         <motion.div

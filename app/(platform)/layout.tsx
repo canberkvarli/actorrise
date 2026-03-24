@@ -8,6 +8,7 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { IconHome, IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar } from "@tabler/icons-react";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarks";
@@ -245,7 +246,8 @@ export default function PlatformLayout({
             </div>
 
             {/* Desktop Profile Dropdown - right aligned */}
-            <div className="hidden md:flex items-center">
+            <div className="hidden md:flex items-center gap-1">
+              <ThemeToggle />
               <div className="relative" ref={dropdownRef}>
                 <Button
                   variant="ghost"
@@ -480,8 +482,10 @@ export default function PlatformLayout({
               </Button>
             </div>
 
-            {/* Mobile menu: button on far right (click outside to close) */}
-            <div ref={mobileMenuRef} className="md:hidden relative shrink-0">
+            {/* Mobile menu: theme toggle + hamburger on far right */}
+            <div className="md:hidden flex items-center gap-0.5 shrink-0">
+              <ThemeToggle />
+              <div ref={mobileMenuRef} className="relative">
               <Button
                 variant="ghost"
                 size="icon"
@@ -645,6 +649,7 @@ export default function PlatformLayout({
               </div>
             </div>
               )}
+            </div>
             </div>
         </div>
         </div>
