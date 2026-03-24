@@ -152,13 +152,10 @@ TEMPLATES = [
     {
         "id": "scene_partner_launch",
         "name": "ScenePartner Launch",
-        "description": "Announce ScenePartner to free users with FOUNDER promo code",
+        "description": "Announce ScenePartner to users (personal, no promo language)",
         "subject": "New: rehearse lines with a scene partner that never flakes",
         "variables": [
             {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
-            {"name": "promo_code", "label": "Promo code", "type": "text", "default": "FOUNDER", "required": True},
-            {"name": "cta_text", "label": "CTA button text", "type": "text", "default": "Try ScenePartner", "required": True},
-            {"name": "cta_url", "label": "CTA button URL", "type": "url", "default": "https://actorrise.com/my-scripts", "required": True},
             {"name": "video_url", "label": "Video URL (optional)", "type": "url", "default": "https://www.youtube.com/watch?v=TTZxo3bZPI4", "required": False},
         ],
     },

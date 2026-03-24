@@ -77,10 +77,6 @@ export function MonologueDetailContent({
         </div>
         <div className="space-y-4">
           <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-sm text-muted-foreground mr-1">Character:</span>
-            <Badge variant="outline" className="font-normal font-typewriter">
-              {monologue.character_name}
-            </Badge>
             {monologue.character_gender && monologue.character_gender.toLowerCase() !== "any" && (
               <Badge variant="outline" className="font-normal capitalize">
                 {monologue.character_gender}
