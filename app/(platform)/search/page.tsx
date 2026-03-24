@@ -2185,6 +2185,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   <Link href="/profile" className="text-primary underline underline-offset-2 shrink-0">Set it up →</Link>
                 </div>
               )}
+              {correctedQuery && (
+                <p className="text-sm text-muted-foreground">
+                  Showing results for <span className="font-medium text-foreground">{correctedQuery}</span>
+                </p>
+              )}
               {contentGap && (
                 <ContentGapBanner play={contentGap.play} author={contentGap.author} />
               )}

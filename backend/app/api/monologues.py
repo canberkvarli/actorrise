@@ -368,6 +368,18 @@ async def search_monologues(
         if monologue_responses:
             record_total_search(current_user.id, db)
 
+        # AI-powered query validation (Tier 3 queries only - runs during search)
+        ai_valid = getattr(search_service, '_ai_is_valid_search', None)
+        ai_corrected = getattr(search_service, '_ai_corrected_query', None)
+        if ai_valid is False:
+            return SearchResponse(
+                results=[],
+                total=0,
+                page=page,
+                page_size=limit,
+                query_invalid_reason="gibberish",
+            )
+
         # Content gap detection: check if the user wanted a specific play/author we don't have
         content_gap = None
         intended_play = getattr(search_service, '_intended_play', None)
@@ -413,8 +425,8 @@ async def search_monologues(
             total=total,
             page=page,
             page_size=limit,
-            corrected_query=None,
-            query_may_have_typos=False,
+            corrected_query=ai_corrected,
+            query_may_have_typos=ai_corrected is not None,
             content_gap=content_gap,
         )
     except HTTPException:
