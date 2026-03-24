@@ -28,9 +28,19 @@ def validate_query(query: str) -> tuple[bool, str]:
     vowels = set("aeiou")
     gibberish_words = 0
 
+    # Common English words with unusual consonant patterns
+    _KNOWN_WORDS = {
+        "strength", "rhythm", "lengths", "months", "depths", "worlds",
+        "scripts", "nymphs", "synths", "lymph", "glyph", "crypt",
+        "twelfth", "eighth", "schmuck", "schmaltz",
+    }
+
     for word in words:
         # Skip very short words (a, I, to, etc.) and numbers
         if len(word) <= 2 or word.isdigit():
+            continue
+
+        if word.lower() in _KNOWN_WORDS:
             continue
 
         letters = [c for c in word if c.isalpha()]
@@ -42,15 +52,17 @@ def validate_query(query: str) -> tuple[bool, str]:
 
         # Real English words typically have 20-60% vowels
         # "jkdsahvlkadsg" has ~15% vowels, "rhythm" has ~0% but is short
-        has_bad_ratio = vowel_ratio < 0.15 or vowel_ratio > 0.8
+        has_bad_ratio = vowel_ratio <= 0.18 or vowel_ratio > 0.8
 
         # Check for unlikely consonant clusters (4+ consonants in a row)
-        has_consonant_cluster = bool(re.search(r'[^aeiou]{5,}', word))
+        has_consonant_cluster = bool(re.search(r'[^aeiou]{4,}', word))
 
         # Check for repeated patterns (asdfsadf)
         has_repeats = bool(re.search(r'(.{2,})\1{2,}', word))
 
-        if len(word) >= 5 and (has_bad_ratio or has_consonant_cluster or has_repeats):
+        # Flag as gibberish only if multiple signals fire together
+        signals = sum([has_bad_ratio, has_consonant_cluster, has_repeats])
+        if len(word) >= 5 and signals >= 2:
             gibberish_words += 1
 
     real_words = len([w for w in words if len(w) > 2 and not w.isdigit()])
