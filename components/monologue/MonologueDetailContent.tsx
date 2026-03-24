@@ -10,7 +10,7 @@ import { Monologue } from "@/types/actor";
 import { isMeaningfulMonologueTitle } from "@/lib/utils";
 import { getEmotionBadgeClassName, getEmotionBarClassName } from "@/lib/emotionColors";
 import { MonologueText } from "@/components/monologue/MonologueText";
-import { isBibliographicText } from "@/lib/monologueText";
+import { isBibliographicText, stageDirectionPercentage } from "@/lib/monologueText";
 
 export interface MonologueDetailContentProps {
   monologue: Monologue;
@@ -228,7 +228,12 @@ export function MonologueDetailContent({
             )}
           </div>
         ) : (
-          <div className="bg-muted/30 p-6 rounded-lg border border-border">
+          <div className="bg-muted/30 p-6 rounded-lg border border-border space-y-3">
+            {stageDirectionPercentage(monologue.text) > 50 && (
+              <p className="text-xs text-muted-foreground bg-muted/50 px-3 py-2 border border-border/50">
+                This monologue contains a lot of stage directions. The spoken lines are shown in normal text.
+              </p>
+            )}
             <p className="text-base leading-relaxed font-typewriter">
               <MonologueText text={monologue.text} />
             </p>

@@ -16,14 +16,16 @@ export type MonologueSegment =
   | { type: "dialogue"; content: string };
 
 /**
- * Matches:
+ * Matches (in order):
+ * - ALL CAPS NAME (2+ uppercase words) followed by text → character cue (stage direction)
+ * - _italic text_ → stage direction (common in Ibsen, classical formatting)
  * - ( ... ) or [ ... ] → stage direction
  * - " ... " → quoted dialogue (double quotes only; single quotes stay plain text)
  */
-const SEGMENT_RE = /(\([^)]*\)|\[[^\]]*\]|"[^"]*")/g;
+const SEGMENT_RE = /(\b[A-Z][A-Z]+(?:\s+[A-Z][A-Z]+)*\s+_[^_]+_\.?|_[^_]+_|\([^)]*\)|\[[^\]]*\]|"[^"]*")/g;
 
 function isStageDirection(raw: string): boolean {
-  return raw.startsWith("(") || raw.startsWith("[");
+  return raw.startsWith("(") || raw.startsWith("[") || raw.includes("_");
 }
 
 /**
@@ -36,6 +38,21 @@ export function isBibliographicText(text: string): boolean {
   const catalogPattern = /\b[A-Z]{2,},\s+[A-Z][a-z]/g;
   const matches = text.match(catalogPattern);
   return (matches?.length ?? 0) >= 3;
+}
+
+/**
+ * Returns the percentage of text that is stage directions (0-100).
+ * Useful for flagging monologues that are mostly stage directions.
+ */
+export function stageDirectionPercentage(text: string): number {
+  if (!text) return 0;
+  const segments = parseMonologueText(text);
+  const totalLen = segments.reduce((sum, s) => sum + s.content.length, 0);
+  if (totalLen === 0) return 0;
+  const stageLen = segments
+    .filter((s) => s.type === "stage")
+    .reduce((sum, s) => sum + s.content.length, 0);
+  return Math.round((stageLen / totalLen) * 100);
 }
 
 export function parseMonologueText(text: string): MonologueSegment[] {
