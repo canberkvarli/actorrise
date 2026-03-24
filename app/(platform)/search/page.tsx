@@ -204,6 +204,7 @@ function SearchContent() {
   const [correctedQuery, setCorrectedQuery] = useState<string | null>(null);
   const [queryMayHaveTypos, setQueryMayHaveTypos] = useState(false);
   const [contentGap, setContentGap] = useState<{ play: string | null; author: string | null } | null>(null);
+  const [queryInvalidReason, setQueryInvalidReason] = useState<string | null>(null);
   const PAGE_SIZE = 20;
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -685,6 +686,7 @@ function SearchContent() {
     corrected_query?: string | null;
     query_may_have_typos?: boolean;
     content_gap?: { play: string | null; author: string | null } | null;
+    query_invalid_reason?: string | null;
   };
 
   const performSearch = async (
@@ -735,6 +737,7 @@ function SearchContent() {
         setCorrectedQuery(data.corrected_query ?? null);
         setQueryMayHaveTypos(data.query_may_have_typos ?? false);
         setContentGap(data.content_gap ?? null);
+        setQueryInvalidReason(data.query_invalid_reason ?? null);
       }
       setTotal(data.total);
       setPage(data.page);
@@ -801,7 +804,7 @@ function SearchContent() {
       const upgradeUrl = raw && typeof raw === "object" && "upgrade_url" in raw ? (raw as { upgrade_url: string }).upgrade_url : null;
       setSearchError(message);
       setSearchUpgradeUrl(upgradeUrl ?? null);
-      if (!append) { setResults([]); setContentGap(null); }
+      if (!append) { setResults([]); setContentGap(null); setQueryInvalidReason(null); }
     } finally {
       // Only clear loading if this search is still the active one
       // (a newer search may have replaced our controller)
@@ -2130,17 +2133,22 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
             >
-              <div className="pt-12 pb-12 text-center">
+              <div className="pt-12 pb-12 text-center max-w-md mx-auto">
                 <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
                 {contentGap ? (
-                  <>
-                    <ContentGapBanner play={contentGap.play} author={contentGap.author} />
-                  </>
-                ) : queryUsedForResults && !/[a-z]{2,}/i.test(queryUsedForResults) ? (
+                  <ContentGapBanner play={contentGap.play} author={contentGap.author} />
+                ) : queryInvalidReason === "gibberish" ? (
                   <>
                     <h3 className="text-2xl font-semibold mb-2">We couldn&apos;t understand that search</h3>
                     <p className="text-sm text-muted-foreground">
-                      Try describing what you&apos;re looking for, like &quot;funny monologue for a woman in her 20s&quot;
+                      Try describing what you&apos;re looking for, like &quot;funny monologue for a woman in her 20s&quot; or a play title like &quot;Hamlet&quot;
+                    </p>
+                  </>
+                ) : queryInvalidReason ? (
+                  <>
+                    <h3 className="text-2xl font-semibold mb-2">That search is too short</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Try adding more detail, like &quot;sad monologue about loss&quot;
                     </p>
                   </>
                 ) : (
