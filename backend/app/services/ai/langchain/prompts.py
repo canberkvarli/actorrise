@@ -49,12 +49,14 @@ QUERY_PARSING_HUMAN = """Parse this monologue search query and extract any filte
 
 QUERY: "{query}"
 
-IMPORTANT INSTRUCTIONS:
-- Only extract filters that the user EXPLICITLY wants to filter by
-- If the user mentions a play title (e.g., "Hamlet", "Macbeth", "Romeo and Juliet") or famous character name (e.g., "Hamlet", "Ophelia", "Lady Macbeth"), DO NOT extract themes or filters
-- DO NOT extract category or author filters based on play title mentions
-- The search uses semantic similarity on play titles, character names, and monologue text, so specific titles/names/quotes will match by content, not by filters
-- ONLY extract filters when the user requests specific attributes like gender, age, emotion, tone, etc.
+CRITICAL INSTRUCTIONS:
+- ONLY extract filters the user EXPLICITLY mentions in their query. Do NOT infer, assume, or guess.
+- "dramatic monologue, male, 18 year old 2 minutes" → tone: dramatic, gender: male, age_range: teens, max_duration: 120. That's it. Do NOT add emotion, themes, difficulty, or category unless the user explicitly says them.
+- If the user says "funny" → extract emotion: joy AND tone: comedic. If they say "sad" → extract emotion: sadness. But do NOT add emotions they never mentioned.
+- Do NOT add themes unless the user explicitly mentions a topic (e.g., "about love", "dealing with death"). "dramatic monologue" does NOT imply any theme.
+- Do NOT add difficulty unless the user explicitly says "beginner", "intermediate", or "advanced".
+- If the user mentions a play title or character name, DO NOT extract themes or filters from that.
+- When in doubt, return null. It is MUCH better to extract too few filters than too many.
 
 Extract the following information if present in the query (return null if not mentioned):
 
