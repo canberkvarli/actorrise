@@ -71,11 +71,9 @@ class ResendEmailClient:
             }
             if scheduled_at:
                 params["scheduled_at"] = scheduled_at
-            if unsubscribe_url:
-                params["headers"] = {
-                    "List-Unsubscribe": f"<{unsubscribe_url}>",
-                    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-                }
+            # Note: List-Unsubscribe headers removed to avoid Gmail
+            # Promotions tab. Unsubscribe link is still in the email body
+            # for CAN-SPAM compliance.
 
             response = resend.Emails.send(params)
 
