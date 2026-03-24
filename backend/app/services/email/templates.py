@@ -204,8 +204,8 @@ class EmailTemplates:
         sender_name: str = "Canberk",
         sender_title: str = "Founder, ActorRise",
         share_text: Optional[str] = None,
-        share_url: Optional[str] = None,
         unsubscribe_url: Optional[str] = None,
+        **kwargs,
     ) -> str:
         """Render founder offer email with promo code, testimony ask, and share CTA."""
         template = self.env.get_template('founder_offer.html')
@@ -219,7 +219,6 @@ class EmailTemplates:
             sender_name=sender_name,
             sender_title=sender_title,
             share_text=share_text,
-            share_url=share_url or "https://actorrise.com",
             unsubscribe_url=unsubscribe_url,
         )
 
@@ -260,13 +259,39 @@ class EmailTemplates:
         unsubscribe_url: Optional[str] = None,
         **kwargs,
     ) -> str:
-        """Render ScenePartner launch email."""
+        """Render ScenePartner launch email (HTML version for preview)."""
         template = self.env.get_template('scene_partner_launch.html')
         return template.render(
             user_name=user_name or "there",
             video_url=video_url,
             unsubscribe_url=unsubscribe_url,
         )
+
+    def render_scene_partner_launch_plain(
+        self,
+        user_name: str,
+        video_url: Optional[str] = None,
+        unsubscribe_url: Optional[str] = None,
+        **kwargs,
+    ) -> str:
+        """Render ScenePartner launch as plain text (lands in Gmail Primary)."""
+        name = user_name or "there"
+        lines = [
+            f"Hey {name},",
+            "",
+            "Just finished building something I think you'll actually use. It's called ScenePartner.",
+            "",
+            "Basically, you upload a script (or pick one from the library), choose your character, and the AI reads the other parts with you. You can run it over and over. It listens to you and responds in real time.",
+            "",
+            "I built it because I got tired of asking friends to read with me at weird hours. Now I just open it and go.",
+            "",
+            "Let me know what you think. Seriously, just reply to this.",
+            "",
+            "Canberk",
+            "Founder | Actor",
+            "actorrise.com",
+        ]
+        return "\n".join(lines)
 
     def render_cold_outreach(
         self,

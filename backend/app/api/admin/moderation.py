@@ -156,11 +156,23 @@ async def get_moderation_queue(
         desc(MonologueSubmission.submitted_at)
     ).limit(limit).offset(offset).all()
 
-    # Build response with joined data
+    # Batch-load all related users in one query instead of N+1
+    user_ids = set()
+    for sub in submissions:
+        if sub.user_id:
+            user_ids.add(sub.user_id)
+        if sub.reviewer_id:
+            user_ids.add(sub.reviewer_id)
+
+    users_map: dict[int, User] = {}
+    if user_ids:
+        users = db.query(User).filter(User.id.in_(user_ids)).all()
+        users_map = {u.id: u for u in users}
+
     results = []
     for sub in submissions:
-        submitter = db.query(User).filter(User.id == sub.user_id).first()
-        reviewer = db.query(User).filter(User.id == sub.reviewer_id).first() if sub.reviewer_id else None
+        submitter = users_map.get(sub.user_id)
+        reviewer = users_map.get(sub.reviewer_id) if sub.reviewer_id else None
 
         results.append({
             'id': sub.id,
@@ -270,38 +282,33 @@ async def get_queue_stats(
     db: Session = Depends(get_db)
 ):
     """Get statistics about the moderation queue."""
-    from datetime import datetime, timedelta
+    from datetime import datetime
+    from sqlalchemy import func, case, cast
+    from sqlalchemy.types import Date
 
     today = datetime.utcnow().date()
 
-    pending = db.query(MonologueSubmission).filter(
-        MonologueSubmission.status == 'pending'
-    ).count()
-
-    ai_review = db.query(MonologueSubmission).filter(
-        MonologueSubmission.status == 'ai_review'
-    ).count()
-
-    manual_review = db.query(MonologueSubmission).filter(
-        MonologueSubmission.status == 'manual_review'
-    ).count()
-
-    approved_today = db.query(MonologueSubmission).filter(
-        MonologueSubmission.status == 'approved',
-        MonologueSubmission.processed_at >= today
-    ).count()
-
-    rejected_today = db.query(MonologueSubmission).filter(
-        MonologueSubmission.status == 'rejected',
-        MonologueSubmission.processed_at >= today
-    ).count()
+    # Single query for all counts
+    row = db.query(
+        func.count(case((MonologueSubmission.status == 'pending', 1))).label('pending'),
+        func.count(case((MonologueSubmission.status == 'ai_review', 1))).label('ai_review'),
+        func.count(case((MonologueSubmission.status == 'manual_review', 1))).label('manual_review'),
+        func.count(case((
+            (MonologueSubmission.status == 'approved') & (cast(MonologueSubmission.processed_at, Date) == today),
+            1,
+        ))).label('approved_today'),
+        func.count(case((
+            (MonologueSubmission.status == 'rejected') & (cast(MonologueSubmission.processed_at, Date) == today),
+            1,
+        ))).label('rejected_today'),
+    ).first()
 
     return {
-        'pending': pending,
-        'ai_review': ai_review,
-        'manual_review': manual_review,
-        'approved_today': approved_today,
-        'rejected_today': rejected_today
+        'pending': row.pending,
+        'ai_review': row.ai_review,
+        'manual_review': row.manual_review,
+        'approved_today': row.approved_today,
+        'rejected_today': row.rejected_today,
     }
 
 

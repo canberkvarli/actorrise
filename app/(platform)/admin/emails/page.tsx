@@ -94,6 +94,9 @@ interface BatchStatus {
 export default function AdminEmailsPage() {
   const { user } = useAuth();
 
+  // Loading
+  const [loading, setLoading] = useState(true);
+
   // Template data
   const [templates, setTemplates] = useState<TemplateMeta[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -113,6 +116,7 @@ export default function AdminEmailsPage() {
   const [bulkInput, setBulkInput] = useState("");
   const [target, setTarget] = useState("all");
   const [dryRun, setDryRun] = useState(true);
+  const [sendVia, setSendVia] = useState<"smtp" | "resend">("smtp");
 
   // Bulk extras
   const [campaignKey, setCampaignKey] = useState("");
@@ -140,18 +144,16 @@ export default function AdminEmailsPage() {
 
   // Fetch templates + batch history
   useEffect(() => {
-    api
-      .get<TemplateMeta[]>("/api/admin/emails/templates")
-      .then(({ data }) => {
+    Promise.all([
+      api.get<TemplateMeta[]>("/api/admin/emails/templates").then(({ data }) => {
         setTemplates(data);
         if (data.length > 0) {
           setSelectedId(data[0].id);
           _initVars(data[0]);
         }
-      })
-      .catch(() => toast.error("Failed to load email templates"));
-
-    fetchBatchHistory();
+      }).catch(() => toast.error("Failed to load email templates")),
+      api.get<BatchHistoryItem[]>("/api/admin/emails/batches").then(({ data }) => setBatchHistory(data)).catch(() => {}),
+    ]).finally(() => setLoading(false));
   }, []);
 
   function fetchBatchHistory(search?: string) {
@@ -294,9 +296,9 @@ export default function AdminEmailsPage() {
       if (mode === "single") {
         await api.post("/api/admin/emails/send", {
           template_id: selectedId, to: recipientEmail.trim(),
-          subject: subjectOverride || undefined, variables,
+          subject: subjectOverride || undefined, variables, send_via: sendVia,
         });
-        toast.success(`Email sent to ${recipientEmail.trim()}`);
+        toast.success(`Email sent to ${recipientEmail.trim()} via ${sendVia.toUpperCase()}`);
       } else if (mode === "bulk") {
         const { data } = await api.post<{ batch_id: number; status: string; total: number }>(
           "/api/admin/emails/bulk-send", {
@@ -304,25 +306,26 @@ export default function AdminEmailsPage() {
             subject: subjectOverride || undefined, variables,
             campaign_key: campaignKey.trim() || undefined,
             scheduled_at: scheduledAt || undefined,
+            send_via: sendVia,
           }
         );
-        toast.success(scheduledAt ? `Scheduled ${data.total} emails` : `Sending ${data.total} emails...`);
+        toast.success(scheduledAt ? `Scheduled ${data.total} emails` : `Sending ${data.total} emails via ${sendVia.toUpperCase()}...`);
         setBatchStatus({ batch_id: data.batch_id, status: data.status as BatchStatus["status"], total: data.total, sent: 0, skipped: 0, errors: [], sends: [] });
         startBatchPolling(data.batch_id);
       } else {
         if (dryRun) {
           const { data } = await api.post<CampaignResult>("/api/admin/emails/campaign", {
-            template_id: selectedId, target, dry_run: true, variables,
+            template_id: selectedId, target, dry_run: true, variables, send_via: sendVia,
           });
           setCampaignResult(data);
           toast.success(`Dry run: ${data.recipients.length} recipients`);
         } else {
           const { data } = await api.post<{ batch_id: number; status: string; total: number }>(
             "/api/admin/emails/campaign", {
-              template_id: selectedId, target, dry_run: false, variables,
+              template_id: selectedId, target, dry_run: false, variables, send_via: sendVia,
             }
           );
-          toast.success(`Campaign started: sending to ${data.total} users...`);
+          toast.success(`Campaign started: sending to ${data.total} users via ${sendVia.toUpperCase()}...`);
           setBatchStatus({ batch_id: data.batch_id, status: data.status as BatchStatus["status"], total: data.total, sent: 0, skipped: 0, errors: [], sends: [] });
           startBatchPolling(data.batch_id);
         }
@@ -360,6 +363,30 @@ export default function AdminEmailsPage() {
   const totalOpened = batchHistory.reduce((sum, b) => sum + (b.status_counts["opened"] || 0) + (b.status_counts["clicked"] || 0), 0);
   const totalClicked = batchHistory.reduce((sum, b) => sum + (b.status_counts["clicked"] || 0), 0);
   const totalBounced = batchHistory.reduce((sum, b) => sum + (b.status_counts["bounced"] || 0), 0);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-2">
+          <IconMail className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Campaigns</h2>
+        </div>
+        <div className="grid grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="rounded-lg border border-border p-4 animate-pulse">
+              <div className="h-3 w-16 bg-muted rounded mb-2" />
+              <div className="h-7 w-10 bg-muted rounded" />
+            </div>
+          ))}
+        </div>
+        <div className="space-y-2">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-10 bg-muted/50 rounded animate-pulse" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -666,6 +693,15 @@ export default function AdminEmailsPage() {
                       <Button variant={mode === "campaign" ? "default" : "outline"} size="sm" className="gap-2" onClick={() => setMode("campaign")}>
                         <IconUsers className="h-4 w-4" /> Campaign
                       </Button>
+                      <div className="ml-auto flex items-center gap-1.5 text-xs">
+                        <span className="text-muted-foreground">Send via:</span>
+                        <Button variant={sendVia === "smtp" ? "default" : "outline"} size="sm" className="h-7 text-xs px-2.5" onClick={() => setSendVia("smtp")}>
+                          Gmail
+                        </Button>
+                        <Button variant={sendVia === "resend" ? "default" : "outline"} size="sm" className="h-7 text-xs px-2.5" onClick={() => setSendVia("resend")}>
+                          Resend
+                        </Button>
+                      </div>
                     </div>
 
                     {mode === "single" ? (

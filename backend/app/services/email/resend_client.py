@@ -44,6 +44,7 @@ class ResendEmailClient:
         from_email: str = "Canberk <canberk@actorrise.com>",
         scheduled_at: Optional[str] = None,
         unsubscribe_url: Optional[str] = None,
+        plain_text: Optional[str] = None,
     ) -> dict:
         """
         Send an email via Resend.
@@ -51,10 +52,12 @@ class ResendEmailClient:
         Args:
             to: Recipient email address
             subject: Email subject
-            html: HTML email body
-            from_email: Sender email (default: notifications@actorrise.com)
+            html: HTML email body (ignored if plain_text is provided)
+            from_email: Sender email
             scheduled_at: ISO datetime string to schedule send (max 72h ahead)
-            unsubscribe_url: If provided, adds List-Unsubscribe headers
+            unsubscribe_url: Unused, kept for backward compat
+            plain_text: If provided, sends as plain text instead of HTML
+                        (lands in Gmail Primary tab more reliably)
 
         Returns:
             Resend response dict with email ID
@@ -67,13 +70,13 @@ class ResendEmailClient:
                 "from": from_email,
                 "to": to,
                 "subject": subject,
-                "html": html,
             }
+            if plain_text:
+                params["text"] = plain_text
+            else:
+                params["html"] = html
             if scheduled_at:
                 params["scheduled_at"] = scheduled_at
-            # Note: List-Unsubscribe headers removed to avoid Gmail
-            # Promotions tab. Unsubscribe link is still in the email body
-            # for CAN-SPAM compliance.
 
             response = resend.Emails.send(params)
 

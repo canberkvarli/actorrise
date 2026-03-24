@@ -91,9 +91,14 @@ def get_admin_stats(
     signups_by_day_map = {row.d: row.c for row in signups_by_day_q}
     signups_by_day = [{"date": d.isoformat(), "count": signups_by_day_map.get(d, 0)} for d in date_list]
 
-    # --- Feedback ---
-    total_positive = db.query(ResultFeedback).filter(ResultFeedback.rating == "positive").count()
-    total_negative = db.query(ResultFeedback).filter(ResultFeedback.rating == "negative").count()
+    # --- Feedback (single query for both counts) ---
+    feedback_counts_q = (
+        db.query(ResultFeedback.rating, sql_count(ResultFeedback.id))
+        .group_by(ResultFeedback.rating)
+    )
+    feedback_totals = {r: c for r, c in feedback_counts_q}
+    total_positive = feedback_totals.get("positive", 0)
+    total_negative = feedback_totals.get("negative", 0)
     feedback_by_day_q = (
         db.query(
             cast(ResultFeedback.created_at, Date).label("d"),
@@ -120,12 +125,15 @@ def get_admin_stats(
         for d in date_list
     ]
 
-    # --- Submissions ---
-    submission_counts: dict[str, int] = {}
-    for status in ("pending", "ai_review", "manual_review", "approved", "rejected"):
-        submission_counts[status] = db.query(MonologueSubmission).filter(
-            MonologueSubmission.status == status
-        ).count()
+    # --- Submissions (single grouped query instead of 5 separate counts) ---
+    sub_counts_q = (
+        db.query(MonologueSubmission.status, sql_count(MonologueSubmission.id))
+        .filter(MonologueSubmission.status.in_(("pending", "ai_review", "manual_review", "approved", "rejected")))
+        .group_by(MonologueSubmission.status)
+    )
+    submission_counts: dict[str, int] = {s: 0 for s in ("pending", "ai_review", "manual_review", "approved", "rejected")}
+    for s, c in sub_counts_q:
+        submission_counts[s] = c
     submissions_by_day_q = (
         db.query(
             cast(MonologueSubmission.submitted_at, Date).label("d"),
@@ -140,16 +148,19 @@ def get_admin_stats(
     submissions_by_day_map = {row.d: row.c for row in submissions_by_day_q}
     submissions_by_day = [{"date": d.isoformat(), "count": submissions_by_day_map.get(d, 0)} for d in date_list]
 
-    # Approved/rejected today (for summary cards)
+    # Approved/rejected today (single query)
     today = date.today()
-    approved_today = db.query(MonologueSubmission).filter(
-        MonologueSubmission.status == "approved",
-        cast(MonologueSubmission.processed_at, Date) == today,
-    ).count()
-    rejected_today = db.query(MonologueSubmission).filter(
-        MonologueSubmission.status == "rejected",
-        cast(MonologueSubmission.processed_at, Date) == today,
-    ).count()
+    today_counts_q = (
+        db.query(MonologueSubmission.status, sql_count(MonologueSubmission.id))
+        .filter(
+            MonologueSubmission.status.in_(("approved", "rejected")),
+            cast(MonologueSubmission.processed_at, Date) == today,
+        )
+        .group_by(MonologueSubmission.status)
+    )
+    today_map = {s: c for s, c in today_counts_q}
+    approved_today = today_map.get("approved", 0)
+    rejected_today = today_map.get("rejected", 0)
 
     # --- Usage: all users in date range ---
     usage_q = db.query(
