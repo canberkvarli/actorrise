@@ -15,7 +15,7 @@ from app.core.database import get_db
 from app.middleware.rate_limiting import require_ai_search_when_query
 from app.models.actor import Monologue, MonologueFavorite, Play
 from app.models.user import User
-from app.services.search.query_optimizer import correct_query_typos
+from app.services.search.query_optimizer import correct_query_typos, validate_query
 from app.services.search.recommender import Recommender
 from app.services.search.semantic_search import SemanticSearch
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -70,6 +70,7 @@ class SearchResponse(BaseModel):
     corrected_query: Optional[str] = None
     query_may_have_typos: bool = False
     content_gap: Optional[dict] = None
+    query_invalid_reason: Optional[str] = None
 
 
 class LeadMagnetItem(BaseModel):
@@ -294,6 +295,18 @@ async def search_monologues(
         filters['max_overdone_score'] = max_overdone_score
     elif exclude_overdone:
         filters['max_overdone_score'] = 0.3  # Only show "fresh" pieces (0.0 = fresh, 1.0 = extremely overdone)
+
+    # Pre-validate query before running search
+    if q and q.strip():
+        is_valid, invalid_reason = validate_query(q.strip())
+        if not is_valid:
+            return SearchResponse(
+                results=[],
+                total=0,
+                page=page,
+                page_size=limit,
+                query_invalid_reason=invalid_reason,
+            )
 
     try:
         search_service = SemanticSearch(db)

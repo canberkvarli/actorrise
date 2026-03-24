@@ -6,6 +6,60 @@ from functools import lru_cache
 from typing import Dict, List, Optional, Tuple
 
 
+def validate_query(query: str) -> tuple[bool, str]:
+    """
+    Quick pre-check: is this query meaningful enough to search?
+
+    Returns:
+        (is_valid, reason) - reason is empty if valid, otherwise a user-friendly message.
+    """
+    q = query.strip()
+
+    if not q:
+        return False, "empty"
+
+    # Too short (single char that isn't a word)
+    if len(q) == 1 and not q.isalpha():
+        return False, "too_short"
+
+    # Check each word: does it look like a real word?
+    # Real words have a reasonable vowel-to-consonant ratio
+    words = q.lower().split()
+    vowels = set("aeiou")
+    gibberish_words = 0
+
+    for word in words:
+        # Skip very short words (a, I, to, etc.) and numbers
+        if len(word) <= 2 or word.isdigit():
+            continue
+
+        letters = [c for c in word if c.isalpha()]
+        if not letters:
+            continue
+
+        vowel_count = sum(1 for c in letters if c in vowels)
+        vowel_ratio = vowel_count / len(letters)
+
+        # Real English words typically have 20-60% vowels
+        # "jkdsahvlkadsg" has ~15% vowels, "rhythm" has ~0% but is short
+        has_bad_ratio = vowel_ratio < 0.15 or vowel_ratio > 0.8
+
+        # Check for unlikely consonant clusters (4+ consonants in a row)
+        has_consonant_cluster = bool(re.search(r'[^aeiou]{5,}', word))
+
+        # Check for repeated patterns (asdfsadf)
+        has_repeats = bool(re.search(r'(.{2,})\1{2,}', word))
+
+        if len(word) >= 5 and (has_bad_ratio or has_consonant_cluster or has_repeats):
+            gibberish_words += 1
+
+    real_words = len([w for w in words if len(w) > 2 and not w.isdigit()])
+    if real_words > 0 and gibberish_words / real_words > 0.5:
+        return False, "gibberish"
+
+    return True, ""
+
+
 class QueryClassifier:
     """Classify search queries by complexity to optimize API usage"""
 

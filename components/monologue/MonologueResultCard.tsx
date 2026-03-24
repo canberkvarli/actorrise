@@ -138,17 +138,27 @@ export function MonologueResultCard({
               </div>
             </div>
 
-            {/* Compact metadata line + emotion badge */}
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs text-muted-foreground capitalize">
-                {[
-                  mono.character_gender && mono.character_gender.toLowerCase() !== "any" ? mono.character_gender : null,
-                  mono.character_age_range && mono.character_age_range.toLowerCase() !== "any" ? mono.character_age_range : null,
-                  mono.category,
-                ].filter(Boolean).join(", ")}
-              </span>
+            {/* Metadata + emotion */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {mono.character_gender && mono.character_gender.toLowerCase() !== "any" && (
+                <span className="text-[11px] text-muted-foreground capitalize">{mono.character_gender}</span>
+              )}
+              {mono.character_age_range && mono.character_age_range.toLowerCase() !== "any" && (
+                <>
+                  {mono.character_gender && mono.character_gender.toLowerCase() !== "any" && (
+                    <span className="text-muted-foreground/40">·</span>
+                  )}
+                  <span className="text-[11px] text-muted-foreground">{mono.character_age_range}</span>
+                </>
+              )}
+              {mono.category && (
+                <>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span className="text-[11px] text-muted-foreground capitalize">{mono.category}</span>
+                </>
+              )}
               {mono.primary_emotion && (
-                <Badge variant="secondary" className={`font-normal capitalize text-xs border-transparent ${getEmotionBadgeClassName(mono.primary_emotion)}`}>
+                <Badge variant="secondary" className={`ml-auto font-medium capitalize text-[11px] px-2 py-0.5 ${getEmotionBadgeClassName(mono.primary_emotion)}`}>
                   {mono.primary_emotion}
                 </Badge>
               )}
@@ -171,10 +181,7 @@ export function MonologueResultCard({
             </span>
           </div>
           {matchReasons && matchReasons.length > 0 && (
-            <div className="mt-2 flex items-center gap-2">
-              <p className="text-[11px] text-muted-foreground/70 leading-relaxed truncate flex-1">
-                {matchReasons.map((r) => r.label).join(" · ")}
-              </p>
+            <div className="mt-2">
               <MatchReasonTooltip reasons={matchReasons} />
             </div>
           )}
