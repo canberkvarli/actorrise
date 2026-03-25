@@ -1,0 +1,593 @@
+#!/usr/bin/env python
+"""
+Extract film & TV monologues from IMSDb scripts using scraping + AI identification.
+
+Pipeline:
+  1. For each film in film_tv_references that has an IMSDb URL, fetch the script HTML.
+  2. Parse screenplay format: extract dialogue blocks by character.
+  3. Identify continuous speeches by one character (monologue candidates).
+  4. Use GPT-4o-mini to pick the best audition-worthy monologues from the candidates.
+  5. Run ContentAnalyzer for emotion/theme/tone analysis + embeddings.
+  6. Store as Play + Monologue records with full attribution.
+
+Legal:
+  - Only short excerpts (1-2 minutes of dialogue, 100-400 words), not full scripts.
+  - Full script text is never stored — only the extracted monologue excerpt.
+  - copyright_status = "copyrighted", license_type = "fair_use"
+  - Always includes attribution to writer/director and IMSDb source link.
+
+Cost estimate:
+  - GPT-4o-mini for monologue selection: ~$0.001/script
+  - GPT-4o-mini for analysis: ~$0.002/monologue
+  - Embedding (text-embedding-3-large): ~$0.0001/monologue
+  - 1000 scripts → ~3000 monologues ≈ $10-15 total
+
+Usage:
+    uv run python scripts/extract_film_tv_monologues.py                    # All with IMSDb URLs
+    uv run python scripts/extract_film_tv_monologues.py --limit 5          # Test with 5 scripts
+    uv run python scripts/extract_film_tv_monologues.py --dry-run          # Preview only
+    uv run python scripts/extract_film_tv_monologues.py --min-rating 8.0   # Only high-rated films
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+import time
+from pathlib import Path
+from typing import Optional
+
+backend_dir = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(backend_dir))
+
+import requests
+from bs4 import BeautifulSoup
+from openai import OpenAI
+from sqlalchemy.orm import Session as DBSession
+
+from app.core.database import SessionLocal
+from app.models.actor import FilmTvReference, Monologue, Play
+from app.services.ai.content_analyzer import ContentAnalyzer
+
+
+# ── IMSDb Scraping ───────────────────────────────────────────────────────────
+
+IMSDB_HEADERS = {
+    "User-Agent": "ActorRise/1.0 (audition-prep; monologue-extraction)",
+    "Accept": "text/html",
+}
+IMSDB_DELAY = 2.0  # seconds between requests — be respectful
+
+
+def fetch_script_html(url: str) -> str | None:
+    """Fetch raw HTML from an IMSDb script page. Returns None if not a valid script."""
+    try:
+        resp = requests.get(url, headers=IMSDB_HEADERS, timeout=15)
+        if resp.status_code == 404:
+            return None
+        resp.raise_for_status()
+        # Verify this is actually a script page (has scrtext class)
+        if "scrtext" not in resp.text:
+            return None
+        return resp.text
+    except Exception as e:
+        print(f"    FETCH ERROR: {e}")
+        return None
+
+
+def build_imsdb_url(title: str) -> str:
+    """Build IMSDb script URL from title (same logic as frontend getImsdbSearchUrl)."""
+    slug = title.strip()
+    slug = re.sub(r"[''']", "", slug)
+    slug = re.sub(r"\s*&\s*", "-and-", slug)
+    slug = re.sub(r"\s+", "-", slug)
+    slug = re.sub(r"[^a-zA-Z0-9-]", "", slug)
+    return f"https://imsdb.com/scripts/{slug}.html"
+
+
+# ── Script Parsing ───────────────────────────────────────────────────────────
+
+def parse_screenplay(html: str) -> list[dict]:
+    """
+    Parse IMSDb screenplay HTML into dialogue blocks.
+
+    IMSDb structure: <td class="scrtext"> with <b> tags for character names
+    and scene headings. Dialogue is plain text between <b> tags.
+
+    Strategy: find all <b> tags, identify character names, collect text
+    between consecutive <b> tags as dialogue for the preceding character.
+
+    Returns list of: { character: str, text: str, word_count: int }
+    """
+    soup = BeautifulSoup(html, "lxml")
+
+    # Find the script content container
+    scrtext = soup.find("td", class_="scrtext")
+    if not scrtext:
+        return []
+
+    # Get ALL <b> tags in the script area
+    b_tags = scrtext.find_all("b")
+    if len(b_tags) < 5:
+        return []
+
+    blocks: list[dict] = []
+    current_character: str | None = None
+
+    for b_tag in b_tags:
+        bold_text = b_tag.get_text().strip()
+
+        # Skip empty, scene headings, transitions
+        if not bold_text or _is_scene_heading(bold_text):
+            # Flush: collect text AFTER this <b> tag but it's not dialogue
+            if current_character:
+                # Grab text between previous character <b> and this <b>
+                dialogue = _collect_text_after_b(b_tag.find_previous("b"), b_tag)
+                if dialogue:
+                    blocks.append({
+                        "character": current_character,
+                        "text": dialogue,
+                        "word_count": len(dialogue.split()),
+                    })
+                current_character = None
+            continue
+
+        if _is_character_name(bold_text):
+            # Flush previous character's dialogue
+            if current_character:
+                dialogue = _collect_text_after_b(b_tag.find_previous("b"), b_tag)
+                if dialogue:
+                    blocks.append({
+                        "character": current_character,
+                        "text": dialogue,
+                        "word_count": len(dialogue.split()),
+                    })
+            current_character = _normalize_character_name(bold_text)
+        else:
+            # Not a character name or heading — skip
+            if current_character:
+                dialogue = _collect_text_after_b(b_tag.find_previous("b"), b_tag)
+                if dialogue:
+                    blocks.append({
+                        "character": current_character,
+                        "text": dialogue,
+                        "word_count": len(dialogue.split()),
+                    })
+                current_character = None
+
+    return blocks
+
+
+def _collect_text_after_b(prev_b, next_b) -> str:
+    """Collect plain text between two <b> tags (the dialogue after prev_b, before next_b)."""
+    if not prev_b:
+        return ""
+    text_parts: list[str] = []
+    node = prev_b.next_sibling
+    while node and node != next_b:
+        if hasattr(node, "name") and node.name == "b":
+            break
+        if hasattr(node, "name") and node.name is not None:
+            # Skip other tags (but grab their text if it's inline like <i>)
+            txt = node.get_text().strip()
+            if txt:
+                text_parts.append(txt)
+        else:
+            txt = str(node).strip()
+            if txt:
+                text_parts.append(txt)
+        node = node.next_sibling
+    return _clean_dialogue(" ".join(text_parts))
+
+
+def _is_scene_heading(text: str) -> bool:
+    """Check if bold text is a scene heading, not a character name."""
+    t = text.strip().upper()
+    return bool(
+        re.match(r"^(INT\.|EXT\.|INT/EXT|I/E\b)", t)
+        or t.endswith(":")  # CUT TO:, FADE IN:, etc.
+        or t in {"CONTINUED", "FADE IN", "FADE OUT", "FADE TO BLACK", "THE END",
+                  "DISSOLVE TO", "SMASH CUT TO", "TITLE CARD", "SUPER", "MONTAGE"}
+        or t.startswith("TITLE")
+        or t.startswith("SUPER:")
+    )
+
+
+def _is_character_name(text: str) -> bool:
+    """Check if bold text looks like a character name."""
+    t = text.strip()
+    # Must be mostly uppercase
+    alpha = re.sub(r"[^a-zA-Z]", "", t)
+    if not alpha or len(alpha) < 2:
+        return False
+    upper_ratio = sum(1 for c in alpha if c.isupper()) / len(alpha)
+    if upper_ratio < 0.7:
+        return False
+    # Character names are typically short (1-4 words)
+    words = t.split()
+    if len(words) > 5:
+        return False
+    # Remove parentheticals like (V.O.) (O.S.) (CONT'D)
+    clean = re.sub(r"\(.*?\)", "", t).strip()
+    return len(clean) >= 2
+
+
+def _normalize_character_name(text: str) -> str:
+    """Clean up character name: remove (V.O.), (CONT'D), etc."""
+    name = re.sub(r"\(.*?\)", "", text).strip()
+    # Title case for display
+    return name.title() if name.isupper() else name
+
+
+def _clean_dialogue(text: str) -> str:
+    """Clean dialogue text: remove excessive whitespace, parenthetical directions."""
+    # Remove leading/trailing whitespace per line
+    lines = [line.strip() for line in text.split("\n")]
+    # Remove empty lines at start/end
+    while lines and not lines[0]:
+        lines.pop(0)
+    while lines and not lines[-1]:
+        lines.pop()
+    text = "\n".join(lines)
+    # Collapse multiple blank lines
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+# ── Monologue Identification ─────────────────────────────────────────────────
+
+def merge_consecutive_speeches(blocks: list[dict], min_words: int = 80) -> list[dict]:
+    """
+    Merge consecutive dialogue blocks by the same character into monologues.
+    Only keep speeches with min_words+ words (good audition length).
+    """
+    if not blocks:
+        return []
+
+    merged: list[dict] = []
+    current = blocks[0].copy()
+
+    for block in blocks[1:]:
+        if block["character"] == current["character"]:
+            # Same character speaking — merge
+            current["text"] += "\n\n" + block["text"]
+            current["word_count"] += block["word_count"]
+        else:
+            # Different character — flush and start new
+            if current["word_count"] >= min_words:
+                merged.append(current)
+            current = block.copy()
+
+    # Flush last
+    if current["word_count"] >= min_words:
+        merged.append(current)
+
+    return merged
+
+
+MONOLOGUE_SELECTION_PROMPT = """You are an acting coach selecting the best audition monologues from a screenplay.
+
+Below are monologue candidates from "{title}" ({year}), written by {writer}.
+Each candidate is a continuous speech by one character. Pick the TOP {max_picks} most audition-worthy monologues.
+
+Criteria for good audition monologues:
+- Emotional depth or clear character arc within the speech
+- Self-contained (makes sense without extensive context)
+- 100-400 words (1-3 minutes when performed)
+- Showcases acting range (not just exposition or plot delivery)
+- Iconic or memorable if possible
+
+CANDIDATES:
+{candidates}
+
+Respond with a JSON array of objects. Each object:
+{{"index": <candidate number 0-indexed>, "title": "<short descriptive title for this monologue>", "scene_description": "<1-2 sentence description of the scene for an actor>"}}
+
+Return ONLY the JSON array, nothing else."""
+
+
+def select_best_monologues(
+    client: OpenAI,
+    candidates: list[dict],
+    title: str,
+    year: int | None,
+    writer: str,
+    max_picks: int = 4,
+) -> list[dict]:
+    """Use GPT-4o-mini to select the best audition monologues from candidates."""
+    if not candidates:
+        return []
+
+    # Build candidate descriptions (truncated to save tokens)
+    candidate_text = ""
+    for i, c in enumerate(candidates):
+        preview = c["text"][:300] + ("..." if len(c["text"]) > 300 else "")
+        candidate_text += f"\n[{i}] {c['character']} ({c['word_count']} words):\n{preview}\n"
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {
+                    "role": "user",
+                    "content": MONOLOGUE_SELECTION_PROMPT.format(
+                        title=title,
+                        year=year or "Unknown",
+                        writer=writer,
+                        max_picks=min(max_picks, len(candidates)),
+                        candidates=candidate_text,
+                    ),
+                }
+            ],
+            temperature=0.2,
+            max_tokens=1000,
+        )
+        raw = (response.choices[0].message.content or "").strip()
+        # Parse JSON (handle markdown code blocks)
+        raw = re.sub(r"^```(?:json)?\s*", "", raw)
+        raw = re.sub(r"\s*```$", "", raw)
+        selections = json.loads(raw)
+        return selections if isinstance(selections, list) else []
+    except Exception as e:
+        print(f"    AI SELECTION ERROR: {e}")
+        # Fallback: pick the longest candidates
+        sorted_candidates = sorted(enumerate(candidates), key=lambda x: x[1]["word_count"], reverse=True)
+        return [
+            {"index": i, "title": f"{c['character']}'s speech", "scene_description": ""}
+            for i, c in sorted_candidates[:max_picks]
+        ]
+
+
+# ── Database Helpers ─────────────────────────────────────────────────────────
+
+def get_or_create_play(
+    db: DBSession,
+    ref: FilmTvReference,
+    writer: str,
+) -> Play:
+    """Get or create a Play record for a film/TV screenplay."""
+    existing = (
+        db.query(Play)
+        .filter(Play.film_tv_reference_id == ref.id)
+        .first()
+    )
+    if existing:
+        return existing
+
+    source_type = "tv" if ref.type == "tvSeries" else "film"
+    genres = ref.genre or []
+    genre_str = genres[0].lower() if genres else "drama"
+
+    play = Play(
+        title=str(ref.title),
+        author=writer,
+        year_written=ref.year,
+        genre=genre_str,
+        category="contemporary",
+        source_type=source_type,
+        film_tv_reference_id=int(ref.id),
+        copyright_status="copyrighted",
+        license_type="fair_use",
+        source_url=ref.imsdb_url or build_imsdb_url(str(ref.title)),
+        purchase_url=f"https://www.amazon.com/s?k={str(ref.title).replace(' ', '+')}+screenplay",
+        language="en",
+        themes=list(genres),
+    )
+    db.add(play)
+    db.flush()
+    return play
+
+
+# ── Main Pipeline ────────────────────────────────────────────────────────────
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Extract film/TV monologues from IMSDb")
+    parser.add_argument("--limit", type=int, default=0, help="Limit number of scripts to process (0=all)")
+    parser.add_argument("--min-rating", type=float, default=0.0, help="Minimum IMDb rating (e.g. 7.5)")
+    parser.add_argument("--max-monologues", type=int, default=4, help="Max monologues per script")
+    parser.add_argument("--dry-run", action="store_true", help="Preview without saving to DB")
+    parser.add_argument("--skip-existing", action="store_true", default=True, help="Skip scripts already processed")
+    parser.add_argument("--titles", nargs="+", help="Process specific titles (e.g. --titles 'Pulp Fiction' 'Fight Club')")
+    args = parser.parse_args()
+
+    client = OpenAI()
+    analyzer = ContentAnalyzer()
+    db = SessionLocal()
+
+    # Find film_tv_references to process
+    if args.titles:
+        # Specific titles requested
+        from sqlalchemy import or_
+        title_filters = [FilmTvReference.title.ilike(f"%{t}%") for t in args.titles]
+        query = db.query(FilmTvReference).filter(or_(*title_filters))
+    else:
+        # Filter to movies only (IMSDb mainly has movies, not TV), English-language, well-known
+        query = db.query(FilmTvReference).filter(
+            FilmTvReference.imdb_rating.isnot(None),
+            FilmTvReference.type == "movie",  # IMSDb is mostly movies
+        )
+        if args.min_rating > 0:
+            query = query.filter(FilmTvReference.imdb_rating >= args.min_rating)
+    query = query.order_by(FilmTvReference.imdb_rating.desc().nullslast())
+    if args.limit > 0:
+        query = query.limit(args.limit)
+
+    refs = query.all()
+    print(f"Processing {len(refs)} film/TV references (min rating: {args.min_rating})...")
+    if args.dry_run:
+        print("DRY RUN — no data will be saved\n")
+
+    total_scripts = 0
+    total_monologues = 0
+    total_skipped = 0
+    total_fetch_errors = 0
+
+    for i, ref in enumerate(refs):
+        title = str(ref.title)
+        year = ref.year
+        writer = str(ref.director) if ref.director else "Unknown"
+
+        # Skip if already processed
+        if args.skip_existing:
+            existing = db.query(Play).filter(Play.film_tv_reference_id == ref.id).first()
+            if existing:
+                existing_count = db.query(Monologue).filter(Monologue.play_id == existing.id).count()
+                if existing_count > 0:
+                    print(f"  [{i+1}/{len(refs)}] SKIP {title} — {existing_count} monologues already exist")
+                    total_skipped += 1
+                    continue
+
+        # Build IMSDb URL
+        url = ref.imsdb_url or build_imsdb_url(title)
+        print(f"  [{i+1}/{len(refs)}] {title} ({year}) *{ref.imdb_rating}")
+        print(f"    URL: {url}")
+
+        # Fetch script
+        html = fetch_script_html(url)
+        if not html:
+            total_fetch_errors += 1
+            time.sleep(IMSDB_DELAY)
+            continue
+
+        # Parse dialogue blocks
+        blocks = parse_screenplay(html)
+        if not blocks:
+            print(f"    No dialogue blocks found (may not be a screenplay page)")
+            total_fetch_errors += 1
+            time.sleep(IMSDB_DELAY)
+            continue
+
+        print(f"    Parsed {len(blocks)} dialogue blocks")
+
+        # Merge consecutive speeches and filter by length
+        candidates = merge_consecutive_speeches(blocks, min_words=80)
+        if not candidates:
+            print(f"    No monologue-length speeches found (need 80+ words)")
+            time.sleep(IMSDB_DELAY)
+            continue
+
+        print(f"    {len(candidates)} monologue candidates (80+ words)")
+
+        # Use AI to select the best monologues
+        selections = select_best_monologues(
+            client, candidates, title, year, writer,
+            max_picks=args.max_monologues,
+        )
+        print(f"    AI selected {len(selections)} monologues")
+
+        if args.dry_run:
+            for sel in selections:
+                idx = sel.get("index", 0)
+                if 0 <= idx < len(candidates):
+                    c = candidates[idx]
+                    print(f"      - {c['character']} ({c['word_count']} words): {sel.get('title', '')}")
+            total_scripts += 1
+            total_monologues += len(selections)
+            time.sleep(IMSDB_DELAY)
+            continue
+
+        # Create Play record
+        play = get_or_create_play(db, ref, writer)
+
+        for sel in selections:
+            idx = sel.get("index", 0)
+            if idx < 0 or idx >= len(candidates):
+                continue
+
+            candidate = candidates[idx]
+            mono_text = candidate["text"]
+            character = candidate["character"]
+            word_count = candidate["word_count"]
+
+            # Cap at ~400 words for fair use
+            if word_count > 450:
+                words = mono_text.split()
+                mono_text = " ".join(words[:400])
+                word_count = 400
+
+            duration_seconds = round(word_count / 2.5)  # ~150 wpm
+            mono_title = sel.get("title", f"{character}'s speech")
+            scene_desc = sel.get("scene_description", "")
+
+            # Check for duplicate
+            existing_mono = (
+                db.query(Monologue)
+                .filter(
+                    Monologue.play_id == play.id,
+                    Monologue.character_name == character,
+                    Monologue.title == mono_title,
+                )
+                .first()
+            )
+            if existing_mono:
+                print(f"      SKIP duplicate: {character} — {mono_title}")
+                continue
+
+            # AI analysis
+            print(f"      Analyzing: {character} ({word_count} words)")
+            analysis = analyzer.analyze_monologue(
+                text=mono_text,
+                character=character,
+                play_title=title,
+                author=writer,
+            )
+
+            # Embedding
+            embedding = analyzer.generate_embedding(mono_text)
+
+            # Search tags
+            tags = analyzer.generate_search_tags(analysis, mono_text, character)
+            if ref.type == "tvSeries":
+                tags.extend(["tv series", "television"])
+            else:
+                tags.extend(["film", "movie"])
+
+            monologue = Monologue(
+                play_id=int(play.id),
+                title=mono_title,
+                character_name=character,
+                text=mono_text,
+                character_gender=analysis.get("character_gender"),
+                character_age_range=analysis.get("character_age_range"),
+                character_description=f"From {title} ({year}), directed by {writer}",
+                word_count=word_count,
+                estimated_duration_seconds=duration_seconds,
+                difficulty_level=analysis.get("difficulty_level"),
+                primary_emotion=analysis.get("primary_emotion"),
+                emotion_scores=analysis.get("emotion_scores"),
+                themes=analysis.get("themes"),
+                tone=analysis.get("tone"),
+                scene_description=scene_desc,
+                search_tags=tags,
+                is_verified=False,
+                quality_score=None,
+                overdone_score=0.3,
+            )
+
+            if embedding:
+                monologue.embedding_vector = embedding
+
+            db.add(monologue)
+            db.commit()
+            total_monologues += 1
+            print(f"      OK Saved: {character} — {mono_title} (#{monologue.id})")
+
+            time.sleep(0.3)  # Rate limit AI calls
+
+        total_scripts += 1
+        time.sleep(IMSDB_DELAY)  # Rate limit IMSDb requests
+
+    print(f"\n{'='*60}")
+    print(f"Done!")
+    print(f"  Scripts processed: {total_scripts}")
+    print(f"  Monologues created: {total_monologues}")
+    print(f"  Scripts skipped (already done): {total_skipped}")
+    print(f"  Fetch errors (no script found): {total_fetch_errors}")
+    print(f"  Est. cost: ~${total_monologues * 0.005:.2f}")
+    db.close()
+
+
+if __name__ == "__main__":
+    main()

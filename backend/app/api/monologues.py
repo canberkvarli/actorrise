@@ -55,6 +55,12 @@ class MonologueResponse(BaseModel):
     relevance_score: Optional[float] = None  # Similarity score from search (0.0-1.0)
     match_type: Optional[str] = None  # "exact_quote" | "fuzzy_quote" when this monologue is the actual quote match
     source_url: Optional[str] = None  # Link to original source (e.g. Project Gutenberg) for attribution
+    # Film/TV metadata (populated when play.source_type is "film" or "tv")
+    source_type: Optional[str] = None  # "play" | "film" | "tv"
+    poster_url: Optional[str] = None
+    imdb_rating: Optional[float] = None
+    imdb_id: Optional[str] = None
+    director: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -181,6 +187,12 @@ def _monologue_to_response(
         relevance_score=relevance_score,
         match_type=match_type,
         source_url=cast(Optional[str], play.source_url),
+        # Film/TV metadata
+        source_type=cast(Optional[str], getattr(play, "source_type", "play")),
+        poster_url=getattr(play.film_tv_reference, "poster_url", None) if getattr(play, "film_tv_reference", None) else None,
+        imdb_rating=getattr(play.film_tv_reference, "imdb_rating", None) if getattr(play, "film_tv_reference", None) else None,
+        imdb_id=getattr(play.film_tv_reference, "imdb_id", None) if getattr(play, "film_tv_reference", None) else None,
+        director=getattr(play.film_tv_reference, "director", None) if getattr(play, "film_tv_reference", None) else None,
     )
 
 
@@ -251,6 +263,7 @@ async def search_monologues(
     max_duration: Optional[int] = None,
     exclude_overdone: bool = Query(False, description="If true, only return monologues with low overdone_score (fresh pieces)"),
     max_overdone_score: Optional[float] = Query(None, ge=0.0, le=1.0, description="Max overdone_score to include (0=freshest only, 1=all). Overrides exclude_overdone when set."),
+    source_type: Optional[str] = Query(None, description="Filter by source: 'play', 'film', 'tv'. Comma-separated for multiple."),
     limit: int = Query(20, le=100),
     page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
@@ -295,6 +308,9 @@ async def search_monologues(
         filters['max_overdone_score'] = max_overdone_score
     elif exclude_overdone:
         filters['max_overdone_score'] = 0.3  # Only show "fresh" pieces (0.0 = fresh, 1.0 = extremely overdone)
+    if source_type:
+        parts = [s.strip() for s in source_type.split(",") if s.strip()]
+        filters['source_type'] = parts if len(parts) > 1 else parts[0]
 
     # Pre-validate query before running search
     if q and q.strip():

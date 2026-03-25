@@ -59,6 +59,12 @@ export interface Monologue {
   /** "exact_quote" | "fuzzy_quote" when this monologue is the actual quote match (e.g. Hamlet for "to be or not to be") */
   match_type?: string;
   difficulty?: string;
+  // Film/TV metadata (populated when source_type is "film" or "tv")
+  source_type?: string | null;  // "play" | "film" | "tv"
+  poster_url?: string | null;
+  imdb_rating?: number | null;
+  imdb_id?: string | null;
+  director?: string | null;
 }
 
 export interface SearchRequest {
