@@ -22,14 +22,17 @@ export function FilmTvInfoModal({ open, onOpenChange }: FilmTvInfoModalProps) {
         </DialogHeader>
         <div className="space-y-3 text-sm text-muted-foreground">
           <p>
-            Search 14,000+ films and TV series to find the right piece for your audition.
+            Search monologues from iconic films and TV series for your audition.
             Use natural language: <em>&ldquo;dark psychological thriller&rdquo;</em>, <em>&ldquo;villain monologue&rdquo;</em>,
             or just a title like <em>&ldquo;The Godfather&rdquo;</em>.
           </p>
           <p>
-            After you search, click a result to see details, then use the <strong>Script</strong> link
-            to search for the script online (e.g. IMSDb or other sources). When available, <strong>Watch</strong> opens
-            the clip on YouTube. We don&apos;t store script text. You open the original source.
+            Results include audition-ready monologue excerpts you can save, rehearse with ScenePartner, and
+            film/TV reference cards with script links and metadata.
+          </p>
+          <p className="text-xs text-muted-foreground/70">
+            Monologue excerpts are provided under fair use for audition preparation.
+            All content is attributed to the original writers.
           </p>
         </div>
         <div className="flex justify-end pt-2">

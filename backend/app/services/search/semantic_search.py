@@ -734,6 +734,13 @@ class SemanticSearch:
                     )
                 )
 
+            if hard_filters.get('source_type'):
+                st = hard_filters['source_type']
+                if isinstance(st, list):
+                    base_query = base_query.filter(Play.source_type.in_(st))
+                else:
+                    base_query = base_query.filter(Play.source_type == st)
+
         # Get user's bookmarked monologues if user_id provided
         # NOTE: Fetches all bookmarks because boost is applied during scoring
         # Capped at 1000 most recent to avoid pathological cases
@@ -1093,6 +1100,13 @@ class SemanticSearch:
                         Monologue.overdone_score <= threshold,
                     )
                 )
+
+            if filters.get('source_type'):
+                st = filters['source_type']
+                if isinstance(st, list):
+                    base_query = base_query.filter(Play.source_type.in_(st))
+                else:
+                    base_query = base_query.filter(Play.source_type == st)
 
         # Simple keyword-friendly text search: play title, character, author, monologue title/text.
         # We search both the full query and important keywords so that

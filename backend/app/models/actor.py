@@ -44,7 +44,7 @@ class ActorProfile(Base):
 
 
 class Play(Base):
-    """Source play/script metadata"""
+    """Source play/script metadata — also used for film & TV screenplays."""
     __tablename__ = "plays"
 
     id = Column(Integer, primary_key=True, index=True)
@@ -53,6 +53,11 @@ class Play(Base):
     year_written = Column(Integer, nullable=True)
     genre = Column(String, nullable=False)  # tragedy, comedy, drama, etc.
     category = Column(String, nullable=False, index=True)  # classical, contemporary
+
+    # Source type: "play" (default) | "film" | "tv"
+    source_type = Column(String, nullable=False, server_default="play", index=True)
+    # Link to film_tv_references for poster, IMDb rating, etc. (NULL for plays)
+    film_tv_reference_id = Column(Integer, ForeignKey("film_tv_references.id"), nullable=True, index=True)
 
     # Legal & Source Info
     copyright_status = Column(String, nullable=False)  # public_domain, copyrighted, unknown
@@ -78,6 +83,7 @@ class Play(Base):
     # Relationships
     monologues = relationship("Monologue", back_populates="play")
     scenes = relationship("Scene", backref="play", lazy="select")
+    film_tv_reference = relationship("FilmTvReference", backref="plays")
 
 
 class Monologue(Base):
