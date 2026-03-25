@@ -866,11 +866,14 @@ function SearchContent() {
             : Promise.resolve({ data: { results: [] as Monologue[], total: 0 } }),
         ]);
 
-        const results = refRes.data.results;
-        const total = refRes.data.total;
+        // Cap total results to PAGE_SIZE: prioritize monologues, fill rest with references
+        const monoResults = monoRes.data.results;
+        const refSlots = Math.max(0, PAGE_SIZE - monoResults.length);
+        const results = refRes.data.results.slice(0, refSlots);
+        const total = Math.min(monoRes.data.total + refRes.data.total, PAGE_SIZE);
         setFilmTvResults(results);
         setFilmTvTotal(total);
-        setFilmTvMonologues(monoRes.data.results);
+        setFilmTvMonologues(monoResults.slice(0, PAGE_SIZE));
         setFilmTvMonoTotal(monoRes.data.total);
         // Persist so refresh or navigating away and back keeps Film & TV results (like plays).
         try {
