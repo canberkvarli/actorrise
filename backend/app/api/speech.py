@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.api.auth import get_current_user
 from app.core.config import settings
 from app.core.database import get_db
+from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import FeatureGate
 from app.models.user import User
 from app.services.tts_service import VOICE_PROFILES, TTSService
@@ -52,6 +53,7 @@ async def synthesize_speech(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     _gate: bool = Depends(FeatureGate("scene_partner", increment=False)),
+    _burst: bool = Depends(BurstLimiter("speech_synthesize")),
 ):
     """
     Synthesize speech for a scene partner dialogue line.
@@ -110,6 +112,7 @@ async def transcribe_speech(
     prompt: Optional[str] = None,  # Expected line text — improves Whisper accuracy
     current_user: User = Depends(get_current_user),
     _gate: bool = Depends(FeatureGate("scene_partner", increment=False)),
+    _burst: bool = Depends(BurstLimiter("speech_transcribe")),
 ):
     """Transcribe user speech using OpenAI Whisper-1."""
     if not settings.openai_api_key:

@@ -6,6 +6,7 @@ from typing import List, Optional, cast
 
 from app.api.auth import get_current_user
 from app.core.database import get_db
+from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import record_total_search
 from app.models.actor import FilmTvFavorite, FilmTvReference
 from app.models.search_log import SearchLog
@@ -163,6 +164,7 @@ async def search_film_tv_references(
     page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    _burst: bool = Depends(BurstLimiter("film_tv_search")),
 ):
     """
     Semantic + structured search over film/TV references.

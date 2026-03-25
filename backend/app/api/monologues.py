@@ -12,6 +12,7 @@ from app.middleware.rate_limiting import record_total_search
 from app.services.email.resend_client import ResendEmailClient
 from app.core.config import settings
 from app.core.database import get_db
+from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import require_ai_search_when_query
 from app.models.actor import Monologue, MonologueFavorite, Play
 from app.models.user import User
@@ -269,6 +270,7 @@ async def search_monologues(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _ai_search_gate: bool = Depends(require_ai_search_when_query),
+    _burst: bool = Depends(BurstLimiter("ai_search")),
 ):
     """
     Semantic search for monologues. Same contract for dashboard and /search page.
