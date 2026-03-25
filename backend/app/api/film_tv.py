@@ -49,6 +49,7 @@ class FilmTvReferenceResult(BaseModel):
     imsdb_url: Optional[str] = None
     confidence_score: Optional[float] = None
     is_best_match: bool = False
+    match_type: Optional[str] = None  # "title_match" | "director_match" | "actor_match" | "plot_match" | "semantic"
 
     class Config:
         from_attributes = True
@@ -80,7 +81,7 @@ def _plot_snippet(plot: Optional[str], max_len: int = 300) -> Optional[str]:
     return plot if len(plot) <= max_len else plot[:max_len].rsplit(" ", 1)[0] + " …"
 
 
-def _text_match_score(ref: FilmTvReference, query: str) -> Optional[float]:
+def _text_match_score(ref: FilmTvReference, query: str) -> tuple[Optional[float], Optional[str]]:
     """
     Boost score when the query matches title, director, actors, or plot keywords.
 
@@ -91,11 +92,11 @@ def _text_match_score(ref: FilmTvReference, query: str) -> Optional[float]:
       director contains       → 0.87
       actor word match (≥4ch) → 0.85
       plot keyword match      → 0.80
-    Returns None when no match found.
+    Returns (score, match_type) tuple. Both None when no match found.
     """
     q = query.strip().lower()
     if not q:
-        return None
+        return None, None
 
     title_lower = (ref.title or "").lower()
     director_lower = (ref.director or "").lower()
@@ -103,25 +104,26 @@ def _text_match_score(ref: FilmTvReference, query: str) -> Optional[float]:
     plot_lower = (ref.plot or "").lower()
 
     if q == title_lower:
-        return 0.98
+        return 0.98, "title_match"
     if q in title_lower or title_lower in q:
-        return 0.95
+        return 0.95, "title_match"
     if director_lower and (q in director_lower or director_lower in q):
-        return 0.87
+        return 0.87, "director_match"
 
     query_words = [w for w in q.split() if len(w) >= 4]
     if query_words:
         if any(any(w in a for w in query_words) for a in actors_lower):
-            return 0.85
+            return 0.85, "actor_match"
         if any(w in plot_lower for w in query_words):
-            return 0.80
-    return None
+            return 0.80, "plot_match"
+    return None, None
 
 
 def _to_result(
     ref: FilmTvReference,
     score: Optional[float] = None,
     is_best_match: bool = False,
+    match_type: Optional[str] = None,
 ) -> FilmTvReferenceResult:
     return FilmTvReferenceResult(
         id=cast(int, ref.id),
@@ -139,6 +141,7 @@ def _to_result(
         imsdb_url=ref.imsdb_url,
         confidence_score=round(score, 4) if score is not None else None,
         is_best_match=is_best_match,
+        match_type=match_type,
     )
 
 
@@ -193,15 +196,15 @@ async def search_film_tv_references(
         from app.services.ai.langchain.embeddings import generate_embedding
         query_embedding = generate_embedding(q_clean, model="text-embedding-3-large", dimensions=3072)
 
-        # scores_by_id: imdb_id → (score, ref)
-        scores_by_id: dict[str, tuple[float, FilmTvReference]] = {}
+        # scores_by_id: imdb_id → (score, ref, match_type)
+        scores_by_id: dict[str, tuple[float, FilmTvReference, Optional[str]]] = {}
 
         # Path A: semantic (pgvector)
         if query_embedding:
             sem_rows = (
                 base.filter(FilmTvReference.embedding.isnot(None))
                 .order_by(FilmTvReference.embedding.cosine_distance(query_embedding))
-                .limit(limit * 3)
+                .limit(limit)
                 .all()
             )
             for ref in sem_rows:
@@ -214,7 +217,7 @@ async def search_film_tv_references(
                     sem_score = 0.0
                 prev = scores_by_id.get(iid)
                 if prev is None or sem_score > prev[0]:
-                    scores_by_id[iid] = (sem_score, ref)
+                    scores_by_id[iid] = (sem_score, ref, "semantic")
 
         # Path B: text (title / director / plot ILIKE, actors word match)
         text_rows = (
@@ -226,29 +229,32 @@ async def search_film_tv_references(
                 )
             )
             .order_by(FilmTvReference.imdb_rating.desc().nullslast())
-            .limit(limit * 2)
+            .limit(limit)
             .all()
         )
         for ref in text_rows:
             iid = cast(str, ref.imdb_id)
-            text_score = _text_match_score(ref, q_clean) or 0.80
+            text_score, text_match_type = _text_match_score(ref, q_clean)
+            if text_score is None:
+                text_score = 0.80
+                text_match_type = "plot_match"
             prev = scores_by_id.get(iid)
             if prev is None or text_score > prev[0]:
-                scores_by_id[iid] = (text_score, ref)
+                scores_by_id[iid] = (text_score, ref, text_match_type)
 
-        # Merge, sort, paginate
-        total = len(scores_by_id)
+        # Merge, sort, paginate — cap total to limit so the UI count matches actual results
         ranked = sorted(scores_by_id.values(), key=lambda x: x[0], reverse=True)
         offset = (page - 1) * limit
         page_items = ranked[offset: offset + limit]
+        total = min(len(scores_by_id), limit) if page == 1 else len(scores_by_id)
 
         results: List[FilmTvReferenceResult] = []
         best_assigned = False
-        for score, ref in page_items:
+        for score, ref, mt in page_items:
             is_best = not best_assigned and score >= BEST_MATCH_THRESHOLD
             if is_best:
                 best_assigned = True
-            results.append(_to_result(ref, score=score, is_best_match=is_best))
+            results.append(_to_result(ref, score=score, is_best_match=is_best, match_type=mt))
 
         if results:
             record_total_search(current_user.id, db)

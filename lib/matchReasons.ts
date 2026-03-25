@@ -1,4 +1,5 @@
 import type { Monologue } from "@/types/actor";
+import type { FilmTvReference } from "@/types/filmTv";
 import type { QueryHighlights } from "@/lib/queryMatchHighlight";
 import type { ProfileMatch } from "@/lib/profileMatch";
 
@@ -95,6 +96,53 @@ export function computeMatchReasons(
     for (const reason of profileMatch.reasons) {
       reasons.push({ label: reason, category: "profile" });
     }
+  }
+
+  return reasons;
+}
+
+const FILM_TV_MATCH_LABELS: Record<string, string> = {
+  title_match: "Title matches your search",
+  director_match: "Director matches your search",
+  actor_match: "Actor matches your search",
+  plot_match: "Plot matches your search",
+  semantic: "Semantically related",
+};
+
+export function computeFilmTvMatchReasons(
+  ref: FilmTvReference,
+  query: string,
+  activeFilters: Record<string, string>,
+): MatchReason[] {
+  const reasons: MatchReason[] = [];
+
+  // 1. Match type
+  if (ref.match_type && FILM_TV_MATCH_LABELS[ref.match_type]) {
+    reasons.push({ label: FILM_TV_MATCH_LABELS[ref.match_type], category: "quote" });
+  }
+
+  // 2. Confidence score
+  if (ref.confidence_score != null && ref.confidence_score > 0.1) {
+    reasons.push({ label: `${Math.round(ref.confidence_score * 100)}% match`, category: "score" });
+  }
+
+  // 3. Type (movie/tv)
+  if (ref.type) {
+    reasons.push({ label: ref.type === "tvSeries" ? "TV Series" : "Movie", category: "era" });
+  }
+
+  // 4. Genre
+  if (ref.genre && ref.genre.length > 0) {
+    reasons.push({ label: ref.genre.slice(0, 3).join(", "), category: "theme" });
+  }
+
+  // 5. Active filter matches
+  if (activeFilters.genre && ref.genre?.map(g => g.toLowerCase()).includes(activeFilters.genre.toLowerCase())) {
+    const already = reasons.some(r => r.label.toLowerCase().includes(activeFilters.genre.toLowerCase()));
+    if (!already) reasons.push({ label: `genre: ${activeFilters.genre}`, category: "filter" });
+  }
+  if (activeFilters.director && ref.director?.toLowerCase().includes(activeFilters.director.toLowerCase())) {
+    reasons.push({ label: `Director: ${ref.director}`, category: "filter" });
   }
 
   return reasons;

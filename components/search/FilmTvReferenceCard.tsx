@@ -8,7 +8,9 @@ import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import type { FilmTvReference } from "@/types/filmTv";
+import type { MatchReason } from "@/lib/matchReasons";
 import { MatchIndicatorTag } from "@/components/search/MatchIndicatorTag";
+import { MatchReasonTooltip } from "@/components/search/MatchReasonTooltip";
 import { ScriptSourcePicker } from "@/components/search/ScriptSourcePicker";
 
 export interface FilmTvReferenceCardProps {
@@ -20,6 +22,8 @@ export interface FilmTvReferenceCardProps {
   /** When set, show bookmark button and call on toggle (e.g. from search). */
   isFavorited?: boolean;
   onToggleFavorite?: (e: React.MouseEvent) => void;
+  /** Match reasons for the "why you got this" tooltip. */
+  matchReasons?: MatchReason[];
 }
 
 export function FilmTvReferenceCard({
@@ -29,6 +33,7 @@ export function FilmTvReferenceCard({
   compact = false,
   isFavorited = false,
   onToggleFavorite,
+  matchReasons,
 }: FilmTvReferenceCardProps) {
   const [posterError, setPosterError] = useState(false);
   const typeLabel = ref_item.type === "tvSeries" ? "TV Series" : ref_item.type === "movie" ? "Movie" : null;
@@ -109,12 +114,15 @@ export function FilmTvReferenceCard({
             </div>
           </div>
           {ref_item.plot_snippet && (
-            <p className="text-sm text-muted-foreground line-clamp-3 flex-1 leading-relaxed min-h-[4rem]">
+            <p className="text-sm text-muted-foreground line-clamp-3 grow shrink-0 leading-relaxed">
               {ref_item.plot_snippet}
             </p>
           )}
-          <div className="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-border/50 text-xs">
-            {typeLabel && <span className="font-medium text-muted-foreground">{typeLabel}</span>}
+          <div className="flex items-center justify-between gap-3 mt-auto pt-4 border-t border-border/50 text-xs">
+            <div className="flex items-center gap-2">
+              {typeLabel && <span className="font-medium text-muted-foreground">{typeLabel}</span>}
+              {matchReasons && matchReasons.length > 0 && <MatchReasonTooltip reasons={matchReasons} />}
+            </div>
             <ScriptSourcePicker ref_item={ref_item} compact />
           </div>
         </div>
@@ -212,7 +220,8 @@ export function FilmTvReferenceCard({
             )}
           </div>
 
-          <div className="mt-4 pt-4 border-t flex items-center justify-end gap-2 text-xs">
+          <div className="mt-4 pt-4 border-t flex items-center justify-between gap-2 text-xs">
+            {matchReasons && matchReasons.length > 0 && <MatchReasonTooltip reasons={matchReasons} />}
             <ScriptSourcePicker ref_item={ref_item} />
           </div>
         </CardContent>

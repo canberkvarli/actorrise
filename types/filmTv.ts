@@ -16,6 +16,7 @@ export interface FilmTvReference {
   imsdb_url: string | null;
   confidence_score: number | null;
   is_best_match: boolean;
+  match_type?: string | null;  // "title_match" | "director_match" | "actor_match" | "plot_match" | "semantic"
 }
 
 export interface FilmTvSearchResponse {

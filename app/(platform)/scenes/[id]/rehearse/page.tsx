@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { SCRIPTS_FEATURE_ENABLED } from '@/lib/featureFlags';
 import UnderConstructionScripts from '@/components/UnderConstructionScripts';
-import api from '@/lib/api';
+import api, { API_URL, getCachedAuthToken } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import {
   ArrowLeft,
@@ -1074,19 +1074,36 @@ export default function RehearsalPage() {
     return () => navigator.mediaDevices?.removeEventListener('devicechange', handler);
   }, [selectedMicId, setSelectedMicId]);
 
-  // Kill audio when user navigates away (back button, bfcache, client-side route)
+  // Kill audio & abandon session when user navigates away (back button, bfcache, client-side route)
+  const showFeedbackRef = useRef(showFeedback);
+  useEffect(() => { showFeedbackRef.current = showFeedback; }, [showFeedback]);
+
   useEffect(() => {
     const stop = () => { cancelAI(); window.speechSynthesis?.cancel(); };
-    window.addEventListener('pagehide', stop);
+    const abandonSession = () => {
+      // Only abandon if session is still in progress (not completed)
+      if (!sessionId || showFeedbackRef.current) return;
+      const token = getCachedAuthToken();
+      if (!token) return;
+      fetch(`${API_URL}/api/scenes/rehearse/${sessionId}/abandon`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: '{}',
+        keepalive: true,
+      }).catch(() => {});
+    };
+    const handlePageHide = () => { stop(); abandonSession(); };
+    window.addEventListener('pagehide', handlePageHide);
     return () => {
-      window.removeEventListener('pagehide', stop);
-      // Component unmount — kill all pending timers and audio
+      window.removeEventListener('pagehide', handlePageHide);
+      // Component unmount — kill all pending timers and audio, abandon session
       stop();
+      abandonSession();
       if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
       if (srAdvanceTimerRef.current) clearTimeout(srAdvanceTimerRef.current);
       if (pendingAdvanceRef.current) clearTimeout(pendingAdvanceRef.current);
     };
-  }, [cancelAI]);
+  }, [cancelAI, sessionId]);
 
   // Initial load
   useEffect(() => {
