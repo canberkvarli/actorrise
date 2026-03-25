@@ -51,6 +51,12 @@ function clearSessionCache(): void {
   cachedSession = null;
 }
 
+/** Return the cached auth token synchronously (or undefined if not cached / expired).
+ *  Useful for fire-and-forget requests during page unload where we cannot await. */
+export function getCachedAuthToken(): string | undefined {
+  return isSessionCacheValid() && cachedSession ? cachedSession.access_token : undefined;
+}
+
 /** Prime the session cache from an already-fetched Supabase session (e.g. from AuthProvider). */
 export function primeSessionCache(accessToken: string, expiresAt: number): void {
   const expiryMs = Math.min(

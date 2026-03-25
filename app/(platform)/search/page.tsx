@@ -79,7 +79,7 @@ import { ContactModal } from "@/components/contact/ContactModal";
 import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackPrompt";
 import { extractQueryHighlights } from "@/lib/queryMatchHighlight";
 import { ActiveFilterChips } from "@/components/search/ActiveFilterChips";
-import { computeMatchReasons } from "@/lib/matchReasons";
+import { computeMatchReasons, computeFilmTvMatchReasons } from "@/lib/matchReasons";
 import { QuickFilterChips } from "@/components/search/QuickFilterChips";
 import { ContentGapBanner } from "@/components/search/ContentGapBanner";
 import type { FilmTvReference } from "@/types/filmTv";
@@ -2024,6 +2024,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                               index={idx}
                               onSelect={() => setSelectedFilmTvRef(ref)}
                               isFavorited={savedFilmTvIds.has(ref.id)}
+                              matchReasons={computeFilmTvMatchReasons(ref, filmTvQuery, filmTvFilters)}
                               onToggleFavorite={() => {
                                 toggleFilmTvFavoriteMutation.mutate({
                                   referenceId: ref.id,

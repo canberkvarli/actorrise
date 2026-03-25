@@ -586,6 +586,27 @@ async def deliver_line(
     )
 
 
+@router.post("/rehearse/{session_id}/abandon")
+async def abandon_session(
+    session_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Mark an in-progress session as abandoned (e.g. user navigated away)."""
+    session = db.query(RehearsalSession).filter_by(
+        id=session_id,
+        user_id=current_user.id,
+    ).first()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if str(session.status) != "in_progress":
+        return {"ok": True, "status": str(session.status)}
+    session.status = "abandoned"  # type: ignore
+    session.completed_at = datetime.utcnow()  # type: ignore
+    db.commit()
+    return {"ok": True, "status": "abandoned"}
+
+
 @router.get("/rehearse/{session_id}/feedback", response_model=SessionFeedbackResponse)
 async def get_session_feedback(
     session_id: int,
