@@ -7,6 +7,7 @@ from typing import List, Optional
 
 from app.api.auth import get_current_user
 from app.core.database import get_db
+from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import require_scene_partner
 from app.models.actor import (RehearsalLineDelivery, RehearsalSession, Scene,
                               SceneFavorite, UserScript)
@@ -312,6 +313,7 @@ async def start_rehearsal(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _gate: bool = Depends(require_scene_partner(increment=True)),
+    _burst: bool = Depends(BurstLimiter("scene_partner")),
 ):
     """Start a new rehearsal session. Only scenes from the user's own scripts can be rehearsed."""
     scene = db.query(Scene).filter_by(id=request.scene_id).first()
@@ -409,7 +411,8 @@ async def start_rehearsal(
 async def deliver_line(
     request: DeliverLineRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    _burst: bool = Depends(BurstLimiter("scene_partner")),
 ):
     """Deliver a line during rehearsal and get AI response"""
     session = db.query(RehearsalSession).filter_by(
