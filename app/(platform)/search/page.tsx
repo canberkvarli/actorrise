@@ -854,7 +854,7 @@ function SearchContent() {
         if (filmTvFilters.genre) monoParams.set("theme", filmTvFilters.genre.toLowerCase());
 
         const [refRes, monoRes] = await Promise.all([
-          api.get<{ results: FilmTvReference[]; total: number }>(
+          api.get<{ results: FilmTvReference[]; total: number; query_invalid_reason?: string | null }>(
             `/api/film-tv/search?${params.toString()}`,
             { signal: controller.signal }
           ),
@@ -865,6 +865,18 @@ function SearchContent() {
               ).catch(() => ({ data: { results: [], total: 0 } }))
             : Promise.resolve({ data: { results: [] as Monologue[], total: 0 } }),
         ]);
+
+        // Check if query was flagged as invalid (gibberish, etc.)
+        if (refRes.data.query_invalid_reason) {
+          setQueryInvalidReason(refRes.data.query_invalid_reason);
+          setFilmTvResults([]);
+          setFilmTvMonologues([]);
+          setFilmTvTotal(0);
+          setFilmTvMonoTotal(0);
+          setIsFilmTvLoading(false);
+          return;
+        }
+        setQueryInvalidReason(null);
 
         // Cap total results to PAGE_SIZE: prioritize monologues, fill rest with references
         const monoResults = monoRes.data.results;
@@ -2034,15 +2046,35 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         </Button>
                       </div>
                       {displayList.length === 0 && (filmTvMonologues.length === 0 || showFilmTvBookmarkedOnly) ? (
-                        <Card className="border-dashed bg-muted/20">
-                          <CardContent className="pt-12 pb-12 text-center">
-                            <p className="text-muted-foreground text-sm">
-                              {showFilmTvBookmarkedOnly
-                                ? "No saved references in this search. Save some to see them here."
-                                : "No results match. Try a different search or filters."}
-                            </p>
-                          </CardContent>
-                        </Card>
+                        <div className="pt-12 pb-12 text-center max-w-md mx-auto">
+                          {queryInvalidReason === "gibberish" ? (
+                            <>
+                              <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+                              <h3 className="text-2xl font-semibold mb-2">We couldn&apos;t understand that search</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Try searching for a movie title, director, or genre like &quot;drama&quot; or &quot;Tarantino&quot;
+                              </p>
+                            </>
+                          ) : queryInvalidReason ? (
+                            <>
+                              <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+                              <h3 className="text-2xl font-semibold mb-2">That search is too short</h3>
+                              <p className="text-sm text-muted-foreground">
+                                Try adding more detail, like a movie title or genre
+                              </p>
+                            </>
+                          ) : (
+                            <Card className="border-dashed bg-muted/20">
+                              <CardContent className="pt-12 pb-12 text-center">
+                                <p className="text-muted-foreground text-sm">
+                                  {showFilmTvBookmarkedOnly
+                                    ? "No saved references in this search. Save some to see them here."
+                                    : "No results match. Try a different search or filters."}
+                                </p>
+                              </CardContent>
+                            </Card>
+                          )}
+                        </div>
                       ) : (
                         <div className="space-y-8">
                           {/* Film/TV Monologues (actual audition pieces) */}

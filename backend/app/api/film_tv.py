@@ -8,6 +8,7 @@ from app.api.auth import get_current_user
 from app.core.database import get_db
 from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import record_total_search
+from app.services.search.query_optimizer import validate_query
 from app.models.actor import FilmTvFavorite, FilmTvReference
 from app.models.search_log import SearchLog
 from app.models.user import User
@@ -61,6 +62,7 @@ class FilmTvSearchResponse(BaseModel):
     total: int
     page: int
     page_size: int
+    query_invalid_reason: Optional[str] = None
 
 
 # ── Helpers ────────────────────────────────────────────────────────────────────
@@ -175,6 +177,18 @@ async def search_film_tv_references(
 
     First result with confidence ≥ 0.90 is tagged is_best_match=True.
     """
+    # Validate query before searching
+    if q and q.strip():
+        is_valid, invalid_reason = validate_query(q.strip())
+        if not is_valid:
+            return FilmTvSearchResponse(
+                results=[],
+                total=0,
+                page=page,
+                page_size=limit,
+                query_invalid_reason=invalid_reason,
+            )
+
     base = db.query(FilmTvReference)
 
     # Structured filters
