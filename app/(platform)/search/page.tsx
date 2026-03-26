@@ -2000,7 +2000,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-0 min-w-0">
                           <div className="flex items-baseline gap-2 flex-wrap shrink-0">
                             <span className="text-2xl font-semibold tabular-nums text-foreground">
-                              {showFilmTvBookmarkedOnly ? filmTvBookmarked.length : filmTvMonoTotal + filmTvTotal}
+                              {showFilmTvBookmarkedOnly ? filmTvBookmarked.length : filmTvMonologues.length + filmTvResults.length}
                             </span>
                             <span className="text-sm text-muted-foreground">
                               {showFilmTvBookmarkedOnly ? "saved" : "results"}
@@ -2033,13 +2033,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           Bookmarked only
                         </Button>
                       </div>
-                      {displayList.length === 0 ? (
+                      {displayList.length === 0 && (filmTvMonologues.length === 0 || showFilmTvBookmarkedOnly) ? (
                         <Card className="border-dashed bg-muted/20">
                           <CardContent className="pt-12 pb-12 text-center">
                             <p className="text-muted-foreground text-sm">
                               {showFilmTvBookmarkedOnly
                                 ? "No saved references in this search. Save some to see them here."
-                                : "No references match. Try a different search or filters."}
+                                : "No results match. Try a different search or filters."}
                             </p>
                           </CardContent>
                         </Card>
