@@ -30,9 +30,9 @@ from app.core.database import SessionLocal
 from app.models.actor import Monologue, MonologueFavorite
 
 MODEL = "gpt-4o"
-BATCH_SIZE = 10   # texts per API call
-CONCURRENCY = 3   # concurrent calls — keeps TPM well under 200k limit
-EXCERPT_LEN = 250 # chars per excerpt — enough to detect scene descriptions vs dialogue
+BATCH_SIZE = 5    # texts per API call
+CONCURRENCY = 1   # sequential — org TPM limit is 30k
+EXCERPT_LEN = 200 # chars per excerpt — enough to detect scene descriptions vs dialogue
 
 SYSTEM_PROMPT = """You are a classifier for a theater/film monologue database.
 You will receive a numbered list of text excerpts. For each one, decide:
