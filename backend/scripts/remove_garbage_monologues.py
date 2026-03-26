@@ -32,14 +32,20 @@ from app.models.actor import Monologue, MonologueFavorite
 MODEL = "gpt-4o-mini"
 BATCH_SIZE = 10   # texts per API call
 CONCURRENCY = 3   # concurrent calls — keeps TPM well under 200k limit
-EXCERPT_LEN = 120 # chars per excerpt — enough to classify, minimises token usage
+EXCERPT_LEN = 250 # chars per excerpt — enough to detect scene descriptions vs dialogue
 
-SYSTEM_PROMPT = """You are a classifier for a theater monologue database.
+SYSTEM_PROMPT = """You are a classifier for a theater/film monologue database.
 You will receive a numbered list of text excerpts. For each one, decide:
-  m — actual dramatic speech, character dialogue, or narrative from a play/script
-  c — anything NOT a monologue: bibliographic listing, cast list, play catalog,
-      author biography, stage directions reference, table of contents,
-      publishing ad, or any non-dramatic text
+  m — actual spoken monologue: words a character says OUT LOUD, like Hamlet's "To be or not to be"
+  c — anything NOT a spoken monologue, including:
+      - Scene descriptions or action lines (characters DOING things, not SAYING things)
+      - Camera directions (ANGLE ON, CUT TO, SERIES OF SHOTS, INTERCUT, POV, CLOSE ON)
+      - Screenplay action text with ALL-CAPS character names describing physical actions
+      - Bibliographic listings, cast lists, play catalogs, author biographies
+      - Stage directions references, tables of contents, publishing ads
+      - Any text where less than half is actual spoken dialogue
+
+Key test: could an actor stand up and SPEAK this text as a monologue? If the text mostly describes what characters do, what the camera shows, or physical actions rather than spoken words, mark it "c".
 
 Reply with ONLY a comma-separated list of labels in the same order, e.g.:
 m,c,m,m,c

@@ -222,18 +222,57 @@ def _normalize_character_name(text: str) -> str:
 
 
 def _clean_dialogue(text: str) -> str:
-    """Clean dialogue text: remove excessive whitespace, parenthetical directions."""
-    # Remove leading/trailing whitespace per line
+    """Clean dialogue text: remove scene directions, camera cues, and excessive whitespace."""
     lines = [line.strip() for line in text.split("\n")]
     # Remove empty lines at start/end
     while lines and not lines[0]:
         lines.pop(0)
     while lines and not lines[-1]:
         lines.pop()
-    text = "\n".join(lines)
+    # Filter out action/camera direction lines
+    cleaned: list[str] = []
+    for line in lines:
+        if _is_action_line(line):
+            continue
+        # Remove inline parenthetical stage directions like (beat), (pause), (continuing)
+        line = re.sub(r"\((?:beat|pause|continuing|cont(?:'d|inued)?|a beat|then|softly|quietly|whispers?|shouting|laughing|crying|sobbing|smiling|angrily|sadly)\)", "", line, flags=re.IGNORECASE).strip()
+        if line:
+            cleaned.append(line)
+    text = "\n".join(cleaned)
     # Collapse multiple blank lines
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
+
+
+# Camera/action cue patterns that indicate scene description, not dialogue
+_ACTION_CUE_RE = re.compile(
+    r"^(ANGLE ON|CUT TO|SERIES OF|INTERCUT|POV|CLOSE ON|SMASH CUT|"
+    r"FADE|DISSOLVE|WIDE SHOT|MEDIUM SHOT|CLOSE UP|PAN TO|ZOOM|"
+    r"TRACKING SHOT|CRANE SHOT|AERIAL SHOT|REVERSE ANGLE|"
+    r"ANOTHER ANGLE|BACK TO|MATCH CUT|JUMP CUT|TITLE CARD|SUPER:)",
+    re.IGNORECASE,
+)
+
+
+def _is_action_line(line: str) -> bool:
+    """Check if a line is a camera direction or action description, not spoken dialogue."""
+    stripped = line.strip()
+    if not stripped:
+        return False
+    # Lines that are ALL CAPS and more than 3 words are likely scene directions
+    alpha = re.sub(r"[^a-zA-Z ]", "", stripped)
+    words = alpha.split()
+    if len(words) >= 3 and alpha == alpha.upper() and len(alpha) > 10:
+        return True
+    # Known camera/editing cue patterns
+    if _ACTION_CUE_RE.match(stripped):
+        return True
+    # Lines starting with a dash followed by ALL CAPS (shot descriptions like "- TWO MIMES with...")
+    if stripped.startswith("-") and len(words) >= 3:
+        first_few = " ".join(words[:3])
+        if first_few == first_few.upper():
+            return True
+    return False
 
 
 # ── Monologue Identification ─────────────────────────────────────────────────
@@ -241,24 +280,46 @@ def _clean_dialogue(text: str) -> str:
 def merge_consecutive_speeches(blocks: list[dict], min_words: int = 80) -> list[dict]:
     """
     Merge consecutive dialogue blocks by the same character into monologues.
+    Also merges across short interruptions (brief stage directions or very short
+    lines by other characters like "Yes." or "Go on.") — these are common in
+    screenplays where the same character is essentially giving a monologue with
+    minor interjections.
     Only keep speeches with min_words+ words (good audition length).
     """
     if not blocks:
         return []
 
+    # Max words for an "interruption" we'll merge across (e.g. "Yes." = 1 word)
+    INTERRUPTION_MAX_WORDS = 8
+
     merged: list[dict] = []
     current = blocks[0].copy()
 
-    for block in blocks[1:]:
+    i = 1
+    while i < len(blocks):
+        block = blocks[i]
         if block["character"] == current["character"]:
             # Same character speaking — merge
             current["text"] += "\n\n" + block["text"]
             current["word_count"] += block["word_count"]
+        elif (
+            block["word_count"] <= INTERRUPTION_MAX_WORDS
+            and i + 1 < len(blocks)
+            and blocks[i + 1]["character"] == current["character"]
+        ):
+            # Short interruption by another character, and same character resumes.
+            # Keep the interruption as an inline stage direction.
+            direction = f"({block['character']}: {block['text'].strip()})"
+            current["text"] += f"\n\n{direction}\n\n" + blocks[i + 1]["text"]
+            current["word_count"] += blocks[i + 1]["word_count"]
+            i += 2  # skip both the interruption and the resuming block
+            continue
         else:
             # Different character — flush and start new
             if current["word_count"] >= min_words:
                 merged.append(current)
             current = block.copy()
+        i += 1
 
     # Flush last
     if current["word_count"] >= min_words:
@@ -272,12 +333,28 @@ MONOLOGUE_SELECTION_PROMPT = """You are an acting coach selecting the best audit
 Below are monologue candidates from "{title}" ({year}), written by {writer}.
 Each candidate is a continuous speech by one character. Pick the TOP {max_picks} most audition-worthy monologues.
 
+WHAT A REAL MONOLOGUE LOOKS LIKE — this is from Hamlet:
+"To be, or not to be, that is the question: Whether 'tis nobler in the mind to suffer the slings and arrows of outrageous fortune, or to take arms against a sea of troubles, and by opposing end them? To die, to sleep — no more — and by a sleep to say we end the heart-ache and the thousand natural shocks that flesh is heir to."
+
+Notice: it is ONE PERSON SPEAKING. Every word is something an actor says out loud. There are no camera directions, no descriptions of what other characters are doing, no ALL-CAPS scene headings.
+
+WHAT IS NOT A MONOLOGUE — REJECT these:
+- Scene descriptions: "BRUCE runs down the alley. ANGLE ON his face as BULLETS FLY."
+- Camera directions: "SERIES OF SHOTS", "INTERCUT WITH", "CUT TO", "CLOSE ON"
+- Action/narrative text: "She picks up the glass. He turns away. The room falls silent."
+- Mixed text where most of the content describes actions rather than spoken words
+- Text with ALL-CAPS phrases (ANGLE ON, POV SHOTS, SMASH CUT, etc.) — these are editing cues, not dialogue
+
+ONLY select candidates where the text is WORDS A CHARACTER ACTUALLY SPEAKS OUT LOUD. If you removed all the action lines and camera cues and less than 50% of the text remains, REJECT it.
+
 Criteria for good audition monologues:
 - Emotional depth or clear character arc within the speech
 - Self-contained (makes sense without extensive context)
 - 100-400 words (1-3 minutes when performed)
 - Showcases acting range (not just exposition or plot delivery)
 - Iconic or memorable if possible
+
+If fewer than {max_picks} candidates are actual spoken dialogue, return fewer. Return an empty array [] if none qualify.
 
 CANDIDATES:
 {candidates}
