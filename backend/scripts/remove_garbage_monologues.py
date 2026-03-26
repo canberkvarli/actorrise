@@ -29,7 +29,7 @@ sys.path.insert(0, str(backend_dir))
 from app.core.database import SessionLocal
 from app.models.actor import Monologue, MonologueFavorite
 
-MODEL = "gpt-4o-mini"
+MODEL = "gpt-4o"
 BATCH_SIZE = 10   # texts per API call
 CONCURRENCY = 3   # concurrent calls — keeps TPM well under 200k limit
 EXCERPT_LEN = 250 # chars per excerpt — enough to detect scene descriptions vs dialogue
