@@ -1300,4 +1300,11 @@ class SemanticSearch:
                     )
                 )
 
+            if filters.get('source_type'):
+                st = filters['source_type']
+                if isinstance(st, list):
+                    query = query.filter(Play.source_type.in_(st))
+                else:
+                    query = query.filter(Play.source_type == st)
+
         return query.order_by(func.random()).limit(limit).all()
