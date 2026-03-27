@@ -210,6 +210,11 @@ def main():
                     except Exception as e:
                         print(f"    [warn] batch error: {e}")
 
+        # Commit text cleanups before starting metadata
+        if args.apply and (encoding_fixes > 0 or ai_cleanups > 0):
+            db.commit()
+            print(f"\n  Text changes committed ({encoding_fixes} encoding, {ai_cleanups} reflows)")
+
         # Step 3: Fill missing metadata via AI
         if args.metadata:
             missing_meta = [
@@ -249,15 +254,25 @@ def main():
                         if result.get("scene_description"):
                             mono.context_description = result["scene_description"]
                         metadata_fills += 1
+                        # Commit every 20 to avoid losing progress
+                        if metadata_fills % 20 == 0:
+                            db.commit()
+                            print(f"    (committed {metadata_fills} metadata fills)")
                     except Exception as e:
                         print(f"    [warn] Failed: {e}")
+                        db.rollback()
                         if "429" in str(e) or "rate_limit" in str(e) or "quota" in str(e):
                             print("    Hit rate/quota limit, stopping metadata fill.")
                             break
                         continue
 
+                # Final commit for remaining metadata
+                try:
+                    db.commit()
+                except Exception:
+                    db.rollback()
+
         if args.apply:
-            db.commit()
             print(f"\n  Applied changes:")
         else:
             print(f"\n[DRY RUN] Would apply:")
