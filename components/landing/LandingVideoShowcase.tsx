@@ -66,15 +66,6 @@ export function LandingVideoShowcase() {
         <div className="max-w-5xl mx-auto">
           {/* ── Title block — scroll-linked ── */}
           <div className="text-center mb-14 sm:mb-20">
-            {/* Pill badge */}
-            <motion.div
-              style={{ opacity: badgeOpacity, scale: badgeScale }}
-              className="mb-5 sm:mb-6 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm"
-            >
-              <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-              Rehearse with AI
-            </motion.div>
-
             {/* Heading */}
             <div className="overflow-hidden">
               <motion.h2
