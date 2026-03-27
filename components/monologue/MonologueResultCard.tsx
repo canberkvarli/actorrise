@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -85,7 +86,19 @@ export function MonologueResultCard({
         <CardContent className="pt-6 flex-1 flex flex-col">
           <div className="space-y-4 flex-1">
             <div className="flex items-start justify-between gap-2">
-              <div className="flex-1">
+              {mono.poster_url && (
+                <div className="shrink-0 w-14 h-20 rounded overflow-hidden bg-muted">
+                  <Image
+                    src={mono.poster_url}
+                    alt={mono.play_title || "Poster"}
+                    width={56}
+                    height={80}
+                    className="w-full h-full object-cover"
+                    unoptimized
+                  />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3 className="font-bold text-lg sm:text-xl lg:text-2xl mb-1 group-hover:text-foreground transition-colors line-clamp-2 break-words">
                     {mono.character_name}
