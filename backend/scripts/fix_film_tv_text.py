@@ -22,6 +22,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from openai import OpenAI
+from sqlalchemy import text
 from app.core.database import SessionLocal
 from app.models.actor import Monologue, Play
 
@@ -135,6 +136,9 @@ def main():
     args = parser.parse_args()
 
     db = SessionLocal()
+    # Override Supabase's short statement timeout for bulk operations
+    db.execute(text("SET statement_timeout = '60s'"))
+    db.commit()
 
     try:
         query = (
