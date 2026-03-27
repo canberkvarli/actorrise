@@ -287,21 +287,19 @@ export function useRecommendations(enabled: boolean = true, fast: boolean = true
   });
 }
 
-// Hook for discover Film & TV. When personalized=true, results are matched to actor’s preferred genres.
+// Hook for discover Film & TV monologues (actual audition pieces extracted from screenplays).
 export function useDiscoverFilmTv(enabled: boolean = true, personalized: boolean = false, isDemoUser: boolean = false) {
-  return useQuery<FilmTvReference[]>({
-    queryKey: ["discover-film-tv", personalized],
+  return useQuery<Monologue[]>({
+    queryKey: ["discover-film-tv-monologues", personalized],
     queryFn: async () => {
-      const params = new URLSearchParams({ limit: "6", include_count: "false" });
-      if (personalized) params.set("personalized", "true");
-      const response = await api.get<{ results: FilmTvReference[]; total: number }>(
-        `/api/film-tv/search?${params}`,
+      const params = new URLSearchParams({ limit: "6", source_type: "film,tv" });
+      const response = await api.get<{ results: Monologue[]; total: number }>(
+        `/api/monologues/search?${params}`,
         { timeoutMs: DASHBOARD_REQUEST_TIMEOUT_MS }
       );
       return response.data.results;
     },
     enabled: enabled && !isDemoUser,
-    ...(isDemoUser && { initialData: DEMO_FILM_TV }),
     staleTime: 10 * 60 * 1000,
     gcTime: 15 * 60 * 1000,
     retry: 1,
