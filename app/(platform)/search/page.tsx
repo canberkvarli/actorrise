@@ -789,6 +789,11 @@ function SearchContent() {
 
   const handleSearch = async () => {
     if (searchMode === "film_tv") {
+      const hasQueryOrFilters = filmTvQuery.trim() !== "" || Object.entries(filters).some(([, v]) => v !== "") || maxOverdoneScore < 1;
+      if (!hasQueryOrFilters) {
+        setJitter(true);
+        return;
+      }
       // Cancel any in-flight search
       userStoppedRef.current = false;
 
