@@ -58,9 +58,17 @@ async def classify_batch(
     batch: list[tuple[int, str]],
 ) -> dict[int, str]:
     """Classify a batch of (id, excerpt) pairs. Returns {id: label}."""
-    # Sanitize: short excerpt + strip quotes to keep tokens low and output clean
+    # Sanitize: short excerpt, strip quotes, remove control chars to keep valid JSON
+    def sanitize(txt: str) -> str:
+        t = txt[:EXCERPT_LEN].replace(chr(34), chr(39))
+        # Remove control characters that break JSON
+        t = "".join(c for c in t if ord(c) >= 32 or c in "\n\t")
+        # Remove replacement characters
+        t = t.replace("\ufffd", " ")
+        return t
+
     numbered = "\n\n".join(
-        f"{i+1}. {txt[:EXCERPT_LEN].replace(chr(34), chr(39))}"
+        f"{i+1}. {sanitize(txt)}"
         for i, (_, txt) in enumerate(batch)
     )
 
