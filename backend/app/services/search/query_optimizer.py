@@ -157,7 +157,7 @@ class KeywordExtractor:
             # Joy family
             'happy': 'joy', 'funny': 'joy', 'comedic': 'joy', 'hilarious': 'joy',
             'joyful': 'joy', 'cheerful': 'joy', 'humorous': 'joy', 'amusing': 'joy',
-            'lighthearted': 'joy', 'comic': 'joy', 'witty': 'joy',
+            'lighthearted': 'joy', 'comic': 'joy', 'witty': 'joy', 'comedy': 'joy',
 
             # Anger family
             'angry': 'anger', 'furious': 'anger', 'rage': 'anger', 'mad': 'anger',
@@ -380,6 +380,24 @@ class KeywordExtractor:
                 elif low >= 40 and high <= 59:
                     filters['age_range'] = '40s' if high < 50 else '50s'
                 elif low >= 60:
+                    filters['age_range'] = '60+'
+
+        # Single age: "26 year old", "18 years old", "50 year old"
+        if 'age_range' not in filters:
+            single_age_match = re.search(r'\b(\d{1,2})\s*(?:year|yr)s?\s*old\b', query_lower)
+            if single_age_match:
+                age = int(single_age_match.group(1))
+                if age < 20:
+                    filters['age_range'] = 'teens'
+                elif age < 30:
+                    filters['age_range'] = '20s'
+                elif age < 40:
+                    filters['age_range'] = '30s'
+                elif age < 50:
+                    filters['age_range'] = '40s'
+                elif age < 60:
+                    filters['age_range'] = '50s'
+                else:
                     filters['age_range'] = '60+'
 
         # Extract each filter type
@@ -767,6 +785,9 @@ _FUZZY_SKIP: set = {
     "friend", "king", "queen", "prince", "princess", "lord", "lady",
     "english", "american", "british", "irish", "french", "italian",
     "african", "asian", "latin", "spanish", "german", "russian",
+    "australian", "canadian", "scottish", "welsh", "indian",
+    "comedy", "comedic", "dramatic", "tragic", "romantic",
+    "male", "female", "woman", "women",
 }
 
 

@@ -72,10 +72,11 @@ Extract the following information if present in the query (return null if not me
    - Keywords: middle aged/forties/40s → "40s"
    - Keywords: fifties/50s/older → "50s"
    - Keywords: elderly/senior/60+ → "60+"
+   - Specific ages: "18 year old" → "teens", "26 year old" → "20s", "35 year old" → "30s", "45 year old" → "40s", "55 year old" → "50s", "65 year old" → "60+"
    - Otherwise → null
 
 3. emotion: What primary emotion is requested?
-   - Keywords: funny/comedic/humorous/laugh → "joy"
+   - Keywords: funny/comedic/humorous/laugh/comedy → "joy"
    - Keywords: sad/depressing/melancholy/tearful → "sadness"
    - Keywords: angry/furious/rage → "anger"
    - Keywords: scary/fearful/anxious → "fear"

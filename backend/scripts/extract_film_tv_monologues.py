@@ -61,30 +61,61 @@ IMSDB_HEADERS = {
 IMSDB_DELAY = 2.0  # seconds between requests — be respectful
 
 
-def fetch_script_html(url: str) -> str | None:
-    """Fetch raw HTML from an IMSDb script page. Returns None if not a valid script."""
-    try:
-        resp = requests.get(url, headers=IMSDB_HEADERS, timeout=15)
-        if resp.status_code == 404:
-            return None
-        resp.raise_for_status()
-        # Verify this is actually a script page (has scrtext class)
-        if "scrtext" not in resp.text:
-            return None
-        return resp.text
-    except Exception as e:
-        print(f"    FETCH ERROR: {e}")
-        return None
+def fetch_script_html(urls: list[str] | str, debug: bool = False) -> str | None:
+    """Fetch raw HTML from an IMSDb script page. Tries multiple URLs. Returns None if not a valid script."""
+    if isinstance(urls, str):
+        urls = [urls]
+    for url in urls:
+        try:
+            resp = requests.get(url, headers=IMSDB_HEADERS, timeout=15)
+            if debug:
+                print(f"    DEBUG: {url} → status={resp.status_code}, len={len(resp.text)}, has_scrtext={'scrtext' in resp.text}")
+            if resp.status_code == 404:
+                continue
+            resp.raise_for_status()
+            # Verify this is actually a script page (has scrtext class)
+            if "scrtext" not in resp.text:
+                continue
+            # IMSDb returns a ~7785 byte shell page for missing scripts — detect it
+            if len(resp.text) < 10000:
+                if debug:
+                    print(f"    DEBUG: page too short ({len(resp.text)} bytes), likely not a real script")
+                continue
+            return resp.text
+        except Exception as e:
+            if debug:
+                print(f"    DEBUG: fetch error for {url}: {e}")
+            continue
+    return None
 
 
-def build_imsdb_url(title: str) -> str:
-    """Build IMSDb script URL from title (same logic as frontend getImsdbSearchUrl)."""
+def _title_to_slug(title: str) -> str:
+    """Convert a title to an IMSDb URL slug."""
     slug = title.strip()
     slug = re.sub(r"[''']", "", slug)
     slug = re.sub(r"\s*&\s*", "-and-", slug)
     slug = re.sub(r"\s+", "-", slug)
     slug = re.sub(r"[^a-zA-Z0-9-]", "", slug)
-    return f"https://imsdb.com/scripts/{slug}.html"
+    return slug
+
+
+def build_imsdb_url(title: str) -> list[str]:
+    """Build candidate IMSDb URLs for a title. Returns multiple variants to try."""
+    slug = _title_to_slug(title)
+    urls = [f"https://imsdb.com/scripts/{slug}.html"]
+
+    # IMSDb often moves articles to the end: "The Godfather" → "Godfather,-The"
+    article_match = re.match(r"^(The|A|An)\s+(.+)$", title.strip(), flags=re.IGNORECASE)
+    if article_match:
+        article = article_match.group(1)
+        rest = article_match.group(2)
+        # Try: "Godfather,-The.html"
+        rest_slug = _title_to_slug(rest)
+        urls.append(f"https://imsdb.com/scripts/{rest_slug},-{article}.html")
+        # Try without article entirely: "Godfather.html"
+        urls.append(f"https://imsdb.com/scripts/{rest_slug}.html")
+
+    return urls
 
 
 # ── Script Parsing ───────────────────────────────────────────────────────────
@@ -467,6 +498,7 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true", help="Preview without saving to DB")
     parser.add_argument("--skip-existing", action="store_true", default=True, help="Skip scripts already processed")
     parser.add_argument("--titles", nargs="+", help="Process specific titles (e.g. --titles 'Pulp Fiction' 'Fight Club')")
+    parser.add_argument("--debug", action="store_true", help="Show debug info for fetch failures")
     args = parser.parse_args()
 
     client = OpenAI()
@@ -516,13 +548,13 @@ def main() -> None:
                     total_skipped += 1
                     continue
 
-        # Build IMSDb URL
-        url = ref.imsdb_url or build_imsdb_url(title)
+        # Build IMSDb URL(s) to try
+        urls = [ref.imsdb_url] if ref.imsdb_url else build_imsdb_url(title)
         print(f"  [{i+1}/{len(refs)}] {title} ({year}) *{ref.imdb_rating}")
-        print(f"    URL: {url}")
+        print(f"    URLs to try: {urls}")
 
         # Fetch script
-        html = fetch_script_html(url)
+        html = fetch_script_html(urls, debug=args.debug)
         if not html:
             total_fetch_errors += 1
             time.sleep(IMSDB_DELAY)
