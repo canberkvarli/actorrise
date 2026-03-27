@@ -205,15 +205,27 @@ def main():
                             if processed % 20 == 0:
                                 print(f"  ... {processed}/{len(candidates)} processed")
                                 if args.apply:
-                                    db.flush()
+                                    try:
+                                        db.commit()
+                                    except Exception as ce:
+                                        print(f"    [warn] commit failed, rolling back: {ce}")
+                                        db.rollback()
 
                     except Exception as e:
                         print(f"    [warn] batch error: {e}")
+                        try:
+                            db.rollback()
+                        except Exception:
+                            pass
 
-        # Commit text cleanups before starting metadata
+        # Final commit for remaining text cleanups
         if args.apply and (encoding_fixes > 0 or ai_cleanups > 0):
-            db.commit()
-            print(f"\n  Text changes committed ({encoding_fixes} encoding, {ai_cleanups} reflows)")
+            try:
+                db.commit()
+                print(f"\n  Text changes committed ({encoding_fixes} encoding, {ai_cleanups} reflows)")
+            except Exception as e:
+                print(f"\n  [warn] Final text commit failed: {e}")
+                db.rollback()
 
         # Step 3: Fill missing metadata via AI
         if args.metadata:
