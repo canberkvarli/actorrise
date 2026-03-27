@@ -61,8 +61,9 @@ IMSDB_HEADERS = {
 IMSDB_DELAY = 2.0  # seconds between requests — be respectful
 
 
-def fetch_script_html(urls: list[str] | str, debug: bool = False) -> str | None:
-    """Fetch raw HTML from an IMSDb script page. Tries multiple URLs. Returns None if not a valid script."""
+def fetch_script_html(urls: list[str] | str, debug: bool = False) -> tuple[str | None, str | None]:
+    """Fetch raw HTML from an IMSDb script page. Tries multiple URLs.
+    Returns (html, working_url) or (None, None) if not found."""
     if isinstance(urls, str):
         urls = [urls]
     for url in urls:
@@ -81,12 +82,12 @@ def fetch_script_html(urls: list[str] | str, debug: bool = False) -> str | None:
                 if debug:
                     print(f"    DEBUG: page too short ({len(resp.text)} bytes), likely not a real script")
                 continue
-            return resp.text
+            return resp.text, url
         except Exception as e:
             if debug:
                 print(f"    DEBUG: fetch error for {url}: {e}")
             continue
-    return None
+    return None, None
 
 
 def _title_to_slug(title: str) -> str:
@@ -454,6 +455,7 @@ def get_or_create_play(
     db: DBSession,
     ref: FilmTvReference,
     writer: str,
+    working_url: str | None = None,
 ) -> Play:
     """Get or create a Play record for a film/TV screenplay."""
     existing = (
@@ -478,7 +480,7 @@ def get_or_create_play(
         film_tv_reference_id=int(ref.id),
         copyright_status="copyrighted",
         license_type="fair_use",
-        source_url=ref.imsdb_url or build_imsdb_url(str(ref.title)),
+        source_url=working_url or ref.imsdb_url or build_imsdb_url(str(ref.title))[0],
         purchase_url=f"https://www.amazon.com/s?k={str(ref.title).replace(' ', '+')}+screenplay",
         language="en",
         themes=list(genres),
@@ -554,7 +556,7 @@ def main() -> None:
         print(f"    URLs to try: {urls}")
 
         # Fetch script
-        html = fetch_script_html(urls, debug=args.debug)
+        html, working_url = fetch_script_html(urls, debug=args.debug)
         if not html:
             total_fetch_errors += 1
             time.sleep(IMSDB_DELAY)
@@ -598,7 +600,7 @@ def main() -> None:
             continue
 
         # Create Play record
-        play = get_or_create_play(db, ref, writer)
+        play = get_or_create_play(db, ref, writer, working_url=working_url)
 
         for sel in selections:
             idx = sel.get("index", 0)

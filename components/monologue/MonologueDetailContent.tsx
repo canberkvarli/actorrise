@@ -294,7 +294,7 @@ export function MonologueDetailContent({
               </p>
             </div>
             {monologue.source_url && (
-              <Button variant="outline" asChild className="hover:border-primary hover:text-primary">
+              <Button variant="outline" asChild className="hover:bg-foreground hover:text-background">
                 <a
                   href={monologue.source_url}
                   target="_blank"
