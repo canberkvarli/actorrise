@@ -76,16 +76,6 @@ export function LandingSearchShowcase() {
           {/* ── Text column: ~35%, staggered scroll reveals ── */}
           <div className="lg:w-[35%] shrink-0">
             {/* Badge */}
-            <motion.div
-              style={{ y: badgeY, opacity: badgeOpacity, scale: badgeScale }}
-              className="mb-5"
-            >
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm">
-                <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                AI-powered search
-              </div>
-            </motion.div>
-
             {/* Heading */}
             <motion.h2
               style={{

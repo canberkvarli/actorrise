@@ -72,7 +72,7 @@ export function LandingVideoShowcase() {
               className="mb-5 sm:mb-6 inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/40 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm"
             >
               <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
-              ScenePartner
+              Rehearse with AI
             </motion.div>
 
             {/* Heading */}

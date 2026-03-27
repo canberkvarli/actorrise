@@ -70,7 +70,7 @@ function PricingCard({ tier, formatPrice, isHighlighted }: { tier: PricingTier; 
       {isHighlighted && (
         <div className="absolute -top-2.5 left-4">
           <span className="bg-primary px-2 py-0.5 text-[11px] font-medium text-white">
-            Founding member tier
+            Most popular
           </span>
         </div>
       )}
@@ -137,13 +137,20 @@ export function LandingPricing() {
           </p>
         </div>
 
-        {/* Founding member banner */}
-        <div className="mt-6 inline-flex items-center gap-3 px-4 py-2.5 border border-primary/20 bg-primary/[0.03]">
-          <span className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />
-          <p className="text-sm">
-            <span className="font-medium">50 founding member spots.</span>{" "}
-            <span className="text-muted-foreground">100% off Plus for 12 months. Enter code <span className="font-semibold">FOUNDER</span> at checkout.</span>
-          </p>
+        {/* Early access + student/educator banner */}
+        <div className="mt-6 space-y-3">
+          <div className="inline-flex items-center gap-3 px-4 py-2.5 border border-primary/20 bg-primary/[0.03]">
+            <span className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />
+            <p className="text-sm">
+              <span className="font-medium">Early access?</span>{" "}
+              <span className="text-muted-foreground">Reach out for 12 months free on Plus. <a href="mailto:canberk@actorrise.com" className="underline hover:text-foreground">canberk@actorrise.com</a></span>
+            </p>
+          </div>
+          <div className="inline-flex items-center gap-3 px-4 py-2.5 border border-border/40 bg-card/40">
+            <p className="text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">Students & educators</span> get free access. Just email me.
+            </p>
+          </div>
         </div>
 
         {/* Pricing cards */}
