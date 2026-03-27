@@ -151,13 +151,7 @@ export function MonologueResultCard({
                   <span className="text-[11px] text-muted-foreground">{mono.character_age_range}</span>
                 </>
               )}
-              {mono.category && (
-                <>
-                  <span className="text-muted-foreground/40">·</span>
-                  <span className="text-[11px] text-muted-foreground capitalize">{mono.category}</span>
-                </>
-              )}
-              {mono.primary_emotion && (
+              {mono.primary_emotion && mono.primary_emotion.toLowerCase() !== "unknown" && (
                 <Badge variant="secondary" className={`ml-auto font-medium capitalize text-[11px] px-2 py-0.5 ${getEmotionBadgeClassName(mono.primary_emotion)}`}>
                   {mono.primary_emotion}
                 </Badge>
