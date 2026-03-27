@@ -7,11 +7,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "For Teachers & Coaches",
   description:
-    "Your students find the right audition monologue in less than 20 seconds. 8,600+ monologues, AI search, Overdone filter. Free resource for drama teachers and acting coaches.",
+    "Your students find the right audition monologue in less than 20 seconds. 7,500+ monologues, AI search, Overdone filter. Free resource for drama teachers and acting coaches.",
   openGraph: {
     title: "For Teachers & Coaches | ActorRise",
     description:
-      "Find the right audition monologue in less than 20 seconds. 8,600+ pieces, AI fit to type and casting, Overdone filter. We're starting with teachers and coaches; students spread it.",
+      "Find the right audition monologue in less than 20 seconds. 7,500+ pieces, AI fit to type and casting, Overdone filter. We're starting with teachers and coaches; students spread it.",
     url: `${siteUrl}/for-teachers`,
   },
   alternates: { canonical: `${siteUrl}/for-teachers` },
@@ -25,7 +25,7 @@ export default function ForTeachersPage() {
       </h1>
       <p className="text-lg text-muted-foreground mb-8">
         Your students find the right audition monologue in less than 20 seconds. ActorRise gives them
-        8,600+ searchable pieces, AI that matches to their type and the casting scenario, and an
+        7,500+ searchable pieces, AI that matches to their type and the casting scenario, and an
         Overdone filter so they bring something different. So they spend less time digging and more
         time rehearsing.
       </p>

@@ -47,6 +47,7 @@ import api, { API_URL } from "@/lib/api";
 import { UpgradeModal } from "@/components/billing/UpgradeModal";
 import { getGenreBadgeClassName, getGenreBorderClassName } from "@/lib/genreColors";
 import { toast } from "sonner";
+import { trackScenePartnerOpened } from "@/lib/analytics";
 
 // Known backend progress prefixes and their friendly group labels.
 // Steps sharing the same group appear as sub-steps under one heading.
@@ -151,7 +152,13 @@ export default function MyScriptsPage() {
   const mutateScripts = () => queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY });
 
   const [mounted, setMounted] = useState(false);
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    // Track ScenePartner page open — infer source from referrer
+    const ref = typeof document !== "undefined" ? document.referrer : "";
+    const source = ref.includes("/search") ? "search_result" as const : ref.includes("/my-scripts") ? "nav" as const : "direct" as const;
+    trackScenePartnerOpened({ source });
+  }, []);
 
   useEffect(() => {
     setShowTutorial(!getScenePartnerTutorialSeen());

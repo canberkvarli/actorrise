@@ -7,11 +7,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "Comedic Monologue for Woman Under 2 Minutes",
   description:
-    "Find comedic monologues for women under 2 minutes from 8,600+ pieces. AI search by length, type, and style. Free to try.",
+    "Find comedic monologues for women under 2 minutes from 7,500+ pieces. AI search by length, type, and style. Free to try.",
   openGraph: {
     title: "Comedic Monologue for Woman Under 2 Minutes | ActorRise",
     description:
-      "Search 8,600+ monologues for comedic pieces for women under 2 minutes. AI-powered, natural language search.",
+      "Search 7,500+ monologues for comedic pieces for women under 2 minutes. AI-powered, natural language search.",
     url: `${siteUrl}/monologues/comedic-woman-under-2-minutes`,
   },
   alternates: { canonical: `${siteUrl}/monologues/comedic-woman-under-2-minutes` },
@@ -32,7 +32,7 @@ export default function Page() {
       </p>
       <Button asChild size="lg" className="rounded-full px-6">
         <Link href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
-          Search 8,600+ monologues
+          Search 7,500+ monologues
         </Link>
       </Button>
     </div>

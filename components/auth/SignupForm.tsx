@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { IconLoader2 } from "@tabler/icons-react";
+import { trackSignupCompleted } from "@/lib/analytics";
 
 const signupSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -35,6 +36,9 @@ export function SignupForm() {
     setIsLoading(true);
     try {
       await signup(data.email, data.password);
+      // Track successful signup — infer source from current page path
+      const source = typeof window !== "undefined" ? window.location.pathname : "unknown";
+      trackSignupCompleted({ source });
     } catch (err: unknown) {
       let errorMessage = "Failed to sign up";
       if (err instanceof Error) {

@@ -7,11 +7,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "Classical Monologues for Auditions",
   description:
-    "Find classical monologues from Shakespeare and beyond. 8,600+ searchable pieces with AI. Filter by play, length, and character type.",
+    "Find classical monologues from Shakespeare and beyond. 7,500+ searchable pieces with AI. Filter by play, length, and character type.",
   openGraph: {
     title: "Classical Monologues for Auditions | ActorRise",
     description:
-      "Search 8,600+ monologues for classical pieces. Shakespeare and more. AI-powered discovery.",
+      "Search 7,500+ monologues for classical pieces. Shakespeare and more. AI-powered discovery.",
     url: `${siteUrl}/monologues/classical-monologues`,
   },
   alternates: { canonical: `${siteUrl}/monologues/classical-monologues` },
@@ -32,7 +32,7 @@ export default function Page() {
       </p>
       <Button asChild size="lg" className="rounded-full px-6">
         <Link href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
-          Search 8,600+ monologues
+          Search 7,500+ monologues
         </Link>
       </Button>
     </div>

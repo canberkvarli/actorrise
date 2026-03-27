@@ -44,7 +44,7 @@ const LOADING_MESSAGES_FILM_TV = [
 
 const SEARCH_LOADING_STEPS = [
   "Consulting the drama gods",
-  "Rifling through 9,500+ scripts and plays",
+  "Rifling through 7,500+ scripts and plays",
   "Asking Shakespeare which one hits hardest",
   "Weighing every speech for emotional weight",
   "Finding the ones that'll stop the room",
@@ -2070,7 +2070,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     </div>
                     <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
                       {!showBookmarkedOnly && queryUsedForResults && (
-                        <span className="text-muted-foreground/50">from 9,500+ in our library</span>
+                        <span className="text-muted-foreground/50">from 7,500+ in our library</span>
                       )}
                       {!showBookmarkedOnly && queryUsedForResults && !showConfidence && relatedResults.length > 0 && (
                         <span aria-hidden className="text-border">·</span>

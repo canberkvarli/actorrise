@@ -7,11 +7,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "Monologue Finder for Actors | Find Audition Pieces Fast | ActorRise",
   description:
-    "Use ActorRise's monologue finder to search 8,600+ real monologues by tone, length, and character type. No keyword guessing. Free to start.",
+    "Use ActorRise's monologue finder to search 7,500+ real monologues by tone, length, and character type. No keyword guessing. Free to start.",
   openGraph: {
     title: "Monologue Finder for Actors | ActorRise",
     description:
-      "Find your next audition piece in seconds. 8,600+ monologues, AI search, no keyword hunting. Free tier available.",
+      "Find your next audition piece in seconds. 7,500+ monologues, AI search, no keyword hunting. Free tier available.",
     url: `${siteUrl}/monologue-finder`,
   },
   alternates: { canonical: `${siteUrl}/monologue-finder` },
@@ -24,7 +24,7 @@ export default function MonologueFinderPage() {
         Monologue finder: find your next audition piece in seconds
       </h1>
       <p className="text-lg text-muted-foreground mb-8">
-        ActorRise is a monologue finder and database built for actors. Search 8,600+ real monologues
+        ActorRise is a monologue finder and database built for actors. Search 7,500+ real monologues
         by describing what you need in plain English, no keyword hunting. Get a shortlist in under 20
         seconds.
       </p>
