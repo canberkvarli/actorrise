@@ -78,7 +78,7 @@ export function MonologueResultCard({
     >
       {indicatorLabel && <MatchIndicatorTag label={indicatorLabel} />}
       <Card
-        className={`hover:shadow-xl transition-all cursor-pointer h-full flex flex-col group rounded-lg ${
+        className={`hover:shadow-xl transition-all cursor-pointer h-full min-h-[280px] flex flex-col group rounded-lg ${
           isBestMatch ? "border-l-4 border-border hover:border-muted-foreground/40" : "hover:border-secondary/50"
         }`}
         onClick={onSelect}
@@ -152,7 +152,7 @@ export function MonologueResultCard({
             </div>
 
             {/* Metadata + emotion */}
-            <div className="flex items-center gap-1.5 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap min-h-[24px]">
               {mono.character_gender && mono.character_gender.toLowerCase() !== "any" && (
                 <span className="text-[11px] text-muted-foreground capitalize">{mono.character_gender}</span>
               )}
