@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { toastBookmark } from "@/lib/toast";
 import { trackSearchPerformed, trackResultClicked } from "@/lib/analytics";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow, IconSend, IconFlag, IconDeviceTv, IconEdit, IconCheck, IconBulb } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconEye, IconEyeOff, IconDownload, IconAdjustments, IconTargetArrow, IconSend, IconFlag, IconDeviceTv, IconCheck } from "@tabler/icons-react";
 
 // Fun loading messages for AI search (theater)
 const LOADING_MESSAGES = [
@@ -68,10 +68,8 @@ import { MonologueDetailContent } from "@/components/monologue/MonologueDetailCo
 import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueResultCard } from "@/components/monologue/MonologueResultCard";
 import { SearchFiltersSheet, getDurationLabel } from "@/components/search/SearchFiltersSheet";
-import { FilmTvReferenceCard } from "@/components/search/FilmTvReferenceCard";
 import { accentTeal } from "@/components/search/MatchIndicatorTag";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
-import { FilmTvInfoModal } from "@/components/search/FilmTvInfoModal";
 import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
 import { EditMonologueModal } from "@/components/admin/EditMonologueModal";
 import type { EditMonologueBody } from "@/components/admin/EditMonologueModal";
@@ -80,13 +78,9 @@ import { ContactModal } from "@/components/contact/ContactModal";
 import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackPrompt";
 import { extractQueryHighlights } from "@/lib/queryMatchHighlight";
 import { ActiveFilterChips } from "@/components/search/ActiveFilterChips";
-import { computeMatchReasons, computeFilmTvMatchReasons } from "@/lib/matchReasons";
+import { computeMatchReasons } from "@/lib/matchReasons";
 import { QuickFilterChips } from "@/components/search/QuickFilterChips";
 import { ContentGapBanner } from "@/components/search/ContentGapBanner";
-import type { FilmTvReference } from "@/types/filmTv";
-import { getFilmTvScriptUrl } from "@/lib/utils";
-import { ScriptSourcePicker } from "@/components/search/ScriptSourcePicker";
-import { useFilmTvFavorites, useToggleFilmTvFavorite } from "@/hooks/useFilmTvFavorites";
 import { useProfileStats, useProfileFormData } from "@/hooks/useDashboardData";
 import { computeProfileMatch, type ProfileMatch } from "@/lib/profileMatch";
 import { useQueryClient } from "@tanstack/react-query";
@@ -146,7 +140,6 @@ function SearchContent() {
   const [reportOpen, setReportOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [showBookmarkedOnly, setShowBookmarkedOnly] = useState(false);
-  const [showFilmTvBookmarkedOnly, setShowFilmTvBookmarkedOnly] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   /** When set, restore effect skips Film & TV block to avoid acting on stale URL after a Plays action. */
   const playsActionAtRef = useRef<number>(0);
@@ -162,29 +155,11 @@ function SearchContent() {
   });
   // Derived: reflects current mode's loading state (for shared UI like search button)
   const isLoading = searchMode === "film_tv" ? isFilmTvLoading : isPlaysLoading;
-  const [filmTvResults, setFilmTvResults] = useState<FilmTvReference[]>([]);
+  const [filmTvResults, setFilmTvResults] = useState<Monologue[]>([]);
   const [filmTvTotal, setFilmTvTotal] = useState(0);
-  // Film/TV monologue results (actual monologue text from films/TV, searched via /api/monologues/search?source_type=film,tv)
-  const [filmTvMonologues, setFilmTvMonologues] = useState<Monologue[]>([]);
-  const [filmTvMonoTotal, setFilmTvMonoTotal] = useState(0);
   const [filmTvHasSearched, setFilmTvHasSearched] = useState(false);
-  const [showFilmTvInfoModal, setShowFilmTvInfoModal] = useState(false);
-  const [filmTvFilters, setFilmTvFilters] = useState({
-    type: "",
-    genre: "",
-    year_min: "",
-    year_max: "",
-    director: "",
-    imdb_rating_min: "",
-  });
   /** Brief viewport outline "woosh" when switching tabs: orange (plays) or purple (film/tv) */
   const [outlineFlash, setOutlineFlash] = useState<"plays" | "film_tv" | null>(null);
-  const [showFilmTvFilters, setShowFilmTvFilters] = useState(false);
-  const [selectedFilmTvRef, setSelectedFilmTvRef] = useState<FilmTvReference | null>(null);
-  const [filmTvPosterError, setFilmTvPosterError] = useState(false);
-  const [filmTvEditScriptOpen, setFilmTvEditScriptOpen] = useState(false);
-  const [filmTvEditScriptValue, setFilmTvEditScriptValue] = useState("");
-  const [filmTvEditScriptSaving, setFilmTvEditScriptSaving] = useState(false);
   const [editMonologueId, setEditMonologueId] = useState<number | null>(null);
   const [editMonologueSaving, setEditMonologueSaving] = useState(false);
   const [showProfileCompleteModal, setShowProfileCompleteModal] = useState(false);
@@ -269,10 +244,6 @@ function SearchContent() {
     }
     setIsLoadingMore(false);
   }, [searchMode]);
-
-  const { data: filmTvFavorites = [] } = useFilmTvFavorites();
-  const toggleFilmTvFavoriteMutation = useToggleFilmTvFavorite();
-  const savedFilmTvIds = useMemo(() => new Set(filmTvFavorites.map((r) => r.id)), [filmTvFavorites]);
 
   // Show search tour for first-time visitors
   useEffect(() => {
@@ -367,6 +338,7 @@ function SearchContent() {
     } catch {
       // ignore
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filmTvHasSearched, filmTvResults.length, filmTvResultsViewCount]);
 
   // Restore search state from URL and sessionStorage whenever this page is (re)visited.
@@ -413,23 +385,14 @@ function SearchContent() {
     if (mode === "film_tv") {
       setSearchMode("film_tv");
       const urlQuery = searchParams.get("q") ?? "";
-      const urlFilmTvFilters: typeof filmTvFilters = {
-        type: searchParams.get("type") ?? "",
-        genre: searchParams.get("genre") ?? "",
-        year_min: searchParams.get("year_min") ?? "",
-        year_max: searchParams.get("year_max") ?? "",
-        director: searchParams.get("director") ?? "",
-        imdb_rating_min: searchParams.get("imdb_rating_min") ?? "",
-      };
       setFilmTvQuery(urlQuery);
-      setFilmTvFilters(urlFilmTvFilters);
       setRestoredFromLastSearch(false);
 
-      const cacheKey = `film_tv_results_${urlQuery}_${JSON.stringify(urlFilmTvFilters)}`;
+      const cacheKey = `film_tv_results_${urlQuery}`;
       const cached = sessionStorage.getItem(cacheKey);
       if (cached) {
         try {
-          const { results: cachedResults, total: cachedTotal } = JSON.parse(cached) as { results: FilmTvReference[]; total: number };
+          const { results: cachedResults, total: cachedTotal } = JSON.parse(cached) as { results: Monologue[]; total: number };
           setFilmTvResults(cachedResults);
           setFilmTvTotal(cachedTotal);
           setFilmTvHasSearched(true);
@@ -439,7 +402,7 @@ function SearchContent() {
         }
       }
 
-      const hasFilmTvParams = urlQuery.trim() !== "" || Object.values(urlFilmTvFilters).some((v) => v !== "");
+      const hasFilmTvParams = urlQuery.trim() !== "";
       // Skip re-triggering if user just manually stopped this search
       if (userStoppedModesRef.current.has("film_tv")) {
         userStoppedModesRef.current.delete("film_tv");
@@ -447,23 +410,19 @@ function SearchContent() {
       }
       if (hasFilmTvParams) {
         (async () => {
-    
           if (filmTvAbortRef.current) filmTvAbortRef.current.abort();
           const ctrl = new AbortController();
           filmTvAbortRef.current = ctrl;
           setIsFilmTvLoading(true);
           setSearchError(null);
           try {
-            const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: "1" });
+            const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: "1", source_type: "film,tv" });
             if (urlQuery.trim()) params.set("q", urlQuery.trim());
-            Object.entries(urlFilmTvFilters).forEach(([key, value]) => {
-              if (value) params.set(key, value);
-            });
-            const res = await api.get<{ results: FilmTvReference[]; total: number }>(`/api/film-tv/search?${params.toString()}`, { signal: ctrl.signal });
+            const res = await api.get<{ results: Monologue[]; total: number }>(`/api/monologues/search?${params.toString()}`, { signal: ctrl.signal });
             setFilmTvResults(res.data.results);
             setFilmTvTotal(res.data.total);
             setFilmTvHasSearched(true);
-            const payload = { query: urlQuery.trim(), filmTvFilters: urlFilmTvFilters, results: res.data.results, total: res.data.total };
+            const payload = { query: urlQuery.trim(), results: res.data.results, total: res.data.total };
             sessionStorage.setItem(FILM_TV_LAST_SEARCH_KEY, JSON.stringify(payload));
             sessionStorage.setItem(cacheKey, JSON.stringify({ results: res.data.results, total: res.data.total }));
             sessionStorage.setItem(SEARCH_LAST_MODE_KEY, "film_tv");
@@ -471,8 +430,6 @@ function SearchContent() {
             if (filmTvAbortRef.current !== ctrl) return;
             setFilmTvResults([]);
             setFilmTvTotal(0);
-            setFilmTvMonologues([]);
-            setFilmTvMonoTotal(0);
             setFilmTvHasSearched(true);
           } finally {
             if (filmTvAbortRef.current === ctrl) {
@@ -486,9 +443,8 @@ function SearchContent() {
       const lastFilmTvRaw = sessionStorage.getItem(FILM_TV_LAST_SEARCH_KEY);
       if (lastFilmTvRaw) {
         try {
-          const last = JSON.parse(lastFilmTvRaw) as { query: string; filmTvFilters: typeof filmTvFilters; results: FilmTvReference[]; total: number };
+          const last = JSON.parse(lastFilmTvRaw) as { query: string; results: Monologue[]; total: number };
           setFilmTvQuery(last.query);
-          setFilmTvFilters(last.filmTvFilters);
           setFilmTvResults(last.results);
           setFilmTvTotal(last.total);
           setFilmTvHasSearched(true);
@@ -624,10 +580,9 @@ function SearchContent() {
       if (lastMode === "film_tv") {
         const lastFilmTvRaw = sessionStorage.getItem(FILM_TV_LAST_SEARCH_KEY);
         if (lastFilmTvRaw) {
-          const last = JSON.parse(lastFilmTvRaw) as { query: string; filmTvFilters: typeof filmTvFilters; results: FilmTvReference[]; total: number };
+          const last = JSON.parse(lastFilmTvRaw) as { query: string; results: Monologue[]; total: number };
           setSearchMode("film_tv");
           setFilmTvQuery(last.query);
-          setFilmTvFilters(last.filmTvFilters);
           setFilmTvResults(last.results);
           setFilmTvTotal(last.total);
           setFilmTvHasSearched(true);
@@ -834,9 +789,6 @@ function SearchContent() {
 
   const handleSearch = async () => {
     if (searchMode === "film_tv") {
-      setShowFilmTvFilters(false);
-      const hasQueryOrFilters = filmTvQuery.trim() !== "" || Object.values(filmTvFilters).some((v) => v !== "");
-      // Only set filmTvHasSearched and results when we actually run a fetch (query/filters or explicit "Browse all").
       // Cancel any in-flight search
       userStoppedRef.current = false;
 
@@ -846,69 +798,50 @@ function SearchContent() {
       setFilmTvHasSearched(true);
       setIsFilmTvLoading(true);
       setSearchError(null);
+      setQueryInvalidReason(null);
       try {
-        const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: "1" });
+        const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: "1", source_type: "film,tv" });
         if (filmTvQuery.trim()) params.set("q", filmTvQuery.trim());
-        Object.entries(filmTvFilters).forEach(([key, value]) => {
+        // Apply the same filters as plays
+        Object.entries(filters).forEach(([key, value]) => {
           if (value) params.set(key, value);
         });
+        if (maxOverdoneScore < 1) params.set("max_overdone_score", String(maxOverdoneScore));
 
-        // Search monologues from films/TV in parallel with reference search
-        const monoParams = new URLSearchParams({ limit: String(PAGE_SIZE), page: "1", source_type: "film,tv" });
-        if (filmTvQuery.trim()) monoParams.set("q", filmTvQuery.trim());
-        // Map film/tv filters to monologue filters where applicable
-        if (filmTvFilters.genre) monoParams.set("theme", filmTvFilters.genre.toLowerCase());
-
-        const [refRes, monoRes] = await Promise.all([
-          api.get<{ results: FilmTvReference[]; total: number; query_invalid_reason?: string | null }>(
-            `/api/film-tv/search?${params.toString()}`,
-            { signal: controller.signal }
-          ),
-          filmTvQuery.trim()
-            ? api.get<{ results: Monologue[]; total: number }>(
-                `/api/monologues/search?${monoParams.toString()}`,
-                { signal: controller.signal }
-              ).catch(() => ({ data: { results: [], total: 0 } }))
-            : Promise.resolve({ data: { results: [] as Monologue[], total: 0 } }),
-        ]);
+        const res = await api.get<SearchResponseShape>(
+          `/api/monologues/search?${params.toString()}`,
+          { timeoutMs: 180000, signal: controller.signal }
+        );
 
         // Check if query was flagged as invalid (gibberish, etc.)
-        if (refRes.data.query_invalid_reason) {
-          setQueryInvalidReason(refRes.data.query_invalid_reason);
+        if (res.data.query_invalid_reason) {
+          setQueryInvalidReason(res.data.query_invalid_reason);
           setFilmTvResults([]);
-          setFilmTvMonologues([]);
           setFilmTvTotal(0);
-          setFilmTvMonoTotal(0);
           setIsFilmTvLoading(false);
           return;
         }
-        setQueryInvalidReason(null);
 
-        // Cap total results to PAGE_SIZE: prioritize monologues, fill rest with references
-        const monoResults = monoRes.data.results;
-        const refSlots = Math.max(0, PAGE_SIZE - monoResults.length);
-        const results = refRes.data.results.slice(0, refSlots);
-        const total = Math.min(monoRes.data.total + refRes.data.total, PAGE_SIZE);
-        setFilmTvResults(results);
-        setFilmTvTotal(total);
-        setFilmTvMonologues(monoResults.slice(0, PAGE_SIZE));
-        setFilmTvMonoTotal(monoRes.data.total);
+        setFilmTvResults(res.data.results);
+        setFilmTvTotal(res.data.total);
+        setQueryUsedForResults(filmTvQuery.trim());
+
         // Track GA4 search event for film/TV
         if (filmTvQuery.trim()) {
-          trackSearchPerformed({ query: filmTvQuery.trim(), results_count: total, search_type: "film_tv" });
+          trackSearchPerformed({ query: filmTvQuery.trim(), results_count: res.data.total, search_type: "film_tv" });
         }
 
         // Persist so refresh or navigating away and back keeps Film & TV results (like plays).
         try {
-          const payload = { query: filmTvQuery.trim(), filmTvFilters, results, total };
+          const payload = { query: filmTvQuery.trim(), results: res.data.results, total: res.data.total };
           sessionStorage.setItem(FILM_TV_LAST_SEARCH_KEY, JSON.stringify(payload));
-          const cacheKey = `film_tv_results_${filmTvQuery.trim()}_${JSON.stringify(filmTvFilters)}`;
-          sessionStorage.setItem(cacheKey, JSON.stringify({ results, total }));
+          const cacheKey = `film_tv_results_${filmTvQuery.trim()}`;
+          sessionStorage.setItem(cacheKey, JSON.stringify({ results: res.data.results, total: res.data.total }));
           sessionStorage.setItem(SEARCH_LAST_MODE_KEY, "film_tv");
         } catch (e) {
           console.error("Error persisting film_tv search:", e);
         }
-        // Increment results view count for feedback prompt ("Were these results what you expected?")
+        // Increment results view count for feedback prompt
         try {
           const prev = parseInt(sessionStorage.getItem(FILM_TV_RESULTS_VIEW_COUNT_KEY) || "0", 10);
           const next = (Number.isNaN(prev) ? 0 : prev) + 1;
@@ -921,9 +854,6 @@ function SearchContent() {
         const urlParams = new URLSearchParams();
         urlParams.set("mode", "film_tv");
         if (filmTvQuery.trim()) urlParams.set("q", filmTvQuery.trim());
-        Object.entries(filmTvFilters).forEach(([key, value]) => {
-          if (value) urlParams.set(key, value);
-        });
         router.replace(`/search?${urlParams.toString()}`, { scroll: false });
       } catch (err: unknown) {
         if (userStoppedRef.current) { userStoppedRef.current = false; return; }
@@ -933,8 +863,7 @@ function SearchContent() {
           : "Search failed.";
         setSearchError(typeof msg === "string" ? msg : "Search failed.");
         setFilmTvResults([]);
-        setFilmTvMonologues([]);
-        setFilmTvMonoTotal(0);
+        setFilmTvTotal(0);
       } finally {
         if (filmTvAbortRef.current === controller) {
           setIsFilmTvLoading(false);
@@ -1170,15 +1099,20 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   };
 
   const queryClient = useQueryClient();
+  const updateMonoFav = (setter: React.Dispatch<React.SetStateAction<Monologue[]>>, id: number, favorited: boolean) => {
+    setter(prev => prev.map(m => m.id === id ? { ...m, is_favorited: favorited, favorite_count: favorited ? (m.favorite_count ?? 0) + 1 : Math.max(0, (m.favorite_count ?? 1) - 1) } : m));
+  };
   const toggleFavorite = async (e: React.MouseEvent, mono: Monologue) => {
     e.stopPropagation();
     const previousResults = results;
+    const previousFilmTvResults = filmTvResults;
     const previousSelected = selectedMonologue;
     const monologueId = mono.id;
 
     try {
       if (mono.is_favorited) {
-        setResults(results.map(m => m.id === mono.id ? { ...m, is_favorited: false, favorite_count: m.favorite_count - 1 } : m));
+        updateMonoFav(setResults, mono.id, false);
+        updateMonoFav(setFilmTvResults, mono.id, false);
         if (selectedMonologue?.id === mono.id) {
           setSelectedMonologue(prev => prev ? { ...prev, is_favorited: false, favorite_count: prev.favorite_count - 1 } : null);
         }
@@ -1189,7 +1123,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           onUndo: async () => {
             try {
               await api.post(`/api/monologues/${monologueId}/favorite`);
-              setResults(prev => prev.map(m => m.id === monologueId ? { ...m, is_favorited: true, favorite_count: (m.favorite_count ?? 0) + 1 } : m));
+              updateMonoFav(setResults, monologueId, true);
+              updateMonoFav(setFilmTvResults, monologueId, true);
               setSelectedMonologue(prev => prev?.id === monologueId ? { ...prev, is_favorited: true, favorite_count: (prev.favorite_count ?? 0) + 1 } : prev);
               queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
             } catch {
@@ -1198,7 +1133,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           },
         });
       } else {
-        setResults(results.map(m => m.id === mono.id ? { ...m, is_favorited: true, favorite_count: (m.favorite_count ?? 0) + 1 } : m));
+        updateMonoFav(setResults, mono.id, true);
+        updateMonoFav(setFilmTvResults, mono.id, true);
         if (selectedMonologue?.id === mono.id) {
           setSelectedMonologue(prev => prev ? { ...prev, is_favorited: true, favorite_count: (prev.favorite_count ?? 0) + 1 } : null);
         }
@@ -1209,7 +1145,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           onUndo: async () => {
             try {
               await api.delete(`/api/monologues/${monologueId}/favorite`);
-              setResults(prev => prev.map(m => m.id === monologueId ? { ...m, is_favorited: false, favorite_count: Math.max(0, (m.favorite_count ?? 1) - 1) } : m));
+              updateMonoFav(setResults, monologueId, false);
+              updateMonoFav(setFilmTvResults, monologueId, false);
               setSelectedMonologue(prev => prev?.id === monologueId ? { ...prev, is_favorited: false, favorite_count: Math.max(0, (prev.favorite_count ?? 1) - 1) } : prev);
               queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
             } catch {
@@ -1220,6 +1157,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       }
     } catch (error) {
       setResults(previousResults);
+      setFilmTvResults(previousFilmTvResults);
       setSelectedMonologue(previousSelected);
       toast.error("Couldn't update bookmark. Please try again.");
       console.error("Error toggling favorite:", error);
@@ -1369,41 +1307,16 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 const params = new URLSearchParams();
                 params.set("mode", "film_tv");
                 if (filmTvQuery) params.set("q", filmTvQuery);
-                Object.entries(filmTvFilters).forEach(([key, value]) => {
-                  if (value) params.set(key, value);
-                });
                 router.replace(`/search?${params.toString()}`, { scroll: false });
-                if (typeof window !== "undefined" && !localStorage.getItem("film_tv_info_seen")) {
-                  setShowFilmTvInfoModal(true);
-                }
               }}
             >
               Film &amp; TV
             </button>
           </div>
           <div className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0">
-            {searchMode === "film_tv" ? (
-              <button
-                type="button"
-                onClick={() => setShowFilmTvInfoModal(true)}
-                className="p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                aria-label="Learn about Film & TV reference"
-              >
-                <IconInfoCircle className="h-4 w-4" />
-              </button>
-            ) : (
-              <span className="w-10 h-10" aria-hidden />
-            )}
+            <span className="w-10 h-10" aria-hidden />
           </div>
         </div>
-        <FilmTvInfoModal
-          open={showFilmTvInfoModal}
-          onOpenChange={(open) => {
-            setShowFilmTvInfoModal(open);
-            if (typeof window !== "undefined" && !open) localStorage.setItem("film_tv_info_seen", "1");
-          }}
-        />
-
         {/* Search Bar - stacked on mobile for easier tap targets */}
         <div className="max-w-3xl mx-auto">
           <div className="relative group">
@@ -1499,71 +1412,42 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           {/* Action Row - Filters (Plays or Film & TV) + Find for me (Plays only) */}
           <div id="search-filters" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 sm:mt-4">
             <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFiltersSheet(true)}
+                className="md:hidden gap-2 text-muted-foreground hover:text-foreground min-h-[44px]"
+              >
+                <IconAdjustments className="h-4 w-4" />
+                Filters
+                {(activeFilters.length > 0 || hasFreshnessFilter) && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                    {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
+                  </Badge>
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFilters(!showFilters)}
+                className={`hidden md:flex gap-2 text-muted-foreground hover:text-foreground ${showFilters ? "text-foreground bg-muted" : ""}`}
+              >
+                <IconAdjustments className="h-4 w-4" />
+                Filters
+                {(activeFilters.length > 0 || hasFreshnessFilter) && (
+                  <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                    {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
+                  </Badge>
+                )}
+              </Button>
               {searchMode === "plays" && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowFiltersSheet(true)}
-                    className="md:hidden gap-2 text-muted-foreground hover:text-foreground min-h-[44px]"
-                  >
-                    <IconAdjustments className="h-4 w-4" />
-                    Filters
-                    {(activeFilters.length > 0 || hasFreshnessFilter) && (
-                      <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                        {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
-                      </Badge>
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowFilters(!showFilters)}
-                    className={`hidden md:flex gap-2 text-muted-foreground hover:text-foreground ${showFilters ? "text-foreground bg-muted" : ""}`}
-                  >
-                    <IconAdjustments className="h-4 w-4" />
-                    Filters
-                    {(activeFilters.length > 0 || hasFreshnessFilter) && (
-                      <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                        {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
-                      </Badge>
-                    )}
-                  </Button>
-                  <Link
-                    href="/submit-monologue"
-                    className="hidden md:inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
-                  >
-                    <IconSend className="h-4 w-4" />
-                    Submit monologue
-                  </Link>
-                </>
-              )}
-              {searchMode === "film_tv" && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowFilmTvFilters(!showFilmTvFilters)}
-                    className={`gap-2 text-muted-foreground hover:text-foreground min-h-[44px] md:min-h-0 ${showFilmTvFilters ? "text-foreground bg-muted" : ""}`}
-                  >
-                    <IconAdjustments className="h-4 w-4" />
-                    Filters
-                    {Object.values(filmTvFilters).some((v) => v !== "") && (
-                      <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
-                        {Object.values(filmTvFilters).filter((v) => v !== "").length}
-                      </Badge>
-                    )}
-                  </Button>
-                  {Object.values(filmTvFilters).some((v) => v !== "") && (
-                    <button
-                      type="button"
-                      onClick={() => setFilmTvFilters({ type: "", genre: "", year_min: "", year_max: "", director: "", imdb_rating_min: "" })}
-                      className="text-xs text-muted-foreground hover:text-foreground underline"
-                    >
-                      Clear filters
-                    </button>
-                  )}
-                </>
+                <Link
+                  href="/submit-monologue"
+                  className="hidden md:inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <IconSend className="h-4 w-4" />
+                  Submit monologue
+                </Link>
               )}
             </div>
 
@@ -1593,27 +1477,23 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             )}
           </div>
 
-          {/* Quick filter chips — one-tap popular filters (Plays only) */}
-          {searchMode === "plays" && (
-            <div className="mt-3">
-              <QuickFilterChips
-                filters={filters}
-                onToggle={(key, value) => setFilters({ ...filters, [key]: value })}
-              />
-            </div>
-          )}
-
-          {/* Mobile: filters in sheet (SearchFiltersSheet). Desktop: expandable inline filters (Plays only) */}
-          {searchMode === "plays" && (
-            <SearchFiltersSheet
-              open={showFiltersSheet}
-              onOpenChange={setShowFiltersSheet}
+          {/* Quick filter chips — one-tap popular filters */}
+          <div className="mt-3">
+            <QuickFilterChips
               filters={filters}
-              setFilters={setFilters}
-              maxOverdoneScore={maxOverdoneScore}
-              setMaxOverdoneScore={setMaxOverdoneScore}
+              onToggle={(key, value) => setFilters({ ...filters, [key]: value })}
             />
-          )}
+          </div>
+
+          {/* Mobile: filters in sheet (SearchFiltersSheet). Desktop: expandable inline filters */}
+          <SearchFiltersSheet
+            open={showFiltersSheet}
+            onOpenChange={setShowFiltersSheet}
+            filters={filters}
+            setFilters={setFilters}
+            maxOverdoneScore={maxOverdoneScore}
+            setMaxOverdoneScore={setMaxOverdoneScore}
+          />
 
           {selectedMonologue && (
             <ReportMonologueModal
@@ -1625,112 +1505,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             />
           )}
 
-          {/* Film & TV: expandable filters panel */}
-          {searchMode === "film_tv" && showFilmTvFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-4 p-4 bg-card border border-border rounded-lg"
-            >
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Type</Label>
-                  <Select
-                    value={filmTvFilters.type || "__any__"}
-                    onValueChange={(v) => setFilmTvFilters((f) => ({ ...f, type: v === "__any__" ? "" : v }))}
-                  >
-                    <SelectTrigger className="w-full min-h-[44px] px-3 py-2 text-sm">
-                      <SelectValue placeholder="Any" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__any__">Any</SelectItem>
-                      <SelectItem value="movie">Movie</SelectItem>
-                      <SelectItem value="tvSeries">TV Series</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Genre</Label>
-                  <Select
-                    value={filmTvFilters.genre || "__any__"}
-                    onValueChange={(v) => setFilmTvFilters((f) => ({ ...f, genre: v === "__any__" ? "" : v }))}
-                  >
-                    <SelectTrigger className="w-full min-h-[44px] px-3 py-2 text-sm">
-                      <SelectValue placeholder="Any" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__any__">Any</SelectItem>
-                      <SelectItem value="drama">Drama</SelectItem>
-                      <SelectItem value="comedy">Comedy</SelectItem>
-                      <SelectItem value="crime">Crime</SelectItem>
-                      <SelectItem value="thriller">Thriller</SelectItem>
-                      <SelectItem value="biography">Biography</SelectItem>
-                      <SelectItem value="romance">Romance</SelectItem>
-                      <SelectItem value="action">Action</SelectItem>
-                      <SelectItem value="history">History</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Year from</Label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 1990"
-                    value={filmTvFilters.year_min}
-                    onChange={(e) => setFilmTvFilters((f) => ({ ...f, year_min: e.target.value }))}
-                    className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
-                    min={1950}
-                    max={2025}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Year to</Label>
-                  <input
-                    type="number"
-                    placeholder="e.g. 2010"
-                    value={filmTvFilters.year_max}
-                    onChange={(e) => setFilmTvFilters((f) => ({ ...f, year_max: e.target.value }))}
-                    className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
-                    min={1950}
-                    max={2025}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Min IMDb rating</Label>
-                  <Select
-                    value={filmTvFilters.imdb_rating_min || "__any__"}
-                    onValueChange={(v) => setFilmTvFilters((f) => ({ ...f, imdb_rating_min: v === "__any__" ? "" : v }))}
-                  >
-                    <SelectTrigger className="w-full min-h-[44px] px-3 py-2 text-sm">
-                      <SelectValue placeholder="Any" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__any__">Any</SelectItem>
-                      <SelectItem value="6">6+</SelectItem>
-                      <SelectItem value="7">7+</SelectItem>
-                      <SelectItem value="7.5">7.5+</SelectItem>
-                      <SelectItem value="8">8+</SelectItem>
-                      <SelectItem value="8.5">8.5+</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Director</Label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Nolan"
-                    value={filmTvFilters.director}
-                    onChange={(e) => setFilmTvFilters((f) => ({ ...f, director: e.target.value }))}
-                    className="w-full min-h-[44px] px-3 py-2 text-sm rounded-lg border border-input bg-background"
-                  />
-                </div>
-              </div>
-            </motion.div>
-          )}
-
-          {/* Expandable Filters - desktop only (Plays mode) */}
-          {searchMode === "plays" && showFilters && (
+          {/* Expandable Filters - desktop only (shared for both modes) */}
+          {showFilters && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
@@ -1988,10 +1764,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       </div>
                     </div>
                     <h3 className="text-base font-semibold text-foreground mb-1.5">
-                      Film & TV references
+                      Film & TV monologues
                     </h3>
                     <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                      Search by mood or scene, same as plays. Or browse all references.
+                      Search by mood or scene, same as plays. Or browse all Film & TV monologues.
                     </p>
                     <Button
                       variant="default"
@@ -2005,159 +1781,116 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </CardContent>
                 </Card>
               </motion.div>
-            ) : filmTvResults.length === 0 && filmTvMonologues.length === 0 ? (
-              <Card className="border-dashed bg-muted/20">
-                <CardContent className="pt-12 pb-12 text-center">
-                  <p className="text-muted-foreground text-sm">No results match. Try a different search or filters.</p>
-                </CardContent>
-              </Card>
+            ) : filmTvResults.length === 0 ? (
+              <div className="pt-12 pb-12 text-center max-w-md mx-auto">
+                {queryInvalidReason === "gibberish" ? (
+                  <>
+                    <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+                    <h3 className="text-2xl font-semibold mb-2">We couldn&apos;t understand that search</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Try searching for a movie title, character, or genre like &quot;drama&quot; or &quot;courtroom&quot;
+                    </p>
+                  </>
+                ) : queryInvalidReason ? (
+                  <>
+                    <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
+                    <h3 className="text-2xl font-semibold mb-2">That search is too short</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Try adding more detail, like a movie title or genre
+                    </p>
+                  </>
+                ) : (
+                  <Card className="border-dashed bg-muted/20">
+                    <CardContent className="pt-12 pb-12 text-center">
+                      <p className="text-muted-foreground text-sm">No results match. Try a different search or filters.</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
             ) : (
               <div id="search-results" className="space-y-4">
                 <ActiveFilterChips
-                  filters={filmTvFilters}
-                  labels={{ type: "Type", genre: "Genre", year_min: "From", year_max: "To", imdb_rating_min: "Min Rating", director: "Director" }}
-                  onRemove={(key) => setFilmTvFilters((f) => ({ ...f, [key]: "" }))}
-                  onClearAll={() => setFilmTvFilters({ type: "", genre: "", year_min: "", year_max: "", director: "", imdb_rating_min: "" })}
+                  filters={filters}
+                  labels={{ gender: "Gender", age_range: "Age", emotion: "Emotion", theme: "Theme", category: "Category", tone: "Tone", difficulty: "Difficulty", author: "Author", max_duration: "Max Duration" }}
+                  onRemove={(key) => setFilters((f) => ({ ...f, [key]: "" }))}
+                  onClearAll={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" })}
                 />
-                {/* Results header: count left, feedback center, Bookmarked only right (one row, same as plays) */}
-                {(() => {
-                  const filmTvBookmarked = filmTvResults.filter((r) => savedFilmTvIds.has(r.id));
-                  const displayList = showFilmTvBookmarkedOnly ? filmTvBookmarked : filmTvResults;
-                  return (
-                    <>
-                      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 mb-8">
-                        <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-0 min-w-0">
-                          <div className="flex items-baseline gap-2 flex-wrap shrink-0">
-                            <span className="text-2xl font-semibold tabular-nums text-foreground">
-                              {showFilmTvBookmarkedOnly ? filmTvBookmarked.length : filmTvMonologues.length + filmTvResults.length}
-                            </span>
-                            <span className="text-sm text-muted-foreground">
-                              {showFilmTvBookmarkedOnly ? "saved" : "results"}
-                            </span>
-                          </div>
-                          <Button
-                            variant={showFilmTvBookmarkedOnly ? "secondary" : "outline"}
-                            size="sm"
-                            onClick={() => setShowFilmTvBookmarkedOnly(!showFilmTvBookmarkedOnly)}
-                            className="gap-2 rounded-full shrink-0 sm:hidden"
-                          >
-                            <IconBookmark className={`h-4 w-4 ${showFilmTvBookmarkedOnly ? "fill-current" : ""}`} />
-                            Bookmarked
-                          </Button>
-                        </div>
-                        <div className="flex-1 flex justify-center min-w-0">
-                          <ResultsFeedbackPrompt
-                            context="film_tv_search"
-                            resultsViewCount={filmTvResultsViewCount}
-                            onOpenContact={() => setContactOpen(true)}
-                          />
-                        </div>
-                        <Button
-                          variant={showFilmTvBookmarkedOnly ? "secondary" : "outline"}
-                          size="sm"
-                          onClick={() => setShowFilmTvBookmarkedOnly(!showFilmTvBookmarkedOnly)}
-                          className="hidden sm:inline-flex gap-2 rounded-full shrink-0"
-                        >
-                          <IconBookmark className={`h-4 w-4 ${showFilmTvBookmarkedOnly ? "fill-current" : ""}`} />
-                          Bookmarked only
-                        </Button>
+                {/* Results header */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 mb-8">
+                  <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-0 min-w-0">
+                    <div className="flex flex-col gap-0.5 min-w-0">
+                      <div className="flex items-baseline gap-2 flex-wrap">
+                        <span className="text-2xl font-semibold tabular-nums text-foreground">
+                          {showBookmarkedOnly
+                            ? filmTvResults.filter((m) => m.is_favorited).length
+                            : filmTvTotal > 0 ? filmTvTotal : filmTvResults.length}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          {showBookmarkedOnly ? "bookmarked" : "monologues found"}
+                        </span>
                       </div>
-                      {displayList.length === 0 && (filmTvMonologues.length === 0 || showFilmTvBookmarkedOnly) ? (
-                        <div className="pt-12 pb-12 text-center max-w-md mx-auto">
-                          {queryInvalidReason === "gibberish" ? (
-                            <>
-                              <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-                              <h3 className="text-2xl font-semibold mb-2">We couldn&apos;t understand that search</h3>
-                              <p className="text-sm text-muted-foreground">
-                                Try searching for a movie title, director, or genre like &quot;drama&quot; or &quot;Tarantino&quot;
-                              </p>
-                            </>
-                          ) : queryInvalidReason ? (
-                            <>
-                              <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-                              <h3 className="text-2xl font-semibold mb-2">That search is too short</h3>
-                              <p className="text-sm text-muted-foreground">
-                                Try adding more detail, like a movie title or genre
-                              </p>
-                            </>
-                          ) : (
-                            <Card className="border-dashed bg-muted/20">
-                              <CardContent className="pt-12 pb-12 text-center">
-                                <p className="text-muted-foreground text-sm">
-                                  {showFilmTvBookmarkedOnly
-                                    ? "No saved references in this search. Save some to see them here."
-                                    : "No results match. Try a different search or filters."}
-                                </p>
-                              </CardContent>
-                            </Card>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="space-y-8">
-                          {/* Film/TV Monologues (actual audition pieces) */}
-                          {filmTvMonologues.length > 0 && !showFilmTvBookmarkedOnly && (
-                            <div className="space-y-4">
-                              <div className="flex items-baseline gap-2">
-                                <h3 className="text-lg font-semibold text-foreground">Monologues</h3>
-                                <span className="text-sm text-muted-foreground">{filmTvMonoTotal} audition pieces</span>
-                              </div>
-                              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {filmTvMonologues.map((mono, idx) => (
-                                  <MonologueResultCard
-                                    key={`ftm-${mono.id}`}
-                                    mono={mono}
-                                    index={idx}
-                                    onSelect={() => openMonologue(mono, idx, "film_tv")}
-                                    onToggleFavorite={toggleFavorite}
-                                    isModerator={!!user?.is_moderator}
-                                    onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
-                                    matchReasons={computeMatchReasons(mono, undefined, {})}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {/* Film/TV References (metadata cards) */}
-                          {displayList.length > 0 && (
-                            <div className="space-y-4">
-                              {filmTvMonologues.length > 0 && !showFilmTvBookmarkedOnly && (
-                                <div className="flex items-baseline gap-2">
-                                  <h3 className="text-lg font-semibold text-foreground">Film & TV References</h3>
-                                  <span className="text-sm text-muted-foreground">script links & metadata</span>
-                                </div>
-                              )}
-                              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {displayList.map((ref, idx) => (
-                                  <FilmTvReferenceCard
-                                    key={ref.id}
-                                    ref_item={ref}
-                                    index={idx}
-                                    onSelect={() => {
-                                      trackResultClicked({
-                                        monologue_id: ref.id,
-                                        title: ref.title,
-                                        position: idx,
-                                        search_type: "film_tv",
-                                      });
-                                      setSelectedFilmTvRef(ref);
-                                    }}
-                                    isFavorited={savedFilmTvIds.has(ref.id)}
-                                    matchReasons={computeFilmTvMatchReasons(ref, filmTvQuery, filmTvFilters)}
-                                    onToggleFavorite={() => {
-                                      toggleFilmTvFavoriteMutation.mutate({
-                                        referenceId: ref.id,
-                                        isFavorited: savedFilmTvIds.has(ref.id),
-                                        refForOptimistic: ref,
-                                      });
-                                    }}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
+                      {!showBookmarkedOnly && queryUsedForResults && (
+                        <span className="text-xs text-muted-foreground/50">from Film & TV scripts in our library</span>
                       )}
-                    </>
+                    </div>
+                    <Button
+                      variant={showBookmarkedOnly ? "secondary" : "outline"}
+                      size="sm"
+                      onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
+                      className={`sm:hidden gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
+                    >
+                      <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
+                      Bookmarked
+                    </Button>
+                  </div>
+                  <div className="flex-1 flex justify-center min-w-0">
+                    <ResultsFeedbackPrompt
+                      context="film_tv_search"
+                      resultsViewCount={filmTvResultsViewCount}
+                      onOpenContact={() => setContactOpen(true)}
+                    />
+                  </div>
+                  <Button
+                    variant={showBookmarkedOnly ? "secondary" : "outline"}
+                    size="sm"
+                    onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
+                    className={`hidden sm:inline-flex gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
+                  >
+                    <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
+                    Bookmarked only
+                  </Button>
+                </div>
+                {/* Monologue cards grid */}
+                {(() => {
+                  const filmTvDisplay = showBookmarkedOnly ? filmTvResults.filter((m) => m.is_favorited) : filmTvResults;
+                  if (filmTvDisplay.length === 0) {
+                    return (
+                      <Card className="border-dashed bg-muted/20">
+                        <CardContent className="pt-12 pb-12 text-center">
+                          <p className="text-muted-foreground text-sm">
+                            {showBookmarkedOnly
+                              ? "No bookmarked monologues in this search. Bookmark some to see them here."
+                              : "No results match. Try a different search or filters."}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    );
+                  }
+                  return (
+                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filmTvDisplay.map((mono, idx) => (
+                        <MonologueResultCard
+                          key={mono.id}
+                          mono={mono}
+                          index={idx}
+                          onSelect={() => openMonologue(mono, idx, "film_tv")}
+                          onToggleFavorite={toggleFavorite}
+                          isModerator={!!user?.is_moderator}
+                          onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
+                          matchReasons={computeMatchReasons(mono, undefined, filters)}
+                        />
+                      ))}
+                    </div>
                   );
                 })()}
               </div>
@@ -2672,242 +2405,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </>
         )}
       </AnimatePresence>
-
-      {/* Film & TV reference detail panel */}
-      <AnimatePresence>
-        {selectedFilmTvRef && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setSelectedFilmTvRef(null)}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="fixed inset-0 z-[10000] bg-black/50"
-            />
-            <motion.div
-              initial={{ x: "100%", opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: "100%", opacity: 0 }}
-              transition={{ duration: 0.3, ease: "easeOut", opacity: { duration: 0.25 } }}
-              className="fixed right-0 top-0 bottom-0 z-[10001] w-full md:w-[600px] lg:w-[700px] bg-background border-l shadow-2xl overflow-y-auto"
-            >
-              <div className="sticky top-0 bg-background/95 backdrop-blur-sm border-b z-[10002]">
-                <div className="flex items-center justify-between gap-2 p-6">
-                  <h2 className="text-2xl font-bold truncate">
-                    {selectedFilmTvRef.type === "tvSeries" ? "TV details" : "Movie details"}
-                  </h2>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (selectedFilmTvRef)
-                          toggleFilmTvFavoriteMutation.mutate({
-                            referenceId: selectedFilmTvRef.id,
-                            isFavorited: savedFilmTvIds.has(selectedFilmTvRef.id),
-                            refForOptimistic: selectedFilmTvRef,
-                          });
-                      }}
-                      className="hover:bg-muted min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 text-muted-foreground hover:text-foreground transition-colors duration-200 ease-out"
-                      title={savedFilmTvIds.has(selectedFilmTvRef.id) ? "Remove from saved" : "Add to saved"}
-                      aria-label={savedFilmTvIds.has(selectedFilmTvRef.id) ? "Remove from saved" : "Add to saved"}
-                    >
-                      <BookmarkIcon filled={savedFilmTvIds.has(selectedFilmTvRef.id)} size="md" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setContactOpen(true);
-                      }}
-                      className="hover:bg-muted min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0 text-muted-foreground hover:text-foreground"
-                      title="Report an issue"
-                      aria-label="Report an issue with this reference"
-                    >
-                      <IconFlag className="h-5 w-5" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setSelectedFilmTvRef(null)}
-                      className="min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0"
-                    >
-                      <IconX className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-              <div className="p-6 space-y-6">
-                {/* Poster + title */}
-                <div className="flex items-start gap-4">
-                  {selectedFilmTvRef.poster_url && !filmTvPosterError ? (
-                    <img
-                      src={selectedFilmTvRef.poster_url}
-                      alt={selectedFilmTvRef.title}
-                      className="w-40 rounded-md object-cover shadow-sm shrink-0"
-                      onError={() => setFilmTvPosterError(true)}
-                    />
-                  ) : (
-                    <div className="w-40 shrink-0 rounded-md bg-muted flex items-center justify-center aspect-[2/3] text-muted-foreground/40">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
-                      </svg>
-                    </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start gap-2 flex-wrap">
-                      <h1 className="text-2xl font-bold text-foreground leading-tight">{selectedFilmTvRef.title}</h1>
-                      {selectedFilmTvRef.is_best_match && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-muted/90 text-foreground border border-border">
-                          Best Match
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-muted-foreground mt-1 text-sm">
-                      {selectedFilmTvRef.year ?? ""}
-                      {selectedFilmTvRef.director ? ` · Directed by ${selectedFilmTvRef.director}` : ""}
-                    </p>
-                    {selectedFilmTvRef.imdb_rating != null && (
-                      <p className="text-sm font-semibold text-amber-500 mt-1">
-                        ★ {selectedFilmTvRef.imdb_rating.toFixed(1)} IMDb
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Type + genre */}
-                <div className="flex flex-wrap gap-2">
-                  {selectedFilmTvRef.type && (
-                    <Badge variant="secondary" className="capitalize">
-                      {selectedFilmTvRef.type === "tvSeries" ? "TV Series" : "Movie"}
-                    </Badge>
-                  )}
-                  {selectedFilmTvRef.genre?.map((g) => (
-                    <Badge key={g} variant="outline" className="capitalize">{g}</Badge>
-                  ))}
-                </div>
-
-                {/* Actors */}
-                {selectedFilmTvRef.actors && selectedFilmTvRef.actors.length > 0 && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Cast</p>
-                    <p className="text-sm text-foreground">{selectedFilmTvRef.actors.join(", ")}</p>
-                  </div>
-                )}
-
-                {/* Full plot */}
-                {selectedFilmTvRef.plot && (
-                  <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Plot</p>
-                    <p className="text-sm text-muted-foreground leading-relaxed">{selectedFilmTvRef.plot}</p>
-                  </div>
-                )}
-
-                {/* Confidence (informational tag, not a button) */}
-                {selectedFilmTvRef.confidence_score != null && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium tabular-nums w-fit bg-muted/90 text-foreground border border-border">
-                    {Math.round(selectedFilmTvRef.confidence_score * 100)}% match
-                  </span>
-                )}
-
-                {user?.is_moderator && (
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                    <span>ID: {selectedFilmTvRef.id}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="gap-1.5 h-8 text-xs"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFilmTvEditScriptValue(
-                          selectedFilmTvRef.imsdb_url?.trim() ?? getFilmTvScriptUrl(selectedFilmTvRef)
-                        );
-                        setFilmTvEditScriptOpen(true);
-                      }}
-                    >
-                      <IconEdit className="h-3.5 w-3.5" />
-                      Edit script link
-                    </Button>
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex flex-wrap gap-2 pt-2 border-t">
-                  <ScriptSourcePicker ref_item={selectedFilmTvRef} />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => window.open(`https://www.imdb.com/title/${selectedFilmTvRef.imdb_id}/`, "_blank", "noopener,noreferrer")}
-                  >
-                    <IconExternalLink className="h-4 w-4" />
-                    IMDb page
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
-
-      <Dialog open={filmTvEditScriptOpen} onOpenChange={setFilmTvEditScriptOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Edit script link</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Override the IMSDb script URL for this title (e.g. IMSDb uses &quot;Godfather&quot; but we show &quot;The Godfather&quot;). Leave empty to use the auto-generated URL from the title.
-          </p>
-          <div className="grid gap-2">
-            <Label htmlFor="film-tv-script-url">Script URL</Label>
-            <Input
-              id="film-tv-script-url"
-              value={filmTvEditScriptValue}
-              onChange={(e) => setFilmTvEditScriptValue(e.target.value)}
-              placeholder="https://imsdb.com/scripts/Godfather.html"
-            />
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setFilmTvEditScriptOpen(false)}
-              disabled={filmTvEditScriptSaving}
-            >
-              Cancel
-            </Button>
-            <Button
-              disabled={filmTvEditScriptSaving}
-              onClick={async () => {
-                if (!selectedFilmTvRef) return;
-                setFilmTvEditScriptSaving(true);
-                try {
-                  const res = await api.patch<{ imsdb_url: string | null }>(
-                    `/api/admin/film-tv/${selectedFilmTvRef.id}`,
-                    { imsdb_url: filmTvEditScriptValue.trim() || null }
-                  );
-                  setSelectedFilmTvRef((prev) =>
-                    prev ? { ...prev, imsdb_url: res.data.imsdb_url } : null
-                  );
-                  setFilmTvEditScriptOpen(false);
-                  toast.success("Script link updated");
-                } catch (err) {
-                  toast.error(err instanceof Error ? err.message : "Update failed");
-                } finally {
-                  setFilmTvEditScriptSaving(false);
-                }
-              }}
-            >
-              {filmTvEditScriptSaving ? (
-                <IconLoader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : null}
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       <EditMonologueModal
         monologueId={editMonologueId}
