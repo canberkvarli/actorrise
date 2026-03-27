@@ -135,6 +135,8 @@ def main():
     parser.add_argument("--limit", type=int, default=None, help="Limit number of monologues to process")
     parser.add_argument("--debug", action="store_true", help="Show detailed output")
     parser.add_argument("--concurrency", type=int, default=2, help="Concurrent AI requests")
+    parser.add_argument("--skip-encoding", action="store_true", help="Skip encoding fixes (if DB timeouts)")
+    parser.add_argument("--skip-reflow", action="store_true", help="Skip AI text reflow (just do metadata)")
     args = parser.parse_args()
 
     # Use direct connection (port 5432) instead of pooler (6543) to avoid statement timeout
@@ -161,19 +163,29 @@ def main():
         ai_cleanups = 0
         metadata_fills = 0
 
+        def safe_update(mono_id: int, **kwargs):
+            """Update a single monologue using raw SQL with timeout override."""
+            sets = ", ".join(f"{k} = :{k}" for k in kwargs)
+            kwargs["mid"] = mono_id
+            db.execute(text(f"SET LOCAL statement_timeout = '120s'"))
+            db.execute(text(f"UPDATE monologues SET {sets}, updated_at = now() WHERE id = :mid").bindparams(**kwargs))
+            db.commit()
+
         def safe_commit():
-            """Set timeout per-transaction (pgbouncer resets session settings) then commit."""
-            db.execute(text("SET LOCAL statement_timeout = '60s'"))
+            """Commit with timeout override."""
+            db.execute(text("SET LOCAL statement_timeout = '120s'"))
             db.commit()
 
         # Step 1: Encoding fixes (fast, no AI) - commit each individually
-        for mono in monologues:
+        if args.skip_encoding:
+            print("Skipping encoding fixes (--skip-encoding)")
+        for mono in ([] if args.skip_encoding else monologues):
             fixed = fix_encoding(mono.text)
             if fixed != mono.text:
                 if args.apply:
-                    mono.text = fixed
                     try:
-                        safe_commit()
+                        safe_update(mono.id, text=fixed)
+                        mono.text = fixed  # sync ORM object
                         encoding_fixes += 1
                     except Exception as e:
                         db.rollback()
@@ -184,12 +196,16 @@ def main():
         print(f"Encoding fixes: {encoding_fixes}")
 
         # Step 2: AI cleanup for screenplay-formatted text
-        candidates = [
-            (mono.id, mono.text, mono.character_name, mono.play.title)
-            for mono in monologues
-            if needs_cleanup(mono.text)
-        ]
-        print(f"Monologues needing AI cleanup: {len(candidates)}")
+        if args.skip_reflow:
+            print("Skipping AI reflow (--skip-reflow)")
+            candidates = []
+        else:
+            candidates = [
+                (mono.id, mono.text, mono.character_name, mono.play.title)
+                for mono in monologues
+                if needs_cleanup(mono.text)
+            ]
+            print(f"Monologues needing AI cleanup: {len(candidates)}")
 
         if candidates:
             mono_map = {m.id: m for m in monologues}
@@ -215,12 +231,11 @@ def main():
                                 print(f"    AFTER:  {cleaned_text[:150].replace(chr(10), ' ')}...")
 
                             if args.apply:
-                                mono.text = cleaned_text
-                                mono.word_count = len(cleaned_text.split())
-                                mono.estimated_duration_seconds = int(len(cleaned_text.split()) / 2.5)
-                                # Commit each record individually to avoid statement timeout
+                                wc = len(cleaned_text.split())
+                                dur = int(wc / 2.5)
                                 try:
-                                    safe_commit()
+                                    safe_update(mono.id, text=cleaned_text, word_count=wc, estimated_duration_seconds=dur)
+                                    mono.text = cleaned_text
                                     ai_cleanups += 1
                                 except Exception as ce:
                                     print(f"    [warn] commit failed for id={mono.id}: {ce}")
