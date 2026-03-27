@@ -34,48 +34,47 @@ export function computeMatchReasons(
   // 2. Relevance score
   if (mono.relevance_score != null && mono.relevance_score > 0.1) {
     const pct = Math.round(mono.relevance_score * 100);
-    reasons.push({ label: `${pct}% match`, category: "score" });
+    reasons.push({ label: `${pct}% match to your search`, category: "score" });
   }
 
-  // 3. Query-matched attributes
+  // 3. Query-matched attributes — explain WHY this matched the search
   if (queryHighlights) {
     if (queryHighlights.emotion && mono.primary_emotion?.toLowerCase() === queryHighlights.emotion) {
-      reasons.push({ label: mono.primary_emotion, category: "emotion" });
+      reasons.push({ label: `Matches the ${mono.primary_emotion} vibe you searched for`, category: "emotion" });
     }
     if (queryHighlights.tone && mono.tone?.toLowerCase() === queryHighlights.tone) {
-      reasons.push({ label: mono.tone, category: "tone" });
+      reasons.push({ label: `${mono.tone} tone, like you asked`, category: "tone" });
     }
     if (queryHighlights.gender && mono.character_gender?.toLowerCase() === queryHighlights.gender) {
       reasons.push({ label: `${mono.character_gender} character`, category: "gender" });
     }
     if (queryHighlights.category && mono.category?.toLowerCase() === queryHighlights.category) {
-      reasons.push({ label: mono.category, category: "era" });
+      reasons.push({ label: `${mono.category} era, as requested`, category: "era" });
     }
     if (queryHighlights.themes && mono.themes) {
       const matchedThemes = mono.themes.filter((t) =>
         queryHighlights.themes!.includes(t.toLowerCase())
       );
       if (matchedThemes.length > 0) {
-        reasons.push({ label: matchedThemes.join(", "), category: "theme" });
+        reasons.push({ label: `About ${matchedThemes.join(" & ")}`, category: "theme" });
       }
     }
   }
 
-  // 4. Active filter matches
+  // 4. Active filter matches (UI-selected filters)
   const filterChecks: Array<{ filterKey: string; friendlyLabel: string; monoValue?: string | null; cat: MatchReasonCategory }> = [
-    { filterKey: "gender", friendlyLabel: "character", monoValue: mono.character_gender, cat: "gender" },
-    { filterKey: "age_range", friendlyLabel: "age", monoValue: mono.character_age_range, cat: "filter" },
-    { filterKey: "emotion", friendlyLabel: "emotion", monoValue: mono.primary_emotion, cat: "emotion" },
-    { filterKey: "tone", friendlyLabel: "tone", monoValue: mono.tone, cat: "tone" },
-    { filterKey: "category", friendlyLabel: "era", monoValue: mono.category, cat: "era" },
-    { filterKey: "difficulty", friendlyLabel: "difficulty", monoValue: mono.difficulty_level, cat: "filter" },
+    { filterKey: "gender", friendlyLabel: "Matches your filter", monoValue: mono.character_gender, cat: "gender" },
+    { filterKey: "age_range", friendlyLabel: "Age range matches", monoValue: mono.character_age_range, cat: "filter" },
+    { filterKey: "emotion", friendlyLabel: "Emotion matches", monoValue: mono.primary_emotion, cat: "emotion" },
+    { filterKey: "tone", friendlyLabel: "Tone matches", monoValue: mono.tone, cat: "tone" },
+    { filterKey: "difficulty", friendlyLabel: "Difficulty matches", monoValue: mono.difficulty_level, cat: "filter" },
   ];
 
   for (const { filterKey, friendlyLabel, monoValue, cat } of filterChecks) {
     const filterValue = activeFilters[filterKey];
     if (filterValue && monoValue && monoValue.toLowerCase() === filterValue.toLowerCase()) {
       const alreadyAdded = reasons.some(
-        (r) => r.label.toLowerCase().includes(monoValue.toLowerCase())
+        (r) => r.category === cat
       );
       if (!alreadyAdded) {
         reasons.push({ label: `${friendlyLabel}: ${monoValue}`, category: cat });
@@ -83,19 +82,17 @@ export function computeMatchReasons(
     }
   }
 
-  // 5. Themes (if not already shown from query match)
-  if (mono.themes && mono.themes.length > 0) {
-    const alreadyHasThemes = reasons.some((r) => r.category === "theme");
-    if (!alreadyHasThemes) {
-      reasons.push({ label: mono.themes.slice(0, 3).join(", "), category: "theme" });
-    }
-  }
-
-  // 6. Profile match
+  // 5. Profile match — explain how it fits the actor
   if (profileMatch && profileMatch.score >= 2 && profileMatch.reasons.length > 0) {
     for (const reason of profileMatch.reasons) {
       reasons.push({ label: reason, category: "profile" });
     }
+  }
+
+  // 6. "Worth a look" — if we have few specific reasons, explain why it's still here
+  const specificReasons = reasons.filter(r => r.category !== "score");
+  if (specificReasons.length === 0 && mono.themes && mono.themes.length > 0) {
+    reasons.push({ label: `Explores ${mono.themes.slice(0, 2).join(" & ")} — could be a great fit`, category: "theme" });
   }
 
   return reasons;
