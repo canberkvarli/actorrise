@@ -198,18 +198,18 @@ def main():
                                 mono.text = cleaned_text
                                 mono.word_count = len(cleaned_text.split())
                                 mono.estimated_duration_seconds = int(len(cleaned_text.split()) / 2.5)
-                                ai_cleanups += 1
+                                # Commit each record individually to avoid statement timeout
+                                try:
+                                    db.commit()
+                                    ai_cleanups += 1
+                                except Exception as ce:
+                                    print(f"    [warn] commit failed for id={mono.id}: {ce}")
+                                    db.rollback()
                             else:
                                 ai_cleanups += 1
 
                             if processed % 20 == 0:
                                 print(f"  ... {processed}/{len(candidates)} processed")
-                                if args.apply:
-                                    try:
-                                        db.commit()
-                                    except Exception as ce:
-                                        print(f"    [warn] commit failed, rolling back: {ce}")
-                                        db.rollback()
 
                     except Exception as e:
                         print(f"    [warn] batch error: {e}")
