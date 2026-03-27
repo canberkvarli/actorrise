@@ -41,6 +41,7 @@ import ScriptsQuickAccess from "@/components/scripts/ScriptsQuickAccess";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
+import { MonologueResultCard } from "@/components/monologue/MonologueResultCard";
 import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
 import { useProfileStats, useProfile, useRecommendations, useDiscover, useDiscoverFilmTv } from "@/hooks/useDashboardData";
 import { useBookmarkCount, useToggleFavorite } from "@/hooks/useBookmarks";
@@ -613,9 +614,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             ) : discoverFilmTv.length > 0 ? (
               <AnimatePresence mode="popLayout">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 min-h-[240px]">
-                {discoverFilmTv.slice(0, 4).map((ref, idx) => (
+                {discoverFilmTv.slice(0, 4).map((mono, idx) => (
                   <motion.div
-                    key={ref.id}
+                    key={mono.id}
                     layout
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
@@ -623,19 +624,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     transition={{ duration: 0.35, delay: idx * 0.05, ease: [0.25, 0.1, 0.25, 1] }}
                     className="h-full"
                   >
-                  <FilmTvReferenceCard
-                    ref_item={ref}
+                  <MonologueResultCard
+                    mono={mono}
                     index={idx}
-                    compact
-                    onSelect={() => setSelectedFilmTvRef(ref)}
-                    isFavorited={savedFilmTvIds.has(ref.id)}
-                    onToggleFavorite={() => {
-                      toggleFilmTvFavoriteMutation.mutate({
-                        referenceId: ref.id,
-                        isFavorited: savedFilmTvIds.has(ref.id),
-                        refForOptimistic: ref,
-                      });
-                    }}
+                    onSelect={() => openMonologue(mono)}
+                    onToggleFavorite={toggleFavorite}
                   />
                   </motion.div>
                 ))}
