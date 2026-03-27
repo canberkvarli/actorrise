@@ -9,7 +9,7 @@ const INITIAL_DURATION_MS = 2000;
 const UPDATE_DURATION_MS = 1200;
 
 /** Fallback library stats so the section isn’t empty while the API loads (avoids long dash). */
-const FALLBACK_LIBRARY = { monologues: 8600, filmTv: 14000 };
+const FALLBACK_LIBRARY = { monologues: 7500, filmTv: 870 };
 /** Fallback search count shown immediately before API responds — prevents showing "0". */
 const FALLBACK_SEARCHES = 600;
 const FALLBACK_USERS = 120;
@@ -52,7 +52,8 @@ type LandingLiveCountProps = {
 type PublicStats = {
   total_searches: number;
   total_monologues?: number;
-  total_film_tv_references?: number;
+  total_play_monologues?: number;
+  total_film_tv_monologues?: number;
   total_users?: number;
 };
 
@@ -73,13 +74,10 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
     if (typeof data.total_users === "number") {
       setTotalUsers(data.total_users);
     }
-    if (
-      typeof data.total_monologues === "number" &&
-      typeof data.total_film_tv_references === "number"
-    ) {
+    if (typeof data.total_monologues === "number") {
       setLibraryStats({
         monologues: data.total_monologues,
-        filmTv: data.total_film_tv_references,
+        filmTv: data.total_film_tv_monologues ?? 0,
       });
     }
   };
@@ -105,8 +103,8 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
       setTotalSearches(cached.total_searches);
       setHasAnimated(true);
       if (cached.total_users != null) setTotalUsers(cached.total_users);
-      if (cached.total_monologues && cached.total_film_tv_references) {
-        setLibraryStats({ monologues: cached.total_monologues, filmTv: cached.total_film_tv_references });
+      if (cached.total_monologues) {
+        setLibraryStats({ monologues: cached.total_monologues, filmTv: cached.total_film_tv_monologues ?? 0 });
       }
     }
     // Always fetch fresh for inline/micro (hero). Section variant waits for IntersectionObserver.
@@ -253,7 +251,7 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
             <span className={libraryStats ? "" : "text-muted-foreground"}>{libraryToShow.monologues.toLocaleString("en-US")} monologues</span>
           </p>
           <p className={isInline ? "mt-0.5 text-muted-foreground text-sm" : "mt-1 text-muted-foreground text-sm"}>
-            <span className={libraryStats ? "" : "text-muted-foreground"}>{libraryToShow.filmTv.toLocaleString("en-US")} film & TV</span>
+            from plays, films, and TV
           </p>
         </div>
 
