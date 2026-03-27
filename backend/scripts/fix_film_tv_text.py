@@ -153,13 +153,20 @@ def main():
         ai_cleanups = 0
         metadata_fills = 0
 
-        # Step 1: Encoding fixes (fast, no AI)
+        # Step 1: Encoding fixes (fast, no AI) - commit each individually
         for mono in monologues:
             fixed = fix_encoding(mono.text)
             if fixed != mono.text:
-                encoding_fixes += 1
                 if args.apply:
                     mono.text = fixed
+                    try:
+                        db.commit()
+                        encoding_fixes += 1
+                    except Exception as e:
+                        db.rollback()
+                        print(f"    [warn] encoding fix failed for id={mono.id}: {e}")
+                else:
+                    encoding_fixes += 1
 
         print(f"Encoding fixes: {encoding_fixes}")
 
@@ -218,14 +225,7 @@ def main():
                         except Exception:
                             pass
 
-        # Final commit for remaining text cleanups
-        if args.apply and (encoding_fixes > 0 or ai_cleanups > 0):
-            try:
-                db.commit()
-                print(f"\n  Text changes committed ({encoding_fixes} encoding, {ai_cleanups} reflows)")
-            except Exception as e:
-                print(f"\n  [warn] Final text commit failed: {e}")
-                db.rollback()
+        print(f"\n  Text changes: {encoding_fixes} encoding fixes, {ai_cleanups} reflows")
 
         # Step 3: Fill missing metadata via AI
         if args.metadata:
