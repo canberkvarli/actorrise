@@ -636,10 +636,7 @@ class SemanticSearch:
         if hard_filters:
             if hard_filters.get('gender'):
                 base_query = base_query.filter(
-                    or_(
-                        Monologue.character_gender == hard_filters['gender'],
-                        Monologue.character_gender == 'any'
-                    )
+                    Monologue.character_gender == hard_filters['gender']
                 )
 
             if hard_filters.get('age_range'):
@@ -1004,10 +1001,7 @@ class SemanticSearch:
         if filters:
             if apply_gender_filter:
                 base_query = base_query.filter(
-                    or_(
-                        Monologue.character_gender == filters['gender'],
-                        Monologue.character_gender == 'any'
-                    )
+                    Monologue.character_gender == filters['gender']
                 )
 
             if filters.get('tone'):
@@ -1237,10 +1231,7 @@ class SemanticSearch:
         if filters:
             if filters.get('gender'):
                 query = query.filter(
-                    or_(
-                        Monologue.character_gender == filters['gender'],
-                        Monologue.character_gender == 'any'
-                    )
+                    Monologue.character_gender == filters['gender']
                 )
 
             if filters.get('age_range'):
