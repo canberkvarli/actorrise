@@ -22,8 +22,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from openai import OpenAI
-from sqlalchemy import text
-from app.core.database import SessionLocal
+import re as _re
+from sqlalchemy import text, create_engine
+from sqlalchemy.orm import sessionmaker
+from app.core.config import settings
 from app.models.actor import Monologue, Play
 
 client = OpenAI()
@@ -135,10 +137,12 @@ def main():
     parser.add_argument("--concurrency", type=int, default=2, help="Concurrent AI requests")
     args = parser.parse_args()
 
-    db = SessionLocal()
-    # Override Supabase's short statement timeout for bulk operations
-    db.execute(text("SET statement_timeout = '60s'"))
-    db.commit()
+    # Use direct connection (port 5432) instead of pooler (6543) to avoid statement timeout
+    direct_url = _re.sub(r':6543/', ':5432/', settings.database_url)
+    print(f"  Using direct DB connection (port 5432)\n")
+    engine = create_engine(direct_url)
+    Session = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    db = Session()
 
     try:
         query = (
