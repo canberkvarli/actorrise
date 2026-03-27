@@ -7,11 +7,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "Contemporary Monologues for Auditions",
   description:
-    "Find contemporary monologues for auditions from 8,600+ searchable pieces. Modern plays, current voices. AI search by tone, length, and character type. Free to try.",
+    "Find contemporary monologues for auditions from 7,500+ searchable pieces. Modern plays, current voices. AI search by tone, length, and character type. Free to try.",
   openGraph: {
     title: "Contemporary Monologues for Auditions | ActorRise",
     description:
-      "Search 8,600+ monologues for contemporary pieces from modern plays. AI-powered discovery.",
+      "Search 7,500+ monologues for contemporary pieces from modern plays. AI-powered discovery.",
     url: `${siteUrl}/contemporary-monologues`,
   },
   alternates: { canonical: `${siteUrl}/contemporary-monologues` },

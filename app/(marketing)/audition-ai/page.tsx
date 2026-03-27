@@ -33,7 +33,7 @@ export default function AuditionAiPage() {
           <span className="text-primary">·</span>
           <span>
             <strong className="text-foreground">Monologue search</strong>: describe what you need in plain English.
-            We match you to 8,600+ real monologues by meaning, not just keywords.
+            We match you to 7,500+ real monologues by meaning, not just keywords.
           </span>
         </li>
         <li className="flex gap-2">

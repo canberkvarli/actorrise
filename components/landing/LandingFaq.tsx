@@ -5,7 +5,7 @@ import Link from "next/link";
 const FAQ_ITEMS = [
   {
     q: "Is the search really AI?",
-    a: "Yes. ActorRise uses semantic (AI) search over 8,600+ real theatrical monologues and 14,000+ film/TV references. You describe what you need in plain English; we don't generate or invent text. We find the right published pieces.",
+    a: "Yes. ActorRise uses semantic (AI) search over 7,500+ real monologues from plays, films, and TV. You describe what you need in plain English; we don't generate or invent text. We find the right published pieces.",
   },
   {
     q: "Where do the monologues come from?",

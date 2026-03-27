@@ -5,6 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { toastBookmark } from "@/lib/toast";
 import api from "@/lib/api";
+import { trackMonologueSaved } from "@/lib/analytics";
 import { Monologue } from "@/types/actor";
 
 // Hook for fetching bookmarks (cached – shared with dashboard, My Monologues, etc.)
@@ -133,6 +134,15 @@ export function useToggleFavorite() {
     },
     onSuccess: (_data, variables) => {
       const nextFavorited = !variables.isFavorited;
+      if (nextFavorited) {
+        // Find the monologue title from cache for the event
+        const mono = queryClient.getQueryData<Monologue>(["monologue", variables.monologueId])
+          ?? queryClient.getQueryData<Monologue[]>(["bookmarks"])?.find((m) => m.id === variables.monologueId);
+        trackMonologueSaved({
+          monologue_id: variables.monologueId,
+          title: mono?.title || mono?.character_name || String(variables.monologueId),
+        });
+      }
       toastBookmark(nextFavorited, {
         duration: 5000,
         label: "Monologue",

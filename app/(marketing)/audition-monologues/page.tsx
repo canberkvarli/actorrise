@@ -11,7 +11,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Audition Monologues | ActorRise",
     description:
-      "Audition monologues for every casting need. Classical, contemporary, comedic. 8,600+ pieces, AI search, Overdone filter.",
+      "Audition monologues for every casting need. Classical, contemporary, comedic. 7,500+ pieces, AI search, Overdone filter.",
     url: `${siteUrl}/audition-monologues`,
   },
   alternates: { canonical: `${siteUrl}/audition-monologues` },
@@ -25,7 +25,7 @@ export default function AuditionMonologuesPage() {
       </h1>
       <p className="text-lg text-muted-foreground mb-8">
         Whether you need classical, contemporary, or comedic audition monologues, ActorRise lets you
-        search 8,600+ real pieces by style, length, gender, and tone. AI finds what fits so you spend
+        search 7,500+ real pieces by style, length, gender, and tone. AI finds what fits so you spend
         less time digging and more time rehearsing.
       </p>
       <ul className="space-y-3 text-muted-foreground mb-10">

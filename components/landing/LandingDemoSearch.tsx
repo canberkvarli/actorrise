@@ -382,7 +382,7 @@ export function LandingDemoSearch() {
                   We didn&apos;t find any monologues for that search. Try different words or browse the full library.
                 </p>
                 <Button asChild size="lg" variant="outline" className="rounded-full mt-4">
-                  <Link href="/signup">Search 8,600+ monologues</Link>
+                  <Link href="/signup">Search 7,500+ monologues</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -451,7 +451,7 @@ export function LandingDemoSearch() {
               >
                 <Button asChild size="lg" className="rounded-full px-8 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground hover:border-muted-foreground/30">
                   <Link href={`/signup?redirect=${encodeURIComponent(`/search?q=${encodeURIComponent(query.trim())}`)}`}>
-                    Search 8,600+ monologues
+                    Search 7,500+ monologues
                   </Link>
                 </Button>
               </motion.div>
@@ -509,7 +509,7 @@ export function LandingDemoSearch() {
                 transition={{ delay: 0.45, duration: 0.35 }}
               >
                 <Button asChild size="lg" className="rounded-full px-8 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground hover:border-muted-foreground/30">
-                  <Link href="/signup">Search 8,600+ monologues</Link>
+                  <Link href="/signup">Search 7,500+ monologues</Link>
                 </Button>
               </motion.div>
             </div>

@@ -39,8 +39,8 @@ export default function Page() {
         <li className="flex gap-2">
           <span className="text-primary">&middot;</span>
           <span>
-            <strong className="text-foreground">Film & TV scenes</strong>: rehearse from 14,000+
-            scene references in the database.
+            <strong className="text-foreground">Film & TV scenes</strong>: rehearse from
+            monologues extracted from iconic screenplays.
           </span>
         </li>
         <li className="flex gap-2">
