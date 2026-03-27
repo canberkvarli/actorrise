@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { toastBookmark } from "@/lib/toast";
+import { trackSearchPerformed, trackResultClicked } from "@/lib/analytics";
 import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconExternalLink, IconEye, IconEyeOff, IconDownload, IconInfoCircle, IconAdjustments, IconTargetArrow, IconSend, IconFlag, IconDeviceTv, IconEdit, IconCheck, IconBulb } from "@tabler/icons-react";
 
 // Fun loading messages for AI search (theater)
@@ -324,12 +325,12 @@ function SearchContent() {
 
   // Auto-scroll: handled via ref callback on the latest step
 
-  // Scroll panel to top when monologue is selected
+  // Scroll panel to top only when a *different* monologue is selected (not on data refresh)
   useEffect(() => {
     if (selectedMonologue && panelRef.current) {
       panelRef.current.scrollTop = 0;
     }
-  }, [selectedMonologue]);
+  }, [selectedMonologue?.id]);
 
   // Initialize results view count from sessionStorage (for feedback prompt).
   useEffect(() => {
@@ -748,6 +749,11 @@ function SearchContent() {
       setPage(data.page);
       setHasMore(newResults.length === PAGE_SIZE && newResults.length < data.total);
 
+      // Track GA4 search event (first page only)
+      if (pageNum === 1 && searchQuery.trim()) {
+        trackSearchPerformed({ query: searchQuery, results_count: data.total, search_type: "monologue" });
+      }
+
       // Cache results (first page only) in sessionStorage keyed by query+filters
       if (pageNum === 1) {
         playsActionAtRef.current = Date.now();
@@ -887,6 +893,11 @@ function SearchContent() {
         setFilmTvTotal(total);
         setFilmTvMonologues(monoResults.slice(0, PAGE_SIZE));
         setFilmTvMonoTotal(monoRes.data.total);
+        // Track GA4 search event for film/TV
+        if (filmTvQuery.trim()) {
+          trackSearchPerformed({ query: filmTvQuery.trim(), results_count: total, search_type: "film_tv" });
+        }
+
         // Persist so refresh or navigating away and back keeps Film & TV results (like plays).
         try {
           const payload = { query: filmTvQuery.trim(), filmTvFilters, results, total };
@@ -997,7 +1008,13 @@ function SearchContent() {
     }
   };
 
-  const openMonologue = (mono: Monologue) => {
+  const openMonologue = (mono: Monologue, position?: number, resultSearchType?: "monologue" | "film_tv") => {
+    trackResultClicked({
+      monologue_id: mono.id,
+      title: mono.title || mono.character_name,
+      position: position ?? 0,
+      search_type: resultSearchType ?? (searchMode === "film_tv" ? "film_tv" : "monologue"),
+    });
     setSelectedMonologue(mono);
     setIsLoadingDetail(false);
     setIsReadingMode(false);
@@ -2090,7 +2107,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                                     key={`ftm-${mono.id}`}
                                     mono={mono}
                                     index={idx}
-                                    onSelect={() => openMonologue(mono)}
+                                    onSelect={() => openMonologue(mono, idx, "film_tv")}
                                     onToggleFavorite={toggleFavorite}
                                     isModerator={!!user?.is_moderator}
                                     onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
@@ -2115,7 +2132,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                                     key={ref.id}
                                     ref_item={ref}
                                     index={idx}
-                                    onSelect={() => setSelectedFilmTvRef(ref)}
+                                    onSelect={() => {
+                                      trackResultClicked({
+                                        monologue_id: ref.id,
+                                        title: ref.title,
+                                        position: idx,
+                                        search_type: "film_tv",
+                                      });
+                                      setSelectedFilmTvRef(ref);
+                                    }}
                                     isFavorited={savedFilmTvIds.has(ref.id)}
                                     matchReasons={computeFilmTvMatchReasons(ref, filmTvQuery, filmTvFilters)}
                                     onToggleFavorite={() => {
@@ -2384,7 +2409,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <MonologueResultCard
                           key={mono.id}
                           mono={mono}
-                          onSelect={() => openMonologue(mono)}
+                          onSelect={() => openMonologue(mono, idx, "monologue")}
                           onToggleFavorite={toggleFavorite}
                           variant="bestMatch"
                           index={idx}
@@ -2399,7 +2424,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <MonologueResultCard
                           key={mono.id}
                           mono={mono}
-                          onSelect={() => openMonologue(mono)}
+                          onSelect={() => openMonologue(mono, (!showBookmarkedOnly ? bestMatches.length : 0) + idx, "monologue")}
                           onToggleFavorite={toggleFavorite}
                           variant="default"
                           index={(!showBookmarkedOnly ? bestMatches.length : 0) + idx}

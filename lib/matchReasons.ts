@@ -89,10 +89,13 @@ export function computeMatchReasons(
     }
   }
 
-  // 6. "Worth a look" — if we have few specific reasons, explain why it's still here
+  // 6. "Worth a look" — if we have few specific reasons, explain themes individually
   const specificReasons = reasons.filter(r => r.category !== "score");
   if (specificReasons.length === 0 && mono.themes && mono.themes.length > 0) {
-    reasons.push({ label: `Explores ${mono.themes.slice(0, 2).join(" & ")} — could be a great fit`, category: "theme" });
+    for (const theme of mono.themes.slice(0, 3)) {
+      reasons.push({ label: theme, category: "theme" });
+    }
+    reasons.push({ label: "Could be a great fit", category: "score" });
   }
 
   return reasons;
