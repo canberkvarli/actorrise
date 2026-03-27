@@ -157,6 +157,11 @@ def main():
         ai_cleanups = 0
         metadata_fills = 0
 
+        def safe_commit():
+            """Set timeout per-transaction (pgbouncer resets session settings) then commit."""
+            db.execute(text("SET LOCAL statement_timeout = '60s'"))
+            db.commit()
+
         # Step 1: Encoding fixes (fast, no AI) - commit each individually
         for mono in monologues:
             fixed = fix_encoding(mono.text)
@@ -164,7 +169,7 @@ def main():
                 if args.apply:
                     mono.text = fixed
                     try:
-                        db.commit()
+                        safe_commit()
                         encoding_fixes += 1
                     except Exception as e:
                         db.rollback()
@@ -211,7 +216,7 @@ def main():
                                 mono.estimated_duration_seconds = int(len(cleaned_text.split()) / 2.5)
                                 # Commit each record individually to avoid statement timeout
                                 try:
-                                    db.commit()
+                                    safe_commit()
                                     ai_cleanups += 1
                                 except Exception as ce:
                                     print(f"    [warn] commit failed for id={mono.id}: {ce}")
@@ -272,7 +277,7 @@ def main():
                         metadata_fills += 1
                         # Commit every 20 to avoid losing progress
                         if metadata_fills % 20 == 0:
-                            db.commit()
+                            safe_commit()
                             print(f"    (committed {metadata_fills} metadata fills)")
                     except Exception as e:
                         print(f"    [warn] Failed: {e}")
@@ -284,7 +289,7 @@ def main():
 
                 # Final commit for remaining metadata
                 try:
-                    db.commit()
+                    safe_commit()
                 except Exception:
                     db.rollback()
 
