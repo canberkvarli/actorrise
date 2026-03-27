@@ -135,7 +135,7 @@ export function MonologueDetailContent({
               Analysis
             </h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {monologue.primary_emotion && (
+              {monologue.primary_emotion && monologue.primary_emotion.toLowerCase() !== "unknown" && (
                 <div>
                   <p className="text-sm text-muted-foreground mb-1">Primary Emotion:</p>
                   <Badge
