@@ -62,18 +62,20 @@ def get_public_stats(db: Session = Depends(get_db)) -> dict[str, Any]:
         ).scalar() or 0
     total = int(db_total) + _demo_searches_count
 
-    # Content record counts (for "8,600+ monologues", "14,000+ film & TV", etc.)
+    # Content record counts
     monologue_count = db.query(sql_count(Monologue.id)).scalar() or 0
+    play_monologue_count = db.query(sql_count(Monologue.id)).join(Play).filter(Play.source_type == "play").scalar() or 0
+    film_tv_monologue_count = db.query(sql_count(Monologue.id)).join(Play).filter(Play.source_type.in_(["film", "tv"])).scalar() or 0
     play_count = db.query(sql_count(Play.id)).scalar() or 0
-    film_tv_count = db.query(sql_count(FilmTvReference.id)).scalar() or 0
 
     user_count = db.query(sql_count(User.id)).scalar() or 0
 
     payload = {
         "total_searches": total,
         "total_monologues": int(monologue_count),
+        "total_play_monologues": int(play_monologue_count),
+        "total_film_tv_monologues": int(film_tv_monologue_count),
         "total_plays": int(play_count),
-        "total_film_tv_references": int(film_tv_count),
         "total_users": int(user_count),
     }
     _CACHE["public_stats"] = (payload, now + _CACHE_TTL_SEC)
