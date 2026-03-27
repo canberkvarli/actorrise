@@ -26,7 +26,7 @@ from app.core.database import SessionLocal
 from app.models.actor import Monologue, Play
 
 client = OpenAI()
-MODEL = "gpt-4o"
+MODEL = "gpt-4o-mini"  # 200k TPM vs 30k for gpt-4o at Tier 1
 
 # --- Encoding fixes (no AI needed) ----------------------------------------
 
@@ -110,8 +110,8 @@ def ai_cleanup_batch(monologues: list[tuple[int, str, str, str]]) -> dict[int, s
                 ],
             )
             cleaned = response.choices[0].message.content.strip()
-            # Sanity check: cleaned text should be at least 30% of original length
-            if len(cleaned) >= len(text) * 0.3:
+            # Sanity check: cleaned text should be at least 50 chars
+            if len(cleaned) >= 50:
                 results[mono_id] = cleaned
             else:
                 print(f"    [warn] id={mono_id} AI output too short ({len(cleaned)} vs {len(text)}), skipping")

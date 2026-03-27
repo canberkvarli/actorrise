@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { IconSparkles, IconExternalLink, IconInfoCircle, IconBookmark, IconEdit } from "@tabler/icons-react";
+import { IconSparkles, IconExternalLink, IconInfoCircle, IconBookmark, IconEdit, IconScript } from "@tabler/icons-react";
+import Image from "next/image";
 import { Monologue } from "@/types/actor";
 import { isMeaningfulMonologueTitle } from "@/lib/utils";
 import { getEmotionBadgeClassName, getEmotionBarClassName } from "@/lib/emotionColors";
@@ -33,6 +34,18 @@ export function MonologueDetailContent({
       {/* Header */}
       <div className="space-y-3">
         <div className="flex items-start justify-between gap-4">
+          {monologue.poster_url && (
+            <div className="shrink-0 w-20 h-28 rounded-lg overflow-hidden bg-muted border border-border">
+              <Image
+                src={monologue.poster_url}
+                alt={monologue.play_title || "Poster"}
+                width={80}
+                height={112}
+                className="w-full h-full object-cover"
+                unoptimized
+              />
+            </div>
+          )}
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold font-typewriter">{monologue.character_name}</h1>
             {isMeaningfulMonologueTitle(monologue.title, monologue.character_name) && (
@@ -41,6 +54,12 @@ export function MonologueDetailContent({
             <p className="text-lg text-muted-foreground font-typewriter mt-1">
               From <span className="font-semibold">{monologue.play_title}</span> by {monologue.author}
             </p>
+            {monologue.director && (
+              <p className="text-sm text-muted-foreground mt-0.5">Directed by {monologue.director}</p>
+            )}
+            {monologue.imdb_rating && (
+              <span className="text-xs text-muted-foreground">IMDb {monologue.imdb_rating}/10</span>
+            )}
           </div>
           {headerActions}
         </div>
@@ -282,7 +301,9 @@ export function MonologueDetailContent({
                   rel="noopener noreferrer"
                   className="flex items-center gap-2"
                 >
-                  View Full Play
+                  {monologue.source_type === "film" || monologue.source_type === "tv"
+                    ? "View Script"
+                    : "View Full Play"}
                   <IconExternalLink className="h-4 w-4" />
                 </a>
               </Button>
