@@ -1000,10 +1000,8 @@ class SemanticSearch:
         classical pieces like Hamlet still surface even when the exact phrase
         doesn't appear in the script.
         """
-        # Gender: only hard-filter when set via UI (explicit), not when from query text
-        apply_gender_filter = filters and filters.get('gender') and (
-            explicit_filters is None or explicit_filters.get('gender')
-        )
+        # Gender is always a hard filter — "for women" is unambiguous intent
+        apply_gender_filter = filters and filters.get('gender')
 
         base_query = self.db.query(Monologue).join(Play)
 
