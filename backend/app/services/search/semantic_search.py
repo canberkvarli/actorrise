@@ -504,6 +504,16 @@ class SemanticSearch:
 
         logger.debug("Extracted filters (AI): %s", extracted_filters)
 
+        # Normalize gender values from AI (it may return "woman"/"man" instead of "female"/"male")
+        _GENDER_NORMALIZE = {
+            'woman': 'female', 'women': 'female', 'girl': 'female', 'lady': 'female', 'feminine': 'female', 'she': 'female', 'her': 'female',
+            'man': 'male', 'men': 'male', 'boy': 'male', 'gentleman': 'male', 'masculine': 'male', 'he': 'male', 'him': 'male',
+        }
+        for filters_dict in [extracted_filters, optimized_filters, explicit_filters]:
+            if filters_dict and filters_dict.get('gender'):
+                g = filters_dict['gender'].lower().strip()
+                filters_dict['gender'] = _GENDER_NORMALIZE.get(g, g)
+
         # Merge filters in precedence order:
         # AI-parsed < keyword-derived (optimized) < explicit filters
         merged_filters = {**(extracted_filters or {}), **(optimized_filters or {}), **(explicit_filters or {})}
