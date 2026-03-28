@@ -1753,39 +1753,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </div>
                 </div>
               </motion.div>
-            ) : !filmTvHasSearched ? (
-              <motion.div
-                key="film-tv-empty"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Card className="border border-border/60 bg-gradient-to-b from-muted/30 to-muted/10 shadow-sm overflow-hidden max-w-md mx-auto">
-                  <CardContent className="pt-10 pb-10 px-5 sm:px-6 text-center">
-                    <div className="flex justify-center mb-4">
-                      <div className="rounded-full bg-muted/80 p-3">
-                        <IconDeviceTv className="h-7 w-7 text-foreground" aria-hidden />
-                      </div>
-                    </div>
-                    <h3 className="text-base font-semibold text-foreground mb-1.5">
-                      Film & TV monologues
-                    </h3>
-                    <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-                      Search by mood or scene, same as plays. Or browse all Film & TV monologues.
-                    </p>
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => handleSearch()}
-                      className="rounded-full px-6 font-medium"
-                      disabled={isLoading}
-                    >
-                      Browse all
-                    </Button>
-                  </CardContent>
-                </Card>
-              </motion.div>
+            ) : filmTvResults.length === 0 && !filmTvHasSearched ? (
+              <div />
             ) : filmTvResults.length === 0 ? (
               <div className="pt-12 pb-12 text-center max-w-md mx-auto">
                 {queryInvalidReason === "gibberish" ? (
