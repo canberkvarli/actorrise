@@ -514,6 +514,24 @@ class SemanticSearch:
                 g = filters_dict['gender'].lower().strip()
                 filters_dict['gender'] = _GENDER_NORMALIZE.get(g, g)
 
+        # Safety net: regex-based gender detection from query text (in case AI missed it)
+        _query_lower = query.lower()
+        _has_gender_in_any = any(
+            d and d.get('gender') for d in [extracted_filters, optimized_filters, explicit_filters]
+        )
+        if not _has_gender_in_any:
+            import re as _re
+            if _re.search(r'\b(female|woman|women|girl|lady|for her|for a woman)\b', _query_lower):
+                if extracted_filters is None:
+                    extracted_filters = {}
+                extracted_filters['gender'] = 'female'
+                logger.debug("Safety net: detected gender=female from query text")
+            elif _re.search(r'\b(male|man|men|boy|for him|for a man|gentleman)\b', _query_lower):
+                if extracted_filters is None:
+                    extracted_filters = {}
+                extracted_filters['gender'] = 'male'
+                logger.debug("Safety net: detected gender=male from query text")
+
         # Merge filters in precedence order:
         # AI-parsed < keyword-derived (optimized) < explicit filters
         merged_filters = {**(extracted_filters or {}), **(optimized_filters or {}), **(explicit_filters or {})}
