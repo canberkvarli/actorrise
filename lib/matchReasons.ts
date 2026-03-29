@@ -31,83 +31,111 @@ export function computeMatchReasons(
     reasons.push({ label: MATCH_TYPE_LABELS[mono.match_type], category: "quote" });
   }
 
-  // 2. Relevance score
+  // 2. Relevance score — natural language, not "100% match"
   if (mono.relevance_score != null && mono.relevance_score > 0.1) {
     const pct = Math.round(mono.relevance_score * 100);
-    reasons.push({ label: `${pct}% match to your search`, category: "score" });
-  }
-
-  // 3. Query-matched attributes — explain WHY this matched the search
-  if (queryHighlights) {
-    if (queryHighlights.emotion && mono.primary_emotion?.toLowerCase() === queryHighlights.emotion) {
-      reasons.push({ label: `Matches the ${mono.primary_emotion} vibe you searched for`, category: "emotion" });
-    }
-    if (queryHighlights.tone && mono.tone?.toLowerCase() === queryHighlights.tone) {
-      reasons.push({ label: `${mono.tone} tone, like you asked`, category: "tone" });
-    }
-    if (queryHighlights.gender && mono.character_gender?.toLowerCase() === queryHighlights.gender) {
-      reasons.push({ label: `${mono.character_gender} character`, category: "gender" });
-    }
-    if (queryHighlights.category && mono.category?.toLowerCase() === queryHighlights.category) {
-      reasons.push({ label: `${mono.category} era, as requested`, category: "era" });
-    }
-    if (queryHighlights.themes && mono.themes) {
-      const matchedThemes = mono.themes.filter((t) =>
-        queryHighlights.themes!.includes(t.toLowerCase())
-      );
-      if (matchedThemes.length > 0) {
-        reasons.push({ label: `About ${matchedThemes.join(" & ")}`, category: "theme" });
-      }
+    if (pct >= 90) {
+      reasons.push({ label: "Strong match to your search", category: "score" });
+    } else if (pct >= 70) {
+      reasons.push({ label: "Good match to your search", category: "score" });
+    } else if (pct >= 50) {
+      reasons.push({ label: "Related to your search", category: "score" });
     }
   }
 
-  // 4. Active filter matches (UI-selected filters)
-  const filterChecks: Array<{ filterKey: string; friendlyLabel: string; monoValue?: string | null; cat: MatchReasonCategory }> = [
-    { filterKey: "gender", friendlyLabel: "Matches your filter", monoValue: mono.character_gender, cat: "gender" },
-    { filterKey: "age_range", friendlyLabel: "Age range matches", monoValue: mono.character_age_range, cat: "filter" },
-    { filterKey: "emotion", friendlyLabel: "Emotion matches", monoValue: mono.primary_emotion, cat: "emotion" },
-    { filterKey: "tone", friendlyLabel: "Tone matches", monoValue: mono.tone, cat: "tone" },
-    { filterKey: "difficulty", friendlyLabel: "Difficulty matches", monoValue: mono.difficulty_level, cat: "filter" },
+  // 3. Gender match — tell the actor we heard them
+  const searchedGender = queryHighlights?.gender || activeFilters.gender;
+  if (searchedGender && mono.character_gender?.toLowerCase() === searchedGender.toLowerCase()) {
+    reasons.push({ label: `${mono.character_gender} role, as requested`, category: "gender" });
+  }
+
+  // 4. Age range match
+  const searchedAge = queryHighlights?.age_range || activeFilters.age_range;
+  if (searchedAge && mono.character_age_range) {
+    if (mono.character_age_range.toLowerCase() === searchedAge.toLowerCase()) {
+      reasons.push({ label: `Age range: ${mono.character_age_range}`, category: "filter" });
+    }
+  } else if (mono.character_age_range && mono.character_age_range !== "any") {
+    // Show age even if not searched — useful context
+    reasons.push({ label: `Written for ${mono.character_age_range}`, category: "filter" });
+  }
+
+  // 5. Emotion match
+  if (queryHighlights?.emotion && mono.primary_emotion?.toLowerCase() === queryHighlights.emotion) {
+    reasons.push({ label: `${mono.primary_emotion} — the vibe you searched for`, category: "emotion" });
+  } else if (mono.primary_emotion && mono.primary_emotion !== "unknown") {
+    // Show emotion as context even without match
+    reasons.push({ label: mono.primary_emotion, category: "emotion" });
+  }
+
+  // 6. Tone match
+  if (queryHighlights?.tone && mono.tone?.toLowerCase() === queryHighlights.tone) {
+    reasons.push({ label: `${mono.tone} tone, like you asked`, category: "tone" });
+  }
+
+  // 7. Era/category match
+  if (queryHighlights?.category && mono.category?.toLowerCase() === queryHighlights.category) {
+    reasons.push({ label: `${mono.category} piece`, category: "era" });
+  }
+
+  // 8. Theme matches from search
+  if (queryHighlights?.themes && mono.themes) {
+    const matchedThemes = mono.themes.filter((t) =>
+      queryHighlights.themes!.includes(t.toLowerCase())
+    );
+    if (matchedThemes.length > 0) {
+      reasons.push({ label: `About ${matchedThemes.join(" & ")}`, category: "theme" });
+    }
+  }
+
+  // 9. UI filter matches (only if not already covered above)
+  const filterChecks: Array<{ filterKey: string; monoValue?: string | null; cat: MatchReasonCategory }> = [
+    { filterKey: "emotion", monoValue: mono.primary_emotion, cat: "emotion" },
+    { filterKey: "tone", monoValue: mono.tone, cat: "tone" },
+    { filterKey: "difficulty", monoValue: mono.difficulty_level, cat: "filter" },
   ];
 
-  for (const { filterKey, friendlyLabel, monoValue, cat } of filterChecks) {
+  for (const { filterKey, monoValue, cat } of filterChecks) {
     const filterValue = activeFilters[filterKey];
     if (filterValue && monoValue && monoValue.toLowerCase() === filterValue.toLowerCase()) {
-      const alreadyAdded = reasons.some(
-        (r) => r.category === cat
-      );
+      const alreadyAdded = reasons.some((r) => r.category === cat);
       if (!alreadyAdded) {
-        reasons.push({ label: `${friendlyLabel}: ${monoValue}`, category: cat });
+        reasons.push({ label: `Matches your ${filterKey} filter`, category: cat });
       }
     }
   }
 
-  // 5. Profile match — explain how it fits the actor
-  if (profileMatch && profileMatch.score >= 2 && profileMatch.reasons.length > 0) {
+  // 10. Profile match — tell them how it fits their profile
+  if (profileMatch && profileMatch.score >= 1.5 && profileMatch.reasons.length > 0) {
     for (const reason of profileMatch.reasons) {
       reasons.push({ label: reason, category: "profile" });
     }
   }
 
-  // 6. "Worth a look" — if we have few specific reasons, explain themes individually
-  const specificReasons = reasons.filter(r => r.category !== "score");
-  if (specificReasons.length === 0 && mono.themes && mono.themes.length > 0) {
+  // 11. Remaining themes as context (if we have few specific reasons)
+  const specificReasons = reasons.filter(r => r.category !== "score" && r.category !== "emotion");
+  if (specificReasons.length < 2 && mono.themes && mono.themes.length > 0) {
+    const alreadyMentioned = new Set(reasons.map(r => r.label.toLowerCase()));
     for (const theme of mono.themes.slice(0, 3)) {
-      reasons.push({ label: theme, category: "theme" });
+      if (!alreadyMentioned.has(theme.toLowerCase())) {
+        reasons.push({ label: theme, category: "theme" });
+      }
     }
-    reasons.push({ label: "Could be a great fit", category: "score" });
+  }
+
+  // 12. Duration context
+  if (mono.estimated_duration_seconds) {
+    const mins = Math.floor(mono.estimated_duration_seconds / 60);
+    const secs = mono.estimated_duration_seconds % 60;
+    if (mins >= 2) {
+      reasons.push({ label: `${mins}:${secs.toString().padStart(2, "0")} — a longer piece`, category: "filter" });
+    } else if (mins === 0 && secs < 45) {
+      reasons.push({ label: "Quick piece, under a minute", category: "filter" });
+    }
   }
 
   return reasons;
 }
-
-const FILM_TV_MATCH_LABELS: Record<string, string> = {
-  title_match: "Title matches your search",
-  director_match: "Director matches your search",
-  actor_match: "Actor matches your search",
-  plot_match: "Plot matches your search",
-  semantic: "Semantically related",
-};
 
 export function computeFilmTvMatchReasons(
   ref: FilmTvReference,
@@ -116,27 +144,22 @@ export function computeFilmTvMatchReasons(
 ): MatchReason[] {
   const reasons: MatchReason[] = [];
 
-  // 1. Match type
-  if (ref.match_type && FILM_TV_MATCH_LABELS[ref.match_type]) {
-    reasons.push({ label: FILM_TV_MATCH_LABELS[ref.match_type], category: "quote" });
+  if (ref.match_type && MATCH_TYPE_LABELS[ref.match_type]) {
+    reasons.push({ label: MATCH_TYPE_LABELS[ref.match_type], category: "quote" });
   }
 
-  // 2. Confidence score
   if (ref.confidence_score != null && ref.confidence_score > 0.1) {
     reasons.push({ label: `${Math.round(ref.confidence_score * 100)}% match`, category: "score" });
   }
 
-  // 3. Type (movie/tv)
   if (ref.type) {
     reasons.push({ label: ref.type === "tvSeries" ? "TV Series" : "Movie", category: "era" });
   }
 
-  // 4. Genre
   if (ref.genre && ref.genre.length > 0) {
     reasons.push({ label: ref.genre.slice(0, 3).join(", "), category: "theme" });
   }
 
-  // 5. Active filter matches
   if (activeFilters.genre && ref.genre?.map(g => g.toLowerCase()).includes(activeFilters.genre.toLowerCase())) {
     const already = reasons.some(r => r.label.toLowerCase().includes(activeFilters.genre.toLowerCase()));
     if (!already) reasons.push({ label: `genre: ${activeFilters.genre}`, category: "filter" });
