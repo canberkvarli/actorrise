@@ -168,10 +168,10 @@ function SearchContent() {
   const [editMonologueSaving, setEditMonologueSaving] = useState(false);
   const [showProfileCompleteModal, setShowProfileCompleteModal] = useState(false);
 
-  // Debug overlay toggle: Ctrl+Shift+D (dev mode or admin/moderator only)
+  // Debug overlay toggle: Ctrl+Shift+D or Cmd+Shift+D (dev mode or admin/moderator only)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === "D") {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === "D" || e.key === "d")) {
         e.preventDefault();
         const isDev = process.env.NODE_ENV === "development";
         if (isDev || user?.is_moderator) {
