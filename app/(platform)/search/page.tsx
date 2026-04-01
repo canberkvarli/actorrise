@@ -140,6 +140,10 @@ function SearchContent() {
   const [reportOpen, setReportOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [showBookmarkedOnly, setShowBookmarkedOnly] = useState(false);
+  const [debugTiming, setDebugTiming] = useState<DebugTiming | null>(null);
+  const [showDebug, setShowDebug] = useState(false);
+  const [frontendSearchStart, setFrontendSearchStart] = useState<number | null>(null);
+  const [frontendSearchMs, setFrontendSearchMs] = useState<number | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   /** When set, restore effect skips Film & TV block to avoid acting on stale URL after a Plays action. */
   const playsActionAtRef = useRef<number>(0);
@@ -163,6 +167,21 @@ function SearchContent() {
   const [editMonologueId, setEditMonologueId] = useState<number | null>(null);
   const [editMonologueSaving, setEditMonologueSaving] = useState(false);
   const [showProfileCompleteModal, setShowProfileCompleteModal] = useState(false);
+
+  // Debug overlay toggle: Ctrl+Shift+D (dev mode or admin/moderator only)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === "D") {
+        e.preventDefault();
+        const isDev = process.env.NODE_ENV === "development";
+        if (isDev || user?.is_moderator) {
+          setShowDebug((prev) => !prev);
+        }
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [user?.is_moderator]);
   const { data: profileStats } = useProfileStats(isDemoUser);
   const { data: profileData } = useProfileFormData();
 
@@ -639,6 +658,22 @@ function SearchContent() {
       .catch(() => {});
   }, []);
 
+  type DebugTiming = {
+    tier?: number;
+    optimize_ms?: number;
+    ai_parse_ms?: number;
+    ai_parse_source?: string;
+    embedding_ms?: number;
+    embedding_source?: string;
+    filters_ms?: number;
+    filters_merged?: Record<string, string>;
+    total_ms?: number;
+    result_count?: number;
+    candidates?: number;
+    results_source?: string;
+    hard_filters?: Record<string, string>;
+  };
+
   type SearchResponseShape = {
     results: Monologue[];
     total: number;
@@ -648,6 +683,7 @@ function SearchContent() {
     query_may_have_typos?: boolean;
     content_gap?: { play: string | null; author: string | null } | null;
     query_invalid_reason?: string | null;
+    debug_timing?: DebugTiming | null;
   };
 
   const performSearch = async (
@@ -684,11 +720,16 @@ function SearchContent() {
       });
       if (effectiveMaxOverdone < 1) params.set("max_overdone_score", String(effectiveMaxOverdone));
 
+      const _searchStart = Date.now();
+      setFrontendSearchStart(_searchStart);
       const response = await api.get<SearchResponseShape>(
         `/api/monologues/search?${params.toString()}`,
         { timeoutMs: 180000, signal: controller.signal }
       );
+      const _searchEnd = Date.now();
+      setFrontendSearchMs(_searchEnd - _searchStart);
       const data = response.data;
+      if (data.debug_timing) setDebugTiming(data.debug_timing);
       const newResults = data.results;
 
       if (append) {
@@ -813,10 +854,14 @@ function SearchContent() {
         });
         if (maxOverdoneScore < 1) params.set("max_overdone_score", String(maxOverdoneScore));
 
+        const _ftSearchStart = Date.now();
+        setFrontendSearchStart(_ftSearchStart);
         const res = await api.get<SearchResponseShape>(
           `/api/monologues/search?${params.toString()}`,
           { timeoutMs: 180000, signal: controller.signal }
         );
+        setFrontendSearchMs(Date.now() - _ftSearchStart);
+        if (res.data.debug_timing) setDebugTiming(res.data.debug_timing);
 
         // Check if query was flagged as invalid (gibberish, etc.)
         if (res.data.query_invalid_reason) {
@@ -2436,6 +2481,61 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Debug timing overlay — Ctrl+Shift+D to toggle (dev or admin only) */}
+      {showDebug && debugTiming && (
+        <div className="fixed bottom-4 right-4 z-[9999] bg-black/90 text-green-400 font-mono text-xs p-4 rounded-lg shadow-2xl max-w-sm border border-green-500/30 backdrop-blur-sm">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-green-300 font-bold text-sm">Search Debug</span>
+            <button onClick={() => setShowDebug(false)} className="text-green-500 hover:text-white">x</button>
+          </div>
+          <div className="space-y-1">
+            <div className="flex justify-between">
+              <span className="text-green-500/70">Frontend total</span>
+              <span>{frontendSearchMs != null ? `${frontendSearchMs}ms` : "—"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-green-500/70">Backend total</span>
+              <span>{debugTiming.total_ms != null ? `${debugTiming.total_ms}ms` : "—"}</span>
+            </div>
+            <div className="border-t border-green-500/20 my-1" />
+            <div className="flex justify-between">
+              <span className="text-green-500/70">Query tier</span>
+              <span>{debugTiming.tier ?? "—"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-green-500/70">AI parse</span>
+              <span>{debugTiming.ai_parse_ms != null ? `${debugTiming.ai_parse_ms}ms` : "—"} <span className="text-green-500/50">({debugTiming.ai_parse_source ?? "skipped"})</span></span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-green-500/70">Embedding</span>
+              <span>{debugTiming.embedding_ms != null ? `${debugTiming.embedding_ms}ms` : "—"} <span className="text-green-500/50">({debugTiming.embedding_source ?? "—"})</span></span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-green-500/70">Results</span>
+              <span>{debugTiming.result_count ?? "—"} / {debugTiming.candidates ?? "—"} candidates</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-green-500/70">Source</span>
+              <span>{debugTiming.results_source ?? "—"}</span>
+            </div>
+            {debugTiming.filters_merged && Object.keys(debugTiming.filters_merged).length > 0 && (
+              <>
+                <div className="border-t border-green-500/20 my-1" />
+                <div className="text-green-500/70 mb-1">Extracted filters:</div>
+                {Object.entries(debugTiming.filters_merged).map(([k, v]) => (
+                  <div key={k} className="flex justify-between pl-2">
+                    <span className="text-green-500/50">{k}</span>
+                    <span>{String(v)}</span>
+                  </div>
+                ))}
+              </>
+            )}
+            <div className="border-t border-green-500/20 my-1" />
+            <div className="text-green-500/40 text-center">Ctrl+Shift+D to hide</div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
