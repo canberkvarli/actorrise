@@ -26,6 +26,7 @@ from app.api.scenes import router as scenes_router
 from app.api.speech import router as speech_router
 from app.api.scripts import router as scripts_router
 from app.api.subscriptions import router as subscriptions_router
+from app.api.tracking import router as tracking_router
 from app.api.webhooks import router as webhooks_router
 from app.core.config import settings
 from app.core.database import Base, engine
@@ -131,6 +132,7 @@ app.include_router(tapes_router)
 app.include_router(public_router)
 app.include_router(pricing_router)
 app.include_router(subscriptions_router)
+app.include_router(tracking_router)
 app.include_router(webhooks_router)
 app.include_router(moderation_router)
 app.include_router(admin_monologues_router)
