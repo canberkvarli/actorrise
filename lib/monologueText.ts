@@ -68,11 +68,13 @@ export function stageDirectionPercentage(text: string): number {
  * Detects and reflows screenplay-style narrow column text into normal prose.
  * Screenplay dialogue is formatted in ~35-char wide columns with hard line breaks.
  * This joins those into flowing text while preserving intentional paragraph breaks.
+ *
+ * CONSERVATIVE: only reflows lines, never removes content. Removal of scene
+ * directions should be done at extraction time, not at render time.
  */
 function reflowScreenplayText(text: string): string {
   const lines = text.split("\n");
-  // Heuristic: if most lines are short (under 45 chars) and don't end with
-  // sentence-ending punctuation, it's likely screenplay column formatting
+  // Heuristic: if most lines are short (under 45 chars), it's likely screenplay column formatting
   const nonEmptyLines = lines.filter(l => l.trim().length > 0);
   if (nonEmptyLines.length < 4) return text;
   const shortLines = nonEmptyLines.filter(l => l.trim().length < 45);
@@ -85,18 +87,6 @@ function reflowScreenplayText(text: string): string {
     const trimmed = line.trim();
     if (trimmed === "") {
       // Empty line = paragraph break
-      if (currentParagraph.length > 0) {
-        reflowed.push(currentParagraph.join(" "));
-        currentParagraph = [];
-      }
-      continue;
-    }
-    // Check if this is a stage direction line (ALL CAPS character name + action,
-    // or a line describing camera/scene action)
-    const isSceneAction = /^[A-Z][A-Z\s,.']+[a-z]/.test(trimmed) &&
-      /\b(walks|stands|looks|turns|sits|enters|exits|pulls|grabs|opens|closes|picks|puts|moves|reaches|holds|drops|takes|runs|pushes|starts|stops|falls|rises|throws)\b/i.test(trimmed);
-    if (isSceneAction && trimmed.length > 60) {
-      // Long action/scene description line - skip it
       if (currentParagraph.length > 0) {
         reflowed.push(currentParagraph.join(" "));
         currentParagraph = [];
@@ -120,14 +110,6 @@ export function parseMonologueText(text: string): MonologueSegment[] {
 
   // Reflow screenplay-style narrow column text into normal prose
   text = reflowScreenplayText(text);
-
-  // Strip trailing scene action lines (e.g. "He stands up and walks out.")
-  // These are common in Film/TV extractions where action bleeds into dialogue
-  const trailingActionRe = /\n+(?:[A-Z][a-z]+(?:\s+[A-Za-z]+)*\s+(?:stands|walks|sits|looks|turns|enters|exits|pulls|grabs|opens|closes|picks|puts|moves|reaches|holds|drops|takes|runs|pushes|starts|stops|falls|rises|throws|unzips|lets|does|folds|goes|comes|steps|stares|leaves|gets|sets|watches|struggles|emerges|slumps|cries|laughs|smiles|nods|shakes|waves|points|leans|kneels|crawls|climbs|jumps|ducks|rolls|slides|lifts|lowers|strikes|checks|hurries|darts|backs|races)\b[^"]*\.?)$/i;
-  text = text.replace(trailingActionRe, "");
-
-  // Also strip lines that are clearly camera/scene directions
-  text = text.replace(/\n+(?:ANGLE ON|SERIES OF SHOTS|INTERCUT|CUT TO|FADE|CLOSE ON|EXT\.|INT\.)[^\n]*/g, "");
 
   const segments: MonologueSegment[] = [];
   let lastIndex = 0;
