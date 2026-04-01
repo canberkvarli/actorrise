@@ -30,6 +30,7 @@ from app.services.email.marketing import (
 from app.services.email.resend_client import ResendEmailClient
 from app.services.email.smtp_client import SmtpEmailClient
 from app.services.email.templates import EmailTemplates
+from app.services.email.tracking import add_tracking
 
 
 def _get_email_client(send_via: str = "smtp"):
@@ -475,6 +476,9 @@ def bulk_send_email(
 
                     html, _, plain_text = _render_template(body.template_id, vars_copy)
 
+                    # Inject self-hosted open/click tracking
+                    html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
+
                     response = client.send_email(
                         to=send_row.to_email,
                         subject=subject,
@@ -495,7 +499,9 @@ def bulk_send_email(
                     logger.warning("Failed to send to %s: %s", send_row.to_email, e)
 
                 db2.commit()
-                time.sleep(0.5)  # Respect Resend rate limit (2 req/sec)
+                # SMTP needs more spacing to avoid Gmail throttling
+                delay = 2.0 if body.send_via == "smtp" else 0.5
+                time.sleep(delay)
 
             b.status = "completed"
             db2.commit()
@@ -785,6 +791,9 @@ def send_campaign_endpoint(
                     html = render_fn(**vars_copy)
                     plain_text = plain_fn(**vars_copy) if plain_fn else None
 
+                    # Inject self-hosted open/click tracking
+                    html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
+
                     response = client.send_email(
                         to=send_row.to_email,
                         subject=subject,
@@ -804,7 +813,9 @@ def send_campaign_endpoint(
                     logger.warning("Campaign send failed for %s: %s", send_row.to_email, e)
 
                 db2.commit()
-                time.sleep(0.5)
+                # SMTP needs more spacing to avoid Gmail throttling
+                delay = 2.0 if body.send_via == "smtp" else 0.5
+                time.sleep(delay)
 
             b.status = "completed"
             db2.commit()
