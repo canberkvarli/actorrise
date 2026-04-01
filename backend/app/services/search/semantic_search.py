@@ -405,6 +405,7 @@ class SemanticSearch:
 
         import time
         overall_start = time.time()
+        self._debug_timing: Dict[str, Any] = {"start": overall_start}
 
         # Normalize query for caching (conservative canonicalization)
         canonical_query = _canonicalize_query_for_cache(query)
@@ -417,6 +418,8 @@ class SemanticSearch:
         # - Tier 3: allow AI parsing (with Redis + in-memory caching)
         tier, optimized_filters = self.query_optimizer.optimize(query, explicit_filters)
         logger.debug("Query tier: %s, optimized filters: %s", tier, optimized_filters)
+        self._debug_timing["tier"] = tier
+        self._debug_timing["optimize_ms"] = round((time.time() - overall_start) * 1000)
 
         extracted_filters: Dict = {}
 
@@ -435,6 +438,7 @@ class SemanticSearch:
             _precomputed_embedding = EMBEDDING_CACHE[_emb_hash]
             EMBEDDING_CACHE.move_to_end(_emb_hash)
             logger.debug("Embedding pre-check: in-memory cache hit for: %s", query)
+            self._debug_timing["embedding_source"] = "memory_cache"
         else:
             _emb_cache_query = canonical_query + _emb_cache_suffix
             _cached_emb = self.cache.get_embedding(_emb_cache_query)
@@ -444,12 +448,14 @@ class SemanticSearch:
                 EMBEDDING_CACHE.move_to_end(_emb_hash)
                 _evict_if_needed(EMBEDDING_CACHE, _MAX_EMBEDDING_CACHE)
                 logger.debug("Embedding pre-check: Redis cache hit for: %s", query)
+                self._debug_timing["embedding_source"] = "redis_cache"
             else:
                 # No cache hit — start embedding generation in background thread
                 # so it runs in parallel with AI query parsing (Tier 3) or
                 # filter merging + result cache check (Tier 1/2).
                 from app.services.ai.langchain.embeddings import generate_embedding as _gen_emb
                 logger.debug("Embedding pre-check: cache miss, starting background generation")
+                self._debug_timing["embedding_source"] = "generated"
                 _emb_start = time.time()
                 _emb_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
                 _embedding_future = _emb_executor.submit(
@@ -472,6 +478,8 @@ class SemanticSearch:
                 if query_hash in QUERY_PARSE_CACHE:
                     logger.debug("Using in-memory cached query parse for: %s", query)
                     extracted_filters = QUERY_PARSE_CACHE[query_hash]
+                    self._debug_timing["ai_parse_source"] = "memory_cache"
+                    self._debug_timing["ai_parse_ms"] = 0
                     QUERY_PARSE_CACHE.move_to_end(query_hash)  # Mark as recently used (LRU)
                 else:
                     # Level 1: Redis cache via CacheManager
@@ -479,6 +487,8 @@ class SemanticSearch:
                     if cached_filters:
                         logger.debug("Using Redis cached query parse for: %s", query)
                         extracted_filters = cached_filters
+                        self._debug_timing["ai_parse_source"] = "redis_cache"
+                        self._debug_timing["ai_parse_ms"] = 0
                         QUERY_PARSE_CACHE[query_hash] = extracted_filters
                     else:
                         parse_start = time.time()
@@ -486,6 +496,8 @@ class SemanticSearch:
                         extracted_filters = self.analyzer.parse_search_query(query)
                         parse_time = time.time() - parse_start
                         logger.debug("Query parsing took %.2fs", parse_time)
+                        self._debug_timing["ai_parse_ms"] = round(parse_time * 1000)
+                        self._debug_timing["ai_parse_source"] = "api"
                         # Store in both in-memory and Redis caches
                         QUERY_PARSE_CACHE[query_hash] = extracted_filters
                         QUERY_PARSE_CACHE.move_to_end(query_hash)  # Mark as recently used
@@ -536,6 +548,8 @@ class SemanticSearch:
         # AI-parsed < keyword-derived (optimized) < explicit filters
         merged_filters = {**(extracted_filters or {}), **(optimized_filters or {}), **(explicit_filters or {})}
         logger.debug("Merged filters (final): %s", merged_filters)
+        self._debug_timing["filters_merged"] = dict(merged_filters)
+        self._debug_timing["filters_ms"] = round((time.time() - overall_start) * 1000)
 
         # IMPORTANT: Separate hard SQL filters from boost-only filters.
         # Filters derived from natural language (keyword extraction / AI parsing) for
@@ -601,6 +615,9 @@ class SemanticSearch:
             ]
             overall_time = time.time() - overall_start
             logger.debug("Total search time (cache hit): %.2fs, results: %s", overall_time, len(ordered_with_scores))
+            self._debug_timing["total_ms"] = round(overall_time * 1000)
+            self._debug_timing["result_count"] = len(ordered_with_scores)
+            self._debug_timing["results_source"] = "cache"
             # Restore quote_match_type from cache if stored (payload item length >= 3)
             quote_types: Dict[int, str] = {}
             if cached and isinstance(cached[0], (list, tuple)) and len(cached[0]) >= 3:
@@ -620,7 +637,9 @@ class SemanticSearch:
                 logger.warning("Background embedding generation failed: %s", e)
                 query_embedding = None
             if _emb_start is not None:
-                logger.debug("Embedding generation (parallel) took %.2fs", time.time() - _emb_start)
+                _emb_elapsed = time.time() - _emb_start
+                logger.debug("Embedding generation (parallel) took %.2fs", _emb_elapsed)
+                self._debug_timing["embedding_ms"] = round(_emb_elapsed * 1000)
             if query_embedding:
                 # Store in in-memory and Redis caches
                 _emb_cache_query_store = canonical_query + _emb_cache_suffix
@@ -971,10 +990,17 @@ class SemanticSearch:
 
             overall_time = time.time() - overall_start
             logger.debug("Total search time: %.2fs, final results: %s", overall_time, len(final_results))
+            self._debug_timing["total_ms"] = round(overall_time * 1000)
+            self._debug_timing["result_count"] = len(final_results)
+            self._debug_timing["results_source"] = "text_fallback"
 
             return (final_results_with_scores[:limit], quote_match_type_by_id)
 
         overall_time = time.time() - overall_start
+        self._debug_timing["total_ms"] = round(overall_time * 1000)
+        self._debug_timing["result_count"] = len(top_results)
+        self._debug_timing["candidates"] = len(results_with_scores)
+        self._debug_timing["results_source"] = "semantic"
 
         if logger.isEnabledFor(logging.DEBUG):
             from collections import Counter

@@ -78,6 +78,7 @@ class SearchResponse(BaseModel):
     query_may_have_typos: bool = False
     content_gap: Optional[dict] = None
     query_invalid_reason: Optional[str] = None
+    debug_timing: Optional[dict] = None  # Timing data for dev/admin debug overlay
 
 
 class LeadMagnetItem(BaseModel):
@@ -438,6 +439,11 @@ async def search_monologues(
             except Exception:
                 db.rollback()
 
+        # Collect debug timing from search service (available for dev/admin)
+        debug_timing = getattr(search_service, '_debug_timing', None)
+        if debug_timing:
+            debug_timing["hard_filters"] = {k: str(v) for k, v in (filters or {}).items()}
+
         return SearchResponse(
             results=monologue_responses,
             total=total,
@@ -446,6 +452,7 @@ async def search_monologues(
             corrected_query=ai_corrected,
             query_may_have_typos=ai_corrected is not None,
             content_gap=content_gap,
+            debug_timing=debug_timing,
         )
     except HTTPException:
         raise  # Re-raise HTTP exceptions (e.g. from auth/rate-limiting) as-is
