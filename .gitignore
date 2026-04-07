@@ -65,3 +65,4 @@ backend/data/perseus/canonical-latinLit/
 supabase/.temp/
 .env*.local
 backend/.next/
+.claude/worktrees/

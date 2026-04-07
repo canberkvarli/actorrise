@@ -12,7 +12,11 @@
     "editor.codeActionsOnSave": {
       "source.organizeImports": "explicit"
     }
-  }
+  },
+  "cursorpyright.analysis.extraPaths": [
+    "${workspaceFolder}/backend"
+  ],
+  "cursorpyright.analysis.typeCheckingMode": "basic"
 }
 
 
