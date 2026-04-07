@@ -457,7 +457,8 @@ class SemanticSearch:
                 logger.debug("Embedding pre-check: cache miss, starting background generation")
                 self._debug_timing["embedding_source"] = "generated"
                 _emb_start = time.time()
-                _emb_executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+                # Use 2 workers to allow parallel embedding + AI parsing
+                _emb_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
                 _embedding_future = _emb_executor.submit(
                     _gen_emb, text=query, model=embedding_model,
                     dimensions=embedding_dims, api_key=self.analyzer.api_key

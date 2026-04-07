@@ -82,6 +82,7 @@ class QueryClassifier:
         r'^(teen|young|old|elderly|middle.aged)$',
         r'^(love|death|betrayal|power|revenge|family|identity)$',
         r'^(shakespeare|chekhov|ibsen|classical|contemporary|modern)$',
+        r'^(film|films|movie|movies|tv|television|series|show|shows)$',
     ]
 
     # Tier 2: 2-5 word combinations (keywords + embedding)
@@ -91,6 +92,11 @@ class QueryClassifier:
         r'^(young|old|middle.aged|teen) (male|female|man|woman)$',
         r'^(shakespeare|chekhov|ibsen) (monologue|piece|play)$',
         r'^(love|death|revenge|betrayal) monologue$',
+        # Film/TV patterns
+        r'^(film|movie|tv|television|series) (monologue|piece)s?$',
+        r'^(film|movie|tv|television) (male|female|man|woman)$',
+        r'^(sad|happy|angry|funny|dramatic) (film|movie|tv) (monologue|piece)$',
+        r'^(film|movie|tv|television) (monologue|piece)s? for (male|female|man|woman)$',
     ]
 
     @classmethod
@@ -333,6 +339,20 @@ class KeywordExtractor:
             # Others
             'philosophical': 'philosophical', 'contemplative': 'contemplative',
             'defiant': 'defiant', 'rebellious': 'defiant',
+        },
+
+        'source_type': {
+            # Film/movie keywords
+            'film': ['film'], 'films': ['film'], 'movie': ['film'], 'movies': ['film'],
+            'cinema': ['film'], 'cinematic': ['film'], 'screenplay': ['film'],
+            'screen': ['film'],
+
+            # TV keywords
+            'tv': ['tv'], 'television': ['tv'], 'series': ['tv'], 'show': ['tv'],
+            'shows': ['tv'], 'episode': ['tv'], 'episodes': ['tv'],
+
+            # Combined
+            'film/tv': ['film', 'tv'], 'movie/tv': ['film', 'tv'],
         }
     }
 
@@ -440,6 +460,10 @@ class KeywordExtractor:
                 for theme in char_themes:
                     if theme not in themes_found:
                         themes_found.append(theme)
+
+            # Check source_type (film/tv)
+            if 'source_type' not in filters and word in cls.KEYWORD_MAPPINGS['source_type']:
+                filters['source_type'] = cls.KEYWORD_MAPPINGS['source_type'][word]
 
         # Check for famous character names (multi-word phrases)
         for char_key, char_name in cls.KEYWORD_MAPPINGS['famous_characters'].items():
