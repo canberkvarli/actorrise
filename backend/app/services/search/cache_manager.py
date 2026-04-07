@@ -336,6 +336,40 @@ class CacheManager:
         print("✓ Cache warmup complete")
 
 
+# Common queries to pre-warm (film/tv, emotions, demographics)
+COMMON_WARMUP_QUERIES = [
+    # Source type queries
+    "film monologue",
+    "tv monologue",
+    "movie monologue",
+    "film monologues",
+    "tv monologues",
+    "movie monologues",
+    # Emotion + source type
+    "sad film monologue",
+    "funny movie monologue",
+    "dramatic tv monologue",
+    "angry film monologue",
+    # Gender + source type
+    "film monologue for woman",
+    "film monologue for man",
+    "tv monologue for woman",
+    "tv monologue for man",
+    "movie monologue female",
+    "movie monologue male",
+    # Common emotion queries
+    "sad monologue",
+    "funny monologue",
+    "angry monologue",
+    "dramatic monologue",
+    # Common demographic queries
+    "female monologue",
+    "male monologue",
+    "young woman monologue",
+    "young man monologue",
+]
+
+
 # Global cache instance
 cache_manager = CacheManager()
 

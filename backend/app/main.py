@@ -69,6 +69,32 @@ def _init_db() -> None:
         )
 
 
+def _warmup_search_cache_background():
+    """Warm up search cache in background thread (non-blocking)."""
+    import threading
+
+    def warmup():
+        try:
+            from app.services.search.cache_manager import cache_manager, COMMON_WARMUP_QUERIES
+            from app.services.ai.langchain.embeddings import generate_embedding
+
+            if not cache_manager.redis_enabled:
+                logger.debug("Redis not available, skipping search cache warmup")
+                return
+
+            logger.info("Starting search cache warmup (%d queries)...", len(COMMON_WARMUP_QUERIES))
+            cache_manager.warmup_common_queries(
+                COMMON_WARMUP_QUERIES,
+                lambda q: generate_embedding(q, model="text-embedding-3-large", dimensions=3072)
+            )
+            logger.info("Search cache warmup complete")
+        except Exception as e:
+            logger.warning("Search cache warmup failed (non-fatal): %s", e)
+
+    thread = threading.Thread(target=warmup, daemon=True)
+    thread.start()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _init_db()
@@ -76,6 +102,8 @@ async def lifespan(app: FastAPI):
         ensure_pricing_tiers()
     except Exception as e:
         logger.warning("Could not ensure pricing tiers (non-fatal): %s", e)
+    # Warmup search cache in background (non-blocking)
+    _warmup_search_cache_background()
     yield
 
 
