@@ -29,6 +29,10 @@ import {
   IconMailOpened,
   IconClick,
   IconBounceRight,
+  IconUserOff,
+  IconArrowForward,
+  IconTrash,
+  IconPlus,
 } from "@tabler/icons-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────
@@ -89,6 +93,14 @@ interface BatchStatus {
   sends: BatchSend[];
 }
 
+interface DncEntry {
+  id: number;
+  email: string;
+  name: string | null;
+  reason: string | null;
+  added_at: string | null;
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────
 
 export default function AdminEmailsPage() {
@@ -134,6 +146,13 @@ export default function AdminEmailsPage() {
 
   // Compose section toggle
   const [composeOpen, setComposeOpen] = useState(false);
+  const composeRef = useRef<HTMLDivElement>(null);
+
+  // Do-not-contact list
+  const [dncOpen, setDncOpen] = useState(false);
+  const [dncEntries, setDncEntries] = useState<DncEntry[]>([]);
+  const [dncLoading, setDncLoading] = useState(false);
+  const [dncInput, setDncInput] = useState("");
 
   // Dialogs
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -142,7 +161,7 @@ export default function AdminEmailsPage() {
 
   const selected = templates.find((t) => t.id === selectedId) ?? null;
 
-  // Fetch templates + batch history
+  // Fetch templates + batch history + DNC
   useEffect(() => {
     Promise.all([
       api.get<TemplateMeta[]>("/api/admin/emails/templates").then(({ data }) => {
@@ -153,8 +172,76 @@ export default function AdminEmailsPage() {
         }
       }).catch(() => toast.error("Failed to load email templates")),
       api.get<BatchHistoryItem[]>("/api/admin/emails/batches").then(({ data }) => setBatchHistory(data)).catch(() => {}),
+      api.get<DncEntry[]>("/api/admin/emails/do-not-contact").then(({ data }) => setDncEntries(data)).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
+
+  function refreshDnc() {
+    return api
+      .get<DncEntry[]>("/api/admin/emails/do-not-contact")
+      .then(({ data }) => setDncEntries(data))
+      .catch(() => {});
+  }
+
+  async function addDncEntries(raw: string) {
+    const parsed = parseBulkLines(raw);
+    if (parsed.length === 0) {
+      toast.error("No valid emails found");
+      return;
+    }
+    setDncLoading(true);
+    try {
+      const { data } = await api.post<{ added: number; skipped: number }>(
+        "/api/admin/emails/do-not-contact",
+        { entries: parsed },
+      );
+      toast.success(
+        `Added ${data.added} to do-not-contact${data.skipped > 0 ? ` (${data.skipped} already on list)` : ""}`,
+      );
+      setDncInput("");
+      await refreshDnc();
+    } catch {
+      toast.error("Failed to add to do-not-contact list");
+    } finally {
+      setDncLoading(false);
+    }
+  }
+
+  async function removeDncEntry(entryId: number) {
+    try {
+      await api.delete(`/api/admin/emails/do-not-contact/${entryId}`);
+      setDncEntries((prev) => prev.filter((e) => e.id !== entryId));
+    } catch {
+      toast.error("Failed to remove entry");
+    }
+  }
+
+  function startFollowUp(sends: BatchSend[], audience: "openers" | "non_openers") {
+    const filtered = sends.filter((s) => {
+      const opened = !!s.opened_at || !!s.clicked_at;
+      return audience === "openers" ? opened : !opened;
+    });
+    if (filtered.length === 0) {
+      toast.error(`No ${audience === "openers" ? "openers" : "non-openers"} in this batch`);
+      return;
+    }
+    const dncSet = new Set(dncEntries.map((e) => e.email));
+    const recipients = filtered
+      .filter((s) => !dncSet.has(s.email.toLowerCase()))
+      .map((s) => ({ email: s.email, name: s.name || "" }));
+    const skippedCount = filtered.length - recipients.length;
+    setBulkRecipients(recipients);
+    setMode("bulk");
+    setComposeOpen(true);
+    setCampaignKey(
+      audience === "openers" ? `followup-openers-${new Date().toISOString().slice(0, 10)}` : `followup-nonopeners-${new Date().toISOString().slice(0, 10)}`,
+    );
+    toast.success(
+      `Loaded ${recipients.length} ${audience === "openers" ? "opener" : "non-opener"}${recipients.length !== 1 ? "s" : ""}` +
+        (skippedCount > 0 ? ` (${skippedCount} skipped via do-not-contact)` : ""),
+    );
+    setTimeout(() => composeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+  }
 
   function fetchBatchHistory(search?: string) {
     const params = search ? `?search=${encodeURIComponent(search)}` : "";
@@ -396,15 +483,31 @@ export default function AdminEmailsPage() {
           <IconMail className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">Campaigns</h2>
         </div>
-        <Button
-          variant={composeOpen ? "default" : "outline"}
-          size="sm"
-          className="gap-2"
-          onClick={() => setComposeOpen(!composeOpen)}
-        >
-          <IconSend className="h-4 w-4" />
-          {composeOpen ? "Close composer" : "New email"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={dncOpen ? "default" : "outline"}
+            size="sm"
+            className="gap-2"
+            onClick={() => setDncOpen(!dncOpen)}
+          >
+            <IconUserOff className="h-4 w-4" />
+            Do not contact
+            {dncEntries.length > 0 && (
+              <span className="bg-muted text-muted-foreground rounded-full px-1.5 text-[10px] font-medium">
+                {dncEntries.length}
+              </span>
+            )}
+          </Button>
+          <Button
+            variant={composeOpen ? "default" : "outline"}
+            size="sm"
+            className="gap-2"
+            onClick={() => setComposeOpen(!composeOpen)}
+          >
+            <IconSend className="h-4 w-4" />
+            {composeOpen ? "Close composer" : "New email"}
+          </Button>
+        </div>
       </div>
 
       {/* ── Overview stats ── */}
@@ -533,9 +636,33 @@ export default function AdminEmailsPage() {
                         <tr>
                           <td colSpan={9} className="px-0 py-0">
                             <div className="bg-muted/20 px-4 py-3 border-b border-border">
-                              <p className="text-xs font-medium text-muted-foreground mb-2">
-                                {expandedSends.length} recipient{expandedSends.length !== 1 ? "s" : ""}
-                              </p>
+                              <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+                                <p className="text-xs font-medium text-muted-foreground">
+                                  {expandedSends.length} recipient{expandedSends.length !== 1 ? "s" : ""}
+                                </p>
+                                {canSend && expandedSends.length > 0 && (
+                                  <div className="flex items-center gap-1.5">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs gap-1.5"
+                                      onClick={(e) => { e.stopPropagation(); startFollowUp(expandedSends, "openers"); }}
+                                    >
+                                      <IconArrowForward className="h-3.5 w-3.5" />
+                                      Follow up openers
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-7 text-xs gap-1.5"
+                                      onClick={(e) => { e.stopPropagation(); startFollowUp(expandedSends, "non_openers"); }}
+                                    >
+                                      <IconArrowForward className="h-3.5 w-3.5" />
+                                      Follow up non-openers
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
                               <div className="max-h-64 overflow-y-auto">
                                 <table className="w-full text-xs">
                                   <thead>
@@ -584,9 +711,99 @@ export default function AdminEmailsPage() {
         )}
       </div>
 
+      {/* ── Do-not-contact section (collapsible) ── */}
+      {dncOpen && (
+        <div className="rounded-lg border border-border p-5 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <IconUserOff className="h-4 w-4 text-muted-foreground" />
+                Do not contact list
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                These emails are auto-skipped by every bulk send and campaign. Add friends, test accounts, etc.
+              </p>
+            </div>
+            <button onClick={() => setDncOpen(false)} className="text-muted-foreground hover:text-foreground">
+              <IconX className="h-4 w-4" />
+            </button>
+          </div>
+
+          {canSend && (
+            <div>
+              <Label className="text-xs">Add emails (one per line)</Label>
+              <p className="text-[11px] text-muted-foreground mt-0.5 mb-1.5">
+                Same formats as bulk paste: <code className="bg-muted px-1 rounded">Name, email</code>{" "}
+                <code className="bg-muted px-1 rounded">email</code>{" "}
+                <code className="bg-muted px-1 rounded">{"Name <email>"}</code> or tab-separated
+              </p>
+              <div className="flex gap-2 items-end">
+                <Textarea
+                  placeholder={"friend@example.com\nJane Doe, jane@example.com"}
+                  value={dncInput}
+                  onChange={(e) => setDncInput(e.target.value)}
+                  rows={3}
+                  className="text-sm font-mono"
+                />
+                <Button
+                  variant="secondary"
+                  onClick={() => addDncEntries(dncInput)}
+                  disabled={!dncInput.trim() || dncLoading}
+                  className="gap-1.5"
+                >
+                  <IconPlus className="h-4 w-4" />
+                  {dncLoading ? "Adding..." : "Add"}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {dncEntries.length > 0 ? (
+            <div className="rounded-lg border border-border max-h-72 overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/30 sticky top-0">
+                  <tr className="text-muted-foreground">
+                    <th className="text-left px-3 py-2 font-medium">Email</th>
+                    <th className="text-left px-3 py-2 font-medium">Name</th>
+                    <th className="text-left px-3 py-2 font-medium">Added</th>
+                    <th className="text-right px-3 py-2 font-medium w-10"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dncEntries.map((e) => (
+                    <tr key={e.id} className="border-t border-border/40">
+                      <td className="px-3 py-1.5 font-mono">{e.email}</td>
+                      <td className="px-3 py-1.5">{e.name || <span className="text-muted-foreground/40">&mdash;</span>}</td>
+                      <td className="px-3 py-1.5 text-muted-foreground">
+                        {e.added_at
+                          ? new Date(e.added_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
+                          : <span className="text-muted-foreground/40">&mdash;</span>}
+                      </td>
+                      <td className="px-3 py-1.5 text-right">
+                        {canSend && (
+                          <button
+                            onClick={() => removeDncEntry(e.id)}
+                            className="text-muted-foreground hover:text-destructive transition-colors"
+                            title="Remove"
+                          >
+                            <IconTrash className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground py-4 text-center">No emails on the do-not-contact list yet.</p>
+          )}
+        </div>
+      )}
+
       {/* ── Compose section (collapsible) ── */}
       {composeOpen && canSend && (
-        <div className="rounded-lg border border-border p-5 space-y-5">
+        <div ref={composeRef} className="rounded-lg border border-border p-5 space-y-5">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Compose</h3>
             <button onClick={() => setComposeOpen(false)} className="text-muted-foreground hover:text-foreground">

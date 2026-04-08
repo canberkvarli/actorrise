@@ -17,6 +17,7 @@ from sqlalchemy.orm import Session
 from app.api.auth import get_current_user
 from app.core.database import SessionLocal, get_db
 from app.models.billing import AdminAuditLog
+from app.models.email_do_not_contact import EmailDoNotContact
 from app.models.email_tracking import EmailBatch, EmailSend
 from app.models.user import User
 from app.services.email.marketing import (
@@ -249,6 +250,24 @@ class CampaignResponse(BaseModel):
     recipients: list[str]
 
 
+class DncEntryIn(BaseModel):
+    email: str
+    name: Optional[str] = None
+    reason: Optional[str] = None
+
+
+class DncBulkAddRequest(BaseModel):
+    entries: list[DncEntryIn]
+
+
+class DncEntryOut(BaseModel):
+    id: int
+    email: str
+    name: Optional[str]
+    reason: Optional[str]
+    added_at: Optional[str]
+
+
 # ========================================
 # Rendering helper
 # ========================================
@@ -316,6 +335,16 @@ def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, 
         plain_text = plain_fn(**kwargs)
 
     return html, subject, plain_text
+
+
+# ========================================
+# Do-not-contact helpers
+# ========================================
+
+def _get_dnc_emails(db: Session) -> set[str]:
+    """Return the set of all do-not-contact emails (lowercased)."""
+    rows = db.query(EmailDoNotContact.email).all()
+    return {row[0].strip().lower() for row in rows if row[0]}
 
 
 # ========================================
@@ -401,7 +430,9 @@ def bulk_send_email(
 
     default_name = body.variables.get("user_name", "there")
     skipped_dupes = 0
+    skipped_dnc = 0
     seen_in_batch: set[str] = set()
+    dnc_emails = _get_dnc_emails(db)
 
     for recipient in body.recipients:
         email_addr = recipient.email.strip().lower()
@@ -413,6 +444,11 @@ def bulk_send_email(
             skipped_dupes += 1
             continue
         seen_in_batch.add(email_addr)
+
+        # Skip do-not-contact entries
+        if email_addr in dnc_emails:
+            skipped_dnc += 1
+            continue
 
         # Cross-batch dedup: skip if same email + campaign_key already sent
         if body.campaign_key:
@@ -444,10 +480,16 @@ def bulk_send_email(
         )
         db.add(send)
 
-    batch.skipped = skipped_dupes
-    batch.total = batch.total - skipped_dupes
+    total_skipped = skipped_dupes + skipped_dnc
+    batch.skipped = total_skipped
+    batch.total = batch.total - total_skipped
+    notes: list[str] = []
     if skipped_dupes > 0:
-        batch.errors_json = [f"{skipped_dupes} duplicate(s) skipped (campaign: {body.campaign_key})"]
+        notes.append(f"{skipped_dupes} duplicate(s) skipped (campaign: {body.campaign_key})")
+    if skipped_dnc > 0:
+        notes.append(f"{skipped_dnc} do-not-contact entr{'y' if skipped_dnc == 1 else 'ies'} skipped")
+    if notes:
+        batch.errors_json = notes
     db.commit()
 
     batch_id = batch.id
@@ -701,9 +743,16 @@ def send_campaign_endpoint(
 
     default_name = body.variables.get("user_name", "there")
     skipped_dupes = 0
+    skipped_dnc = 0
+    dnc_emails = _get_dnc_emails(db)
 
     for user in recipients:
         email_addr = user.email.strip().lower()
+
+        # Skip do-not-contact entries
+        if email_addr in dnc_emails:
+            skipped_dnc += 1
+            continue
 
         # Cross-batch dedup on campaign_key
         existing = (
@@ -728,8 +777,13 @@ def send_campaign_endpoint(
         )
         db.add(send)
 
-    batch.skipped = skipped_dupes
-    batch.total = batch.total - skipped_dupes
+    total_skipped = skipped_dupes + skipped_dnc
+    batch.skipped = total_skipped
+    batch.total = batch.total - total_skipped
+    if skipped_dnc > 0:
+        notes = list(batch.errors_json or [])
+        notes.append(f"{skipped_dnc} do-not-contact entr{'y' if skipped_dnc == 1 else 'ies'} skipped")
+        batch.errors_json = notes
     db.commit()
 
     batch_id = batch.id
@@ -852,3 +906,83 @@ def send_campaign_endpoint(
     t.start()
 
     return {"batch_id": batch_id, "status": "pending", "total": batch.total}
+
+
+# ========================================
+# Do-not-contact endpoints
+# ========================================
+
+def _serialize_dnc(row: EmailDoNotContact) -> dict[str, Any]:
+    return {
+        "id": row.id,
+        "email": row.email,
+        "name": row.name,
+        "reason": row.reason,
+        "added_at": row.added_at.isoformat() if row.added_at else None,
+    }
+
+
+@router.get("/do-not-contact")
+def list_do_not_contact(
+    _user: User = Depends(require_moderator),
+    db: Session = Depends(get_db),
+):
+    """List every email on the do-not-contact list, newest first."""
+    rows = (
+        db.query(EmailDoNotContact)
+        .order_by(EmailDoNotContact.added_at.desc())
+        .all()
+    )
+    return [_serialize_dnc(r) for r in rows]
+
+
+@router.post("/do-not-contact")
+def add_do_not_contact(
+    body: DncBulkAddRequest,
+    admin: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+):
+    """Add one or more emails to the do-not-contact list. Idempotent."""
+    if not body.entries:
+        raise HTTPException(status_code=400, detail="No entries provided")
+
+    added = 0
+    skipped = 0
+    for entry in body.entries:
+        email_addr = (entry.email or "").strip().lower()
+        if not email_addr:
+            continue
+        existing = (
+            db.query(EmailDoNotContact)
+            .filter(EmailDoNotContact.email == email_addr)
+            .first()
+        )
+        if existing:
+            skipped += 1
+            continue
+        db.add(
+            EmailDoNotContact(
+                email=email_addr,
+                name=(entry.name or "").strip() or None,
+                reason=(entry.reason or "").strip() or None,
+                added_by=admin.id,
+            )
+        )
+        added += 1
+    db.commit()
+    return {"added": added, "skipped": skipped}
+
+
+@router.delete("/do-not-contact/{entry_id}")
+def remove_do_not_contact(
+    entry_id: int,
+    _admin: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+):
+    """Remove a single entry from the do-not-contact list by ID."""
+    row = db.query(EmailDoNotContact).filter(EmailDoNotContact.id == entry_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    db.delete(row)
+    db.commit()
+    return {"ok": True}
