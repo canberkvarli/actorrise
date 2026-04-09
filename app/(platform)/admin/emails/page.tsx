@@ -33,6 +33,14 @@ import {
   IconArrowForward,
   IconTrash,
   IconPlus,
+  IconTarget,
+  IconFilter,
+  IconSearch,
+  IconBrandApple,
+  IconCrown,
+  IconCheck,
+  IconRefresh,
+  IconBolt,
 } from "@tabler/icons-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────
@@ -101,6 +109,22 @@ interface DncEntry {
   added_at: string | null;
 }
 
+interface Lead {
+  id: number;
+  email: string;
+  name: string | null;
+  created_at: string | null;
+  tier_name: string | null;
+  subscription_status: string | null;
+  is_active_paid: boolean;
+  is_apple_relay: boolean;
+  on_dnc: boolean;
+  marketing_opt_in: boolean;
+  total_scripts_uploaded: number;
+}
+
+type LeadSegment = "all" | "untouched" | "recent" | "opt_in";
+
 // ─── Page ─────────────────────────────────────────────────────────────────
 
 export default function AdminEmailsPage() {
@@ -153,6 +177,19 @@ export default function AdminEmailsPage() {
   const [dncEntries, setDncEntries] = useState<DncEntry[]>([]);
   const [dncLoading, setDncLoading] = useState(false);
   const [dncInput, setDncInput] = useState("");
+  const [autoDncLoading, setAutoDncLoading] = useState(false);
+
+  // Leads browser
+  const [leadsOpen, setLeadsOpen] = useState(false);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leadsLoading, setLeadsLoading] = useState(false);
+  const [leadSearch, setLeadSearch] = useState("");
+  const [leadSegment, setLeadSegment] = useState<LeadSegment>("untouched");
+  const [hideAppleRelay, setHideAppleRelay] = useState(true);
+  const [hidePaid, setHidePaid] = useState(true);
+  const [hideDnc, setHideDnc] = useState(true);
+  const [requireOptIn, setRequireOptIn] = useState(false);
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<number>>(new Set());
 
   // Dialogs
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -161,7 +198,7 @@ export default function AdminEmailsPage() {
 
   const selected = templates.find((t) => t.id === selectedId) ?? null;
 
-  // Fetch templates + batch history + DNC
+  // Fetch templates + batch history + DNC + leads
   useEffect(() => {
     Promise.all([
       api.get<TemplateMeta[]>("/api/admin/emails/templates").then(({ data }) => {
@@ -173,8 +210,37 @@ export default function AdminEmailsPage() {
       }).catch(() => toast.error("Failed to load email templates")),
       api.get<BatchHistoryItem[]>("/api/admin/emails/batches").then(({ data }) => setBatchHistory(data)).catch(() => {}),
       api.get<DncEntry[]>("/api/admin/emails/do-not-contact").then(({ data }) => setDncEntries(data)).catch(() => {}),
+      api.get<Lead[]>("/api/admin/emails/leads").then(({ data }) => setLeads(data)).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
+
+  function refreshLeads() {
+    setLeadsLoading(true);
+    return api
+      .get<Lead[]>("/api/admin/emails/leads")
+      .then(({ data }) => setLeads(data))
+      .catch(() => toast.error("Failed to load leads"))
+      .finally(() => setLeadsLoading(false));
+  }
+
+  async function autoDncAppleRelay() {
+    setAutoDncLoading(true);
+    try {
+      const { data } = await api.post<{ added: number; scanned: number }>(
+        "/api/admin/emails/do-not-contact/auto-apple-relay",
+      );
+      if (data.added > 0) {
+        toast.success(`Added ${data.added} Apple Hide-My-Email user${data.added !== 1 ? "s" : ""} to do-not-contact`);
+      } else {
+        toast.success(`No new Apple SSO users to add (scanned ${data.scanned})`);
+      }
+      await Promise.all([refreshDnc(), refreshLeads()]);
+    } catch {
+      toast.error("Failed to auto-add Apple SSO users");
+    } finally {
+      setAutoDncLoading(false);
+    }
+  }
 
   function refreshDnc() {
     return api
@@ -214,6 +280,83 @@ export default function AdminEmailsPage() {
     } catch {
       toast.error("Failed to remove entry");
     }
+  }
+
+  // ── Leads filtering (in-memory, instant) ──────────────────────────────
+  const filteredLeads = React.useMemo(() => {
+    const q = leadSearch.trim().toLowerCase();
+    const cutoff30d = Date.now() - 30 * 24 * 60 * 60 * 1000;
+    return leads.filter((l) => {
+      if (hideAppleRelay && l.is_apple_relay) return false;
+      if (hidePaid && l.is_active_paid) return false;
+      if (hideDnc && l.on_dnc) return false;
+      if (requireOptIn && !l.marketing_opt_in) return false;
+      if (leadSegment === "untouched" && l.total_scripts_uploaded > 0) return false;
+      if (leadSegment === "opt_in" && !l.marketing_opt_in) return false;
+      if (leadSegment === "recent") {
+        const t = l.created_at ? new Date(l.created_at).getTime() : 0;
+        if (!t || t < cutoff30d) return false;
+      }
+      if (q) {
+        const hay = `${l.email} ${l.name || ""}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [leads, leadSearch, leadSegment, hideAppleRelay, hidePaid, hideDnc, requireOptIn]);
+
+  const filteredLeadIds = React.useMemo(
+    () => new Set(filteredLeads.map((l) => l.id)),
+    [filteredLeads],
+  );
+  const visibleSelectedCount = React.useMemo(
+    () => filteredLeads.filter((l) => selectedLeadIds.has(l.id)).length,
+    [filteredLeads, selectedLeadIds],
+  );
+  const allVisibleSelected =
+    filteredLeads.length > 0 && visibleSelectedCount === filteredLeads.length;
+
+  function toggleLead(id: number) {
+    setSelectedLeadIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAllVisible() {
+    setSelectedLeadIds((prev) => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        for (const id of filteredLeadIds) next.delete(id);
+      } else {
+        for (const id of filteredLeadIds) next.add(id);
+      }
+      return next;
+    });
+  }
+
+  function loadLeadsIntoComposer() {
+    const picked = leads.filter((l) => selectedLeadIds.has(l.id));
+    if (picked.length === 0) {
+      toast.error("Select at least one lead first");
+      return;
+    }
+    const recipients = picked.map((l) => ({ email: l.email, name: l.name || "" }));
+    setBulkRecipients(recipients);
+    setMode("bulk");
+    // Founder offer is the natural template for converting signed-up users
+    const founderTmpl = templates.find((t) => t.id === "founder_offer");
+    if (founderTmpl) {
+      setSelectedId("founder_offer");
+      _initVars(founderTmpl);
+    }
+    setCampaignKey(`founder-leads-${new Date().toISOString().slice(0, 10)}`);
+    setComposeOpen(true);
+    setLeadsOpen(false);
+    toast.success(`Loaded ${recipients.length} lead${recipients.length !== 1 ? "s" : ""} into composer`);
+    setTimeout(() => composeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   }
 
   function startFollowUp(sends: BatchSend[], audience: "openers" | "non_openers") {
@@ -485,6 +628,23 @@ export default function AdminEmailsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button
+            variant={leadsOpen ? "default" : "outline"}
+            size="sm"
+            className="gap-2"
+            onClick={() => {
+              setLeadsOpen(!leadsOpen);
+              if (!leadsOpen && leads.length === 0) refreshLeads();
+            }}
+          >
+            <IconTarget className="h-4 w-4" />
+            Leads
+            {filteredLeads.length > 0 && (
+              <span className="bg-muted text-muted-foreground rounded-full px-1.5 text-[10px] font-medium">
+                {filteredLeads.length}
+              </span>
+            )}
+          </Button>
+          <Button
             variant={dncOpen ? "default" : "outline"}
             size="sm"
             className="gap-2"
@@ -711,10 +871,267 @@ export default function AdminEmailsPage() {
         )}
       </div>
 
+      {/* ── Leads browser (collapsible) ── */}
+      {leadsOpen && (
+        <div className="rounded-lg border border-border p-5 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <IconTarget className="h-4 w-4 text-muted-foreground" />
+                Leads
+                <span className="text-[11px] font-normal text-muted-foreground">
+                  signed up but never used the founder code
+                </span>
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Filter, select, and load straight into the composer with the founder offer template.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs gap-1.5"
+                onClick={refreshLeads}
+                disabled={leadsLoading}
+                title="Reload from server"
+              >
+                <IconRefresh className={`h-3.5 w-3.5 ${leadsLoading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+              <button onClick={() => setLeadsOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <IconX className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Segment chips */}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {([
+              { id: "untouched", label: "Never used app", icon: IconBolt },
+              { id: "recent", label: "Last 30 days", icon: IconClock },
+              { id: "opt_in", label: "Marketing opt-in", icon: IconCheck },
+              { id: "all", label: "All users", icon: IconUsers },
+            ] as { id: LeadSegment; label: string; icon: typeof IconBolt }[]).map((s) => {
+              const active = leadSegment === s.id;
+              const Icon = s.icon;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setLeadSegment(s.id)}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border transition-colors ${
+                    active
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-3.5 w-3.5" />
+                  {s.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Toggles + search */}
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[200px]">
+              <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+              <Input
+                placeholder="Search by email or name..."
+                value={leadSearch}
+                onChange={(e) => setLeadSearch(e.target.value)}
+                className="h-8 text-xs pl-8"
+              />
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <IconFilter className="h-3.5 w-3.5" />
+              <span>Hide:</span>
+            </div>
+            {([
+              { key: "apple", label: "Apple SSO", value: hideAppleRelay, set: setHideAppleRelay, icon: IconBrandApple },
+              { key: "paid", label: "Paid", value: hidePaid, set: setHidePaid, icon: IconCrown },
+              { key: "dnc", label: "DNC", value: hideDnc, set: setHideDnc, icon: IconUserOff },
+            ] as { key: string; label: string; value: boolean; set: (v: boolean) => void; icon: typeof IconBolt }[]).map((t) => {
+              const Icon = t.icon;
+              return (
+                <button
+                  key={t.key}
+                  onClick={() => t.set(!t.value)}
+                  className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border transition-colors ${
+                    t.value
+                      ? "bg-muted border-border text-foreground"
+                      : "border-dashed border-border/60 text-muted-foreground/60 hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-3 w-3" />
+                  {t.label}
+                </button>
+              );
+            })}
+            <button
+              onClick={() => setRequireOptIn(!requireOptIn)}
+              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border transition-colors ${
+                requireOptIn
+                  ? "bg-primary/10 border-primary/40 text-primary"
+                  : "border-dashed border-border/60 text-muted-foreground/60 hover:text-foreground"
+              }`}
+              title="Only show users who opted into marketing"
+            >
+              <IconCheck className="h-3 w-3" />
+              Opt-in only
+            </button>
+          </div>
+
+          {/* Stats bar + bulk actions */}
+          <div className="flex items-center justify-between text-xs">
+            <p className="text-muted-foreground">
+              <span className="text-foreground font-medium">{filteredLeads.length}</span> eligible
+              <span className="mx-1.5 text-muted-foreground/50">·</span>
+              {leads.length} total
+              {selectedLeadIds.size > 0 && (
+                <>
+                  <span className="mx-1.5 text-muted-foreground/50">·</span>
+                  <span className="text-primary font-medium">{selectedLeadIds.size} selected</span>
+                </>
+              )}
+            </p>
+            <div className="flex items-center gap-2">
+              {selectedLeadIds.size > 0 && (
+                <button
+                  onClick={() => setSelectedLeadIds(new Set())}
+                  className="text-muted-foreground hover:text-destructive transition-colors"
+                >
+                  Clear
+                </button>
+              )}
+              {canSend && (
+                <Button
+                  size="sm"
+                  className="h-8 text-xs gap-1.5"
+                  onClick={loadLeadsIntoComposer}
+                  disabled={selectedLeadIds.size === 0}
+                >
+                  <IconArrowForward className="h-3.5 w-3.5" />
+                  Load {selectedLeadIds.size > 0 ? selectedLeadIds.size : ""} into composer
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Table */}
+          {leadsLoading ? (
+            <div className="space-y-1.5">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="h-9 bg-muted/40 rounded animate-pulse" />
+              ))}
+            </div>
+          ) : filteredLeads.length > 0 ? (
+            <div className="rounded-lg border border-border max-h-[480px] overflow-y-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-muted/40 sticky top-0 z-10">
+                  <tr className="text-muted-foreground">
+                    <th className="text-left px-3 py-2 font-medium w-8">
+                      <input
+                        type="checkbox"
+                        checked={allVisibleSelected}
+                        onChange={toggleSelectAllVisible}
+                        className="rounded border-border"
+                      />
+                    </th>
+                    <th className="text-left px-3 py-2 font-medium">Email</th>
+                    <th className="text-left px-3 py-2 font-medium">Name</th>
+                    <th className="text-left px-3 py-2 font-medium">Joined</th>
+                    <th className="text-left px-3 py-2 font-medium">Tier</th>
+                    <th className="text-left px-3 py-2 font-medium">Flags</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredLeads.map((l) => {
+                    const checked = selectedLeadIds.has(l.id);
+                    return (
+                      <tr
+                        key={l.id}
+                        onClick={() => toggleLead(l.id)}
+                        className={`border-t border-border/40 cursor-pointer hover:bg-muted/20 ${
+                          checked ? "bg-primary/5" : ""
+                        }`}
+                      >
+                        <td className="px-3 py-1.5">
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleLead(l.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            className="rounded border-border"
+                          />
+                        </td>
+                        <td className="px-3 py-1.5 font-mono">{l.email}</td>
+                        <td className="px-3 py-1.5">
+                          {l.name || <span className="text-muted-foreground/40">&mdash;</span>}
+                        </td>
+                        <td className="px-3 py-1.5 text-muted-foreground">
+                          {l.created_at
+                            ? new Date(l.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })
+                            : <span className="text-muted-foreground/40">&mdash;</span>}
+                        </td>
+                        <td className="px-3 py-1.5">
+                          {l.tier_name ? (
+                            <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
+                              l.is_active_paid
+                                ? "bg-amber-500/10 text-amber-600"
+                                : "bg-muted text-muted-foreground"
+                            }`}>
+                              {l.tier_name}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/40">&mdash;</span>
+                          )}
+                        </td>
+                        <td className="px-3 py-1.5">
+                          <div className="flex items-center gap-1">
+                            {l.is_apple_relay && (
+                              <span className="inline-flex items-center gap-0.5 bg-muted px-1 py-0.5 rounded text-[9px] text-muted-foreground" title="Apple Hide-My-Email">
+                                <IconBrandApple className="h-2.5 w-2.5" />
+                                relay
+                              </span>
+                            )}
+                            {l.on_dnc && (
+                              <span className="inline-flex items-center gap-0.5 bg-destructive/10 text-destructive px-1 py-0.5 rounded text-[9px]" title="On do-not-contact">
+                                <IconUserOff className="h-2.5 w-2.5" />
+                                dnc
+                              </span>
+                            )}
+                            {l.marketing_opt_in && (
+                              <span className="inline-flex items-center gap-0.5 bg-green-500/10 text-green-600 px-1 py-0.5 rounded text-[9px]" title="Marketing opt-in">
+                                <IconCheck className="h-2.5 w-2.5" />
+                                opt-in
+                              </span>
+                            )}
+                            {l.total_scripts_uploaded > 0 && (
+                              <span className="inline-flex items-center gap-0.5 bg-blue-500/10 text-blue-600 px-1 py-0.5 rounded text-[9px]" title={`${l.total_scripts_uploaded} script(s) uploaded`}>
+                                {l.total_scripts_uploaded}↑
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground py-6 text-center">
+              No leads match these filters. Try toggling the &ldquo;Hide&rdquo; switches off.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* ── Do-not-contact section (collapsible) ── */}
       {dncOpen && (
         <div className="rounded-lg border border-border p-5 space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold flex items-center gap-2">
                 <IconUserOff className="h-4 w-4 text-muted-foreground" />
@@ -724,9 +1141,24 @@ export default function AdminEmailsPage() {
                 These emails are auto-skipped by every bulk send and campaign. Add friends, test accounts, etc.
               </p>
             </div>
-            <button onClick={() => setDncOpen(false)} className="text-muted-foreground hover:text-foreground">
-              <IconX className="h-4 w-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              {canSend && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-xs gap-1.5"
+                  onClick={autoDncAppleRelay}
+                  disabled={autoDncLoading}
+                  title="Bulk-add every Apple Hide-My-Email user"
+                >
+                  <IconBrandApple className="h-3.5 w-3.5" />
+                  {autoDncLoading ? "Adding..." : "Auto-add Apple SSO"}
+                </Button>
+              )}
+              <button onClick={() => setDncOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <IconX className="h-4 w-4" />
+              </button>
+            </div>
           </div>
 
           {canSend && (
@@ -983,9 +1415,10 @@ export default function AdminEmailsPage() {
                           <div>
                             <Label htmlFor="target" className="text-xs">Target audience</Label>
                             <select id="target" value={target} onChange={(e) => setTarget(e.target.value)} className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
-                              <option value="all">All users</option>
-                              <option value="free">Free tier</option>
-                              <option value="paid">Paid tier</option>
+                              <option value="all">All users (opt-in)</option>
+                              <option value="free">Free tier (opt-in)</option>
+                              <option value="paid">Paid tier (opt-in)</option>
+                              <option value="leads">Leads — never used founder code</option>
                             </select>
                           </div>
                           <label className="flex items-center gap-2 text-sm cursor-pointer pb-2">

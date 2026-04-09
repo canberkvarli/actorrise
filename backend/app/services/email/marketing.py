@@ -59,45 +59,65 @@ def build_unsubscribe_url(email: str) -> str:
 # Targeting helpers
 # ---------------------------------------------------------------------------
 
+APPLE_RELAY_DOMAIN = "@privaterelay.appleid.com"
+
+
+def is_apple_relay_email(email: str | None) -> bool:
+    """True if the email is an Apple Hide-My-Email relay address."""
+    if not email:
+        return False
+    return APPLE_RELAY_DOMAIN in email.lower()
+
+
 def _get_marketing_recipients(
     db: Session,
     target: str = "all",
+    exclude_apple_relay: bool = True,
+    require_opt_in: bool = True,
 ) -> list[User]:
     """
     Query users filtered by tier. Unsubscribed users (marketing_opt_in=False)
-    are excluded; everyone else is included.
+    are excluded by default; pass require_opt_in=False to include them
+    (e.g. for the leads view, where you're cold-outreaching signed-up users).
 
     target:
-        "all"  — every subscribed user
-        "free" — only free-tier users
-        "paid" — only users with an active paid subscription
+        "all"     — every (subscribed) user
+        "free"    — only free-tier users
+        "paid"    — only users with an active paid subscription
+        "leads"   — free-tier users who never used the founder code:
+                    no active paid subscription AND total_scripts_uploaded == 0
     """
-    query = db.query(User).filter(User.marketing_opt_in.is_(True))
+    query = db.query(User)
+
+    if require_opt_in:
+        query = query.filter(User.marketing_opt_in.is_(True))
+
+    if exclude_apple_relay:
+        query = query.filter(~User.email.ilike(f"%{APPLE_RELAY_DOMAIN}%"))
+
+    paid_user_ids = (
+        db.query(UserSubscription.user_id)
+        .join(PricingTier, UserSubscription.tier_id == PricingTier.id)
+        .filter(
+            UserSubscription.status.in_(["active", "trialing"]),
+            PricingTier.name != "free",
+        )
+        .subquery()
+    )
 
     if target == "all":
         pass  # no additional filter
     elif target == "free":
-        paid_user_ids = (
-            db.query(UserSubscription.user_id)
-            .join(PricingTier, UserSubscription.tier_id == PricingTier.id)
-            .filter(
-                UserSubscription.status.in_(["active", "trialing"]),
-                PricingTier.name != "free",
-            )
-            .subquery()
-        )
         query = query.filter(~User.id.in_(paid_user_ids))
     elif target == "paid":
-        paid_user_ids = (
-            db.query(UserSubscription.user_id)
-            .join(PricingTier, UserSubscription.tier_id == PricingTier.id)
-            .filter(
-                UserSubscription.status.in_(["active", "trialing"]),
-                PricingTier.name != "free",
-            )
-            .subquery()
-        )
         query = query.filter(User.id.in_(paid_user_ids))
+    elif target == "leads":
+        # Signed up but never engaged with the founder offer:
+        # not paying AND no scripts uploaded yet.
+        query = query.filter(
+            ~User.id.in_(paid_user_ids),
+            User.total_scripts_uploaded == 0,
+        )
 
     return query.all()
 

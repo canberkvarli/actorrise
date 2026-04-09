@@ -12,20 +12,22 @@ from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from app.api.auth import get_current_user
 from app.core.database import SessionLocal, get_db
-from app.models.billing import AdminAuditLog
+from app.models.billing import AdminAuditLog, UserSubscription
 from app.models.email_do_not_contact import EmailDoNotContact
 from app.models.email_tracking import EmailBatch, EmailSend
 from app.models.user import User
 from app.services.email.marketing import (
+    APPLE_RELAY_DOMAIN,
     _get_ai_search_limit,
     _get_marketing_recipients,
     _get_monthly_ai_searches,
     _send_upgrade_nudge_campaign,
     build_unsubscribe_url,
+    is_apple_relay_email,
     send_campaign,
 )
 from app.services.email.resend_client import ResendEmailClient
@@ -223,6 +225,7 @@ class BulkSendRequest(BaseModel):
     campaign_key: Optional[str] = None
     scheduled_at: Optional[str] = None  # ISO datetime string
     send_via: str = "smtp"  # "smtp" (Google Workspace) or "resend"
+    skip_apple_relay: bool = True  # auto-skip @privaterelay.appleid.com addresses
 
 
 class BatchStatusResponse(BaseModel):
@@ -237,10 +240,11 @@ class BatchStatusResponse(BaseModel):
 
 class CampaignRequest(BaseModel):
     template_id: str
-    target: str = "all"
+    target: str = "all"  # "all" | "free" | "paid" | "leads"
     dry_run: bool = False
     variables: dict[str, Any] = {}
     send_via: str = "smtp"  # "smtp" (Google Workspace) or "resend"
+    skip_apple_relay: bool = True  # auto-skip @privaterelay.appleid.com addresses
 
 
 class CampaignResponse(BaseModel):
@@ -431,6 +435,7 @@ def bulk_send_email(
     default_name = body.variables.get("user_name", "there")
     skipped_dupes = 0
     skipped_dnc = 0
+    skipped_relay = 0
     seen_in_batch: set[str] = set()
     dnc_emails = _get_dnc_emails(db)
 
@@ -448,6 +453,11 @@ def bulk_send_email(
         # Skip do-not-contact entries
         if email_addr in dnc_emails:
             skipped_dnc += 1
+            continue
+
+        # Skip Apple Hide-My-Email relay addresses (most don't forward reliably)
+        if body.skip_apple_relay and is_apple_relay_email(email_addr):
+            skipped_relay += 1
             continue
 
         # Cross-batch dedup: skip if same email + campaign_key already sent
@@ -480,7 +490,7 @@ def bulk_send_email(
         )
         db.add(send)
 
-    total_skipped = skipped_dupes + skipped_dnc
+    total_skipped = skipped_dupes + skipped_dnc + skipped_relay
     batch.skipped = total_skipped
     batch.total = batch.total - total_skipped
     notes: list[str] = []
@@ -488,6 +498,8 @@ def bulk_send_email(
         notes.append(f"{skipped_dupes} duplicate(s) skipped (campaign: {body.campaign_key})")
     if skipped_dnc > 0:
         notes.append(f"{skipped_dnc} do-not-contact entr{'y' if skipped_dnc == 1 else 'ies'} skipped")
+    if skipped_relay > 0:
+        notes.append(f"{skipped_relay} Apple Hide-My-Email address(es) skipped")
     if notes:
         batch.errors_json = notes
     db.commit()
@@ -692,8 +704,8 @@ def send_campaign_endpoint(
     db: Session = Depends(get_db),
 ):
     """Send a campaign to a user segment. Creates a tracked batch."""
-    if body.target not in ("all", "free", "paid"):
-        raise HTTPException(status_code=400, detail="target must be all, free, or paid")
+    if body.target not in ("all", "free", "paid", "leads"):
+        raise HTTPException(status_code=400, detail="target must be all, free, paid, or leads")
 
     campaign_type = body.template_id
 
@@ -707,8 +719,14 @@ def send_campaign_endpoint(
             recipients=result.get("recipients", []),
         )
 
-    # Get recipients
-    recipients = _get_marketing_recipients(db, body.target)
+    # Get recipients. The "leads" segment is for cold-converting signed-up
+    # users who never used the founder code, so opt-in is not required there.
+    recipients = _get_marketing_recipients(
+        db,
+        body.target,
+        exclude_apple_relay=body.skip_apple_relay,
+        require_opt_in=body.target != "leads",
+    )
 
     if body.dry_run:
         return CampaignResponse(
@@ -986,3 +1004,96 @@ def remove_do_not_contact(
     db.delete(row)
     db.commit()
     return {"ok": True}
+
+
+@router.post("/do-not-contact/auto-apple-relay")
+def auto_dnc_apple_relay(
+    admin: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+):
+    """Bulk-add every Apple Hide-My-Email user to the do-not-contact list."""
+    relay_users = (
+        db.query(User)
+        .filter(User.email.ilike(f"%{APPLE_RELAY_DOMAIN}%"))
+        .all()
+    )
+    existing = {
+        row[0]
+        for row in db.query(EmailDoNotContact.email)
+        .filter(EmailDoNotContact.email.ilike(f"%{APPLE_RELAY_DOMAIN}%"))
+        .all()
+    }
+    added = 0
+    for u in relay_users:
+        addr = (u.email or "").strip().lower()
+        if not addr or addr in existing:
+            continue
+        db.add(
+            EmailDoNotContact(
+                email=addr,
+                name=u.name,
+                reason="apple_sso_relay",
+                added_by=admin.id,
+            )
+        )
+        existing.add(addr)
+        added += 1
+    db.commit()
+    return {"added": added, "scanned": len(relay_users)}
+
+
+# ========================================
+# Leads browser
+# ========================================
+
+@router.get("/leads")
+def list_leads(
+    _user: User = Depends(require_moderator),
+    db: Session = Depends(get_db),
+):
+    """
+    Return signed-up users with reachability + status flags so the admin
+    UI can browse, filter, and select cold-outreach targets.
+
+    Returns up to 1000 users (newest first). The frontend filters in-memory
+    so chip toggles are instant.
+    """
+    users = (
+        db.query(User)
+        .options(joinedload(User.subscription).joinedload(UserSubscription.tier))
+        .order_by(User.created_at.desc())
+        .limit(1000)
+        .all()
+    )
+
+    dnc_emails = _get_dnc_emails(db)
+
+    out: list[dict[str, Any]] = []
+    for u in users:
+        sub = u.subscription
+        tier = sub.tier if sub else None
+        tier_name = tier.name if tier else None
+        sub_status = sub.status if sub else None
+        is_active_paid = (
+            sub is not None
+            and sub.status in ("active", "trialing")
+            and tier_name is not None
+            and tier_name != "free"
+        )
+        addr = (u.email or "").strip().lower()
+        out.append(
+            {
+                "id": u.id,
+                "email": u.email,
+                "name": u.name,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+                "tier_name": tier_name,
+                "subscription_status": sub_status,
+                "is_active_paid": is_active_paid,
+                "is_apple_relay": is_apple_relay_email(u.email),
+                "on_dnc": addr in dnc_emails,
+                "marketing_opt_in": bool(u.marketing_opt_in),
+                "total_scripts_uploaded": int(u.total_scripts_uploaded or 0),
+            }
+        )
+    return out
