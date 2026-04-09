@@ -110,6 +110,14 @@ def submit_feedback(
             detail="Invalid rating. Must be 'positive' or 'negative'.",
         )
 
+    # Require comment for negative feedback (except scene_extraction which has structured fields)
+    if body.rating == "negative" and body.context != "scene_extraction":
+        if not body.comment or not body.comment.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Please tell us what you were looking for so we can improve.",
+            )
+
     # For scene_extraction, prefix comment with structured metadata
     stored_comment = body.comment or ""
     if body.context == "scene_extraction":
