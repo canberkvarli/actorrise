@@ -418,6 +418,57 @@ class EmailTemplates:
         ]
         return "\n".join(lines)
 
+    def render_founder_followup(
+        self,
+        user_name: str,
+        intro_text: str = "Just wanted to follow up on my last email. The founder code is still active if you want to use it.",
+        promo_code: str = "FOUNDER",
+        upgrade_url: str = "https://actorrise.com/pricing",
+        sender_name: str = "Canberk",
+        sender_title: str = "Founder, ActorRise",
+        unsubscribe_url: Optional[str] = None,
+        **kwargs,
+    ) -> str:
+        """Render founder follow-up email (HTML version for preview)."""
+        # Simple HTML wrapper for preview - actual send uses plain text
+        name = (user_name or "there").split()[0]
+        html = f"""
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <p>hey {name},</p>
+            <p>{intro_text}</p>
+            <p>Your code is {promo_code}</p>
+            <p>No pressure at all. Just didn't want it to get buried in your inbox.</p>
+            <p>{sender_name}<br>actorrise.com</p>
+        </div>
+        """
+        return html
+
+    def render_founder_followup_plain(
+        self,
+        user_name: str,
+        intro_text: str = "Just wanted to follow up on my last email. The founder code is still active if you want to use it.",
+        promo_code: str = "FOUNDER",
+        upgrade_url: str = "https://actorrise.com/pricing",
+        sender_name: str = "Canberk",
+        sender_title: str = "Founder, ActorRise",
+        **kwargs,
+    ) -> str:
+        """Render founder follow-up as plain text."""
+        name = (user_name or "there").split()[0]
+        lines = [
+            f"hey {name},",
+            "",
+            intro_text,
+            "",
+            f"Your code is {promo_code}",
+            "",
+            "No pressure at all. Just didn't want it to get buried in your inbox.",
+            "",
+            sender_name,
+            "actorrise.com",
+        ]
+        return "\n".join(lines)
+
     def render_actor_page_plain(self, user_name: str, intro_text: str = "", step_1: str = "", step_2: str = "", step_3: str = "", sender_name: str = "Canberk", sender_title: str = "Founder | Actor, ActorRise", **kwargs) -> str:
         name = user_name or "there"
         return "\n".join([
