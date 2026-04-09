@@ -273,6 +273,35 @@ export default function AdminEmailsPage() {
     }
   }
 
+  async function addSelectedLeadsToDnc() {
+    const picked = leads.filter((l) => selectedLeadIds.has(l.id));
+    if (picked.length === 0) {
+      toast.error("Select at least one lead first");
+      return;
+    }
+    const entries = picked.map((l) => ({
+      email: l.email,
+      name: l.name || "",
+      reason: "family_friends",
+    }));
+    setDncLoading(true);
+    try {
+      const { data } = await api.post<{ added: number; skipped: number }>(
+        "/api/admin/emails/do-not-contact",
+        { entries },
+      );
+      toast.success(
+        `Added ${data.added} to do-not-contact${data.skipped > 0 ? ` (${data.skipped} already on list)` : ""}`,
+      );
+      setSelectedLeadIds(new Set());
+      await Promise.all([refreshDnc(), refreshLeads()]);
+    } catch {
+      toast.error("Failed to add to do-not-contact list");
+    } finally {
+      setDncLoading(false);
+    }
+  }
+
   async function removeDncEntry(entryId: number) {
     try {
       await api.delete(`/api/admin/emails/do-not-contact/${entryId}`);
@@ -359,7 +388,7 @@ export default function AdminEmailsPage() {
     setTimeout(() => composeRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
   }
 
-  function startFollowUp(sends: BatchSend[], audience: "openers" | "non_openers") {
+  function startFollowUp(sends: BatchSend[], audience: "openers" | "non_openers", originalTemplateId?: string) {
     const filtered = sends.filter((s) => {
       const opened = !!s.opened_at || !!s.clicked_at;
       return audience === "openers" ? opened : !opened;
@@ -379,6 +408,16 @@ export default function AdminEmailsPage() {
     setCampaignKey(
       audience === "openers" ? `followup-openers-${new Date().toISOString().slice(0, 10)}` : `followup-nonopeners-${new Date().toISOString().slice(0, 10)}`,
     );
+
+    // Auto-select follow-up template based on original template
+    if (audience === "non_openers" && originalTemplateId === "founder_offer") {
+      const followupTmpl = templates.find((t) => t.id === "founder_followup");
+      if (followupTmpl) {
+        setSelectedId("founder_followup");
+        _initVars(followupTmpl);
+      }
+    }
+
     toast.success(
       `Loaded ${recipients.length} ${audience === "openers" ? "opener" : "non-opener"}${recipients.length !== 1 ? "s" : ""}` +
         (skippedCount > 0 ? ` (${skippedCount} skipped via do-not-contact)` : ""),
@@ -806,7 +845,7 @@ export default function AdminEmailsPage() {
                                       size="sm"
                                       variant="outline"
                                       className="h-7 text-xs gap-1.5"
-                                      onClick={(e) => { e.stopPropagation(); startFollowUp(expandedSends, "openers"); }}
+                                      onClick={(e) => { e.stopPropagation(); startFollowUp(expandedSends, "openers", b.template_id); }}
                                     >
                                       <IconArrowForward className="h-3.5 w-3.5" />
                                       Follow up openers
@@ -815,7 +854,7 @@ export default function AdminEmailsPage() {
                                       size="sm"
                                       variant="outline"
                                       className="h-7 text-xs gap-1.5"
-                                      onClick={(e) => { e.stopPropagation(); startFollowUp(expandedSends, "non_openers"); }}
+                                      onClick={(e) => { e.stopPropagation(); startFollowUp(expandedSends, "non_openers", b.template_id); }}
                                     >
                                       <IconArrowForward className="h-3.5 w-3.5" />
                                       Follow up non-openers
@@ -1005,15 +1044,27 @@ export default function AdminEmailsPage() {
                 </button>
               )}
               {canSend && (
-                <Button
-                  size="sm"
-                  className="h-8 text-xs gap-1.5"
-                  onClick={loadLeadsIntoComposer}
-                  disabled={selectedLeadIds.size === 0}
-                >
-                  <IconArrowForward className="h-3.5 w-3.5" />
-                  Load {selectedLeadIds.size > 0 ? selectedLeadIds.size : ""} into composer
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs gap-1.5"
+                    onClick={addSelectedLeadsToDnc}
+                    disabled={selectedLeadIds.size === 0 || dncLoading}
+                  >
+                    <IconUserOff className="h-3.5 w-3.5" />
+                    {dncLoading ? "Adding..." : `Add ${selectedLeadIds.size > 0 ? selectedLeadIds.size : ""} to DNC`}
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-8 text-xs gap-1.5"
+                    onClick={loadLeadsIntoComposer}
+                    disabled={selectedLeadIds.size === 0}
+                  >
+                    <IconArrowForward className="h-3.5 w-3.5" />
+                    Load {selectedLeadIds.size > 0 ? selectedLeadIds.size : ""} into composer
+                  </Button>
+                </>
               )}
             </div>
           </div>
