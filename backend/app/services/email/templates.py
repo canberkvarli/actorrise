@@ -155,44 +155,6 @@ class EmailTemplates:
             timestamp=timestamp,
         )
 
-    def render_upgrade_nudge(
-        self,
-        user_name: str,
-        searches_used: int,
-        searches_limit: int,
-        unsubscribe_url: Optional[str] = None,
-    ) -> str:
-        """Render upgrade nudge email for free-tier users."""
-        template = self.env.get_template('upgrade_nudge.html')
-        return template.render(
-            user_name=user_name or "there",
-            searches_used=searches_used,
-            searches_limit=searches_limit,
-            unsubscribe_url=unsubscribe_url,
-        )
-
-    def render_feature_announcement(
-        self,
-        user_name: str,
-        feature_title: str,
-        feature_description: str,
-        cta_text: str,
-        cta_url: str,
-        video_url: Optional[str] = None,
-        unsubscribe_url: Optional[str] = None,
-    ) -> str:
-        """Render feature announcement email."""
-        template = self.env.get_template('feature_announcement.html')
-        return template.render(
-            user_name=user_name or "there",
-            feature_title=feature_title,
-            feature_description=feature_description,
-            cta_text=cta_text,
-            cta_url=cta_url,
-            video_url=video_url,
-            unsubscribe_url=unsubscribe_url,
-        )
-
     def render_founder_offer(
         self,
         user_name: str,
@@ -222,122 +184,22 @@ class EmailTemplates:
             unsubscribe_url=unsubscribe_url,
         )
 
-    def render_actor_page(
-        self,
-        user_name: str,
-        intro_text: str = "I'm building actor pages on ActorRise where you can showcase your work, link your socials, and let people reach out to you directly. I'd love to set yours up.",
-        step_1: str = "Sign up or log in at actorrise.com",
-        step_2: str = "Go to your profile and fill in your bio, headshot, and links",
-        step_3: str = "Your page goes live and anyone can find you",
-        page_url: Optional[str] = None,
-        cta_text: str = "Check out your page",
-        extra_text: Optional[str] = None,
-        sender_name: str = "Canberk",
-        sender_title: str = "Founder | Actor, ActorRise",
-        unsubscribe_url: Optional[str] = None,
-    ) -> str:
-        """Render actor page email."""
-        template = self.env.get_template('actor_page.html')
-        return template.render(
-            user_name=user_name or "there",
-            intro_text=intro_text,
-            step_1=step_1,
-            step_2=step_2,
-            step_3=step_3,
-            page_url=page_url,
-            cta_text=cta_text,
-            extra_text=extra_text,
-            sender_name=sender_name,
-            sender_title=sender_title,
-            unsubscribe_url=unsubscribe_url,
-        )
-
-    def render_scene_partner_launch(
-        self,
-        user_name: str,
-        video_url: Optional[str] = None,
-        unsubscribe_url: Optional[str] = None,
-        **kwargs,
-    ) -> str:
-        """Render ScenePartner launch email (HTML version for preview)."""
-        template = self.env.get_template('scene_partner_launch.html')
-        return template.render(
-            user_name=user_name or "there",
-            video_url=video_url,
-            unsubscribe_url=unsubscribe_url,
-        )
-
-    def render_scene_partner_launch_plain(
-        self,
-        user_name: str,
-        video_url: Optional[str] = None,
-        unsubscribe_url: Optional[str] = None,
-        **kwargs,
-    ) -> str:
-        """Render ScenePartner launch as plain text (lands in Gmail Primary)."""
-        name = user_name or "there"
-        lines = [
-            f"Hey {name},",
-            "",
-            "Just finished building something I think you'll actually use. It's called ScenePartner.",
-            "",
-            "Basically, you upload a script (or pick one from the library), choose your character, and the AI reads the other parts with you. You can run it over and over. It listens to you and responds in real time.",
-            "",
-            "I built it because I got tired of asking friends to read with me at weird hours. Now I just open it and go.",
-            "",
-            "Let me know what you think. Seriously, just reply to this.",
-            "",
-            "Canberk",
-            "Founder | Actor",
-            "actorrise.com",
-        ]
-        return "\n".join(lines)
-
-    def render_cold_outreach(
-        self,
-        user_name: str,
-        intro_text: str = "I found your profile on Backstage and really liked your work. I'm building a platform called ActorRise where actors can find and rehearse monologues, get a personal profile page, and connect with other actors. I think you'd be a great fit.",
-        body_text: Optional[str] = None,
-        cta_text: Optional[str] = "Check it out",
-        cta_url: Optional[str] = "https://actorrise.com",
-        closing_text: Optional[str] = None,
-        sender_name: str = "Canberk",
-        sender_title: str = "Founder | Actor, ActorRise",
-        unsubscribe_url: Optional[str] = None,
-    ) -> str:
-        """Render cold outreach email for recruiting actors."""
-        template = self.env.get_template('cold_outreach.html')
-        return template.render(
-            user_name=user_name or "there",
-            intro_text=intro_text,
-            body_text=body_text,
-            cta_text=cta_text,
-            cta_url=cta_url,
-            closing_text=closing_text,
-            sender_name=sender_name,
-            sender_title=sender_title,
-            unsubscribe_url=unsubscribe_url,
-        )
-
     def render_weekly_engagement(
         self,
         user_name: str,
-        monologue_title: Optional[str] = None,
+        character_analysis: Optional[str] = None,
         monologue_snippet: Optional[str] = None,
         monologue_url: Optional[str] = None,
-        tip_title: Optional[str] = None,
-        tip_body: Optional[str] = None,
         unsubscribe_url: Optional[str] = None,
+        **kwargs,  # Ignore old params for backwards compatibility
     ) -> str:
         """Render weekly engagement digest email."""
         template = self.env.get_template('weekly_engagement.html')
         return template.render(
             user_name=user_name or "there",
-            monologue_title=monologue_title,
+            character_analysis=character_analysis,
             monologue_snippet=monologue_snippet,
             monologue_url=monologue_url or "https://actorrise.com/dashboard",
-            tip_title=tip_title,
-            tip_body=tip_body,
             unsubscribe_url=unsubscribe_url,
         )
 
@@ -361,39 +223,7 @@ class EmailTemplates:
             "If you have feedback, questions, or ideas, just reply to this email. I read everything.",
             "",
             "Canberk",
-            "Founder | Actor",
-            "actorrise.com",
-        ])
-
-    def render_upgrade_nudge_plain(self, user_name: str, searches_used: int = 8, searches_limit: int = 10, **kwargs) -> str:
-        name = user_name or "there"
-        return "\n".join([
-            f"Hey {name},",
-            "",
-            f"You've used {searches_used} of your {searches_limit} AI searches this month. That tells me you're finding value in ActorRise, which is awesome.",
-            "",
-            "With Plus you get 150 searches/month, unlimited saved monologues, 30 ScenePartner sessions, and PDF downloads. It's $12/mo or $99/year (2 months free).",
-            "",
-            "If you want to upgrade: actorrise.com/pricing",
-            "",
-            "No pressure at all. Just wanted to let you know before you hit the limit. If you have any questions, just reply to this.",
-            "",
-            "Canberk",
-            "Founder | Actor",
-            "actorrise.com",
-        ])
-
-    def render_feature_announcement_plain(self, user_name: str, feature_title: str = "", feature_description: str = "", **kwargs) -> str:
-        name = user_name or "there"
-        return "\n".join([
-            f"Hey {name},",
-            "",
-            feature_description,
-            "",
-            "If you have feedback or questions, just reply to this email.",
-            "",
-            "Canberk",
-            "Founder | Actor",
+            "Founder, ActorRise",
             "actorrise.com",
         ])
 
@@ -414,7 +244,8 @@ class EmailTemplates:
             "Appreciate you being here. If you have any questions, just reply to this email.",
             "",
             sender_name,
-            sender_title,
+            "Founder, ActorRise",
+            "actorrise.com",
         ]
         return "\n".join(lines)
 
@@ -438,7 +269,7 @@ class EmailTemplates:
             <p>{intro_text}</p>
             <p>Your code is {promo_code}</p>
             <p>No pressure at all. Just didn't want it to get buried in your inbox.</p>
-            <p>{sender_name}<br>actorrise.com</p>
+            <p>{sender_name}<br>Founder, ActorRise<br>actorrise.com</p>
         </div>
         """
         return html
@@ -465,68 +296,123 @@ class EmailTemplates:
             "No pressure at all. Just didn't want it to get buried in your inbox.",
             "",
             sender_name,
+            "Founder, ActorRise",
             "actorrise.com",
         ]
         return "\n".join(lines)
 
-    def render_actor_page_plain(self, user_name: str, intro_text: str = "", step_1: str = "", step_2: str = "", step_3: str = "", sender_name: str = "Canberk", sender_title: str = "Founder | Actor, ActorRise", **kwargs) -> str:
-        name = user_name or "there"
-        return "\n".join([
-            f"Hey {name},",
-            "",
-            intro_text,
-            "",
-            "Here's how to set it up:",
-            "",
-            f"1. {step_1}",
-            f"2. {step_2}",
-            f"3. {step_3}",
-            "",
-            "If you have any questions, just reply to this email.",
-            "",
-            sender_name,
-            sender_title,
-        ])
-
-    def render_cold_outreach_plain(self, user_name: str, intro_text: str = "", body_text: str = "", closing_text: str = "", sender_name: str = "Canberk", sender_title: str = "Founder | Actor, ActorRise", **kwargs) -> str:
-        name = (user_name or "there").split()[0]
-        lines = [
-            f"Hey {name},",
-            "",
-            intro_text,
-        ]
-        if body_text:
-            lines += ["", body_text]
-        if closing_text:
-            lines += ["", closing_text]
-        lines += [
-            "",
-            "If you have any questions, just reply to this email.",
-            "",
-            sender_name,
-            sender_title,
-        ]
-        return "\n".join(lines)
-
-    def render_weekly_engagement_plain(self, user_name: str, monologue_title: str = "", monologue_snippet: str = "", tip_title: str = "", tip_body: str = "", **kwargs) -> str:
+    def render_weekly_engagement_plain(self, user_name: str, character_analysis: str = "", monologue_snippet: str = "", monologue_url: str = "", **kwargs) -> str:
         name = user_name or "there"
         lines = [
             f"Hey {name},",
             "",
-            "Here's what caught my eye this week.",
         ]
-        if monologue_title:
-            lines += ["", f"This week's pick: {monologue_title}"]
-            if monologue_snippet:
-                lines += ["", f'"{monologue_snippet}"']
-        if tip_title:
-            lines += ["", f"{tip_title}", tip_body]
+        if character_analysis:
+            lines += [character_analysis, ""]
+        if monologue_snippet:
+            lines += [f'"{monologue_snippet}"', ""]
+        if monologue_url:
+            lines += [f"Read the full monologue: {monologue_url}", ""]
         lines += [
             "",
-            "If something caught your eye, just reply and let me know.",
+            "Want to practice a scene? Try our sample script or upload your own and start rehearsing with AI Scene Partner.",
+            "Try it: actorrise.com/dashboard",
+            "",
+            "I'd love your feedback on Scene Partner - just reply to this email. I read everything.",
             "",
             "Canberk",
-            "Founder | Actor",
+            "Founder, ActorRise",
             "actorrise.com",
         ]
+        return "\n".join(lines)
+
+    # ── Custom template (freeform with Markdown) ──
+
+    def _markdown_to_html(self, text: str) -> str:
+        """Convert Markdown text to simple HTML paragraphs."""
+        import re
+
+        # Split into paragraphs
+        paragraphs = text.strip().split("\n\n")
+        html_parts = []
+
+        for para in paragraphs:
+            if not para.strip():
+                continue
+
+            # Convert single newlines to <br>
+            para = para.replace("\n", "<br>")
+
+            # Bold: **text** or __text__
+            para = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', para)
+            para = re.sub(r'__(.+?)__', r'<strong>\1</strong>', para)
+
+            # Italic: *text* or _text_
+            para = re.sub(r'\*([^*]+)\*', r'<em>\1</em>', para)
+            para = re.sub(r'_([^_]+)_', r'<em>\1</em>', para)
+
+            # Links: [text](url)
+            para = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', para)
+
+            html_parts.append(f"<p>{para}</p>")
+
+        return "\n".join(html_parts)
+
+    def _markdown_to_plain(self, text: str) -> str:
+        """Convert Markdown to plain text (strip formatting)."""
+        import re
+
+        # Remove bold markers
+        text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+        text = re.sub(r'__(.+?)__', r'\1', text)
+
+        # Remove italic markers
+        text = re.sub(r'\*([^*]+)\*', r'\1', text)
+        text = re.sub(r'_([^_]+)_', r'\1', text)
+
+        # Convert links to "text (url)" format
+        text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'\1 (\2)', text)
+
+        return text
+
+    def render_custom(
+        self,
+        user_name: str,
+        body_markdown: str = "",
+        sender_name: str = "Canberk",
+        sender_title: str = "",
+        unsubscribe_url: Optional[str] = None,
+        **kwargs,
+    ) -> str:
+        """Render custom freeform email with Markdown support (HTML version for preview)."""
+        template = self.env.get_template('custom.html')
+        body_html = self._markdown_to_html(body_markdown) if body_markdown else ""
+        return template.render(
+            user_name=user_name or "there",
+            body_html=body_html,
+            sender_name=sender_name,
+            sender_title=sender_title,
+            unsubscribe_url=unsubscribe_url,
+            subject=kwargs.get("subject", ""),
+        )
+
+    def render_custom_plain(
+        self,
+        user_name: str,
+        body_markdown: str = "",
+        sender_name: str = "Canberk",
+        sender_title: str = "",
+        **kwargs,
+    ) -> str:
+        """Render custom freeform email as plain text."""
+        name = (user_name or "there").split()[0]
+        body_plain = self._markdown_to_plain(body_markdown) if body_markdown else ""
+        lines = [
+            f"hey {name},",
+            "",
+            body_plain,
+        ]
+        # Only add signature if sender_title is provided
+        if sender_title:
+            lines += ["", sender_name, sender_title]
         return "\n".join(lines)

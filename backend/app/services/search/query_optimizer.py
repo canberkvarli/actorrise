@@ -86,6 +86,7 @@ class QueryClassifier:
     ]
 
     # Tier 2: 2-5 word combinations (keywords + embedding)
+    # Also matches 6-8 word queries with clear filter structure
     TIER_2_PATTERNS = [
         r'^(sad|happy|angry|funny) (male|female|man|woman)$',
         r'^(funny|dramatic|sad) (piece|monologue)( for)? (male|female|man|woman)$',
@@ -97,6 +98,10 @@ class QueryClassifier:
         r'^(film|movie|tv|television) (male|female|man|woman)$',
         r'^(sad|happy|angry|funny|dramatic) (film|movie|tv) (monologue|piece)$',
         r'^(film|movie|tv|television) (monologue|piece)s? for (male|female|man|woman)$',
+        # Age-based patterns
+        r'^(monologue|piece)s? for (men|women|man|woman|male|female) under \d+',
+        r'^(monologue|piece)s? for (young|old|teen|middle.aged) (men|women|man|woman)$',
+        r'^(sad|funny|dramatic|comedic|sassy|smart|witty).* (monologue|piece)s? for (men|women|man|woman)',
     ]
 
     @classmethod
@@ -121,14 +126,15 @@ class QueryClassifier:
                 if re.match(pattern, query_lower):
                     return 1
 
-        # Tier 2: 2-5 words with recognizable patterns
-        if 2 <= word_count <= 5:
+        # Tier 2: 2-8 words with recognizable patterns
+        # Extended from 5 to 8 to capture queries like "smart ass monologues for men under 29"
+        if 2 <= word_count <= 8:
             for pattern in cls.TIER_2_PATTERNS:
                 if re.match(pattern, query_lower, re.IGNORECASE):
                     return 2
 
         # Tier 3: Complex semantic queries
-        # - More than 5 words
+        # - More than 8 words
         # - Contains complex phrases
         # - Metaphorical language
         return 3
@@ -332,8 +338,9 @@ class KeywordExtractor:
             # Romantic
             'romantic': 'romantic', 'loving': 'romantic',
 
-            # Sassy / Bold
+            # Sassy / Bold / Witty
             'sassy': 'comedic', 'sarcastic': 'comedic', 'witty': 'comedic',
+            'smart': 'comedic', 'clever': 'comedic', 'sharp': 'comedic',
             'bold': 'dramatic', 'fierce': 'dramatic', 'powerful': 'dramatic',
 
             # Others
@@ -402,7 +409,25 @@ class KeywordExtractor:
                 elif low >= 60:
                     filters['age_range'] = '60+'
 
-        # Single age: "26 year old", "18 years old", "50 year old"
+        # Single age: "26 year old", "18 years old", "50 year old", "under 29", "under 30 years old"
+        if 'age_range' not in filters:
+            # Match "under X" or "under X years old" or "younger than X"
+            under_age_match = re.search(r'\b(?:under|younger\s+than|less\s+than)\s*(\d{1,2})\s*(?:y(?:ears?)?\s*(?:old)?)?', query_lower)
+            if under_age_match:
+                age = int(under_age_match.group(1))
+                if age <= 20:
+                    filters['age_range'] = 'teens'
+                elif age <= 30:
+                    filters['age_range'] = '20s'
+                elif age <= 40:
+                    filters['age_range'] = '30s'
+                elif age <= 50:
+                    filters['age_range'] = '40s'
+                elif age <= 60:
+                    filters['age_range'] = '50s'
+                else:
+                    filters['age_range'] = '60+'
+
         if 'age_range' not in filters:
             single_age_match = re.search(r'\b(\d{1,2})\s*(?:year|yr)s?\s*old\b', query_lower)
             if single_age_match:
@@ -470,6 +495,17 @@ class KeywordExtractor:
             if char_key in query_lower:
                 # Store the character name for text matching
                 filters['character_name'] = char_name
+                break
+
+        # Check for tone phrases (multi-word like "smart ass", "bad ass")
+        TONE_PHRASES = {
+            'smart ass': 'comedic', 'smartass': 'comedic',
+            'bad ass': 'dramatic', 'badass': 'dramatic',
+            'kick ass': 'dramatic', 'kickass': 'dramatic',
+        }
+        for phrase, tone in TONE_PHRASES.items():
+            if phrase in query_lower and 'tone' not in filters:
+                filters['tone'] = tone
                 break
 
         # Add themes if found

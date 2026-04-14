@@ -627,7 +627,7 @@ export default function MyScriptsPage() {
                               <motion.p
                                 initial={{ opacity: 0 }}
                                 animate={{ opacity: 1 }}
-                                className={`text-[11px] leading-snug mt-0.5 ${isCompleted ? "text-muted-foreground/50" : "text-muted-foreground/80"}`}
+                                className={`text-[11px] leading-snug mt-0.5 ${isCompleted ? "text-muted-foreground/70" : "text-muted-foreground/80"}`}
                               >
                                 {step.detail}
                                 {isLatest && (
@@ -661,7 +661,7 @@ export default function MyScriptsPage() {
               </div>
               <button
                 onClick={() => abortControllerRef.current?.abort()}
-                className="mt-6 text-xs text-muted-foreground/60 hover:text-foreground transition-colors"
+                className="mt-6 text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
                 Cancel upload
               </button>
@@ -859,7 +859,7 @@ export default function MyScriptsPage() {
                             ) : (
                               <span>{script.num_characters} character{script.num_characters !== 1 ? "s" : ""}</span>
                             )}
-                            <span className="text-muted-foreground/40">·</span>
+                            <span className="text-muted-foreground/70">·</span>
                             {(script.scene_titles?.length ?? 0) > 0 || script.first_scene_title ? (
                               <Tooltip>
                                 <TooltipTrigger asChild>
@@ -887,7 +887,7 @@ export default function MyScriptsPage() {
                             )}
                             {script.estimated_length_minutes != null && (
                               <>
-                                <span className="text-muted-foreground/40">·</span>
+                                <span className="text-muted-foreground/70">·</span>
                                 <span>~{script.estimated_length_minutes} min</span>
                               </>
                             )}
@@ -922,7 +922,7 @@ export default function MyScriptsPage() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-9 w-9 text-muted-foreground/50 hover:text-muted-foreground hover:bg-muted/60"
+                            className="h-9 w-9 text-muted-foreground/70 hover:text-muted-foreground hover:bg-muted/60"
                             onClick={() => {
                               toast("Report issues from the script detail page — open the script and use the flag on each scene.", { duration: 4000 });
                             }}

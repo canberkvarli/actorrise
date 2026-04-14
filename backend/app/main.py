@@ -85,7 +85,7 @@ def _warmup_search_cache_background():
             logger.info("Starting search cache warmup (%d queries)...", len(COMMON_WARMUP_QUERIES))
             cache_manager.warmup_common_queries(
                 COMMON_WARMUP_QUERIES,
-                lambda q: generate_embedding(q, model="text-embedding-3-large", dimensions=3072)
+                lambda q: generate_embedding(q, model="text-embedding-3-large", dimensions=1536)
             )
             logger.info("Search cache warmup complete")
         except Exception as e:

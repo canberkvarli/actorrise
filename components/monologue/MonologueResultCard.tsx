@@ -164,6 +164,18 @@ export function MonologueResultCard({
                   <span className="text-[11px] text-muted-foreground">{mono.character_age_range}</span>
                 </>
               )}
+              {mono.category && (
+                <Badge
+                  variant="outline"
+                  className={`text-[10px] px-1.5 py-0 h-5 font-medium capitalize ${
+                    mono.category.toLowerCase() === 'classical'
+                      ? 'border-amber-500/50 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30'
+                      : 'border-sky-500/50 text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950/30'
+                  }`}
+                >
+                  {mono.category}
+                </Badge>
+              )}
               {mono.primary_emotion && mono.primary_emotion.toLowerCase() !== "unknown" && (
                 <Badge variant="secondary" className={`ml-auto font-medium capitalize text-[11px] px-2 py-0.5 ${getEmotionBadgeClassName(mono.primary_emotion)}`}>
                   {mono.primary_emotion}

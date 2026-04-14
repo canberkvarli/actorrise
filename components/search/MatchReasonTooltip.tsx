@@ -31,7 +31,7 @@ export function MatchReasonTooltip({ reasons }: MatchReasonTooltipProps) {
             type="button"
             onClick={(e) => e.stopPropagation()}
             onPointerDown={(e) => e.stopPropagation()}
-            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground/60 hover:text-foreground transition-colors cursor-pointer shrink-0"
+            className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors cursor-pointer shrink-0"
             aria-label="Why this result matched"
           >
             <IconInfoCircle className="h-3 w-3" />

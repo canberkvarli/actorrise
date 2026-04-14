@@ -1,21 +1,22 @@
 """Semantic search for monologues using embeddings."""
 
+import concurrent.futures
 import hashlib
 import json
 import logging
-import concurrent.futures
 import random as _random
 import re
 from collections import OrderedDict
 from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+from sqlalchemy import func, or_, text
+from sqlalchemy.orm import Session, joinedload
+
 from app.models.actor import Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
 from app.services.search.cache_manager import cache_manager
 from app.services.search.query_optimizer import QueryOptimizer
-from sqlalchemy import func, or_, text
-from sqlalchemy.orm import Session
 
 # Module-level in-memory caches (Level 0 hot cache shared across SemanticSearch instances).
 # Uses OrderedDict for LRU eviction - popular queries stay cached longer.
@@ -36,7 +37,8 @@ QUERY_PARSE_CACHE: OrderedDict[str, Dict] = OrderedDict()
 SEARCH_RESULTS_CACHE: OrderedDict[str, List[Any]] = OrderedDict()
 
 
-_AGE_RANGE_ORDER = ['teens', '20s', '30s', '40s', '50s', '60s', '70s']
+_AGE_RANGE_ORDER = ["teens", "20s", "30s", "40s", "50s", "60s", "70s"]
+
 
 def _expand_age_range(age_range: str) -> List[str]:
     """Expand an age range to include adjacent ranges + 'any'.
@@ -46,13 +48,13 @@ def _expand_age_range(age_range: str) -> List[str]:
     try:
         idx = _AGE_RANGE_ORDER.index(age_lower)
     except ValueError:
-        return [age_range, 'any']
+        return [age_range, "any"]
     adjacent = {_AGE_RANGE_ORDER[idx]}
     if idx > 0:
         adjacent.add(_AGE_RANGE_ORDER[idx - 1])
     if idx < len(_AGE_RANGE_ORDER) - 1:
         adjacent.add(_AGE_RANGE_ORDER[idx + 1])
-    adjacent.add('any')
+    adjacent.add("any")
     return list(adjacent)
 
 
@@ -60,6 +62,7 @@ def _evict_if_needed(cache: OrderedDict, max_size: int) -> None:
     """Remove oldest entries until cache is within max_size."""
     while len(cache) > max_size:
         cache.popitem(last=False)
+
 
 # Minimum relevance (0–1) to show any results. Below this, the query is treated as no match
 # (e.g. unrelated language, gibberish) and we return empty instead of weak semantic hits.
@@ -118,7 +121,12 @@ def _keyword_match_score_and_type(mono: Monologue, query: str) -> Tuple[float, s
         return (0.95, "title_match")
     if q in char_lower or char_lower in q:
         return (0.90, "character_match")
-    if q in play_title_lower or play_title_lower in q or q in play_author_lower or play_author_lower in q:
+    if (
+        q in play_title_lower
+        or play_title_lower in q
+        or q in play_author_lower
+        or play_author_lower in q
+    ):
         return (0.85, "play_match")
     return (0.0, "")
 
@@ -193,7 +201,7 @@ def _calculate_relevance_score_multiplicative(
     mono: Monologue,
     merged_filters: Dict,
     actor_profile: Optional[Dict],
-    is_bookmarked: bool
+    is_bookmarked: bool,
 ) -> float:
     """
     IMPROVED: Multiplicative scoring to prevent saturation and preserve ranking.
@@ -215,15 +223,15 @@ def _calculate_relevance_score_multiplicative(
 
     # Weight constants (tuned for good results)
     WEIGHTS = {
-        'filter_gender': 0.25,
-        'filter_emotion': 0.15,
-        'filter_tone': 0.12,
-        'filter_age_range': 0.20,
-        'filter_duration': 0.12,
-        'filter_theme': 0.08,
-        'profile_gender': 0.10,
-        'profile_age': 0.05,
-        'bookmark': 0.20,  # Reduced from +0.3 additive
+        "filter_gender": 0.25,
+        "filter_emotion": 0.15,
+        "filter_tone": 0.12,
+        "filter_age_range": 0.20,
+        "filter_duration": 0.12,
+        "filter_theme": 0.08,
+        "profile_gender": 0.10,
+        "profile_age": 0.05,
+        "bookmark": 0.20,  # Reduced from +0.3 additive
     }
 
     # 1. Filter matches
@@ -231,31 +239,35 @@ def _calculate_relevance_score_multiplicative(
         g = (mono.character_gender or "").lower()
         want = (merged_filters["gender"] or "").lower()
         if g == want or g == "any" or want == "any":
-            score *= (1 + WEIGHTS['filter_gender'])
+            score *= 1 + WEIGHTS["filter_gender"]
 
     if merged_filters.get("emotion"):
         e = (mono.primary_emotion or "").lower()
         if e == (merged_filters["emotion"] or "").lower():
-            score *= (1 + WEIGHTS['filter_emotion'])
+            score *= 1 + WEIGHTS["filter_emotion"]
 
     if merged_filters.get("tone"):
         t = (mono.tone or "").lower()
         if t == (merged_filters["tone"] or "").lower():
-            score *= (1 + WEIGHTS['filter_tone'])
+            score *= 1 + WEIGHTS["filter_tone"]
 
     if merged_filters.get("age_range"):
         ca = (mono.character_age_range or "").lower()
         want_age = (merged_filters["age_range"] or "").lower()
         if ca == want_age:
-            score *= (1 + WEIGHTS['filter_age_range'])  # Full boost for exact match
-        elif ca == "any" or ca in [a for a in _expand_age_range(want_age) if a != want_age and a != 'any']:
-            score *= (1 + WEIGHTS['filter_age_range'] * 0.5)  # Half boost for adjacent/any
+            score *= 1 + WEIGHTS["filter_age_range"]  # Full boost for exact match
+        elif ca == "any" or ca in [
+            a for a in _expand_age_range(want_age) if a != want_age and a != "any"
+        ]:
+            score *= (
+                1 + WEIGHTS["filter_age_range"] * 0.5
+            )  # Half boost for adjacent/any
 
     if merged_filters.get("max_duration") and mono.estimated_duration_seconds:
         try:
             max_sec = int(merged_filters["max_duration"])
             if mono.estimated_duration_seconds <= max_sec:
-                score *= (1 + WEIGHTS['filter_duration'])
+                score *= 1 + WEIGHTS["filter_duration"]
         except (TypeError, ValueError):
             pass
 
@@ -263,16 +275,18 @@ def _calculate_relevance_score_multiplicative(
         try:
             min_sec = int(merged_filters["min_duration"])
             if mono.estimated_duration_seconds >= min_sec:
-                score *= (1 + WEIGHTS['filter_duration'])
+                score *= 1 + WEIGHTS["filter_duration"]
         except (TypeError, ValueError):
             pass
 
-    want_themes = merged_filters.get("themes") or ([merged_filters["theme"]] if merged_filters.get("theme") else None)
+    want_themes = merged_filters.get("themes") or (
+        [merged_filters["theme"]] if merged_filters.get("theme") else None
+    )
     if want_themes and mono.themes:
         mono_themes_lower = [str(t).lower() for t in (mono.themes or []) if t]
         for wt in want_themes if isinstance(want_themes, list) else [want_themes]:
             if wt and str(wt).lower() in mono_themes_lower:
-                score *= (1 + WEIGHTS['filter_theme'])
+                score *= 1 + WEIGHTS["filter_theme"]
                 break
 
     # 2. Profile matches
@@ -281,17 +295,17 @@ def _calculate_relevance_score_multiplicative(
         if ap_gender:
             cg = (mono.character_gender or "").lower()
             if cg == ap_gender or cg == "any":
-                score *= (1 + WEIGHTS['profile_gender'])
+                score *= 1 + WEIGHTS["profile_gender"]
 
         ap_age = (actor_profile.get("age_range") or "").strip().lower()
         if ap_age:
             ca = (mono.character_age_range or "").lower()
             if ca == ap_age or ca == "any":
-                score *= (1 + WEIGHTS['profile_age'])
+                score *= 1 + WEIGHTS["profile_age"]
 
     # 3. Bookmark boost
     if is_bookmarked:
-        score *= (1 + WEIGHTS['bookmark'])
+        score *= 1 + WEIGHTS["bookmark"]
 
     # Soft cap at 1.0, but allow exceptional matches to go slightly higher
     return min(1.0, score)
@@ -313,7 +327,7 @@ def _exact_quote_match_with_boundaries(query: str, text: str) -> bool:
         return False
 
     # Use regex with word boundaries
-    pattern = r'\b' + re.escape(query).replace(r'\ ', r'\s+') + r'\b'
+    pattern = r"\b" + re.escape(query).replace(r"\ ", r"\s+") + r"\b"
     return re.search(pattern, text, re.IGNORECASE) is not None
 
 
@@ -404,6 +418,7 @@ class SemanticSearch:
         """
 
         import time
+
         overall_start = time.time()
         self._debug_timing: Dict[str, Any] = {"start": overall_start}
 
@@ -427,9 +442,11 @@ class SemanticSearch:
         # For cold-cache Tier 3 queries, this saves ~1-2s by running the
         # embedding API call concurrently with the AI query parsing call.
         embedding_model = "text-embedding-3-large"
-        embedding_dims = 3072
+        embedding_dims = 1536  # Max 2000 for pgvector HNSW indexing
         _emb_cache_suffix = f"_{embedding_model}_{embedding_dims}"
-        _emb_hash = hashlib.md5((canonical_query + _emb_cache_suffix).encode()).hexdigest()
+        _emb_hash = hashlib.md5(
+            (canonical_query + _emb_cache_suffix).encode()
+        ).hexdigest()
         _precomputed_embedding: Optional[List[float]] = None
         _embedding_future: Optional[concurrent.futures.Future] = None
         _emb_start: Optional[float] = None
@@ -453,15 +470,23 @@ class SemanticSearch:
                 # No cache hit — start embedding generation in background thread
                 # so it runs in parallel with AI query parsing (Tier 3) or
                 # filter merging + result cache check (Tier 1/2).
-                from app.services.ai.langchain.embeddings import generate_embedding as _gen_emb
-                logger.debug("Embedding pre-check: cache miss, starting background generation")
+                from app.services.ai.langchain.embeddings import (
+                    generate_embedding as _gen_emb,
+                )
+
+                logger.debug(
+                    "Embedding pre-check: cache miss, starting background generation"
+                )
                 self._debug_timing["embedding_source"] = "generated"
                 _emb_start = time.time()
                 # Use 2 workers to allow parallel embedding + AI parsing
                 _emb_executor = concurrent.futures.ThreadPoolExecutor(max_workers=2)
                 _embedding_future = _emb_executor.submit(
-                    _gen_emb, text=query, model=embedding_model,
-                    dimensions=embedding_dims, api_key=self.analyzer.api_key
+                    _gen_emb,
+                    text=query,
+                    model=embedding_model,
+                    dimensions=embedding_dims,
+                    api_key=self.analyzer.api_key,
                 )
 
         if explicit_filters:
@@ -470,7 +495,9 @@ class SemanticSearch:
         else:
             if tier in (1, 2):
                 # For simple/medium queries, rely on keyword extraction only (no AI).
-                logger.debug("Tier 1/2 query with no explicit filters - skipping AI query parsing")
+                logger.debug(
+                    "Tier 1/2 query with no explicit filters - skipping AI query parsing"
+                )
             else:
                 # Tier 3: complex semantic query – use AI parsing with multi-level caching.
                 query_hash = hashlib.md5(canonical_query.encode()).hexdigest()
@@ -481,7 +508,9 @@ class SemanticSearch:
                     extracted_filters = QUERY_PARSE_CACHE[query_hash]
                     self._debug_timing["ai_parse_source"] = "memory_cache"
                     self._debug_timing["ai_parse_ms"] = 0
-                    QUERY_PARSE_CACHE.move_to_end(query_hash)  # Mark as recently used (LRU)
+                    QUERY_PARSE_CACHE.move_to_end(
+                        query_hash
+                    )  # Mark as recently used (LRU)
                 else:
                     # Level 1: Redis cache via CacheManager
                     cached_filters = self.cache.get_parsed_filters(canonical_query)
@@ -501,15 +530,19 @@ class SemanticSearch:
                         self._debug_timing["ai_parse_source"] = "api"
                         # Store in both in-memory and Redis caches
                         QUERY_PARSE_CACHE[query_hash] = extracted_filters
-                        QUERY_PARSE_CACHE.move_to_end(query_hash)  # Mark as recently used
-                        self.cache.set_parsed_filters(canonical_query, extracted_filters)
+                        QUERY_PARSE_CACHE.move_to_end(
+                            query_hash
+                        )  # Mark as recently used
+                        self.cache.set_parsed_filters(
+                            canonical_query, extracted_filters
+                        )
 
                         _evict_if_needed(QUERY_PARSE_CACHE, _MAX_QUERY_PARSE_CACHE)
 
         # Extract AI validation fields before merging
         if extracted_filters:
-            ai_valid = extracted_filters.pop('is_valid_search', None)
-            ai_corrected = extracted_filters.pop('corrected_query', None)
+            ai_valid = extracted_filters.pop("is_valid_search", None)
+            ai_corrected = extracted_filters.pop("corrected_query", None)
             if ai_valid is not None:
                 self._ai_is_valid_search = ai_valid
             if ai_corrected:
@@ -519,35 +552,57 @@ class SemanticSearch:
 
         # Normalize gender values from AI (it may return "woman"/"man" instead of "female"/"male")
         _GENDER_NORMALIZE = {
-            'woman': 'female', 'women': 'female', 'girl': 'female', 'lady': 'female', 'feminine': 'female', 'she': 'female', 'her': 'female',
-            'man': 'male', 'men': 'male', 'boy': 'male', 'gentleman': 'male', 'masculine': 'male', 'he': 'male', 'him': 'male',
+            "woman": "female",
+            "women": "female",
+            "girl": "female",
+            "lady": "female",
+            "feminine": "female",
+            "she": "female",
+            "her": "female",
+            "man": "male",
+            "men": "male",
+            "boy": "male",
+            "gentleman": "male",
+            "masculine": "male",
+            "he": "male",
+            "him": "male",
         }
         for filters_dict in [extracted_filters, optimized_filters, explicit_filters]:
-            if filters_dict and filters_dict.get('gender'):
-                g = filters_dict['gender'].lower().strip()
-                filters_dict['gender'] = _GENDER_NORMALIZE.get(g, g)
+            if filters_dict and filters_dict.get("gender"):
+                g = filters_dict["gender"].lower().strip()
+                filters_dict["gender"] = _GENDER_NORMALIZE.get(g, g)
 
         # Safety net: regex-based gender detection from query text (in case AI missed it)
         _query_lower = query.lower()
         _has_gender_in_any = any(
-            d and d.get('gender') for d in [extracted_filters, optimized_filters, explicit_filters]
+            d and d.get("gender")
+            for d in [extracted_filters, optimized_filters, explicit_filters]
         )
         if not _has_gender_in_any:
             import re as _re
-            if _re.search(r'\b(female|woman|women|girl|lady|for her|for a woman)\b', _query_lower):
+
+            if _re.search(
+                r"\b(female|woman|women|girl|lady|for her|for a woman)\b", _query_lower
+            ):
                 if extracted_filters is None:
                     extracted_filters = {}
-                extracted_filters['gender'] = 'female'
+                extracted_filters["gender"] = "female"
                 logger.debug("Safety net: detected gender=female from query text")
-            elif _re.search(r'\b(male|man|men|boy|for him|for a man|gentleman)\b', _query_lower):
+            elif _re.search(
+                r"\b(male|man|men|boy|for him|for a man|gentleman)\b", _query_lower
+            ):
                 if extracted_filters is None:
                     extracted_filters = {}
-                extracted_filters['gender'] = 'male'
+                extracted_filters["gender"] = "male"
                 logger.debug("Safety net: detected gender=male from query text")
 
         # Merge filters in precedence order:
         # AI-parsed < keyword-derived (optimized) < explicit filters
-        merged_filters = {**(extracted_filters or {}), **(optimized_filters or {}), **(explicit_filters or {})}
+        merged_filters = {
+            **(extracted_filters or {}),
+            **(optimized_filters or {}),
+            **(explicit_filters or {}),
+        }
         logger.debug("Merged filters (final): %s", merged_filters)
         self._debug_timing["filters_merged"] = dict(merged_filters)
         self._debug_timing["filters_ms"] = round((time.time() - overall_start) * 1000)
@@ -561,7 +616,14 @@ class SemanticSearch:
         # "funny monologue" must return joy, "for a woman" must return female/any.
         # These are unambiguous user intent. Age, tone, themes stay as boosts
         # since they're fuzzier (embedding handles the nuance).
-        BOOST_ONLY_KEYS = {'tone', 'age_range', 'theme', 'themes', 'intended_play', 'intended_author'}
+        BOOST_ONLY_KEYS = {
+            "tone",
+            "age_range",
+            "theme",
+            "themes",
+            "intended_play",
+            "intended_author",
+        }
         hard_filters = {}
         for k, v in merged_filters.items():
             if k in BOOST_ONLY_KEYS:
@@ -571,11 +633,14 @@ class SemanticSearch:
             else:
                 hard_filters[k] = v
         logger.debug("Hard filters (SQL WHERE): %s", hard_filters)
-        logger.debug("Boost-only filters (scoring): %s", {k: v for k, v in merged_filters.items() if k not in hard_filters})
+        logger.debug(
+            "Boost-only filters (scoring): %s",
+            {k: v for k, v in merged_filters.items() if k not in hard_filters},
+        )
 
         # Store intended play/author for content gap detection by the caller
-        self._intended_play = merged_filters.get('intended_play')
-        self._intended_author = merged_filters.get('intended_author')
+        self._intended_play = merged_filters.get("intended_play")
+        self._intended_author = merged_filters.get("intended_author")
 
         # Optional: check cache for full search results for this (query, filters, user)
         cache_filters_for_results: Dict = dict(merged_filters)
@@ -592,13 +657,19 @@ class SemanticSearch:
 
         # Level 1: Redis cache for full search results (if enabled)
         if self.cache.redis_enabled:
-            cached = self.cache.get_search_results(canonical_query, cache_filters_for_results)
+            cached = self.cache.get_search_results(
+                canonical_query, cache_filters_for_results
+            )
         else:
             # Level 0: in-memory result cache shared within this process
             cached = SEARCH_RESULTS_CACHE.get(results_cache_key)
 
         if cached:
-            logger.debug("Using cached search results for query=%r filters=%s", query, cache_filters_for_results)
+            logger.debug(
+                "Using cached search results for query=%r filters=%s",
+                query,
+                cache_filters_for_results,
+            )
             # Cache format: list of [id, score] so we preserve confidence scores for UI
             if cached and isinstance(cached[0], (list, tuple)):
                 cached_ids = [item[0] for item in cached]
@@ -607,7 +678,12 @@ class SemanticSearch:
                 # Legacy: list of ids only
                 cached_ids = list(cached)
                 cached_scores = {}
-            mons = self.db.query(Monologue).join(Play).filter(Monologue.id.in_(cached_ids)).all()
+            mons = (
+                self.db.query(Monologue)
+                .join(Play)
+                .filter(Monologue.id.in_(cached_ids))
+                .all()
+            )
             mon_by_id: Dict[Any, Monologue] = {m.id: m for m in mons}
             ordered_with_scores: List[tuple[Monologue, float]] = [
                 (mon_by_id[mid], cached_scores.get(mid, 0.0))
@@ -615,14 +691,20 @@ class SemanticSearch:
                 if mid in mon_by_id
             ]
             overall_time = time.time() - overall_start
-            logger.debug("Total search time (cache hit): %.2fs, results: %s", overall_time, len(ordered_with_scores))
+            logger.debug(
+                "Total search time (cache hit): %.2fs, results: %s",
+                overall_time,
+                len(ordered_with_scores),
+            )
             self._debug_timing["total_ms"] = round(overall_time * 1000)
             self._debug_timing["result_count"] = len(ordered_with_scores)
             self._debug_timing["results_source"] = "cache"
             # Restore quote_match_type from cache if stored (payload item length >= 3)
             quote_types: Dict[int, str] = {}
             if cached and isinstance(cached[0], (list, tuple)) and len(cached[0]) >= 3:
-                quote_types = {item[0]: item[2] for item in cached if len(item) >= 3 and item[2]}
+                quote_types = {
+                    item[0]: item[2] for item in cached if len(item) >= 3 and item[2]
+                }
             return (ordered_with_scores[:limit], quote_types)
 
         # Retrieve embedding from early parallel fetch or cache (started before AI parsing)
@@ -652,12 +734,18 @@ class SemanticSearch:
             # Fallback: generate embedding synchronously (shouldn't normally reach here)
             logger.debug("Generating embedding synchronously (fallback): %s", query)
             from app.services.ai.langchain.embeddings import generate_embedding
+
             _emb_start_sync = time.time()
             query_embedding = generate_embedding(
-                text=query, model=embedding_model,
-                dimensions=embedding_dims, api_key=self.analyzer.api_key
+                text=query,
+                model=embedding_model,
+                dimensions=embedding_dims,
+                api_key=self.analyzer.api_key,
             )
-            logger.debug("Embedding generation (sync fallback) took %.2fs", time.time() - _emb_start_sync)
+            logger.debug(
+                "Embedding generation (sync fallback) took %.2fs",
+                time.time() - _emb_start_sync,
+            )
             if query_embedding:
                 _emb_cache_query_store = canonical_query + _emb_cache_suffix
                 EMBEDDING_CACHE[_emb_hash] = query_embedding
@@ -667,111 +755,115 @@ class SemanticSearch:
 
         if not query_embedding:
             logger.info("Failed to generate embedding, falling back to text search")
-            fallback = self._fallback_text_search(query, limit, hard_filters, explicit_filters)
+            fallback = self._fallback_text_search(
+                query, limit, hard_filters, explicit_filters
+            )
             return ([(m, 0.0) for m in fallback], {})
 
         # Hybrid search: run text search for direct play/character/title matches and merge on top.
         # Many monologues (e.g. from Gutenberg) have no embeddings, so "hamlet" would otherwise
         # return only semantic results from other plays and never show Hamlet.
-        text_match_results = self._fallback_text_search(query, limit=limit, filters=hard_filters, explicit_filters=explicit_filters)
+        text_match_results = self._fallback_text_search(
+            query, limit=limit, filters=hard_filters, explicit_filters=explicit_filters
+        )
 
-        # Build base query
-        base_query = self.db.query(Monologue).join(Play)
+        # Build base query (eager-load Play to avoid N+1 during scoring/response)
+        base_query = (
+            self.db.query(Monologue).join(Play).options(joinedload(Monologue.play))
+        )
 
         # Apply ONLY hard filters as SQL WHERE clauses.
         # Soft filters (emotion, tone, age_range, theme from NL query) are applied
         # as score boosts in _calculate_relevance_score_multiplicative instead.
         if hard_filters:
-            if hard_filters.get('gender'):
+            if hard_filters.get("gender"):
                 base_query = base_query.filter(
-                    Monologue.character_gender == hard_filters['gender']
+                    Monologue.character_gender == hard_filters["gender"]
                 )
 
-            if hard_filters.get('age_range'):
-                expanded_ages = _expand_age_range(hard_filters['age_range'])
+            if hard_filters.get("age_range"):
+                expanded_ages = _expand_age_range(hard_filters["age_range"])
                 base_query = base_query.filter(
                     Monologue.character_age_range.in_(expanded_ages)
                 )
 
-            if hard_filters.get('emotion'):
+            if hard_filters.get("emotion"):
                 base_query = base_query.filter(
-                    Monologue.primary_emotion == hard_filters['emotion']
+                    Monologue.primary_emotion == hard_filters["emotion"]
                 )
 
-            if hard_filters.get('theme'):
-                theme = hard_filters['theme']
+            if hard_filters.get("theme"):
+                theme = hard_filters["theme"]
                 base_query = base_query.filter(
-                    text("monologues.themes @> ARRAY[:theme_val]::character varying[]").bindparams(theme_val=theme)
+                    text(
+                        "monologues.themes @> ARRAY[:theme_val]::character varying[]"
+                    ).bindparams(theme_val=theme)
                 )
 
-            if hard_filters.get('themes'):
-                themes = hard_filters['themes']
+            if hard_filters.get("themes"):
+                themes = hard_filters["themes"]
                 if isinstance(themes, list) and len(themes) > 0:
                     theme_conditions = [
-                        text("monologues.themes @> ARRAY[:theme_val]::character varying[]").bindparams(theme_val=theme)
+                        text(
+                            "monologues.themes @> ARRAY[:theme_val]::character varying[]"
+                        ).bindparams(theme_val=theme)
                         for theme in themes
                     ]
                     base_query = base_query.filter(or_(*theme_conditions))
 
-            if hard_filters.get('tone'):
+            if hard_filters.get("tone"):
+                base_query = base_query.filter(Monologue.tone == hard_filters["tone"])
+
+            if hard_filters.get("difficulty"):
                 base_query = base_query.filter(
-                    Monologue.tone == hard_filters['tone']
+                    Monologue.difficulty_level == hard_filters["difficulty"]
                 )
 
-            if hard_filters.get('difficulty'):
-                base_query = base_query.filter(
-                    Monologue.difficulty_level == hard_filters['difficulty']
-                )
-
-            if hard_filters.get('category'):
-                category = hard_filters['category']
+            if hard_filters.get("category"):
+                category = hard_filters["category"]
                 if isinstance(category, list):
                     category_conditions = [
-                        Play.category.ilike(f'%{cat}%') for cat in category
+                        Play.category.ilike(f"%{cat}%") for cat in category
                     ]
                     base_query = base_query.filter(or_(*category_conditions))
                 else:
-                    base_query = base_query.filter(
-                        Play.category.ilike(f'%{category}%')
-                    )
+                    base_query = base_query.filter(Play.category.ilike(f"%{category}%"))
 
-            if hard_filters.get('author'):
+            if hard_filters.get("author"):
                 base_query = base_query.filter(
                     Play.author.ilike(f"%{hard_filters['author']}%")
                 )
 
-            if hard_filters.get('exclude_author'):
+            if hard_filters.get("exclude_author"):
                 base_query = base_query.filter(
                     ~Play.author.ilike(f"%{hard_filters['exclude_author']}%")
                 )
 
-            if hard_filters.get('character_name'):
+            if hard_filters.get("character_name"):
                 base_query = base_query.filter(
-                    Monologue.character_name.ilike(f"%{hard_filters['character_name']}%")
+                    Monologue.character_name.ilike(
+                        f"%{hard_filters['character_name']}%"
+                    )
                 )
 
-            if hard_filters.get('max_duration'):
+            if hard_filters.get("max_duration"):
                 base_query = base_query.filter(
-                    Monologue.estimated_duration_seconds <= hard_filters['max_duration']
+                    Monologue.estimated_duration_seconds <= hard_filters["max_duration"]
                 )
 
-            if hard_filters.get('min_duration'):
+            if hard_filters.get("min_duration"):
                 base_query = base_query.filter(
-                    Monologue.estimated_duration_seconds >= hard_filters['min_duration']
+                    Monologue.estimated_duration_seconds >= hard_filters["min_duration"]
                 )
 
-            if hard_filters.get('act'):
-                base_query = base_query.filter(
-                    Monologue.act == hard_filters['act']
-                )
+            if hard_filters.get("act"):
+                base_query = base_query.filter(Monologue.act == hard_filters["act"])
 
-            if hard_filters.get('scene'):
-                base_query = base_query.filter(
-                    Monologue.scene == hard_filters['scene']
-                )
+            if hard_filters.get("scene"):
+                base_query = base_query.filter(Monologue.scene == hard_filters["scene"])
 
-            if hard_filters.get('max_overdone_score') is not None:
-                threshold = float(hard_filters['max_overdone_score'])
+            if hard_filters.get("max_overdone_score") is not None:
+                threshold = float(hard_filters["max_overdone_score"])
                 base_query = base_query.filter(
                     or_(
                         Monologue.overdone_score.is_(None),
@@ -779,8 +871,8 @@ class SemanticSearch:
                     )
                 )
 
-            if hard_filters.get('source_type'):
-                st = hard_filters['source_type']
+            if hard_filters.get("source_type"):
+                st = hard_filters["source_type"]
                 if isinstance(st, list):
                     base_query = base_query.filter(Play.source_type.in_(st))
                 else:
@@ -792,16 +884,21 @@ class SemanticSearch:
         bookmarked_ids = set()
         if user_id:
             from app.models.actor import MonologueFavorite
-            favorites = self.db.query(MonologueFavorite.monologue_id).filter(
-                MonologueFavorite.user_id == user_id
-            ).order_by(MonologueFavorite.created_at.desc()).limit(1000).all()
+
+            favorites = (
+                self.db.query(MonologueFavorite.monologue_id)
+                .filter(MonologueFavorite.user_id == user_id)
+                .order_by(MonologueFavorite.created_at.desc())
+                .limit(1000)
+                .all()
+            )
             bookmarked_ids = {f[0] for f in favorites}
 
         # OPTIMIZATION: Prefer DB-side vector search via pgvector when available.
         # We first try to use the `embedding_vector` pgvector column, and only
         # fall back to legacy JSON embeddings + Python cosine similarity when
         # pgvector is not available or no vectors exist yet.
-        MAX_CANDIDATES = 150  # Upper bound for candidate pool size
+        MAX_CANDIDATES = 75  # Upper bound for candidate pool size
 
         results_with_scores: List[tuple[Monologue, float]] = []
 
@@ -812,6 +909,14 @@ class SemanticSearch:
             # OPTIMIZED: Reduced from 3x to 1.5x since HNSW indexes are now in place
             VECTOR_CANDIDATES = min(MAX_CANDIDATES, max(int(limit * 1.5), limit))
 
+            # OPTIMIZATION: Set ef_search for faster HNSW queries (default is 40).
+            # Lower = faster but less accurate, higher = slower but more accurate.
+            # 40 is a good balance for our corpus size (~7.5k monologues).
+            try:
+                self.db.execute(text("SET hnsw.ef_search = 40"))
+            except Exception:
+                pass  # Non-fatal if this fails (e.g., old pgvector version)
+
             semantic_candidates = (
                 base_query.filter(Monologue.embedding_vector.isnot(None))
                 .order_by(Monologue.embedding_vector.cosine_distance(query_embedding))
@@ -821,7 +926,8 @@ class SemanticSearch:
 
             logger.debug(
                 "Loaded %s monologues with pgvector embeddings (max: %s)",
-                len(semantic_candidates), VECTOR_CANDIDATES
+                len(semantic_candidates),
+                VECTOR_CANDIDATES,
             )
 
             # pgvector already returned candidates sorted best-first by cosine distance.
@@ -842,14 +948,23 @@ class SemanticSearch:
                 self.db.rollback()
             except Exception:
                 pass
-            fallback_monologues = self._fallback_text_search(query, limit, hard_filters, explicit_filters)
+            fallback_monologues = self._fallback_text_search(
+                query, limit, hard_filters, explicit_filters
+            )
             return ([(m, 0.0) for m in fallback_monologues], {})
 
         # IMPROVED: Apply all boosts using multiplicative scoring (prevents saturation)
         results_with_scores = [
-            (mono, _calculate_relevance_score_multiplicative(
-                score, mono, merged_filters, actor_profile, mono.id in bookmarked_ids
-            ))
+            (
+                mono,
+                _calculate_relevance_score_multiplicative(
+                    score,
+                    mono,
+                    merged_filters,
+                    actor_profile,
+                    mono.id in bookmarked_ids,
+                ),
+            )
             for mono, score in results_with_scores
         ]
 
@@ -865,7 +980,11 @@ class SemanticSearch:
         # Merge hybrid: combine text and semantic matches, sort by best score
         if text_match_results:
             existing_ids = {m.id for m in text_match_results}
-            semantic_only = [(mono, score) for mono, score in top_semantic if mono.id not in existing_ids]
+            semantic_only = [
+                (mono, score)
+                for mono, score in top_semantic
+                if mono.id not in existing_ids
+            ]
             semantic_scores_by_id = {mono.id: score for mono, score in top_semantic}
             combined_with_scores: list[tuple[Monologue, float]] = []
 
@@ -873,7 +992,10 @@ class SemanticSearch:
             for m in text_match_results:
                 kw_score, kw_type = _keyword_match_score_and_type(m, query)
                 # Use best of semantic score or keyword score so title/character/play matches rank at top
-                score = max(semantic_scores_by_id.get(m.id, 0.0), kw_score if kw_score > 0 else 0.0)
+                score = max(
+                    semantic_scores_by_id.get(m.id, 0.0),
+                    kw_score if kw_score > 0 else 0.0,
+                )
                 if kw_type:
                     quote_match_type_by_id[m.id] = kw_type
                 combined_with_scores.append((m, score))
@@ -887,7 +1009,10 @@ class SemanticSearch:
 
             logger.debug(
                 "Hybrid: %s text + %s semantic = %s combined, top %s after sorting",
-                len(text_match_results), len(semantic_only), len(combined_with_scores), len(top_results)
+                len(text_match_results),
+                len(semantic_only),
+                len(combined_with_scores),
+                len(top_results),
             )
         else:
             top_results = top_semantic
@@ -923,8 +1048,10 @@ class SemanticSearch:
                 top_results = exact_matches + fuzzy_matches + other_results
                 logger.debug(
                     "Famous-line boost: %s exact (%.2f), %s fuzzy (%.2f)",
-                    len(exact_matches), EXACT_QUOTE_MATCH_SCORE,
-                    len(fuzzy_matches), FUZZY_QUOTE_MATCH_SCORE
+                    len(exact_matches),
+                    EXACT_QUOTE_MATCH_SCORE,
+                    len(fuzzy_matches),
+                    FUZZY_QUOTE_MATCH_SCORE,
                 )
 
         # Tag ALL results with keyword match type (title/character/play) if applicable.
@@ -946,32 +1073,47 @@ class SemanticSearch:
         if top_results:
             best_score = max(s for _, s in top_results)
             if best_score < MIN_RELEVANCE_TO_SHOW:
-                logger.debug("Best relevance %.3f below threshold %.2f; returning no results", best_score, MIN_RELEVANCE_TO_SHOW)
+                logger.debug(
+                    "Best relevance %.3f below threshold %.2f; returning no results",
+                    best_score,
+                    MIN_RELEVANCE_TO_SHOW,
+                )
                 return ([], {})
             top_results = [(m, s) for m, s in top_results if s >= MIN_RELEVANCE_TO_SHOW]
         else:
             no_semantic_match = True
 
-        # FALLBACK: If we don't have enough semantic results, supplement with text search.
-        # Skip fallback if semantic search explicitly returned nothing (gibberish/no match).
-        if len(top_results) < limit and not no_semantic_match:
+        # FALLBACK: Only supplement with text search if semantic returned zero results.
+        # The hybrid merge at line 766 already handles title/author/character matches.
+        # Running a second ILIKE scan for partial results just adds latency for score=0.0 filler.
+        if len(top_results) == 0 and not no_semantic_match:
             needed = limit - len(top_results)
-            logger.debug("Only %s semantic results, supplementing with %s text search", len(top_results), needed)
+            logger.debug(
+                "Only %s semantic results, supplementing with %s text search",
+                len(top_results),
+                needed,
+            )
 
             # Get IDs we already have to avoid duplicates
             existing_ids = {mono.id for mono, _ in top_results}
 
             # Fallback to text search
             fallback_start = time.time()
-            fallback_results = self._fallback_text_search(query, needed * 2, hard_filters, explicit_filters)  # Get extra for filtering
+            fallback_results = self._fallback_text_search(
+                query, needed * 2, hard_filters, explicit_filters
+            )  # Get extra for filtering
             fallback_time = time.time() - fallback_start
             logger.debug("Fallback text search took %.2fs", fallback_time)
 
             # Add fallback results that aren't already in semantic results
-            fallback_unique = [m for m in fallback_results if m.id not in existing_ids][:needed]
+            fallback_unique = [m for m in fallback_results if m.id not in existing_ids][
+                :needed
+            ]
 
             # Combine results: semantic results first (with scores), then fallback (with 0.0 score)
-            final_results_with_scores = list(top_results) + [(m, 0.0) for m in fallback_unique]
+            final_results_with_scores = list(top_results) + [
+                (m, 0.0) for m in fallback_unique
+            ]
             final_results = [mono for mono, _ in final_results_with_scores]
 
             # Cache final ordered results with scores and quote match types
@@ -990,7 +1132,11 @@ class SemanticSearch:
                 _evict_if_needed(SEARCH_RESULTS_CACHE, _MAX_SEARCH_RESULTS_CACHE)
 
             overall_time = time.time() - overall_start
-            logger.debug("Total search time: %.2fs, final results: %s", overall_time, len(final_results))
+            logger.debug(
+                "Total search time: %.2fs, final results: %s",
+                overall_time,
+                len(final_results),
+            )
             self._debug_timing["total_ms"] = round(overall_time * 1000)
             self._debug_timing["result_count"] = len(final_results)
             self._debug_timing["results_source"] = "text_fallback"
@@ -1005,10 +1151,14 @@ class SemanticSearch:
 
         if logger.isEnabledFor(logging.DEBUG):
             from collections import Counter
+
             author_dist = Counter(mono.play.author for mono, _ in results_with_scores)
             logger.debug(
                 "Search complete: query=%r, time=%.2fs, candidates=%s, top=%s; author dist: %s",
-                query, overall_time, len(results_with_scores), len(top_results),
+                query,
+                overall_time,
+                len(results_with_scores),
+                len(top_results),
                 dict(author_dist.most_common(5)),
             )
 
@@ -1046,7 +1196,7 @@ class SemanticSearch:
         doesn't appear in the script.
         """
         # Gender is always a hard filter — "for women" is unambiguous intent
-        apply_gender_filter = filters and filters.get('gender')
+        apply_gender_filter = filters and filters.get("gender")
 
         base_query = self.db.query(Monologue).join(Play)
 
@@ -1054,93 +1204,87 @@ class SemanticSearch:
         if filters:
             if apply_gender_filter:
                 base_query = base_query.filter(
-                    Monologue.character_gender == filters['gender']
+                    Monologue.character_gender == filters["gender"]
                 )
 
-            if filters.get('tone'):
-                base_query = base_query.filter(
-                    Monologue.tone == filters['tone']
-                )
+            if filters.get("tone"):
+                base_query = base_query.filter(Monologue.tone == filters["tone"])
 
-            if filters.get('age_ranges'):
+            if filters.get("age_ranges"):
                 base_query = base_query.filter(
-                    Monologue.character_age_range.in_(filters['age_ranges'])
+                    Monologue.character_age_range.in_(filters["age_ranges"])
                 )
-            elif filters.get('age_range'):
-                expanded_ages = _expand_age_range(filters['age_range'])
+            elif filters.get("age_range"):
+                expanded_ages = _expand_age_range(filters["age_range"])
                 base_query = base_query.filter(
                     Monologue.character_age_range.in_(expanded_ages)
                 )
 
-            if filters.get('emotion'):
+            if filters.get("emotion"):
                 base_query = base_query.filter(
-                    Monologue.primary_emotion == filters['emotion']
+                    Monologue.primary_emotion == filters["emotion"]
                 )
 
-            if filters.get('theme'):
+            if filters.get("theme"):
                 # Check if theme is in the themes array using PostgreSQL array contains operator
-                theme = filters['theme']
+                theme = filters["theme"]
                 # Use PostgreSQL @> operator with proper type casting
                 # Cast array to character varying[] to match column type
                 base_query = base_query.filter(
-                    text("monologues.themes @> ARRAY[:theme_val]::character varying[]").bindparams(theme_val=theme)
+                    text(
+                        "monologues.themes @> ARRAY[:theme_val]::character varying[]"
+                    ).bindparams(theme_val=theme)
                 )
 
-            if filters.get('difficulty'):
+            if filters.get("difficulty"):
                 base_query = base_query.filter(
-                    Monologue.difficulty_level == filters['difficulty']
+                    Monologue.difficulty_level == filters["difficulty"]
                 )
 
-            if filters.get('category'):
-                category = filters['category']
+            if filters.get("category"):
+                category = filters["category"]
                 # Handle both string and list formats
                 if isinstance(category, list):
                     # If it's a list, use ILIKE with OR conditions
                     category_conditions = [
-                        Play.category.ilike(f'%{cat}%') for cat in category
+                        Play.category.ilike(f"%{cat}%") for cat in category
                     ]
                     base_query = base_query.filter(or_(*category_conditions))
                 else:
                     # If it's a string, use ILIKE for partial match
-                    base_query = base_query.filter(
-                        Play.category.ilike(f'%{category}%')
-                    )
+                    base_query = base_query.filter(Play.category.ilike(f"%{category}%"))
 
-            if filters.get('author'):
+            if filters.get("author"):
                 base_query = base_query.filter(
                     Play.author.ilike(f"%{filters['author']}%")
                 )
 
             # Exclude author filter (e.g., "not Shakespeare")
-            if filters.get('exclude_author'):
+            if filters.get("exclude_author"):
                 base_query = base_query.filter(
                     ~Play.author.ilike(f"%{filters['exclude_author']}%")
                 )
 
             # Duration filter
-            if filters.get('max_duration'):
+            if filters.get("max_duration"):
                 base_query = base_query.filter(
-                    Monologue.estimated_duration_seconds <= filters['max_duration']
+                    Monologue.estimated_duration_seconds <= filters["max_duration"]
                 )
 
-            if filters.get('min_duration'):
+            if filters.get("min_duration"):
                 base_query = base_query.filter(
-                    Monologue.estimated_duration_seconds >= filters['min_duration']
+                    Monologue.estimated_duration_seconds >= filters["min_duration"]
                 )
 
             # Act/scene filters for classical plays
-            if filters.get('act'):
-                base_query = base_query.filter(
-                    Monologue.act == filters['act']
-                )
+            if filters.get("act"):
+                base_query = base_query.filter(Monologue.act == filters["act"])
 
-            if filters.get('scene'):
-                base_query = base_query.filter(
-                    Monologue.scene == filters['scene']
-                )
+            if filters.get("scene"):
+                base_query = base_query.filter(Monologue.scene == filters["scene"])
 
-            if filters.get('max_overdone_score') is not None:
-                threshold = float(filters['max_overdone_score'])
+            if filters.get("max_overdone_score") is not None:
+                threshold = float(filters["max_overdone_score"])
                 base_query = base_query.filter(
                     or_(
                         Monologue.overdone_score.is_(None),
@@ -1148,8 +1292,8 @@ class SemanticSearch:
                     )
                 )
 
-            if filters.get('source_type'):
-                st = filters['source_type']
+            if filters.get("source_type"):
+                st = filters["source_type"]
                 if isinstance(st, list):
                     base_query = base_query.filter(Play.source_type.in_(st))
                 else:
@@ -1191,7 +1335,8 @@ class SemanticSearch:
         if not tokens and len(query_words) >= 3:
             # Include short non-stopwords for famous line detection
             short_tokens = {
-                token for token in query_words
+                token
+                for token in query_words
                 if token not in stopwords and len(token) >= 2
             }
             tokens.update(short_tokens)
@@ -1246,22 +1391,28 @@ class SemanticSearch:
         # Priority 3: Opening line matches query pattern
         # Check if the normalized start of text contains most words from query
         # Uses word boundaries to avoid matching common word fragments
-        query_words_for_match = [w for w in re.findall(r"\w+", normalized_for_punctuation.lower())]
+        query_words_for_match = [
+            w for w in re.findall(r"\w+", normalized_for_punctuation.lower())
+        ]
         if len(query_words_for_match) >= 3:
             # Check if words appear as whole words in first 50 chars using regex word boundaries
             # More words matched = higher priority
-            word_boundary_clauses = " + ".join([
-                f"CASE WHEN regexp_replace(lower(substring(monologues.text, 1, 50)), '[^a-z ]', '', 'g') ~ '\\y{word}\\y' THEN 1 ELSE 0 END"
-                for word in query_words_for_match
-            ])
+            word_boundary_clauses = " + ".join(
+                [
+                    f"CASE WHEN regexp_replace(lower(substring(monologues.text, 1, 50)), '[^a-z ]', '', 'g') ~ '\\y{word}\\y' THEN 1 ELSE 0 END"
+                    for word in query_words_for_match
+                ]
+            )
             ordering_clauses.append(text(f"({word_boundary_clauses}) DESC"))
 
         # Priority 4: Exact match with punctuation (text, play title, character)
-        ordering_clauses.extend([
-            Monologue.text.ilike(f"%{normalized_query}%").desc(),
-            Play.title.ilike(f'%{normalized_query}%').desc(),
-            Monologue.character_name.ilike(f'%{normalized_query}%').desc(),
-        ])
+        ordering_clauses.extend(
+            [
+                Monologue.text.ilike(f"%{normalized_query}%").desc(),
+                Play.title.ilike(f"%{normalized_query}%").desc(),
+                Monologue.character_name.ilike(f"%{normalized_query}%").desc(),
+            ]
+        )
 
         # Final: alphabetical
         ordering_clauses.extend([Play.title, Monologue.character_name])
@@ -1270,7 +1421,9 @@ class SemanticSearch:
 
         return base_query.all()
 
-    def get_random_monologues(self, limit: int = 10, filters: Optional[Dict] = None) -> List[Monologue]:
+    def get_random_monologues(
+        self, limit: int = 10, filters: Optional[Dict] = None
+    ) -> List[Monologue]:
         """Get random monologues (for "Discover" feature).
 
         Uses ORDER BY RANDOM() LIMIT directly in the DB — single query, no
@@ -1282,61 +1435,63 @@ class SemanticSearch:
 
         # Apply filters — same set as semantic search so UI toggles work in browse mode
         if filters:
-            if filters.get('gender'):
+            if filters.get("gender"):
+                query = query.filter(Monologue.character_gender == filters["gender"])
+
+            if filters.get("age_range"):
+                expanded_ages = _expand_age_range(filters["age_range"])
+                query = query.filter(Monologue.character_age_range.in_(expanded_ages))
+
+            if filters.get("emotion"):
+                query = query.filter(Monologue.primary_emotion == filters["emotion"])
+
+            if filters.get("theme"):
+                theme = filters["theme"]
                 query = query.filter(
-                    Monologue.character_gender == filters['gender']
+                    text(
+                        "monologues.themes @> ARRAY[:theme_val]::character varying[]"
+                    ).bindparams(theme_val=theme)
                 )
 
-            if filters.get('age_range'):
-                expanded_ages = _expand_age_range(filters['age_range'])
-                query = query.filter(
-                    Monologue.character_age_range.in_(expanded_ages)
-                )
-
-            if filters.get('emotion'):
-                query = query.filter(Monologue.primary_emotion == filters['emotion'])
-
-            if filters.get('theme'):
-                theme = filters['theme']
-                query = query.filter(
-                    text("monologues.themes @> ARRAY[:theme_val]::character varying[]").bindparams(theme_val=theme)
-                )
-
-            if filters.get('category'):
-                category = filters['category']
+            if filters.get("category"):
+                category = filters["category"]
                 if isinstance(category, list):
-                    category_conditions = [Play.category.ilike(f'%{cat}%') for cat in category]
+                    category_conditions = [
+                        Play.category.ilike(f"%{cat}%") for cat in category
+                    ]
                     query = query.filter(or_(*category_conditions))
                 else:
-                    query = query.filter(Play.category.ilike(f'%{category}%'))
+                    query = query.filter(Play.category.ilike(f"%{category}%"))
 
-            if filters.get('difficulty'):
-                query = query.filter(Monologue.difficulty_level == filters['difficulty'])
+            if filters.get("difficulty"):
+                query = query.filter(
+                    Monologue.difficulty_level == filters["difficulty"]
+                )
 
-            if filters.get('author'):
+            if filters.get("author"):
                 query = query.filter(Play.author.ilike(f"%{filters['author']}%"))
 
-            if filters.get('tone'):
-                query = query.filter(Monologue.tone == filters['tone'])
+            if filters.get("tone"):
+                query = query.filter(Monologue.tone == filters["tone"])
 
-            if filters.get('max_duration'):
+            if filters.get("max_duration"):
                 query = query.filter(
-                    Monologue.estimated_duration_seconds <= filters['max_duration']
+                    Monologue.estimated_duration_seconds <= filters["max_duration"]
                 )
 
-            if filters.get('min_duration'):
+            if filters.get("min_duration"):
                 query = query.filter(
-                    Monologue.estimated_duration_seconds >= filters['min_duration']
+                    Monologue.estimated_duration_seconds >= filters["min_duration"]
                 )
 
-            if filters.get('act'):
-                query = query.filter(Monologue.act == filters['act'])
+            if filters.get("act"):
+                query = query.filter(Monologue.act == filters["act"])
 
-            if filters.get('scene'):
-                query = query.filter(Monologue.scene == filters['scene'])
+            if filters.get("scene"):
+                query = query.filter(Monologue.scene == filters["scene"])
 
-            if filters.get('max_overdone_score') is not None:
-                threshold = float(filters['max_overdone_score'])
+            if filters.get("max_overdone_score") is not None:
+                threshold = float(filters["max_overdone_score"])
                 query = query.filter(
                     or_(
                         Monologue.overdone_score.is_(None),
@@ -1344,8 +1499,8 @@ class SemanticSearch:
                     )
                 )
 
-            if filters.get('source_type'):
-                st = filters['source_type']
+            if filters.get("source_type"):
+                st = filters["source_type"]
                 if isinstance(st, list):
                     query = query.filter(Play.source_type.in_(st))
                 else:

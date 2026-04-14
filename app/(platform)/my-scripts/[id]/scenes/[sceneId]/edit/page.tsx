@@ -106,7 +106,7 @@ function RehearsalLoadingOverlay() {
           key={idx}
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-neutral-500 text-sm"
+          className="text-neutral-400 text-sm"
         >
           {REHEARSAL_LOADING_TEXTS[idx]}
         </motion.p>
@@ -148,7 +148,7 @@ function SceneEditLoadingScreen() {
           key={idx}
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-neutral-500 text-sm"
+          className="text-neutral-400 text-sm"
         >
           {SCENE_EDIT_LOADING_TEXTS[idx]}
         </motion.p>
@@ -1574,7 +1574,7 @@ export default function SceneEditPage() {
             <button
               type="button"
               onClick={() => startEditScene(field, str)}
-              className="text-neutral-500 hover:text-neutral-300 transition-colors"
+              className="text-neutral-400 hover:text-neutral-200 transition-colors"
             >
               <Edit2 className="w-3 h-3" />
             </button>
@@ -1595,7 +1595,7 @@ export default function SceneEditPage() {
                 onBlur={handleBlur}
               />
               {maxLength && (
-                <p className="text-[10px] text-neutral-500 text-right tabular-nums">
+                <p className="text-[10px] text-neutral-400 text-right tabular-nums">
                   {sceneEditValue.length}/{maxLength}
                 </p>
               )}
@@ -1618,11 +1618,11 @@ export default function SceneEditPage() {
             onClick={() => startEditScene(field, str)}
             className="group flex items-start gap-2 text-left w-full rounded-md px-2 py-1.5 -mx-2 hover:bg-neutral-800/60 transition-colors border border-transparent"
           >
-            <p className={cn("text-sm flex-1 break-words line-clamp-4", str ? "text-neutral-200" : "text-neutral-500 italic")}>
+            <p className={cn("text-sm flex-1 break-words line-clamp-4", str ? "text-neutral-200" : "text-neutral-400 italic")}>
               {str || `Add ${label.toLowerCase()}...`}
             </p>
             {!iconNextToLabel && (
-              <Edit2 className="w-3 h-3 text-neutral-500 group-hover:text-neutral-300 transition-colors flex-shrink-0 mt-0.5" />
+              <Edit2 className="w-3 h-3 text-neutral-400 group-hover:text-neutral-200 transition-colors flex-shrink-0 mt-0.5" />
             )}
           </button>
         )}
@@ -1642,7 +1642,7 @@ export default function SceneEditPage() {
     <div className="space-y-5">
       {/* Header — title + attribution */}
       <div className="rounded-xl bg-gradient-to-br from-neutral-900 to-neutral-900/60 border border-neutral-800 p-4 space-y-3 overflow-hidden">
-        <div className="text-sm text-neutral-400 tracking-wide break-words">
+        <div className="text-sm text-neutral-300 tracking-wide break-words">
           {editingSceneField === "play_title" && editingLocation === "left" ? (
             <Input
               value={sceneEditValue}
@@ -1712,7 +1712,7 @@ export default function SceneEditPage() {
             </>
           )}
           {(scene.act || scene.scene_number) && (
-            <span className="text-neutral-500 ml-1">
+            <span className="text-neutral-400 ml-1">
               {" \u00B7 "}
               {[scene.act, scene.scene_number].filter(Boolean).join(", ")}
             </span>
@@ -1725,13 +1725,13 @@ export default function SceneEditPage() {
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <span className="text-xs uppercase tracking-wider text-neutral-400 font-medium">
-                Description <span className="normal-case text-neutral-500">(optional)</span>
+                Description <span className="normal-case text-neutral-400">(optional)</span>
               </span>
               <button
                 type="button"
                 onClick={suggestSynopsis}
                 disabled={generatingSynopsis}
-                className="text-neutral-500 hover:text-primary transition-colors"
+                className="text-neutral-400 hover:text-primary transition-colors"
                 title="Let AI create a description"
               >
                 {generatingSynopsis ? (
@@ -1743,7 +1743,7 @@ export default function SceneEditPage() {
               <button
                 type="button"
                 onClick={() => startEditScene("description", scene.description ?? "")}
-                className="text-neutral-500 hover:text-neutral-300 transition-colors"
+                className="text-neutral-400 hover:text-neutral-200 transition-colors"
                 title="Write manually"
               >
                 <Edit2 className="w-3 h-3" />

@@ -93,6 +93,7 @@ def handle_checkout_completed(session: dict, db: Session):
     Handle successful checkout.
 
     Creates or updates UserSubscription with subscription details.
+    Also adds paid users to do-not-contact list automatically.
     """
     user_id = int(session["metadata"]["user_id"])
     tier_id = int(session["metadata"]["tier_id"])
@@ -116,14 +117,31 @@ def handle_checkout_completed(session: dict, db: Session):
 
     print(f"✅ Checkout completed for user {user_id} - {billing_period} subscription")
 
-    # Send upgrade notification to admin (fire-and-forget)
+    # Auto-add paid users to do-not-contact list
     try:
+        from app.models.email_do_not_contact import EmailDoNotContact
         from app.models.user import User
 
         user = db.query(User).filter(User.id == user_id).first()
         tier = db.query(PricingTier).filter(PricingTier.id == tier_id).first()
 
         if user and tier and tier.name != "free":
+            email_addr = (user.email or "").strip().lower()
+            if email_addr:
+                # Check if already on DNC
+                existing = db.query(EmailDoNotContact).filter(
+                    EmailDoNotContact.email == email_addr
+                ).first()
+                if not existing:
+                    db.add(EmailDoNotContact(
+                        email=email_addr,
+                        name=user.name,
+                        reason="paid_subscriber",
+                    ))
+                    db.commit()
+                    print(f"✅ Auto-added {email_addr} to do-not-contact (paid subscriber)")
+
+            # Send upgrade notification to admin (fire-and-forget)
             from app.services.email.notifications import send_upgrade_notification
 
             threading.Thread(
@@ -137,7 +155,7 @@ def handle_checkout_completed(session: dict, db: Session):
                 daemon=True,
             ).start()
     except Exception as e:
-        print(f"Warning: Could not send upgrade notification: {e}")
+        print(f"Warning: Could not process post-checkout tasks: {e}")
 
 
 def handle_invoice_paid(invoice: dict, db: Session):

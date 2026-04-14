@@ -80,6 +80,18 @@ def require_approval_permission(current_user: User = Depends(get_current_user)) 
 
 TEMPLATES = [
     {
+        "id": "custom",
+        "name": "Custom",
+        "description": "Freeform email with Markdown support — write whatever you want",
+        "subject": "hey",
+        "variables": [
+            {"name": "user_name", "label": "Recipient name", "type": "text", "default": "there", "required": True},
+            {"name": "body_markdown", "label": "Message body (Markdown supported: **bold**, *italic*, [links](url))", "type": "text", "default": "", "required": True},
+            {"name": "sender_name", "label": "Sender name", "type": "text", "default": "Canberk", "required": True},
+            {"name": "sender_title", "label": "Sender title", "type": "text", "default": "Founder, ActorRise", "required": True},
+        ],
+    },
+    {
         "id": "welcome",
         "name": "Welcome",
         "description": "Sent to new users on signup",
@@ -89,45 +101,18 @@ TEMPLATES = [
         ],
     },
     {
-        "id": "upgrade_nudge",
-        "name": "Upgrade Nudge",
-        "description": "Encourages free-tier users to upgrade when nearing their search limit",
-        "subject": "You're getting close to your search limit",
-        "variables": [
-            {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
-            {"name": "searches_used", "label": "Searches used", "type": "number", "default": 8, "required": True},
-            {"name": "searches_limit", "label": "Search limit", "type": "number", "default": 10, "required": True},
-        ],
-    },
-    {
-        "id": "feature_announcement",
-        "name": "Feature Announcement",
-        "description": "Announce a new feature to users",
-        "subject": "What's new on ActorRise",
-        "variables": [
-            {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
-            {"name": "feature_title", "label": "Feature title", "type": "text", "default": "New Feature", "required": True},
-            {"name": "feature_description", "label": "Description", "type": "text", "default": "Check out what's new on ActorRise.", "required": True},
-            {"name": "cta_text", "label": "CTA button text", "type": "text", "default": "Learn more", "required": True},
-            {"name": "cta_url", "label": "CTA button URL", "type": "url", "default": "https://actorrise.com", "required": True},
-            {"name": "video_url", "label": "Video URL (optional)", "type": "url", "default": "", "required": False},
-        ],
-    },
-    {
         "id": "founder_offer",
         "name": "Founder Offer",
-        "description": "12 months of Plus free for early users, asks for testimony + audience share",
+        "description": "12 months of Plus free for early users",
         "subject": "A personal note from me",
         "variables": [
             {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
             {"name": "intro_text", "label": "Main message", "type": "text", "default": "I wanted to reach out personally. I'm an actor too, and I built ActorRise because I couldn't find the tools I needed. You signed up early and that means a lot to me.", "required": True},
             {"name": "body_text", "label": "Extra paragraph (optional)", "type": "text", "default": "", "required": False},
             {"name": "promo_code", "label": "Promo code", "type": "text", "default": "FOUNDER", "required": True},
-            {"name": "discount_description", "label": "Discount details", "type": "text", "default": "Enter this at checkout", "required": True},
             {"name": "upgrade_url", "label": "Upgrade URL", "type": "url", "default": "https://actorrise.com/pricing", "required": True},
             {"name": "sender_name", "label": "Sender name", "type": "text", "default": "Canberk", "required": True},
             {"name": "sender_title", "label": "Sender title", "type": "text", "default": "Founder, ActorRise", "required": True},
-            {"name": "share_text", "label": "Share blurb (optional)", "type": "text", "default": "", "required": False},
         ],
     },
     {
@@ -145,60 +130,15 @@ TEMPLATES = [
         ],
     },
     {
-        "id": "actor_page",
-        "name": "Actor Page",
-        "description": "Personal outreach about the actor profile page feature",
-        "subject": "Your actor page on ActorRise",
-        "variables": [
-            {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
-            {"name": "intro_text", "label": "Main message", "type": "text", "default": "I'm building actor pages on ActorRise where you can showcase your work, link your socials, and let people reach out to you directly. I'd love to set yours up.", "required": True},
-            {"name": "step_1", "label": "Step 1", "type": "text", "default": "Sign up or log in at actorrise.com", "required": True},
-            {"name": "step_2", "label": "Step 2", "type": "text", "default": "Go to your profile and fill in your bio, headshot, and links", "required": True},
-            {"name": "step_3", "label": "Step 3", "type": "text", "default": "Your page goes live and anyone can find you", "required": True},
-            {"name": "page_url", "label": "Their page URL (optional)", "type": "url", "default": "", "required": False},
-            {"name": "cta_text", "label": "Button text", "type": "text", "default": "Check out your page", "required": False},
-            {"name": "extra_text", "label": "Extra text below button (optional)", "type": "text", "default": "", "required": False},
-            {"name": "sender_name", "label": "Sender name", "type": "text", "default": "Canberk", "required": True},
-            {"name": "sender_title", "label": "Sender title", "type": "text", "default": "Founder | Actor, ActorRise", "required": True},
-        ],
-    },
-    {
-        "id": "cold_outreach",
-        "name": "Cold Outreach",
-        "description": "Personal outreach to recruit actors (e.g. from Backstage)",
-        "subject": "hey from ActorRise",
-        "variables": [
-            {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
-            {"name": "intro_text", "label": "Main message", "type": "text", "default": "I found your profile on Backstage and really liked your work. I'm building a platform called ActorRise where actors can find and rehearse monologues, get a personal profile page, and connect with other actors. I think you'd be a great fit.", "required": True},
-            {"name": "body_text", "label": "Extra paragraph (optional)", "type": "text", "default": "", "required": False},
-            {"name": "cta_text", "label": "Button text", "type": "text", "default": "Check it out", "required": False},
-            {"name": "cta_url", "label": "Button URL", "type": "url", "default": "https://actorrise.com", "required": False},
-            {"name": "closing_text", "label": "Closing line (optional)", "type": "text", "default": "", "required": False},
-            {"name": "sender_name", "label": "Sender name", "type": "text", "default": "Canberk", "required": True},
-            {"name": "sender_title", "label": "Sender title", "type": "text", "default": "Founder | Actor, ActorRise", "required": True},
-        ],
-    },
-    {
-        "id": "scene_partner_launch",
-        "name": "ScenePartner Launch",
-        "description": "Announce ScenePartner to users (personal, no promo language)",
-        "subject": "New: rehearse lines with a scene partner that never flakes",
-        "variables": [
-            {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
-        ],
-    },
-    {
         "id": "weekly_engagement",
         "name": "Weekly Engagement",
-        "description": "Weekly digest with a featured monologue and acting tip",
-        "subject": "Your weekly pick from ActorRise",
+        "description": "Weekly digest with AI-personalized monologue recommendation",
+        "subject": "This week's pick",
         "variables": [
             {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
-            {"name": "monologue_title", "label": "Monologue title", "type": "text", "default": "To be, or not to be", "required": False},
-            {"name": "monologue_snippet", "label": "Monologue excerpt", "type": "text", "default": "Whether 'tis nobler in the mind to suffer...", "required": False},
-            {"name": "monologue_url", "label": "Monologue URL", "type": "url", "default": "https://actorrise.com/monologues", "required": False},
-            {"name": "tip_title", "label": "Tip title", "type": "text", "default": "Cold read tip", "required": False},
-            {"name": "tip_body", "label": "Tip body", "type": "text", "default": "Read the monologue once silently, then once aloud.", "required": False},
+            {"name": "character_analysis", "label": "AI character intro (2-3 sentences)", "type": "text", "default": "", "required": False},
+            {"name": "monologue_snippet", "label": "Monologue excerpt", "type": "text", "default": "", "required": False},
+            {"name": "monologue_url", "label": "Monologue URL", "type": "url", "default": "https://actorrise.com/dashboard", "required": False},
         ],
     },
 ]
@@ -318,28 +258,20 @@ def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, 
     kwargs["unsubscribe_url"] = variables.get("unsubscribe_url", "#unsubscribe")
 
     render_map = {
+        "custom": templates.render_custom,
         "welcome": templates.render_welcome,
-        "upgrade_nudge": templates.render_upgrade_nudge,
-        "feature_announcement": templates.render_feature_announcement,
         "founder_offer": templates.render_founder_offer,
         "founder_followup": templates.render_founder_followup,
-        "actor_page": templates.render_actor_page,
-        "cold_outreach": templates.render_cold_outreach,
         "weekly_engagement": templates.render_weekly_engagement,
-        "scene_partner_launch": templates.render_scene_partner_launch,
     }
 
     # All marketing templates send as plain text for better inbox placement
     plain_text_map = {
+        "custom": templates.render_custom_plain,
         "welcome": templates.render_welcome_plain,
-        "upgrade_nudge": templates.render_upgrade_nudge_plain,
-        "feature_announcement": templates.render_feature_announcement_plain,
         "founder_offer": templates.render_founder_offer_plain,
         "founder_followup": templates.render_founder_followup_plain,
-        "actor_page": templates.render_actor_page_plain,
-        "cold_outreach": templates.render_cold_outreach_plain,
         "weekly_engagement": templates.render_weekly_engagement_plain,
-        "scene_partner_launch": templates.render_scene_partner_launch_plain,
     }
 
     render_fn = render_map.get(template_id)
@@ -466,7 +398,7 @@ def bulk_send_email(
             continue
         seen_in_batch.add(email_addr)
 
-        # Skip do-not-contact entries
+        # Skip do-not-contact entries (includes paid users, apple relay, etc)
         if email_addr in dnc_emails:
             skipped_dnc += 1
             continue
@@ -645,6 +577,136 @@ def get_batch_status(
     )
 
 
+class ResumeBatchRequest(BaseModel):
+    send_via: str = "smtp"  # "smtp" or "resend"
+
+
+@router.post("/batch/{batch_id}/resume")
+def resume_batch(
+    batch_id: int,
+    body: ResumeBatchRequest,
+    admin: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+):
+    """Resume a stuck batch that has queued emails remaining."""
+    batch = db.query(EmailBatch).filter(EmailBatch.id == batch_id).first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+
+    queued_count = db.query(EmailSend).filter(
+        EmailSend.batch_id == batch_id,
+        EmailSend.status == "queued",
+    ).count()
+
+    if queued_count == 0:
+        raise HTTPException(status_code=400, detail="No queued emails to resume")
+
+    # Get template metadata
+    meta = next((t for t in TEMPLATES if t["id"] == batch.template_id), None)
+    if not meta:
+        raise HTTPException(status_code=400, detail=f"Unknown template: {batch.template_id}")
+
+    # Spawn background thread to process remaining sends
+    template_id = batch.template_id
+    subject = batch.subject
+    default_name = "there"
+
+    def _resume_batch():
+        db2 = SessionLocal()
+        try:
+            b = db2.query(EmailBatch).filter(EmailBatch.id == batch_id).first()
+            if not b:
+                return
+            b.status = "processing"
+            db2.commit()
+
+            client = _get_email_client(body.send_via)
+            templates_svc = EmailTemplates()
+
+            sends = db2.query(EmailSend).filter(
+                EmailSend.batch_id == batch_id,
+                EmailSend.status == "queued",
+            ).all()
+
+            render_map = {
+                "custom": templates_svc.render_custom,
+                "welcome": templates_svc.render_welcome,
+                "founder_offer": templates_svc.render_founder_offer,
+                "founder_followup": templates_svc.render_founder_followup,
+                "weekly_engagement": templates_svc.render_weekly_engagement,
+            }
+            plain_text_map = {
+                "custom": templates_svc.render_custom_plain,
+                "welcome": templates_svc.render_welcome_plain,
+                "founder_offer": templates_svc.render_founder_offer_plain,
+                "founder_followup": templates_svc.render_founder_followup_plain,
+                "weekly_engagement": templates_svc.render_weekly_engagement_plain,
+            }
+
+            render_fn = render_map.get(template_id)
+            plain_fn = plain_text_map.get(template_id)
+            if not render_fn:
+                b.status = "failed"
+                b.errors_json = list(b.errors_json or []) + [f"Unknown template: {template_id}"]
+                db2.commit()
+                return
+
+            for send_row in sends:
+                try:
+                    vars_copy = {
+                        "unsubscribe_url": build_unsubscribe_url(send_row.to_email),
+                        "user_name": send_row.to_name or default_name,
+                    }
+
+                    html = render_fn(**vars_copy)
+                    plain_text = plain_fn(**vars_copy) if plain_fn else None
+
+                    # Inject self-hosted open/click tracking
+                    html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
+
+                    response = client.send_email(
+                        to=send_row.to_email,
+                        subject=subject,
+                        html=html,
+                        plain_text=plain_text,
+                    )
+
+                    send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
+                    send_row.status = "sent"
+                    b.sent += 1
+                except Exception as e:
+                    send_row.status = "failed"
+                    b.skipped += 1
+                    errors = list(b.errors_json or [])
+                    errors.append(f"{send_row.to_email}: {e}")
+                    b.errors_json = errors
+                    logger.warning("Resume send failed for %s: %s", send_row.to_email, e)
+
+                db2.commit()
+                delay = 2.0 if body.send_via == "smtp" else 0.5
+                time.sleep(delay)
+
+            b.status = "completed"
+            db2.commit()
+
+        except Exception as e:
+            logger.exception("Resume batch %s failed: %s", batch_id, e)
+            try:
+                b = db2.query(EmailBatch).filter(EmailBatch.id == batch_id).first()
+                if b:
+                    b.status = "failed"
+                    db2.commit()
+            except Exception:
+                pass
+        finally:
+            db2.close()
+
+    t = threading.Thread(target=_resume_batch, daemon=True)
+    t.start()
+
+    return {"batch_id": batch_id, "status": "resuming", "queued": queued_count}
+
+
 @router.get("/batches")
 def list_batches(
     search: Optional[str] = None,
@@ -783,7 +845,7 @@ def send_campaign_endpoint(
     for user in recipients:
         email_addr = user.email.strip().lower()
 
-        # Skip do-not-contact entries
+        # Skip do-not-contact entries (includes paid users, apple relay, etc)
         if email_addr in dnc_emails:
             skipped_dnc += 1
             continue
@@ -843,26 +905,18 @@ def send_campaign_endpoint(
             ).all()
 
             render_map = {
-                "upgrade_nudge": templates_svc.render_upgrade_nudge,
-                "feature_announcement": templates_svc.render_feature_announcement,
+                "custom": templates_svc.render_custom,
                 "founder_offer": templates_svc.render_founder_offer,
                 "founder_followup": templates_svc.render_founder_followup,
-                "actor_page": templates_svc.render_actor_page,
-                "cold_outreach": templates_svc.render_cold_outreach,
                 "weekly_engagement": templates_svc.render_weekly_engagement,
-                "scene_partner_launch": templates_svc.render_scene_partner_launch,
             }
             # All marketing templates send as plain text for better inbox placement
             plain_text_map = {
+                "custom": templates_svc.render_custom_plain,
                 "welcome": templates_svc.render_welcome_plain,
-                "upgrade_nudge": templates_svc.render_upgrade_nudge_plain,
-                "feature_announcement": templates_svc.render_feature_announcement_plain,
                 "founder_offer": templates_svc.render_founder_offer_plain,
                 "founder_followup": templates_svc.render_founder_followup_plain,
-                "actor_page": templates_svc.render_actor_page_plain,
-                "cold_outreach": templates_svc.render_cold_outreach_plain,
                 "weekly_engagement": templates_svc.render_weekly_engagement_plain,
-                "scene_partner_launch": templates_svc.render_scene_partner_launch_plain,
             }
             render_fn = render_map.get(template_id)
             plain_fn = plain_text_map.get(template_id)
@@ -1058,6 +1112,405 @@ def auto_dnc_apple_relay(
         added += 1
     db.commit()
     return {"added": added, "scanned": len(relay_users)}
+
+
+
+
+# ========================================
+# Weekly Digest Batch System
+# ========================================
+
+class WeeklyDigestPrepareRequest(BaseModel):
+    curated_monologue_id: Optional[int] = None  # Fallback for users without search history
+    dry_run: bool = False
+
+
+class WeeklyDigestRecipient(BaseModel):
+    user_id: int
+    email: str
+    name: str
+    monologue_id: int
+    monologue_title: str
+    monologue_character: str
+    monologue_play: str
+    monologue_snippet: str
+    monologue_url: str
+    character_analysis: str
+    is_personalized: bool  # True if based on search history, False if curated fallback
+
+
+class WeeklyDigestBatchResponse(BaseModel):
+    batch_id: int
+    status: str
+    recipient_count: int
+    personalized_count: int
+    fallback_count: int
+    sample_recipients: list[WeeklyDigestRecipient]
+    estimated_cost: str  # e.g., "$0.12 (AI generation)"
+
+
+@router.post("/weekly-digest/prepare")
+def prepare_weekly_digest(
+    body: WeeklyDigestPrepareRequest,
+    admin: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+):
+    """
+    Prepare a weekly digest batch:
+    1. Query free users not in DNC
+    2. For each user with search history → pick personalized monologue via semantic search
+    3. For users without history → use curated "Monologue of the Week"
+    4. Generate AI character analysis for each unique monologue
+    5. Save batch as "pending_approval"
+    """
+    from app.models.actor import Monologue, Play
+    from app.models.search_log import SearchLog
+    from app.services.ai.content_analyzer import ContentAnalyzer
+
+    # Get free users not in DNC
+    dnc_emails = _get_dnc_emails(db)
+
+    free_users = (
+        db.query(User)
+        .outerjoin(UserSubscription)
+        .filter(
+            (UserSubscription.id == None) |  # No subscription
+            (UserSubscription.status.notin_(["active", "trialing"]))  # Inactive sub
+        )
+        .all()
+    )
+
+    eligible_users = [
+        u for u in free_users
+        if u.email and u.email.strip().lower() not in dnc_emails
+        and not is_apple_relay_email(u.email)
+    ]
+
+    if body.dry_run:
+        return {
+            "dry_run": True,
+            "eligible_count": len(eligible_users),
+            "sample_users": [
+                {"email": u.email, "name": u.name}
+                for u in eligible_users[:5]
+            ],
+        }
+
+    # Get curated fallback monologue
+    curated_monologue = None
+    if body.curated_monologue_id:
+        curated_monologue = (
+            db.query(Monologue)
+            .options(joinedload(Monologue.play))
+            .filter(Monologue.id == body.curated_monologue_id)
+            .first()
+        )
+
+    if not curated_monologue:
+        # Pick a popular monologue as default
+        curated_monologue = (
+            db.query(Monologue)
+            .options(joinedload(Monologue.play))
+            .filter(Monologue.is_public == True)
+            .order_by(Monologue.view_count.desc().nullslast())
+            .first()
+        )
+
+    if not curated_monologue:
+        raise HTTPException(status_code=400, detail="No monologues available for weekly digest")
+
+    # Create batch
+    from datetime import date as date_type
+    campaign_key = f"weekly-digest-{date_type.today().isoformat()}"
+
+    batch = EmailBatch(
+        template_id="weekly_engagement",
+        campaign_key=campaign_key,
+        subject="This week's pick",
+        status="pending_approval",
+        total=len(eligible_users),
+        created_by=admin.id,
+    )
+    db.add(batch)
+    db.flush()
+
+    # Build recipient list with monologue assignments
+    analyzer = ContentAnalyzer()
+    recipients_data: list[dict] = []
+    analysis_cache: dict[int, str] = {}  # monologue_id -> character_analysis
+    personalized_count = 0
+    fallback_count = 0
+
+    for user in eligible_users:
+        # Check if user has search history
+        last_search = (
+            db.query(SearchLog)
+            .filter(SearchLog.user_id == user.id)
+            .order_by(SearchLog.created_at.desc())
+            .first()
+        )
+
+        monologue = None
+        is_personalized = False
+
+        if last_search and last_search.query:
+            # Try to find a personalized monologue based on their search
+            # Use semantic search to find similar monologues
+            from app.services.search.semantic_search import SemanticSearch
+            try:
+                searcher = SemanticSearch(db)
+                results = searcher.search(last_search.query, limit=1)
+                if results:
+                    monologue = results[0]
+                    is_personalized = True
+                    personalized_count += 1
+            except Exception as e:
+                logger.warning(f"Semantic search failed for user {user.id}: {e}")
+
+        if not monologue:
+            monologue = curated_monologue
+            fallback_count += 1
+
+        # Generate character analysis (cached per monologue)
+        if monologue.id not in analysis_cache:
+            try:
+                analysis = analyzer.generate_character_intro(
+                    text=monologue.text,
+                    character=monologue.character_name,
+                    play_title=monologue.play.title if monologue.play else "Unknown",
+                    author=monologue.play.author if monologue.play else "Unknown",
+                )
+                analysis_cache[monologue.id] = analysis
+            except Exception as e:
+                logger.warning(f"Failed to generate analysis for monologue {monologue.id}: {e}")
+                analysis_cache[monologue.id] = f"A compelling moment for {monologue.character_name}."
+
+        # Create EmailSend record with extra data in JSON
+        snippet = (monologue.text[:200] + "...") if len(monologue.text) > 200 else monologue.text
+        monologue_url = f"https://actorrise.com/monologues/{monologue.id}"
+
+        send = EmailSend(
+            batch_id=batch.id,
+            to_email=user.email.strip().lower(),
+            to_name=user.name or "there",
+            status="queued",
+        )
+        db.add(send)
+
+        recipients_data.append({
+            "user_id": user.id,
+            "email": user.email,
+            "name": user.name or "there",
+            "monologue_id": monologue.id,
+            "monologue_title": monologue.title,
+            "monologue_character": monologue.character_name,
+            "monologue_play": monologue.play.title if monologue.play else "Unknown",
+            "monologue_snippet": snippet,
+            "monologue_url": monologue_url,
+            "character_analysis": analysis_cache[monologue.id],
+            "is_personalized": is_personalized,
+        })
+
+    # Store recipient data in batch metadata for later sending
+    batch.errors_json = {
+        "recipients_data": recipients_data,
+        "curated_monologue_id": curated_monologue.id if curated_monologue else None,
+    }
+    db.commit()
+
+    # Return sample recipients for preview
+    sample = recipients_data[:5]
+    estimated_cost = f"${len(analysis_cache) * 0.002:.2f} (AI generation for {len(analysis_cache)} unique monologues)"
+
+    return {
+        "batch_id": batch.id,
+        "status": "pending_approval",
+        "recipient_count": len(recipients_data),
+        "personalized_count": personalized_count,
+        "fallback_count": fallback_count,
+        "sample_recipients": sample,
+        "estimated_cost": estimated_cost,
+    }
+
+
+@router.get("/weekly-digest/{batch_id}")
+def get_weekly_digest_batch(
+    batch_id: int,
+    _user: User = Depends(require_moderator),
+    db: Session = Depends(get_db),
+):
+    """Get details of a weekly digest batch for review."""
+    batch = db.query(EmailBatch).filter(EmailBatch.id == batch_id).first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+
+    if batch.template_id != "weekly_engagement":
+        raise HTTPException(status_code=400, detail="Not a weekly digest batch")
+
+    metadata = batch.errors_json or {}
+    recipients_data = metadata.get("recipients_data", [])
+
+    return {
+        "batch_id": batch.id,
+        "status": batch.status,
+        "recipient_count": len(recipients_data),
+        "personalized_count": sum(1 for r in recipients_data if r.get("is_personalized")),
+        "fallback_count": sum(1 for r in recipients_data if not r.get("is_personalized")),
+        "sample_recipients": recipients_data[:10],
+        "created_at": batch.created_at.isoformat() if batch.created_at else None,
+    }
+
+
+@router.post("/weekly-digest/{batch_id}/approve")
+def approve_weekly_digest(
+    batch_id: int,
+    admin: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+):
+    """Approve and send a weekly digest batch."""
+    batch = db.query(EmailBatch).filter(EmailBatch.id == batch_id).first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+
+    if batch.status != "pending_approval":
+        raise HTTPException(status_code=400, detail=f"Batch status is '{batch.status}', expected 'pending_approval'")
+
+    metadata = batch.errors_json or {}
+    recipients_data = metadata.get("recipients_data", [])
+
+    if not recipients_data:
+        raise HTTPException(status_code=400, detail="No recipients in batch")
+
+    # Clear metadata from errors_json (we'll use it for actual errors now)
+    batch.errors_json = []
+    batch.status = "pending"
+    db.commit()
+
+    batch_id_local = batch.id
+
+    # Process in background
+    def _send_weekly_digest():
+        db2 = SessionLocal()
+        try:
+            b = db2.query(EmailBatch).filter(EmailBatch.id == batch_id_local).first()
+            if not b:
+                return
+            b.status = "processing"
+            db2.commit()
+
+            client = _get_email_client("smtp")
+            templates_svc = EmailTemplates()
+
+            sends = db2.query(EmailSend).filter(
+                EmailSend.batch_id == batch_id_local,
+                EmailSend.status == "queued",
+            ).all()
+
+            # Build email -> recipient data map
+            recipient_map = {r["email"].strip().lower(): r for r in recipients_data}
+
+            for send_row in sends:
+                try:
+                    recipient = recipient_map.get(send_row.to_email)
+                    if not recipient:
+                        send_row.status = "failed"
+                        b.skipped += 1
+                        continue
+
+                    vars_copy = {
+                        "user_name": recipient["name"],
+                        "character_analysis": recipient["character_analysis"],
+                        "monologue_snippet": recipient["monologue_snippet"],
+                        "monologue_url": recipient["monologue_url"],
+                        "unsubscribe_url": build_unsubscribe_url(send_row.to_email),
+                    }
+
+                    html = templates_svc.render_weekly_engagement(**vars_copy)
+                    plain_text = templates_svc.render_weekly_engagement_plain(**vars_copy)
+
+                    html, plain_text = add_tracking(send_row.id, html=html, plain_text=plain_text)
+
+                    response = client.send_email(
+                        to=send_row.to_email,
+                        subject="This week's pick",
+                        html=html,
+                        plain_text=plain_text,
+                    )
+
+                    send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
+                    send_row.status = "sent"
+                    b.sent += 1
+                except Exception as e:
+                    send_row.status = "failed"
+                    b.skipped += 1
+                    errors = list(b.errors_json or [])
+                    errors.append(f"{send_row.to_email}: {e}")
+                    b.errors_json = errors
+                    logger.warning("Weekly digest send failed for %s: %s", send_row.to_email, e)
+
+                db2.commit()
+                time.sleep(2.0)  # SMTP throttling
+
+            b.status = "completed"
+            db2.commit()
+
+            if b.sent > 0:
+                audit = AdminAuditLog(
+                    actor_admin_id=b.created_by,
+                    target_user_id=b.created_by,
+                    action_type="weekly_digest_sent",
+                    after_json={
+                        "template": "weekly_engagement",
+                        "sent": b.sent,
+                        "total": b.total,
+                        "campaign_key": b.campaign_key,
+                    },
+                )
+                db2.add(audit)
+                db2.commit()
+
+        except Exception as e:
+            logger.exception("Weekly digest batch %s failed: %s", batch_id_local, e)
+            try:
+                b = db2.query(EmailBatch).filter(EmailBatch.id == batch_id_local).first()
+                if b:
+                    b.status = "failed"
+                    db2.commit()
+            except Exception:
+                pass
+        finally:
+            db2.close()
+
+    t = threading.Thread(target=_send_weekly_digest, daemon=True)
+    t.start()
+
+    return {"batch_id": batch_id, "status": "processing", "message": "Weekly digest send started"}
+
+
+@router.delete("/weekly-digest/{batch_id}")
+def cancel_weekly_digest(
+    batch_id: int,
+    _admin: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+):
+    """Cancel a pending weekly digest batch."""
+    batch = db.query(EmailBatch).filter(EmailBatch.id == batch_id).first()
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+
+    if batch.status not in ("pending_approval", "pending"):
+        raise HTTPException(status_code=400, detail=f"Cannot cancel batch with status '{batch.status}'")
+
+    # Delete all queued sends
+    db.query(EmailSend).filter(
+        EmailSend.batch_id == batch_id,
+        EmailSend.status == "queued",
+    ).delete()
+
+    batch.status = "cancelled"
+    db.commit()
+
+    return {"ok": True, "message": "Weekly digest batch cancelled"}
 
 
 # ========================================

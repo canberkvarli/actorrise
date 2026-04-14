@@ -41,6 +41,8 @@ import {
   IconCheck,
   IconRefresh,
   IconBolt,
+  IconCalendar,
+  IconSparkles,
 } from "@tabler/icons-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────
@@ -177,7 +179,29 @@ export default function AdminEmailsPage() {
   const [dncEntries, setDncEntries] = useState<DncEntry[]>([]);
   const [dncLoading, setDncLoading] = useState(false);
   const [dncInput, setDncInput] = useState("");
-  const [autoDncLoading, setAutoDncLoading] = useState(false);
+
+  // Weekly digest
+  const [weeklyDigestOpen, setWeeklyDigestOpen] = useState(false);
+  const [weeklyDigestBatch, setWeeklyDigestBatch] = useState<{
+    batch_id: number;
+    status: string;
+    recipient_count: number;
+    personalized_count: number;
+    fallback_count: number;
+    sample_recipients: Array<{
+      email: string;
+      name: string;
+      monologue_title: string;
+      monologue_character: string;
+      monologue_play: string;
+      monologue_snippet: string;
+      character_analysis: string;
+      is_personalized: boolean;
+    }>;
+    estimated_cost: string;
+  } | null>(null);
+  const [weeklyDigestLoading, setWeeklyDigestLoading] = useState(false);
+  const [curatedMonologueId, setCuratedMonologueId] = useState("");
 
   // Leads browser
   const [leadsOpen, setLeadsOpen] = useState(false);
@@ -221,25 +245,6 @@ export default function AdminEmailsPage() {
       .then(({ data }) => setLeads(data))
       .catch(() => toast.error("Failed to load leads"))
       .finally(() => setLeadsLoading(false));
-  }
-
-  async function autoDncAppleRelay() {
-    setAutoDncLoading(true);
-    try {
-      const { data } = await api.post<{ added: number; scanned: number }>(
-        "/api/admin/emails/do-not-contact/auto-apple-relay",
-      );
-      if (data.added > 0) {
-        toast.success(`Added ${data.added} Apple Hide-My-Email user${data.added !== 1 ? "s" : ""} to do-not-contact`);
-      } else {
-        toast.success(`No new Apple SSO users to add (scanned ${data.scanned})`);
-      }
-      await Promise.all([refreshDnc(), refreshLeads()]);
-    } catch {
-      toast.error("Failed to auto-add Apple SSO users");
-    } finally {
-      setAutoDncLoading(false);
-    }
   }
 
   function refreshDnc() {
@@ -431,6 +436,62 @@ export default function AdminEmailsPage() {
       .get<BatchHistoryItem[]>(`/api/admin/emails/batches${params}`)
       .then(({ data }) => setBatchHistory(data))
       .catch(() => {});
+  }
+
+  // Weekly digest functions
+  async function prepareWeeklyDigest(dryRun = false) {
+    setWeeklyDigestLoading(true);
+    try {
+      const { data } = await api.post<typeof weeklyDigestBatch | { dry_run: boolean; eligible_count: number; sample_users: { email: string; name: string }[] }>(
+        "/api/admin/emails/weekly-digest/prepare",
+        {
+          curated_monologue_id: curatedMonologueId ? parseInt(curatedMonologueId) : undefined,
+          dry_run: dryRun,
+        }
+      );
+      if ("dry_run" in data && data.dry_run) {
+        toast.success(`${data.eligible_count} eligible users found`);
+      } else {
+        setWeeklyDigestBatch(data as typeof weeklyDigestBatch);
+        toast.success(`Batch prepared: ${(data as typeof weeklyDigestBatch)?.recipient_count} recipients`);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to prepare weekly digest";
+      toast.error(msg);
+    } finally {
+      setWeeklyDigestLoading(false);
+    }
+  }
+
+  async function approveWeeklyDigest() {
+    if (!weeklyDigestBatch) return;
+    setWeeklyDigestLoading(true);
+    try {
+      await api.post(`/api/admin/emails/weekly-digest/${weeklyDigestBatch.batch_id}/approve`);
+      toast.success("Weekly digest send started");
+      setWeeklyDigestBatch(null);
+      fetchBatchHistory();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to approve weekly digest";
+      toast.error(msg);
+    } finally {
+      setWeeklyDigestLoading(false);
+    }
+  }
+
+  async function cancelWeeklyDigest() {
+    if (!weeklyDigestBatch) return;
+    setWeeklyDigestLoading(true);
+    try {
+      await api.delete(`/api/admin/emails/weekly-digest/${weeklyDigestBatch.batch_id}`);
+      toast.success("Weekly digest cancelled");
+      setWeeklyDigestBatch(null);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to cancel weekly digest";
+      toast.error(msg);
+    } finally {
+      setWeeklyDigestLoading(false);
+    }
   }
 
   async function toggleBatchDrilldown(batchId: number) {
@@ -667,6 +728,15 @@ export default function AdminEmailsPage() {
         </div>
         <div className="flex items-center gap-2">
           <Button
+            variant={weeklyDigestOpen ? "default" : "outline"}
+            size="sm"
+            className="gap-2"
+            onClick={() => setWeeklyDigestOpen(!weeklyDigestOpen)}
+          >
+            <IconCalendar className="h-4 w-4" />
+            Weekly Digest
+          </Button>
+          <Button
             variant={leadsOpen ? "default" : "outline"}
             size="sm"
             className="gap-2"
@@ -808,13 +878,13 @@ export default function AdminEmailsPage() {
                           {b.campaign_key ? (
                             <span className="inline-block bg-muted px-2 py-0.5 text-xs">{b.campaign_key}</span>
                           ) : (
-                            <span className="text-muted-foreground/40">&mdash;</span>
+                            <span className="text-muted-foreground/70">&mdash;</span>
                           )}
                         </td>
                         <td className="px-3 py-2 text-center">{b.sent}</td>
-                        <td className="px-3 py-2 text-center">{opened > 0 ? opened : <span className="text-muted-foreground/40">&mdash;</span>}</td>
-                        <td className="px-3 py-2 text-center">{clicked > 0 ? clicked : <span className="text-muted-foreground/40">&mdash;</span>}</td>
-                        <td className="px-3 py-2 text-center">{bounced > 0 ? <span className="text-destructive">{bounced}</span> : <span className="text-muted-foreground/40">&mdash;</span>}</td>
+                        <td className="px-3 py-2 text-center">{opened > 0 ? opened : <span className="text-muted-foreground/70">&mdash;</span>}</td>
+                        <td className="px-3 py-2 text-center">{clicked > 0 ? clicked : <span className="text-muted-foreground/70">&mdash;</span>}</td>
+                        <td className="px-3 py-2 text-center">{bounced > 0 ? <span className="text-destructive">{bounced}</span> : <span className="text-muted-foreground/70">&mdash;</span>}</td>
                         <td className="px-3 py-2">
                           <span className={`inline-block px-2 py-0.5 text-xs font-medium ${
                             b.status === "completed" ? "bg-green-500/10 text-green-600" :
@@ -828,7 +898,7 @@ export default function AdminEmailsPage() {
                         <td className="px-3 py-2 text-muted-foreground text-xs">
                           {b.created_at ? new Date(b.created_at).toLocaleDateString("en-US", {
                             month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
-                          }) : <span className="text-muted-foreground/40">&mdash;</span>}
+                          }) : <span className="text-muted-foreground/70">&mdash;</span>}
                         </td>
                       </tr>
                       {isExpanded && (
@@ -838,9 +908,34 @@ export default function AdminEmailsPage() {
                               <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
                                 <p className="text-xs font-medium text-muted-foreground">
                                   {expandedSends.length} recipient{expandedSends.length !== 1 ? "s" : ""}
+                                  {expandedSends.filter((s) => s.status === "queued").length > 0 && (
+                                    <span className="ml-2 text-amber-600">
+                                      ({expandedSends.filter((s) => s.status === "queued").length} queued)
+                                    </span>
+                                  )}
                                 </p>
                                 {canSend && expandedSends.length > 0 && (
                                   <div className="flex items-center gap-1.5">
+                                    {expandedSends.filter((s) => s.status === "queued").length > 0 && (
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        className="h-7 text-xs gap-1.5 bg-amber-600 hover:bg-amber-700"
+                                        onClick={async (e) => {
+                                          e.stopPropagation();
+                                          try {
+                                            await api.post(`/api/admin/emails/batch/${b.batch_id}/resume`, { send_via: sendVia });
+                                            toast.success(`Resuming ${expandedSends.filter((s) => s.status === "queued").length} queued emails...`);
+                                            setTimeout(() => fetchBatchHistory(), 2000);
+                                          } catch {
+                                            toast.error("Failed to resume batch");
+                                          }
+                                        }}
+                                      >
+                                        <IconRefresh className="h-3.5 w-3.5" />
+                                        Resume sending
+                                      </Button>
+                                    )}
                                     <Button
                                       size="sm"
                                       variant="outline"
@@ -877,7 +972,7 @@ export default function AdminEmailsPage() {
                                     {expandedSends.map((s) => (
                                       <tr key={s.email} className="border-t border-border/30">
                                         <td className="py-1.5 pr-3 font-mono">{s.email}</td>
-                                        <td className="py-1.5 pr-3">{s.name || <span className="text-muted-foreground/40">&mdash;</span>}</td>
+                                        <td className="py-1.5 pr-3">{s.name || <span className="text-muted-foreground/70">&mdash;</span>}</td>
                                         <td className="py-1.5 pr-3">
                                           <span className={`inline-block px-1.5 py-0.5 text-[10px] font-medium ${
                                             s.status === "opened" || s.status === "clicked" ? "bg-green-500/10 text-green-600" :
@@ -888,8 +983,8 @@ export default function AdminEmailsPage() {
                                             {s.status}
                                           </span>
                                         </td>
-                                        <td className="py-1.5 pr-3">{s.opened_at ? new Date(s.opened_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : <span className="text-muted-foreground/40">&mdash;</span>}</td>
-                                        <td className="py-1.5">{s.clicked_at ? new Date(s.clicked_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : <span className="text-muted-foreground/40">&mdash;</span>}</td>
+                                        <td className="py-1.5 pr-3">{s.opened_at ? new Date(s.opened_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : <span className="text-muted-foreground/70">&mdash;</span>}</td>
+                                        <td className="py-1.5">{s.clicked_at ? new Date(s.clicked_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : <span className="text-muted-foreground/70">&mdash;</span>}</td>
                                       </tr>
                                     ))}
                                   </tbody>
@@ -909,6 +1004,139 @@ export default function AdminEmailsPage() {
           <p className="text-sm text-muted-foreground py-8 text-center">No campaigns sent yet. Click &ldquo;New email&rdquo; to get started.</p>
         )}
       </div>
+
+      {/* ── Weekly Digest (collapsible) ── */}
+      {weeklyDigestOpen && (
+        <div className="rounded-lg border border-border p-5 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <IconCalendar className="h-4 w-4 text-muted-foreground" />
+                Weekly Digest
+              </h3>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                AI-personalized monologue recommendations for free users. Personalized based on search history.
+              </p>
+            </div>
+            <button onClick={() => setWeeklyDigestOpen(false)} className="text-muted-foreground hover:text-foreground">
+              <IconX className="h-4 w-4" />
+            </button>
+          </div>
+
+          {!weeklyDigestBatch ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="curated-monologue" className="text-xs">
+                    Fallback monologue ID (optional)
+                  </Label>
+                  <p className="text-[11px] text-muted-foreground mb-1.5">
+                    Used for users without search history. Leave empty to auto-pick popular monologue.
+                  </p>
+                  <Input
+                    id="curated-monologue"
+                    placeholder="e.g. 1234"
+                    value={curatedMonologueId}
+                    onChange={(e) => setCuratedMonologueId(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => prepareWeeklyDigest(true)}
+                  disabled={weeklyDigestLoading}
+                  className="gap-2"
+                >
+                  <IconEye className="h-4 w-4" />
+                  {weeklyDigestLoading ? "Checking..." : "Preview eligible users"}
+                </Button>
+                <Button
+                  onClick={() => prepareWeeklyDigest(false)}
+                  disabled={weeklyDigestLoading}
+                  className="gap-2"
+                >
+                  <IconSparkles className="h-4 w-4" />
+                  {weeklyDigestLoading ? "Preparing..." : "Prepare batch with AI"}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Batch summary */}
+              <div className="grid grid-cols-4 gap-3">
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <p className="text-xs text-muted-foreground">Recipients</p>
+                  <p className="text-lg font-semibold">{weeklyDigestBatch.recipient_count}</p>
+                </div>
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <p className="text-xs text-muted-foreground">Personalized</p>
+                  <p className="text-lg font-semibold text-green-600">{weeklyDigestBatch.personalized_count}</p>
+                </div>
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <p className="text-xs text-muted-foreground">Fallback</p>
+                  <p className="text-lg font-semibold text-amber-600">{weeklyDigestBatch.fallback_count}</p>
+                </div>
+                <div className="rounded-lg bg-muted/40 p-3">
+                  <p className="text-xs text-muted-foreground">AI Cost</p>
+                  <p className="text-lg font-semibold">{weeklyDigestBatch.estimated_cost}</p>
+                </div>
+              </div>
+
+              {/* Sample previews */}
+              <div>
+                <h4 className="text-xs font-medium text-muted-foreground mb-2">Sample emails (preview)</h4>
+                <div className="space-y-3 max-h-96 overflow-y-auto">
+                  {weeklyDigestBatch.sample_recipients.map((r, i) => (
+                    <div key={i} className="rounded-lg border border-border p-4 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-sm">{r.name}</span>
+                          <span className="text-xs text-muted-foreground">{r.email}</span>
+                        </div>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded ${r.is_personalized ? "bg-green-500/10 text-green-600" : "bg-amber-500/10 text-amber-600"}`}>
+                          {r.is_personalized ? "Personalized" : "Curated"}
+                        </span>
+                      </div>
+                      <div className="text-sm space-y-2 bg-muted/30 p-3 rounded">
+                        <p className="text-muted-foreground text-xs">Subject: This week&apos;s pick</p>
+                        <p>Hey {r.name.split(" ")[0]},</p>
+                        <p>{r.character_analysis}</p>
+                        <p className="italic text-muted-foreground border-l-2 border-border pl-3">
+                          &ldquo;{r.monologue_snippet.slice(0, 150)}...&rdquo;
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {r.monologue_character} from &ldquo;{r.monologue_play}&rdquo;
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-2 border-t border-border">
+                <Button
+                  variant="outline"
+                  onClick={cancelWeeklyDigest}
+                  disabled={weeklyDigestLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={approveWeeklyDigest}
+                  disabled={weeklyDigestLoading}
+                  className="gap-2"
+                >
+                  <IconSend className="h-4 w-4" />
+                  {weeklyDigestLoading ? "Sending..." : `Approve & Send ${weeklyDigestBatch.recipient_count} emails`}
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Leads browser (collapsible) ── */}
       {leadsOpen && (
@@ -999,7 +1227,7 @@ export default function AdminEmailsPage() {
                   className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border transition-colors ${
                     t.value
                       ? "bg-muted border-border text-foreground"
-                      : "border-dashed border-border/60 text-muted-foreground/60 hover:text-foreground"
+                      : "border-dashed border-border/60 text-muted-foreground hover:text-foreground"
                   }`}
                 >
                   <Icon className="h-3 w-3" />
@@ -1012,7 +1240,7 @@ export default function AdminEmailsPage() {
               className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border transition-colors ${
                 requireOptIn
                   ? "bg-primary/10 border-primary/40 text-primary"
-                  : "border-dashed border-border/60 text-muted-foreground/60 hover:text-foreground"
+                  : "border-dashed border-border/60 text-muted-foreground hover:text-foreground"
               }`}
               title="Only show users who opted into marketing"
             >
@@ -1025,11 +1253,11 @@ export default function AdminEmailsPage() {
           <div className="flex items-center justify-between text-xs">
             <p className="text-muted-foreground">
               <span className="text-foreground font-medium">{filteredLeads.length}</span> eligible
-              <span className="mx-1.5 text-muted-foreground/50">·</span>
+              <span className="mx-1.5 text-muted-foreground/70">·</span>
               {leads.length} total
               {selectedLeadIds.size > 0 && (
                 <>
-                  <span className="mx-1.5 text-muted-foreground/50">·</span>
+                  <span className="mx-1.5 text-muted-foreground/70">·</span>
                   <span className="text-primary font-medium">{selectedLeadIds.size} selected</span>
                 </>
               )}
@@ -1118,12 +1346,12 @@ export default function AdminEmailsPage() {
                         </td>
                         <td className="px-3 py-1.5 font-mono">{l.email}</td>
                         <td className="px-3 py-1.5">
-                          {l.name || <span className="text-muted-foreground/40">&mdash;</span>}
+                          {l.name || <span className="text-muted-foreground/70">&mdash;</span>}
                         </td>
                         <td className="px-3 py-1.5 text-muted-foreground">
                           {l.created_at
                             ? new Date(l.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })
-                            : <span className="text-muted-foreground/40">&mdash;</span>}
+                            : <span className="text-muted-foreground/70">&mdash;</span>}
                         </td>
                         <td className="px-3 py-1.5">
                           {l.tier_name ? (
@@ -1135,7 +1363,7 @@ export default function AdminEmailsPage() {
                               {l.tier_name}
                             </span>
                           ) : (
-                            <span className="text-muted-foreground/40">&mdash;</span>
+                            <span className="text-muted-foreground/70">&mdash;</span>
                           )}
                         </td>
                         <td className="px-3 py-1.5">
@@ -1193,19 +1421,6 @@ export default function AdminEmailsPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              {canSend && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs gap-1.5"
-                  onClick={autoDncAppleRelay}
-                  disabled={autoDncLoading}
-                  title="Bulk-add every Apple Hide-My-Email user"
-                >
-                  <IconBrandApple className="h-3.5 w-3.5" />
-                  {autoDncLoading ? "Adding..." : "Auto-add Apple SSO"}
-                </Button>
-              )}
               <button onClick={() => setDncOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <IconX className="h-4 w-4" />
               </button>
@@ -1256,11 +1471,11 @@ export default function AdminEmailsPage() {
                   {dncEntries.map((e) => (
                     <tr key={e.id} className="border-t border-border/40">
                       <td className="px-3 py-1.5 font-mono">{e.email}</td>
-                      <td className="px-3 py-1.5">{e.name || <span className="text-muted-foreground/40">&mdash;</span>}</td>
+                      <td className="px-3 py-1.5">{e.name || <span className="text-muted-foreground/70">&mdash;</span>}</td>
                       <td className="px-3 py-1.5 text-muted-foreground">
                         {e.added_at
                           ? new Date(e.added_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-                          : <span className="text-muted-foreground/40">&mdash;</span>}
+                          : <span className="text-muted-foreground/70">&mdash;</span>}
                       </td>
                       <td className="px-3 py-1.5 text-right">
                         {canSend && (
@@ -1335,12 +1550,14 @@ export default function AdminEmailsPage() {
                             {v.label}
                             {v.required && <span className="text-destructive ml-0.5">*</span>}
                           </Label>
-                          {v.type === "text" && String(v.default).length > 60 ? (
+                          {v.type === "text" && (String(v.default).length > 60 || v.name === "body_markdown" || v.name === "intro_text") ? (
                             <Textarea
-                              id={v.name} rows={2}
+                              id={v.name}
+                              rows={v.name === "body_markdown" ? 8 : 3}
+                              placeholder={v.name === "body_markdown" ? "Write your message here...\n\nUse **bold**, *italic*, and [links](https://example.com)" : undefined}
                               value={variables[v.name] ?? ""}
                               onChange={(e) => setVariables((prev) => ({ ...prev, [v.name]: e.target.value }))}
-                              className="mt-1"
+                              className="mt-1 font-mono text-sm"
                             />
                           ) : (
                             <Input

@@ -1,7 +1,11 @@
 """Film & TV search: semantic + structured search over IMDb/OMDb-seeded film_tv_references."""
 
+import hashlib
+import logging
 import math
 import random as _random
+import re
+from collections import OrderedDict
 from typing import List, Optional, cast
 
 from app.api.auth import get_current_user
@@ -13,10 +17,74 @@ from app.models.actor import FilmTvFavorite, FilmTvReference
 from app.models.search_log import SearchLog
 from app.models.user import User
 from app.services.ai.content_analyzer import ContentAnalyzer
+from app.services.search.cache_manager import cache_manager
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
+
+# In-memory LRU cache for film/TV embeddings (Level 0 - fastest)
+_MAX_FILMTV_EMBEDDING_CACHE = 200
+FILMTV_EMBEDDING_CACHE: OrderedDict[str, List[float]] = OrderedDict()
+
+
+def _evict_if_needed(cache: OrderedDict, max_size: int) -> None:
+    """Remove oldest entries until cache is within max_size."""
+    while len(cache) > max_size:
+        cache.popitem(last=False)
+
+
+def _canonicalize_query(raw_query: str) -> str:
+    """Canonicalize queries for caching."""
+    q = raw_query.lower().strip()
+    q = re.sub(r"[!?.,;:]+$", "", q)
+    q = re.sub(r"\s+", " ", q)
+    return q
+
+
+def _get_cached_embedding(query: str) -> Optional[List[float]]:
+    """
+    Get embedding from 2-level cache (memory → Redis).
+    Returns cached embedding or None if not found.
+    """
+    canonical = _canonicalize_query(query)
+    emb_hash = hashlib.md5(f"{canonical}_filmtv_1536".encode()).hexdigest()
+
+    # Level 0: In-memory cache (fastest)
+    if emb_hash in FILMTV_EMBEDDING_CACHE:
+        FILMTV_EMBEDDING_CACHE.move_to_end(emb_hash)
+        logger.debug("Film/TV embedding: memory cache hit for: %s", query[:50])
+        return FILMTV_EMBEDDING_CACHE[emb_hash]
+
+    # Level 1: Redis cache
+    cache_key = f"{canonical}_text-embedding-3-large_3072"
+    cached = cache_manager.get_embedding(cache_key)
+    if cached:
+        # Promote to memory cache
+        FILMTV_EMBEDDING_CACHE[emb_hash] = cached
+        FILMTV_EMBEDDING_CACHE.move_to_end(emb_hash)
+        _evict_if_needed(FILMTV_EMBEDDING_CACHE, _MAX_FILMTV_EMBEDDING_CACHE)
+        logger.debug("Film/TV embedding: Redis cache hit for: %s", query[:50])
+        return cached
+
+    return None
+
+
+def _cache_embedding(query: str, embedding: List[float]) -> None:
+    """Store embedding in both memory and Redis caches."""
+    canonical = _canonicalize_query(query)
+    emb_hash = hashlib.md5(f"{canonical}_filmtv_1536".encode()).hexdigest()
+
+    # Store in memory cache
+    FILMTV_EMBEDDING_CACHE[emb_hash] = embedding
+    FILMTV_EMBEDDING_CACHE.move_to_end(emb_hash)
+    _evict_if_needed(FILMTV_EMBEDDING_CACHE, _MAX_FILMTV_EMBEDDING_CACHE)
+
+    # Store in Redis cache (7 days TTL)
+    cache_key = f"{canonical}_text-embedding-3-large_3072"
+    cache_manager.set_embedding(cache_key, embedding)
 
 router = APIRouter(prefix="/api/film-tv", tags=["film-tv"])
 
@@ -209,8 +277,19 @@ async def search_film_tv_references(
 
     if q and q.strip():
         q_clean = q.strip()
-        from app.services.ai.langchain.embeddings import generate_embedding
-        query_embedding = generate_embedding(q_clean, model="text-embedding-3-large", dimensions=3072)
+
+        # Check embedding cache first (memory → Redis)
+        query_embedding = _get_cached_embedding(q_clean)
+
+        if query_embedding is None:
+            # Cache miss - generate embedding
+            from app.services.ai.langchain.embeddings import generate_embedding
+            logger.debug("Film/TV embedding: cache miss, generating for: %s", q_clean[:50])
+            query_embedding = generate_embedding(q_clean, model="text-embedding-3-large", dimensions=3072)
+
+            # Cache the generated embedding
+            if query_embedding:
+                _cache_embedding(q_clean, query_embedding)
 
         # scores_by_id: imdb_id → (score, ref, match_type)
         scores_by_id: dict[str, tuple[float, FilmTvReference, Optional[str]]] = {}

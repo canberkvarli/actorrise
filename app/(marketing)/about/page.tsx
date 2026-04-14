@@ -42,7 +42,7 @@ export default function AboutPage() {
 
       {/* Launch badges */}
       <div className="mt-12 pt-8 border-t border-border/60">
-        <p className="text-xs text-muted-foreground/60 mb-4">Featured on</p>
+        <p className="text-xs text-muted-foreground mb-4">Featured on</p>
         <div className="flex flex-wrap items-center gap-4">
           <a href="https://www.producthunt.com/products/actorrise?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-actorrise" target="_blank" rel="noopener noreferrer">
             <img
