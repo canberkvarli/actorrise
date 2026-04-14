@@ -449,6 +449,9 @@ export default function AdminEmailsPage() {
           dry_run: dryRun,
         }
       );
+      if (!data) {
+        throw new Error("No response from server");
+      }
       if ("dry_run" in data && data.dry_run) {
         toast.success(`${data.eligible_count} eligible users found`);
       } else {
