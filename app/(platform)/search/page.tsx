@@ -713,7 +713,7 @@ function SearchContent() {
     setHasSearched(true);
     setRestoredFromLastSearch(false);
     try {
-      const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: String(pageNum) });
+      const params = new URLSearchParams({ limit: String(PAGE_SIZE), page: String(pageNum), source_type: "play" });
       if (searchQuery.trim()) params.set("q", searchQuery);
       Object.entries(searchFilters).forEach(([key, value]) => {
         if (value) params.append(key, value);
@@ -1821,7 +1821,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 ) : (
                   <Card className="border-dashed bg-muted/20">
                     <CardContent className="pt-12 pb-12 text-center">
-                      <p className="text-muted-foreground text-sm">No results match. Try a different search or filters.</p>
+                      <p className="text-muted-foreground text-sm">No results found</p>
                     </CardContent>
                   </Card>
                 )}
@@ -1888,8 +1888,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <CardContent className="pt-12 pb-12 text-center">
                           <p className="text-muted-foreground text-sm">
                             {showBookmarkedOnly
-                              ? "No bookmarked monologues in this search. Bookmark some to see them here."
-                              : "No results match. Try a different search or filters."}
+                              ? "No bookmarked results"
+                              : "No results found"}
                           </p>
                         </CardContent>
                       </Card>
