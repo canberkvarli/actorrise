@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 from sqlalchemy import func, or_, text
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, joinedload, defer
 
 from app.models.actor import Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
@@ -768,8 +768,11 @@ class SemanticSearch:
         )
 
         # Build base query (eager-load Play to avoid N+1 during scoring/response)
+        # CRITICAL: Defer embedding_vector to avoid loading 1536 floats per row over network
         base_query = (
-            self.db.query(Monologue).join(Play).options(joinedload(Monologue.play))
+            self.db.query(Monologue)
+            .join(Play)
+            .options(joinedload(Monologue.play), defer(Monologue.embedding_vector))
         )
 
         # Apply ONLY hard filters as SQL WHERE clauses.
@@ -909,26 +912,70 @@ class SemanticSearch:
             # OPTIMIZED: Reduced from 3x to 1.5x since HNSW indexes are now in place
             VECTOR_CANDIDATES = min(MAX_CANDIDATES, max(int(limit * 1.5), limit))
 
-            # OPTIMIZATION: Set ef_search for faster HNSW queries (default is 40).
-            # Lower = faster but less accurate, higher = slower but more accurate.
-            # 40 is a good balance for our corpus size (~7.5k monologues).
+            # OPTIMIZATION: Two-step query to avoid sending 1536-dim vectors through ORM.
+            # Step 1: Raw SQL to get IDs ordered by cosine distance (fast, minimal data)
+            # Step 2: Load full Monologue objects by ID (no embedding transfer)
+            vec_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+
+            # Build WHERE clause for hard filters
+            where_clauses = ["m.embedding_vector IS NOT NULL"]
+            if hard_filters.get("gender"):
+                where_clauses.append(f"m.character_gender = '{hard_filters['gender']}'")
+            if hard_filters.get("emotion"):
+                where_clauses.append(f"m.primary_emotion = '{hard_filters['emotion']}'")
+            if hard_filters.get("source_type"):
+                st = hard_filters["source_type"]
+                if isinstance(st, list):
+                    st_list = ",".join(f"'{s}'" for s in st)
+                    where_clauses.append(f"p.source_type IN ({st_list})")
+                else:
+                    where_clauses.append(f"p.source_type = '{st}'")
+
+            where_sql = " AND ".join(where_clauses)
+
+            # Step 1: Get IDs with pgvector similarity search
+            id_query = text(f"""
+                SELECT m.id
+                FROM monologues m
+                JOIN plays p ON p.id = m.play_id
+                WHERE {where_sql}
+                ORDER BY m.embedding_vector <=> '{vec_str}'::vector
+                LIMIT :limit
+            """)
+
             try:
                 self.db.execute(text("SET hnsw.ef_search = 40"))
             except Exception:
-                pass  # Non-fatal if this fails (e.g., old pgvector version)
+                pass
 
-            semantic_candidates = (
-                base_query.filter(Monologue.embedding_vector.isnot(None))
-                .order_by(Monologue.embedding_vector.cosine_distance(query_embedding))
-                .limit(VECTOR_CANDIDATES)
-                .all()
-            )
+            id_results = self.db.execute(id_query, {"limit": VECTOR_CANDIDATES}).fetchall()
+            candidate_ids = [row[0] for row in id_results]
 
             logger.debug(
-                "Loaded %s monologues with pgvector embeddings (max: %s)",
-                len(semantic_candidates),
+                "pgvector returned %s candidate IDs (max: %s)",
+                len(candidate_ids),
                 VECTOR_CANDIDATES,
             )
+
+            # Step 2: Load full Monologue objects (without heavy columns)
+            # CRITICAL: Defer large columns to avoid transferring megabytes of data
+            if candidate_ids:
+                from sqlalchemy.orm import Load
+                semantic_candidates = (
+                    self.db.query(Monologue)
+                    .join(Play)
+                    .options(
+                        joinedload(Monologue.play).defer(Play.full_text),  # Defer play's full_text
+                        defer(Monologue.embedding_vector),  # 1536 floats per row
+                    )
+                    .filter(Monologue.id.in_(candidate_ids))
+                    .all()
+                )
+                # Re-order to match pgvector ranking
+                mono_by_id = {m.id: m for m in semantic_candidates}
+                semantic_candidates = [mono_by_id[mid] for mid in candidate_ids if mid in mono_by_id]
+            else:
+                semantic_candidates = []
 
             # pgvector already returned candidates sorted best-first by cosine distance.
             # Recomputing cosine similarity in Python is redundant; derive a score
