@@ -123,14 +123,14 @@ class ContentAnalyzer:
             text: Text to embed
 
         Returns:
-            List of floats representing the embedding vector (3072 dimensions)
+            List of floats representing the embedding vector (1536 dimensions)
         """
         try:
             # Use LangChain embedding generation
             return langchain_generate_embedding(
                 text=text,
                 model="text-embedding-3-large",
-                dimensions=3072,
+                dimensions=1536,  # Max 2000 for pgvector HNSW indexing
                 api_key=self.api_key
             )
 
@@ -221,6 +221,79 @@ class ContentAnalyzer:
                 })
 
         return results
+
+    def generate_character_intro(
+        self,
+        text: str,
+        character: str,
+        play_title: str,
+        author: str = "Unknown"
+    ) -> str:
+        """
+        Generate a 2-3 sentence character introduction for weekly emails.
+
+        This is a conversational hook that makes the reader want to explore
+        the monologue. Not a summary, but a teaser.
+
+        Args:
+            text: The monologue text
+            character: Character name
+            play_title: Title of the play
+            author: Author name
+
+        Returns:
+            A 2-3 sentence character introduction
+        """
+        from langchain_openai import ChatOpenAI
+        from langchain.prompts import ChatPromptTemplate
+
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", """You write brief, intriguing character introductions for actors looking for monologues.
+
+Write 2-3 sentences that:
+1. Capture who this character is emotionally
+2. Hint at what's at stake in the monologue
+3. Make the reader curious to read more
+
+Be conversational, not academic. Address the reader directly using "you" when appropriate.
+Don't mention the play title or author - the context is already clear.
+Don't use phrases like "In this monologue" or "This piece".
+
+Example good output:
+"She's cornered, but she's not backing down. Everything she's worked for is on the line, and she's finally saying what she should've said years ago."
+
+Example bad output:
+"In this dramatic monologue from Shakespeare's play, the character expresses strong emotions about their circumstances."
+"""),
+            ("human", """Character: {character}
+Play: {play_title}
+Author: {author}
+
+Monologue excerpt (first 500 chars):
+{text_excerpt}
+
+Write the introduction:""")
+        ])
+
+        llm = ChatOpenAI(
+            model="gpt-4o-mini",
+            temperature=0.7,
+            api_key=self.api_key
+        )
+
+        chain = prompt | llm
+
+        try:
+            result = chain.invoke({
+                "character": character,
+                "play_title": play_title,
+                "author": author,
+                "text_excerpt": text[:500]
+            })
+            return result.content.strip()
+        except Exception as e:
+            print(f"Error generating character intro: {e}")
+            return f"A powerful moment for {character}."
 
     def parse_search_query(self, query: str) -> Dict:
         """

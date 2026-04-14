@@ -126,8 +126,8 @@ class Monologue(Base):
     scene_description = Column(Text, nullable=True)  # Setting and situation
 
     # Search & Discovery
-    # Embedding: text-embedding-3-large (3072 dims)
-    embedding_vector = deferred(Column(Vector(3072), nullable=True))
+    # Embedding: text-embedding-3-large (1536 dims for pgvector HNSW indexing)
+    embedding_vector = deferred(Column(Vector(1536), nullable=True))
     search_tags = Column(ARRAY(String), nullable=True)  # Searchable keywords
 
     # Usage Analytics
@@ -415,8 +415,8 @@ class FilmTvReference(Base):
     imdb_rating = Column(Float, nullable=True, index=True)
     poster_url = Column(String, nullable=True)
     imsdb_url = Column(String, nullable=True)
-    # Embedding: text-embedding-3-large (3072 dims)
-    embedding = Column(Vector(3072), nullable=True)
+    # Embedding: text-embedding-3-large (1536 dims for pgvector HNSW indexing)
+    embedding = Column(Vector(1536), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))
 
     # Relationships

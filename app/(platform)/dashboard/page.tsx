@@ -413,30 +413,20 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
             {/* Action links – editorial style, no cards */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-5 pt-1">
-              <Link href="/search" className="group">
-                <div className="flex items-center gap-2 mb-1">
-                  <IconSearch className="h-[18px] w-[18px] text-primary" />
-                  <span className="text-[15px] font-semibold text-foreground">
-                    Find a monologue
-                  </span>
-                  <IconArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                </div>
-                <p className="text-sm text-muted-foreground pl-[26px] group-hover:text-muted-foreground/80 transition-colors">
-                  Search by description, emotion, or filters
-                </p>
+              <Link href="/search" className="group flex items-center gap-2 py-1">
+                <IconSearch className="h-[18px] w-[18px] text-primary" />
+                <span className="text-[15px] font-semibold text-foreground">
+                  Find a monologue
+                </span>
+                <IconArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
               </Link>
 
-              <Link href="/my-scripts" className="group">
-                <div className="flex items-center gap-2 mb-1">
-                  <IconMicrophone className="h-[18px] w-[18px] text-primary" />
-                  <span className="text-[15px] font-semibold text-foreground">
-                    Rehearse a scene
-                  </span>
-                  <IconArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                </div>
-                <p className="text-sm text-muted-foreground pl-[26px] group-hover:text-muted-foreground/80 transition-colors">
-                  Upload a script and run lines with AI
-                </p>
+              <Link href="/my-scripts" className="group flex items-center gap-2 py-1">
+                <IconMicrophone className="h-[18px] w-[18px] text-primary" />
+                <span className="text-[15px] font-semibold text-foreground">
+                  Rehearse a scene
+                </span>
+                <IconArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
               </Link>
             </div>
           </motion.section>
@@ -448,14 +438,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             transition={{ duration: sectionDuration, delay: sectionStagger * 2, ease: sectionEase }}
           >
             <div className="flex items-end justify-between mb-6">
-              <div>
-                <h2 className="text-2xl md:text-3xl font-bold text-foreground">
-                  {mounted && isProfileComplete ? "Recommended for you" : "Discover monologues"}
-                </h2>
-                <p className="text-muted-foreground mt-1">
-                  {mounted && isProfileComplete ? "Personalized picks based on your profile" : "Explore our curated collection"}
-                </p>
-              </div>
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground">
+                {mounted && isProfileComplete ? "Recommended for you" : "Discover monologues"}
+              </h2>
               <Button asChild variant="ghost" size="sm" className="shrink-0 text-muted-foreground hover:bg-muted hover:text-foreground">
                 <Link href="/search" className="whitespace-nowrap">
                   View all

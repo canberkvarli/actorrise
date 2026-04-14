@@ -1,30 +1,31 @@
 {% extends "base_personal.html" %}
 
-{% block title %}Your weekly pick{% endblock %}
+{% block title %}This week's pick{% endblock %}
 
 {% block content %}
         <p>Hey {{ user_name }},</p>
 
-        <p>Here's what caught my eye this week.</p>
+        {% if character_analysis %}
+        <p>{{ character_analysis }}</p>
+        {% endif %}
 
-        {% if monologue_title %}
-        <p><strong>This week's pick: {{ monologue_title }}</strong></p>
         {% if monologue_snippet %}
-        <p style="font-style: italic; color: #555;">{{ monologue_snippet }}</p>
-        {% endif %}
-        <p><a href="{{ monologue_url }}">Read the full monologue</a></p>
+        <p style="font-style: italic; color: #555; border-left: 3px solid #ddd; padding-left: 16px; margin: 20px 0;">"{{ monologue_snippet }}"</p>
         {% endif %}
 
-        {% if tip_title %}
-        <p><strong>{{ tip_title }}</strong><br>
-        {{ tip_body }}</p>
+        {% if monologue_url %}
+        <p><a href="{{ monologue_url }}" style="color: #1a1a1a; font-weight: 500;">Read the full monologue →</a></p>
         {% endif %}
 
-        <p>If something caught your eye, just reply and let me know.</p>
+        <p style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #eee;">Want to practice a scene? Try our sample script or upload your own and start rehearsing with AI Scene Partner.</p>
 
-        <div style="margin-top:28px; color:#555; font-size:14px; line-height:1.5;">
+        <p><a href="https://actorrise.com/dashboard" style="color: #1a1a1a; font-weight: 500;">Try it →</a></p>
+
+        <p style="margin-top: 24px;">I'd love your feedback on Scene Partner - just reply to this email. I read everything.</p>
+
+        <p style="margin-top: 28px;">
             Canberk<br>
-            Founder | Actor<br>
-            <a href="https://actorrise.com">actorrise.com</a>
-        </div>
+            <span style="color: #666;">Founder, ActorRise</span><br>
+            <a href="https://actorrise.com" style="color: #666;">actorrise.com</a>
+        </p>
 {% endblock %}

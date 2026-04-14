@@ -180,7 +180,7 @@ export default function RootLayout({
         <FontLoader />
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
           enableSystem={false}
           disableTransitionOnChange
         >
