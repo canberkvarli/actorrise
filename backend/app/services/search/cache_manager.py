@@ -40,10 +40,12 @@ class CacheManager:
 
             if redis_url:
                 # Upstash or any Redis URL (redis://... or rediss://...)
+                # ssl_cert_reqs=None needed for macOS local dev (production has proper certs)
                 self.redis_client = redis.Redis.from_url(
                     redis_url,
                     decode_responses=False,
                     socket_connect_timeout=2,
+                    ssl_cert_reqs=None,
                 )
             else:
                 # Fallback to host/port config
