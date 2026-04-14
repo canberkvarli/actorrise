@@ -359,30 +359,43 @@ class CacheManager:
             embedding_generator: Function that generates embeddings
         """
         if not self.redis_enabled:
-            print("⚠ Redis not enabled, skipping warmup")
+            logger.debug("Redis not enabled, skipping warmup")
             return
 
-        print(f"Warming up cache with {len(queries)} common queries...")
+        # Skip warmup if cache already has embeddings (fast check)
+        try:
+            existing_keys = self.redis_client.dbsize()
+            if existing_keys >= len(queries):
+                logger.info("Cache already warm (%d keys), skipping warmup", existing_keys)
+                return
+        except Exception:
+            pass
 
-        for i, query in enumerate(queries, 1):
-            # Check if already cached
-            if self.get_embedding(query):
-                continue
+        logger.info("Warming up cache with %d common queries...", len(queries))
+
+        cached_count = 0
+        generated_count = 0
+        for query in queries:
+            # Check if already cached (silent check)
+            cache_key = self._generate_cache_key("embedding", query)
+            try:
+                if self.redis_client.exists(cache_key):
+                    cached_count += 1
+                    continue
+            except Exception:
+                pass
 
             # Generate and cache embedding
             try:
                 embedding = embedding_generator(query)
                 if embedding:
-                    self.set_embedding(
-                        query, embedding, ttl=2592000
-                    )  # 30 days for common queries
-                    print(f"  [{i}/{len(queries)}] Cached: {query}")
+                    self.set_embedding(query, embedding, ttl=2592000)  # 30 days
+                    generated_count += 1
                     time.sleep(0.1)  # Rate limit
-
             except Exception as e:
-                print(f"  Error caching {query}: {e}")
+                logger.debug("Error caching %s: %s", query, e)
 
-        print("✓ Cache warmup complete")
+        logger.info("Cache warmup complete: %d cached, %d generated", cached_count, generated_count)
 
 
 # Common queries to pre-warm (film/tv, emotions, demographics)
