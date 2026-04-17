@@ -151,7 +151,7 @@ export function MonologueResultCard({
               </div>
             </div>
 
-            {/* Metadata + emotion */}
+            {/* Metadata row: gender · age · category */}
             <div className="flex items-center gap-1.5 flex-wrap min-h-[24px]">
               {mono.character_gender && mono.character_gender.toLowerCase() !== "any" && (
                 <span className="text-[11px] text-muted-foreground capitalize">{mono.character_gender}</span>
@@ -176,12 +176,13 @@ export function MonologueResultCard({
                   {mono.category}
                 </Badge>
               )}
-              {mono.primary_emotion && mono.primary_emotion.toLowerCase() !== "unknown" && (
-                <Badge variant="secondary" className={`ml-auto font-medium capitalize text-[11px] px-2 py-0.5 ${getEmotionBadgeClassName(mono.primary_emotion)}`}>
-                  {mono.primary_emotion}
-                </Badge>
-              )}
             </div>
+            {/* Emotion on its own line */}
+            {mono.primary_emotion && mono.primary_emotion.toLowerCase() !== "unknown" && (
+              <Badge variant="secondary" className={`w-fit font-medium capitalize text-[11px] px-2 py-0.5 ${getEmotionBadgeClassName(mono.primary_emotion)}`}>
+                {mono.primary_emotion}
+              </Badge>
+            )}
 
             <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
               &ldquo;{mono.text.substring(0, 120)}...&rdquo;
