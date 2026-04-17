@@ -16,7 +16,7 @@ function SpeedBlock() {
       </p>
       <p className="text-lg text-foreground/95 leading-snug">
         Find the right audition monologue in{" "}
-        <span className="font-semibold text-foreground">less than 20 seconds.</span>
+        <span className="font-semibold text-foreground">seconds.</span>
       </p>
     </div>
   );

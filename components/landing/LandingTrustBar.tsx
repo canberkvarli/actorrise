@@ -41,7 +41,7 @@ export function LandingTrustBar() {
           >
             <img
               src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1078076&theme=dark&t=1772064638507"
-              alt="ActorRise - Find the perfect monologue in less than 20 seconds | Product Hunt"
+              alt="ActorRise - Find the perfect monologue in seconds | Product Hunt"
               width={250}
               height={54}
               className="h-[40px] sm:h-[54px] w-auto"

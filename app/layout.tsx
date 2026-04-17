@@ -44,11 +44,11 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "ActorRise - Find Your Monologue in 20 Seconds, Spend Your Time Rehearsing",
+    default: "ActorRise - Find Your Monologue in Seconds, Spend Your Time Rehearsing",
     template: "%s | ActorRise",
   },
   description:
-    "Stop wasting hours searching books. Find your perfect audition monologue in 20 seconds with AI search. 7,500+ monologues from plays, films, and TV. Free while in early access, no credit card required.",
+    "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 7,500+ monologues from plays, films, and TV. Free while in early access, no credit card required.",
   keywords: [
     "monologue search",
     "audition monologues",
@@ -76,23 +76,23 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: siteUrl,
     siteName: "ActorRise",
-    title: "ActorRise - Find Your Monologue in 20 Seconds, Spend Your Time Rehearsing",
+    title: "ActorRise - Find Your Monologue in Seconds, Spend Your Time Rehearsing",
     description:
-      "Stop wasting hours searching books. Find your perfect audition monologue in 20 seconds with AI search. 7,500+ monologues from plays, films, and TV. Free while in early access.",
+      "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 7,500+ monologues from plays, films, and TV. Free while in early access.",
     images: [
       {
         url: "/opengraph-image",
         width: 1200,
         height: 630,
-        alt: "ActorRise - Find your monologue in 20 seconds. Spend your time rehearsing.",
+        alt: "ActorRise - Find your monologue in seconds. Spend your time rehearsing.",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ActorRise - Find Your Monologue in 20 Seconds, Spend Your Time Rehearsing",
+    title: "ActorRise - Find Your Monologue in Seconds, Spend Your Time Rehearsing",
     description:
-      "Stop wasting hours searching books. Find your perfect audition monologue in 20 seconds with AI search. 7,500+ monologues from plays, films, and TV. Free while in early access.",
+      "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 7,500+ monologues from plays, films, and TV. Free while in early access.",
     images: ["/opengraph-image"],
   },
   robots: {
@@ -116,7 +116,7 @@ const jsonLd = {
       "@id": `${siteUrl}/#website`,
       name: "ActorRise",
       url: siteUrl,
-      description: "Find your perfect audition monologue in 20 seconds with AI search. 7,500+ monologues from plays, films, and TV. Spend your time rehearsing.",
+      description: "Find your perfect audition monologue in seconds with AI search. 7,500+ monologues from plays, films, and TV. Spend your time rehearsing.",
       publisher: { "@id": `${siteUrl}/#organization` },
     },
     {
@@ -125,7 +125,7 @@ const jsonLd = {
       name: "ActorRise",
       url: siteUrl,
       description:
-        "Stop wasting hours searching books. Find your perfect audition monologue in 20 seconds with AI search. Free while in early access, no credit card required.",
+        "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. Free while in early access, no credit card required.",
       logo: { "@type": "ImageObject", url: `${siteUrl}/icon-512.png` },
     },
     {
@@ -134,7 +134,7 @@ const jsonLd = {
       name: "ActorRise",
       url: siteUrl,
       description:
-        "Find your monologue in 20 seconds. Spend your time rehearsing. AI semantic search over 7,500+ monologues from plays, films, and TV.",
+        "Find your monologue in seconds. Spend your time rehearsing. AI semantic search over 7,500+ monologues from plays, films, and TV.",
       applicationCategory: "EntertainmentApplication",
       operatingSystem: "Any",
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
