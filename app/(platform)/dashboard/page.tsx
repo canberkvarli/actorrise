@@ -450,9 +450,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </div>
 
             {(!mounted || isLoadingMain) ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 min-h-[280px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="p-5 sm:p-6 bg-card border border-border rounded-xl min-h-[220px] sm:min-h-[260px]">
+                  <div key={i} className="p-5 sm:p-6 bg-card border border-border rounded-xl h-[340px] sm:h-[380px]">
                     <Skeleton className="h-6 w-3/4 mb-3 rounded-md" />
                     <Skeleton className="h-4 w-1/2 mb-2 rounded-md" />
                     <Skeleton className="h-4 w-1/3 mb-4 rounded-md" />
@@ -462,7 +462,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               </div>
             ) : mainMonologues.length > 0 ? (
               <AnimatePresence mode="popLayout">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 min-h-[280px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {mainMonologues.slice(0, 4).map((mono, idx) => (
                   <motion.div
                     key={mono.id}
@@ -471,7 +471,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.35, delay: idx * 0.05, ease: [0.25, 0.1, 0.25, 1] }}
-                    className="group p-4 sm:p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer h-full flex flex-col min-h-[200px] sm:min-h-[260px]"
+                    className="group p-4 sm:p-6 bg-card border border-border rounded-xl hover:border-primary/30 hover:shadow-lg transition-all cursor-pointer flex flex-col h-[340px] sm:h-[380px]"
                     onClick={() => openMonologue(mono)}
                   >
                       <div className="flex items-start justify-between gap-2 mb-4">
@@ -515,8 +515,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         </div>
                       </div>
 
-                      <p className="text-sm text-muted-foreground line-clamp-3 flex-1 leading-relaxed">
-                        "{mono.text.substring(0, 120)}..."
+                      <p className="text-sm text-muted-foreground line-clamp-5 flex-1 leading-relaxed">
+                        "{mono.text.substring(0, 300)}..."
                       </p>
 
                       <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border/50 text-xs text-muted-foreground">
