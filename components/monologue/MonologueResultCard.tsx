@@ -37,6 +37,8 @@ export interface MonologueResultCardProps {
   highlightFields?: QueryHighlights;
   /** Match reasons for the "why you got this" tooltip. */
   matchReasons?: MatchReason[];
+  /** Layout variant. "dashboard" is a taller fixed-height tile with more synopsis lines. */
+  size?: "default" | "dashboard";
 }
 
 export function MonologueResultCard({
@@ -50,6 +52,7 @@ export function MonologueResultCard({
   onEdit,
   highlightFields,
   matchReasons,
+  size = "default",
 }: MonologueResultCardProps) {
   const isBestMatch = variant === "bestMatch";
   const [justBookmarked, setJustBookmarked] = useState(false);
@@ -78,7 +81,9 @@ export function MonologueResultCard({
     >
       {indicatorLabel && <MatchIndicatorTag label={indicatorLabel} />}
       <Card
-        className={`hover:shadow-xl transition-all cursor-pointer h-full min-h-[280px] flex flex-col group rounded-lg ${
+        className={`hover:shadow-xl transition-all cursor-pointer flex flex-col group rounded-lg ${
+          size === "dashboard" ? "h-[380px]" : "h-full min-h-[280px]"
+        } ${
           isBestMatch ? "border-l-4 border-border hover:border-muted-foreground/40" : "hover:border-secondary/50"
         }`}
         onClick={onSelect}
@@ -184,8 +189,8 @@ export function MonologueResultCard({
               </Badge>
             )}
 
-            <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-              &ldquo;{mono.text.substring(0, 120)}...&rdquo;
+            <p className={`text-sm text-muted-foreground leading-relaxed ${size === "dashboard" ? "line-clamp-4" : "line-clamp-2"}`}>
+              &ldquo;{mono.text.substring(0, size === "dashboard" ? 280 : 120)}...&rdquo;
             </p>
           </div>
 
