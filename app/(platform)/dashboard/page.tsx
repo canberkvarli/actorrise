@@ -612,6 +612,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   <MonologueResultCard
                     mono={mono}
                     index={idx}
+                    size="dashboard"
                     onSelect={() => openMonologue(mono)}
                     onToggleFavorite={toggleFavorite}
                   />
