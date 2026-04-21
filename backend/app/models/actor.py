@@ -98,6 +98,7 @@ class Monologue(Base):
     character_name = Column(String, nullable=False, index=True)
     text = Column(Text, nullable=False)  # The actual monologue text
     stage_directions = Column(Text, nullable=True)  # Extracted stage directions
+    text_segments = Column(JSONB, nullable=True)  # Structured render segments: [{type, speaker?, text}, ...]
 
     # Location in play (for classical works)
     # Deferred so DBs without these columns still load; add columns via add_act_scene_columns.py
