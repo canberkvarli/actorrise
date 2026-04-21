@@ -27,7 +27,7 @@ export function MonologueTextRenderer({
       {segments.map((seg, i) => {
         if (seg.type === "direction") {
           return (
-            <p key={i} className="italic text-muted-foreground/70 my-2">
+            <p key={i} className="italic text-muted-foreground/70">
               {seg.text}
             </p>
           );
