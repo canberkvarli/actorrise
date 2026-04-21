@@ -25,10 +25,10 @@ from pathlib import Path
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from sqlalchemy.orm import Session as DBSession
+from sqlalchemy.orm import Session as DBSession, joinedload, load_only
 
 from app.core.database import SessionLocal
-from app.models.actor import Monologue
+from app.models.actor import Monologue, Play
 
 
 # ── Constants ────────────────────────────────────────────────────────────────
@@ -191,7 +191,16 @@ def main() -> None:
 
     db: DBSession = SessionLocal()
     try:
-        query = db.query(Monologue)
+        query = db.query(Monologue).options(
+            load_only(
+                Monologue.id,
+                Monologue.character_name,
+                Monologue.text,
+                Monologue.play_id,
+                Monologue.text_segments,
+            ),
+            joinedload(Monologue.play).load_only(Play.id, Play.title),
+        )
         if not args.force:
             query = query.filter(Monologue.text_segments.is_(None))
         query = query.order_by(Monologue.id.asc())
