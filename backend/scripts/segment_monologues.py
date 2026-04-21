@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 Segment monologues: parse the `text` field into structured segments
-(dialogue / interjection / direction) via Claude Haiku, and write them to
+(dialogue / interjection / direction) via OpenAI GPT-4o-mini, and write them to
 the `text_segments` JSONB column added in Task 5.
 
 This is a backfill. Dry-run by default; pass --write to persist.
@@ -33,7 +33,7 @@ from app.models.actor import Monologue
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
-MODEL = "claude-haiku-4-5-20251001"
+MODEL = "gpt-4o-mini"
 ALLOWED_TYPES = {"dialogue", "interjection", "direction"}
 BATCH_SIZE = 25
 
@@ -59,7 +59,7 @@ Rules:
 - Parentheticals like "(laughing)" are type="direction".
 - If unsure, default to type="dialogue".
 
-Output: strictly the JSON array, no prose, no code fences."""
+Output: a JSON object with exactly one key "segments" whose value is the array of segments. No prose, no code fences."""
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -116,37 +116,34 @@ def segment_monologue(
     play_title: str,
     text: str,
 ) -> tuple[list | None, str]:
-    """Call Haiku to segment a monologue. Returns (segments, error_reason)."""
+    """Call GPT-4o-mini to segment a monologue. Returns (segments, error_reason)."""
     user_content = (
         f"CHARACTER: {character}\n"
         f"PLAY / FILM: {play_title}\n\n"
         f"TEXT:\n{text}"
     )
     try:
-        response = client.messages.create(
+        response = client.chat.completions.create(
             model=MODEL,
             max_tokens=8192,
-            system=SYSTEM_PROMPT,
-            messages=[{"role": "user", "content": user_content}],
+            response_format={"type": "json_object"},
+            messages=[
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": user_content},
+            ],
         )
     except Exception as e:
         return None, f"api error: {e}"
 
-    if getattr(response, "stop_reason", None) == "max_tokens":
+    if response.choices[0].finish_reason == "length":
         print(
             "  !! output truncated at max_tokens - monologue too long?",
             file=sys.stderr,
         )
         return None, "max_tokens_truncation"
 
-    # Concatenate all text blocks from the response
     try:
-        parts = []
-        for block in response.content:
-            btext = getattr(block, "text", None)
-            if btext:
-                parts.append(btext)
-        raw = "".join(parts)
+        raw = response.choices[0].message.content or ""
     except Exception as e:
         return None, f"response parse error: {e}"
 
@@ -155,9 +152,13 @@ def segment_monologue(
         return None, "empty response"
 
     try:
-        segs = json.loads(raw)
+        parsed = json.loads(raw)
     except json.JSONDecodeError as e:
         return None, f"json decode error: {e}"
+
+    if not isinstance(parsed, dict) or "segments" not in parsed:
+        return None, "response object missing 'segments' key"
+    segs = parsed["segments"]
 
     ok, reason = _validate_segments(segs, original_text=text)
     if not ok:
@@ -168,25 +169,25 @@ def segment_monologue(
 # ── Main ─────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Backfill monologue text_segments via Claude Haiku")
+    parser = argparse.ArgumentParser(description="Backfill monologue text_segments via OpenAI GPT-4o-mini")
     parser.add_argument("--limit", type=int, default=None, help="Max records to process (default: all)")
     parser.add_argument("--write", action="store_true", help="Persist to DB (default: dry-run, no writes)")
     parser.add_argument("--force", action="store_true", help="Re-segment records that already have text_segments")
     args = parser.parse_args()
 
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
-        print("ERROR: ANTHROPIC_API_KEY environment variable is not set.", file=sys.stderr)
+        print("ERROR: OPENAI_API_KEY environment variable is not set.", file=sys.stderr)
         sys.exit(1)
 
     try:
-        from anthropic import Anthropic  # noqa: F401
+        from openai import OpenAI  # noqa: F401
     except ImportError:
-        print("ERROR: anthropic not installed. Install the 'anthropic' package.", file=sys.stderr)
+        print("ERROR: openai not installed. Install the 'openai' package.", file=sys.stderr)
         raise
 
-    from anthropic import Anthropic
-    client = Anthropic(api_key=api_key)
+    from openai import OpenAI
+    client = OpenAI(api_key=api_key)
 
     db: DBSession = SessionLocal()
     try:
