@@ -23,7 +23,7 @@ export function MonologueTextRenderer({
   }
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("space-y-4 leading-relaxed", className)}>
       {segments.map((seg, i) => {
         if (seg.type === "direction") {
           return (
