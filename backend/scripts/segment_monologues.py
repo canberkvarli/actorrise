@@ -35,6 +35,7 @@ from app.models.actor import Monologue
 
 MODEL = "claude-haiku-4-5-20251001"
 ALLOWED_TYPES = {"dialogue", "interjection", "direction"}
+BATCH_SIZE = 25
 
 SYSTEM_PROMPT = """You segment a monologue into structured parts for a theatre/film study app.
 
@@ -71,7 +72,7 @@ def _strip_fences(raw: str) -> str:
     return raw.strip()
 
 
-def _validate_segments(segs) -> tuple[bool, str]:
+def _validate_segments(segs, original_text: str | None = None) -> tuple[bool, str]:
     """Return (ok, reason). Non-list, empty, or malformed → not ok."""
     if not isinstance(segs, list):
         return False, "response is not a list"
@@ -91,6 +92,20 @@ def _validate_segments(segs) -> tuple[bool, str]:
             has_dialogue = True
     if not has_dialogue:
         return False, "no dialogue segment found"
+
+    # Soft check: warn if segment text length drifts >10% from original.
+    if original_text is not None:
+        orig_len = len(original_text.strip())
+        segs_len = len("".join(s["text"] for s in segs).strip())
+        if orig_len > 0 and abs(orig_len - segs_len) / orig_len > 0.10:
+            print(
+                f"  !! WARN len-drift: original={orig_len} chars, "
+                f"segments={segs_len} chars "
+                f"(diff={abs(orig_len - segs_len)}, "
+                f"{abs(orig_len - segs_len) / orig_len * 100:.1f}%)",
+                file=sys.stderr,
+            )
+
     return True, ""
 
 
@@ -110,12 +125,19 @@ def segment_monologue(
     try:
         response = client.messages.create(
             model=MODEL,
-            max_tokens=4000,
+            max_tokens=8192,
             system=SYSTEM_PROMPT,
             messages=[{"role": "user", "content": user_content}],
         )
     except Exception as e:
         return None, f"api error: {e}"
+
+    if getattr(response, "stop_reason", None) == "max_tokens":
+        print(
+            "  !! output truncated at max_tokens - monologue too long?",
+            file=sys.stderr,
+        )
+        return None, "max_tokens_truncation"
 
     # Concatenate all text blocks from the response
     try:
@@ -137,7 +159,7 @@ def segment_monologue(
     except json.JSONDecodeError as e:
         return None, f"json decode error: {e}"
 
-    ok, reason = _validate_segments(segs)
+    ok, reason = _validate_segments(segs, original_text=text)
     if not ok:
         return None, reason
     return segs, ""
@@ -223,9 +245,14 @@ def main() -> None:
 
             success += 1
 
-        if args.write and success > 0:
+            if args.write and success > 0 and success % BATCH_SIZE == 0:
+                db.commit()
+                print(f"  .. committed batch (total written: {success})")
+
+        if args.write:
             db.commit()
-            print(f"Committed {success} updates to DB.")
+            if success > 0:
+                print(f"Committed {success} updates to DB.")
 
         print(f"\nOK: {success} / {attempted}")
     finally:
