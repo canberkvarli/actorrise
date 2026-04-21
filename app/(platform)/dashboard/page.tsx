@@ -41,6 +41,7 @@ import ScriptsQuickAccess from "@/components/scripts/ScriptsQuickAccess";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
+import { MonologueTextRenderer } from "@/components/monologue/MonologueTextRenderer";
 import { MonologueResultCard } from "@/components/monologue/MonologueResultCard";
 import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
 import { useProfileStats, useProfile, useRecommendations, useDiscover, useDiscoverFilmTv } from "@/hooks/useDashboardData";
@@ -908,9 +909,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           </div>
                         </div>
                         <div className="bg-background p-8 rounded-lg">
-                          <p className="text-xl leading-relaxed whitespace-pre-wrap font-typewriter max-w-3xl mx-auto text-center">
-                            {currentMonologue.text}
-                          </p>
+                          {(currentMonologue.text_segments && currentMonologue.text_segments.length > 0)
+                            ? <MonologueTextRenderer
+                                text={currentMonologue.text}
+                                segments={currentMonologue.text_segments}
+                                className="text-xl font-typewriter max-w-3xl mx-auto text-center"
+                              />
+                            : <p className="text-xl leading-relaxed whitespace-pre-wrap font-typewriter max-w-3xl mx-auto text-center">
+                                {currentMonologue.text}
+                              </p>}
                         </div>
                       </motion.div>
                     ) : (
