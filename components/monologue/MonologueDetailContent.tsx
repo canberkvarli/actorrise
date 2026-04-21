@@ -11,6 +11,7 @@ import { Monologue } from "@/types/actor";
 import { isMeaningfulMonologueTitle } from "@/lib/utils";
 import { getEmotionBadgeClassName, getEmotionBarClassName } from "@/lib/emotionColors";
 import { MonologueText } from "@/components/monologue/MonologueText";
+import { MonologueTextRenderer } from "@/components/monologue/MonologueTextRenderer";
 import { isBibliographicText, stageDirectionPercentage } from "@/lib/monologueText";
 
 export interface MonologueDetailContentProps {
@@ -249,9 +250,11 @@ export function MonologueDetailContent({
                 This monologue contains a lot of stage directions. The spoken lines are shown in normal text.
               </p>
             )}
-            <p className="text-base leading-relaxed font-typewriter">
-              <MonologueText text={monologue.text} />
-            </p>
+            {(monologue.text_segments && monologue.text_segments.length > 0)
+              ? <MonologueTextRenderer text={monologue.text} segments={monologue.text_segments} className="text-base font-typewriter" />
+              : <p className="text-base leading-relaxed font-typewriter">
+                  <MonologueText text={monologue.text} />
+                </p>}
           </div>
         )}
       </div>
