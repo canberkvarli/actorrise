@@ -173,6 +173,7 @@ def _monologue_to_response(
         character_name=cast(str, m.character_name),
         text=cast(str, m.text),
         stage_directions=cast(Optional[str], m.stage_directions),
+        text_segments=m.text_segments,
         play_title=cast(str, play.title),
         play_id=cast(int, play.id),
         author=cast(str, play.author),

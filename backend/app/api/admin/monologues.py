@@ -93,6 +93,7 @@ def _mono_to_admin_response(m: Monologue) -> AdminMonologueResponse:
         character_name=m.character_name,
         text=m.text,
         stage_directions=m.stage_directions,
+        text_segments=m.text_segments,
         play_title=play.title,
         play_id=play.id,
         author=play.author,
