@@ -516,7 +516,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       </div>
 
                       <p className="text-sm text-muted-foreground line-clamp-5 flex-1 leading-relaxed">
-                        "{mono.text.substring(0, 300)}..."
+                        &ldquo;{mono.text.substring(0, 300)}&hellip;&rdquo;
                       </p>
 
                       <div className="flex items-center gap-3 mt-4 pt-4 border-t border-border/50 text-xs text-muted-foreground">
