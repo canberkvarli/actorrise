@@ -4,7 +4,7 @@ import html as html_module
 import os
 import time
 from datetime import datetime
-from typing import List, Optional, cast
+from typing import List, Literal, Optional, cast
 
 from app.api.auth import get_current_user, get_current_user_optional
 from app.api.public import record_demo_search
@@ -27,12 +27,19 @@ router = APIRouter(prefix="/api/monologues", tags=["monologues"])
 
 
 # Pydantic schemas
+class TextSegment(BaseModel):
+    type: Literal["dialogue", "interjection", "direction"]
+    speaker: Optional[str] = None
+    text: str
+
+
 class MonologueResponse(BaseModel):
     id: int
     title: str
     character_name: str
     text: str
     stage_directions: Optional[str]
+    text_segments: Optional[List[TextSegment]] = None
     play_title: str
     play_id: int
     author: str

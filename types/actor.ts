@@ -30,6 +30,11 @@ export interface Monologue {
   character_name: string;
   text: string;
   stage_directions?: string;
+  text_segments?: Array<{
+    type: "dialogue" | "interjection" | "direction";
+    speaker?: string;
+    text: string;
+  }>;
   play_title: string;
   play_id: number;
   author: string;

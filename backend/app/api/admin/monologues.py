@@ -6,7 +6,7 @@ Allows moderators to:
 - Edit monologue content (e.g. fix corrupted data from user reports)
 """
 
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -32,6 +32,12 @@ def require_moderator(current_user: User = Depends(get_current_user)) -> User:
     return current_user
 
 
+class TextSegment(BaseModel):
+    type: Literal["dialogue", "interjection", "direction"]
+    speaker: Optional[str] = None
+    text: str
+
+
 # Response: same shape as public MonologueResponse for reuse in UI
 class AdminMonologueResponse(BaseModel):
     id: int
@@ -39,6 +45,7 @@ class AdminMonologueResponse(BaseModel):
     character_name: str
     text: str
     stage_directions: Optional[str]
+    text_segments: Optional[List[TextSegment]] = None
     play_title: str
     play_id: int
     author: str
