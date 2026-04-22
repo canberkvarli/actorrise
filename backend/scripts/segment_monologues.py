@@ -25,10 +25,26 @@ from pathlib import Path
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from sqlalchemy.orm import Session as DBSession, joinedload, load_only
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session as DBSession, joinedload, load_only, sessionmaker
 
-from app.core.database import SessionLocal
+from app.core.config import settings
 from app.models.actor import Monologue, Play
+
+
+# Dedicated engine for this long-running script. pool_pre_ping detects connections
+# the Supabase pooler has silently closed between slow LLM round-trips, and
+# pool_recycle refreshes them before pgbouncer's idle timeout kicks in. Mirrors
+# app/core/database.py config so SSL/pooler behaviour is identical, but scoped
+# locally so we don't touch the app-wide engine.
+_engine = create_engine(
+    settings.database_url,
+    pool_size=5,
+    max_overflow=10,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 
 
 # ── Constants ────────────────────────────────────────────────────────────────
