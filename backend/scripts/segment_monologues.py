@@ -36,6 +36,7 @@ from app.models.actor import Monologue, Play
 MODEL = "gpt-4o-mini"
 ALLOWED_TYPES = {"dialogue", "interjection", "direction"}
 BATCH_SIZE = 25
+FETCH_BATCH_SIZE = 250  # rows per DB page (keeps pooler happy)
 
 SYSTEM_PROMPT = """You segment a monologue into structured parts for a theatre/film study app.
 
@@ -191,73 +192,116 @@ def main() -> None:
 
     db: DBSession = SessionLocal()
     try:
-        query = db.query(Monologue).options(
-            load_only(
-                Monologue.id,
-                Monologue.character_name,
-                Monologue.text,
-                Monologue.play_id,
-                Monologue.text_segments,
-            ),
-            joinedload(Monologue.play).load_only(Play.id, Play.title),
-        )
+        # Count total matching rows up front (small query, reliable) so we can
+        # show [i/N] progress without materializing all rows at once.
+        count_query = db.query(Monologue)
         if not args.force:
-            query = query.filter(Monologue.text_segments.is_(None))
-        query = query.order_by(Monologue.id.asc())
+            count_query = count_query.filter(Monologue.text_segments.is_(None))
+        total_matching = count_query.count()
         if args.limit is not None and args.limit > 0:
-            query = query.limit(args.limit)
+            total_to_process = min(total_matching, args.limit)
+        else:
+            total_to_process = total_matching
 
-        monologues = query.all()
         mode = "WRITE" if args.write else "DRY RUN"
-        print(f"[{mode}] Processing {len(monologues)} monologues (model={MODEL}, force={args.force})")
+        print(
+            f"[{mode}] Processing {total_to_process} monologues "
+            f"(model={MODEL}, force={args.force}, fetch_page={FETCH_BATCH_SIZE})"
+        )
         if not args.write:
             print("  (no database writes will occur; pass --write to persist)")
 
         success = 0
         attempted = 0
+        last_id = 0
+        page_num = 0
+        done = False
 
-        for i, mono in enumerate(monologues):
-            attempted += 1
-            mono_id = mono.id
-            character = mono.character_name or "UNKNOWN"
-            play_title = mono.play.title if mono.play else "UNKNOWN"
-            text = mono.text or ""
-
-            if not text.strip():
-                print(f"  [{i+1}/{len(monologues)}] id={mono_id} {character!r} SKIP: empty text")
-                continue
-
-            segs, reason = segment_monologue(
-                client,
-                character=character,
-                play_title=play_title,
-                text=text,
+        # Outer fetch loop: paginate via keyset on id to avoid huge result sets
+        # that trip the Supabase pooler ("SSL SYSCALL error: EOF detected").
+        while not done:
+            page_query = db.query(Monologue).options(
+                load_only(
+                    Monologue.id,
+                    Monologue.character_name,
+                    Monologue.text,
+                    Monologue.play_id,
+                    Monologue.text_segments,
+                ),
+                joinedload(Monologue.play).load_only(Play.id, Play.title),
+            )
+            if not args.force:
+                page_query = page_query.filter(Monologue.text_segments.is_(None))
+            page_query = (
+                page_query.filter(Monologue.id > last_id)
+                .order_by(Monologue.id.asc())
+                .limit(FETCH_BATCH_SIZE)
             )
 
-            if segs is None:
-                print(f"  [{i+1}/{len(monologues)}] id={mono_id} {character!r} WARN: {reason}")
-                continue
+            page_rows = page_query.all()
+            if not page_rows:
+                break
 
-            # Count by type for logging
-            type_counts: dict[str, int] = {}
-            for s in segs:
-                type_counts[s["type"]] = type_counts.get(s["type"], 0) + 1
-            counts_str = ", ".join(f"{k}={v}" for k, v in sorted(type_counts.items()))
-
+            page_num += 1
             print(
-                f"  [{i+1}/{len(monologues)}] id={mono_id} {character!r} "
-                f"OK: {len(segs)} segments ({counts_str})"
+                f"  -- fetched page {page_num}: {len(page_rows)} rows "
+                f"(id range {page_rows[0].id}..{page_rows[-1].id})"
             )
 
-            if args.write:
-                mono.text_segments = segs
-                db.add(mono)
+            for mono in page_rows:
+                if args.limit is not None and args.limit > 0 and attempted >= args.limit:
+                    done = True
+                    break
 
-            success += 1
+                attempted += 1
+                mono_id = mono.id
+                character = mono.character_name or "UNKNOWN"
+                play_title = mono.play.title if mono.play else "UNKNOWN"
+                text = mono.text or ""
 
-            if args.write and success > 0 and success % BATCH_SIZE == 0:
-                db.commit()
-                print(f"  .. committed batch (total written: {success})")
+                if not text.strip():
+                    print(f"  [{attempted}/{total_to_process}] id={mono_id} {character!r} SKIP: empty text")
+                    continue
+
+                segs, reason = segment_monologue(
+                    client,
+                    character=character,
+                    play_title=play_title,
+                    text=text,
+                )
+
+                if segs is None:
+                    print(f"  [{attempted}/{total_to_process}] id={mono_id} {character!r} WARN: {reason}")
+                    continue
+
+                # Count by type for logging
+                type_counts: dict[str, int] = {}
+                for s in segs:
+                    type_counts[s["type"]] = type_counts.get(s["type"], 0) + 1
+                counts_str = ", ".join(f"{k}={v}" for k, v in sorted(type_counts.items()))
+
+                print(
+                    f"  [{attempted}/{total_to_process}] id={mono_id} {character!r} "
+                    f"OK: {len(segs)} segments ({counts_str})"
+                )
+
+                if args.write:
+                    mono.text_segments = segs
+                    db.add(mono)
+
+                success += 1
+
+                if args.write and success > 0 and success % BATCH_SIZE == 0:
+                    db.commit()
+                    print(f"  .. committed batch (total written: {success})")
+
+            # Advance cursor regardless of whether args.limit cut us off; if
+            # done=True we'll exit the outer loop on the next check.
+            last_id = page_rows[-1].id
+
+            if len(page_rows) < FETCH_BATCH_SIZE:
+                # No more rows to fetch.
+                break
 
         if args.write:
             db.commit()
