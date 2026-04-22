@@ -20,12 +20,14 @@ import json
 import os
 import re
 import sys
+import time
 from pathlib import Path
 
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from sqlalchemy import create_engine
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session as DBSession, joinedload, load_only, sessionmaker
 
 from app.core.config import settings
@@ -53,6 +55,7 @@ MODEL = "gpt-4o-mini"
 ALLOWED_TYPES = {"dialogue", "interjection", "direction"}
 BATCH_SIZE = 25
 FETCH_BATCH_SIZE = 250  # rows per DB page (keeps pooler happy)
+PAGE_FETCH_RETRIES = 5
 
 SYSTEM_PROMPT = """You segment a monologue into structured parts for a theatre/film study app.
 
@@ -80,6 +83,32 @@ Output: a JSON object with exactly one key "segments" whose value is the array o
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+
+def _fetch_page_with_retry(session_factory, build_query):
+    """
+    Fetch one page of monologues, retrying on transient DB connection failures.
+    session_factory: a callable returning a new Session (e.g. SessionLocal).
+    build_query: a callable that takes a Session and returns the configured Query.
+    Returns (session, rows). Caller is responsible for closing the session when finished.
+    """
+    last_err = None
+    for attempt in range(1, PAGE_FETCH_RETRIES + 1):
+        session = session_factory()
+        try:
+            rows = build_query(session).all()
+            return session, rows
+        except OperationalError as e:
+            last_err = e
+            session.close()
+            backoff = min(30, 2 ** attempt)  # 2, 4, 8, 16, 30
+            print(
+                f"  !! DB fetch failed (attempt {attempt}/{PAGE_FETCH_RETRIES}): {type(e).__name__}; "
+                f"retrying in {backoff}s",
+                file=sys.stderr,
+            )
+            time.sleep(backoff)
+    raise RuntimeError(f"page fetch failed after {PAGE_FETCH_RETRIES} attempts") from last_err
+
 
 def _strip_fences(raw: str) -> str:
     """Strip surrounding ```json ... ``` code fences if present."""
@@ -206,14 +235,44 @@ def main() -> None:
     from openai import OpenAI
     client = OpenAI(api_key=api_key)
 
-    db: DBSession = SessionLocal()
+    db: DBSession | None = None
     try:
         # Count total matching rows up front (small query, reliable) so we can
-        # show [i/N] progress without materializing all rows at once.
-        count_query = db.query(Monologue)
-        if not args.force:
-            count_query = count_query.filter(Monologue.text_segments.is_(None))
-        total_matching = count_query.count()
+        # show [i/N] progress without materializing all rows at once. Wrap in
+        # the same retry pattern as page fetches since COUNT(*) is equally
+        # vulnerable to SSL EOF mid-query.
+        def _build_count(session):
+            q = session.query(Monologue)
+            if not args.force:
+                q = q.filter(Monologue.text_segments.is_(None))
+            # We only want the count; return a trivial query and .count() below
+            # won't work with _fetch_page_with_retry (which calls .all()), so
+            # handle count inline with its own retry loop.
+            return q
+
+        last_err = None
+        total_matching = None
+        for attempt in range(1, PAGE_FETCH_RETRIES + 1):
+            count_session = SessionLocal()
+            try:
+                total_matching = _build_count(count_session).count()
+                count_session.close()
+                break
+            except OperationalError as e:
+                last_err = e
+                count_session.close()
+                backoff = min(30, 2 ** attempt)
+                print(
+                    f"  !! DB count failed (attempt {attempt}/{PAGE_FETCH_RETRIES}): "
+                    f"{type(e).__name__}; retrying in {backoff}s",
+                    file=sys.stderr,
+                )
+                time.sleep(backoff)
+        if total_matching is None:
+            raise RuntimeError(
+                f"initial count failed after {PAGE_FETCH_RETRIES} attempts"
+            ) from last_err
+
         if args.limit is not None and args.limit > 0:
             total_to_process = min(total_matching, args.limit)
         else:
@@ -236,25 +295,31 @@ def main() -> None:
         # Outer fetch loop: paginate via keyset on id to avoid huge result sets
         # that trip the Supabase pooler ("SSL SYSCALL error: EOF detected").
         while not done:
-            page_query = db.query(Monologue).options(
-                load_only(
-                    Monologue.id,
-                    Monologue.character_name,
-                    Monologue.text,
-                    Monologue.play_id,
-                    Monologue.text_segments,
-                ),
-                joinedload(Monologue.play).load_only(Play.id, Play.title),
-            )
-            if not args.force:
-                page_query = page_query.filter(Monologue.text_segments.is_(None))
-            page_query = (
-                page_query.filter(Monologue.id > last_id)
-                .order_by(Monologue.id.asc())
-                .limit(FETCH_BATCH_SIZE)
-            )
+            def _build_page(session, _last_id=last_id):
+                q = session.query(Monologue).options(
+                    load_only(
+                        Monologue.id,
+                        Monologue.character_name,
+                        Monologue.text,
+                        Monologue.play_id,
+                        Monologue.text_segments,
+                    ),
+                    joinedload(Monologue.play).load_only(Play.id, Play.title),
+                )
+                if not args.force:
+                    q = q.filter(Monologue.text_segments.is_(None))
+                return (
+                    q.filter(Monologue.id > _last_id)
+                    .order_by(Monologue.id.asc())
+                    .limit(FETCH_BATCH_SIZE)
+                )
 
-            page_rows = page_query.all()
+            # Close old session before refetching so we don't hold stale
+            # connections (the previous one may have been poisoned by an
+            # OperationalError during the per-record work).
+            if db is not None:
+                db.close()
+            db, page_rows = _fetch_page_with_retry(SessionLocal, _build_page)
             if not page_rows:
                 break
 
@@ -319,14 +384,28 @@ def main() -> None:
                 # No more rows to fetch.
                 break
 
-        if args.write:
-            db.commit()
+        if args.write and db is not None:
+            # Final commit can also hit SSL EOF — retry a few times so we don't
+            # lose work already processed in memory.
+            for attempt in range(1, 4):
+                try:
+                    db.commit()
+                    break
+                except OperationalError as e:
+                    print(
+                        f"  !! final commit failed (attempt {attempt}/3): {e}; retrying",
+                        file=sys.stderr,
+                    )
+                    time.sleep(2 ** attempt)
+            else:
+                raise RuntimeError("final commit failed after 3 attempts")
             if success > 0:
                 print(f"Committed {success} updates to DB.")
 
         print(f"\nOK: {success} / {attempted}")
     finally:
-        db.close()
+        if db is not None:
+            db.close()
 
 
 if __name__ == "__main__":
