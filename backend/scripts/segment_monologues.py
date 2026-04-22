@@ -46,7 +46,12 @@ _engine = create_engine(
     pool_pre_ping=True,
     pool_recycle=1800,
 )
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,  # keep attributes populated after batch commits to avoid lazy-load refresh on a flaky pooler connection
+    bind=_engine,
+)
 
 
 # ── Constants ────────────────────────────────────────────────────────────────
