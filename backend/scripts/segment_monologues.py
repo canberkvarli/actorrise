@@ -26,7 +26,7 @@ from pathlib import Path
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, update
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session as DBSession, joinedload, load_only, sessionmaker
 
@@ -61,6 +61,7 @@ ALLOWED_TYPES = {"dialogue", "interjection", "direction"}
 BATCH_SIZE = 25
 FETCH_BATCH_SIZE = 250  # rows per DB page (keeps pooler happy)
 PAGE_FETCH_RETRIES = 5
+FLUSH_RETRIES = 5
 
 SYSTEM_PROMPT = """You segment a monologue into structured parts for a theatre/film study app.
 
@@ -133,6 +134,41 @@ def _fetch_page_with_retry(session_factory, build_query):
             )
             time.sleep(backoff)
     raise RuntimeError(f"page fetch failed after {PAGE_FETCH_RETRIES} attempts") from last_err
+
+
+def _flush_updates_with_retry(session_factory, updates: list[tuple[int, list]]) -> None:
+    """
+    Persist a batch of (monologue_id, segments) updates in a fresh transaction.
+    Retries on OperationalError with exponential backoff.
+    """
+    last_err = None
+    for attempt in range(1, FLUSH_RETRIES + 1):
+        session = session_factory()
+        try:
+            for mono_id, segs in updates:
+                session.execute(
+                    update(Monologue)
+                    .where(Monologue.id == mono_id)
+                    .values(text_segments=segs)
+                )
+            session.commit()
+            return
+        except OperationalError as e:
+            last_err = e
+            try:
+                session.rollback()
+            except Exception:
+                pass
+            backoff = min(30, 2 ** attempt)
+            print(
+                f"  !! batch commit failed (attempt {attempt}/{FLUSH_RETRIES}): "
+                f"{type(e).__name__}; retrying in {backoff}s",
+                file=sys.stderr,
+            )
+            time.sleep(backoff)
+        finally:
+            session.close()
+    raise RuntimeError(f"batch commit failed after {FLUSH_RETRIES} attempts") from last_err
 
 
 def _strip_fences(raw: str) -> str:
@@ -320,6 +356,7 @@ def main() -> None:
         last_id = 0
         page_num = 0
         done = False
+        pending_updates: list[tuple[int, list]] = []
 
         # Outer fetch loop: paginate via keyset on id to avoid huge result sets
         # that trip the Supabase pooler ("SSL SYSCALL error: EOF detected").
@@ -396,13 +433,13 @@ def main() -> None:
                 )
 
                 if args.write:
-                    mono.text_segments = segs
-                    db.add(mono)
+                    pending_updates.append((mono_id, segs))
 
                 success += 1
 
-                if args.write and success > 0 and success % BATCH_SIZE == 0:
-                    db.commit()
+                if args.write and len(pending_updates) >= BATCH_SIZE:
+                    _flush_updates_with_retry(SessionLocal, pending_updates)
+                    pending_updates.clear()
                     print(f"  .. committed batch (total written: {success})")
 
             # Advance cursor regardless of whether args.limit cut us off; if
@@ -413,23 +450,12 @@ def main() -> None:
                 # No more rows to fetch.
                 break
 
-        if args.write and db is not None:
-            # Final commit can also hit SSL EOF — retry a few times so we don't
-            # lose work already processed in memory.
-            for attempt in range(1, 4):
-                try:
-                    db.commit()
-                    break
-                except OperationalError as e:
-                    print(
-                        f"  !! final commit failed (attempt {attempt}/3): {e}; retrying",
-                        file=sys.stderr,
-                    )
-                    time.sleep(2 ** attempt)
-            else:
-                raise RuntimeError("final commit failed after 3 attempts")
-            if success > 0:
-                print(f"Committed {success} updates to DB.")
+        if args.write and pending_updates:
+            _flush_updates_with_retry(SessionLocal, pending_updates)
+            print(f"  .. committed final batch (total written: {success})")
+            pending_updates.clear()
+        if args.write and success > 0:
+            print(f"Committed {success} updates to DB.")
 
         print(f"\nOK: {success} / {attempted}")
     finally:
