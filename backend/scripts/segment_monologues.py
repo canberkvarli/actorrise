@@ -26,7 +26,7 @@ from pathlib import Path
 backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session as DBSession, joinedload, load_only, sessionmaker
 
@@ -88,6 +88,26 @@ Output: a JSON object with exactly one key "segments" whose value is the array o
 
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
+
+def _cleanup_stale_sessions(engine_) -> None:
+    """Best-effort: kill our own leaked 'idle in transaction' Supavisor sessions
+    from prior crashed runs. Failure is non-fatal."""
+    try:
+        with engine_.connect() as conn:
+            killed = conn.execute(text("""
+                SELECT pg_terminate_backend(pid), pid, state
+                FROM pg_stat_activity
+                WHERE application_name = 'Supavisor'
+                  AND state IN ('idle in transaction', 'idle in transaction (aborted)')
+                  AND pid <> pg_backend_pid()
+            """)).fetchall()
+            conn.commit()
+        if killed:
+            print(f"  cleanup: terminated {len(killed)} stale 'idle in transaction' session(s)")
+    except Exception as e:
+        # Best-effort. Continue — the main retry loop will surface real DB errors.
+        print(f"  cleanup skipped: {type(e).__name__}: {e}", file=sys.stderr)
+
 
 def _fetch_page_with_retry(session_factory, build_query):
     """
@@ -239,6 +259,10 @@ def main() -> None:
 
     from openai import OpenAI
     client = OpenAI(api_key=api_key)
+
+    # Kill any leftover 'idle in transaction' Supavisor sessions from prior
+    # crashed runs of this script. Best-effort; safe to no-op if it can't connect.
+    _cleanup_stale_sessions(_engine)
 
     db: DBSession | None = None
     try:
