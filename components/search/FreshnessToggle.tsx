@@ -18,7 +18,7 @@ export function FreshnessToggle({ value, onChange }: FreshnessToggleProps) {
     <div className="space-y-2">
       <div>
         <p className="text-sm font-medium text-foreground">Originality</p>
-        <p className="text-xs text-muted-foreground mt-0.5">Filter out commonly used audition pieces</p>
+        <p className="text-xs text-muted-foreground mt-0.5">Hide commonly used pieces</p>
       </div>
       <div className="inline-flex rounded-lg border border-border/60 overflow-hidden">
         {OPTIONS.map((opt) => {

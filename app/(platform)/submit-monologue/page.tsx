@@ -257,7 +257,7 @@ export default function SubmitMonologuePage() {
                 </Label>
                 <Input
                   id="title"
-                  placeholder="e.g., Hamlet's Soliloquy"
+                  placeholder="Hamlet's Soliloquy"
                   value={formData.title}
                   onChange={(e) => handleChange("title", e.target.value)}
                   className={errors.title ? "border-red-500" : ""}
@@ -272,7 +272,7 @@ export default function SubmitMonologuePage() {
                 </Label>
                 <Input
                   id="character_name"
-                  placeholder="e.g., Hamlet"
+                  placeholder="Hamlet"
                   value={formData.character_name}
                   onChange={(e) => handleChange("character_name", e.target.value)}
                   className={errors.character_name ? "border-red-500" : ""}
@@ -287,7 +287,7 @@ export default function SubmitMonologuePage() {
                 </Label>
                 <Input
                   id="play_title"
-                  placeholder="e.g., Hamlet"
+                  placeholder="Hamlet"
                   value={formData.play_title}
                   onChange={(e) => handleChange("play_title", e.target.value)}
                   className={errors.play_title ? "border-red-500" : ""}
@@ -302,7 +302,7 @@ export default function SubmitMonologuePage() {
                 </Label>
                 <Input
                   id="author"
-                  placeholder="e.g., William Shakespeare"
+                  placeholder="William Shakespeare"
                   value={formData.author}
                   onChange={(e) => handleChange("author", e.target.value)}
                   className={errors.author ? "border-red-500" : ""}
@@ -343,7 +343,7 @@ export default function SubmitMonologuePage() {
                 </Label>
                 <Textarea
                   id="notes"
-                  placeholder="Any additional context about the source, rights, or context (e.g., 'Act 3, Scene 1', 'Public domain', etc.)"
+                  placeholder="Act 3, Scene 1 / Public domain / etc."
                   value={formData.notes}
                   onChange={(e) => handleChange("notes", e.target.value)}
                   className="min-h-[80px]"

@@ -234,7 +234,7 @@ export function EditMonologueModal({
                   id="edit-emotion"
                   value={primaryEmotion}
                   onChange={(e) => setPrimaryEmotion(e.target.value)}
-                  placeholder="e.g. sadness, anger"
+                  placeholder="sadness, anger"
                 />
               </div>
               <div className="grid gap-2">

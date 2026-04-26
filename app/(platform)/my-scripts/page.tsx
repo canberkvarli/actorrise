@@ -406,7 +406,7 @@ export default function MyScriptsPage() {
       );
       if (data.num_scenes_extracted === 0) {
         toast.error(
-          "No two-person scenes were found. Use format: CHARACTER: line (e.g. JORDAN: Hello. SAM: Hi.). You can delete this script below.",
+          "No two-person scenes found. Use format: CHARACTER: line",
           { duration: 8000 }
         );
       } else {
@@ -783,7 +783,7 @@ export default function MyScriptsPage() {
               transition={{ duration: 0.25, ease: "easeOut" }}
               className="border border-dashed border-primary/30 bg-muted/30 py-16 px-6 text-center"
             >
-              <p className="text-muted-foreground text-base">No scripts yet. Use the buttons above to add one.</p>
+              <p className="text-muted-foreground text-base">No scripts yet</p>
             </motion.div>
           ) : (
             <motion.div
@@ -1029,7 +1029,7 @@ export default function MyScriptsPage() {
             <DialogTitle className="text-xl sm:text-2xl font-serif">Paste script</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Paste your scene or script text below. AI will extract title, characters, and two-person scenes. Use the format <strong>CHARACTER: line</strong> (e.g. JORDAN: Hello. SAM: Hi.). Best for one scene or short script.
+            Format: <strong>CHARACTER: line</strong>. AI extracts scenes automatically.
           </p>
           <div className="space-y-4">
             <div>
@@ -1042,7 +1042,7 @@ export default function MyScriptsPage() {
                 rows={12}
                 className="mt-2 resize-y font-mono text-sm"
               />
-              <p className="text-xs text-muted-foreground mt-1">At least 100 characters. Max 10MB. Include character names and dialogue in the form CHARACTER: line.</p>
+              <p className="text-xs text-muted-foreground mt-1">Min 100 characters</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
@@ -1051,7 +1051,7 @@ export default function MyScriptsPage() {
                   id="paste-title"
                   value={pasteTitle}
                   onChange={(e) => setPasteTitle(e.target.value)}
-                  placeholder="e.g. Kitchen Scene"
+                  placeholder="Kitchen Scene"
                   className="mt-2"
                 />
               </div>
@@ -1061,7 +1061,7 @@ export default function MyScriptsPage() {
                   id="paste-author"
                   value={pasteAuthor}
                   onChange={(e) => setPasteAuthor(e.target.value)}
-                  placeholder="e.g. Unknown"
+                  placeholder="Unknown"
                   className="mt-2"
                 />
               </div>

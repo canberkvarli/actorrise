@@ -16,7 +16,9 @@
   "cursorpyright.analysis.extraPaths": [
     "${workspaceFolder}/backend"
   ],
-  "cursorpyright.analysis.typeCheckingMode": "basic"
+  "cursorpyright.analysis.typeCheckingMode": "basic",
+  "workbench.colorTheme": "Monokai"
+
 }
 
 

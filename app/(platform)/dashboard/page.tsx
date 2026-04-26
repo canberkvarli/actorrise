@@ -535,7 +535,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               <div className="text-center py-16 bg-card border border-border rounded-xl min-h-[280px] flex flex-col items-center justify-center">
                 <IconSparkles className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
                 <p className="text-lg font-medium text-foreground mb-2">No recommendations yet</p>
-                <p className="text-muted-foreground mb-6">Complete your profile or search to discover monologues</p>
+                <p className="text-muted-foreground mb-6">Complete your profile to get personalized picks</p>
                 <Button asChild>
                   <Link href="/search">Browse Monologues</Link>
                 </Button>

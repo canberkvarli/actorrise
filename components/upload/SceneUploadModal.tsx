@@ -145,7 +145,7 @@ export function SceneUploadModal({
               <Label htmlFor="title">Scene Title *</Label>
               <Input
                 id="title"
-                placeholder="e.g., Kitchen Confrontation"
+                placeholder="Kitchen Confrontation"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 required
@@ -157,7 +157,7 @@ export function SceneUploadModal({
                 <Label htmlFor="play_title">Play/Script Title *</Label>
                 <Input
                   id="play_title"
-                  placeholder="e.g., My Original Script"
+                  placeholder="My Original Script"
                   value={formData.play_title}
                   onChange={(e) => setFormData({ ...formData, play_title: e.target.value })}
                   required
@@ -167,7 +167,7 @@ export function SceneUploadModal({
                 <Label htmlFor="author">Author *</Label>
                 <Input
                   id="author"
-                  placeholder="e.g., Your Name"
+                  placeholder="Your Name"
                   value={formData.author}
                   onChange={(e) => setFormData({ ...formData, author: e.target.value })}
                   required
@@ -190,7 +190,7 @@ export function SceneUploadModal({
               <Label htmlFor="setting">Setting (Optional)</Label>
               <Input
                 id="setting"
-                placeholder="e.g., A kitchen at night"
+                placeholder="A kitchen at night"
                 value={formData.setting || ""}
                 onChange={(e) => setFormData({ ...formData, setting: e.target.value })}
               />
@@ -209,7 +209,7 @@ export function SceneUploadModal({
                   <Label htmlFor="char1_name">Name *</Label>
                   <Input
                     id="char1_name"
-                    placeholder="e.g., Sarah"
+                    placeholder="Sarah"
                     value={formData.character_1_name}
                     onChange={(e) => setFormData({ ...formData, character_1_name: e.target.value })}
                     required
@@ -237,7 +237,7 @@ export function SceneUploadModal({
                   <Label htmlFor="char1_age">Age Range</Label>
                   <Input
                     id="char1_age"
-                    placeholder="e.g., 20s"
+                    placeholder="20s"
                     value={formData.character_1_age_range || ""}
                     onChange={(e) => setFormData({ ...formData, character_1_age_range: e.target.value })}
                   />
@@ -253,7 +253,7 @@ export function SceneUploadModal({
                   <Label htmlFor="char2_name">Name *</Label>
                   <Input
                     id="char2_name"
-                    placeholder="e.g., John"
+                    placeholder="John"
                     value={formData.character_2_name}
                     onChange={(e) => setFormData({ ...formData, character_2_name: e.target.value })}
                     required
@@ -281,7 +281,7 @@ export function SceneUploadModal({
                   <Label htmlFor="char2_age">Age Range</Label>
                   <Input
                     id="char2_age"
-                    placeholder="e.g., 30s"
+                    placeholder="30s"
                     value={formData.character_2_age_range || ""}
                     onChange={(e) => setFormData({ ...formData, character_2_age_range: e.target.value })}
                   />
@@ -353,7 +353,7 @@ export function SceneUploadModal({
                   <div className="space-y-2">
                     <Label>Stage Direction (Optional)</Label>
                     <Input
-                      placeholder="e.g., [angrily]"
+                      placeholder="[angrily]"
                       value={line.stage_direction || ""}
                       onChange={(e) => updateLine(index, "stage_direction", e.target.value)}
                     />

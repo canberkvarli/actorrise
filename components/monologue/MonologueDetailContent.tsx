@@ -183,7 +183,7 @@ export function MonologueDetailContent({
                         <IconInfoCircle className="h-3.5 w-3.5 cursor-help" />
                       </TooltipTrigger>
                       <TooltipContent className="max-w-xs">
-                        <p className="text-sm">Estimated at a performed pace (~130 WPM) with pauses for punctuation, breath, and beat changes.</p>
+                        <p className="text-sm">~130 WPM with pauses</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
