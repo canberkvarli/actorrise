@@ -1298,7 +1298,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     );
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8 max-w-7xl relative">
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8 max-w-[88rem] relative">
       {outlineOverlay}
 
       {/* Hero Search Section - compact on mobile */}

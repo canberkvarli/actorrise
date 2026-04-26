@@ -82,7 +82,7 @@ export function MonologueResultCard({
       {indicatorLabel && <MatchIndicatorTag label={indicatorLabel} />}
       <Card
         className={`hover:shadow-xl transition-all cursor-pointer flex flex-col group rounded-lg ${
-          size === "dashboard" ? "h-[380px]" : "h-full min-h-[280px]"
+          size === "dashboard" ? "h-[380px]" : "h-full min-h-[360px]"
         } ${
           isBestMatch ? "border-l-4 border-border hover:border-muted-foreground/40" : "hover:border-secondary/50"
         }`}
@@ -189,8 +189,8 @@ export function MonologueResultCard({
               </Badge>
             )}
 
-            <p className={`text-sm text-muted-foreground leading-relaxed ${size === "dashboard" ? "line-clamp-4" : "line-clamp-2"}`}>
-              &ldquo;{mono.text.substring(0, size === "dashboard" ? 280 : 120)}...&rdquo;
+            <p className={`text-sm text-muted-foreground leading-relaxed ${size === "dashboard" ? "line-clamp-4" : "line-clamp-3"}`}>
+              &ldquo;{mono.text.substring(0, size === "dashboard" ? 280 : 200)}...&rdquo;
             </p>
           </div>
 

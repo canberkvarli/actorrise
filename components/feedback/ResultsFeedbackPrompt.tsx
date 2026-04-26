@@ -173,7 +173,7 @@ export function ResultsFeedbackPrompt({
               ref={textareaRef}
               value={negativeReason}
               onChange={(e) => setNegativeReason(e.target.value)}
-              placeholder="e.g. 'I wanted comedic monologues but got dramatic ones' or 'Looking for something shorter'"
+              placeholder="Wanted comedic, got dramatic / Looking for shorter pieces"
               className="text-sm min-h-[60px] resize-none"
               maxLength={500}
               onKeyDown={(e) => {

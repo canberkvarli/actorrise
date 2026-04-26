@@ -88,7 +88,7 @@ export function MonologueUploadModal({
             <Label htmlFor="title">Monologue Title *</Label>
             <Input
               id="title"
-              placeholder="e.g., Sarah's Opening Monologue"
+              placeholder="Sarah's Opening Monologue"
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               required
@@ -100,7 +100,7 @@ export function MonologueUploadModal({
             <Label htmlFor="character_name">Character Name *</Label>
             <Input
               id="character_name"
-              placeholder="e.g., Sarah"
+              placeholder="Sarah"
               value={formData.character_name}
               onChange={(e) => setFormData({ ...formData, character_name: e.target.value })}
               required
@@ -113,7 +113,7 @@ export function MonologueUploadModal({
               <Label htmlFor="play_title">Play/Script Title *</Label>
               <Input
                 id="play_title"
-                placeholder="e.g., My Original Script"
+                placeholder="My Original Script"
                 value={formData.play_title}
                 onChange={(e) => setFormData({ ...formData, play_title: e.target.value })}
                 required
@@ -123,7 +123,7 @@ export function MonologueUploadModal({
               <Label htmlFor="author">Author *</Label>
               <Input
                 id="author"
-                placeholder="e.g., Your Name"
+                placeholder="Your Name"
                 value={formData.author}
                 onChange={(e) => setFormData({ ...formData, author: e.target.value })}
                 required
@@ -155,7 +155,7 @@ export function MonologueUploadModal({
               <Label htmlFor="character_age_range">Age Range (Optional)</Label>
               <Input
                 id="character_age_range"
-                placeholder="e.g., 20s, 30-40, 50+"
+                placeholder="20s, 30-40, 50+"
                 value={formData.character_age_range || ""}
                 onChange={(e) => setFormData({ ...formData, character_age_range: e.target.value })}
               />
@@ -181,7 +181,7 @@ export function MonologueUploadModal({
             <Label htmlFor="stage_directions">Stage Directions (Optional)</Label>
             <Textarea
               id="stage_directions"
-              placeholder="e.g., [Enters from stage left, visibly upset]"
+              placeholder="[Enters from stage left, visibly upset]"
               value={formData.stage_directions || ""}
               onChange={(e) => setFormData({ ...formData, stage_directions: e.target.value })}
               rows={2}

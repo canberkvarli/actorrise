@@ -233,7 +233,7 @@ export function SearchFiltersSheet({
               <Label className="text-xs text-muted-foreground">Author</Label>
               <input
                 type="text"
-                placeholder="e.g. Shakespeare"
+                placeholder="Shakespeare"
                 value={filters.author}
                 onChange={(e) => setFilters({ ...filters, author: e.target.value })}
                 className="w-full min-h-[48px] px-4 py-3 text-base rounded-lg border border-input bg-background"
