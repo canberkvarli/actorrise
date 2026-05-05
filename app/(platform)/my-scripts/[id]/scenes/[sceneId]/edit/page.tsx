@@ -2700,6 +2700,54 @@ export default function SceneEditPage() {
                         isMine && "bg-orange-50/50"
                       )}
                     >
+                      {/* Listen / waveform — above character name (partner lines only) */}
+                      {!isMine && (() => {
+                        const lineVid = charVoices[line.character_name] ?? null;
+                        const isPlayingThisLine = (isSpeakingAI || isLoadingAI) && ttsLineIdRef.current === line.id;
+                        return (
+                          <div className="h-7 mb-1 flex items-center justify-center w-full">
+                            {isPlayingThisLine ? (
+                              <motion.div
+                                key="wave"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.18 }}
+                                className="w-full max-w-[200px]"
+                              >
+                                <TTSWaveform
+                                  audioElement={aiAudioRef.current}
+                                  isLoading={isLoadingAI}
+                                  isSpeaking={isSpeakingAI}
+                                  onProgress={setTtsProgress}
+                                  className="mx-auto"
+                                />
+                              </motion.div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  cancelAI();
+                                  const stageDir = line.stage_direction || "";
+                                  const instructions = buildActorInstructions(line.character_name, stageDir || undefined);
+                                  ttsLineIdRef.current = line.id;
+                                  setTtsProgress(0);
+                                  speakAI(line.text, lineVid || "coral", instructions);
+                                }}
+                                onMouseEnter={() => {
+                                  const stageDir = line.stage_direction || "";
+                                  const preloadInstructions = buildActorInstructions(line.character_name, stageDir || undefined);
+                                  preloadAI(line.text, lineVid || "coral", preloadInstructions);
+                                }}
+                                className="opacity-0 sm:group-hover/linerow:opacity-100 transition-opacity duration-200 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100"
+                              >
+                                <Volume2 className="w-3 h-3" />
+                                Listen
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
                       {/* Character name + avatar + stage direction */}
                       {(() => {
                         const vid = charVoices[line.character_name] ?? null;
