@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -564,6 +565,24 @@ def main():
         logger.info(f"⊘ Duplicates skipped: {grand_total['duplicates_skipped']}")
         logger.info(f"⏱  Time elapsed: {elapsed/60:.1f} minutes")
         logger.info("=" * 60)
+
+        # Auto-segment any monologues that landed without text_segments. Idempotent
+        # (filters text_segments IS NULL); skipped rows cost nothing. We close the
+        # ORM session first so the subprocess gets a clean connection.
+        if grand_total['monologues_added'] > 0:
+            db.close()
+            logger.info("\n=== Auto-segmenting newly created monologues ===")
+            segment_proc = subprocess.run(
+                [sys.executable, "-m", "scripts.segment_monologues", "--write"],
+                cwd=str(Path(__file__).resolve().parent.parent),
+                check=False,
+            )
+            if segment_proc.returncode != 0:
+                logger.warning(
+                    f"segment_monologues exited with code {segment_proc.returncode}; "
+                    "new records may render via the plain-text fallback until "
+                    "you re-run the segmenter manually."
+                )
 
         logger.info("\nNext steps:")
         logger.info("  1. Run AI enrichment: uv run python scripts/enrich_monologues.py")
