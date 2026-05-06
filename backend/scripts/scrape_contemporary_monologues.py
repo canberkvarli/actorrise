@@ -15,6 +15,8 @@ Legal basis:
 import asyncio
 import re
 import json
+import subprocess
+from pathlib import Path
 from typing import List, Dict, Optional
 import httpx
 from bs4 import BeautifulSoup
@@ -488,6 +490,24 @@ async def main():
         limit_collections=args.limit_collections,
     )
     await scraper.run()
+
+    # Auto-segment newly created monologues. Idempotent: skips records that
+    # already have text_segments populated. Without this, new records render
+    # via the plain-text fallback (no italic stage directions, no other-
+    # character interjections distinguished).
+    print("\n=== Auto-segmenting newly created monologues ===")
+    segment_proc = subprocess.run(
+        [sys.executable, "-m", "scripts.segment_monologues", "--write"],
+        cwd=str(Path(__file__).resolve().parent.parent),
+        check=False,
+    )
+    if segment_proc.returncode != 0:
+        print(
+            f"WARN: segment_monologues exited with code {segment_proc.returncode}; "
+            "new records will render via plain-text fallback until you re-run "
+            "the segmenter manually.",
+            file=sys.stderr,
+        )
 
 
 if __name__ == "__main__":

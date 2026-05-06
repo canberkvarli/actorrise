@@ -34,6 +34,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -698,6 +699,25 @@ def main() -> None:
     print(f"  Fetch errors (no script found): {total_fetch_errors}")
     print(f"  Est. cost: ~${total_monologues * 0.005:.2f}")
     db.close()
+
+    # Auto-segment any newly-created monologues. Idempotent (filters
+    # text_segments IS NULL); skipped rows cost nothing. Without this, new
+    # records render via the plain-text fallback and stage directions /
+    # other-character interjections are not visually distinguished.
+    if total_monologues > 0:
+        print(f"\n=== Auto-segmenting {total_monologues} newly created monologues ===")
+        segment_proc = subprocess.run(
+            [sys.executable, "-m", "scripts.segment_monologues", "--write"],
+            cwd=str(Path(__file__).resolve().parent.parent),
+            check=False,
+        )
+        if segment_proc.returncode != 0:
+            print(
+                f"WARN: segment_monologues exited with code {segment_proc.returncode}; "
+                "new records will render via plain-text fallback until you re-run "
+                "the segmenter manually.",
+                file=sys.stderr,
+            )
 
 
 if __name__ == "__main__":
