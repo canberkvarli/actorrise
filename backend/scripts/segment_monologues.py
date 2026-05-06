@@ -68,22 +68,32 @@ SYSTEM_PROMPT = """You segment a monologue into structured parts for a theatre/f
 You receive:
 - The target CHARACTER name
 - The PLAY / FILM title
-- The raw TEXT, which may contain:
-  - The target character's spoken lines (most of the text)
-  - Brief interjections from other characters (cue lines, short responses)
-  - Stage directions or parentheticals (e.g. "(laughing)", "She crosses to the window")
+- The raw TEXT, which mixes three kinds of content:
+  (1) The target character's spoken lines (their actual lines of dialogue)
+  (2) Brief lines from OTHER characters (cues, reactions, questions)
+  (3) Stage directions, parentheticals, AND screenplay narration (description, not speech)
 
-Return ONLY a JSON array of segments. Each segment is:
-  { "type": "dialogue"    , "text": "..." }    // target character speaking
-  { "type": "interjection", "speaker": "NAME", "text": "..." }  // another character
-  { "type": "direction"   , "text": "..." }    // stage direction / parenthetical
+Return ONLY a JSON object: { "segments": [...] }. Each segment is one of:
+  { "type": "dialogue",     "text": "..." }                       // target character speaking aloud
+  { "type": "interjection", "speaker": "NAME", "text": "..." }    // ANY other character speaking aloud
+  { "type": "direction",    "text": "..." }                       // anything NOT spoken aloud
 
-Rules:
-- Preserve the original ordering and wording exactly.
-- Do not add, drop, or paraphrase content. The concatenation of all segment texts should match the original text.
-- For interjections, infer speaker from context if possible; if unknown, use "OTHER".
-- Parentheticals like "(laughing)" are type="direction".
-- If unsure, default to type="dialogue".
+How to choose the type — apply this test to every span:
+- "DIALOGUE" — Could the target character physically speak these words aloud in performance? First-person speech, addressed at someone in scene.
+- "INTERJECTION" — Could ANOTHER character speak these words aloud? Often a short cue, question, or response. Use even when the line is unattributed (no "NAME:" prefix). Infer speaker from context (use the other character's name when it appears in the text); fall back to "OTHER" only if truly unknown.
+- "DIRECTION" — Anything that describes what is happening rather than something being spoken. This INCLUDES:
+    * Parentheticals: "(laughing)", "(he turns away)"
+    * Action lines: "She crosses to the window and stares out."
+    * Screenplay narration (third-person prose describing the scene): "The fireball barrels through the sky.", "His mouth is agape.", "An otherworldly voice comes from the hole."
+    * Scene-setting prose: "In the sky above, a star is moving toward us."
+  If the words describe what the audience SEES or HEARS happening (rather than something a character SAYS), it is direction.
+
+Bias rule: when unsure between dialogue and direction, choose DIRECTION. Better to mute narration than to spotlight it as the character's speech.
+
+Strict preservation rules:
+- Preserve original ordering and wording exactly. Do not rephrase, summarize, or expand.
+- The concatenation of all segment texts (in order) must reconstruct the original text closely.
+- Do not split a single sentence across segments unless it actually shifts type mid-sentence.
 
 Output: a JSON object with exactly one key "segments" whose value is the array of segments. No prose, no code fences."""
 
@@ -280,7 +290,20 @@ def main() -> None:
     parser.add_argument("--limit", type=int, default=None, help="Max records to process (default: all)")
     parser.add_argument("--write", action="store_true", help="Persist to DB (default: dry-run, no writes)")
     parser.add_argument("--force", action="store_true", help="Re-segment records that already have text_segments")
+    parser.add_argument("--ids", type=str, default=None,
+                        help="Comma-separated monologue IDs to target (implies --force)")
+    parser.add_argument("--source-type", type=str, default=None,
+                        help="Comma-separated Play.source_type values: film,tv,play")
     args = parser.parse_args()
+
+    target_ids: list[int] | None = None
+    if args.ids:
+        target_ids = [int(x.strip()) for x in args.ids.split(",") if x.strip()]
+        args.force = True  # --ids implies re-segment those specific records
+
+    target_source_types: list[str] | None = None
+    if args.source_type:
+        target_source_types = [s.strip() for s in args.source_type.split(",") if s.strip()]
 
     api_key = os.environ.get("OPENAI_API_KEY")
     if not api_key:
@@ -308,8 +331,14 @@ def main() -> None:
         # vulnerable to SSL EOF mid-query.
         def _build_count(session):
             q = session.query(Monologue)
-            if not args.force:
+            if target_ids:
+                q = q.filter(Monologue.id.in_(target_ids))
+            elif not args.force:
                 q = q.filter(Monologue.text_segments.is_(None))
+            if target_source_types:
+                q = q.join(Play, Monologue.play_id == Play.id).filter(
+                    Play.source_type.in_(target_source_types)
+                )
             # We only want the count; return a trivial query and .count() below
             # won't work with _fetch_page_with_retry (which calls .all()), so
             # handle count inline with its own retry loop.
@@ -372,8 +401,14 @@ def main() -> None:
                     ),
                     joinedload(Monologue.play).load_only(Play.id, Play.title),
                 )
-                if not args.force:
+                if target_ids:
+                    q = q.filter(Monologue.id.in_(target_ids))
+                elif not args.force:
                     q = q.filter(Monologue.text_segments.is_(None))
+                if target_source_types:
+                    q = q.join(Play, Monologue.play_id == Play.id).filter(
+                        Play.source_type.in_(target_source_types)
+                    )
                 return (
                     q.filter(Monologue.id > _last_id)
                     .order_by(Monologue.id.asc())
