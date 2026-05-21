@@ -678,7 +678,7 @@ export default function AdminOverviewPage() {
             className="gap-2"
             onClick={() => {
               clearLastSeen();
-              window.location.href = "/dashboard";
+              window.location.href = "/practice";
             }}
           >
             Show modal (test)

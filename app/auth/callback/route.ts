@@ -6,7 +6,7 @@ export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const { searchParams } = requestUrl;
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  const next = searchParams.get("next") ?? "/practice";
   const provider = searchParams.get("provider"); // google | apple; for "last used" on login/signup
   // Use the request's origin so redirect stays on same host (avoids www vs non-www mismatch)
   const origin = requestUrl.origin;

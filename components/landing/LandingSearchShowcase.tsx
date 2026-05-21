@@ -102,7 +102,7 @@ export function LandingSearchShowcase() {
               className="mt-7"
             >
               <Button asChild size="lg" className="rounded-full px-8">
-                <Link href="/search">Try it free</Link>
+                <Link href="/monologues">Try it free</Link>
               </Button>
             </motion.div>
           </div>

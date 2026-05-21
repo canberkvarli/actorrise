@@ -102,7 +102,7 @@ export function MonologuesBrowse({ onSelect, onToggleFavorite }: MonologuesBrows
       <CuratedRow
         title="Recently saved"
         monologues={recentlySaved}
-        seeAllHref="/my-monologues"
+        seeAllHref="/monologues"
         isLoading={isBookmarksLoading}
         onSelect={onSelect}
         onToggleFavorite={onToggleFavorite}

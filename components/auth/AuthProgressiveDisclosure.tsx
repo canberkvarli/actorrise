@@ -22,7 +22,7 @@ const emailFormVariants = {
 
 export function AuthProgressiveDisclosure({
   mode,
-  redirectTo = "/dashboard",
+  redirectTo = "/practice",
 }: AuthProgressiveDisclosureProps) {
   const [showEmailForm, setShowEmailForm] = useState(false);
 
