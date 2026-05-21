@@ -144,7 +144,7 @@ export default function PlatformLayout({
     { href: "/practice", label: "Practice", icon: IconMasksTheater },
     { href: "/monologues", label: "Monologues", icon: IconMicrophone },
   ];
-  const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/my-scripts\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$/.test(pathname || "");
+  const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/practice\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$/.test(pathname || "");
 
   return (
     <>
