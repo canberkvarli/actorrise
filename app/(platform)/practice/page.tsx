@@ -10,7 +10,6 @@ import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import UnderConstructionScripts from "@/components/UnderConstructionScripts";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { ProfileCompletionCard } from "@/components/practice/ProfileCompletionCard";
 import { PracticeGreeting } from "@/components/practice/PracticeGreeting";
 import { PracticeHeadlineCard } from "@/components/practice/PracticeHeadlineCard";
 import { PracticeActivityBeats } from "@/components/practice/PracticeActivityBeats";
@@ -20,11 +19,10 @@ import { PracticeScriptsGrid } from "@/components/practice/PracticeScriptsGrid";
  * /practice — editorial cinematic landing page for ScenePartner.
  *
  * Layout (top to bottom):
- *  1. ProfileCompletionCard (above the fold, only when profile <100%)
- *  2. Time-of-day greeting
- *  3. Headline card (adaptive: empty-state CTAs OR continue-rehearsing featured script)
- *  4. Activity beats (single quiet row; hidden when nothing to say)
- *  5. Scripts grid (visual 2 to 3 column layout; demo pinned last)
+ *  1. Time-of-day greeting
+ *  2. Headline card (adaptive: empty-state CTAs OR "where you left off" featured script)
+ *  3. Activity beats (single quiet row; hidden when nothing to say)
+ *  4. Scripts grid (visual 1 to 3 column layout; featured script excluded; demo pinned last)
  */
 export default function PracticePage() {
   // Hooks must run on every render — call before any feature-flag early return.
@@ -52,18 +50,25 @@ export default function PracticePage() {
     return { userScripts, demoScript, featuredScript };
   }, [scripts]);
 
+  // Scripts displayed in the library grid below. When the headline features a
+  // script, exclude it from the grid so we don't show the same title twice.
+  const gridScripts = useMemo(() => {
+    if (!featuredScript) return scripts;
+    return scripts.filter((s) => s.id !== featuredScript.id);
+  }, [scripts, featuredScript]);
+
   const isLoading = !mounted || authLoading || scriptsLoading;
   const displayName = (profile?.name?.trim() || user?.name?.trim() || "") as string;
 
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-14 max-w-6xl">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 max-w-6xl">
       {isLoading ? (
-        <div className="space-y-10">
+        <div className="space-y-8 sm:space-y-10">
           <Skeleton className="h-12 w-3/4 max-w-md" />
           <Skeleton className="h-48 w-full rounded-lg" />
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-44 w-full rounded-lg" />
             ))}
@@ -79,10 +84,8 @@ export default function PracticePage() {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-          className="space-y-10 sm:space-y-14"
+          className="space-y-8 sm:space-y-12 lg:space-y-14"
         >
-          <ProfileCompletionCard />
-
           <div className="space-y-3">
             <PracticeGreeting name={displayName} />
             <PracticeActivityBeats userScriptCount={userScripts.length} />
@@ -93,7 +96,7 @@ export default function PracticePage() {
             demoScriptId={demoScript?.id ?? null}
           />
 
-          <PracticeScriptsGrid scripts={scripts} isLoading={false} />
+          <PracticeScriptsGrid scripts={gridScripts} isLoading={false} />
         </motion.div>
       )}
     </div>
