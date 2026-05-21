@@ -181,9 +181,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearSwrCache();
       clearUserSpecificQueryCache(); // only wipe profile/stats — keep discover cache for instant load
 
-      // Full page redirect so session cookies are sent on the next request (e.g. /search).
+      // Full page redirect so session cookies are sent on the next request (e.g. /monologues).
       // router.push() is client-only and can leave middleware without cookies on first nav.
-      const redirectPath = redirectTo || "/dashboard";
+      const redirectPath = redirectTo || "/practice";
       window.location.href = redirectPath;
     } catch (error: unknown) {
       console.error("Login error:", error);
@@ -233,7 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearUserSpecificQueryCache(); // only wipe profile/stats — keep discover cache for instant load
         // Full page redirect so session cookies are sent on the next request and modal state is cleared
         // Using router.push() leaves the auth modal open because React state persists
-        window.location.href = "/dashboard";
+        window.location.href = "/practice";
       } else {
         // Email confirmation required - show success message
         // User will need to confirm email before logging in

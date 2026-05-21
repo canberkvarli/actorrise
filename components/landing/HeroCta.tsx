@@ -12,7 +12,7 @@ export function HeroCta() {
 
   const handleClick = () => {
     if (user) {
-      router.push("/my-scripts");
+      router.push("/practice");
     } else {
       authModal?.openAuthModal("signup");
     }

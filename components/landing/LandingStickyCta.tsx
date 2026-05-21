@@ -37,7 +37,7 @@ export function LandingStickyCta() {
         >
           <div className="bg-background/95 backdrop-blur-sm border-t border-border shadow-lg px-4 py-3">
             <Button asChild className="w-full h-11 text-sm font-semibold">
-              <Link href="/my-scripts">Start rehearsing</Link>
+              <Link href="/practice">Start rehearsing</Link>
             </Button>
           </div>
         </motion.div>

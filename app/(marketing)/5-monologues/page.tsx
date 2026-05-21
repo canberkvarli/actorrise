@@ -84,8 +84,8 @@ export default function FiveMonologuesPage() {
           ) : (
             <li className="text-muted-foreground">
               We couldn&apos;t load the list right now.{" "}
-              <Link href="/search" className="text-primary underline">
-                Search monologues
+              <Link href="/monologues" className="text-primary underline">
+                Browse monologues
               </Link>{" "}
               to find fresh pieces.
             </li>

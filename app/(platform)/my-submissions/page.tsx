@@ -242,7 +242,7 @@ export default function MySubmissionsPage() {
             </Button>
             {SCRIPTS_FEATURE_ENABLED && (
               <Button asChild className="w-fit" size="sm">
-                <Link href="/my-scripts">
+                <Link href="/practice">
                   <IconFileText className="h-4 w-4 mr-2" />
                   Your scripts
                 </Link>
@@ -328,7 +328,7 @@ export default function MySubmissionsPage() {
                   Upload and manage scripts for scene practice in Your scripts.
                 </p>
                 <Button asChild variant="outline">
-                  <Link href="/my-scripts">Go to Your scripts</Link>
+                  <Link href="/practice">Go to Practice</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -387,7 +387,7 @@ export default function MySubmissionsPage() {
                   Upload PDF or TXT scripts for scene partner practice.
                 </p>
                 <Button asChild>
-                  <Link href="/my-scripts">
+                  <Link href="/practice">
                     <IconFileText className="h-4 w-4 mr-2" />
                     Go to Your scripts
                   </Link>

@@ -7,7 +7,7 @@ import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconMasksTheater, IconMicrophone, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar } from "@tabler/icons-react";
+import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMasksTheater, IconMicrophone, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar } from "@tabler/icons-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef, Suspense } from "react";
@@ -398,13 +398,13 @@ export default function PlatformLayout({
             <div className="md:hidden flex flex-1 items-center justify-center min-w-0">
               <Button
                 asChild
-                variant={pathname === "/search" ? "outline" : "ghost"}
+                variant={pathname === "/monologues" ? "outline" : "ghost"}
                 size="sm"
                 className="gap-2 rounded-full px-4"
               >
-                <Link href="/search">
+                <Link href="/monologues">
                   <IconSearch className="h-4 w-4" />
-                  <span className="text-sm">Search</span>
+                  <span className="text-sm">Monologues</span>
                 </Link>
               </Button>
             </div>
@@ -463,11 +463,11 @@ export default function PlatformLayout({
                 {/* Bookmarks Link */}
                 <Button
                   asChild
-                  variant={pathname === "/my-monologues" ? "default" : "ghost"}
+                  variant={pathname === "/monologues" ? "default" : "ghost"}
                   size="sm"
                   className="w-full justify-between gap-2"
                 >
-                  <Link href="/my-monologues" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-between w-full">
+                  <Link href="/monologues" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2">
                       <IconBookmark className="h-4 w-4" />
                       Saved
@@ -485,11 +485,11 @@ export default function PlatformLayout({
                 {/* Your Scripts Link */}
                 <Button
                   asChild
-                  variant={pathname === "/my-scripts" ? "default" : "ghost"}
+                  variant={pathname === "/practice" ? "default" : "ghost"}
                   size="sm"
                   className="w-full justify-start gap-2"
                 >
-                  <Link href="/my-scripts" onClick={() => setMobileMenuOpen(false)}>
+                  <Link href="/practice" onClick={() => setMobileMenuOpen(false)}>
                     <IconFileText className="h-4 w-4" />
                     Your Scripts
                   </Link>
@@ -596,22 +596,13 @@ export default function PlatformLayout({
             <span className="text-[10px] font-medium">Practice</span>
           </Link>
           <Link
-            href="/search"
+            href="/monologues"
             className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
-              pathname === "/search" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              pathname === "/monologues" ? "text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <IconSearch className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] font-medium">Search</span>
-          </Link>
-          <Link
-            href="/my-scripts"
-            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
-              pathname === "/my-scripts" ? "text-primary" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <IconMask className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] font-medium">Scenes</span>
+            <span className="text-[10px] font-medium">Monologues</span>
           </Link>
           <Link
             href="/profile"

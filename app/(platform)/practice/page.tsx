@@ -46,11 +46,11 @@ export default function PracticePage() {
   const isLoading = !mounted || authLoading || scriptsLoading;
   const hasOwnScripts = userScripts.length > 0;
 
-  // Upload trigger lives on /my-scripts. Centralizing here would mean
+  // Upload trigger lives on /practice (formerly /my-scripts). Centralizing here would mean
   // duplicating ~150 lines of scan + SSE streaming logic. Phase 3 can extract
   // it into a shared hook/component if needed.
   const handleUploadClick = () => {
-    router.push("/my-scripts");
+    router.push("/practice");
   };
 
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
