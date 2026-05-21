@@ -89,7 +89,7 @@ export function LandingPageAnimated() {
         >
           <div className="max-w-4xl w-full mx-auto text-center">
             <h1 className="text-[2rem] sm:text-5xl md:text-6xl lg:text-7xl leading-[1.05] tracking-[-0.03em] max-w-3xl mx-auto">
-              Find your <span className="hero-keyword">monologue</span> in 20&nbsp;seconds.
+              Find your <span className="hero-keyword">monologue</span> in seconds.
               <br className="hidden sm:block" />
               {" "}Spend your time <span className="hero-keyword">rehearsing</span>.
             </h1>
