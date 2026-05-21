@@ -33,6 +33,9 @@
     },
     "plugins": [
       "expo-router",
+      "expo-apple-authentication",
+      "expo-secure-store",
+      "expo-web-browser",
       [
         "expo-splash-screen",
         {
