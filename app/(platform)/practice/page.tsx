@@ -5,29 +5,32 @@ import { motion } from "framer-motion";
 
 import { useScripts } from "@/hooks/useScripts";
 import { useAuth } from "@/lib/auth";
+import { useProfile } from "@/hooks/useDashboardData";
 import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
 import UnderConstructionScripts from "@/components/UnderConstructionScripts";
 import { Skeleton } from "@/components/ui/skeleton";
 
-import { PracticeEmptyState } from "@/components/practice/PracticeEmptyState";
 import { ProfileCompletionCard } from "@/components/practice/ProfileCompletionCard";
-import { ContinuePracticingRow } from "@/components/practice/ContinuePracticingRow";
-import { YourScriptsList } from "@/components/practice/YourScriptsList";
+import { PracticeGreeting } from "@/components/practice/PracticeGreeting";
+import { PracticeHeadlineCard } from "@/components/practice/PracticeHeadlineCard";
+import { PracticeActivityBeats } from "@/components/practice/PracticeActivityBeats";
+import { PracticeScriptsGrid } from "@/components/practice/PracticeScriptsGrid";
 
 /**
- * /practice — adaptive landing page for ScenePartner.
+ * /practice — editorial cinematic landing page for ScenePartner.
  *
- * - 0 user scripts → PracticeEmptyState hero with upload + demo CTAs.
- * - ≥1 user script → ProfileCompletionCard + (future) ContinuePracticingRow + YourScriptsList.
- *
- * Auth + data fetching uses `useScripts` via TanStack Query.
- * Upload flow is encapsulated in <UploadScriptButton /> (used by both
- * <PracticeEmptyState /> and <YourScriptsList />).
+ * Layout (top to bottom):
+ *  1. ProfileCompletionCard (above the fold, only when profile <100%)
+ *  2. Time-of-day greeting
+ *  3. Headline card (adaptive: empty-state CTAs OR continue-rehearsing featured script)
+ *  4. Activity beats (single quiet row; hidden when nothing to say)
+ *  5. Scripts grid (visual 2 to 3 column layout; demo pinned last)
  */
 export default function PracticePage() {
   // Hooks must run on every render — call before any feature-flag early return.
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isDemoUser } = useAuth();
   const { data: scripts = [], isLoading: scriptsLoading } = useScripts();
+  const { data: profile } = useProfile(isDemoUser);
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -35,26 +38,34 @@ export default function PracticePage() {
     setMounted(true);
   }, []);
 
-  const { userScripts, demoScript } = useMemo(() => {
+  const { userScripts, demoScript, featuredScript } = useMemo(() => {
     const userScripts = scripts.filter((s) => !s.is_sample);
     const demoScript = scripts.find((s) => s.is_sample) ?? null;
-    return { userScripts, demoScript };
+    // Most recently uploaded user script. Backend returns scripts ordered DESC
+    // by created_at, but we sort defensively to stay deterministic.
+    // FUTURE: when recent-rehearsal data lands, swap this for the most recently
+    // practiced *scene* and rename the headline to "Pick up where you left off."
+    const featuredScript =
+      [...userScripts].sort((a, b) =>
+        (b.created_at ?? "").localeCompare(a.created_at ?? ""),
+      )[0] ?? null;
+    return { userScripts, demoScript, featuredScript };
   }, [scripts]);
 
   const isLoading = !mounted || authLoading || scriptsLoading;
-  const hasOwnScripts = userScripts.length > 0;
+  const displayName = (profile?.name?.trim() || user?.name?.trim() || "") as string;
 
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-6 sm:py-10 max-w-3xl">
+    <div className="container mx-auto px-4 sm:px-6 py-8 sm:py-14 max-w-6xl">
       {isLoading ? (
-        <div className="space-y-6">
-          <Skeleton className="h-10 w-3/4 max-w-md" />
-          <Skeleton className="h-5 w-1/2 max-w-sm" />
-          <div className="space-y-3 pt-4">
+        <div className="space-y-10">
+          <Skeleton className="h-12 w-3/4 max-w-md" />
+          <Skeleton className="h-48 w-full rounded-lg" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-[72px] w-full rounded-lg" />
+              <Skeleton key={i} className="h-44 w-full rounded-lg" />
             ))}
           </div>
         </div>
@@ -63,29 +74,26 @@ export default function PracticePage() {
         <div className="py-20 text-center text-muted-foreground text-sm">
           Please sign in to practice scenes.
         </div>
-      ) : !hasOwnScripts ? (
-        <motion.div
-          initial={{ opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-        >
-          <PracticeEmptyState
-            demoScriptId={demoScript?.id ?? null}
-          />
-        </motion.div>
       ) : (
         <motion.div
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-          className="space-y-8"
+          className="space-y-10 sm:space-y-14"
         >
           <ProfileCompletionCard />
-          <ContinuePracticingRow />
-          <YourScriptsList
-            scripts={scripts}
-            isLoading={false}
+
+          <div className="space-y-3">
+            <PracticeGreeting name={displayName} />
+            <PracticeActivityBeats userScriptCount={userScripts.length} />
+          </div>
+
+          <PracticeHeadlineCard
+            featuredScript={featuredScript}
+            demoScriptId={demoScript?.id ?? null}
           />
+
+          <PracticeScriptsGrid scripts={scripts} isLoading={false} />
         </motion.div>
       )}
     </div>
