@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } fro
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { BrandLogo } from './BrandLogo';
+import { DevSignIn } from './DevSignIn';
 import { EmailForm } from './EmailForm';
 import { OAuthButtons } from './OAuthButtons';
 
@@ -78,6 +79,8 @@ export function AuthCard({ mode }: AuthCardProps) {
             <Text className="text-xs text-muted-foreground/70 text-center">
               By continuing, you agree to ActorRise&apos;s Terms of Service.
             </Text>
+
+            <DevSignIn />
           </View>
 
           <View className="flex-row justify-center mt-6 gap-2">

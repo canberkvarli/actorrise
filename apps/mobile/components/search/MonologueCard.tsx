@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
 import type { Monologue } from '@actorrise/types';
 
@@ -10,6 +11,7 @@ interface MonologueCardProps {
 }
 
 export function MonologueCard({ monologue, rank, onPress }: MonologueCardProps) {
+  const handlePress = onPress ?? (() => router.push(`/monologue/${monologue.id}`));
   const meta = [
     `${monologue.word_count} words`,
     formatDuration(monologue.estimated_duration_seconds),
@@ -25,7 +27,7 @@ export function MonologueCard({ monologue, rank, onPress }: MonologueCardProps) 
 
   return (
     <Pressable
-      onPress={onPress}
+      onPress={handlePress}
       className="bg-card border border-border rounded-xl px-5 py-4 mb-3 active:opacity-80">
       <MatchBadge rank={rank} matchType={monologue.match_type} />
 
