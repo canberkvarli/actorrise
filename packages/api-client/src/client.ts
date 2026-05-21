@@ -50,6 +50,19 @@ export interface ApiClient {
     body: unknown,
     opts?: Omit<RequestOptions<TResponse>, "path" | "method" | "body">,
   ): Promise<TResponse>;
+
+  /** Convenience PATCH with JSON body. */
+  patch<TResponse>(
+    path: string,
+    body: unknown,
+    opts?: Omit<RequestOptions<TResponse>, "path" | "method" | "body">,
+  ): Promise<TResponse>;
+
+  /** Convenience DELETE. */
+  delete<TResponse>(
+    path: string,
+    opts?: Omit<RequestOptions<TResponse>, "path" | "method">,
+  ): Promise<TResponse>;
 }
 
 const DEFAULT_TIMEOUT_MS = 30_000;
@@ -116,6 +129,9 @@ export function createApiClient(options: ApiClientOptions): ApiClient {
     get: (path, opts) => request({ ...(opts ?? {}), path, method: "GET" }),
     post: (path, body, opts) =>
       request({ ...(opts ?? {}), path, method: "POST", body }),
+    patch: (path, body, opts) =>
+      request({ ...(opts ?? {}), path, method: "PATCH", body }),
+    delete: (path, opts) => request({ ...(opts ?? {}), path, method: "DELETE" }),
   };
 }
 

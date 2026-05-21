@@ -2,6 +2,7 @@ import { Stack, useLocalSearchParams } from 'expo-router';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { BookmarkButton } from '@/components/monologue/BookmarkButton';
 import { useMonologue } from '@/hooks/use-monologue';
 
 export default function MonologueDetailScreen() {
@@ -41,13 +42,18 @@ export default function MonologueDetailScreen() {
       <Stack.Screen options={{ title: monologue.character_name, headerBackTitle: 'Back' }} />
       <SafeAreaView className="flex-1 bg-background" edges={['bottom']}>
         <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 20 }}>
-          <Text className="text-3xl font-bold text-foreground mb-1">
-            {monologue.character_name}
-          </Text>
-          <Text className="text-base text-muted-foreground mb-1">
-            {monologue.play_title}
-            {monologue.author ? ` · ${monologue.author}` : ''}
-          </Text>
+          <View className="flex-row items-start justify-between gap-3">
+            <View className="flex-1">
+              <Text className="text-3xl font-bold text-foreground mb-1">
+                {monologue.character_name}
+              </Text>
+              <Text className="text-base text-muted-foreground mb-1">
+                {monologue.play_title}
+                {monologue.author ? ` · ${monologue.author}` : ''}
+              </Text>
+            </View>
+            <BookmarkButton monologueId={monologue.id} isFavorited={!!monologue.is_favorited} />
+          </View>
           <Text className="text-xs text-muted-foreground/80 mt-2">{meta.join(' · ')}</Text>
 
           {monologue.scene_description ? (

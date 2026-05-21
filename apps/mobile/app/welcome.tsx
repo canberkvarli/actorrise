@@ -64,7 +64,7 @@ export default function WelcomeScreen() {
   async function dismiss(target: '/(tabs)' | '/(tabs)/profile') {
     setDismissing(true);
     try {
-      await api.post('/api/auth/onboarding', { has_seen_welcome: true });
+      await api.patch('/api/auth/onboarding', { has_seen_welcome: true });
     } catch {
       // Non-fatal — flag will be re-tried next session. Still let the user in.
     }
