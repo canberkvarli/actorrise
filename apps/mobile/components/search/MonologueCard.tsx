@@ -1,60 +1,58 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import type { Monologue } from '@actorrise/types';
 
-import type { MockMonologue } from '@/lib/mock-monologues';
+import { MatchBadge } from './MatchBadge';
 
 interface MonologueCardProps {
-  monologue: MockMonologue;
+  monologue: Monologue;
+  rank: number;
   onPress?: () => void;
 }
 
-export function MonologueCard({ monologue, onPress }: MonologueCardProps) {
-  const metaParts = [
-    `${monologue.wordCount} words`,
-    monologue.gender === 'any' ? 'any gender' : monologue.gender,
-    monologue.ageRange,
-    monologue.genre,
-  ];
+export function MonologueCard({ monologue, rank, onPress }: MonologueCardProps) {
+  const meta = [
+    `${monologue.word_count} words`,
+    formatDuration(monologue.estimated_duration_seconds),
+    monologue.character_gender || monologue.gender,
+    monologue.character_age_range || monologue.age_range,
+    monologue.tone,
+  ].filter(Boolean);
+
+  const preview =
+    monologue.excerpt ??
+    monologue.scene_description ??
+    monologue.text.slice(0, 240);
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
-      <View style={styles.header}>
-        <Text style={styles.character} numberOfLines={1}>
-          {monologue.character}
-        </Text>
-        <Text style={styles.source} numberOfLines={1}>
-          {monologue.source}
-          {monologue.sourceYear ? ` · ${monologue.sourceYear}` : ''}
-        </Text>
-      </View>
-      <Text style={styles.preview} numberOfLines={3}>
-        {monologue.preview}
+      className="bg-card border border-border rounded-xl px-5 py-4 mb-3 active:opacity-80">
+      <MatchBadge rank={rank} matchType={monologue.match_type} />
+
+      <Text className="text-lg font-semibold text-foreground mt-2" numberOfLines={1}>
+        {monologue.character_name}
       </Text>
-      <Text style={styles.meta} numberOfLines={1}>
-        {metaParts.join(' · ')}
+      <Text className="text-sm text-muted-foreground" numberOfLines={1}>
+        {monologue.play_title}
+        {monologue.author ? ` · ${monologue.author}` : ''}
+      </Text>
+
+      <Text className="text-[15px] text-foreground/80 leading-[22px] mt-3" numberOfLines={3}>
+        {preview}
+      </Text>
+
+      <Text className="text-xs text-muted-foreground/80 mt-3" numberOfLines={1}>
+        {meta.join(' · ')}
       </Text>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 1,
-  },
-  cardPressed: { opacity: 0.85 },
-  header: { marginBottom: 10 },
-  character: { fontSize: 17, fontWeight: '600', color: '#111', marginBottom: 2 },
-  source: { fontSize: 13, color: '#666' },
-  preview: { fontSize: 15, color: '#222', lineHeight: 21, marginBottom: 10 },
-  meta: { fontSize: 12, color: '#888', textTransform: 'lowercase' },
-});
+function formatDuration(seconds: number | undefined): string | undefined {
+  if (!seconds) return undefined;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (m === 0) return `${s}s`;
+  if (s === 0) return `${m}m`;
+  return `${m}m ${s}s`;
+}

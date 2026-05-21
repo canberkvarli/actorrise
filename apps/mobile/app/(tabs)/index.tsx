@@ -1,76 +1,78 @@
 import { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MonologueCard } from '@/components/search/MonologueCard';
-import { MOCK_MONOLOGUES, type MockMonologue } from '@/lib/mock-monologues';
+import { SearchInput } from '@/components/search/SearchInput';
+import { useDebounced } from '@/hooks/use-debounced';
+import { useMonologueSearch } from '@/hooks/use-monologue-search';
+
+const LOADING_MESSAGES = [
+  'Asking Shakespeare…',
+  'Rifling through the script pile…',
+  'Consulting drama gods…',
+  'Finding ones that’ll stop the room…',
+];
 
 export default function SearchScreen() {
   const [query, setQuery] = useState('');
+  const debouncedQuery = useDebounced(query, 350);
 
-  const results = useMemo(() => filterMonologues(MOCK_MONOLOGUES, query), [query]);
+  const filters = useMemo(() => ({ q: debouncedQuery, limit: 30 }), [debouncedQuery]);
+  const { data, isLoading, isFetching, error } = useMonologueSearch({ filters });
+
+  const results = data?.results ?? [];
+  const showLoading = isLoading || (isFetching && results.length === 0);
+  const loadingMessage = useMemo(
+    () => LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)],
+    [showLoading],
+  );
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Search</Text>
-        <TextInput
-          style={styles.input}
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Try 'Shakespeare', 'comedy', or 'female 20s'…"
-          placeholderTextColor="#999"
-          autoCapitalize="none"
-          autoCorrect={false}
-          clearButtonMode="while-editing"
-        />
+    <SafeAreaView className="flex-1 bg-background" edges={['top']}>
+      <View className="px-5 pt-2 pb-3">
+        <Text className="text-3xl font-bold text-foreground mb-3">Search</Text>
+        <SearchInput value={query} onChangeText={setQuery} />
       </View>
-      <FlatList
-        data={results}
-        keyExtractor={(m) => m.id}
-        renderItem={({ item }) => <MonologueCard monologue={item} />}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          <Text style={styles.empty}>No monologues match that search.</Text>
-        }
-        ListHeaderComponent={
-          <Text style={styles.resultsLabel}>
-            {results.length} {results.length === 1 ? 'monologue' : 'monologues'} (mock data —
-            real backend wires up in Phase 2)
-          </Text>
-        }
-      />
+
+      {showLoading ? (
+        <View className="flex-1 items-center justify-center px-8">
+          <ActivityIndicator size="small" color="#CB4B00" />
+          <Text className="text-sm text-muted-foreground mt-3">{loadingMessage}</Text>
+        </View>
+      ) : error ? (
+        <ErrorState message={error instanceof Error ? error.message : 'Search failed.'} />
+      ) : (
+        <FlatList
+          data={results}
+          keyExtractor={(m) => String(m.id)}
+          renderItem={({ item, index }) => <MonologueCard monologue={item} rank={index} />}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 24 }}
+          ListHeaderComponent={
+            <Text className="text-xs text-muted-foreground mb-3">
+              {debouncedQuery
+                ? `${data?.total ?? results.length} ${
+                    (data?.total ?? results.length) === 1 ? 'monologue' : 'monologues'
+                  }`
+                : 'Recommended for you'}
+            </Text>
+          }
+          ListEmptyComponent={
+            <Text className="text-center text-muted-foreground mt-12 text-base">
+              No monologues match that search.
+            </Text>
+          }
+        />
+      )}
     </SafeAreaView>
   );
 }
 
-function filterMonologues(all: MockMonologue[], q: string): MockMonologue[] {
-  const trimmed = q.trim().toLowerCase();
-  if (!trimmed) return all;
-  return all.filter((m) => {
-    const haystack = `${m.character} ${m.source} ${m.preview} ${m.genre} ${m.gender} ${m.ageRange}`.toLowerCase();
-    return haystack.includes(trimmed);
-  });
+function ErrorState({ message }: { message: string }) {
+  return (
+    <View className="flex-1 items-center justify-center px-8">
+      <Text className="text-base font-semibold text-foreground mb-2">Something went wrong</Text>
+      <Text className="text-sm text-muted-foreground text-center">{message}</Text>
+    </View>
+  );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
-  header: { paddingHorizontal: 18, paddingTop: 16, paddingBottom: 8 },
-  title: { fontSize: 32, fontWeight: '700', color: '#111', marginBottom: 14 },
-  input: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    fontSize: 16,
-    color: '#111',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  list: { paddingHorizontal: 18, paddingTop: 8, paddingBottom: 24 },
-  resultsLabel: { fontSize: 12, color: '#888', marginBottom: 12 },
-  empty: { textAlign: 'center', color: '#999', marginTop: 48, fontSize: 15 },
-});
