@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 interface PlaceholderScreenProps {
@@ -8,18 +8,13 @@ interface PlaceholderScreenProps {
 
 export function PlaceholderScreen({ title, subtitle }: PlaceholderScreenProps) {
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>{title}</Text>
-        {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
+    <SafeAreaView className="flex-1 bg-background">
+      <View className="flex-1 items-center justify-center px-6">
+        <Text className="text-3xl font-bold text-foreground mb-2">{title}</Text>
+        {subtitle ? (
+          <Text className="text-sm text-muted-foreground text-center">{subtitle}</Text>
+        ) : null}
       </View>
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FAFAFA' },
-  content: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 },
-  title: { fontSize: 28, fontWeight: '700', color: '#111', marginBottom: 8 },
-  subtitle: { fontSize: 14, color: '#666', textAlign: 'center' },
-});
