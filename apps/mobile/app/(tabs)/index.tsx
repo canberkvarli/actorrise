@@ -1,12 +1,6 @@
 import { useMemo, useState } from 'react';
-import {
-  FlatList,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { MonologueCard } from '@/components/search/MonologueCard';
 import { MOCK_MONOLOGUES, type MockMonologue } from '@/lib/mock-monologues';
