@@ -13,7 +13,8 @@
       "supportsTablet": true,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "ActorRise records your voice so ScenePartner can rehearse scenes with you.",
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": ["audio"],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -52,6 +53,18 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "1cbd4e95-8c78-4ae3-a0a9-45844bfdb43a"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/1cbd4e95-8c78-4ae3-a0a9-45844bfdb43a"
     }
   }
 }
