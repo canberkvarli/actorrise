@@ -1,0 +1,20 @@
+{
+  "name": "@actorrise/supabase",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./mobile": "./src/client-mobile.ts"
+  },
+  "dependencies": {
+    "@actorrise/types": "workspace:*"
+  },
+  "peerDependencies": {
+    "@supabase/supabase-js": "^2.89.0"
+  },
+  "peerDependenciesMeta": {
+    "@supabase/supabase-js": { "optional": false }
+  }
+}

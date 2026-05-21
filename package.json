@@ -12,7 +12,8 @@
     "dev:mobile": "turbo dev --filter=mobile"
   },
   "devDependencies": {
-    "turbo": "^2.3.0"
+    "turbo": "^2.3.0",
+    "typescript": "^5"
   },
   "packageManager": "pnpm@9.15.0",
   "engines": {

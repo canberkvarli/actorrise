@@ -11,6 +11,9 @@ importers:
       turbo:
         specifier: ^2.3.0
         version: 2.9.14
+      typescript:
+        specifier: ^5
+        version: 5.9.3
 
   apps/web:
     dependencies:
@@ -159,6 +162,15 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
+
+  packages/supabase:
+    dependencies:
+      '@actorrise/types':
+        specifier: workspace:*
+        version: link:../types
+      '@supabase/supabase-js':
+        specifier: ^2.89.0
+        version: 2.106.1
 
   packages/types: {}
 
