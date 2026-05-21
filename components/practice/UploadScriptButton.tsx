@@ -77,8 +77,8 @@ interface UploadScriptButtonProps {
  * "Quick vs Full" mode-choice dialog + a fullscreen extraction-progress overlay.
  *
  * Used in:
- *  - <PracticeEmptyState /> ("Upload your first script")
- *  - <YourScriptsList /> ("+ Upload script")
+ *  - <PracticeHeadlineCard /> empty state ("Upload a script")
+ *  - <PracticeScriptsGrid /> header ("Upload script")
  */
 export function UploadScriptButton({
   variant = "compact",
