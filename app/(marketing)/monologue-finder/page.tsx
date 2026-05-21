@@ -25,8 +25,7 @@ export default function MonologueFinderPage() {
       </h1>
       <p className="text-lg text-muted-foreground mb-8">
         ActorRise is a monologue finder and database built for actors. Search 7,500+ real monologues
-        by describing what you need in plain English, no keyword hunting. Get a shortlist in under 20
-        seconds.
+        by describing what you need in plain English, no keyword hunting. Get a shortlist in seconds.
       </p>
       <ul className="space-y-3 text-muted-foreground mb-10">
         <li className="flex gap-2">
