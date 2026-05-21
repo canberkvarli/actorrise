@@ -1,5 +1,5 @@
-import { PlaceholderScreen } from '@/components/PlaceholderScreen';
+import { AuthCard } from '@/components/auth/AuthCard';
 
 export default function SignUpScreen() {
-  return <PlaceholderScreen title="Sign up" subtitle="Providers wired in Task 1.13" />;
+  return <AuthCard mode="signup" />;
 }
