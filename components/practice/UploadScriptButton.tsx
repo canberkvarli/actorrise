@@ -571,7 +571,7 @@ export function UploadScriptButton({
           {scanResult && (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                We found{" "}
+                Found{" "}
                 {scanResult.num_acts > 0
                   ? `${scanResult.num_acts} acts with `
                   : ""}
