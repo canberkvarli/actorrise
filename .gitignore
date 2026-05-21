@@ -66,3 +66,4 @@ supabase/.temp/
 .env*.local
 backend/.next/
 .claude/worktrees/
+.worktrees/
