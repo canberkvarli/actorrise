@@ -18,10 +18,10 @@ interface PracticeHeadlineCardProps {
  * Hero card: the ONE thing to do right now.
  *
  * - No featured script: "Start where it matters." with two CTAs.
- * - Featured script:    "Continue rehearsing." with the script as a clickable lead.
+ * - Featured script:    "Where you left off." with the script as a clickable lead.
  *
  * NOTE: When recent-rehearsal data ships, swap `featuredScript` for the most
- * recently practiced scene and rename to "Pick up where you left off."
+ * recently practiced scene.
  */
 export function PracticeHeadlineCard({
   featuredScript,
@@ -35,7 +35,7 @@ export function PracticeHeadlineCard({
         "relative overflow-hidden",
         "border border-border/60",
         "bg-card/40 dark:bg-[#CB4B00]/[0.04]",
-        "px-6 py-10 sm:px-10 sm:py-14",
+        "px-5 py-8 sm:px-8 sm:py-12 md:px-10 md:py-14",
         "transition-colors",
       ].join(" ")}
     >
@@ -109,13 +109,13 @@ function FeaturedScriptHero({ script }: { script: UserScript }) {
     <div className="relative space-y-6 max-w-3xl">
       <div className="space-y-3">
         <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          Continue
+          Recent
         </p>
         <h2 className="font-serif text-3xl md:text-4xl tracking-tight text-foreground leading-[1.1]">
-          Continue rehearsing.
+          Where you left off.
         </h2>
         <p className="text-base text-muted-foreground leading-relaxed max-w-lg">
-          Pick up the most recent script you brought in.
+          Your most recent script. One click and the partner is reading with you.
         </p>
       </div>
 
@@ -124,18 +124,18 @@ function FeaturedScriptHero({ script }: { script: UserScript }) {
         className={[
           "group block rounded-lg",
           "border border-border/70 bg-background/60",
-          "px-5 py-5 sm:px-6 sm:py-6",
+          "px-4 py-4 sm:px-6 sm:py-6",
           "transition-all duration-200",
           "hover:border-border hover:shadow-md",
         ].join(" ")}
       >
-        <div className="flex items-start justify-between gap-6">
+        <div className="flex items-start justify-between gap-4 sm:gap-6">
           <div className="min-w-0 flex-1 space-y-1.5">
-            <h3 className="font-serif text-xl sm:text-2xl tracking-tight text-foreground truncate">
+            <h3 className="font-serif text-lg sm:text-2xl tracking-tight text-foreground truncate">
               {script.title}
             </h3>
             {metaParts.length > 0 && (
-              <p className="text-sm text-muted-foreground truncate">
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">
                 {metaParts.join(" · ")}
               </p>
             )}
