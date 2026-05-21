@@ -1,7 +1,7 @@
 import * as AppleAuthentication from 'expo-apple-authentication';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, Platform, Pressable, Text, View } from 'react-native';
 
 import { supabase } from '@/lib/supabase';
@@ -22,6 +22,14 @@ interface OAuthButtonsProps {
  */
 export function OAuthButtons({ mode, onSuccess }: OAuthButtonsProps) {
   const [busy, setBusy] = useState<null | 'google' | 'apple'>(null);
+  const [appleAvailable, setAppleAvailable] = useState(false);
+
+  useEffect(() => {
+    if (Platform.OS !== 'ios') return;
+    AppleAuthentication.isAvailableAsync()
+      .then(setAppleAvailable)
+      .catch(() => setAppleAvailable(false));
+  }, []);
 
   async function signInWithGoogle() {
     setBusy('google');
@@ -95,7 +103,7 @@ export function OAuthButtons({ mode, onSuccess }: OAuthButtonsProps) {
         </Text>
       </Pressable>
 
-      {Platform.OS === 'ios' ? (
+      {appleAvailable ? (
         <Pressable
           onPress={signInWithApple}
           disabled={busy !== null}
