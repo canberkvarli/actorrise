@@ -145,14 +145,17 @@ already serve monologue search, script/scene reads, and TTS generation.
 - Blog / marketing pages on mobile (web continues to serve these)
 - Self-tape recording features beyond ScenePartner basics
 
-## Open questions
+## Resolved decisions (locked 2026-05-21)
 
-1. Do we want a **single Pro tier** on iOS or mirror the four-tier web pricing
-   exactly? Apple IAP supports multiple subscription groups, but fewer SKUs =
-   simpler review and analytics. Recommendation: mirror Solo/Plus/Pro, drop Free
-   (Free is just "signed in without subscribing").
-2. **Sign in with Apple** as the default, or alongside Google/magic-link?
-   Recommendation: keep all three, lead with Apple on iOS for trust + lower friction.
-3. **OTA update channel strategy:** one channel (`production`) or split
-   (`production` + `staging`)? Recommendation: start with one, add staging when
-   first regression bites.
+1. **Pricing:** Mirror the full four-tier web structure in IAP — Free (signed-in,
+   no subscription), Solo $7, Plus $12, Pro $24. RevenueCat offerings map 1:1
+   with web Stripe products. Entitlements written to the same Supabase
+   `subscriptions` table so a user upgrading on either platform is recognized
+   on both.
+2. **Auth providers:** Match whatever the web app offers exactly — same
+   providers, same flows, same labels. Sign in with Apple is added on top
+   (required by Apple if any other social login is present). To be confirmed
+   against the actual web `LoginForm` component during the monorepo migration
+   phase.
+3. **OTA channels:** Start with a single `production` channel via
+   `expo-updates`. Add `staging` channel only when the first regression bites.
