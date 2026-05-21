@@ -1,0 +1,14 @@
+{
+  "name": "@actorrise/api-client",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@actorrise/types": "workspace:*",
+    "@actorrise/validation": "workspace:*"
+  },
+  "peerDependencies": {
+    "zod": "^4.2.1"
+  }
+}

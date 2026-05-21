@@ -163,6 +163,18 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  packages/api-client:
+    dependencies:
+      '@actorrise/types':
+        specifier: workspace:*
+        version: link:../types
+      '@actorrise/validation':
+        specifier: workspace:*
+        version: link:../validation
+      zod:
+        specifier: ^4.2.1
+        version: 4.4.3
+
   packages/supabase:
     dependencies:
       '@actorrise/types':
