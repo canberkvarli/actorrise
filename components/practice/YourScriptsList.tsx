@@ -1,16 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IconUpload, IconChevronRight, IconLoader2 } from "@tabler/icons-react";
+import { IconChevronRight, IconLoader2 } from "@tabler/icons-react";
 import type { UserScript } from "@/hooks/useScripts";
+import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
 
 interface YourScriptsListProps {
   scripts: UserScript[];
   isLoading: boolean;
-  onUploadClick: () => void;
-  uploading?: boolean;
 }
 
 function ScriptRow({ script }: { script: UserScript }) {
@@ -36,7 +34,7 @@ function ScriptRow({ script }: { script: UserScript }) {
   return (
     <button
       type="button"
-      onClick={() => router.push(`/my-scripts/${script.id}`)}
+      onClick={() => router.push(`/practice/${script.id}`)}
       className="group w-full text-left flex items-center gap-4 p-4 rounded-lg border border-border/70 bg-card hover:border-border hover:shadow-md transition-all duration-200 cursor-pointer"
     >
       <div className="flex-1 min-w-0">
@@ -75,8 +73,6 @@ function ScriptRow({ script }: { script: UserScript }) {
 export function YourScriptsList({
   scripts,
   isLoading,
-  onUploadClick,
-  uploading = false,
 }: YourScriptsListProps) {
   // Demo (is_sample) scripts pinned at the bottom; user scripts ordered as-given.
   const userScripts = scripts.filter((s) => !s.is_sample);
@@ -89,24 +85,7 @@ export function YourScriptsList({
         <h2 className="text-xl font-semibold tracking-tight font-serif text-foreground">
           Your scripts
         </h2>
-        <Button
-          size="sm"
-          onClick={onUploadClick}
-          disabled={uploading}
-          className="gap-1.5 h-9 px-3 font-medium bg-[#CB4B00] hover:bg-[#B03000] text-white border-[#CB4B00] hover:border-[#B03000]"
-        >
-          {uploading ? (
-            <>
-              <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
-              Uploading…
-            </>
-          ) : (
-            <>
-              <IconUpload className="h-3.5 w-3.5" />
-              Upload script
-            </>
-          )}
-        </Button>
+        <UploadScriptButton variant="compact" />
       </div>
 
       {isLoading ? (

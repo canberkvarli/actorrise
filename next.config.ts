@@ -42,6 +42,7 @@ const nextConfig: NextConfig = {
       { source: "/dashboard", destination: "/practice", permanent: true },
       { source: "/search", destination: "/monologues", permanent: true },
       { source: "/my-scripts", destination: "/practice", permanent: true },
+      { source: "/my-scripts/:path*", destination: "/practice/:path*", permanent: true },
       { source: "/my-monologues", destination: "/monologues", permanent: true },
       { source: "/scenes", destination: "/practice", permanent: true },
     ];

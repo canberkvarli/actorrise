@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
 import { useScripts } from "@/hooks/useScripts";
@@ -21,19 +20,18 @@ import { YourScriptsList } from "@/components/practice/YourScriptsList";
  * - 0 user scripts → PracticeEmptyState hero with upload + demo CTAs.
  * - ≥1 user script → ProfileCompletionCard + (future) ContinuePracticingRow + YourScriptsList.
  *
- * Auth + data fetching mirrors `/my-scripts` (useScripts via TanStack Query).
- * Upload flow lives on `/my-scripts` (hidden input + SSE stream + scan dialog).
- * Phase 2 routes the upload CTA there rather than duplicating that logic.
+ * Auth + data fetching uses `useScripts` via TanStack Query.
+ * Upload flow is encapsulated in <UploadScriptButton /> (used by both
+ * <PracticeEmptyState /> and <YourScriptsList />).
  */
 export default function PracticePage() {
   // Hooks must run on every render — call before any feature-flag early return.
-  const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const { data: scripts = [], isLoading: scriptsLoading } = useScripts();
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration guard, same pattern as /dashboard and /my-scripts
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration guard
     setMounted(true);
   }, []);
 
@@ -45,13 +43,6 @@ export default function PracticePage() {
 
   const isLoading = !mounted || authLoading || scriptsLoading;
   const hasOwnScripts = userScripts.length > 0;
-
-  // Upload trigger lives on /practice (formerly /my-scripts). Centralizing here would mean
-  // duplicating ~150 lines of scan + SSE streaming logic. Phase 3 can extract
-  // it into a shared hook/component if needed.
-  const handleUploadClick = () => {
-    router.push("/practice");
-  };
 
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
@@ -80,7 +71,6 @@ export default function PracticePage() {
         >
           <PracticeEmptyState
             demoScriptId={demoScript?.id ?? null}
-            onUploadClick={handleUploadClick}
           />
         </motion.div>
       ) : (
@@ -95,7 +85,6 @@ export default function PracticePage() {
           <YourScriptsList
             scripts={scripts}
             isLoading={false}
-            onUploadClick={handleUploadClick}
           />
         </motion.div>
       )}
