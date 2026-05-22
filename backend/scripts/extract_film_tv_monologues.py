@@ -46,11 +46,31 @@ sys.path.insert(0, str(backend_dir))
 import requests
 from bs4 import BeautifulSoup
 from openai import OpenAI
-from sqlalchemy.orm import Session as DBSession
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session as DBSession, sessionmaker
 
-from app.core.database import SessionLocal
+from app.core.config import settings
 from app.models.actor import FilmTvReference, Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
+
+# Dedicated engine for this long-running script. Mirrors segment_monologues.py:
+# the shared app.core.database engine has pool_recycle=300, which is too aggressive
+# for the long round-trips this script makes (IMSDb fetch + PDF parse + LLM call +
+# ContentAnalyzer + embedding). We get our own engine so connections are pre-pinged
+# and recycled less frequently, surviving Supabase's pooler idle drops.
+_engine = create_engine(
+    settings.database_url,
+    pool_size=5,
+    max_overflow=10,
+    pool_pre_ping=True,
+    pool_recycle=1800,
+)
+SessionLocal = sessionmaker(
+    autocommit=False,
+    autoflush=False,
+    expire_on_commit=False,
+    bind=_engine,
+)
 
 
 # ── IMSDb Scraping ───────────────────────────────────────────────────────────
@@ -60,6 +80,12 @@ IMSDB_HEADERS = {
     "Accept": "text/html",
 }
 IMSDB_DELAY = 2.0  # seconds between requests — be respectful
+
+SCRIPTSLUG_HEADERS = {
+    "User-Agent": "ActorRise/1.0 (audition-prep; monologue-extraction)",
+    "Accept": "application/pdf,*/*",
+}
+SCRIPTSLUG_DELAY = 3.0  # ScriptSlug PDFs are larger; be more respectful
 
 
 def fetch_script_html(urls: list[str] | str, debug: bool = False) -> tuple[str | None, str | None]:
@@ -118,6 +144,79 @@ def build_imsdb_url(title: str) -> list[str]:
         urls.append(f"https://imsdb.com/scripts/{rest_slug}.html")
 
     return urls
+
+
+# ── ScriptSlug Scraping ──────────────────────────────────────────────────────
+
+def _title_to_scriptslug(title: str) -> str:
+    """Convert a title to a ScriptSlug URL slug (lowercase, hyphenated)."""
+    slug = title.strip().lower()
+    slug = re.sub(r"[''']", "", slug)
+    slug = re.sub(r"&", "and", slug)
+    slug = re.sub(r"[^a-z0-9]+", "-", slug)
+    slug = re.sub(r"-+", "-", slug).strip("-")
+    return slug
+
+
+def build_scriptslug_pdf_url(title: str, year: int | None) -> str | None:
+    """Build the predictable direct-PDF URL on ScriptSlug's CDN.
+
+    ScriptSlug stores PDFs at assets.scriptslug.com/live/pdf/scripts/{slug}-{year}.pdf.
+    The unversioned URL serves a cached copy and works without the ?v=... cache-buster.
+    Returns None if we can't build a slug or the year is missing.
+    """
+    slug = _title_to_scriptslug(title)
+    if not slug or year is None:
+        return None
+    return f"https://assets.scriptslug.com/live/pdf/scripts/{slug}-{year}.pdf"
+
+
+def fetch_script_pdf(url: str | None, debug: bool = False) -> bytes | None:
+    """Fetch a PDF screenplay from ScriptSlug. Returns raw PDF bytes or None."""
+    if not url:
+        return None
+    try:
+        resp = requests.get(url, headers=SCRIPTSLUG_HEADERS, timeout=30)
+        if debug:
+            print(f"    DEBUG ScriptSlug: {url} → status={resp.status_code}, len={len(resp.content)}")
+        if resp.status_code != 200:
+            return None
+        # ScriptSlug returns an HTML 404 page on miss; verify magic bytes
+        if not resp.content.startswith(b"%PDF"):
+            if debug:
+                print("    DEBUG ScriptSlug: response is not a PDF (likely HTML 404)")
+            return None
+        return resp.content
+    except Exception as e:
+        if debug:
+            print(f"    DEBUG ScriptSlug fetch error: {e}")
+        return None
+
+
+def discover_scriptslug_pdf_url(title: str, year: int | None, debug: bool = False) -> str | None:
+    """Fall back to scraping the ScriptSlug metadata page for the canonical PDF link.
+
+    Used when the predictable direct-PDF URL 404s — sometimes the slug differs
+    (e.g. punctuation in the original title) or the asset path has been versioned
+    in a way the direct URL doesn't survive without ?v=...
+    """
+    slug = _title_to_scriptslug(title)
+    if not slug or year is None:
+        return None
+    page_url = f"https://www.scriptslug.com/script/{slug}-{year}"
+    try:
+        resp = requests.get(page_url, headers=IMSDB_HEADERS, timeout=15)
+        if resp.status_code != 200:
+            return None
+        soup = BeautifulSoup(resp.text, "html.parser")
+        for a in soup.find_all("a", href=True):
+            href = a["href"]
+            if "/live/pdf/scripts/" in href and (".pdf" in href):
+                return href if href.startswith("http") else f"https://assets.scriptslug.com{href}"
+    except Exception as e:
+        if debug:
+            print(f"    DEBUG ScriptSlug discover error: {e}")
+    return None
 
 
 # ── Script Parsing ───────────────────────────────────────────────────────────
@@ -306,6 +405,115 @@ def _is_action_line(line: str) -> bool:
         if first_few == first_few.upper():
             return True
     return False
+
+
+def _looks_like_character_name(stripped: str) -> bool:
+    """Heuristic: is this line a screenplay character name?
+
+    Screenplay character names are short ALL-CAPS lines on their own,
+    optionally followed by a parenthetical like (V.O.) or (CONT'D).
+    This must hold even when the PDF extractor strips indentation
+    (which pdfplumber routinely does for ScriptSlug PDFs).
+    """
+    if not stripped or len(stripped) > 40:
+        return False
+    # Must contain at least one alphabetic character and be effectively all caps
+    # (apostrophes / periods / hyphens / numerals allowed: "MARY-JANE", "AGENT 47",
+    # "M'LADY"). Compare against .upper() to allow non-ascii letters too.
+    if any(c.islower() for c in stripped):
+        return False
+    if not any(c.isalpha() for c in stripped):
+        return False
+    # Reject lines that look like sentences or scene markers
+    if stripped.endswith((".", "!", "?", ":")):
+        return False
+    if re.match(r"^(INT\.|EXT\.|FADE IN|FADE OUT|CUT TO|DISSOLVE|TITLE|SUPER|SMASH CUT)", stripped):
+        return False
+    # Must not be ONLY digits / punctuation (e.g. "5." page number)
+    letters = sum(1 for c in stripped if c.isalpha())
+    if letters < 2:
+        return False
+    return True
+
+
+def parse_screenplay_pdf(pdf_bytes: bytes, debug: bool = False) -> list[dict]:
+    """Parse a PDF screenplay into [{character, dialogue}] blocks.
+
+    Output shape matches parse_screenplay() so the downstream pipeline
+    (merge_consecutive_speeches → LLM selector) is unchanged.
+
+    Layout assumption: pdfplumber's extract_text() does NOT preserve the
+    horizontal indentation that screenplays use to distinguish character
+    names / dialogue / action — every line typically arrives left-aligned.
+    So instead we use the *vertical* convention: character names appear on
+    their own line in ALL CAPS, dialogue follows on subsequent non-blank
+    lines, and a blank line ends a dialogue block.
+
+    Action paragraphs (mixed-case prose between dialogue blocks) are
+    skipped because we have no character to attribute them to and they're
+    not what the monologue selector cares about.
+
+    Garbage detection: real screenplays have many distinct speakers. If we
+    extract <5 distinct character names, the PDF is likely OCR'd or
+    non-screenplay; return [] to trigger the fetch-error path.
+    """
+    import io
+    import pdfplumber
+
+    blocks: list[dict] = []
+    current_char: str | None = None
+    current_lines: list[str] = []
+
+    def flush():
+        nonlocal current_char, current_lines
+        if current_char and current_lines:
+            text_joined = " ".join(line.strip() for line in current_lines if line.strip())
+            blocks.append({
+                "character": current_char,
+                "text": text_joined,
+                "word_count": len(text_joined.split()),
+            })
+        current_char = None
+        current_lines = []
+
+    try:
+        with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+            for page in pdf.pages:
+                txt = page.extract_text() or ""
+                for raw in txt.split("\n"):
+                    stripped = raw.strip()
+                    if not stripped:
+                        flush()
+                        continue
+                    # Character name: ALL CAPS line on its own
+                    if _looks_like_character_name(stripped):
+                        flush()
+                        # Strip parentheticals: "JOHN (V.O.)" → "JOHN"
+                        current_char = re.sub(r"\s*\([^)]*\)\s*$", "", stripped).strip()
+                        continue
+                    # Already inside a dialogue block → keep accumulating
+                    if current_char:
+                        # Skip standalone parentheticals like "(beat)" / "(angrily)"
+                        if stripped.startswith("(") and stripped.endswith(")"):
+                            continue
+                        current_lines.append(stripped)
+                        continue
+                    # Outside any dialogue block — action / prose / page numbers,
+                    # ignore. Anything we miss here will be re-encountered when
+                    # the next character line opens a new block.
+        flush()
+    except Exception as e:
+        if debug:
+            print(f"    PDF parse error: {e}")
+        return []
+
+    distinct = {b["character"] for b in blocks}
+    if len(distinct) < 5 and len(blocks) > 0:
+        if debug:
+            print(f"    PDF parsed but only {len(distinct)} distinct character(s); likely OCR'd or non-screenplay — skipping")
+        return []
+
+    return blocks
 
 
 # ── Monologue Identification ─────────────────────────────────────────────────
@@ -502,6 +710,12 @@ def main() -> None:
     parser.add_argument("--skip-existing", action="store_true", default=True, help="Skip scripts already processed")
     parser.add_argument("--titles", nargs="+", help="Process specific titles (e.g. --titles 'Pulp Fiction' 'Fight Club')")
     parser.add_argument("--debug", action="store_true", help="Show debug info for fetch failures")
+    parser.add_argument(
+        "--source",
+        choices=["imsdb", "scriptslug", "both"],
+        default="both",
+        help="Which source to fetch from (default: both — IMSDb first, ScriptSlug PDF fallback)",
+    )
     args = parser.parse_args()
 
     client = OpenAI()
@@ -551,27 +765,52 @@ def main() -> None:
                     total_skipped += 1
                     continue
 
-        # Build IMSDb URL(s) to try
-        urls = [ref.imsdb_url] if ref.imsdb_url else build_imsdb_url(title)
         print(f"  [{i+1}/{len(refs)}] {title} ({year}) *{ref.imdb_rating}")
-        print(f"    URLs to try: {urls}")
 
-        # Fetch script
-        html, working_url = fetch_script_html(urls, debug=args.debug)
-        if not html:
-            total_fetch_errors += 1
-            time.sleep(IMSDB_DELAY)
-            continue
+        blocks: list[dict] = []
+        working_url: str | None = None
+        source_used: str | None = None
 
-        # Parse dialogue blocks
-        blocks = parse_screenplay(html)
+        # Attempt 1: IMSDb HTML (fast, proven)
+        if args.source in ("imsdb", "both"):
+            urls = [ref.imsdb_url] if ref.imsdb_url else build_imsdb_url(title)
+            if args.debug:
+                print(f"    IMSDb URLs to try: {urls}")
+            html, html_url = fetch_script_html(urls, debug=args.debug)
+            if html:
+                imsdb_blocks = parse_screenplay(html)
+                if imsdb_blocks:
+                    blocks = imsdb_blocks
+                    working_url = html_url
+                    source_used = "imsdb"
+
+        # Attempt 2: ScriptSlug PDF (fallback for refs IMSDb doesn't carry)
+        if not blocks and args.source in ("scriptslug", "both"):
+            pdf_url = build_scriptslug_pdf_url(title, year)
+            if args.debug and pdf_url:
+                print(f"    ScriptSlug URL to try: {pdf_url}")
+            pdf_bytes = fetch_script_pdf(pdf_url, debug=args.debug)
+            if not pdf_bytes:
+                # The predictable URL 404'd — scrape the metadata page to get
+                # the canonical PDF link (handles unusual slugs / cache-busters).
+                canonical = discover_scriptslug_pdf_url(title, year, debug=args.debug)
+                if canonical and canonical != pdf_url:
+                    pdf_bytes = fetch_script_pdf(canonical, debug=args.debug)
+                    pdf_url = canonical
+            if pdf_bytes:
+                pdf_blocks = parse_screenplay_pdf(pdf_bytes, debug=args.debug)
+                if pdf_blocks:
+                    blocks = pdf_blocks
+                    working_url = pdf_url
+                    source_used = "scriptslug"
+            time.sleep(SCRIPTSLUG_DELAY)
+
         if not blocks:
-            print(f"    No dialogue blocks found (may not be a screenplay page)")
             total_fetch_errors += 1
             time.sleep(IMSDB_DELAY)
             continue
 
-        print(f"    Parsed {len(blocks)} dialogue blocks")
+        print(f"    Source: {source_used} | {len(blocks)} dialogue blocks | {working_url}")
 
         # Merge consecutive speeches and filter by length
         candidates = merge_consecutive_speeches(blocks, min_words=80)
