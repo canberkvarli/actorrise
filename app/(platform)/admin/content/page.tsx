@@ -323,7 +323,9 @@ function MonologuesSection() {
             : ""
         }
         confirmLabel="Delete"
-        onConfirm={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
+        onConfirm={() => {
+          if (deleteTarget) deleteMutation.mutate(deleteTarget.id);
+        }}
         isLoading={deleteMutation.isPending}
       />
     </>

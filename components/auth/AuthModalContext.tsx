@@ -109,7 +109,7 @@ export function AuthModalProvider({ children }: AuthModalProviderProps) {
             </button>
           </div>
           <div className="max-w-[300px] mx-auto">
-            <AuthProgressiveDisclosure mode={mode} redirectTo="/dashboard" />
+            <AuthProgressiveDisclosure mode={mode} redirectTo="/practice" />
           </div>
         </DialogContent>
       </Dialog>

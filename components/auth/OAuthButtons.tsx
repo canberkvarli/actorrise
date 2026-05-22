@@ -81,7 +81,7 @@ const providerConfig: Record<
 };
 
 export function OAuthButtons({
-  redirectTo = "/dashboard",
+  redirectTo = "/practice",
   variant = "icons",
   emailButtonLabel,
   onEmailClick,

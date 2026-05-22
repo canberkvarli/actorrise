@@ -18,10 +18,10 @@ export function LandingHeaderActions() {
       {user ? (
         <>
           <Button asChild variant="ghost" size="sm" className="px-2 sm:px-3 text-xs sm:text-sm whitespace-nowrap">
-            <Link href="/dashboard">Dashboard</Link>
+            <Link href="/monologues">Monologues</Link>
           </Button>
           <Button asChild size="sm" className="rounded-full px-3 sm:px-5 text-xs sm:text-sm whitespace-nowrap">
-            <Link href="/my-scripts">ScenePartner</Link>
+            <Link href="/practice">Practice</Link>
           </Button>
         </>
       ) : (

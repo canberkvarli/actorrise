@@ -341,7 +341,7 @@ export function LandingDemoSearch() {
                   Demo limit reached. You&apos;re signed in. Use the full search to keep going.
                 </p>
                 <Button asChild size="lg" className="rounded-full" variant="outline">
-                  <Link href="/search">Go to search</Link>
+                  <Link href="/monologues">Go to monologues</Link>
                 </Button>
               </CardContent>
             </Card>

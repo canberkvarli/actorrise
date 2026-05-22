@@ -34,7 +34,7 @@ export default function SignupPage() {
           </div>
 
           {/* Three options: Google, Apple, Continue with email (expandable) */}
-          <AuthProgressiveDisclosure mode="signup" redirectTo="/dashboard" />
+          <AuthProgressiveDisclosure mode="signup" redirectTo="/practice" />
 
           {/* Sign in link */}
           <div className="text-center text-sm text-muted-foreground pt-2">

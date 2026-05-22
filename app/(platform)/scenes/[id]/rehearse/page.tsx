@@ -462,8 +462,8 @@ export default function RehearsalPage() {
   const voiceParam = searchParams.get('voice');
 
   const backUrl = scriptId
-    ? `/my-scripts/${scriptId}/scenes/${sceneId}/edit`
-    : '/my-scripts';
+    ? `/practice/${scriptId}/scenes/${sceneId}/edit`
+    : '/practice';
 
   /* ── Core state ─────────────────────────────────────────────────── */
 

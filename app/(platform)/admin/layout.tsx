@@ -32,7 +32,7 @@ export default function AdminLayout({
       return;
     }
     if (!user.is_moderator) {
-      router.replace("/dashboard");
+      router.replace("/practice");
     }
   }, [user, loading, router]);
 

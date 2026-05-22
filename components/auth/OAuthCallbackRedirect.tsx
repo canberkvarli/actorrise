@@ -17,7 +17,7 @@ export function OAuthCallbackRedirect() {
     const code = searchParams.get("code");
     if (!code) return;
 
-    const next = searchParams.get("next") ?? "/dashboard";
+    const next = searchParams.get("next") ?? "/practice";
     const params = new URLSearchParams();
     params.set("code", code);
     params.set("next", next);
