@@ -38,17 +38,17 @@ export function MonologueCard({ monologue, rank, onPress }: MonologueCardProps) 
       className="bg-card border border-border rounded-2xl mb-3 overflow-hidden active:opacity-90">
       <View className="flex-row">
         {/* Poster column */}
-        <View className="w-[72px] bg-muted">
+        <View className="w-[84px] bg-muted">
           {hasPoster ? (
             <Image
               source={{ uri: monologue.poster_url ?? undefined }}
-              style={{ width: 72, height: 104 }}
+              style={{ width: 84, height: 124 }}
               contentFit="cover"
               transition={120}
             />
           ) : (
-            <View className="w-[72px] h-[104px] items-center justify-center">
-              <Text className="text-[10px] uppercase tracking-widest text-muted-foreground">
+            <View className="w-[84px] h-[124px] items-center justify-center px-2">
+              <Text className="text-[10px] uppercase tracking-widest text-muted-foreground text-center">
                 {monologue.source_type === 'film' || monologue.source_type === 'tv'
                   ? monologue.source_type
                   : 'play'}
@@ -74,7 +74,7 @@ export function MonologueCard({ monologue, rank, onPress }: MonologueCardProps) 
             {monologue.author ? ` · ${monologue.author}` : ''}
           </Text>
 
-          <Text className="text-[13px] text-foreground/80 leading-[19px]" numberOfLines={2}>
+          <Text className="text-[13px] text-foreground/80 leading-[19px]" numberOfLines={3}>
             {preview}
           </Text>
 
