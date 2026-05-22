@@ -1,7 +1,14 @@
-import type { SearchFilters } from '@actorrise/types';
+import type { Monologue, SearchFilters } from '@actorrise/types';
 import { useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, {
+  FadeIn,
+  FadeInDown,
+  FadeInUp,
+  FadeOut,
+  Layout,
+} from 'react-native-reanimated';
 
 import { FiltersModal } from '@/components/search/FiltersModal';
 import { MonologueCard } from '@/components/search/MonologueCard';
@@ -33,8 +40,6 @@ export default function SearchScreen() {
     [filters, debouncedQuery],
   );
 
-  // Only hit the AI search when the user has actually typed or filtered.
-  // Empty state shows quick prompts, not an auto-loaded recommendation feed.
   const { data, isLoading, isFetching, error } = useMonologueSearch({
     filters: searchFilters,
     enabled: hasInput,
@@ -93,19 +98,31 @@ function HeroSearch({
     <ScrollView
       contentContainerStyle={{ flexGrow: 1, paddingHorizontal: 20, paddingBottom: 32 }}
       keyboardShouldPersistTaps="handled">
-      <View className="flex-1 justify-center pt-12 pb-8">
-        <Text className="text-xs font-semibold text-brand uppercase tracking-widest mb-2 text-center">
-          Powered by AI
-        </Text>
-        <Text className="text-3xl font-bold text-foreground text-center leading-9 mb-2">
-          Find your{'\n'}next monologue
-        </Text>
-        <Text className="text-sm text-muted-foreground text-center mb-7 leading-5">
-          Search in plain English. The AI knows the catalogue, the casting{' '}
-          {'\n'}breakdowns, and what’s overdone.
-        </Text>
+      <Animated.View
+        entering={FadeIn.duration(400)}
+        exiting={FadeOut.duration(200)}
+        layout={Layout.springify().damping(18)}
+        className="flex-1 justify-center pt-10 pb-8">
+        <Animated.View entering={FadeInUp.duration(450).delay(50)}>
+          <Text className="text-xs font-semibold text-brand uppercase tracking-widest mb-2 text-center">
+            Powered by AI
+          </Text>
+        </Animated.View>
+        <Animated.View entering={FadeInUp.duration(500).delay(120)}>
+          <Text className="text-[32px] font-bold text-foreground text-center leading-[38px] mb-2">
+            Find your{'\n'}next monologue
+          </Text>
+        </Animated.View>
+        <Animated.View entering={FadeInUp.duration(500).delay(200)}>
+          <Text className="text-sm text-muted-foreground text-center mb-7 leading-5 px-2">
+            Search in plain English. The AI knows the catalogue, the casting breakdowns, and what’s
+            overdone.
+          </Text>
+        </Animated.View>
 
-        <View className="flex-row gap-2 mb-5">
+        <Animated.View
+          entering={FadeInUp.duration(500).delay(280)}
+          className="flex-row gap-2 mb-6">
           <View className="flex-1">
             <SearchInput value={query} onChangeText={onChangeQuery} />
           </View>
@@ -116,22 +133,27 @@ function HeroSearch({
               {activeFilterCount > 0 ? `Filters · ${activeFilterCount}` : 'Filters'}
             </Text>
           </Pressable>
-        </View>
+        </Animated.View>
 
-        <Text className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold mb-3 text-center">
-          Try
-        </Text>
-        <View className="flex-row flex-wrap gap-2 justify-center">
-          {QUICK_PROMPTS.map((p) => (
-            <Pressable
-              key={p}
-              onPress={() => onPickPrompt(p)}
-              className="bg-card border border-border px-3.5 py-2 active:opacity-70">
-              <Text className="text-sm text-foreground">{p}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </View>
+        <Animated.View entering={FadeInUp.duration(500).delay(360)}>
+          <Text className="text-[11px] uppercase tracking-widest text-muted-foreground font-semibold mb-3 text-center">
+            Try
+          </Text>
+          <View className="flex-row flex-wrap gap-2 justify-center">
+            {QUICK_PROMPTS.map((p, i) => (
+              <Animated.View
+                key={p}
+                entering={FadeInDown.duration(400).delay(420 + i * 50)}>
+                <Pressable
+                  onPress={() => onPickPrompt(p)}
+                  className="bg-card border border-border px-3.5 py-2 active:opacity-70">
+                  <Text className="text-sm text-foreground">{p}</Text>
+                </Pressable>
+              </Animated.View>
+            ))}
+          </View>
+        </Animated.View>
+      </Animated.View>
     </ScrollView>
   );
 }
@@ -152,11 +174,14 @@ function ActiveSearch({
   onOpenFilters: () => void;
   showLoading: boolean;
   error: unknown;
-  results: import('@actorrise/types').Monologue[];
+  results: Monologue[];
   total: number;
 }) {
   return (
-    <>
+    <Animated.View
+      entering={FadeIn.duration(280)}
+      exiting={FadeOut.duration(180)}
+      style={{ flex: 1 }}>
       <View className="px-5 pt-2 pb-3">
         <View className="flex-row gap-2">
           <View className="flex-1">
@@ -188,23 +213,25 @@ function ActiveSearch({
             </Text>
           }
           ListEmptyComponent={
-            <Text className="text-center text-muted-foreground mt-12 text-base">
-              No monologues match. Try fewer filters.
-            </Text>
+            <Animated.View entering={FadeIn.duration(280).delay(100)}>
+              <Text className="text-center text-muted-foreground mt-12 text-base">
+                No monologues match. Try fewer filters.
+              </Text>
+            </Animated.View>
           }
           keyboardDismissMode="on-drag"
         />
       )}
-    </>
+    </Animated.View>
   );
 }
 
 function ErrorState({ message }: { message: string }) {
   return (
-    <View className="flex-1 items-center justify-center px-8">
+    <Animated.View entering={FadeIn.duration(280)} className="flex-1 items-center justify-center px-8">
       <Text className="text-base font-semibold text-foreground mb-2">Something went wrong</Text>
       <Text className="text-sm text-muted-foreground text-center">{message}</Text>
-    </View>
+    </Animated.View>
   );
 }
 

@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Animated, { FadeIn, Layout } from 'react-native-reanimated';
 
 import { supabase } from '@/lib/supabase';
 
@@ -90,24 +91,29 @@ export default function WelcomeScreen() {
         scrollEnabled={false}
         showsHorizontalScrollIndicator={false}
         className="flex-1">
-        {SLIDES.map((s) => (
-          <View key={s.headline} style={{ width }} className="justify-center px-8">
+        {SLIDES.map((s, i) => (
+          <Animated.View
+            key={s.headline}
+            entering={FadeIn.duration(500).delay(80 * i)}
+            style={{ width }}
+            className="justify-center px-8">
             <Text className="text-xs font-semibold text-brand uppercase tracking-widest mb-3">
               {s.eyebrow}
             </Text>
-            <Text className="text-3xl font-bold text-foreground mb-4 leading-9">
+            <Text className="text-[32px] font-bold text-foreground mb-4 leading-[38px]">
               {s.headline}
             </Text>
             <Text className="text-base text-muted-foreground leading-6">{s.body}</Text>
-          </View>
+          </Animated.View>
         ))}
       </ScrollView>
 
       <View className="px-5 pb-4 gap-4">
         <View className="flex-row justify-center gap-1.5">
           {SLIDES.map((_, i) => (
-            <View
+            <Animated.View
               key={i}
+              layout={Layout.springify().damping(18).stiffness(200)}
               className={`h-1.5 rounded-full ${i === index ? 'w-6 bg-brand' : 'w-1.5 bg-border'}`}
             />
           ))}

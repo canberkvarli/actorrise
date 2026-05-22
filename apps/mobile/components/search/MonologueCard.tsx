@@ -1,12 +1,16 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import type { Monologue } from '@actorrise/types';
 
-import { useToggleFavorite } from '@/hooks/use-bookmarks';
-
 import { EmotionBadge } from './EmotionBadge';
+import { HeartButton } from './HeartButton';
 import { MatchBadge } from './MatchBadge';
 
 interface MonologueCardProps {
@@ -16,8 +20,11 @@ interface MonologueCardProps {
 }
 
 export function MonologueCard({ monologue, rank, onPress }: MonologueCardProps) {
-  const toggleFav = useToggleFavorite();
   const handlePress = onPress ?? (() => router.push(`/monologue/${monologue.id}`));
+  const scale = useSharedValue(1);
+  const animatedScale = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   const isClassical = monologue.category?.toLowerCase() === 'classical';
   const showGender =
@@ -38,11 +45,18 @@ export function MonologueCard({ monologue, rank, onPress }: MonologueCardProps) 
   return (
     <Animated.View
       entering={FadeInDown.duration(280).delay(Math.min(rank * 40, 200))}
+      style={animatedScale}
       className="relative pt-2.5">
       <MatchBadge rank={rank} matchType={monologue.match_type} />
       <Pressable
         onPress={handlePress}
-        className="bg-card border border-border rounded-2xl px-5 pt-5 pb-4 mb-3 active:opacity-90">
+        onPressIn={() => {
+          scale.value = withSpring(0.98, { damping: 18, stiffness: 280 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 14, stiffness: 220 });
+        }}
+        className="bg-card border border-border rounded-2xl px-5 pt-5 pb-4 mb-3">
         {/* Top row: poster + title block + bookmark */}
         <View className="flex-row gap-3 items-start">
           {monologue.poster_url ? (
@@ -86,25 +100,10 @@ export function MonologueCard({ monologue, rank, onPress }: MonologueCardProps) 
             ) : null}
           </View>
 
-          <Pressable
-            hitSlop={8}
-            onPress={(e) => {
-              e.stopPropagation?.();
-              toggleFav.mutate({
-                monologueId: monologue.id,
-                nextState: !monologue.is_favorited,
-              });
-            }}
-            className={`w-11 h-11 items-center justify-center rounded-lg ${
-              monologue.is_favorited ? 'bg-brand/10' : ''
-            } active:opacity-60`}>
-            <Text
-              className={`text-xl ${
-                monologue.is_favorited ? 'text-brand' : 'text-muted-foreground'
-              }`}>
-              {monologue.is_favorited ? '♥' : '♡'}
-            </Text>
-          </Pressable>
+          <HeartButton
+            monologueId={monologue.id}
+            isFavorited={!!monologue.is_favorited}
+          />
         </View>
 
         {/* Metadata row */}
