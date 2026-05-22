@@ -78,7 +78,17 @@ function ScriptCard({ script, index }: { script: UserScript; index: number }) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [prefetched, setPrefetched] = useState(false);
   const deleteScriptMutation = useDeleteScript();
+  const href = `/practice/${script.id}`;
+
+  // Prefetch the route bundle the first time the user hints intent (hover/touch/focus).
+  // Cheap, idempotent — Next.js dedupes — and shaves the JS/data fetch off the click.
+  const prefetchOnce = () => {
+    if (prefetched) return;
+    setPrefetched(true);
+    router.prefetch(href);
+  };
 
   const handleConfirmDelete = async () => {
     try {
@@ -122,6 +132,9 @@ function ScriptCard({ script, index }: { script: UserScript; index: number }) {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.18, ease: [0.4, 0, 1, 1] } }}
       transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.24), ease: [0.25, 0.1, 0.25, 1] }}
+      onMouseEnter={prefetchOnce}
+      onTouchStart={prefetchOnce}
+      onFocus={prefetchOnce}
       className={[
         "group relative w-full text-left",
         "rounded-lg border bg-card",
@@ -136,7 +149,7 @@ function ScriptCard({ script, index }: { script: UserScript; index: number }) {
       {/* Card body — clickable area for navigation. A native <button> so keyboard + screen-reader work. */}
       <button
         type="button"
-        onClick={() => router.push(`/practice/${script.id}`)}
+        onClick={() => router.push(href)}
         className="w-full text-left px-5 py-5 sm:px-6 sm:py-6 min-h-[148px] flex flex-col justify-between cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         <div className="space-y-1.5 pr-12">

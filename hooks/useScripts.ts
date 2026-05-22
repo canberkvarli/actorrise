@@ -41,7 +41,9 @@ export function useScripts() {
       const response = await api.get<UserScript[]>("/api/scripts/");
       return response.data;
     },
-    staleTime: 0,
+    // SWR: render cached list instantly, revalidate in background. Mutations
+    // (upload/delete) already call invalidateQueries, so freshness is covered.
+    staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 1,
   });
