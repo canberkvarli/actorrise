@@ -1,6 +1,7 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Pressable, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import type { Monologue } from '@actorrise/types';
 
 import { useToggleFavorite } from '@/hooks/use-bookmarks';
@@ -18,97 +19,162 @@ export function MonologueCard({ monologue, rank, onPress }: MonologueCardProps) 
   const toggleFav = useToggleFavorite();
   const handlePress = onPress ?? (() => router.push(`/monologue/${monologue.id}`));
 
-  const meta = [
-    `${monologue.word_count} words`,
-    formatDuration(monologue.estimated_duration_seconds),
-    monologue.character_gender || monologue.gender,
-    monologue.character_age_range || monologue.age_range,
-  ].filter(Boolean) as string[];
+  const isClassical = monologue.category?.toLowerCase() === 'classical';
+  const showGender =
+    monologue.character_gender &&
+    monologue.character_gender.toLowerCase() !== 'any';
+  const showAge =
+    monologue.character_age_range &&
+    monologue.character_age_range.toLowerCase() !== 'any';
 
-  const preview =
-    monologue.excerpt ??
-    monologue.scene_description ??
-    monologue.text.slice(0, 220);
+  const meaningfulTitle =
+    monologue.title &&
+    monologue.title.toLowerCase() !== monologue.character_name?.toLowerCase() &&
+    monologue.title.toLowerCase() !== monologue.play_title?.toLowerCase() &&
+    monologue.title.length > 2;
 
-  const hasPoster = !!monologue.poster_url;
+  const preview = `“${monologue.text.slice(0, 200).trim()}…”`;
 
   return (
-    <Pressable
-      onPress={handlePress}
-      className="bg-card border border-border rounded-2xl mb-3 overflow-hidden active:opacity-90">
-      <View className="flex-row">
-        {/* Poster column */}
-        <View className="w-[84px] bg-muted">
-          {hasPoster ? (
-            <Image
-              source={{ uri: monologue.poster_url ?? undefined }}
-              style={{ width: 84, height: 124 }}
-              contentFit="cover"
-              transition={120}
-            />
-          ) : (
-            <View className="w-[84px] h-[124px] items-center justify-center px-2">
-              <Text className="text-[10px] uppercase tracking-widest text-muted-foreground text-center">
-                {monologue.source_type === 'film' || monologue.source_type === 'tv'
-                  ? monologue.source_type
-                  : 'play'}
-              </Text>
+    <Animated.View
+      entering={FadeInDown.duration(280).delay(Math.min(rank * 40, 200))}
+      className="relative pt-2.5">
+      <MatchBadge rank={rank} matchType={monologue.match_type} />
+      <Pressable
+        onPress={handlePress}
+        className="bg-card border border-border rounded-2xl px-5 pt-5 pb-4 mb-3 active:opacity-90">
+        {/* Top row: poster + title block + bookmark */}
+        <View className="flex-row gap-3 items-start">
+          {monologue.poster_url ? (
+            <View className="w-14 h-20 rounded-md overflow-hidden bg-muted shrink-0">
+              <Image
+                source={{ uri: monologue.poster_url }}
+                style={{ width: '100%', height: '100%' }}
+                contentFit="cover"
+                transition={120}
+              />
             </View>
-          )}
-        </View>
+          ) : null}
 
-        {/* Content column */}
-        <View className="flex-1 pl-3.5 pr-3 py-3">
-          <View className="flex-row items-center gap-2 mb-1.5">
-            <MatchBadge rank={rank} matchType={monologue.match_type} />
-            {monologue.primary_emotion ? (
-              <EmotionBadge emotion={monologue.primary_emotion} />
+          <View className="flex-1 min-w-0">
+            <View className="flex-row items-center gap-2 flex-wrap mb-0.5">
+              <Text
+                className="text-xl font-bold text-foreground flex-shrink"
+                numberOfLines={2}>
+                {monologue.character_name}
+              </Text>
+              {monologue.is_favorited ? (
+                <View className="bg-muted border border-border px-2 py-0.5">
+                  <Text className="text-[10px] font-semibold text-foreground">Saved</Text>
+                </View>
+              ) : null}
+            </View>
+            {meaningfulTitle ? (
+              <Text
+                className="text-sm font-medium text-foreground/90 mb-0.5"
+                numberOfLines={1}>
+                {monologue.title}
+              </Text>
+            ) : null}
+            <Text className="text-sm text-muted-foreground" numberOfLines={1}>
+              {monologue.play_title}
+            </Text>
+            {monologue.author ? (
+              <Text className="text-xs text-muted-foreground/80">
+                by {monologue.author}
+              </Text>
             ) : null}
           </View>
 
-          <Text className="text-base font-semibold text-foreground" numberOfLines={1}>
-            {monologue.character_name}
-          </Text>
-          <Text className="text-xs text-muted-foreground mb-1.5" numberOfLines={1}>
-            {monologue.play_title}
-            {monologue.author ? ` · ${monologue.author}` : ''}
-          </Text>
-
-          <Text className="text-[13px] text-foreground/80 leading-[19px]" numberOfLines={3}>
-            {preview}
-          </Text>
-
-          <Text className="text-[11px] text-muted-foreground/80 mt-2" numberOfLines={1}>
-            {meta.join(' · ')}
-          </Text>
+          <Pressable
+            hitSlop={8}
+            onPress={(e) => {
+              e.stopPropagation?.();
+              toggleFav.mutate({
+                monologueId: monologue.id,
+                nextState: !monologue.is_favorited,
+              });
+            }}
+            className={`w-11 h-11 items-center justify-center rounded-lg ${
+              monologue.is_favorited ? 'bg-brand/10' : ''
+            } active:opacity-60`}>
+            <Text
+              className={`text-xl ${
+                monologue.is_favorited ? 'text-brand' : 'text-muted-foreground'
+              }`}>
+              {monologue.is_favorited ? '♥' : '♡'}
+            </Text>
+          </Pressable>
         </View>
 
-        {/* Bookmark button overlay */}
-        <Pressable
-          onPress={(e) => {
-            e.stopPropagation?.();
-            toggleFav.mutate({
-              monologueId: monologue.id,
-              nextState: !monologue.is_favorited,
-            });
-          }}
-          hitSlop={8}
-          className="absolute top-2 right-2 w-8 h-8 items-center justify-center rounded-full bg-background/90 active:opacity-60">
-          <Text
-            className={`text-base ${monologue.is_favorited ? 'text-brand' : 'text-muted-foreground'}`}>
-            {monologue.is_favorited ? '★' : '☆'}
+        {/* Metadata row */}
+        {(showGender || showAge || monologue.category) ? (
+          <View className="flex-row items-center gap-2 flex-wrap mt-3.5">
+            {showGender ? (
+              <Text className="text-[11px] text-muted-foreground capitalize">
+                {monologue.character_gender}
+              </Text>
+            ) : null}
+            {showGender && showAge ? (
+              <Text className="text-muted-foreground/40 text-[11px]">·</Text>
+            ) : null}
+            {showAge ? (
+              <Text className="text-[11px] text-muted-foreground">
+                {monologue.character_age_range}
+              </Text>
+            ) : null}
+            {monologue.category ? (
+              <View
+                className={`border px-2 py-0.5 ${
+                  isClassical
+                    ? 'border-amber-500/50 bg-amber-50'
+                    : 'border-sky-500/50 bg-sky-50'
+                }`}>
+                <Text
+                  className={`text-[10px] font-medium capitalize ${
+                    isClassical ? 'text-amber-700' : 'text-sky-700'
+                  }`}>
+                  {monologue.category}
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
+
+        {/* Emotion on its own line */}
+        {monologue.primary_emotion &&
+        monologue.primary_emotion.toLowerCase() !== 'unknown' ? (
+          <View className="mt-2.5">
+            <EmotionBadge emotion={monologue.primary_emotion} />
+          </View>
+        ) : null}
+
+        {/* Synopsis quote */}
+        <Text
+          className="text-sm text-muted-foreground leading-[20px] mt-3"
+          numberOfLines={3}>
+          {preview}
+        </Text>
+
+        {/* Footer row */}
+        <View className="flex-row items-center justify-between mt-4 pt-3.5 border-t border-border">
+          <Text className="text-xs font-medium text-muted-foreground">
+            {formatDuration(monologue.estimated_duration_seconds)}
           </Text>
-        </Pressable>
-      </View>
-    </Pressable>
+          <Text className="text-xs text-muted-foreground">{monologue.word_count} words</Text>
+          <View className="flex-row items-center gap-1">
+            <Text className="text-xs text-muted-foreground">♥</Text>
+            <Text className="text-xs text-muted-foreground">{monologue.favorite_count}</Text>
+          </View>
+        </View>
+      </Pressable>
+    </Animated.View>
   );
 }
 
-function formatDuration(seconds: number | undefined): string | undefined {
-  if (!seconds) return undefined;
+function formatDuration(seconds: number | undefined): string {
+  if (!seconds) return '0:00 min';
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
-  if (m === 0) return `${s}s`;
-  if (s === 0) return `${m}m`;
-  return `${m}m ${s}s`;
+  return `${m}:${s.toString().padStart(2, '0')} min`;
 }

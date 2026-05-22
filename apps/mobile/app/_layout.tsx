@@ -6,6 +6,29 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, type ReactNode } from 'react';
 import 'react-native-reanimated';
 
+// Silence noisy 'Cannot find native module' errors from optional Expo
+// modules (ExpoLocation, ExpoPushTokenManager) that we don't use directly
+// but get probed during init. Real errors still surface.
+if (__DEV__) {
+  const originalError = console.error;
+  console.error = (...args: unknown[]) => {
+    const first = args[0];
+    if (
+      first instanceof Error &&
+      /Cannot find native module 'Expo(Location|PushTokenManager)'/.test(first.message)
+    ) {
+      return;
+    }
+    if (
+      typeof first === 'string' &&
+      /Cannot find native module 'Expo(Location|PushTokenManager)'/.test(first)
+    ) {
+      return;
+    }
+    originalError(...args);
+  };
+}
+
 import { QueryProvider } from '@/components/QueryProvider';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/hooks/use-auth';
