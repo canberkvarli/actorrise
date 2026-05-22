@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { TextInput, View } from 'react-native';
+import { TextInput, View, Text } from 'react-native';
 
 const TYPEWRITER_PHRASES = [
   'A dramatic monologue for a woman in her 30s, Chekhov',
@@ -14,11 +14,6 @@ interface SearchInputProps {
   onChangeText: (next: string) => void;
 }
 
-/**
- * Cycles placeholder phrases the way the web's useTypewriterPlaceholder
- * does — gives users an example of natural-language queries instead of
- * forcing them to figure out filters.
- */
 export function SearchInput({ value, onChangeText }: SearchInputProps) {
   const [placeholder, setPlaceholder] = useState(TYPEWRITER_PHRASES[0]);
 
@@ -32,7 +27,10 @@ export function SearchInput({ value, onChangeText }: SearchInputProps) {
   }, []);
 
   return (
-    <View className="bg-card border border-border rounded-xl px-4 py-3 flex-row items-center">
+    <View className="bg-card border border-border rounded-xl pl-3 pr-3 py-3 flex-row items-center gap-2.5">
+      <View className="w-6 h-6 items-center justify-center bg-brand/10 rounded-md">
+        <Text className="text-brand text-base">✦</Text>
+      </View>
       <TextInput
         className="flex-1 text-base text-foreground"
         value={value}

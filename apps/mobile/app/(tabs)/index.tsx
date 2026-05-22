@@ -1,20 +1,14 @@
 import type { SearchFilters } from '@actorrise/types';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { FiltersModal } from '@/components/search/FiltersModal';
 import { MonologueCard } from '@/components/search/MonologueCard';
 import { SearchInput } from '@/components/search/SearchInput';
+import { SearchLoading } from '@/components/search/SearchLoading';
 import { useDebounced } from '@/hooks/use-debounced';
 import { useMonologueSearch } from '@/hooks/use-monologue-search';
-
-const LOADING_MESSAGES = [
-  'Asking Shakespeare…',
-  'Rifling through the script pile…',
-  'Consulting drama gods…',
-  'Finding ones that’ll stop the room…',
-];
 
 export default function SearchScreen() {
   const [query, setQuery] = useState('');
@@ -31,10 +25,6 @@ export default function SearchScreen() {
 
   const results = data?.results ?? [];
   const showLoading = isLoading || (isFetching && results.length === 0);
-  const loadingMessage = useMemo(
-    () => LOADING_MESSAGES[Math.floor(Math.random() * LOADING_MESSAGES.length)],
-    [showLoading],
-  );
 
   const activeFilterCount = countFilters(filters);
 
@@ -57,10 +47,7 @@ export default function SearchScreen() {
       </View>
 
       {showLoading ? (
-        <View className="flex-1 items-center justify-center px-8">
-          <ActivityIndicator size="small" color="#CB4B00" />
-          <Text className="text-sm text-muted-foreground mt-3">{loadingMessage}</Text>
-        </View>
+        <SearchLoading />
       ) : error ? (
         <ErrorState message={error instanceof Error ? error.message : 'Search failed.'} />
       ) : (
