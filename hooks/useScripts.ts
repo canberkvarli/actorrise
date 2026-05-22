@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 
 export interface UserScript {
@@ -58,5 +58,20 @@ export function useScript(id: number | null) {
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 1,
+  });
+}
+
+export function useDeleteScript() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (scriptId: number) => {
+      await api.delete(`/api/scripts/${scriptId}`);
+      return scriptId;
+    },
+    onSuccess: (scriptId) => {
+      queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY });
+      queryClient.removeQueries({ queryKey: ["scripts", scriptId] });
+    },
   });
 }

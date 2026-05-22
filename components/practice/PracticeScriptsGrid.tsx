@@ -1,12 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { IconLoader2 } from "@tabler/icons-react";
+import { IconDots, IconLoader2 } from "@tabler/icons-react";
+import { Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
-import type { UserScript } from "@/hooks/useScripts";
+import { useDeleteScript, type UserScript } from "@/hooks/useScripts";
 
 interface PracticeScriptsGridProps {
   scripts: UserScript[];
@@ -65,6 +74,21 @@ export function PracticeScriptsGrid({
 
 function ScriptCard({ script, index }: { script: UserScript; index: number }) {
   const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const deleteScriptMutation = useDeleteScript();
+
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteScriptMutation.mutateAsync(script.id);
+      toast.success("Script deleted");
+    } catch (err: unknown) {
+      const message = err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : "Failed to delete script";
+      toast.error(typeof message === "string" ? message : "Failed to delete script");
+    }
+  };
 
   const isProcessing =
     script.processing_status === "processing" ||
@@ -89,6 +113,7 @@ function ScriptCard({ script, index }: { script: UserScript; index: number }) {
   const showStatusRow = isProcessing || isFailed;
 
   return (
+    <>
     <motion.button
       type="button"
       onClick={() => router.push(`/practice/${script.id}`)}
@@ -112,6 +137,58 @@ function ScriptCard({ script, index }: { script: UserScript; index: number }) {
         <span className="absolute top-3 right-3 text-[10px] uppercase tracking-wide text-muted-foreground bg-background/80 px-1.5 py-0.5 border border-border font-medium">
           Demo
         </span>
+      )}
+
+      {/* Overflow menu — only on non-demo cards. Visible on hover/focus, or when menu is open. */}
+      {!script.is_sample && (
+        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+          <PopoverTrigger asChild>
+            <span
+              role="button"
+              tabIndex={0}
+              aria-label="Script actions"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen((o) => !o);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  setMenuOpen((o) => !o);
+                }
+              }}
+              className={[
+                "absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center",
+                "rounded-md text-muted-foreground/70 hover:text-foreground hover:bg-muted/80",
+                "transition-opacity",
+                menuOpen
+                  ? "opacity-100"
+                  : "opacity-0 group-hover:opacity-100 focus:opacity-100 focus-within:opacity-100",
+              ].join(" ")}
+            >
+              <IconDots className="h-4 w-4" />
+            </span>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            className="w-44 p-1"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-destructive hover:bg-destructive/10 transition-colors rounded-sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                setMenuOpen(false);
+                setDeleteDialogOpen(true);
+              }}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete script
+            </button>
+          </PopoverContent>
+        </Popover>
       )}
 
       <div className="space-y-1.5 pr-12">
@@ -141,6 +218,16 @@ function ScriptCard({ script, index }: { script: UserScript; index: number }) {
         </div>
       )}
     </motion.button>
+    <ConfirmDeleteDialog
+      open={deleteDialogOpen}
+      onOpenChange={setDeleteDialogOpen}
+      title="Delete this script?"
+      description="This deletes the script and all its scenes. Cannot be undone."
+      confirmLabel="Delete script"
+      onConfirm={handleConfirmDelete}
+      isLoading={deleteScriptMutation.isPending}
+    />
+    </>
   );
 }
 

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useScript, SCRIPTS_QUERY_KEY, type UserScript as UserScriptImport } from "@/hooks/useScripts";
+import { useScript, useDeleteScript, SCRIPTS_QUERY_KEY, type UserScript as UserScriptImport } from "@/hooks/useScripts";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import { SCRIPTS_FEATURE_ENABLED } from "@/lib/featureFlags";
@@ -99,8 +99,6 @@ function groupScenesByAct(scenes: Scene[]): ActGroup[] {
 type UserScript = UserScriptImport & { scenes: Scene[] };
 
 export default function ScriptDetailPage() {
-  if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
-
   const router = useRouter();
   const params = useParams();
   const scriptId = parseInt(params.id as string);
@@ -121,6 +119,8 @@ export default function ScriptDetailPage() {
   });
   const [deleteSceneDialogOpen, setDeleteSceneDialogOpen] = useState(false);
   const [sceneToDelete, setSceneToDelete] = useState<number | null>(null);
+  const [deleteScriptDialogOpen, setDeleteScriptDialogOpen] = useState(false);
+  const deleteScriptMutation = useDeleteScript();
   const [expandedActs, setExpandedActs] = useState<Record<string, boolean | undefined>>({});
   const [reportingSceneId, setReportingSceneId] = useState<number | null>(null);
   const [reportCategory, setReportCategory] = useState("missing_lines");
@@ -234,6 +234,19 @@ export default function ScriptDetailPage() {
     setDeleteSceneDialogOpen(true);
   };
 
+  const handleConfirmDeleteScript = async () => {
+    try {
+      await deleteScriptMutation.mutateAsync(scriptId);
+      toast.success("Script deleted");
+      router.push("/practice");
+    } catch (err: unknown) {
+      const message = err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+        : "Failed to delete script";
+      toast.error(typeof message === "string" ? message : "Failed to delete script");
+    }
+  };
+
   const handleConfirmDeleteScene = () => {
     const sceneId = sceneToDelete;
     if (sceneId == null) return;
@@ -269,6 +282,8 @@ export default function ScriptDetailPage() {
     if (m < 2) return s > 0 ? `${m}m ${s}s` : `${m} min`;
     return `${m} min`;
   };
+
+  if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
   return (
     <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 max-w-6xl relative min-h-[320px]">
@@ -673,6 +688,17 @@ export default function ScriptDetailPage() {
               <Plus className="w-3.5 h-3.5" />
               Add Scene
             </Button>
+            {!script.is_sample && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="gap-1.5 h-8 px-3 text-xs text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                onClick={() => setDeleteScriptDialogOpen(true)}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete script
+              </Button>
+            )}
           </div>
         </div>
 
@@ -910,6 +936,16 @@ export default function ScriptDetailPage() {
         description="This will permanently remove the scene. You can undo in the next few seconds after confirming."
         confirmLabel="Delete scene"
         onConfirm={handleConfirmDeleteScene}
+      />
+
+      <ConfirmDeleteDialog
+        open={deleteScriptDialogOpen}
+        onOpenChange={setDeleteScriptDialogOpen}
+        title="Delete this script?"
+        description="This deletes the script and all its scenes. Cannot be undone."
+        confirmLabel="Delete script"
+        onConfirm={handleConfirmDeleteScript}
+        isLoading={deleteScriptMutation.isPending}
       />
 
     </motion.div>
