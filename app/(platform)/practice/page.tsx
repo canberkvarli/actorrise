@@ -50,13 +50,6 @@ export default function PracticePage() {
     return { userScripts, demoScript, featuredScript };
   }, [scripts]);
 
-  // Scripts displayed in the library grid below. When the headline features a
-  // script, exclude it from the grid so we don't show the same title twice.
-  const gridScripts = useMemo(() => {
-    if (!featuredScript) return scripts;
-    return scripts.filter((s) => s.id !== featuredScript.id);
-  }, [scripts, featuredScript]);
-
   const isLoading = !mounted || authLoading || scriptsLoading;
   const displayName = (profile?.name?.trim() || user?.name?.trim() || "") as string;
 
@@ -96,7 +89,7 @@ export default function PracticePage() {
             demoScriptId={demoScript?.id ?? null}
           />
 
-          <PracticeScriptsGrid scripts={gridScripts} isLoading={false} />
+          <PracticeScriptsGrid scripts={scripts} isLoading={false} />
         </motion.div>
       )}
     </div>
