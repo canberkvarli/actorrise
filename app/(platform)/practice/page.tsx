@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 
 import { useScripts } from "@/hooks/useScripts";
@@ -27,18 +27,13 @@ import { PracticeScriptsGrid } from "@/components/practice/PracticeScriptsGrid";
 export default function PracticePage() {
   // Hooks must run on every render — call before any feature-flag early return.
   const { user, loading: authLoading, isDemoUser } = useAuth();
-  const { data: scripts = [], isLoading: scriptsLoading } = useScripts();
+  const { data: scripts, isLoading: scriptsLoading, isFetched: scriptsFetched } = useScripts();
   const { data: profile } = useProfile(isDemoUser);
 
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydration guard
-    setMounted(true);
-  }, []);
-
-  const { userScripts, demoScript, featuredScript } = useMemo(() => {
-    const userScripts = scripts.filter((s) => !s.is_sample);
-    const demoScript = scripts.find((s) => s.is_sample) ?? null;
+  const { userScripts, demoScript, featuredScript, safeScripts } = useMemo(() => {
+    const safeScripts = scripts ?? [];
+    const userScripts = safeScripts.filter((s) => !s.is_sample);
+    const demoScript = safeScripts.find((s) => s.is_sample) ?? null;
     // Most recently uploaded user script. Backend returns scripts ordered DESC
     // by created_at, but we sort defensively to stay deterministic.
     // FUTURE: when recent-rehearsal data lands, swap this for the most recently
@@ -47,10 +42,16 @@ export default function PracticePage() {
       [...userScripts].sort((a, b) =>
         (b.created_at ?? "").localeCompare(a.created_at ?? ""),
       )[0] ?? null;
-    return { userScripts, demoScript, featuredScript };
+    return { userScripts, demoScript, featuredScript, safeScripts };
   }, [scripts]);
 
-  const isLoading = !mounted || authLoading || scriptsLoading;
+  // Render-as-soon-as-we-can: if we have ANY scripts data (from persisted cache
+  // or a prior fetch) AND a user (cached or live), skip the skeleton entirely.
+  // The `mounted` hydration guard was removed — TanStack Query hydrates from
+  // localStorage synchronously inside QueryClientProvider, so first-paint values
+  // are stable between server and client. Auth uses the same cached-user pattern.
+  const hasCachedData = scriptsFetched || safeScripts.length > 0;
+  const isLoading = (authLoading && !user) || (scriptsLoading && !hasCachedData);
   const displayName = (profile?.name?.trim() || user?.name?.trim() || "") as string;
 
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
@@ -89,7 +90,7 @@ export default function PracticePage() {
             demoScriptId={demoScript?.id ?? null}
           />
 
-          <PracticeScriptsGrid scripts={scripts} isLoading={false} />
+          <PracticeScriptsGrid scripts={safeScripts} isLoading={false} />
         </motion.div>
       )}
     </div>

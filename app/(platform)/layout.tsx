@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/lib/auth";
 import { usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -14,15 +15,27 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarks";
 import { useFilmTvFavoriteCount } from "@/hooks/useFilmTvFavorites";
 import { useProfile } from "@/hooks/useDashboardData";
-import { ContactModal } from "@/components/contact/ContactModal";
 import { SWRConfig } from "swr";
 import { localStorageProvider } from "@/lib/swrCache";
 import { useSubscription } from "@/hooks/useSubscription";
 import { AnimatePresence, motion } from "framer-motion";
-import { WelcomeFlow } from "@/components/onboarding/WelcomeFlow";
-import { ChangelogModal } from "@/components/ChangelogModal";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageTransition } from "@/components/transition/PageTransition";
+
+// Lazy-load modals that only appear conditionally — keeps them out of the
+// platform layout's initial JS bundle and shaves first-paint cost on /practice.
+const WelcomeFlow = dynamic(
+  () => import("@/components/onboarding/WelcomeFlow").then((m) => ({ default: m.WelcomeFlow })),
+  { ssr: false },
+);
+const ChangelogModal = dynamic(
+  () => import("@/components/ChangelogModal").then((m) => ({ default: m.ChangelogModal })),
+  { ssr: false },
+);
+const ContactModal = dynamic(
+  () => import("@/components/contact/ContactModal").then((m) => ({ default: m.ContactModal })),
+  { ssr: false },
+);
 import {
   getLatestModalEntry,
   getLastSeenId,
@@ -652,7 +665,7 @@ export default function PlatformLayout({
           }}
         />
       )}
-      <ContactModal open={contactOpen} onOpenChange={setContactOpen} />
+      {contactOpen && <ContactModal open={contactOpen} onOpenChange={setContactOpen} />}
     </div>
     </TooltipProvider>
     </SWRConfig>

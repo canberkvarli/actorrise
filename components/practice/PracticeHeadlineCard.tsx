@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { IconArrowRight } from "@tabler/icons-react";
 
 import { Button } from "@/components/ui/button";
@@ -93,6 +95,15 @@ function EmptyStateHero({ demoScriptId }: { demoScriptId: number | null }) {
 }
 
 function FeaturedScriptHero({ script }: { script: UserScript }) {
+  const router = useRouter();
+  const [prefetched, setPrefetched] = useState(false);
+  const href = `/practice/${script.id}`;
+  const prefetchOnce = () => {
+    if (prefetched) return;
+    setPrefetched(true);
+    router.prefetch(href);
+  };
+
   const charactersSummary =
     script.processing_status === "completed" && script.num_characters > 0
       ? `${script.num_characters} character${script.num_characters !== 1 ? "s" : ""}`
@@ -120,7 +131,11 @@ function FeaturedScriptHero({ script }: { script: UserScript }) {
       </div>
 
       <Link
-        href={`/practice/${script.id}`}
+        href={href}
+        prefetch
+        onMouseEnter={prefetchOnce}
+        onTouchStart={prefetchOnce}
+        onFocus={prefetchOnce}
         className={[
           "group block rounded-lg",
           "border border-border/70 bg-background/60",
