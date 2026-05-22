@@ -929,11 +929,10 @@ export default function AuditionModePage() {
                   <div className="rounded-xl border border-white/5 bg-white/[0.02] divide-y divide-white/5">
                     {canSave ? (
                       savedTapeId ? (
-                        <Link href="/my-tapes" className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.04] transition-colors">
+                        <div className="flex items-center gap-3 px-4 py-3">
                           <IconDeviceFloppy className="w-4 h-4 text-green-400" />
                           <span className="text-sm text-green-400 flex-1">Saved to Library</span>
-                          <IconArrowRight className="w-3.5 h-3.5 text-white/30" />
-                        </Link>
+                        </div>
                       ) : (
                         <button
                           onClick={handleSaveToLibrary}

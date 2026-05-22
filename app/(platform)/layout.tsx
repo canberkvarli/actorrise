@@ -2,27 +2,40 @@
 
 import { useAuth } from "@/lib/auth";
 import { usePathname } from "next/navigation";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconHome, IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMask, IconVideo, IconSparkles, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar } from "@tabler/icons-react";
+import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconQuote, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar } from "@tabler/icons-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef, Suspense } from "react";
 import { useBookmarkCount } from "@/hooks/useBookmarks";
 import { useFilmTvFavoriteCount } from "@/hooks/useFilmTvFavorites";
 import { useProfile } from "@/hooks/useDashboardData";
-import { ContactModal } from "@/components/contact/ContactModal";
 import { SWRConfig } from "swr";
 import { localStorageProvider } from "@/lib/swrCache";
 import { useSubscription } from "@/hooks/useSubscription";
 import { AnimatePresence, motion } from "framer-motion";
-import { WelcomeFlow } from "@/components/onboarding/WelcomeFlow";
-import { ChangelogModal } from "@/components/ChangelogModal";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageTransition } from "@/components/transition/PageTransition";
+
+// Lazy-load modals that only appear conditionally — keeps them out of the
+// platform layout's initial JS bundle and shaves first-paint cost on /practice.
+const WelcomeFlow = dynamic(
+  () => import("@/components/onboarding/WelcomeFlow").then((m) => ({ default: m.WelcomeFlow })),
+  { ssr: false },
+);
+const ChangelogModal = dynamic(
+  () => import("@/components/ChangelogModal").then((m) => ({ default: m.ChangelogModal })),
+  { ssr: false },
+);
+const ContactModal = dynamic(
+  () => import("@/components/contact/ContactModal").then((m) => ({ default: m.ContactModal })),
+  { ssr: false },
+);
 import {
   getLatestModalEntry,
   getLastSeenId,
@@ -141,12 +154,10 @@ export default function PlatformLayout({
 
 
   const navItems = [
-    { href: "/dashboard", label: "Home", icon: IconHome },
-    { href: "/search", label: "MonologueMatch", icon: IconSearch },
-    { href: "/my-scripts", label: "ScenePartner", icon: IconMask },
-    ...(process.env.NODE_ENV === "development" ? [{ href: "/audition", label: "Audition", icon: IconVideo }] : []),
+    { href: "/practice", label: "Practice", icon: IconMicrophone },
+    { href: "/monologues", label: "Monologues", icon: IconQuote },
   ];
-  const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/my-scripts\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$/.test(pathname || "");
+  const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/practice\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$/.test(pathname || "");
 
   return (
     <>
@@ -195,7 +206,7 @@ export default function PlatformLayout({
           <div className="flex items-center justify-between h-20 gap-3">
             {/* Logo: left on all breakpoints */}
             <Link
-              href="/dashboard"
+              href="/practice"
               className="flex items-center min-w-0 shrink-0 text-foreground hover:opacity-80 transition-opacity"
               aria-label="ActorRise Home"
             >
@@ -204,29 +215,22 @@ export default function PlatformLayout({
 
             {/* Desktop Navigation - centered */}
             <div className="hidden md:flex items-center justify-center gap-1 lg:gap-2 flex-1">
-              {navItems.map((item) => {
+              {navItems.map((item, index) => {
                 const Icon = item.icon;
                 const isActive = pathname === item.href;
-                const isHomeOnDashboard = item.href === "/dashboard" && pathname === "/dashboard";
+                const isPrimary = index === 0;
                 return (
                   <Button
                     key={item.href}
-                    asChild={!isHomeOnDashboard}
+                    asChild
                     variant={isActive ? "outline" : "ghost"}
                     size="sm"
                     className="gap-1.5 lg:gap-2 rounded-full px-2.5 lg:px-4 text-xs lg:text-sm"
                   >
-                    {isHomeOnDashboard ? (
-                      <span className="flex items-center gap-1.5 lg:gap-2 cursor-default">
-                        <Icon className="h-4 w-4" />
-                        <span className="hidden sm:inline">{item.label}</span>
-                      </span>
-                    ) : (
-                      <Link href={item.href}>
-                        <Icon className="h-4 w-4" />
-                        <span className="hidden sm:inline">{item.label}</span>
-                      </Link>
-                    )}
+                    <Link href={item.href}>
+                      <Icon className="h-4 w-4" />
+                      <span className={`hidden sm:inline ${isPrimary ? "font-semibold" : ""}`}>{item.label}</span>
+                    </Link>
                   </Button>
                 );
               })}
@@ -345,63 +349,6 @@ export default function PlatformLayout({
                       )}
 
                       <p className="px-2 py-1.5 mt-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                        Content
-                      </p>
-                      <Link
-                        href="/my-monologues"
-                        onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center justify-between gap-2 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <IconBookmark className="h-4 w-4 text-muted-foreground" />
-                          <span>Saved</span>
-                        </div>
-                        <span className="min-w-[1.75rem] flex justify-end">
-                          {isLoadingBookmarks || isLoadingFilmTvFavorites ? null : savedCount > 0 ? (
-                            <Badge variant="secondary" className="text-xs">
-                              {savedCount}
-                            </Badge>
-                          ) : null}
-                        </span>
-                      </Link>
-                      <Link
-                        href="/my-scripts"
-                        onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
-                      >
-                        <IconFileText className="h-4 w-4 text-muted-foreground" />
-                        <span>Your scripts</span>
-                      </Link>
-                      <Link
-                        href="/my-submissions"
-                        onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
-                      >
-                        <IconFileText className="h-4 w-4 text-muted-foreground" />
-                        <span>My submissions</span>
-                      </Link>
-                      {(userTier === "plus" || userTier === "pro") && (
-                        <Link
-                          href="/my-tapes"
-                          onClick={() => setProfileDropdownOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
-                        >
-                          <IconVideo className="h-4 w-4 text-muted-foreground" />
-                          <span>My tapes</span>
-                        </Link>
-                      )}
-                      {user?.is_moderator && (
-                        <Link
-                          href="/admin"
-                          onClick={() => setProfileDropdownOpen(false)}
-                          className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
-                        >
-                          <IconShieldCheck className="h-4 w-4 text-muted-foreground" />
-                          <span>Admin</span>
-                        </Link>
-                      )}
-
-                      <p className="px-2 py-1.5 mt-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                         Billing & settings
                       </p>
                       <Link
@@ -421,28 +368,21 @@ export default function PlatformLayout({
                         <span>Account settings</span>
                       </Link>
 
-                      <p className="px-2 py-1.5 mt-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                        Support
-                      </p>
-                      <Link
-                        href="/changelog"
-                        onClick={() => setProfileDropdownOpen(false)}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
-                      >
-                        <IconRocket className="h-4 w-4 text-muted-foreground" />
-                        <span>What&apos;s New</span>
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setProfileDropdownOpen(false);
-                          setContactOpen(true);
-                        }}
-                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors w-full text-left"
-                      >
-                        <IconMail className="h-4 w-4 text-muted-foreground" />
-                        <span>Contact & feedback</span>
-                      </button>
+                      {user?.is_moderator && (
+                        <>
+                          <p className="px-2 py-1.5 mt-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                            Admin
+                          </p>
+                          <Link
+                            href="/admin"
+                            onClick={() => setProfileDropdownOpen(false)}
+                            className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                          >
+                            <IconShieldCheck className="h-4 w-4 text-muted-foreground" />
+                            <span>Admin</span>
+                          </Link>
+                        </>
+                      )}
 
                       <div className="my-2 h-px bg-border/40" />
 
@@ -471,13 +411,13 @@ export default function PlatformLayout({
             <div className="md:hidden flex flex-1 items-center justify-center min-w-0">
               <Button
                 asChild
-                variant={pathname === "/search" ? "outline" : "ghost"}
+                variant={pathname === "/monologues" ? "outline" : "ghost"}
                 size="sm"
                 className="gap-2 rounded-full px-4"
               >
-                <Link href="/search">
+                <Link href="/monologues">
                   <IconSearch className="h-4 w-4" />
-                  <span className="text-sm">Search</span>
+                  <span className="text-sm">Monologues</span>
                 </Link>
               </Button>
             </div>
@@ -503,26 +443,18 @@ export default function PlatformLayout({
                 {navItems.map((item) => {
                   const Icon = item.icon;
                   const isActive = pathname === item.href;
-                  const isHomeOnDashboard = item.href === "/dashboard" && pathname === "/dashboard";
                   return (
                     <Button
                       key={item.href}
-                      asChild={!isHomeOnDashboard}
+                      asChild
                       variant={isActive ? "default" : "ghost"}
                       size="sm"
                       className="w-full justify-start gap-2"
                     >
-                      {isHomeOnDashboard ? (
-                        <span className="flex items-center gap-2" onClick={() => setMobileMenuOpen(false)}>
-                          <Icon className="h-4 w-4" />
-                          {item.label}
-                        </span>
-                      ) : (
-                        <Link href={item.href} onClick={() => setMobileMenuOpen(false)}>
-                          <Icon className="h-4 w-4" />
-                          {item.label}
-                        </Link>
-                      )}
+                      <Link href={item.href} onClick={() => setMobileMenuOpen(false)}>
+                        <Icon className="h-4 w-4" />
+                        {item.label}
+                      </Link>
                     </Button>
                   );
                 })}
@@ -544,11 +476,11 @@ export default function PlatformLayout({
                 {/* Bookmarks Link */}
                 <Button
                   asChild
-                  variant={pathname === "/my-monologues" ? "default" : "ghost"}
+                  variant={pathname === "/monologues" ? "default" : "ghost"}
                   size="sm"
                   className="w-full justify-between gap-2"
                 >
-                  <Link href="/my-monologues" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-between w-full">
+                  <Link href="/monologues" onClick={() => setMobileMenuOpen(false)} className="flex items-center justify-between w-full">
                     <div className="flex items-center gap-2">
                       <IconBookmark className="h-4 w-4" />
                       Saved
@@ -566,11 +498,11 @@ export default function PlatformLayout({
                 {/* Your Scripts Link */}
                 <Button
                   asChild
-                  variant={pathname === "/my-scripts" ? "default" : "ghost"}
+                  variant={pathname === "/practice" ? "default" : "ghost"}
                   size="sm"
                   className="w-full justify-start gap-2"
                 >
-                  <Link href="/my-scripts" onClick={() => setMobileMenuOpen(false)}>
+                  <Link href="/practice" onClick={() => setMobileMenuOpen(false)}>
                     <IconFileText className="h-4 w-4" />
                     Your Scripts
                   </Link>
@@ -668,31 +600,22 @@ export default function PlatformLayout({
       >
         <div className="flex items-stretch justify-around min-h-[48px]">
           <Link
-            href="/dashboard"
+            href="/practice"
             className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
-              pathname === "/dashboard" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              pathname === "/practice" ? "text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <IconHome className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] font-medium">Home</span>
+            <IconMicrophone className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] font-medium">Practice</span>
           </Link>
           <Link
-            href="/search"
+            href="/monologues"
             className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
-              pathname === "/search" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              pathname === "/monologues" ? "text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <IconSearch className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] font-medium">Search</span>
-          </Link>
-          <Link
-            href="/my-scripts"
-            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
-              pathname === "/my-scripts" ? "text-primary" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <IconMask className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] font-medium">Scenes</span>
+            <IconQuote className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] font-medium">Monologues</span>
           </Link>
           <Link
             href="/profile"
@@ -742,7 +665,7 @@ export default function PlatformLayout({
           }}
         />
       )}
-      <ContactModal open={contactOpen} onOpenChange={setContactOpen} />
+      {contactOpen && <ContactModal open={contactOpen} onOpenChange={setContactOpen} />}
     </div>
     </TooltipProvider>
     </SWRConfig>

@@ -94,7 +94,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export default function SearchPage() {
+export default function MonologuesPage() {
   return (
     <Suspense fallback={
       <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -362,7 +362,7 @@ function SearchContent() {
 
   // Restore search state from URL and sessionStorage whenever this page is (re)visited.
   // This allows search results to persist across refreshes AND when navigating away
-  // to other pages and then back to /search. Supports both Plays and Film & TV.
+  // to other pages and then back to /monologues. Supports both Plays and Film & TV.
   useEffect(() => {
     // Check if this is a restoration from search history
     const historyId = searchParams.get("id");
@@ -644,7 +644,7 @@ function SearchContent() {
     }
   }, [searchParams]);
 
-  // Auto-open monologue from URL on mount (e.g. shared link /search?m=123)
+  // Auto-open monologue from URL on mount (e.g. shared link /monologues?m=123)
   const didAutoOpenRef = useRef(false);
   useEffect(() => {
     if (didAutoOpenRef.current) return;
@@ -783,7 +783,7 @@ function SearchContent() {
           if (value) newParams.set(key, value);
         });
         if (effectiveMaxOverdone < 1) newParams.set("max_overdone_score", String(effectiveMaxOverdone));
-        router.replace(`/search?${newParams.toString()}`, { scroll: false });
+        router.replace(`/monologues?${newParams.toString()}`, { scroll: false });
         // Increment results view count for "every other search" feedback prompt
         try {
           const prev = parseInt(sessionStorage.getItem(RESULTS_VIEW_COUNT_KEY) || "0", 10);
@@ -904,7 +904,7 @@ function SearchContent() {
         const urlParams = new URLSearchParams();
         urlParams.set("mode", "film_tv");
         if (filmTvQuery.trim()) urlParams.set("q", filmTvQuery.trim());
-        router.replace(`/search?${urlParams.toString()}`, { scroll: false });
+        router.replace(`/monologues?${urlParams.toString()}`, { scroll: false });
       } catch (err: unknown) {
         if (userStoppedRef.current) { userStoppedRef.current = false; return; }
         if (filmTvAbortRef.current !== controller) return;
@@ -930,9 +930,11 @@ function SearchContent() {
   };
 
   const handleFindForMe = async () => {
-    // If we already know profile is incomplete, show modal without calling the API
-    const profileIncomplete = profileStats != null && profileStats.completion_percentage < 50;
-    if (profileIncomplete) {
+    // Only block if the profile is truly empty (0%). Any partial info is
+    // enough to surface useful recommendations — the backend handles
+    // missing fields gracefully.
+    const profileEmpty = profileStats != null && profileStats.completion_percentage === 0;
+    if (profileEmpty) {
       setShowProfileCompleteModal(true);
       return;
     }
@@ -948,7 +950,7 @@ function SearchContent() {
       setCorrectedQuery(null);
 
       // Persist AI "Find for me" results as the last search so that
-      // navigating away and back to /search keeps them visible.
+      // navigating away and back to /monologues keeps them visible.
       sessionStorage.setItem(
         LAST_SEARCH_KEY,
         JSON.stringify({
@@ -961,7 +963,7 @@ function SearchContent() {
       sessionStorage.setItem(SEARCH_LAST_MODE_KEY, "plays");
 
       // Update URL to reflect AI search
-      router.replace("/search?ai=true", { scroll: false });
+      router.replace("/monologues?ai=true", { scroll: false });
 
       // Increment results view count for "every other search" feedback prompt
       try {
@@ -1000,7 +1002,7 @@ function SearchContent() {
     // Reflect the open monologue in the URL so it's shareable
     const params = new URLSearchParams(searchParams.toString());
     params.set("m", mono.id.toString());
-    router.replace(`/search?${params.toString()}`, { scroll: false });
+    router.replace(`/monologues?${params.toString()}`, { scroll: false });
     // Fetch fresh data in background (view count, etc.)
     api.get<Monologue>(`/api/monologues/${mono.id}`)
       .then((response) => setSelectedMonologue(response.data))
@@ -1014,7 +1016,7 @@ function SearchContent() {
     // Remove ?m from URL
     const params = new URLSearchParams(searchParams.toString());
     params.delete("m");
-    const newUrl = params.toString() ? `/search?${params.toString()}` : "/search";
+    const newUrl = params.toString() ? `/monologues?${params.toString()}` : "/monologues";
     router.replace(newUrl, { scroll: false });
   };
 
@@ -1337,7 +1339,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   if (value) params.set(key, value);
                 });
                 if (maxOverdoneScore < 1) params.set("max_overdone_score", String(maxOverdoneScore));
-                router.replace(`/search?${params.toString()}`, { scroll: false });
+                router.replace(`/monologues?${params.toString()}`, { scroll: false });
               }}
             >
               Plays
@@ -1357,7 +1359,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 const params = new URLSearchParams();
                 params.set("mode", "film_tv");
                 if (filmTvQuery) params.set("q", filmTvQuery);
-                router.replace(`/search?${params.toString()}`, { scroll: false });
+                router.replace(`/monologues?${params.toString()}`, { scroll: false });
               }}
             >
               Film &amp; TV

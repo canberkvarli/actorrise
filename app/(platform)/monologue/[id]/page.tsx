@@ -90,8 +90,8 @@ export default function MonologueDetailPage() {
         <Card className="rounded-lg">
           <CardContent className="pt-12 pb-12 text-center">
             <h3 className="text-lg font-semibold mb-2">Monologue not found</h3>
-            <Button onClick={() => router.push("/search")} className="mt-4">
-              Back to Search
+            <Button onClick={() => router.push("/monologues")} className="mt-4">
+              Back to Monologues
             </Button>
           </CardContent>
         </Card>

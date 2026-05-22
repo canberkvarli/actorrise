@@ -34,7 +34,7 @@ export default function LoginPage() {
           </div>
 
           {/* Three options: Google, Apple, Sign in with email (expandable) */}
-          <AuthProgressiveDisclosure mode="login" redirectTo="/dashboard" />
+          <AuthProgressiveDisclosure mode="login" redirectTo="/practice" />
 
           {/* Sign up link */}
           <div className="text-center text-sm text-muted-foreground pt-2">

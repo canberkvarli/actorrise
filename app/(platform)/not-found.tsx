@@ -13,10 +13,10 @@ export default function NotFound() {
         </p>
         <div className="pt-4 flex flex-wrap gap-3 justify-center">
           <Button asChild>
-            <Link href="/dashboard">Dashboard</Link>
+            <Link href="/practice">Practice</Link>
           </Button>
           <Button asChild variant="outline">
-            <Link href="/search">Search monologues</Link>
+            <Link href="/monologues">Browse monologues</Link>
           </Button>
         </div>
       </div>

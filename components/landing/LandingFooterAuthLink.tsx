@@ -10,8 +10,8 @@ export function LandingFooterAuthLink() {
 
   if (user) {
     return (
-      <Link href="/dashboard" className="hover:text-foreground transition-colors">
-        Dashboard
+      <Link href="/practice" className="hover:text-foreground transition-colors">
+        Practice
       </Link>
     );
   }

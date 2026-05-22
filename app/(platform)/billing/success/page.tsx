@@ -145,8 +145,8 @@ export default function SuccessPage() {
               <Link href="/billing">View Billing</Link>
             </Button>
             <Button asChild className="flex-1">
-              <Link href="/search">
-                Start Searching
+              <Link href="/monologues">
+                Browse Monologues
                 <IconArrowRight className="h-4 w-4" />
               </Link>
             </Button>

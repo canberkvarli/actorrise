@@ -17,7 +17,7 @@ export interface ConfirmDeleteDialogProps {
   title: string;
   description: string;
   confirmLabel?: string;
-  onConfirm: () => void;
+  onConfirm: () => void | Promise<void>;
   isLoading?: boolean;
 }
 
@@ -30,9 +30,14 @@ export function ConfirmDeleteDialog({
   onConfirm,
   isLoading = false,
 }: ConfirmDeleteDialogProps) {
-  const handleConfirm = () => {
-    onConfirm();
-    onOpenChange(false);
+  const handleConfirm = async () => {
+    try {
+      await onConfirm();
+      onOpenChange(false);
+    } catch (err) {
+      // Keep dialog open so the user can retry or cancel.
+      console.error("[ConfirmDeleteDialog] onConfirm threw:", err);
+    }
   };
 
   return (

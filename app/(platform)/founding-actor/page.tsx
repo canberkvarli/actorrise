@@ -22,7 +22,7 @@ export default function FoundingActorEditPage() {
     }
     // If user is loaded and not a founding actor, redirect
     if (!user.is_founding_actor) {
-      router.replace("/dashboard");
+      router.replace("/practice");
     }
   }, [user, authLoading, router]);
 

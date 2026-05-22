@@ -163,14 +163,14 @@ export default function SubmitMonologuePage() {
               {result?.status === "approved"
                 ? "Your monologue was approved and is now available in the library."
                 : result?.status === "manual_review"
-                  ? "Your submission is under review. A moderator will check it and you'll receive an email with the decision (typically within 24–48 hours)."
-                  : "Thanks for submitting. Check the status below and in My submissions."}
+                  ? "Your submission is under review. A moderator will check it and you'll receive an email with the decision (typically within 24 to 48 hours)."
+                  : "Thanks for submitting. Check the status below."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex-col gap-2 sm:flex-row">
             <Button asChild className="w-full sm:w-auto">
-              <Link href="/my-submissions" onClick={() => setShowSuccessModal(false)}>
-                View my submissions
+              <Link href="/monologues" onClick={() => setShowSuccessModal(false)}>
+                Browse monologues
               </Link>
             </Button>
             <Button variant="outline" onClick={() => setShowSuccessModal(false)} className="w-full sm:w-auto">
@@ -193,8 +193,8 @@ export default function SubmitMonologuePage() {
               <AlertDescription className="text-green-900 dark:text-green-100">
                 <strong className="font-semibold">Approved!</strong> {result.message}
                 <div className="mt-2">
-                  <Link href="/my-submissions" className="text-green-700 dark:text-green-300 underline hover:no-underline">
-                    View your submissions →
+                  <Link href="/monologues" className="text-green-700 dark:text-green-300 underline hover:no-underline">
+                    Browse monologues →
                   </Link>
                 </div>
               </AlertDescription>
@@ -210,8 +210,8 @@ export default function SubmitMonologuePage() {
                   <p className="mt-1 text-sm">Estimated review time: {result.estimated_review_time}</p>
                 )}
                 <div className="mt-2">
-                  <Link href="/my-submissions" className="text-amber-700 dark:text-amber-300 underline hover:no-underline">
-                    Track your submissions →
+                  <Link href="/monologues" className="text-amber-700 dark:text-amber-300 underline hover:no-underline">
+                    Browse monologues →
                   </Link>
                 </div>
               </AlertDescription>
@@ -386,8 +386,8 @@ export default function SubmitMonologuePage() {
                   variant="outline"
                   asChild
                 >
-                  <Link href="/my-submissions">
-                    View My Submissions
+                  <Link href="/monologues">
+                    Browse Monologues
                   </Link>
                 </Button>
               </div>
