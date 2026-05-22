@@ -930,9 +930,11 @@ function SearchContent() {
   };
 
   const handleFindForMe = async () => {
-    // If we already know profile is incomplete, show modal without calling the API
-    const profileIncomplete = profileStats != null && profileStats.completion_percentage < 50;
-    if (profileIncomplete) {
+    // Only block if the profile is truly empty (0%). Any partial info is
+    // enough to surface useful recommendations — the backend handles
+    // missing fields gracefully.
+    const profileEmpty = profileStats != null && profileStats.completion_percentage === 0;
+    if (profileEmpty) {
       setShowProfileCompleteModal(true);
       return;
     }
