@@ -7,7 +7,7 @@ import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMasksTheater, IconMicrophone, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar } from "@tabler/icons-react";
+import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconQuote, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar } from "@tabler/icons-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef, Suspense } from "react";
@@ -141,8 +141,8 @@ export default function PlatformLayout({
 
 
   const navItems = [
-    { href: "/practice", label: "Practice", icon: IconMasksTheater },
-    { href: "/monologues", label: "Monologues", icon: IconMicrophone },
+    { href: "/practice", label: "Practice", icon: IconMicrophone },
+    { href: "/monologues", label: "Monologues", icon: IconQuote },
   ];
   const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/practice\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$/.test(pathname || "");
 
@@ -592,7 +592,7 @@ export default function PlatformLayout({
               pathname === "/practice" ? "text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <IconMasksTheater className="h-5 w-5 shrink-0" />
+            <IconMicrophone className="h-5 w-5 shrink-0" />
             <span className="text-[10px] font-medium">Practice</span>
           </Link>
           <Link
@@ -601,7 +601,7 @@ export default function PlatformLayout({
               pathname === "/monologues" ? "text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <IconSearch className="h-5 w-5 shrink-0" />
+            <IconQuote className="h-5 w-5 shrink-0" />
             <span className="text-[10px] font-medium">Monologues</span>
           </Link>
           <Link
