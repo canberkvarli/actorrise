@@ -23,6 +23,11 @@ build/
 # turbo
 .turbo/
 
+# expo prebuild native projects (regenerated on demand via expo run:ios)
+apps/mobile/ios/
+apps/mobile/android/
+apps/mobile/.expo/
+
 # misc
 .DS_Store
 *.pem
