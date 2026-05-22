@@ -26,7 +26,10 @@ export function PracticeScriptsGrid({
 }: PracticeScriptsGridProps) {
   const userScripts = scripts.filter((s) => !s.is_sample);
   const sampleScripts = scripts.filter((s) => s.is_sample);
-  const ordered = [...userScripts, ...sampleScripts];
+  // Demo is only useful for brand-new users. Once they have their own scripts,
+  // it's clutter — hide it from the library grid.
+  const ordered =
+    userScripts.length > 0 ? userScripts : [...userScripts, ...sampleScripts];
 
   return (
     <section className="space-y-5">
