@@ -114,50 +114,69 @@ function ScriptCard({ script, index }: { script: UserScript; index: number }) {
 
   return (
     <>
-    <motion.button
-      type="button"
-      onClick={() => router.push(`/practice/${script.id}`)}
+    <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.24), ease: [0.25, 0.1, 0.25, 1] }}
       className={[
         "group relative w-full text-left",
         "rounded-lg border bg-card",
-        "px-5 py-5 sm:px-6 sm:py-6",
-        "min-h-[148px] flex flex-col justify-between",
+        "min-h-[148px]",
         "transition-all duration-200",
-        "hover:shadow-md hover:-translate-y-[1px] cursor-pointer",
+        "hover:shadow-md hover:-translate-y-[1px]",
         script.is_sample
           ? "border-dashed border-border/50 bg-muted/30 opacity-90 hover:opacity-100 hover:border-border/70"
           : "border-border/70 hover:border-border",
       ].join(" ")}
     >
+      {/* Card body — clickable area for navigation. A native <button> so keyboard + screen-reader work. */}
+      <button
+        type="button"
+        onClick={() => router.push(`/practice/${script.id}`)}
+        className="w-full text-left px-5 py-5 sm:px-6 sm:py-6 min-h-[148px] flex flex-col justify-between cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      >
+        <div className="space-y-1.5 pr-12">
+          <h3 className="font-serif text-lg sm:text-xl tracking-tight text-foreground line-clamp-2 leading-snug">
+            {script.title}
+          </h3>
+          {metaParts.length > 0 && (
+            <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
+              {metaParts.join(" · ")}
+            </p>
+          )}
+        </div>
+
+        {showStatusRow && (
+          <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/80">
+            {isProcessing && (
+              <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 border border-border font-medium">
+                <IconLoader2 className="h-3 w-3 animate-spin" />
+                Processing
+              </span>
+            )}
+            {isFailed && (
+              <span className="text-[10px] uppercase tracking-wide text-destructive bg-destructive/10 px-1.5 py-0.5 border border-destructive/30 font-medium">
+                Failed
+              </span>
+            )}
+          </div>
+        )}
+      </button>
+
       {/* Demo corner tag — sharp corners, non-clickable */}
       {script.is_sample && (
-        <span className="absolute top-3 right-3 text-[10px] uppercase tracking-wide text-muted-foreground bg-background/80 px-1.5 py-0.5 border border-border font-medium">
+        <span className="absolute top-3 right-3 text-[10px] uppercase tracking-wide text-muted-foreground bg-background/80 px-1.5 py-0.5 border border-border font-medium pointer-events-none">
           Demo
         </span>
       )}
 
-      {/* Overflow menu — only on non-demo cards. Visible on hover/focus, or when menu is open. */}
+      {/* Overflow menu — sibling of the card button so clicks aren't swallowed by the parent. */}
       {!script.is_sample && (
         <Popover open={menuOpen} onOpenChange={setMenuOpen}>
           <PopoverTrigger asChild>
-            <span
-              role="button"
-              tabIndex={0}
+            <button
+              type="button"
               aria-label="Script actions"
-              onClick={(e) => {
-                e.stopPropagation();
-                setMenuOpen((o) => !o);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.stopPropagation();
-                  e.preventDefault();
-                  setMenuOpen((o) => !o);
-                }
-              }}
               className={[
                 "absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center",
                 "rounded-md text-muted-foreground/70 hover:text-foreground hover:bg-muted/80",
@@ -168,18 +187,13 @@ function ScriptCard({ script, index }: { script: UserScript; index: number }) {
               ].join(" ")}
             >
               <IconDots className="h-4 w-4" />
-            </span>
+            </button>
           </PopoverTrigger>
-          <PopoverContent
-            align="end"
-            className="w-44 p-1"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <PopoverContent align="end" className="w-44 p-1">
             <button
               type="button"
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-destructive hover:bg-destructive/10 transition-colors rounded-sm"
-              onClick={(e) => {
-                e.stopPropagation();
+              onClick={() => {
                 setMenuOpen(false);
                 setDeleteDialogOpen(true);
               }}
@@ -190,34 +204,7 @@ function ScriptCard({ script, index }: { script: UserScript; index: number }) {
           </PopoverContent>
         </Popover>
       )}
-
-      <div className="space-y-1.5 pr-12">
-        <h3 className="font-serif text-lg sm:text-xl tracking-tight text-foreground line-clamp-2 leading-snug">
-          {script.title}
-        </h3>
-        {metaParts.length > 0 && (
-          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">
-            {metaParts.join(" · ")}
-          </p>
-        )}
-      </div>
-
-      {showStatusRow && (
-        <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/80">
-          {isProcessing && (
-            <span className="inline-flex items-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground bg-muted px-1.5 py-0.5 border border-border font-medium">
-              <IconLoader2 className="h-3 w-3 animate-spin" />
-              Processing
-            </span>
-          )}
-          {isFailed && (
-            <span className="text-[10px] uppercase tracking-wide text-destructive bg-destructive/10 px-1.5 py-0.5 border border-destructive/30 font-medium">
-              Failed
-            </span>
-          )}
-        </div>
-      )}
-    </motion.button>
+    </motion.div>
     <ConfirmDeleteDialog
       open={deleteDialogOpen}
       onOpenChange={setDeleteDialogOpen}
