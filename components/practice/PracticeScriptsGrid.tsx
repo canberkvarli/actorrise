@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { IconDots, IconLoader2 } from "@tabler/icons-react";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -63,9 +63,11 @@ export function PracticeScriptsGrid({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-          {ordered.map((script, idx) => (
-            <ScriptCard key={script.id} script={script} index={idx} />
-          ))}
+          <AnimatePresence mode="popLayout" initial={false}>
+            {ordered.map((script, idx) => (
+              <ScriptCard key={script.id} script={script} index={idx} />
+            ))}
+          </AnimatePresence>
         </div>
       )}
     </section>
@@ -115,8 +117,10 @@ function ScriptCard({ script, index }: { script: UserScript; index: number }) {
   return (
     <>
     <motion.div
+      layout
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, scale: 0.95, transition: { duration: 0.18, ease: [0.4, 0, 1, 1] } }}
       transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.24), ease: [0.25, 0.1, 0.25, 1] }}
       className={[
         "group relative w-full text-left",
