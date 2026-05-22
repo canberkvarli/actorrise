@@ -38,6 +38,12 @@
       "expo-secure-store",
       "expo-web-browser",
       [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow ActorRise to access the microphone for ScenePartner rehearsals."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
