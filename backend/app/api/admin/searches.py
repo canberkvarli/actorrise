@@ -1,6 +1,6 @@
 """Admin search analytics API."""
 
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any, Optional
 
 from app.api.admin.stats import require_moderator
@@ -11,76 +11,32 @@ from app.models.search_log import SearchLog
 from app.models.user import User
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import Date, cast as sa_cast, desc, func
+from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/admin", tags=["admin", "searches"])
 
 
-@router.get("/searches")
-def get_search_logs(
-    page: int = Query(1, ge=1),
-    limit: int = Query(25, le=100),
-    from_date: Optional[str] = Query(None, alias="from"),
-    to_date: Optional[str] = Query(None, alias="to"),
-    zero_only: bool = Query(False, description="Only show zero-result searches"),
-    source: Optional[str] = Query(None, description="Filter by source: search or demo"),
-    q: Optional[str] = Query(None, description="Filter by query text"),
-    db: Session = Depends(get_db),
-    _mod: User = Depends(require_moderator),
-) -> dict[str, Any]:
-    """Paginated search logs with summary stats."""
+def _date_range(from_date: Optional[str], to_date: Optional[str]) -> tuple[datetime, datetime]:
+    """Resolve query date strings to a [start, end) datetime range usable
+    directly against ``SearchLog.created_at``. Avoids ``cast(..., Date)``
+    on the column, which prevents index usage in Postgres."""
+    end_d = date.fromisoformat(to_date) if to_date else date.today()
+    start_d = date.fromisoformat(from_date) if from_date else end_d - timedelta(days=30)
+    start_dt = datetime.combine(start_d, time.min)
+    end_dt = datetime.combine(end_d + timedelta(days=1), time.min)
+    return start_dt, end_dt
 
-    end = date.fromisoformat(to_date) if to_date else date.today()
-    start = date.fromisoformat(from_date) if from_date else end - timedelta(days=30)
 
-    base = db.query(SearchLog).filter(
-        sa_cast(SearchLog.created_at, Date) >= start,
-        sa_cast(SearchLog.created_at, Date) <= end,
-    )
-
-    if zero_only:
-        base = base.filter(SearchLog.results_count == 0)
-    if source:
-        base = base.filter(SearchLog.source == source)
-    if q:
-        base = base.filter(SearchLog.query.ilike(f"%{q}%"))
-
-    total = base.count()
-
-    logs = (
-        base.order_by(desc(SearchLog.created_at))
-        .offset((page - 1) * limit)
-        .limit(limit)
-        .all()
-    )
-
-    # Collect user emails for display
-    user_ids = {log.user_id for log in logs if log.user_id}
-    user_map = {}
-    if user_ids:
-        users = db.query(User.id, User.email).filter(User.id.in_(user_ids)).all()
-        user_map = {u.id: u.email for u in users}
-
-    searches = [
-        {
-            "id": log.id,
-            "query": log.query,
-            "filters_used": log.filters_used,
-            "results_count": log.results_count,
-            "result_ids": log.result_ids,
-            "user_email": user_map.get(log.user_id),
-            "source": log.source,
-            "created_at": log.created_at.isoformat(),
-        }
-        for log in logs
-    ]
-
-    # Summary stats for the date range
+def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[str, Any]:
+    """Run the four summary aggregates over the date range. Date filter
+    uses raw ``created_at`` comparisons so any (created_at) index can be
+    used by the planner."""
     summary_base = db.query(SearchLog).filter(
-        sa_cast(SearchLog.created_at, Date) >= start,
-        sa_cast(SearchLog.created_at, Date) <= end,
+        SearchLog.created_at >= start_dt,
+        SearchLog.created_at < end_dt,
     )
+
     total_searches = summary_base.count()
     zero_results = summary_base.filter(SearchLog.results_count == 0).count()
 
@@ -110,17 +66,97 @@ def get_search_logs(
     )
 
     return {
+        "total_searches": total_searches,
+        "zero_result_count": zero_results,
+        "top_queries": [{"query": q, "count": c} for q, c in top_queries],
+        "top_zero_result_queries": [{"query": q, "count": c} for q, c in top_zero],
+    }
+
+
+@router.get("/searches")
+def get_search_logs(
+    page: int = Query(1, ge=1),
+    limit: int = Query(25, le=100),
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date: Optional[str] = Query(None, alias="to"),
+    zero_only: bool = Query(False, description="Only show zero-result searches"),
+    source: Optional[str] = Query(None, description="Filter by source: search or demo"),
+    q: Optional[str] = Query(None, description="Filter by query text"),
+    db: Session = Depends(get_db),
+    _mod: User = Depends(require_moderator),
+) -> dict[str, Any]:
+    """Paginated search logs only — summary stats moved to ``/searches/summary``
+    so paginating doesn't re-compute heavy aggregates each time."""
+
+    start_dt, end_dt = _date_range(from_date, to_date)
+
+    base = db.query(SearchLog).filter(
+        SearchLog.created_at >= start_dt,
+        SearchLog.created_at < end_dt,
+    )
+
+    if zero_only:
+        base = base.filter(SearchLog.results_count == 0)
+    if source:
+        base = base.filter(SearchLog.source == source)
+    if q:
+        base = base.filter(SearchLog.query.ilike(f"%{q}%"))
+
+    total = base.count()
+
+    logs = (
+        base.order_by(desc(SearchLog.created_at))
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .all()
+    )
+
+    # Collect user emails for display
+    user_ids = {log.user_id for log in logs if log.user_id}
+    user_map: dict = {}
+    if user_ids:
+        users = db.query(User.id, User.email).filter(User.id.in_(user_ids)).all()
+        user_map = {u.id: u.email for u in users}
+
+    searches = [
+        {
+            "id": log.id,
+            "query": log.query,
+            "filters_used": log.filters_used,
+            "results_count": log.results_count,
+            "result_ids": log.result_ids,
+            "user_email": user_map.get(log.user_id),
+            "source": log.source,
+            "created_at": log.created_at.isoformat(),
+        }
+        for log in logs
+    ]
+
+    # Summary only on page 1 — paginating doesn't change the aggregate,
+    # so we save four COUNT/GROUP BY scans per page-change.
+    summary = _compute_summary(start_dt, end_dt, db) if page == 1 else None
+
+    return {
         "searches": searches,
         "total": total,
         "page": page,
         "limit": limit,
-        "summary": {
-            "total_searches": total_searches,
-            "zero_result_count": zero_results,
-            "top_queries": [{"query": q, "count": c} for q, c in top_queries],
-            "top_zero_result_queries": [{"query": q, "count": c} for q, c in top_zero],
-        },
+        "summary": summary,
     }
+
+
+@router.get("/searches/summary")
+def get_search_logs_summary(
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date: Optional[str] = Query(None, alias="to"),
+    db: Session = Depends(get_db),
+    _mod: User = Depends(require_moderator),
+) -> dict[str, Any]:
+    """Dedicated summary endpoint. Same payload as the embedded `summary`
+    in `/searches?page=1` — frontend can call this directly when it wants
+    fresh aggregates without re-fetching the paginated rows."""
+    start_dt, end_dt = _date_range(from_date, to_date)
+    return _compute_summary(start_dt, end_dt, db)
 
 
 @router.get("/searches/{log_id}/results")
