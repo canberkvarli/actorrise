@@ -1,6 +1,6 @@
 # ActorRise Platform
 
-A modern acting platform built with Next.js and FastAPI: the world's largest AI-powered monologue discovery for **theater and film/TV**. Find the right audition material in under 20 seconds.
+A modern acting platform built with Next.js and FastAPI: the world's largest AI-powered monologue discovery for **theater and film/TV**. Find the right audition material in seconds.
 
 ## 🎭 Current Features
 

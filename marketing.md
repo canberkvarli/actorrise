@@ -4,7 +4,7 @@ ActorRise is the world's largest AI-powered monologue discovery platform — for
 
 Landing Page Hero Section
 Outcome + Speed
-Headline: Find the right audition monologue in under 20 seconds
+Headline: Find the right audition monologue in seconds
 Subheadline: 4x bigger than other collections = 4x better chance of finding the perfect fit. AI-powered search across 8,600+ theater monologues and film/TV scene references. No keyword frustration.
 
 Key Competitive Advantages (Website Sections)
@@ -127,7 +127,7 @@ Social Media Copy (UPDATED)
 Twitter/X Thread Starter
 "Spent 6 hours reading plays to find ONE monologue? There's a better way. 🧵
 
-ActorRise: 8,600+ theater monologues (4x bigger than Backstage) + film/TV scene search. AI search in plain English. Results in under 20 seconds. Stage and screen in one place.
+ActorRise: 8,600+ theater monologues (4x bigger than Backstage) + film/TV scene search. AI search in plain English. Results in seconds. Stage and screen in one place.
 
 It's free to try: [link]"
 
@@ -231,7 +231,7 @@ For Acting Coaches
 "Give your students better recommendations from the industry's largest database. 8,600+ pieces vs competitors' 200-1,100 means fresh material for every student, every semester."
 
 For Community Theatre Actors
-"Don't have time to read dozens of plays? ActorRise searches 8,600+ monologues (8x more than competitors) in under 20 seconds. Find perfect pieces while others are still browsing page 1."
+"Don't have time to read dozens of plays? ActorRise searches 8,600+ monologues (8x more than competitors) in seconds. Find perfect pieces while others are still browsing page 1."
 
 One-Liners for Different Contexts (UPDATED)
 Elevator Pitch:
@@ -241,7 +241,7 @@ Technical Pitch:
 "AI-powered monologue discovery for theater and film/TV using RAG and vector embeddings. Semantic search across 8,600+ theatrical monologues plus film/TV references — the only platform that does both."
 
 Actor-to-Actor Pitch:
-"Backstage has 1,100 theater monologues. ActorRise has 8,600+ plus film/TV search. Same AI, one app. Find stage and screen material in under 20 seconds."
+"Backstage has 1,100 theater monologues. ActorRise has 8,600+ plus film/TV search. Same AI, one app. Find stage and screen material in seconds."
 
 Investor Pitch:
 "ActorRise is the first AI-native monologue platform in a $150M+ market: 8,600+ theater (4-8x larger than competitors) plus film/TV. Only platform with semantic search for both stage and screen."
@@ -335,7 +335,7 @@ Tagline Options (under 60 chars):
 "8,600+ theater + film/TV monologue search, AI-powered" (52 chars)
 
 Description (under 500 chars):
-"Actors waste 6+ hours finding one monologue. ActorRise: AI search across 8,600+ theater monologues and film/TV scene references. Stage and screen in one platform. Describe what you need in plain English — results in under 20 seconds. 4x larger theater DB than Backstage; only platform with film/TV search too. Built by a working actor. Free tier available."
+"Actors waste 6+ hours finding one monologue. ActorRise: AI search across 8,600+ theater monologues and film/TV scene references. Stage and screen in one platform. Describe what you need in plain English — results in seconds. 4x larger theater DB than Backstage; only platform with film/TV search too. Built by a working actor. Free tier available."
 
 First Comment Template:
 "Hey Product Hunt! 👋 
