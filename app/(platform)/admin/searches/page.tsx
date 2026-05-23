@@ -1,7 +1,7 @@
 "use client";
 
-import { Fragment, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Fragment, useEffect, useMemo, useState } from "react";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconSearch, IconRefresh, IconChevronDown, IconChevronUp } from "@tabler/icons-react";
 
 import api from "@/lib/api";
@@ -77,6 +77,8 @@ function ExpandableResults({ logId }: { logId: number }) {
       );
       return res.data;
     },
+    staleTime: 5 * 60_000,
+    gcTime: 10 * 60_000,
   });
 
   if (isLoading) {
@@ -145,6 +147,7 @@ function ContentRequestsTab() {
       const res = await api.get<{ requests: ContentRequestItem[] }>("/api/admin/content-requests");
       return res.data;
     },
+    staleTime: 60_000,
   });
 
   const statusMutation = useMutation({
@@ -210,18 +213,31 @@ function ContentRequestsTab() {
 export default function AdminSearchesPage() {
   const [tab, setTab] = useState<"logs" | "requests">("logs");
   const [q, setQ] = useState("");
+  const [debouncedQ, setDebouncedQ] = useState("");
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [zeroOnly, setZeroOnly] = useState(false);
   const [offset, setOffset] = useState(0);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [stickySummary, setStickySummary] = useState<SearchesResponse["summary"] | null>(null);
+
+  // Debounce the search query so typing doesn't fire a new request per keystroke.
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedQ(q), 350);
+    return () => clearTimeout(id);
+  }, [q]);
+
+  // Reset to page 1 whenever the filters that affect the result set change.
+  useEffect(() => {
+    setOffset(0);
+  }, [debouncedQ, sourceFilter, zeroOnly]);
 
   const page = Math.floor(offset / PAGE_SIZE) + 1;
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["admin-searches", q, sourceFilter, zeroOnly, page],
+    queryKey: ["admin-searches", debouncedQ, sourceFilter, zeroOnly, page],
     queryFn: async () => {
       const params = new URLSearchParams();
-      if (q.trim()) params.set("q", q.trim());
+      if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
       if (sourceFilter !== "all") params.set("source", sourceFilter);
       if (zeroOnly) params.set("zero_only", "true");
       params.set("page", String(page));
@@ -229,10 +245,19 @@ export default function AdminSearchesPage() {
       const res = await api.get<SearchesResponse>(`/api/admin/searches?${params}`);
       return res.data;
     },
+    // Stop refetching on every nav back and stop the flash on pagination.
+    staleTime: 30_000,
+    placeholderData: keepPreviousData,
   });
 
+  // Backend only sends `summary` on page 1 — keep the last one we got so
+  // paginating doesn't blank out the stats cards.
+  useEffect(() => {
+    if (data?.summary) setStickySummary(data.summary);
+  }, [data?.summary]);
+
   const total = data?.total ?? 0;
-  const summary = data?.summary;
+  const summary = useMemo(() => data?.summary ?? stickySummary, [data?.summary, stickySummary]);
   const pageStart = offset + 1;
   const pageEnd = Math.min(offset + PAGE_SIZE, total);
   const canPrev = offset > 0;

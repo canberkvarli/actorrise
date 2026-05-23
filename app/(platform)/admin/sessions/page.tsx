@@ -229,6 +229,12 @@ export default function AdminSessionsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [offset, setOffset] = useState(0);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [stickySummary, setStickySummary] = useState<SessionsResponse["summary"] | null>(null);
+
+  // Reset to page 1 when filters change so page=1's summary refetch lands.
+  useEffect(() => {
+    setOffset(0);
+  }, [debouncedQ, statusFilter]);
 
   const page = Math.floor(offset / PAGE_SIZE) + 1;
 
@@ -245,11 +251,18 @@ export default function AdminSessionsPage() {
       );
       return res.data;
     },
+    staleTime: 30_000,
     placeholderData: keepPreviousData,
   });
 
+  // Backend only returns summary on page 1 — preserve the last value so
+  // paginating doesn't blank out the summary cards.
+  useEffect(() => {
+    if (data?.summary) setStickySummary(data.summary);
+  }, [data?.summary]);
+
   const total = data?.total ?? 0;
-  const summary = data?.summary;
+  const summary = data?.summary ?? stickySummary;
   const pageStart = offset + 1;
   const pageEnd = Math.min(offset + PAGE_SIZE, total);
   const canPrev = offset > 0;

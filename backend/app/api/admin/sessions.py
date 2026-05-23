@@ -1,6 +1,6 @@
 """Admin ScenePartner session analytics API."""
 
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any, Optional
 
 from app.api.admin.stats import require_moderator
@@ -8,10 +8,18 @@ from app.core.database import get_db
 from app.models.actor import Play, RehearsalLineDelivery, RehearsalSession, Scene
 from app.models.user import User
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import Date, cast as sa_cast, desc, func
+from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/admin", tags=["admin", "sessions"])
+
+
+def _date_range(from_date: Optional[str], to_date: Optional[str]) -> tuple[datetime, datetime]:
+    """Resolve query date strings to a [start, end) datetime range. Avoids
+    ``cast(..., Date)`` on the column, which prevents index use."""
+    end_d = date.fromisoformat(to_date) if to_date else date.today()
+    start_d = date.fromisoformat(from_date) if from_date else end_d - timedelta(days=30)
+    return datetime.combine(start_d, time.min), datetime.combine(end_d + timedelta(days=1), time.min)
 
 
 @router.get("/sessions")
@@ -27,14 +35,13 @@ def get_rehearsal_sessions(
 ) -> dict[str, Any]:
     """Paginated rehearsal sessions with summary stats."""
 
-    end = date.fromisoformat(to_date) if to_date else date.today()
-    start = date.fromisoformat(from_date) if from_date else end - timedelta(days=30)
+    start_dt, end_dt = _date_range(from_date, to_date)
 
     base = (
         db.query(RehearsalSession)
         .filter(
-            sa_cast(RehearsalSession.started_at, Date) >= start,
-            sa_cast(RehearsalSession.started_at, Date) <= end,
+            RehearsalSession.started_at >= start_dt,
+            RehearsalSession.started_at < end_dt,
         )
     )
 
@@ -110,53 +117,50 @@ def get_rehearsal_sessions(
             "completed_at": s.completed_at.isoformat() if s.completed_at else None,
         })
 
-    # Summary stats — single aggregation query
-    summary_row = (
-        db.query(
-            func.count().label("total_sessions"),
-            func.count().filter(RehearsalSession.status == "completed").label("completed"),
-            func.count().filter(RehearsalSession.status == "abandoned").label("abandoned"),
-            func.count().filter(RehearsalSession.status == "in_progress").label("in_progress"),
-            func.avg(RehearsalSession.duration_seconds).filter(
-                RehearsalSession.duration_seconds.isnot(None)
-            ).label("avg_duration"),
-            func.avg(RehearsalSession.overall_rating).filter(
-                RehearsalSession.overall_rating.isnot(None)
-            ).label("avg_rating"),
-            func.avg(RehearsalSession.completion_percentage).filter(
-                RehearsalSession.status == "completed"
-            ).label("avg_completion"),
+    # Summary aggregates are stable across pagination — only compute them
+    # on page 1, then the frontend caches the value.
+    summary: Optional[dict[str, Any]] = None
+    if page == 1:
+        summary_row = (
+            db.query(
+                func.count().label("total_sessions"),
+                func.count().filter(RehearsalSession.status == "completed").label("completed"),
+                func.count().filter(RehearsalSession.status == "abandoned").label("abandoned"),
+                func.count().filter(RehearsalSession.status == "in_progress").label("in_progress"),
+                func.avg(RehearsalSession.duration_seconds).filter(
+                    RehearsalSession.duration_seconds.isnot(None)
+                ).label("avg_duration"),
+                func.avg(RehearsalSession.overall_rating).filter(
+                    RehearsalSession.overall_rating.isnot(None)
+                ).label("avg_rating"),
+                func.avg(RehearsalSession.completion_percentage).filter(
+                    RehearsalSession.status == "completed"
+                ).label("avg_completion"),
+            )
+            .filter(
+                RehearsalSession.started_at >= start_dt,
+                RehearsalSession.started_at < end_dt,
+            )
+            .first()
         )
-        .filter(
-            sa_cast(RehearsalSession.started_at, Date) >= start,
-            sa_cast(RehearsalSession.started_at, Date) <= end,
-        )
-        .first()
-    )
 
-    # Top scenes by session count
-    top_scenes = (
-        db.query(
-            Scene.title.label("scene_title"),
-            func.count().label("cnt"),
+        top_scenes = (
+            db.query(
+                Scene.title.label("scene_title"),
+                func.count().label("cnt"),
+            )
+            .join(RehearsalSession, RehearsalSession.scene_id == Scene.id)
+            .filter(
+                RehearsalSession.started_at >= start_dt,
+                RehearsalSession.started_at < end_dt,
+            )
+            .group_by(Scene.title)
+            .order_by(desc("cnt"))
+            .limit(5)
+            .all()
         )
-        .join(RehearsalSession, RehearsalSession.scene_id == Scene.id)
-        .filter(
-            sa_cast(RehearsalSession.started_at, Date) >= start,
-            sa_cast(RehearsalSession.started_at, Date) <= end,
-        )
-        .group_by(Scene.title)
-        .order_by(desc("cnt"))
-        .limit(5)
-        .all()
-    )
 
-    return {
-        "sessions": items,
-        "total": total,
-        "page": page,
-        "limit": limit,
-        "summary": {
+        summary = {
             "total_sessions": summary_row.total_sessions if summary_row else 0,
             "completed": summary_row.completed if summary_row else 0,
             "abandoned": summary_row.abandoned if summary_row else 0,
@@ -165,7 +169,14 @@ def get_rehearsal_sessions(
             "avg_rating": round(float(summary_row.avg_rating), 1) if summary_row and summary_row.avg_rating else None,
             "avg_completion": round(float(summary_row.avg_completion), 1) if summary_row and summary_row.avg_completion else None,
             "top_scenes": [{"scene": s, "count": c} for s, c in top_scenes],
-        },
+        }
+
+    return {
+        "sessions": items,
+        "total": total,
+        "page": page,
+        "limit": limit,
+        "summary": summary,
     }
 
 

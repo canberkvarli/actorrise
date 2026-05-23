@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Literal
 
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
-from sqlalchemy import Date, cast, desc, func, or_
+from sqlalchemy import desc, func, or_
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
@@ -269,10 +269,14 @@ def list_admin_users(
         query = query.filter(UserSubscription.status == subscription_status)
     if tier_name:
         query = query.filter(PricingTier.name == tier_name.lower())
+    # Raw datetime range comparisons so any index on User.created_at is
+    # usable by the planner (cast(..., Date) forced a sequential scan).
     if created_from:
-        query = query.filter(cast(User.created_at, Date) >= created_from)
+        query = query.filter(User.created_at >= datetime.combine(created_from, time.min))
     if created_to:
-        query = query.filter(cast(User.created_at, Date) <= created_to)
+        query = query.filter(
+            User.created_at < datetime.combine(created_to + timedelta(days=1), time.min)
+        )
 
     sort_columns = {
         "created_at": User.created_at,

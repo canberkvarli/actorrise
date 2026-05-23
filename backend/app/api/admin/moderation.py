@@ -282,23 +282,29 @@ async def get_queue_stats(
     db: Session = Depends(get_db)
 ):
     """Get statistics about the moderation queue."""
-    from datetime import datetime
-    from sqlalchemy import func, case, cast
-    from sqlalchemy.types import Date
+    from datetime import datetime, time, timedelta
+    from sqlalchemy import func, case
 
     today = datetime.utcnow().date()
+    today_start = datetime.combine(today, time.min)
+    tomorrow_start = today_start + timedelta(days=1)
 
-    # Single query for all counts
+    # Single query for all counts. The date-range comparison (raw datetime,
+    # no cast) lets the planner use any (processed_at) index.
     row = db.query(
         func.count(case((MonologueSubmission.status == 'pending', 1))).label('pending'),
         func.count(case((MonologueSubmission.status == 'ai_review', 1))).label('ai_review'),
         func.count(case((MonologueSubmission.status == 'manual_review', 1))).label('manual_review'),
         func.count(case((
-            (MonologueSubmission.status == 'approved') & (cast(MonologueSubmission.processed_at, Date) == today),
+            (MonologueSubmission.status == 'approved')
+            & (MonologueSubmission.processed_at >= today_start)
+            & (MonologueSubmission.processed_at < tomorrow_start),
             1,
         ))).label('approved_today'),
         func.count(case((
-            (MonologueSubmission.status == 'rejected') & (cast(MonologueSubmission.processed_at, Date) == today),
+            (MonologueSubmission.status == 'rejected')
+            & (MonologueSubmission.processed_at >= today_start)
+            & (MonologueSubmission.processed_at < tomorrow_start),
             1,
         ))).label('rejected_today'),
     ).first()

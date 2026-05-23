@@ -5,7 +5,7 @@ Returns aggregated analytics: signups, feedback, monologue submissions, usage.
 Protected by require_moderator. Supports optional date range (from/to).
 """
 
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any, Optional
 
 from app.api.auth import get_current_user
@@ -76,15 +76,20 @@ def get_admin_stats(
     days_count = (to_d - from_d).days + 1
     date_list = [from_d + timedelta(days=i) for i in range(days_count)]
 
+    # Datetime range used for WHERE-clause filters — comparing a timestamp
+    # column against datetimes lets Postgres use any index on that column.
+    # The cast(..., Date) calls below are kept ONLY in SELECT projections
+    # and GROUP BY clauses, which don't block index usage on the filter.
+    from_dt = datetime.combine(from_d, time.min)
+    to_dt_exclusive = datetime.combine(to_d + timedelta(days=1), time.min)
+
     # --- Signups ---
-    # Total users (all time)
     total_users = db.query(User).count()
-    # Signups by day in range (cast created_at to date for grouping)
     signups_by_day_q = (
         db.query(cast(User.created_at, Date).label("d"), sql_count(User.id).label("c"))
         .filter(
-            cast(User.created_at, Date) >= from_d,
-            cast(User.created_at, Date) <= to_d,
+            User.created_at >= from_dt,
+            User.created_at < to_dt_exclusive,
         )
         .group_by(cast(User.created_at, Date))
     )
@@ -106,8 +111,8 @@ def get_admin_stats(
             sql_count(ResultFeedback.id).label("c"),
         )
         .filter(
-            cast(ResultFeedback.created_at, Date) >= from_d,
-            cast(ResultFeedback.created_at, Date) <= to_d,
+            ResultFeedback.created_at >= from_dt,
+            ResultFeedback.created_at < to_dt_exclusive,
         )
         .group_by(cast(ResultFeedback.created_at, Date), ResultFeedback.rating)
     )
@@ -140,21 +145,25 @@ def get_admin_stats(
             sql_count(MonologueSubmission.id).label("c"),
         )
         .filter(
-            cast(MonologueSubmission.submitted_at, Date) >= from_d,
-            cast(MonologueSubmission.submitted_at, Date) <= to_d,
+            MonologueSubmission.submitted_at >= from_dt,
+            MonologueSubmission.submitted_at < to_dt_exclusive,
         )
         .group_by(cast(MonologueSubmission.submitted_at, Date))
     )
     submissions_by_day_map = {row.d: row.c for row in submissions_by_day_q}
     submissions_by_day = [{"date": d.isoformat(), "count": submissions_by_day_map.get(d, 0)} for d in date_list]
 
-    # Approved/rejected today (single query)
+    # Approved/rejected today (single query, datetime range so any
+    # (processed_at) index is usable instead of cast forcing a seq scan).
     today = date.today()
+    today_start = datetime.combine(today, time.min)
+    tomorrow_start = today_start + timedelta(days=1)
     today_counts_q = (
         db.query(MonologueSubmission.status, sql_count(MonologueSubmission.id))
         .filter(
             MonologueSubmission.status.in_(("approved", "rejected")),
-            cast(MonologueSubmission.processed_at, Date) == today,
+            MonologueSubmission.processed_at >= today_start,
+            MonologueSubmission.processed_at < tomorrow_start,
         )
         .group_by(MonologueSubmission.status)
     )

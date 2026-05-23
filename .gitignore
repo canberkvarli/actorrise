@@ -67,3 +67,6 @@ supabase/.temp/
 backend/.next/
 .claude/worktrees/
 .worktrees/
+
+# Firecrawl scrape artifacts
+.firecrawl/
