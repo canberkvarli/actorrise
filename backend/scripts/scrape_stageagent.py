@@ -234,9 +234,20 @@ def upsert_play(db: DBSession, parsed: ParsedMonologue) -> Play:
     The `plays` table requires non-null genre, category, copyright_status,
     so we derive sensible defaults from StageAgent's Style / Time Period
     fields when present, fall back to drama / contemporary / copyrighted.
+
+    If StageAgent's Show Type is 'Musical' we also tag the play with
+    themes += 'musical' so it surfaces in musical-theatre search filters.
     """
     play = db.query(Play).filter(Play.title.ilike(parsed.show_title)).first()
+
+    is_musical = (parsed.show_type or "").strip().lower() == "musical"
+
     if play:
+        # Existing play — backfill the musical tag if we now know it's one
+        if is_musical:
+            current = list(play.themes) if play.themes else []
+            if "musical" not in {t.lower() for t in current}:
+                play.themes = current + ["musical"]
         return play
 
     style = (parsed.style or "").lower()
@@ -253,6 +264,7 @@ def upsert_play(db: DBSession, parsed: ParsedMonologue) -> Play:
         copyright_status="copyrighted",  # curated excerpts; fair-use posture
         source_type="play",
         source_url=parsed.url,
+        themes=["musical"] if is_musical else None,
     )
     db.add(play)
     db.flush()
@@ -275,6 +287,14 @@ def create_monologue(db: DBSession, play: Play, parsed: ParsedMonologue) -> Opti
     word_count = len(parsed.text.split())
     estimated_seconds = max(30, word_count * 60 // 150)  # ~150 wpm
 
+    # If the play is a musical, seed search_tags with musical-theatre keywords
+    # so users find it via "musical" / "broadway" / "show tune" queries.
+    is_musical = (parsed.show_type or "").strip().lower() == "musical"
+    search_tags = (
+        ["musical", "broadway", "musical theater", "musical theatre"]
+        if is_musical else None
+    )
+
     mono = Monologue(
         play_id=play.id,
         title=f"{parsed.character_name}'s Monologue",
@@ -288,6 +308,7 @@ def create_monologue(db: DBSession, play: Play, parsed: ParsedMonologue) -> Opti
         scene_description=parsed.time_place,
         word_count=word_count,
         estimated_duration_seconds=estimated_seconds,
+        search_tags=search_tags,
         is_verified=True,  # curated source
         quality_score=0.85,
         overdone_score=0.3,
