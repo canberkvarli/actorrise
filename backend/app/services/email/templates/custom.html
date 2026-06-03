@@ -7,6 +7,12 @@
 
         {{ body_html|safe }}
 
+        {% if cta_url %}
+        <div style="margin:28px 0;">
+            <a href="{{ cta_url }}" style="display:inline-block; background:#CB4B00; color:#ffffff; text-decoration:none; font-size:15px; font-weight:600; padding:13px 26px; border-radius:8px;">{{ cta_label or 'Open' }}</a>
+        </div>
+        {% endif %}
+
         {% if sender_title %}
         <div style="margin-top:28px; color:#555; font-size:14px; line-height:1.5;">
             {{ sender_name }}<br>
