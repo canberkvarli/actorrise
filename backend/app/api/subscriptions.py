@@ -153,6 +153,21 @@ async def get_my_subscription(current_user: User = Depends(get_current_user), db
         )
 
     tier = db.query(PricingTier).get(subscription.tier_id)
+
+    # An expired comp grant (or otherwise inactive sub) should read as Free,
+    # matching the benefits the user actually has.
+    if not subscription.is_active:
+        free_tier = db.query(PricingTier).filter(PricingTier.name == "free").first()
+        return SubscriptionResponse(
+            tier_name="free",
+            tier_display_name=free_tier.display_name if free_tier else "Free",
+            status=subscription.status,
+            billing_period=subscription.billing_period or "monthly",
+            current_period_end=subscription.current_period_end,
+            cancel_at_period_end=subscription.cancel_at_period_end or False,
+            has_stripe_customer=bool(subscription.stripe_customer_id),
+        )
+
     if not tier:
         # Fallback to free if tier missing (e.g. tier deleted)
         return SubscriptionResponse(
@@ -240,23 +255,26 @@ async def create_checkout_session(
             detail=f"Stripe price ID not configured for {tier.display_name} {request.billing_period} plan",
         )
 
-    # Resolve promo code to Stripe coupon (e.g. FOUNDER -> 100% off for 1 year)
+    # Resolve promo code. Founding actor codes grant a free trial (card on file,
+    # $0 today, then rolls into Plus monthly). Other codes apply a Stripe coupon.
     discounts = []
+    trial_period_days: int | None = None
     if request.promo_code:
         promo = request.promo_code.strip().upper()
-        if promo == "FOUNDER":
+        if promo in ("FOUNDER", "FOUNDER6", "FOUNDER12"):
             if tier.name != "plus":
                 raise HTTPException(
                     status_code=400,
-                    detail="The FOUNDER promo code is only valid for the Plus plan.",
+                    detail="The founding actor offer is only valid for the Plus plan.",
                 )
-            founder_coupon_id = os.getenv("STRIPE_FOUNDER_COUPON_ID")
-            if founder_coupon_id:
-                discounts = [{"coupon": founder_coupon_id}]
-            else:
+            # 6 or 12 months free, then auto-converts to Plus monthly ($12/mo).
+            trial_period_days = 180 if promo == "FOUNDER6" else 365
+            # Force monthly rollover regardless of the billing toggle they picked.
+            price_id = tier.stripe_monthly_price_id
+            if not price_id:
                 raise HTTPException(
                     status_code=400,
-                    detail="Promo code FOUNDER is not configured. Please contact support.",
+                    detail="Stripe price ID not configured for the Plus monthly plan.",
                 )
         elif promo in ("STARTUPS", "STARTUPS24"):
             startups_coupon_id = os.getenv("STRIPE_STARTUPS_COUPON_ID")
@@ -323,6 +341,14 @@ async def create_checkout_session(
     }
     if discounts:
         create_params["discounts"] = discounts
+    if trial_period_days:
+        # Collect the card now, charge nothing until the trial ends, then
+        # cancel cleanly if no payment method is on file.
+        create_params["subscription_data"] = {
+            "trial_period_days": trial_period_days,
+            "trial_settings": {"end_behavior": {"missing_payment_method": "cancel"}},
+        }
+        create_params["payment_method_collection"] = "always"
 
     try:
         checkout_session = stripe.checkout.Session.create(**create_params)

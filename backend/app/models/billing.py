@@ -8,7 +8,7 @@ This module contains models for:
 - BillingHistory: Payment and invoice history
 """
 
-from datetime import date
+from datetime import date, datetime, timezone
 
 from app.core.database import Base
 from sqlalchemy import (Boolean, Column, Date, DateTime, ForeignKey, Index,
@@ -113,8 +113,23 @@ class UserSubscription(Base):
 
     @property
     def is_active(self) -> bool:
-        """Check if subscription is currently active."""
-        return self.status in ["active", "trialing"]
+        """Check if subscription is currently active.
+
+        For comped grants (admin-granted access with no Stripe subscription
+        attached), a set ``trial_end`` acts as a hard expiry: once it passes
+        the user falls back to Free automatically, with no cron job needed.
+        Real Stripe subscriptions (which carry a ``stripe_subscription_id``)
+        are left to Stripe's own status, kept in sync via webhooks.
+        """
+        if self.status not in ["active", "trialing"]:
+            return False
+        # Comp grant: honor the expiry date.
+        if not self.stripe_subscription_id and self.trial_end is not None:
+            end = self.trial_end
+            if end.tzinfo is None:
+                end = end.replace(tzinfo=timezone.utc)
+            return end > datetime.now(timezone.utc)
+        return True
 
     @property
     def is_paid_tier(self) -> bool:
