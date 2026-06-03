@@ -86,12 +86,12 @@ function CheckoutContent() {
       setTimeout(() => setPromoShake(false), 500);
     };
 
-    if (code === "FOUNDER") {
+    if (["FOUNDER", "FOUNDER3", "FOUNDER6", "FOUNDER12"].includes(code)) {
       if (tier?.name !== "plus") {
-        triggerShake("FOUNDER is only valid for the Plus plan.");
+        triggerShake("Founder codes are only valid for the Plus plan.");
         return;
       }
-      setPromoApplied("FOUNDER");
+      setPromoApplied(code);
       setPromoError(null);
     } else if (code === "STARTUPS" || code === "STARTUPS24") {
       setPromoApplied("STARTUPS");
@@ -152,7 +152,7 @@ function CheckoutContent() {
 
   const getPrice = () => {
     if (!tier) return 0;
-    if (promoApplied === "FOUNDER" || promoApplied === "BUSINESS" || promoApplied === "STUDENT") return 0;
+    if (promoApplied?.startsWith("FOUNDER") || promoApplied === "BUSINESS" || promoApplied === "STUDENT") return 0;
     const base =
       period === "annual" && tier.annual_price_cents
         ? tier.annual_price_cents
@@ -248,7 +248,7 @@ function CheckoutContent() {
                   <span className="text-muted-foreground">Billed today</span>
                   <span className="text-2xl font-bold">{formatPrice(getPrice())}</span>
                 </div>
-                {(promoApplied !== "FOUNDER" && promoApplied !== "BUSINESS" && promoApplied !== "STUDENT") && (
+                {(!promoApplied?.startsWith("FOUNDER") && promoApplied !== "BUSINESS" && promoApplied !== "STUDENT") && (
                   <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
                     <p className="text-sm font-medium text-accent mb-1">Annual Savings</p>
                     <p className="text-xs text-muted-foreground">
@@ -276,8 +276,8 @@ function CheckoutContent() {
                 <div className="flex items-center justify-between rounded-lg bg-accent/10 border border-accent/20 px-3 py-2">
                   <span className="text-sm font-medium text-foreground flex items-center gap-2">
                     <IconTag className="h-4 w-4 shrink-0 text-accent" />
-                    {promoApplied === "FOUNDER"
-                      ? "FOUNDER applied. Free for 1 year."
+                    {promoApplied?.startsWith("FOUNDER")
+                      ? `${promoApplied} applied. Free for ${promoApplied === "FOUNDER3" ? "3 months" : promoApplied === "FOUNDER6" ? "6 months" : "1 year"}.`
                       : promoApplied === "BUSINESS"
                         ? "BUSINESS applied. 100% off for 3 months."
                         : promoApplied === "STUDENT"
