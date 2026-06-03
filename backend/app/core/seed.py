@@ -31,7 +31,7 @@ def ensure_pricing_tiers() -> None:
                     "search_history_limit": 5,
                     "advanced_analytics": False,
                     "scene_partner_scripts": 1,
-                    "scene_partner_sessions": 1,
+                    "scene_partner_sessions": 2,
                     "scene_partner_lines_per_session": 20,
                     "scene_partner_trial_only": True,
                 },
