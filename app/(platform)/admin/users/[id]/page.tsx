@@ -64,6 +64,12 @@ export default function AdminUserDetailPage() {
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "annual">("monthly");
   const [cancelAtPeriodEnd, setCancelAtPeriodEnd] = useState(false);
 
+  // Comp grant (no card, no Stripe) state.
+  const [grantTierId, setGrantTierId] = useState<number | null>(null);
+  const [grantDurationKey, setGrantDurationKey] = useState<string>("365");
+  const [grantCustomDays, setGrantCustomDays] = useState("30");
+  const [grantNote, setGrantNote] = useState("");
+
   const [benefitKeyPreset, setBenefitKeyPreset] = useState(BENEFIT_OPTIONS[0].key);
   const [customBenefitKey, setCustomBenefitKey] = useState("");
   const [benefitType, setBenefitType] = useState<"set" | "revoke">("set");
@@ -102,6 +108,14 @@ export default function AdminUserDetailPage() {
       return res.data;
     },
   });
+
+  // Default the grant tier to Plus once tiers load.
+  useEffect(() => {
+    if (grantTierId == null && tiers.length) {
+      const plus = tiers.find((t) => t.name.toLowerCase() === "plus");
+      setGrantTierId(plus ? plus.id : tiers[0].id);
+    }
+  }, [tiers, grantTierId]);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-user-detail", userId] });
 
@@ -145,6 +159,28 @@ export default function AdminUserDetailPage() {
       setBenefitNote("");
     },
     onError: (err: Error) => toast.error(err.message || "Failed to update benefits"),
+  });
+
+  const grantMutation = useMutation({
+    mutationFn: async (payload: Record<string, unknown>) =>
+      api.post(`/api/admin/users/${userId}/grant`, payload),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Membership granted");
+      setGrantNote("");
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to grant membership"),
+  });
+
+  const revokeGrantMutation = useMutation({
+    mutationFn: async (note: string) =>
+      api.post(`/api/admin/users/${userId}/revoke-grant`, { note }),
+    onSuccess: () => {
+      invalidate();
+      toast.success("Comp revoked, user dropped to Free");
+      setGrantNote("");
+    },
+    onError: (err: Error) => toast.error(err.message || "Failed to revoke comp"),
   });
 
   const deleteMutation = useMutation({
@@ -231,6 +267,43 @@ export default function AdminUserDetailPage() {
     };
     if (tierId != null) payload.tier_id = tierId;
     subscriptionMutation.mutate(payload);
+  };
+
+  const runGrant = () => {
+    if (!grantNote.trim()) {
+      toast.error("A note is required");
+      return;
+    }
+    if (grantTierId == null) {
+      toast.error("Pick a tier to grant");
+      return;
+    }
+    let durationDays: number | null;
+    if (grantDurationKey === "permanent") {
+      durationDays = null;
+    } else if (grantDurationKey === "custom") {
+      const n = Number(grantCustomDays);
+      if (!Number.isFinite(n) || n <= 0) {
+        toast.error("Enter a valid number of days");
+        return;
+      }
+      durationDays = n;
+    } else {
+      durationDays = Number(grantDurationKey);
+    }
+    grantMutation.mutate({
+      tier_id: grantTierId,
+      duration_days: durationDays,
+      note: grantNote.trim(),
+    });
+  };
+
+  const runRevokeGrant = () => {
+    if (!grantNote.trim()) {
+      toast.error("Add a note before revoking");
+      return;
+    }
+    revokeGrantMutation.mutate(grantNote.trim());
   };
 
   const runBenefitPatch = () => {
@@ -470,10 +543,107 @@ export default function AdminUserDetailPage() {
               <IconSparkles className="h-4 w-4" />
               <AlertTitle>No subscription row yet</AlertTitle>
               <AlertDescription>
-                This user is treated as Free by default. Save changes below to create and assign membership.
+                This user is treated as Free by default. Grant a membership or save changes below.
               </AlertDescription>
             </Alert>
           )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Grant comp membership</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Flip on a paid tier with no card and no Stripe. Pick a duration or make it permanent.
+                Timed grants drop back to Free automatically when they expire.
+              </p>
+
+              {data.subscription && (
+                <p className="text-sm">
+                  Current: <span className="font-medium">{data.subscription.tier_display_name}</span>
+                  {" · "}
+                  {data.subscription.status}
+                  {data.subscription.trial_end
+                    ? ` · expires ${new Date(data.subscription.trial_end).toLocaleDateString()}`
+                    : ""}
+                </p>
+              )}
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div>
+                  <Label>Tier</Label>
+                  <Select
+                    value={grantTierId != null ? String(grantTierId) : undefined}
+                    onValueChange={(value) => setGrantTierId(Number(value))}
+                  >
+                    <SelectTrigger className="mt-1">
+                      <SelectValue placeholder="Select tier" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {tiers
+                        .filter((tier) => tier.name.toLowerCase() !== "free")
+                        .map((tier) => (
+                          <SelectItem key={tier.id} value={String(tier.id)}>
+                            {tier.display_name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Duration</Label>
+                  <Select value={grantDurationKey} onValueChange={setGrantDurationKey}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="14">14 days</SelectItem>
+                      <SelectItem value="30">30 days</SelectItem>
+                      <SelectItem value="90">90 days</SelectItem>
+                      <SelectItem value="180">6 months</SelectItem>
+                      <SelectItem value="365">12 months</SelectItem>
+                      <SelectItem value="custom">Custom days</SelectItem>
+                      <SelectItem value="permanent">No expiry (permanent)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {grantDurationKey === "custom" && (
+                <div>
+                  <Label>Custom days</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={grantCustomDays}
+                    onChange={(e) => setGrantCustomDays(e.target.value)}
+                    className="mt-1"
+                  />
+                </div>
+              )}
+
+              <Input
+                value={grantNote}
+                onChange={(e) => setGrantNote(e.target.value)}
+                placeholder="Reason (e.g. Founding actor, 12 months free)"
+              />
+
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={runGrant} disabled={grantMutation.isPending}>
+                  {grantMutation.isPending ? "Granting..." : "Grant membership"}
+                </Button>
+                {data.subscription && data.subscription.tier_name !== "free" && (
+                  <Button
+                    variant="outline"
+                    onClick={runRevokeGrant}
+                    disabled={revokeGrantMutation.isPending}
+                  >
+                    {revokeGrantMutation.isPending ? "Revoking..." : "Revoke comp"}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader>

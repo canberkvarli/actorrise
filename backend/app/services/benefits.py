@@ -14,7 +14,7 @@ def get_base_tier_features(
 ) -> dict[str, Any]:
     """Return base features from active subscription tier or free tier."""
     tier: PricingTier | None = None
-    if subscription and subscription.status in ("active", "trialing"):
+    if subscription and subscription.is_active:
         tier = db.query(PricingTier).get(subscription.tier_id)
     if tier is None:
         tier = db.query(PricingTier).filter(PricingTier.name == "free").first()

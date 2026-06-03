@@ -74,7 +74,7 @@ class FeatureGate:
             db.query(UserSubscription).filter(UserSubscription.user_id == current_user.id).first()
         )
 
-        if subscription and subscription.status in ("active", "trialing"):
+        if subscription and subscription.is_active:
             tier = db.query(PricingTier).get(subscription.tier_id)
         else:
             # Default to Free tier
