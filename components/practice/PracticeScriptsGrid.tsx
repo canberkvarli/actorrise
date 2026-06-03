@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { IconDots, IconLoader2 } from "@tabler/icons-react";
+import { IconArrowRight, IconDots, IconLoader2 } from "@tabler/icons-react";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -19,62 +20,83 @@ import { useDeleteScript, type UserScript } from "@/hooks/useScripts";
 
 interface PracticeScriptsGridProps {
   scripts: UserScript[];
-  isLoading: boolean;
+  /** ID of the most-recent user script — accented as the "Resume" action. */
+  featuredScriptId: number | null;
+  /** ID of the system sample (`is_sample=true`), so the empty state can link to it. */
+  demoScriptId: number | null;
 }
 
 /**
- * Visual grid of script cards. Demo (`is_sample=true`) is pinned to the end.
+ * The library grid — the hero of /practice.
  *
- * Cards are typographic — the script model does not currently carry any
- * poster/cover/image field. If one is added later (e.g. `cover_image_url`),
- * render it as a 3:4 hero atop the card and demote the typographic block.
+ * - Brand-new user (no own scripts): a spare, action-first empty state.
+ * - Returning user: their scripts only (the demo is hidden once it's clutter).
+ *   The most-recent script is accented with a "Resume" affordance.
+ *
+ * Cards are typographic — the script model carries no poster/cover field yet.
  */
 export function PracticeScriptsGrid({
   scripts,
-  isLoading,
+  featuredScriptId,
+  demoScriptId,
 }: PracticeScriptsGridProps) {
   const userScripts = scripts.filter((s) => !s.is_sample);
-  const sampleScripts = scripts.filter((s) => s.is_sample);
-  // Demo is only useful for brand-new users. Once they have their own scripts,
-  // it's clutter — hide it from the library grid.
-  const ordered =
-    userScripts.length > 0 ? userScripts : [...userScripts, ...sampleScripts];
+
+  if (userScripts.length === 0) {
+    return <EmptyState demoScriptId={demoScriptId} />;
+  }
 
   return (
-    <section className="space-y-5">
-      <div className="flex items-end justify-between gap-3">
-        <div className="space-y-1">
-          <h2 className="font-serif text-2xl md:text-3xl tracking-tight text-foreground">
-            Your library.
-          </h2>
-        </div>
-        <UploadScriptButton variant="compact" />
-      </div>
-
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-44 w-full rounded-lg" />
-          ))}
-        </div>
-      ) : ordered.length === 0 ? (
-        <div className="border border-dashed border-border/60 bg-muted/20 py-10 px-6 text-center">
-          <p className="text-sm text-muted-foreground">No scripts yet.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-          <AnimatePresence mode="popLayout" initial={false}>
-            {ordered.map((script, idx) => (
-              <ScriptCard key={script.id} script={script} index={idx} />
-            ))}
-          </AnimatePresence>
-        </div>
-      )}
+    <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
+      <AnimatePresence mode="popLayout" initial={false}>
+        {userScripts.map((script, idx) => (
+          <ScriptCard
+            key={script.id}
+            script={script}
+            index={idx}
+            isResume={script.id === featuredScriptId}
+          />
+        ))}
+      </AnimatePresence>
     </section>
   );
 }
 
-function ScriptCard({ script, index }: { script: UserScript; index: number }) {
+function EmptyState({ demoScriptId }: { demoScriptId: number | null }) {
+  return (
+    <section className="max-w-lg space-y-6">
+      <p className="text-base text-muted-foreground leading-relaxed">
+        Upload a script and rehearse with a partner reading every other role.
+      </p>
+      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+        <UploadScriptButton variant="primary">Upload a script</UploadScriptButton>
+        {demoScriptId != null && (
+          <Button
+            asChild
+            size="lg"
+            variant="ghost"
+            className="gap-1.5 h-11 px-3 font-medium text-foreground hover:text-foreground hover:bg-muted/60"
+          >
+            <Link href={`/practice/${demoScriptId}`}>
+              Open the demo
+              <IconArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ScriptCard({
+  script,
+  index,
+  isResume,
+}: {
+  script: UserScript;
+  index: number;
+  isResume: boolean;
+}) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -123,6 +145,9 @@ function ScriptCard({ script, index }: { script: UserScript; index: number }) {
   }
 
   const showStatusRow = isProcessing || isFailed;
+  // The recent script is the obvious next action — accent it, but not while it's
+  // still processing or has failed (nothing to resume yet).
+  const showResume = isResume && !showStatusRow;
 
   return (
     <>
@@ -141,8 +166,8 @@ function ScriptCard({ script, index }: { script: UserScript; index: number }) {
         "min-h-[148px]",
         "transition-all duration-200",
         "hover:shadow-md hover:-translate-y-[1px]",
-        script.is_sample
-          ? "border-dashed border-border/50 bg-muted/30 opacity-90 hover:opacity-100 hover:border-border/70"
+        showResume
+          ? "border-[#CB4B00]/45 hover:border-[#CB4B00]/70"
           : "border-border/70 hover:border-border",
       ].join(" ")}
     >
@@ -163,6 +188,13 @@ function ScriptCard({ script, index }: { script: UserScript; index: number }) {
           )}
         </div>
 
+        {showResume && (
+          <span className="mt-4 inline-flex items-center gap-1 text-sm font-medium text-[#CB4B00] group-hover:text-[#B03000] transition-colors">
+            Resume
+            <IconArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+          </span>
+        )}
+
         {showStatusRow && (
           <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground/80">
             {isProcessing && (
@@ -180,47 +212,38 @@ function ScriptCard({ script, index }: { script: UserScript; index: number }) {
         )}
       </button>
 
-      {/* Demo corner tag — sharp corners, non-clickable */}
-      {script.is_sample && (
-        <span className="absolute top-3 right-3 text-[10px] uppercase tracking-wide text-muted-foreground bg-background/80 px-1.5 py-0.5 border border-border font-medium pointer-events-none">
-          Demo
-        </span>
-      )}
-
       {/* Overflow menu — sibling of the card button so clicks aren't swallowed by the parent. */}
-      {!script.is_sample && (
-        <Popover open={menuOpen} onOpenChange={setMenuOpen}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              aria-label="Script actions"
-              className={[
-                "absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center",
-                "rounded-md text-muted-foreground/70 hover:text-foreground hover:bg-muted/80",
-                "transition-opacity",
-                menuOpen
-                  ? "opacity-100"
-                  : "opacity-0 group-hover:opacity-100 focus:opacity-100 focus-within:opacity-100",
-              ].join(" ")}
-            >
-              <IconDots className="h-4 w-4" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="end" className="w-44 p-1">
-            <button
-              type="button"
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-destructive hover:bg-destructive/10 transition-colors rounded-sm"
-              onClick={() => {
-                setMenuOpen(false);
-                setDeleteDialogOpen(true);
-              }}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete script
-            </button>
-          </PopoverContent>
-        </Popover>
-      )}
+      <Popover open={menuOpen} onOpenChange={setMenuOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            aria-label="Script actions"
+            className={[
+              "absolute top-2 right-2 inline-flex h-7 w-7 items-center justify-center",
+              "rounded-md text-muted-foreground/70 hover:text-foreground hover:bg-muted/80",
+              "transition-opacity",
+              menuOpen
+                ? "opacity-100"
+                : "opacity-0 group-hover:opacity-100 focus:opacity-100 focus-within:opacity-100",
+            ].join(" ")}
+          >
+            <IconDots className="h-4 w-4" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent align="end" className="w-44 p-1">
+          <button
+            type="button"
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-destructive hover:bg-destructive/10 transition-colors rounded-sm"
+            onClick={() => {
+              setMenuOpen(false);
+              setDeleteDialogOpen(true);
+            }}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete script
+          </button>
+        </PopoverContent>
+      </Popover>
     </motion.div>
     <ConfirmDeleteDialog
       open={deleteDialogOpen}
