@@ -394,6 +394,8 @@ class EmailTemplates:
             sender_title=sender_title,
             unsubscribe_url=unsubscribe_url,
             subject=kwargs.get("subject", ""),
+            cta_url=kwargs.get("cta_url", ""),
+            cta_label=kwargs.get("cta_label", ""),
         )
 
     def render_custom_plain(
@@ -412,6 +414,11 @@ class EmailTemplates:
             "",
             body_plain,
         ]
+        # Surface the CTA as a labeled link in plain text.
+        cta_url = kwargs.get("cta_url", "")
+        if cta_url:
+            cta_label = kwargs.get("cta_label") or "Open"
+            lines += ["", f"{cta_label}: {cta_url}"]
         # Only add signature if sender_title is provided
         if sender_title:
             lines += ["", sender_name, sender_title]
