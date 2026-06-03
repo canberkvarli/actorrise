@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { motion } from "framer-motion";
 
 import { useScripts } from "@/hooks/useScripts";
@@ -81,11 +81,13 @@ export default function PracticePage() {
             </div>
           )}
 
-          <PracticeLibrary
-            scripts={safeScripts}
-            featuredScriptId={featuredScriptId}
-            demoScriptId={demoScript?.id ?? null}
-          />
+          <Suspense fallback={null}>
+            <PracticeLibrary
+              scripts={safeScripts}
+              featuredScriptId={featuredScriptId}
+              demoScriptId={demoScript?.id ?? null}
+            />
+          </Suspense>
         </motion.div>
       )}
     </div>
