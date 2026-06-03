@@ -422,4 +422,12 @@ class EmailTemplates:
         # Only add signature if sender_title is provided
         if sender_title:
             lines += ["", sender_name, sender_title]
+        unsubscribe_url = kwargs.get("unsubscribe_url")
+        if unsubscribe_url:
+            lines += [
+                "",
+                "---",
+                "i only send these to actors who actually want them. if that's not you anymore, just say no and i'll stop bothering you (no hard feelings): "
+                + unsubscribe_url,
+            ]
         return "\n".join(lines)
