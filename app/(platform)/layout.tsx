@@ -21,6 +21,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { AnimatePresence, motion } from "framer-motion";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PageTransition } from "@/components/transition/PageTransition";
+import { UploadProvider } from "@/components/practice/UploadProvider";
 
 // Lazy-load modals that only appear conditionally — keeps them out of the
 // platform layout's initial JS bundle and shaves first-paint cost on /practice.
@@ -178,6 +179,7 @@ export default function PlatformLayout({
       }}
     >
     <TooltipProvider>
+    <UploadProvider>
     <div className="min-h-screen bg-background overflow-x-hidden relative">
       {/* Logout transition overlay */}
       <AnimatePresence>
@@ -672,6 +674,7 @@ export default function PlatformLayout({
       )}
       {contactOpen && <ContactModal open={contactOpen} onOpenChange={setContactOpen} />}
     </div>
+    </UploadProvider>
     </TooltipProvider>
     </SWRConfig>
     </>
