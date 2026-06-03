@@ -1,14 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { IconArrowRight, IconChevronDown, IconLoader2 } from "@tabler/icons-react";
+import { useRouter } from "next/navigation";
+import { IconChevronRight, IconLoader2 } from "@tabler/icons-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { UpgradeModal } from "@/components/billing/UpgradeModal";
 import { getGenreBadgeClassName } from "@/lib/genreColors";
 import { useScript, type UserScript } from "@/hooks/useScripts";
-import { useStartRehearsal } from "@/hooks/useStartRehearsal";
 import { groupScenesByAct, formatSceneDuration, type Scene } from "@/lib/scenes";
 
 type ScriptWithScenes = UserScript & { scenes: Scene[] };
@@ -20,17 +17,15 @@ interface PracticeScenePanelProps {
 
 /**
  * Right pane of the /practice library: the selected script's scenes, grouped by
- * act. Tap a scene to expand it, pick which character you'll read, and rehearse
- * without leaving the page. Scenes load lazily for the selected script only.
+ * act. Tapping a scene opens it in the editor, where you review it and start the
+ * rehearsal. Scenes load lazily for the selected script only.
  */
 export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
+  const router = useRouter();
   const { data, isLoading } = useScript(script.id) as {
     data: ScriptWithScenes | undefined;
     isLoading: boolean;
   };
-  const { startRehearsal, startingSceneId, upgradeModal, setUpgradeModal } =
-    useStartRehearsal();
-  const [expandedSceneId, setExpandedSceneId] = useState<number | null>(null);
 
   const scenes = data?.scenes ?? [];
   const groups = groupScenesByAct(scenes);
@@ -46,6 +41,9 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
     metaParts.push(
       `${script.num_scenes_extracted} scene${script.num_scenes_extracted !== 1 ? "s" : ""}`,
     );
+
+  const sceneHref = (sceneId: number) =>
+    `/practice/${script.id}/scenes/${sceneId}/edit`;
 
   return (
     <div className="min-w-0">
@@ -69,7 +67,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
       </div>
 
       {/* Body */}
-      <div className="pt-5">
+      <div className="pt-6">
         {isProcessing ? (
           <StatusNote>
             <IconLoader2 className="h-4 w-4 animate-spin" />
@@ -88,16 +86,16 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
         ) : scenes.length === 0 ? (
           <StatusNote>No scenes found in this script yet.</StatusNote>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-8">
             {groups.map((group, gi) => (
-              <div key={group.act ?? `g${gi}`} className="space-y-1.5">
+              <div key={group.act ?? `g${gi}`} className="space-y-3">
                 {group.act && (
-                  <div className="flex items-baseline justify-between gap-3 px-1">
-                    <h3 className="text-xs uppercase tracking-[0.16em] text-muted-foreground font-medium">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <h3 className="font-serif text-2xl md:text-3xl tracking-tight text-foreground">
                       {group.act}
                     </h3>
-                    <span className="text-xs text-muted-foreground/60 tabular-nums">
-                      {group.scenes.length}
+                    <span className="shrink-0 text-sm text-muted-foreground/60 tabular-nums">
+                      {group.scenes.length} {group.scenes.length === 1 ? "scene" : "scenes"}
                     </span>
                   </div>
                 )}
@@ -106,12 +104,8 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
                     <SceneRow
                       key={scene.id}
                       scene={scene}
-                      expanded={expandedSceneId === scene.id}
-                      onToggle={() =>
-                        setExpandedSceneId((cur) => (cur === scene.id ? null : scene.id))
-                      }
-                      starting={startingSceneId === scene.id}
-                      onRehearse={() => startRehearsal(scene.id, scene.character_1_name)}
+                      onOpen={() => router.push(sceneHref(scene.id))}
+                      onPrefetch={() => router.prefetch(sceneHref(scene.id))}
                     />
                   ))}
                 </div>
@@ -120,29 +114,18 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
           </div>
         )}
       </div>
-
-      <UpgradeModal
-        open={upgradeModal.open}
-        onOpenChange={(open) => setUpgradeModal((prev) => ({ ...prev, open }))}
-        feature={upgradeModal.feature}
-        message={upgradeModal.message}
-      />
     </div>
   );
 }
 
 function SceneRow({
   scene,
-  expanded,
-  onToggle,
-  starting,
-  onRehearse,
+  onOpen,
+  onPrefetch,
 }: {
   scene: Scene;
-  expanded: boolean;
-  onToggle: () => void;
-  starting: boolean;
-  onRehearse: () => void;
+  onOpen: () => void;
+  onPrefetch: () => void;
 }) {
   const characters = [scene.character_1_name, scene.character_2_name].filter(Boolean);
   const duration = formatSceneDuration(scene.estimated_duration_seconds);
@@ -153,77 +136,27 @@ function SceneRow({
   if (scene.line_count > 0) subParts.push(`${scene.line_count} lines`);
 
   return (
-    <div
-      className={[
-        "rounded-lg border transition-colors",
-        expanded ? "border-[#CB4B00]/45 bg-muted/20" : "border-border/70 hover:border-border",
-      ].join(" ")}
+    <button
+      type="button"
+      onClick={onOpen}
+      onMouseEnter={onPrefetch}
+      onTouchStart={onPrefetch}
+      onFocus={onPrefetch}
+      className="group w-full flex items-center gap-3 rounded-lg border border-border/70 px-4 py-3 text-left transition-colors hover:border-border hover:bg-muted/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     >
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-        className="w-full flex items-center gap-3 px-4 py-3 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-lg"
-      >
-        <div className="min-w-0 flex-1">
-          <p className="font-medium text-sm text-foreground truncate">
-            {scene.scene_number ? `${scene.scene_number}. ` : ""}
-            {scene.title}
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-sm text-foreground truncate">
+          {scene.scene_number ? `${scene.scene_number}. ` : ""}
+          {scene.title}
+        </p>
+        {subParts.length > 0 && (
+          <p className="text-xs text-muted-foreground truncate mt-0.5">
+            {subParts.join(" · ")}
           </p>
-          {subParts.length > 0 && (
-            <p className="text-xs text-muted-foreground truncate mt-0.5">
-              {subParts.join(" · ")}
-            </p>
-          )}
-        </div>
-        <IconChevronDown
-          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${expanded ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.25, 0.1, 0.25, 1] }}
-            className="overflow-hidden"
-          >
-            <div className="px-4 pb-4 pt-1 space-y-3">
-              {scene.description && (
-                <p className="text-sm text-muted-foreground leading-relaxed line-clamp-3">
-                  {scene.description}
-                </p>
-              )}
-
-              <button
-                type="button"
-                onClick={onRehearse}
-                disabled={starting}
-                className={[
-                  "inline-flex items-center gap-1.5 rounded-md px-4 h-10 text-sm font-medium",
-                  "bg-[#CB4B00] text-white hover:bg-[#B03000] transition-colors",
-                  "disabled:opacity-70 disabled:cursor-not-allowed",
-                ].join(" ")}
-              >
-                {starting ? (
-                  <>
-                    <IconLoader2 className="h-4 w-4 animate-spin" />
-                    Starting…
-                  </>
-                ) : (
-                  <>
-                    Rehearse this scene
-                    <IconArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
-            </div>
-          </motion.div>
         )}
-      </AnimatePresence>
-    </div>
+      </div>
+      <IconChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/50 transition-all group-hover:text-muted-foreground group-hover:translate-x-0.5" />
+    </button>
   );
 }
 
@@ -237,7 +170,7 @@ function StatusNote({
   return (
     <div
       className={[
-        "flex items-center gap-2 border border-dashed px-4 py-8 text-sm justify-center text-center",
+        "flex items-center justify-center gap-2 border border-dashed px-4 py-8 text-sm text-center",
         tone === "error"
           ? "border-destructive/30 text-destructive"
           : "border-border/60 text-muted-foreground",

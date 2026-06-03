@@ -2346,14 +2346,14 @@ export default function RehearsalPage() {
           </DialogHeader>
           <div className="flex gap-3 pt-2">
             <Button
-              variant="outline"
-              className="flex-1 border-neutral-700 text-neutral-200 hover:bg-neutral-800"
+              className="flex-1 bg-neutral-100 text-neutral-900 hover:bg-white"
               onClick={() => { setShowExitModal(false); handleResume(); }}
             >
               Keep Going
             </Button>
             <Button
-              className="flex-1"
+              variant="outline"
+              className="flex-1 bg-transparent border-neutral-600 text-neutral-200 hover:bg-neutral-800 hover:text-white"
               onClick={() => {
                 setShowExitModal(false);
                 handleExit();

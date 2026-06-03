@@ -34,6 +34,8 @@ export interface UsageLimits {
   scene_partner_limit: number;
   craft_coach_used: number;
   craft_coach_limit: number;
+  scripts_used: number;
+  scripts_limit: number;
 }
 
 export interface BillingHistoryItem {

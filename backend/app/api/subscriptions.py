@@ -20,9 +20,11 @@ from app.models.billing import (
     UsageMetrics,
     UserSubscription,
 )
+from app.models.actor import UserScript
 from app.models.user import User
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/subscriptions", tags=["subscriptions"])
@@ -105,6 +107,8 @@ class UsageLimitsResponse(BaseModel):
     scene_partner_limit: int
     craft_coach_used: int
     craft_coach_limit: int
+    scripts_used: int
+    scripts_limit: int
 
 
 class BillingHistoryItem(BaseModel):
@@ -441,6 +445,24 @@ async def get_usage_limits(current_user: User = Depends(get_current_user), db: S
     scene_partner_limit = features.get("scene_partner_sessions", 0)
     craft_coach_limit = features.get("craft_coach_sessions", 0)
 
+    # Script uploads: paid tiers reset monthly; the free tier uses a monotonic
+    # lifetime counter. Mirrors the logic in require_script_upload's gate so the
+    # client can show the upgrade modal before a user even picks a file.
+    scripts_limit = features.get("scene_partner_scripts", 0)
+    is_paid = bool(getattr(tier, "monthly_price_cents", 0) and tier.monthly_price_cents > 0)
+    if is_paid:
+        scripts_used = (
+            db.query(func.count(UserScript.id))
+            .filter(
+                UserScript.user_id == current_user.id,
+                UserScript.created_at >= first_day,
+            )
+            .scalar()
+            or 0
+        )
+    else:
+        scripts_used = current_user.total_scripts_uploaded or 0
+
     return UsageLimitsResponse(
         ai_searches_used=ai_searches_used,
         ai_searches_limit=ai_searches_limit,
@@ -448,6 +470,8 @@ async def get_usage_limits(current_user: User = Depends(get_current_user), db: S
         scene_partner_limit=scene_partner_limit,
         craft_coach_used=craft_coach_used,
         craft_coach_limit=craft_coach_limit,
+        scripts_used=scripts_used,
+        scripts_limit=scripts_limit,
     )
 
 
