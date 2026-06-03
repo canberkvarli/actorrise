@@ -32,6 +32,7 @@ import {
 import { UpgradeModal } from "@/components/billing/UpgradeModal";
 import { API_URL } from "@/lib/api";
 import { SCRIPTS_QUERY_KEY, useScripts } from "@/hooks/useScripts";
+import { useUsageLimits } from "@/hooks/useSubscription";
 
 // Known backend progress prefixes and their friendly group labels.
 const STEP_GROUPS: { match: string; label: string }[] = [
@@ -86,8 +87,12 @@ interface UploadContextValue {
   isUploading: boolean;
   /** Human label for the current phase ("Scanning…" / "Uploading…") or null. */
   phaseLabel: string | null;
+  /** False when the user has hit their plan's script-upload limit. */
+  canUpload: boolean;
   /** Validate + scan + extract a picked file. Safe to call from any trigger. */
   start: (file: File) => Promise<void>;
+  /** Open the upgrade modal directly (used when canUpload is false). */
+  openUpgrade: () => void;
 }
 
 const UploadContext = createContext<UploadContextValue | null>(null);
@@ -110,6 +115,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: scripts = [] } = useScripts();
+  const { usage } = useUsageLimits();
+
+  // Can the user upload another script? Unknown (still loading) defaults to true
+  // so we never block on a slow request — the backend gate is the backstop.
+  const canUpload =
+    !usage || usage.scripts_limit === -1 || usage.scripts_used < usage.scripts_limit;
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const progressScrollRef = useRef<HTMLDivElement | null>(null);
@@ -132,6 +143,8 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     () => queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY }),
     [queryClient],
   );
+
+  const openUpgrade = useCallback(() => setShowUpgradeModal(true), []);
 
   // Warn before a refresh/close cancels an in-flight upload.
   useEffect(() => {
@@ -378,7 +391,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const showBanner = scanning || uploadingFile || doneInfo !== null;
 
   return (
-    <UploadContext.Provider value={{ isUploading: isBusy, phaseLabel, start }}>
+    <UploadContext.Provider value={{ isUploading: isBusy, phaseLabel, canUpload, start, openUpgrade }}>
       {children}
 
       {/* Persistent progress banner */}

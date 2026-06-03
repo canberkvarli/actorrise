@@ -5,6 +5,8 @@ import Link from "next/link";
 import { IconArrowRight } from "@tabler/icons-react";
 import { toast } from "sonner";
 
+import api from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
@@ -40,6 +42,7 @@ export function PracticeLibrary({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserScript | null>(null);
   const deleteScript = useDeleteScript();
+  const { user } = useAuth();
 
   const defaultId = featuredScriptId ?? demoScriptId ?? ordered[0]?.id ?? null;
   const isValid = selectedId != null && ordered.some((s) => s.id === selectedId);
@@ -64,6 +67,30 @@ export function PracticeLibrary({
     }
   };
 
+  const handleReport = async (script: UserScript) => {
+    if (!user?.email) {
+      toast.error("Couldn't flag this — please use Contact in the menu.");
+      return;
+    }
+    try {
+      await api.post("/api/contact", {
+        name: user.name?.trim() || "Actor",
+        email: user.email,
+        category: "bug",
+        message: `Script extraction issue — "${script.title}" (#${script.id}). The scenes may not have extracted correctly; please take a look.`,
+      });
+      toast.success(`Thanks for flagging "${script.title}". I'll take a look.`);
+    } catch (err: unknown) {
+      const message =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
+          : "Couldn't flag this — try Contact in the menu.";
+      toast.error(
+        typeof message === "string" ? message : "Couldn't flag this — try Contact in the menu.",
+      );
+    }
+  };
+
   return (
     <>
       <div className="grid gap-6 lg:grid-cols-[240px_1fr] lg:gap-10">
@@ -73,6 +100,7 @@ export function PracticeLibrary({
             selectedId={effectiveId}
             onSelect={setSelectedId}
             onRequestDelete={setDeleteTarget}
+            onReport={handleReport}
           />
         </aside>
 

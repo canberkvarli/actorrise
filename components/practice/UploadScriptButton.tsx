@@ -30,11 +30,17 @@ export function UploadScriptButton({
   children,
   className,
 }: UploadScriptButtonProps) {
-  const { isUploading, phaseLabel, start } = useUpload();
+  const { isUploading, phaseLabel, canUpload, start, openUpgrade } = useUpload();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const triggerPicker = () => {
     if (isUploading) return;
+    // Over the plan's upload limit? Show the upgrade modal up front instead of
+    // opening a file picker only to reject the upload after the fact.
+    if (!canUpload) {
+      openUpgrade();
+      return;
+    }
     fileInputRef.current?.click();
   };
 

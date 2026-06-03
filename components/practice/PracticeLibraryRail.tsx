@@ -1,6 +1,6 @@
 "use client";
 
-import { IconDots, IconLoader2 } from "@tabler/icons-react";
+import { IconDots, IconFlag, IconLoader2 } from "@tabler/icons-react";
 import { Trash2 } from "lucide-react";
 
 import {
@@ -18,6 +18,8 @@ interface PracticeLibraryRailProps {
   onSelect: (id: number) => void;
   /** Opens the delete confirm for a user script. */
   onRequestDelete: (script: UserScript) => void;
+  /** Flags a script whose scenes look wrong or missing. */
+  onReport: (script: UserScript) => void;
 }
 
 /**
@@ -30,6 +32,7 @@ export function PracticeLibraryRail({
   selectedId,
   onSelect,
   onRequestDelete,
+  onReport,
 }: PracticeLibraryRailProps) {
   return (
     <nav
@@ -43,6 +46,7 @@ export function PracticeLibraryRail({
           selected={script.id === selectedId}
           onSelect={() => onSelect(script.id)}
           onRequestDelete={() => onRequestDelete(script)}
+          onRequestReport={() => onReport(script)}
         />
       ))}
     </nav>
@@ -54,11 +58,13 @@ function RailItem({
   selected,
   onSelect,
   onRequestDelete,
+  onRequestReport,
 }: {
   script: UserScript;
   selected: boolean;
   onSelect: () => void;
   onRequestDelete: () => void;
+  onRequestReport: () => void;
 }) {
   const isProcessing =
     script.processing_status === "processing" || script.processing_status === "pending";
@@ -123,7 +129,15 @@ function RailItem({
               <IconDots className="h-3.5 w-3.5" />
             </button>
           </PopoverTrigger>
-          <PopoverContent align="end" className="w-44 p-1">
+          <PopoverContent align="end" className="w-52 p-1">
+            <button
+              type="button"
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-foreground hover:bg-muted transition-colors rounded-sm"
+              onClick={onRequestReport}
+            >
+              <IconFlag className="h-3.5 w-3.5" />
+              Flag extraction issue
+            </button>
             <button
               type="button"
               className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left text-destructive hover:bg-destructive/10 transition-colors rounded-sm"
