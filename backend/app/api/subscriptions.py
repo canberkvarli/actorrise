@@ -265,14 +265,14 @@ async def create_checkout_session(
     trial_period_days: int | None = None
     if request.promo_code:
         promo = request.promo_code.strip().upper()
-        if promo in ("FOUNDER", "FOUNDER6", "FOUNDER12"):
+        if promo in ("FOUNDER", "FOUNDER3", "FOUNDER6", "FOUNDER12"):
             if tier.name != "plus":
                 raise HTTPException(
                     status_code=400,
                     detail="The founding actor offer is only valid for the Plus plan.",
                 )
-            # 6 or 12 months free, then auto-converts to Plus monthly ($12/mo).
-            trial_period_days = 180 if promo == "FOUNDER6" else 365
+            # 3, 6, or 12 months free, then auto-converts to Plus monthly ($12/mo).
+            trial_period_days = {"FOUNDER3": 90, "FOUNDER6": 180}.get(promo, 365)
             # Force monthly rollover regardless of the billing toggle they picked.
             price_id = tier.stripe_monthly_price_id
             if not price_id:
