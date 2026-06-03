@@ -45,3 +45,27 @@ export function getGenreBorderClassName(genre: string): string {
   const key = genre.toLowerCase().trim();
   return GENRE_BORDER_MAP[key] ?? "border-l-primary/40";
 }
+
+// Solid swatch color for small genre dots. Explicit strings keep Tailwind's
+// JIT from purging them (no dynamic class construction).
+const GENRE_DOT_MAP: Record<string, string> = {
+  drama: "bg-purple-400",
+  comedy: "bg-emerald-400",
+  tragedy: "bg-red-400",
+  romance: "bg-rose-400",
+  thriller: "bg-amber-400",
+  musical: "bg-pink-400",
+  classical: "bg-amber-500",
+  shakespeare: "bg-amber-500",
+  historical: "bg-amber-500",
+  contemporary: "bg-teal-400",
+  fantasy: "bg-indigo-400",
+  absurdist: "bg-violet-400",
+  satire: "bg-lime-400",
+  farce: "bg-emerald-400",
+};
+
+export function getGenreDotClassName(genre?: string | null): string {
+  if (!genre) return "bg-muted-foreground/40";
+  return GENRE_DOT_MAP[genre.toLowerCase().trim()] ?? "bg-primary/50";
+}
