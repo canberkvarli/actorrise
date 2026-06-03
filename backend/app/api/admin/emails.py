@@ -87,6 +87,8 @@ TEMPLATES = [
         "variables": [
             {"name": "user_name", "label": "Recipient name", "type": "text", "default": "there", "required": True},
             {"name": "body_markdown", "label": "Message body (Markdown supported: **bold**, *italic*, [links](url))", "type": "text", "default": "", "required": True},
+            {"name": "cta_label", "label": "Button label (optional, e.g. 'run the scene')", "type": "text", "default": "", "required": False},
+            {"name": "cta_url", "label": "Button link (optional, e.g. https://actorrise.com/practice)", "type": "text", "default": "", "required": False},
             {"name": "sender_name", "label": "Sender name", "type": "text", "default": "Canberk", "required": True},
             {"name": "sender_title", "label": "Sender title", "type": "text", "default": "Founder, ActorRise", "required": True},
         ],
