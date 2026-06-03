@@ -229,9 +229,9 @@ export default function AdminOverviewPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="space-y-6 p-3 sm:p-4 md:p-6">
+        <Skeleton className="h-10 w-full sm:w-64" />
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Skeleton key={i} className="h-32 rounded-lg" />
           ))}
@@ -246,7 +246,7 @@ export default function AdminOverviewPage() {
         ? "You don't have permission to view admin stats."
         : "Failed to load stats.";
     return (
-      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-6 text-destructive">
+      <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 sm:p-4 md:p-6 text-destructive">
         <p>{message}</p>
       </div>
     );
@@ -297,29 +297,30 @@ export default function AdminOverviewPage() {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-3 sm:p-4 md:p-6">
       {/* Date range picker + Export */}
       <Card>
-        <CardHeader className="pb-2 flex flex-row items-center justify-between gap-4">
-          <CardTitle className="text-base flex items-center gap-2">
+        <CardHeader className="pb-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 md:p-6">
+          <CardTitle className="text-base sm:text-lg md:text-xl flex items-center gap-2">
             <IconCalendar className="h-4 w-4" />
             Date range
           </CardTitle>
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="gap-2 min-h-[44px] sm:min-h-0 w-full sm:w-auto"
             onClick={() => exportStatsToCsv(stats)}
           >
             <IconDownload className="h-4 w-4" />
             Export CSV
           </Button>
         </CardHeader>
-        <CardContent className="flex flex-wrap items-end gap-4">
-          <div className="flex gap-2">
+        <CardContent className="flex flex-wrap items-end gap-3 p-3 sm:p-4 md:p-6">
+          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
             <Button
               variant={!useCustom && rangePreset === "7" ? "secondary" : "outline"}
               size="sm"
+              className="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none"
               onClick={() => {
                 setUseCustom(false);
                 setRangePreset("7");
@@ -330,6 +331,7 @@ export default function AdminOverviewPage() {
             <Button
               variant={!useCustom && rangePreset === "30" ? "secondary" : "outline"}
               size="sm"
+              className="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none"
               onClick={() => {
                 setUseCustom(false);
                 setRangePreset("30");
@@ -340,46 +342,47 @@ export default function AdminOverviewPage() {
             <Button
               variant={useCustom ? "secondary" : "outline"}
               size="sm"
+              className="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none"
               onClick={() => setUseCustom(true)}
             >
               Custom
             </Button>
           </div>
           {useCustom && (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               <input
                 type="date"
                 value={customFrom}
                 onChange={(e) => setCustomFrom(e.target.value)}
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm w-full sm:w-auto"
               />
               <span className="text-muted-foreground">to</span>
               <input
                 type="date"
                 value={customTo}
                 onChange={(e) => setCustomTo(e.target.value)}
-                className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="rounded-md border border-input bg-background px-3 py-2 text-sm w-full sm:w-auto"
               />
             </div>
           )}
           <p className="text-sm text-muted-foreground w-full">
-            Showing: {stats.from} → {stats.to}
+            Showing: {stats.from} to {stats.to}
           </p>
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         {cards.map((card) => {
           const Icon = card.icon;
           return (
             <Card key={card.title}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4 md:p-6">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
                   {card.title}
                 </CardTitle>
                 <Icon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
                 <p className="text-2xl font-bold">{card.value}</p>
               </CardContent>
             </Card>
@@ -389,8 +392,8 @@ export default function AdminOverviewPage() {
 
       {/* Founding Actors Goal */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-2 p-3 sm:p-4 md:p-6">
+          <CardTitle className="text-base sm:text-lg md:text-xl flex items-center gap-2">
             <IconRocket className="h-4 w-4" />
             First 50 Founding Actors
           </CardTitle>
@@ -398,7 +401,7 @@ export default function AdminOverviewPage() {
             {stats.subscribers.plus_subscribers} / {stats.subscribers.founding_goal}
           </span>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 p-3 sm:p-4 md:p-6">
           <div className="h-3 w-full rounded-full bg-muted overflow-hidden">
             <div
               className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all"
@@ -420,11 +423,11 @@ export default function AdminOverviewPage() {
 
       {/* Charts */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Signups over time</CardTitle>
+        <CardHeader className="p-3 sm:p-4 md:p-6">
+          <CardTitle className="text-base sm:text-lg md:text-xl">Signups over time</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="h-64">
+        <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
+          <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={stats.signups.by_day}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
@@ -453,13 +456,13 @@ export default function AdminOverviewPage() {
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            Usage: all users ({stats.from} → {stats.to})
+        <CardHeader className="p-3 sm:p-4 md:p-6">
+          <CardTitle className="text-base sm:text-lg md:text-xl">
+            Usage: all users ({stats.from} to {stats.to})
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-6">
+        <CardContent className="space-y-4 p-3 sm:p-4 md:p-6 pt-0">
+          <div className="flex flex-wrap gap-4 sm:gap-6">
             <div>
               <p className="text-sm text-muted-foreground">Total searches (period)</p>
               <p className="text-xl font-semibold">
@@ -492,15 +495,15 @@ export default function AdminOverviewPage() {
 
       {/* System Health Diagnostic */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4 pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 p-3 sm:p-4 md:p-6">
+          <CardTitle className="text-base sm:text-lg md:text-xl flex items-center gap-2">
             <IconHeartRateMonitor className="h-4 w-4" />
             System Health
           </CardTitle>
           <Button
             size="sm"
             variant="outline"
-            className="gap-2"
+            className="gap-2 min-h-[44px] sm:min-h-0 w-full sm:w-auto"
             onClick={() => {
               if (!healthEnabled) {
                 setHealthEnabled(true);
@@ -511,10 +514,10 @@ export default function AdminOverviewPage() {
             disabled={healthLoading}
           >
             <IconRefresh className={`h-4 w-4 ${healthLoading ? "animate-spin" : ""}`} />
-            {healthLoading ? "Running…" : health ? "Refresh" : "Run Diagnostic"}
+            {healthLoading ? "Running..." : health ? "Refresh" : "Run Diagnostic"}
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
           {!health && !healthLoading && (
             <p className="text-sm text-muted-foreground">
               Click &quot;Run Diagnostic&quot; to check DB usage, AI costs, and content counts.
@@ -532,7 +535,7 @@ export default function AdminOverviewPage() {
 
               {/* DB usage bar */}
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div className="flex items-center gap-2 text-sm font-medium">
                     <IconDatabase className="h-4 w-4" />
                     Database (Supabase free tier)
@@ -584,8 +587,8 @@ export default function AdminOverviewPage() {
                   </p>
                 )}
                 {/* Top tables */}
-                <div className="mt-3 rounded-md border overflow-hidden">
-                  <table className="w-full text-xs">
+                <div className="mt-3 rounded-md border overflow-x-auto">
+                  <table className="w-full text-xs min-w-[320px]">
                     <thead>
                       <tr className="bg-muted/50 text-muted-foreground">
                         <th className="text-left px-3 py-2 font-medium">Table</th>
@@ -614,7 +617,7 @@ export default function AdminOverviewPage() {
                   <IconBrain className="h-4 w-4" />
                   Searches &amp; AI cost (OpenAI embeddings)
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mt-2">
                   <div>
                     <p className="text-xs text-muted-foreground">Total this month</p>
                     <p className="text-lg font-semibold">{(health.ai_cost.monthly_total_searches ?? health.ai_cost.monthly_searches).toLocaleString()}</p>
@@ -641,14 +644,14 @@ export default function AdminOverviewPage() {
                   </div>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Cost is based on AI searches only (OpenAI text-embedding-3-small). Total searches include filter-only and non-embedding searches, so Total ≥ AI.
+                  Cost is based on AI searches only (OpenAI text-embedding-3-small). Total searches include filter-only and non-embedding searches, so Total is greater than or equal to AI.
                 </p>
               </div>
 
               {/* Content counts */}
               <div className="space-y-1">
                 <p className="text-sm font-medium">Content library</p>
-                <div className="flex flex-wrap gap-6 mt-1">
+                <div className="flex flex-wrap gap-4 sm:gap-6 mt-1">
                   <div>
                     <p className="text-xs text-muted-foreground">Monologues</p>
                     <p className="text-lg font-semibold">{health.content.monologue_rows.toLocaleString()}</p>
@@ -667,29 +670,29 @@ export default function AdminOverviewPage() {
 
       {/* Changelog modal preview (dev) */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4 pb-2">
-          <CardTitle className="text-base flex items-center gap-2">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-2 p-3 sm:p-4 md:p-6">
+          <CardTitle className="text-base sm:text-lg md:text-xl flex items-center gap-2">
             <IconRocket className="h-4 w-4" />
             Changelog modal
           </CardTitle>
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
-            onClick={() => {
-              clearLastSeen();
+            className="gap-2 min-h-[44px] sm:min-h-0 w-full sm:w-auto"
+            onClick={async () => {
+              await clearLastSeen();
               window.location.href = "/practice";
             }}
           >
             Show modal (test)
           </Button>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
           <p className="text-sm text-muted-foreground mb-4">
             Preview of the &quot;What&apos;s new&quot; modal users see when they haven&apos;t seen the latest feature. Button above clears last seen and opens dashboard so the modal appears.
           </p>
           {changelogModalEntry ? (
-            <div className="max-w-[400px] rounded-2xl border border-border bg-card p-6 shadow-sm space-y-4">
+            <div className="w-full max-w-[400px] rounded-2xl border border-border bg-card p-4 sm:p-6 shadow-sm space-y-4">
               <div>
                 <h3 className="text-lg font-semibold leading-tight flex items-center gap-2">
                   {changelogModalEntry.emoji && <span aria-hidden>{changelogModalEntry.emoji}</span>}

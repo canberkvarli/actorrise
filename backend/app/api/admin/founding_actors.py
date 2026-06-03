@@ -13,6 +13,7 @@ from app.api.founding_actors import generate_slug
 from app.core.database import get_db
 from app.models.founding_actor import FoundingActor
 from app.models.user import User
+from app.services.storage import upload_founding_actor_headshot
 
 router = APIRouter(prefix="/api/admin/founding-actors", tags=["admin", "founding-actors"])
 
@@ -59,6 +60,16 @@ class FoundingActorPatch(BaseModel):
 
 class LinkUserRequest(BaseModel):
     user_id: int
+
+
+class HeadshotUploadRequest(BaseModel):
+    image_base64: str
+    is_primary: bool = False
+    caption: Optional[str] = None
+
+
+class HeadshotDeleteResponse(BaseModel):
+    headshots: list
 
 
 class AdminFoundingActorResponse(BaseModel):
@@ -205,6 +216,82 @@ def link_user_to_founding_actor(
         )
 
     actor.user_id = body.user_id
+    db.commit()
+    db.refresh(actor)
+    return actor
+
+
+MAX_HEADSHOTS = 3
+
+
+@router.post("/{actor_id}/headshots", response_model=AdminFoundingActorResponse)
+def upload_headshot(
+    actor_id: int,
+    body: HeadshotUploadRequest,
+    _admin: User = Depends(require_moderator),
+    db: Session = Depends(get_db),
+):
+    """Upload a headshot image for a founding actor."""
+    actor = db.query(FoundingActor).filter(FoundingActor.id == actor_id).first()
+    if not actor:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    if not actor.user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Founding actor must be linked to a user before uploading headshots",
+        )
+
+    headshots = list(actor.headshots or [])
+    if len(headshots) >= MAX_HEADSHOTS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Maximum {MAX_HEADSHOTS} headshots allowed. Delete one first.",
+        )
+
+    index = len(headshots)
+    try:
+        public_url = upload_founding_actor_headshot(body.image_base64, actor.user_id, index)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+
+    if body.is_primary:
+        for h in headshots:
+            h["is_primary"] = False
+
+    headshots.append({
+        "url": public_url,
+        "is_primary": body.is_primary or len(headshots) == 0,
+        "caption": body.caption,
+    })
+
+    actor.headshots = headshots
+    db.commit()
+    db.refresh(actor)
+    return actor
+
+
+@router.delete("/{actor_id}/headshots/{index}", response_model=AdminFoundingActorResponse)
+def delete_headshot(
+    actor_id: int,
+    index: int,
+    _admin: User = Depends(require_moderator),
+    db: Session = Depends(get_db),
+):
+    """Delete a founding actor headshot by its array index."""
+    actor = db.query(FoundingActor).filter(FoundingActor.id == actor_id).first()
+    if not actor:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not found")
+
+    headshots = list(actor.headshots or [])
+    if index < 0 or index >= len(headshots):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Headshot index out of range")
+
+    removed = headshots.pop(index)
+    if removed.get("is_primary") and headshots:
+        headshots[0]["is_primary"] = True
+
+    actor.headshots = headshots
     db.commit()
     db.refresh(actor)
     return actor

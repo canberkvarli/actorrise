@@ -127,7 +127,10 @@ export default function PlatformLayout({
     }
   }, [loading, user]);
 
-  // Show changelog modal when user has not seen the latest feature (after welcome, 1s delay)
+  // Show changelog modal when user has not seen the latest feature (after welcome, 1s delay).
+  // Source of truth is user.last_seen_feature_id on the backend so it's once per actor,
+  // not once per browser. localStorage is a fallback for dismisses written before the
+  // server-side column existed.
   useEffect(() => {
     if (loading || !user || showWelcome) return;
 
@@ -138,10 +141,12 @@ export default function PlatformLayout({
         .then((data: { updates?: ChangelogEntry[] } | null) => {
           if (cancelled || !data?.updates?.length) return;
           const latest = getLatestModalEntry(data.updates);
-          if (latest && latest.id !== getLastSeenId()) {
-            setChangelogModalEntry(latest);
-            setShowChangelogModal(true);
-          }
+          if (!latest) return;
+          const seenServer = user.last_seen_feature_id ?? null;
+          const seenLocal = getLastSeenId();
+          if (latest.id === seenServer || latest.id === seenLocal) return;
+          setChangelogModalEntry(latest);
+          setShowChangelogModal(true);
         })
         .catch(() => {});
     }, 1000);
@@ -654,13 +659,13 @@ export default function PlatformLayout({
           open={showChangelogModal}
           onOpenChange={(open) => {
             if (!open) {
-              markAsSeen(changelogModalEntry.id);
+              void markAsSeen(changelogModalEntry.id).then(() => refreshUser());
             }
             setShowChangelogModal(open);
           }}
           entry={changelogModalEntry}
           onDismiss={() => {
-            markAsSeen(changelogModalEntry.id);
+            void markAsSeen(changelogModalEntry.id).then(() => refreshUser());
             setShowChangelogModal(false);
           }}
         />

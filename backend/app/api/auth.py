@@ -27,6 +27,7 @@ class UpdateOnboardingRequest(BaseModel):
     has_seen_welcome: bool | None = None
     has_seen_search_tour: bool | None = None
     has_seen_profile_tour: bool | None = None
+    last_seen_feature_id: str | None = None
 
 
 def get_current_user(
@@ -176,6 +177,7 @@ def get_me(
         "has_seen_welcome": current_user.has_seen_welcome,
         "has_seen_search_tour": current_user.has_seen_search_tour,
         "has_seen_profile_tour": current_user.has_seen_profile_tour,
+        "last_seen_feature_id": current_user.last_seen_feature_id,
         "is_moderator": current_user.is_moderator,
         "can_approve_submissions": current_user.can_approve_submissions,
         "is_founding_actor": is_founding_actor,
@@ -220,12 +222,16 @@ def update_onboarding(
         current_user.has_seen_search_tour = body.has_seen_search_tour
     if body.has_seen_profile_tour is not None:
         current_user.has_seen_profile_tour = body.has_seen_profile_tour
+    if body.last_seen_feature_id is not None:
+        # Empty string clears the value (used by admin "preview" reset).
+        current_user.last_seen_feature_id = body.last_seen_feature_id or None
     db.commit()
     db.refresh(current_user)
     return {
         "has_seen_welcome": current_user.has_seen_welcome,
         "has_seen_search_tour": current_user.has_seen_search_tour,
         "has_seen_profile_tour": current_user.has_seen_profile_tour,
+        "last_seen_feature_id": current_user.last_seen_feature_id,
     }
 
 

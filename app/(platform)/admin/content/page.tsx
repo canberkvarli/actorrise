@@ -87,17 +87,17 @@ function FilmTvSection() {
             Look up a film/TV reference by ID and set or clear the IMSDb script URL override.
           </p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2 flex-wrap">
+        <CardContent className="space-y-4 p-3 sm:p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row gap-2 sm:flex-wrap">
             <Input
               placeholder="Film/TV reference ID (e.g. 42)"
               type="number"
               value={idInput}
               onChange={(e) => setIdInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && runLookup()}
-              className="max-w-xs"
+              className="w-full sm:w-auto sm:max-w-xs"
             />
-            <Button onClick={runLookup} disabled={loading}>
+            <Button onClick={runLookup} disabled={loading} className="min-h-[44px] sm:min-h-0 w-full sm:w-auto">
               {loading ? (
                 <IconLoader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -113,12 +113,12 @@ function FilmTvSection() {
       {item && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">{item.title}</CardTitle>
+            <CardTitle className="text-base sm:text-lg">{item.title}</CardTitle>
             <p className="text-sm text-muted-foreground">
               {item.year ?? "-"} · {item.type ?? "-"} · IMDb {item.imdb_id}
             </p>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 p-3 sm:p-4 md:p-6">
             <div className="grid gap-2">
               <Label htmlFor="admin-film-tv-script-url">Script URL (IMSDb override)</Label>
               <Input
@@ -126,12 +126,13 @@ function FilmTvSection() {
                 value={scriptUrlValue}
                 onChange={(e) => setScriptUrlValue(e.target.value)}
                 placeholder="https://imsdb.com/scripts/Godfather.html"
+                className="w-full"
               />
               <p className="text-xs text-muted-foreground">
                 Leave empty to use the auto-generated URL from the title. Set a full URL to override.
               </p>
             </div>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving} className="min-h-[44px] sm:min-h-0 w-full sm:w-auto">
               {saving ? <IconLoader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Save
             </Button>
@@ -230,16 +231,16 @@ function MonologuesSection() {
             Search by monologue ID, title, character name, or play title.
           </p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2 flex-wrap">
+        <CardContent className="space-y-4 p-3 sm:p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row gap-2 sm:flex-wrap">
             <Input
               placeholder="e.g. 12345 or Hamlet"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && runSearch()}
-              className="max-w-sm"
+              className="w-full sm:w-auto sm:max-w-sm"
             />
-            <Button onClick={runSearch} disabled={loading}>
+            <Button onClick={runSearch} disabled={loading} className="min-h-[44px] sm:min-h-0 w-full sm:w-auto">
               {loading ? (
                 <IconLoader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -257,49 +258,52 @@ function MonologuesSection() {
       {results.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>{results.length} result(s)</CardTitle>
+            <CardTitle className="text-base sm:text-lg">{results.length} result(s)</CardTitle>
           </CardHeader>
-          <CardContent>
-            <ul className="space-y-3">
-              {results.map((m) => (
-                <li
-                  key={m.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3"
-                >
-                  <div className="min-w-0">
-                    <span className="font-medium">{m.title}</span>
-                    <span className="text-muted-foreground mx-2">·</span>
-                    <span>{m.character_name}</span>
-                    <span className="text-muted-foreground mx-2">·</span>
-                    <span className="text-muted-foreground">
-                      {m.play_title} by {m.author}
-                    </span>
-                    <span className="text-muted-foreground ml-2 text-sm">
-                      (ID: {m.id})
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setEditModal(m)}
-                    >
-                      <IconEdit className="h-4 w-4 mr-1" />
-                      Edit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => setDeleteTarget(m)}
-                    >
-                      <IconTrash className="h-4 w-4 mr-1" />
-                      Delete
-                    </Button>
-                  </div>
-                </li>
-              ))}
-            </ul>
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            <div className="overflow-x-auto">
+              <ul className="space-y-3">
+                {results.map((m) => (
+                  <li
+                    key={m.id}
+                    className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-2 rounded-lg border p-3"
+                  >
+                    <div className="min-w-0 text-sm">
+                      <span className="font-medium">{m.title}</span>
+                      <span className="text-muted-foreground mx-2">·</span>
+                      <span>{m.character_name}</span>
+                      <span className="text-muted-foreground mx-2">·</span>
+                      <span className="text-muted-foreground">
+                        {m.play_title} by {m.author}
+                      </span>
+                      <span className="text-muted-foreground ml-2 text-xs">
+                        (ID: {m.id})
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setEditModal(m)}
+                        className="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none"
+                      >
+                        <IconEdit className="h-4 w-4 mr-1" />
+                        Edit
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteTarget(m)}
+                      >
+                        <IconTrash className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -338,12 +342,13 @@ export default function AdminContentPage() {
   const [tab, setTab] = useState<Tab>("monologues");
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2 border-b border-border pb-3">
+    <div className="space-y-4 p-3 sm:p-4 md:p-6">
+      <div className="flex gap-2 border-b border-border pb-3 overflow-x-auto">
         <Button
           variant={tab === "monologues" ? "secondary" : "ghost"}
           size="sm"
           onClick={() => setTab("monologues")}
+          className="min-h-[44px] sm:min-h-0"
         >
           Monologues
         </Button>
@@ -351,6 +356,7 @@ export default function AdminContentPage() {
           variant={tab === "film-tv" ? "secondary" : "ghost"}
           size="sm"
           onClick={() => setTab("film-tv")}
+          className="min-h-[44px] sm:min-h-0"
         >
           Film/TV
         </Button>

@@ -66,34 +66,36 @@ export default function AdminLayout({
   return (
     <div className="min-h-screen bg-background">
       <div className="border-b border-border/40 bg-card/30">
-        <div className="container mx-auto px-4 py-4">
-          <h1 className="text-xl font-semibold text-foreground mb-4">Admin</h1>
-          <div className="flex gap-2">
-            {tabs.map((tab) => {
-              const Icon = tab.icon;
-              const isActive =
-                tab.href === "/admin"
-                  ? pathname === "/admin"
-                  : pathname.startsWith(tab.href);
-              return (
-                <Button
-                  key={tab.href}
-                  variant={isActive ? "secondary" : "ghost"}
-                  size="sm"
-                  className="gap-2"
-                  asChild
-                >
-                  <Link href={tab.href}>
-                    <Icon className="h-4 w-4" />
-                    {tab.label}
-                  </Link>
-                </Button>
-              );
-            })}
+        <div className="container mx-auto px-4 py-3 sm:py-4">
+          <h1 className="text-lg sm:text-xl font-semibold text-foreground mb-3 sm:mb-4">Admin</h1>
+          <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-2 w-max sm:w-auto">
+              {tabs.map((tab) => {
+                const Icon = tab.icon;
+                const isActive =
+                  tab.href === "/admin"
+                    ? pathname === "/admin"
+                    : pathname.startsWith(tab.href);
+                return (
+                  <Button
+                    key={tab.href}
+                    variant={isActive ? "secondary" : "ghost"}
+                    size="sm"
+                    className="gap-2 shrink-0 whitespace-nowrap"
+                    asChild
+                  >
+                    <Link href={tab.href}>
+                      <Icon className="h-4 w-4" />
+                      {tab.label}
+                    </Link>
+                  </Button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
-      <main className="container mx-auto px-4 py-6">{children}</main>
+      <main className="container mx-auto px-4 py-4 sm:py-6">{children}</main>
     </div>
   );
 }
