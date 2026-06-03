@@ -192,15 +192,15 @@ export default function AdminModerationPage() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-3 sm:p-4 md:p-6">
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
           <CardTitle className="text-base">Moderation queue</CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 -mx-1 px-1 overflow-x-auto whitespace-nowrap">
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm flex-shrink-0"
             >
               {STATUS_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -208,19 +208,104 @@ export default function AdminModerationPage() {
                 </option>
               ))}
             </select>
-            <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2 flex-shrink-0">
               <IconRefresh className="h-4 w-4" />
               Refresh
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 sm:p-4 md:p-6">
           {queue.length === 0 ? (
             <p className="text-muted-foreground py-8 text-center">
               No submissions in this status.
             </p>
           ) : (
-            <div className="overflow-x-auto">
+            <>
+              <div className="md:hidden space-y-3">
+                {queue.map((sub) => (
+                  <div
+                    key={sub.id}
+                    className="border border-border rounded-lg bg-background p-3 space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setDetailEditModal(sub)}
+                        className="flex-1 min-w-0 text-left"
+                      >
+                        <div className="font-medium truncate">{sub.submitted_title}</div>
+                        <div className="text-muted-foreground text-xs truncate">
+                          {sub.submitted_character}
+                        </div>
+                        <div className="text-muted-foreground text-xs truncate mt-0.5">
+                          {sub.submitted_play_title} · {sub.submitted_author}
+                        </div>
+                      </button>
+                      <Badge variant="secondary" className="rounded-none flex-shrink-0">
+                        {sub.status}
+                      </Badge>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      <span className="truncate max-w-full">
+                        {sub.submitter_name || sub.submitter_email}
+                      </span>
+                      <span>{new Date(sub.submitted_at).toLocaleDateString()}</span>
+                      {sub.ai_quality_score != null && (
+                        <span>
+                          AI {(sub.ai_quality_score * 100).toFixed(0)}%
+                          {sub.ai_copyright_risk && `/${sub.ai_copyright_risk}`}
+                        </span>
+                      )}
+                    </div>
+                    {canApprove &&
+                      (sub.status === "manual_review" ||
+                        sub.status === "pending" ||
+                        sub.status === "ai_review") && (
+                        <div className="flex flex-col sm:flex-row gap-2">
+                          <Button
+                            size="sm"
+                            variant="default"
+                            className="min-h-[44px] gap-1 flex-1"
+                            onClick={() => setApproveModal(sub)}
+                          >
+                            <IconCircleCheck className="h-4 w-4" />
+                            Approve
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="min-h-[44px] gap-1 flex-1"
+                            onClick={() => setRejectModal(sub)}
+                          >
+                            <IconCircleX className="h-4 w-4" />
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="min-h-[44px] gap-1 flex-1"
+                        onClick={() => setDetailEditModal(sub)}
+                      >
+                        <IconEdit className="h-4 w-4" />
+                        View / Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="min-h-[44px] gap-1 flex-1"
+                        onClick={() => setLogsModal(sub)}
+                      >
+                        <IconHistory className="h-4 w-4" />
+                        Logs
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border">
@@ -238,7 +323,7 @@ export default function AdminModerationPage() {
                   {queue.map((sub) => (
                     <React.Fragment key={sub.id}>
                       <tr
-                        className="border-b border-border/60 hover:bg-muted/30"
+                        className="hidden md:table-row border-b border-border/60 hover:bg-muted/30"
                       >
                         <td className="py-2">
                           <button
@@ -286,7 +371,7 @@ export default function AdminModerationPage() {
                           {sub.submitted_play_title} · {sub.submitted_author}
                         </td>
                         <td className="py-2">
-                          <Badge variant="secondary">{sub.status}</Badge>
+                          <Badge variant="secondary" className="rounded-none">{sub.status}</Badge>
                         </td>
                         <td className="py-2">
                           {sub.ai_quality_score != null && (
@@ -362,14 +447,14 @@ export default function AdminModerationPage() {
                         </td>
                       </tr>
                       {expandedId === sub.id && (
-                        <tr className="bg-muted/20">
+                        <tr className="hidden md:table-row bg-muted/20">
                           <td colSpan={8} className="py-3 px-4">
-                            <div className="space-y-2 text-sm max-h-48 overflow-y-auto">
+                            <div className="space-y-2 text-sm max-h-48 overflow-y-auto break-words">
                               <div>
                                 <span className="font-medium text-muted-foreground">
                                   Text:
                                 </span>
-                                <p className="mt-1 whitespace-pre-wrap border rounded p-2 bg-background">
+                                <p className="mt-1 whitespace-pre-wrap break-words border rounded p-2 bg-background">
                                   {sub.submitted_text}
                                 </p>
                               </div>
@@ -378,7 +463,7 @@ export default function AdminModerationPage() {
                                   <span className="font-medium text-muted-foreground">
                                     User notes:
                                   </span>
-                                  <p className="mt-1">{sub.user_notes}</p>
+                                  <p className="mt-1 break-words">{sub.user_notes}</p>
                                 </div>
                               )}
                               {sub.ai_moderation_notes && (
@@ -386,7 +471,7 @@ export default function AdminModerationPage() {
                                   <span className="font-medium text-muted-foreground">
                                     AI notes:
                                   </span>
-                                  <p className="mt-1">{sub.ai_moderation_notes}</p>
+                                  <p className="mt-1 break-words">{sub.ai_moderation_notes}</p>
                                 </div>
                               )}
                             </div>
@@ -397,7 +482,8 @@ export default function AdminModerationPage() {
                   ))}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -508,15 +594,16 @@ function DetailEditModal({
 
   return (
     <Dialog open={!!submission} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md md:max-w-2xl max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-4 sm:p-6 pb-0">
           <DialogTitle>Submission #{submission.id}: View / Edit</DialogTitle>
         </DialogHeader>
 
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-4">
         {/* Metadata */}
-        <div className="rounded-lg border border-border bg-muted/30 p-4 space-y-2 text-sm">
+        <div className="rounded-lg border border-border bg-muted/30 p-3 sm:p-4 space-y-2 text-sm">
           <h4 className="font-semibold text-foreground">Metadata</h4>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-muted-foreground">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-muted-foreground break-words">
             <span>Submitter</span>
             <span className="text-foreground">
               {submission.submitter_name || submission.submitter_email} ({submission.submitter_email})
@@ -648,13 +735,14 @@ function DetailEditModal({
             </div>
           </div>
         </div>
+        </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+        <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2 p-4 sm:p-6 pt-0 border-t border-border">
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto min-h-[44px]">
             Close
           </Button>
           {canEdit && (
-            <Button onClick={handleSave} disabled={isPending}>
+            <Button onClick={handleSave} disabled={isPending} className="w-full sm:w-auto min-h-[44px]">
               {isPending ? "Saving..." : "Save changes"}
             </Button>
           )}
@@ -679,13 +767,13 @@ function ApproveModal({
 
   return (
     <Dialog open={!!submission} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
+      <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md md:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Approve submission</DialogTitle>
         </DialogHeader>
         {submission && (
           <>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground break-words">
               {submission.submitted_title} · {submission.submitted_character}
             </p>
             <div>
@@ -699,13 +787,14 @@ function ApproveModal({
                 onChange={(e) => setNotes(e.target.value)}
               />
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={onClose}>
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+              <Button variant="outline" onClick={onClose} className="w-full sm:w-auto min-h-[44px]">
                 Cancel
               </Button>
               <Button
                 onClick={() => onApprove(notes.trim() || undefined)}
                 disabled={isPending}
+                className="w-full sm:w-auto min-h-[44px]"
               >
                 Approve
               </Button>
@@ -741,13 +830,13 @@ function RejectModal({
 
   return (
     <Dialog open={!!submission} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent>
+      <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md md:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Reject submission</DialogTitle>
         </DialogHeader>
         {submission && (
           <>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground break-words">
               {submission.submitted_title} · {submission.submitted_character}
             </p>
             <div>
@@ -776,14 +865,15 @@ function RejectModal({
                 onChange={(e) => setDetails(e.target.value)}
               />
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={onClose}>
+            <DialogFooter className="flex flex-col-reverse sm:flex-row gap-2">
+              <Button variant="outline" onClick={onClose} className="w-full sm:w-auto min-h-[44px]">
                 Cancel
               </Button>
               <Button
                 variant="destructive"
                 onClick={handleSubmit}
                 disabled={isPending || !details.trim()}
+                className="w-full sm:w-auto min-h-[44px]"
               >
                 Reject
               </Button>
@@ -822,12 +912,12 @@ function LogsModal({
 
   return (
     <Dialog open={!!submission} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md md:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Moderation logs</DialogTitle>
         </DialogHeader>
         {submission && (
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground break-words">
             Submission #{submission.id}: {submission.submitted_title}
           </p>
         )}
@@ -838,7 +928,7 @@ function LogsModal({
             {logs.map((log) => (
               <li
                 key={log.id}
-                className="text-sm border-b border-border/60 pb-2 last:border-0"
+                className="text-sm border-b border-border/60 pb-2 last:border-0 break-words"
               >
                 <span className="font-medium">{log.action}</span>
                 <span className="text-muted-foreground">
@@ -846,7 +936,7 @@ function LogsModal({
                   {log.previous_status} → {log.new_status}
                 </span>
                 {log.reason && (
-                  <p className="mt-1 text-muted-foreground">{log.reason}</p>
+                  <p className="mt-1 text-muted-foreground break-words">{log.reason}</p>
                 )}
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {new Date(log.created_at).toLocaleString()}
@@ -856,7 +946,7 @@ function LogsModal({
           </ul>
         )}
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto min-h-[44px]">
             Close
           </Button>
         </DialogFooter>

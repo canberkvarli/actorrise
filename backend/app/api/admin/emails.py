@@ -197,6 +197,8 @@ class CampaignRequest(BaseModel):
     target: str = "all"  # "all" | "free" | "paid" | "leads"
     dry_run: bool = False
     variables: dict[str, Any] = {}
+    subject: Optional[str] = None
+    scheduled_at: Optional[str] = None  # ISO datetime string, passed to email provider
     send_via: str = "smtp"  # "smtp" (Google Workspace) or "resend"
     skip_apple_relay: bool = True  # auto-skip @privaterelay.appleid.com addresses
 
@@ -807,23 +809,26 @@ def send_campaign_endpoint(
     )
 
     if body.dry_run:
+        dnc_emails = _get_dnc_emails(db)
+        filtered = [u for u in recipients if u.email.strip().lower() not in dnc_emails]
         return CampaignResponse(
             sent=0,
-            skipped=0,
+            skipped=len(recipients) - len(filtered),
             errors=[],
-            recipients=[f"{u.name}, {u.email}" if u.name else u.email for u in recipients],
+            recipients=[f"{u.name}, {u.email}" if u.name else u.email for u in filtered],
         )
 
     # Build campaign_key from template + target + date for dedup
     from datetime import date as date_type
     campaign_key = f"{campaign_type}-{body.target}-{date_type.today().isoformat()}"
 
-    # Resolve subject
+    # Resolve subject: explicit override > scene_partner_launch fallback > template default
     meta = next((t for t in TEMPLATES if t["id"] == campaign_type), None)
     subject_map = {
         "scene_partner_launch": "New: rehearse lines with a scene partner that never flakes",
     }
-    subject = subject_map.get(campaign_type, meta["subject"] if meta else "News from ActorRise")
+    default_subject = subject_map.get(campaign_type, meta["subject"] if meta else "News from ActorRise")
+    subject = (body.subject or "").strip() or default_subject
 
     # Create batch record
     batch = EmailBatch(
@@ -833,6 +838,7 @@ def send_campaign_endpoint(
         status="pending",
         total=len(recipients),
         created_by=admin.id,
+        scheduled_at=body.scheduled_at,
     )
     db.add(batch)
     db.flush()
@@ -943,6 +949,7 @@ def send_campaign_endpoint(
                         subject=subject,
                         html=html,
                         plain_text=plain_text,
+                        scheduled_at=body.scheduled_at or None,
                     )
 
                     send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None

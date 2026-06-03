@@ -36,6 +36,7 @@ from app.models.moderation import ModerationLog, MonologueSubmission
 from app.models.user import User
 from app.services.benefits import get_effective_benefits
 from app.services.storage import delete_headshot
+from app.services.user_deletion import delete_user_completely
 
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 logger = logging.getLogger(__name__)
@@ -689,125 +690,7 @@ def delete_admin_user(
     before_snapshot = _serialize_user(target)
 
     try:
-        # 1. Cancel Stripe subscription if active
-        subscription = (
-            db.query(UserSubscription)
-            .filter(UserSubscription.user_id == user_id)
-            .first()
-        )
-        if subscription and subscription.stripe_subscription_id:
-            try:
-                stripe.Subscription.delete(subscription.stripe_subscription_id)
-                logger.info(f"Canceled Stripe subscription for user {user_id}")
-            except stripe.error.StripeError as e:
-                logger.warning(f"Failed to cancel Stripe subscription for user {user_id}: {e}")
-
-        # 2. Delete headshot from storage
-        try:
-            delete_headshot(user_id)
-        except Exception as e:
-            logger.warning(f"Failed to delete headshot for user {user_id}: {e}")
-
-        # 3. Delete rehearsal data (line deliveries first, then sessions)
-        db.query(RehearsalLineDelivery).filter(
-            RehearsalLineDelivery.session_id.in_(
-                db.query(RehearsalSession.id).filter(RehearsalSession.user_id == user_id)
-            )
-        ).delete(synchronize_session=False)
-        db.query(RehearsalSession).filter(RehearsalSession.user_id == user_id).delete(
-            synchronize_session=False
-        )
-
-        # 4. Delete favorites
-        db.query(SceneFavorite).filter(SceneFavorite.user_id == user_id).delete(
-            synchronize_session=False
-        )
-        db.query(MonologueFavorite).filter(MonologueFavorite.user_id == user_id).delete(
-            synchronize_session=False
-        )
-
-        # 5. Delete user scripts (unlink scenes first)
-        user_script_ids = [
-            row[0]
-            for row in db.query(UserScript.id).filter(UserScript.user_id == user_id).all()
-        ]
-        if user_script_ids:
-            db.query(Scene).filter(Scene.user_script_id.in_(user_script_ids)).update(
-                {"user_script_id": None}, synchronize_session=False
-            )
-            db.query(UserScript).filter(UserScript.user_id == user_id).delete(
-                synchronize_session=False
-            )
-
-        # 6. Delete search history
-        db.query(SearchHistory).filter(SearchHistory.user_id == user_id).delete(
-            synchronize_session=False
-        )
-
-        # 7. Delete actor profile
-        db.query(ActorProfile).filter(ActorProfile.user_id == user_id).delete(
-            synchronize_session=False
-        )
-
-        # 8. Delete usage metrics and billing history
-        db.query(UsageMetrics).filter(UsageMetrics.user_id == user_id).delete(
-            synchronize_session=False
-        )
-        db.query(BillingHistory).filter(BillingHistory.user_id == user_id).delete(
-            synchronize_session=False
-        )
-
-        # 9. Delete benefit overrides (where user is target or creator)
-        db.query(UserBenefitOverride).filter(
-            UserBenefitOverride.user_id == user_id
-        ).delete(synchronize_session=False)
-        db.query(UserBenefitOverride).filter(
-            UserBenefitOverride.created_by_admin_id == user_id
-        ).update({"created_by_admin_id": None}, synchronize_session=False)
-
-        # 10. Handle monologue submissions and moderation logs
-        submission_ids = [
-            row[0]
-            for row in db.query(MonologueSubmission.id)
-            .filter(MonologueSubmission.user_id == user_id)
-            .all()
-        ]
-        if submission_ids:
-            db.query(ModerationLog).filter(
-                ModerationLog.submission_id.in_(submission_ids)
-            ).delete(synchronize_session=False)
-            db.query(MonologueSubmission).filter(
-                MonologueSubmission.user_id == user_id
-            ).delete(synchronize_session=False)
-        # Nullify reviewer references
-        db.query(MonologueSubmission).filter(
-            MonologueSubmission.reviewer_id == user_id
-        ).update({"reviewer_id": None}, synchronize_session=False)
-        # Nullify moderation log actor references
-        db.query(ModerationLog).filter(
-            ModerationLog.actor_id == user_id
-        ).update({"actor_id": None}, synchronize_session=False)
-
-        # 11. Delete audit logs (where user is target or actor)
-        db.query(AdminAuditLog).filter(
-            AdminAuditLog.target_user_id == user_id
-        ).delete(synchronize_session=False)
-        db.query(AdminAuditLog).filter(
-            AdminAuditLog.actor_admin_id == user_id
-        ).delete(synchronize_session=False)
-
-        # 12. Nullify result feedback
-        db.query(ResultFeedback).filter(
-            ResultFeedback.user_id == user_id
-        ).update({"user_id": None}, synchronize_session=False)
-
-        # 13. Delete subscription record
-        if subscription:
-            db.delete(subscription)
-
-        # 13. Delete user
-        db.query(User).filter(User.id == user_id).delete(synchronize_session=False)
-
+        delete_user_completely(db, user_id)
         db.commit()
         logger.info(
             f"Admin {admin.id} ({admin.email}) deleted user {user_id} ({before_snapshot.get('email')}). Reason: {note}"

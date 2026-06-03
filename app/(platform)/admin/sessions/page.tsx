@@ -167,25 +167,25 @@ function ExpandableLines({ sessionId }: { sessionId: number }) {
           {lines.map((l) => (
             <div
               key={l.id}
-              className="border border-border/60 bg-muted/20 p-2.5 text-sm flex gap-3 items-start"
+              className="border border-border/60 bg-muted/20 p-2.5 text-sm flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-start"
             >
               <span className="text-xs text-muted-foreground font-mono shrink-0 pt-0.5">
                 #{l.delivery_order}
               </span>
               <div className="flex-1 min-w-0 space-y-1">
-                <p className="text-foreground">{l.user_input}</p>
+                <p className="text-foreground break-words">{l.user_input}</p>
                 {l.ai_response && (
-                  <p className="text-muted-foreground italic">
+                  <p className="text-muted-foreground italic break-words">
                     {l.ai_response}
                   </p>
                 )}
                 {l.feedback && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground break-words">
                     {l.feedback}
                   </p>
                 )}
               </div>
-              <div className="flex items-center gap-1.5 shrink-0">
+              <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                 {l.emotion_detected && (
                   <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                     {l.emotion_detected}
@@ -269,10 +269,10 @@ export default function AdminSessionsPage() {
   const canNext = offset + PAGE_SIZE < total;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 p-3 sm:p-4 md:p-6">
       {/* Summary cards */}
       {summary && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">Total Sessions</p>
@@ -339,12 +339,12 @@ export default function AdminSessionsPage() {
 
       {/* Filters */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <CardTitle className="text-base">ScenePartner Sessions</CardTitle>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+          <CardTitle className="text-base sm:text-lg">ScenePartner Sessions</CardTitle>
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="gap-2 min-h-[44px] sm:min-h-0 w-full sm:w-auto"
             onClick={() => refetch()}
           >
             <IconRefresh
@@ -353,8 +353,8 @@ export default function AdminSessionsPage() {
             Refresh
           </Button>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid gap-2 md:grid-cols-3">
+        <CardContent className="space-y-3 p-3 sm:p-4 md:p-6">
+          <div className="grid gap-2 grid-cols-1 md:grid-cols-3">
             <div className="relative md:col-span-2">
               <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -363,7 +363,7 @@ export default function AdminSessionsPage() {
                   setOffset(0);
                   setQ(e.target.value);
                 }}
-                className="pl-9"
+                className="pl-9 w-full"
                 placeholder="Filter by user email or scene title..."
               />
             </div>
@@ -373,7 +373,7 @@ export default function AdminSessionsPage() {
                 setOffset(0);
                 setStatusFilter(e.target.value);
               }}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="all">All statuses</option>
               <option value="completed">Completed</option>
@@ -386,7 +386,7 @@ export default function AdminSessionsPage() {
 
       {/* Table */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 p-3 sm:p-4 md:p-6">
           {isLoading ? (
             <p className="py-8 text-center text-muted-foreground">
               Loading sessions...
@@ -397,7 +397,78 @@ export default function AdminSessionsPage() {
             </p>
           ) : (
             <div className="space-y-3">
-              <div className="overflow-x-auto">
+              {/* Mobile: stacked cards */}
+              <div className="md:hidden space-y-2">
+                {data?.sessions.map((s) => (
+                  <div
+                    key={s.id}
+                    className="border border-border/60 bg-card"
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedId(expandedId === s.id ? null : s.id)
+                      }
+                      className="w-full text-left p-3 min-h-[44px] flex flex-col gap-2 hover:bg-muted/30"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-sm break-words">
+                            {s.scene_title}
+                          </p>
+                          <p className="text-xs text-muted-foreground break-words">
+                            {s.play_title}
+                          </p>
+                        </div>
+                        {expandedId === s.id ? (
+                          <IconChevronUp className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                        ) : (
+                          <IconChevronDown className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                        )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        <Badge
+                          variant="outline"
+                          className={statusColor(s.status)}
+                        >
+                          {s.status.replace("_", " ")}
+                        </Badge>
+                        <span className="text-muted-foreground">
+                          as <span className="font-medium text-foreground">{s.user_character}</span>
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+                        <span className="break-all">{s.user_email || "unknown"}</span>
+                        <span>·</span>
+                        <span>
+                          {s.total_lines_delivered} line{s.total_lines_delivered === 1 ? "" : "s"}
+                          {s.lines_retried > 0 && ` (${s.lines_retried} retried)`}
+                        </span>
+                        <span>·</span>
+                        <span>{formatDuration(s.duration_seconds)}</span>
+                        {s.overall_rating != null && (
+                          <>
+                            <span>·</span>
+                            <span className="font-medium text-foreground">
+                              {s.overall_rating.toFixed(1)}/5
+                            </span>
+                          </>
+                        )}
+                        <span>·</span>
+                        <span>{timeAgo(s.started_at)}</span>
+                      </div>
+                    </button>
+                    {expandedId === s.id && (
+                      <div className="border-t border-border/60 bg-muted/10 px-3">
+                        <ExpandableLines sessionId={s.id} />
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop: table */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
@@ -498,11 +569,11 @@ export default function AdminSessionsPage() {
 
               {/* Pagination */}
               {total > 0 && (
-                <div className="flex items-center justify-between pt-2">
-                  <p className="text-xs text-muted-foreground">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pt-2">
+                  <p className="text-xs text-muted-foreground text-center sm:text-left">
                     {pageStart}-{pageEnd} of {total}
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 justify-center sm:justify-end">
                     <Button
                       variant="outline"
                       size="sm"
@@ -510,6 +581,7 @@ export default function AdminSessionsPage() {
                       onClick={() =>
                         setOffset(Math.max(0, offset - PAGE_SIZE))
                       }
+                      className="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none"
                     >
                       Previous
                     </Button>
@@ -518,6 +590,7 @@ export default function AdminSessionsPage() {
                       size="sm"
                       disabled={!canNext}
                       onClick={() => setOffset(offset + PAGE_SIZE)}
+                      className="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none"
                     >
                       Next
                     </Button>

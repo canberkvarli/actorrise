@@ -104,13 +104,13 @@ function ExpandableResults({ logId }: { logId: number }) {
           <p className="text-xs text-muted-foreground">by {m.author}</p>
           <div className="flex flex-wrap gap-1 pt-1">
             {m.gender && m.gender !== "any" && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0">{m.gender}</Badge>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-none">{m.gender}</Badge>
             )}
             {m.age_range && m.age_range !== "any" && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0">{m.age_range}</Badge>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-none">{m.age_range}</Badge>
             )}
             {m.emotion && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0">{m.emotion}</Badge>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-none">{m.emotion}</Badge>
             )}
             <span className="text-[10px] text-muted-foreground">
               {formatDuration(m.duration_seconds)} · {m.word_count}w
@@ -134,9 +134,9 @@ interface ContentRequestItem {
 }
 
 function statusBadgeClass(status: string): string {
-  if (status === "added") return "bg-green-50 text-green-700 border-green-200";
-  if (status === "planned") return "bg-blue-50 text-blue-700 border-blue-200";
-  return "";
+  if (status === "added") return "bg-green-50 text-green-700 border-green-200 rounded-none";
+  if (status === "planned") return "bg-blue-50 text-blue-700 border-blue-200 rounded-none";
+  return "rounded-none";
 }
 
 function ContentRequestsTab() {
@@ -161,49 +161,75 @@ function ContentRequestsTab() {
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">Content Requests</CardTitle>
+      <CardHeader className="p-3 sm:p-4 md:p-6">
+        <CardTitle className="text-base sm:text-lg md:text-xl">Content Requests</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
         {isLoading ? (
           <p className="py-8 text-center text-muted-foreground">Loading...</p>
         ) : requests.length === 0 ? (
           <p className="py-8 text-center text-muted-foreground">No content requests yet.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="py-2 text-left font-medium">Play</th>
-                  <th className="py-2 text-left font-medium">Author</th>
-                  <th className="py-2 text-left font-medium">Requests</th>
-                  <th className="py-2 text-left font-medium">Last Requested</th>
-                  <th className="py-2 text-left font-medium">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {requests.map((r) => (
-                  <tr key={r.id} className="border-b border-border/60 hover:bg-muted/30">
-                    <td className="py-2 font-medium">{r.play_title}</td>
-                    <td className="py-2 text-muted-foreground">{r.author || "-"}</td>
-                    <td className="py-2 font-semibold">{r.request_count}</td>
-                    <td className="py-2 text-muted-foreground">{timeAgo(r.last_requested_at)}</td>
-                    <td className="py-2">
-                      <select
-                        value={r.status}
-                        onChange={(e) => statusMutation.mutate({ id: r.id, status: e.target.value })}
-                        className={`rounded border border-input bg-background px-2 py-1 text-xs ${statusBadgeClass(r.status)}`}
-                      >
-                        <option value="requested">requested</option>
-                        <option value="planned">planned</option>
-                        <option value="added">added</option>
-                      </select>
-                    </td>
+          <>
+            <div className="md:hidden space-y-3">
+              {requests.map((r) => (
+                <div
+                  key={r.id}
+                  className="border border-border/60 bg-card p-3 space-y-2"
+                >
+                  <div className="space-y-0.5">
+                    <p className="font-medium text-sm">{r.play_title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {r.author || "Unknown author"} · {r.request_count} requests · {timeAgo(r.last_requested_at)}
+                    </p>
+                  </div>
+                  <select
+                    value={r.status}
+                    onChange={(e) => statusMutation.mutate({ id: r.id, status: e.target.value })}
+                    className={`rounded border border-input bg-background px-2 py-2 text-xs min-h-[44px] w-full ${statusBadgeClass(r.status)}`}
+                  >
+                    <option value="requested">requested</option>
+                    <option value="planned">planned</option>
+                    <option value="added">added</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="py-2 text-left font-medium">Play</th>
+                    <th className="py-2 text-left font-medium">Author</th>
+                    <th className="py-2 text-left font-medium">Requests</th>
+                    <th className="py-2 text-left font-medium">Last Requested</th>
+                    <th className="py-2 text-left font-medium">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {requests.map((r) => (
+                    <tr key={r.id} className="border-b border-border/60 hover:bg-muted/30">
+                      <td className="py-2 font-medium">{r.play_title}</td>
+                      <td className="py-2 text-muted-foreground">{r.author || "-"}</td>
+                      <td className="py-2 font-semibold">{r.request_count}</td>
+                      <td className="py-2 text-muted-foreground">{timeAgo(r.last_requested_at)}</td>
+                      <td className="py-2">
+                        <select
+                          value={r.status}
+                          onChange={(e) => statusMutation.mutate({ id: r.id, status: e.target.value })}
+                          className={`rounded border border-input bg-background px-2 py-1 text-xs ${statusBadgeClass(r.status)}`}
+                        >
+                          <option value="requested">requested</option>
+                          <option value="planned">planned</option>
+                          <option value="added">added</option>
+                        </select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </CardContent>
     </Card>
@@ -264,12 +290,22 @@ export default function AdminSearchesPage() {
   const canNext = offset + PAGE_SIZE < total;
 
   return (
-    <div className="space-y-4">
-      <div className="flex gap-2 border-b border-border pb-3">
-        <Button variant={tab === "logs" ? "secondary" : "ghost"} size="sm" onClick={() => setTab("logs")}>
+    <div className="space-y-4 p-3 sm:p-4 md:p-6">
+      <div className="flex gap-2 border-b border-border pb-3 overflow-x-auto">
+        <Button
+          variant={tab === "logs" ? "secondary" : "ghost"}
+          size="sm"
+          className="min-h-[44px] sm:min-h-0 shrink-0"
+          onClick={() => setTab("logs")}
+        >
           Search Logs
         </Button>
-        <Button variant={tab === "requests" ? "secondary" : "ghost"} size="sm" onClick={() => setTab("requests")}>
+        <Button
+          variant={tab === "requests" ? "secondary" : "ghost"}
+          size="sm"
+          className="min-h-[44px] sm:min-h-0 shrink-0"
+          onClick={() => setTab("requests")}
+        >
           Content Requests
         </Button>
       </div>
@@ -280,15 +316,15 @@ export default function AdminSearchesPage() {
       <>
       {/* Summary cards */}
       {summary && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:p-4 md:p-6 pt-6">
               <p className="text-sm text-muted-foreground">Total Searches</p>
               <p className="text-2xl font-bold">{summary.total_searches.toLocaleString()}</p>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:p-4 md:p-6 pt-6">
               <p className="text-sm text-muted-foreground">Zero Results</p>
               <p className="text-2xl font-bold text-destructive">
                 {summary.zero_result_count.toLocaleString()}
@@ -301,15 +337,15 @@ export default function AdminSearchesPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:p-4 md:p-6 pt-6">
               <p className="text-sm font-medium mb-2">Top Queries</p>
               {summary.top_queries.length === 0 ? (
                 <p className="text-xs text-muted-foreground">No data yet</p>
               ) : (
                 <div className="space-y-1">
                   {summary.top_queries.slice(0, 5).map((tq, i) => (
-                    <div key={i} className="flex justify-between text-xs">
-                      <span className="truncate mr-2">{tq.query}</span>
+                    <div key={i} className="flex justify-between text-xs gap-2">
+                      <span className="truncate">{tq.query}</span>
                       <span className="text-muted-foreground shrink-0">{tq.count}</span>
                     </div>
                   ))}
@@ -318,15 +354,15 @@ export default function AdminSearchesPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="p-3 sm:p-4 md:p-6 pt-6">
               <p className="text-sm font-medium mb-2 text-destructive">Content Gaps</p>
               {summary.top_zero_result_queries.length === 0 ? (
                 <p className="text-xs text-muted-foreground">No zero-result queries</p>
               ) : (
                 <div className="space-y-1">
                   {summary.top_zero_result_queries.slice(0, 5).map((tq, i) => (
-                    <div key={i} className="flex justify-between text-xs">
-                      <span className="truncate mr-2">{tq.query}</span>
+                    <div key={i} className="flex justify-between text-xs gap-2">
+                      <span className="truncate">{tq.query}</span>
                       <span className="text-muted-foreground shrink-0">{tq.count}</span>
                     </div>
                   ))}
@@ -339,18 +375,23 @@ export default function AdminSearchesPage() {
 
       {/* Filters */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-4">
-          <CardTitle className="text-base">Search Logs</CardTitle>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" className="gap-2" onClick={() => refetch()}>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 md:p-6">
+          <CardTitle className="text-base sm:text-lg md:text-xl">Search Logs</CardTitle>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 min-h-[44px] sm:min-h-0 w-full sm:w-auto"
+              onClick={() => refetch()}
+            >
               <IconRefresh className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
               Refresh
             </Button>
           </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="grid gap-2 md:grid-cols-4">
-            <div className="relative md:col-span-2">
+        <CardContent className="space-y-3 p-3 sm:p-4 md:p-6 pt-0">
+          <div className="flex flex-wrap gap-2">
+            <div className="relative w-full sm:w-64">
               <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={q}
@@ -358,7 +399,7 @@ export default function AdminSearchesPage() {
                   setOffset(0);
                   setQ(e.target.value);
                 }}
-                className="pl-9"
+                className="pl-9 w-full"
                 placeholder="Filter by query text..."
               />
             </div>
@@ -368,14 +409,14 @@ export default function AdminSearchesPage() {
                 setOffset(0);
                 setSourceFilter(e.target.value);
               }}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm w-full sm:w-auto"
             >
               <option value="all">All sources</option>
               <option value="search">Plays</option>
               <option value="film_tv">Film/TV</option>
               <option value="demo">Demo (landing)</option>
             </select>
-            <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <label className="flex items-center gap-2 text-sm cursor-pointer w-full sm:w-auto py-2">
               <input
                 type="checkbox"
                 checked={zeroOnly}
@@ -393,7 +434,7 @@ export default function AdminSearchesPage() {
 
       {/* Table */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="p-3 sm:p-4 md:p-6 pt-6">
           {isLoading ? (
             <p className="py-8 text-center text-muted-foreground">Loading searches...</p>
           ) : isError ? (
@@ -402,7 +443,73 @@ export default function AdminSearchesPage() {
             </p>
           ) : (
             <div className="space-y-3">
-              <div className="overflow-x-auto">
+              <div className="md:hidden space-y-3">
+                {data?.searches.map((entry) => (
+                  <Fragment key={entry.id}>
+                    <div
+                      className="border border-border/60 bg-card p-3 space-y-2 cursor-pointer"
+                      onClick={() =>
+                        setExpandedId(expandedId === entry.id ? null : entry.id)
+                      }
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium text-sm break-words flex-1">{entry.query}</p>
+                        {expandedId === entry.id ? (
+                          <IconChevronUp className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                        ) : (
+                          <IconChevronDown className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        <span
+                          className={
+                            entry.results_count === 0
+                              ? "font-medium text-destructive"
+                              : "font-medium text-foreground"
+                          }
+                        >
+                          {entry.results_count} results
+                        </span>
+                        {" · "}
+                        {timeAgo(entry.created_at)}
+                        {" · "}
+                        {entry.user_email || "anonymous"}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge
+                          variant="outline"
+                          className={
+                            entry.source === "demo"
+                              ? "bg-blue-50 text-blue-700 border-blue-200 rounded-none"
+                              : entry.source === "film_tv"
+                                ? "bg-purple-50 text-purple-700 border-purple-200 rounded-none"
+                                : "rounded-none"
+                          }
+                        >
+                          {entry.source === "film_tv" ? "Film/TV" : entry.source === "search" ? "Plays" : entry.source}
+                        </Badge>
+                        {entry.filters_used && Object.entries(entry.filters_used).map(([k, v]) => (
+                          <Badge
+                            key={k}
+                            variant="outline"
+                            className="text-xs px-2 py-0.5 rounded-none"
+                          >
+                            <span className="font-semibold text-foreground">{k}:</span>{" "}
+                            {String(v)}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                    {expandedId === entry.id && (
+                      <div className="bg-muted/10 px-3 border border-border/60">
+                        <ExpandableResults logId={entry.id} />
+                      </div>
+                    )}
+                  </Fragment>
+                ))}
+              </div>
+
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-border">
@@ -439,7 +546,7 @@ export default function AdminSearchesPage() {
                                   <Badge
                                     key={k}
                                     variant="outline"
-                                    className="text-xs px-2 py-0.5"
+                                    className="text-xs px-2 py-0.5 rounded-none"
                                   >
                                     <span className="font-semibold text-foreground">{k}:</span>{" "}
                                     {String(v)}
@@ -466,10 +573,10 @@ export default function AdminSearchesPage() {
                               variant="outline"
                               className={
                                 entry.source === "demo"
-                                  ? "bg-blue-50 text-blue-700 border-blue-200"
+                                  ? "bg-blue-50 text-blue-700 border-blue-200 rounded-none"
                                   : entry.source === "film_tv"
-                                    ? "bg-purple-50 text-purple-700 border-purple-200"
-                                    : ""
+                                    ? "bg-purple-50 text-purple-700 border-purple-200 rounded-none"
+                                    : "rounded-none"
                               }
                             >
                               {entry.source === "film_tv" ? "Film/TV" : entry.source === "search" ? "Plays" : entry.source}
@@ -501,14 +608,15 @@ export default function AdminSearchesPage() {
 
               {/* Pagination */}
               {total > 0 && (
-                <div className="flex items-center justify-between pt-2">
-                  <p className="text-xs text-muted-foreground">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
+                  <p className="text-xs text-muted-foreground text-center sm:text-left">
                     {pageStart}-{pageEnd} of {total}
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 justify-center sm:justify-end">
                     <Button
                       variant="outline"
                       size="sm"
+                      className="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none"
                       disabled={!canPrev}
                       onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
                     >
@@ -517,6 +625,7 @@ export default function AdminSearchesPage() {
                     <Button
                       variant="outline"
                       size="sm"
+                      className="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none"
                       disabled={!canNext}
                       onClick={() => setOffset(offset + PAGE_SIZE)}
                     >

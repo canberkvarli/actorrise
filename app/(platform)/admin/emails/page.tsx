@@ -127,6 +127,29 @@ interface Lead {
 
 type LeadSegment = "all" | "untouched" | "recent" | "opt_in";
 
+// Convert a "datetime-local" wall-clock string to a UTC ISO string,
+// interpreting it in the given IANA timezone (handles DST correctly).
+function localWallClockToUtcIso(dateTimeLocal: string, timeZone: string): string {
+  const [datePart, timePart] = dateTimeLocal.split("T");
+  const [year, month, day] = datePart.split("-").map(Number);
+  const [hour, minute] = timePart.split(":").map(Number);
+  const asUtc = new Date(Date.UTC(year, month - 1, day, hour, minute));
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", second: "2-digit",
+    hour12: false,
+  }).formatToParts(asUtc);
+  const lookup: Record<string, string> = {};
+  for (const p of parts) lookup[p.type] = p.value;
+  const tzAsUtc = Date.UTC(
+    Number(lookup.year), Number(lookup.month) - 1, Number(lookup.day),
+    Number(lookup.hour) % 24, Number(lookup.minute), Number(lookup.second),
+  );
+  const offset = tzAsUtc - asUtc.getTime();
+  return new Date(asUtc.getTime() - offset).toISOString();
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────
 
 export default function AdminEmailsPage() {
@@ -159,6 +182,7 @@ export default function AdminEmailsPage() {
   // Bulk extras
   const [campaignKey, setCampaignKey] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+  const [scheduleTz, setScheduleTz] = useState<string>("America/New_York");
 
   // Batch progress
   const [batchStatus, setBatchStatus] = useState<BatchStatus | null>(null);
@@ -214,6 +238,7 @@ export default function AdminEmailsPage() {
   const [hideDnc, setHideDnc] = useState(true);
   const [requireOptIn, setRequireOptIn] = useState(false);
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<number>>(new Set());
+  const [leadFiltersOpen, setLeadFiltersOpen] = useState(false);
 
   // Dialogs
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -648,17 +673,21 @@ export default function AdminEmailsPage() {
       } else {
         if (dryRun) {
           const { data } = await api.post<CampaignResult>("/api/admin/emails/campaign", {
-            template_id: selectedId, target, dry_run: true, variables, send_via: sendVia,
+            template_id: selectedId, target, dry_run: true, variables,
+            subject: subjectOverride || undefined, send_via: sendVia,
           });
           setCampaignResult(data);
           toast.success(`Dry run: ${data.recipients.length} recipients`);
         } else {
           const { data } = await api.post<{ batch_id: number; status: string; total: number }>(
             "/api/admin/emails/campaign", {
-              template_id: selectedId, target, dry_run: false, variables, send_via: sendVia,
+              template_id: selectedId, target, dry_run: false, variables,
+              subject: subjectOverride || undefined,
+              scheduled_at: scheduledAt ? localWallClockToUtcIso(scheduledAt, scheduleTz) : undefined,
+              send_via: sendVia,
             }
           );
-          toast.success(`Campaign started: sending to ${data.total} users via ${sendVia.toUpperCase()}...`);
+          toast.success(scheduledAt ? `Scheduled ${data.total} emails` : `Campaign started: sending to ${data.total} users via ${sendVia.toUpperCase()}...`);
           setBatchStatus({ batch_id: data.batch_id, status: data.status as BatchStatus["status"], total: data.total, sent: 0, skipped: 0, errors: [], sends: [] });
           startBatchPolling(data.batch_id);
         }
@@ -702,11 +731,11 @@ export default function AdminEmailsPage() {
       <div className="space-y-6">
         <div className="flex items-center gap-2">
           <IconMail className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">Campaigns</h2>
+          <h2 className="text-lg sm:text-xl font-semibold">Campaigns</h2>
         </div>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="rounded-lg border border-border p-4 animate-pulse">
+            <div key={i} className="rounded-lg border border-border p-3 sm:p-4 animate-pulse">
               <div className="h-3 w-16 bg-muted rounded mb-2" />
               <div className="h-7 w-10 bg-muted rounded" />
             </div>
@@ -724,16 +753,16 @@ export default function AdminEmailsPage() {
   return (
     <div className="space-y-6">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-2">
           <IconMail className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">Campaigns</h2>
+          <h2 className="text-lg sm:text-xl font-semibold">Campaigns</h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant={weeklyDigestOpen ? "default" : "outline"}
             size="sm"
-            className="gap-2"
+            className="gap-2 min-h-[44px] sm:min-h-0"
             onClick={() => setWeeklyDigestOpen(!weeklyDigestOpen)}
           >
             <IconCalendar className="h-4 w-4" />
@@ -742,7 +771,7 @@ export default function AdminEmailsPage() {
           <Button
             variant={leadsOpen ? "default" : "outline"}
             size="sm"
-            className="gap-2"
+            className="gap-2 min-h-[44px] sm:min-h-0"
             onClick={() => {
               setLeadsOpen(!leadsOpen);
               if (!leadsOpen && leads.length === 0) refreshLeads();
@@ -759,7 +788,7 @@ export default function AdminEmailsPage() {
           <Button
             variant={dncOpen ? "default" : "outline"}
             size="sm"
-            className="gap-2"
+            className="gap-2 min-h-[44px] sm:min-h-0"
             onClick={() => setDncOpen(!dncOpen)}
           >
             <IconUserOff className="h-4 w-4" />
@@ -773,7 +802,7 @@ export default function AdminEmailsPage() {
           <Button
             variant={composeOpen ? "default" : "outline"}
             size="sm"
-            className="gap-2"
+            className="gap-2 min-h-[44px] sm:min-h-0"
             onClick={() => setComposeOpen(!composeOpen)}
           >
             <IconSend className="h-4 w-4" />
@@ -783,40 +812,40 @@ export default function AdminEmailsPage() {
       </div>
 
       {/* ── Overview stats ── */}
-      <div className="grid grid-cols-4 gap-4">
-        <div className="rounded-lg border border-border p-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+        <div className="rounded-lg border border-border p-3 sm:p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
             <IconSend className="h-3.5 w-3.5" />
             Total sent
           </div>
-          <p className="text-2xl font-semibold">{totalSent}</p>
+          <p className="text-xl sm:text-2xl font-semibold">{totalSent}</p>
         </div>
-        <div className="rounded-lg border border-border p-4">
+        <div className="rounded-lg border border-border p-3 sm:p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
             <IconMailOpened className="h-3.5 w-3.5" />
             Opened
           </div>
-          <p className="text-2xl font-semibold">
+          <p className="text-xl sm:text-2xl font-semibold">
             {totalOpened}
             {totalSent > 0 && <span className="text-sm text-muted-foreground ml-1.5">{Math.round((totalOpened / totalSent) * 100)}%</span>}
           </p>
         </div>
-        <div className="rounded-lg border border-border p-4">
+        <div className="rounded-lg border border-border p-3 sm:p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
             <IconClick className="h-3.5 w-3.5" />
             Clicked
           </div>
-          <p className="text-2xl font-semibold">
+          <p className="text-xl sm:text-2xl font-semibold">
             {totalClicked}
             {totalSent > 0 && <span className="text-sm text-muted-foreground ml-1.5">{Math.round((totalClicked / totalSent) * 100)}%</span>}
           </p>
         </div>
-        <div className="rounded-lg border border-border p-4">
+        <div className="rounded-lg border border-border p-3 sm:p-4">
           <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
             <IconBounceRight className="h-3.5 w-3.5" />
             Bounced
           </div>
-          <p className="text-2xl font-semibold">
+          <p className="text-xl sm:text-2xl font-semibold">
             {totalBounced}
             {totalSent > 0 && <span className="text-sm text-muted-foreground ml-1.5">{Math.round((totalBounced / totalSent) * 100)}%</span>}
           </p>
@@ -825,15 +854,15 @@ export default function AdminEmailsPage() {
 
       {/* ── Campaign history ── */}
       <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <h3 className="text-sm font-semibold">Send history</h3>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Input
               placeholder="Search campaigns..."
               value={historySearch}
               onChange={(e) => setHistorySearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && fetchBatchHistory(historySearch)}
-              className="h-8 w-56 text-xs"
+              className="h-8 w-full sm:w-56 text-xs"
             />
             <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => fetchBatchHistory(historySearch)}>
               Search
@@ -848,18 +877,19 @@ export default function AdminEmailsPage() {
 
         {batchHistory.length > 0 ? (
           <div className="rounded-lg border border-border overflow-hidden">
+            <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/30 text-muted-foreground text-xs">
-                  <th className="text-left px-3 py-2 font-medium">Template</th>
+                  <th className="text-left px-3 py-2 font-medium hidden md:table-cell">Template</th>
                   <th className="text-left px-3 py-2 font-medium">Subject</th>
-                  <th className="text-left px-3 py-2 font-medium">Campaign</th>
+                  <th className="text-left px-3 py-2 font-medium hidden lg:table-cell">Campaign</th>
                   <th className="text-center px-3 py-2 font-medium">Sent</th>
-                  <th className="text-center px-3 py-2 font-medium">Opened</th>
-                  <th className="text-center px-3 py-2 font-medium">Clicked</th>
-                  <th className="text-center px-3 py-2 font-medium">Bounced</th>
+                  <th className="text-center px-3 py-2 font-medium hidden sm:table-cell">Opened</th>
+                  <th className="text-center px-3 py-2 font-medium hidden md:table-cell">Clicked</th>
+                  <th className="text-center px-3 py-2 font-medium hidden lg:table-cell">Bounced</th>
                   <th className="text-left px-3 py-2 font-medium">Status</th>
-                  <th className="text-left px-3 py-2 font-medium">Date</th>
+                  <th className="text-left px-3 py-2 font-medium hidden md:table-cell">Date</th>
                 </tr>
               </thead>
               <tbody>
@@ -875,9 +905,9 @@ export default function AdminEmailsPage() {
                         onClick={() => toggleBatchDrilldown(b.batch_id)}
                         className={`border-b border-border hover:bg-muted/20 cursor-pointer ${isExpanded ? "bg-muted/10" : ""}`}
                       >
-                        <td className="px-3 py-2 font-medium">{tmplName}</td>
-                        <td className="px-3 py-2 text-muted-foreground truncate max-w-[200px]">{b.subject}</td>
-                        <td className="px-3 py-2">
+                        <td className="px-3 py-2 font-medium hidden md:table-cell">{tmplName}</td>
+                        <td className="px-3 py-2 text-muted-foreground truncate max-w-[160px] sm:max-w-[200px]">{b.subject}</td>
+                        <td className="px-3 py-2 hidden lg:table-cell">
                           {b.campaign_key ? (
                             <span className="inline-block bg-muted px-2 py-0.5 text-xs">{b.campaign_key}</span>
                           ) : (
@@ -885,9 +915,9 @@ export default function AdminEmailsPage() {
                           )}
                         </td>
                         <td className="px-3 py-2 text-center">{b.sent}</td>
-                        <td className="px-3 py-2 text-center">{opened > 0 ? opened : <span className="text-muted-foreground/70">&mdash;</span>}</td>
-                        <td className="px-3 py-2 text-center">{clicked > 0 ? clicked : <span className="text-muted-foreground/70">&mdash;</span>}</td>
-                        <td className="px-3 py-2 text-center">{bounced > 0 ? <span className="text-destructive">{bounced}</span> : <span className="text-muted-foreground/70">&mdash;</span>}</td>
+                        <td className="px-3 py-2 text-center hidden sm:table-cell">{opened > 0 ? opened : <span className="text-muted-foreground/70">&mdash;</span>}</td>
+                        <td className="px-3 py-2 text-center hidden md:table-cell">{clicked > 0 ? clicked : <span className="text-muted-foreground/70">&mdash;</span>}</td>
+                        <td className="px-3 py-2 text-center hidden lg:table-cell">{bounced > 0 ? <span className="text-destructive">{bounced}</span> : <span className="text-muted-foreground/70">&mdash;</span>}</td>
                         <td className="px-3 py-2">
                           <span className={`inline-block px-2 py-0.5 text-xs font-medium ${
                             b.status === "completed" ? "bg-green-500/10 text-green-600" :
@@ -898,7 +928,7 @@ export default function AdminEmailsPage() {
                             {b.status}
                           </span>
                         </td>
-                        <td className="px-3 py-2 text-muted-foreground text-xs">
+                        <td className="px-3 py-2 text-muted-foreground text-xs hidden md:table-cell">
                           {b.created_at ? new Date(b.created_at).toLocaleDateString("en-US", {
                             month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
                           }) : <span className="text-muted-foreground/70">&mdash;</span>}
@@ -907,8 +937,8 @@ export default function AdminEmailsPage() {
                       {isExpanded && (
                         <tr>
                           <td colSpan={9} className="px-0 py-0">
-                            <div className="bg-muted/20 px-4 py-3 border-b border-border">
-                              <div className="flex items-center justify-between mb-2 gap-2 flex-wrap">
+                            <div className="bg-muted/20 px-3 sm:px-4 py-3 border-b border-border">
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2 gap-2 flex-wrap">
                                 <p className="text-xs font-medium text-muted-foreground">
                                   {expandedSends.length} recipient{expandedSends.length !== 1 ? "s" : ""}
                                   {expandedSends.filter((s) => s.status === "queued").length > 0 && (
@@ -918,7 +948,7 @@ export default function AdminEmailsPage() {
                                   )}
                                 </p>
                                 {canSend && expandedSends.length > 0 && (
-                                  <div className="flex items-center gap-1.5">
+                                  <div className="flex flex-wrap items-center gap-1.5">
                                     {expandedSends.filter((s) => s.status === "queued").length > 0 && (
                                       <Button
                                         size="sm"
@@ -960,22 +990,22 @@ export default function AdminEmailsPage() {
                                   </div>
                                 )}
                               </div>
-                              <div className="max-h-64 overflow-y-auto">
+                              <div className="max-h-64 overflow-y-auto overflow-x-auto">
                                 <table className="w-full text-xs">
                                   <thead>
                                     <tr className="text-muted-foreground">
                                       <th className="text-left py-1 pr-3 font-medium">Email</th>
-                                      <th className="text-left py-1 pr-3 font-medium">Name</th>
+                                      <th className="text-left py-1 pr-3 font-medium hidden sm:table-cell">Name</th>
                                       <th className="text-left py-1 pr-3 font-medium">Status</th>
-                                      <th className="text-left py-1 pr-3 font-medium">Opened</th>
-                                      <th className="text-left py-1 font-medium">Clicked</th>
+                                      <th className="text-left py-1 pr-3 font-medium hidden md:table-cell">Opened</th>
+                                      <th className="text-left py-1 font-medium hidden md:table-cell">Clicked</th>
                                     </tr>
                                   </thead>
                                   <tbody>
                                     {expandedSends.map((s) => (
                                       <tr key={s.email} className="border-t border-border/30">
-                                        <td className="py-1.5 pr-3 font-mono">{s.email}</td>
-                                        <td className="py-1.5 pr-3">{s.name || <span className="text-muted-foreground/70">&mdash;</span>}</td>
+                                        <td className="py-1.5 pr-3 font-mono break-all">{s.email}</td>
+                                        <td className="py-1.5 pr-3 hidden sm:table-cell">{s.name || <span className="text-muted-foreground/70">&mdash;</span>}</td>
                                         <td className="py-1.5 pr-3">
                                           <span className={`inline-block px-1.5 py-0.5 text-[10px] font-medium ${
                                             s.status === "opened" || s.status === "clicked" ? "bg-green-500/10 text-green-600" :
@@ -986,8 +1016,8 @@ export default function AdminEmailsPage() {
                                             {s.status}
                                           </span>
                                         </td>
-                                        <td className="py-1.5 pr-3">{s.opened_at ? new Date(s.opened_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : <span className="text-muted-foreground/70">&mdash;</span>}</td>
-                                        <td className="py-1.5">{s.clicked_at ? new Date(s.clicked_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : <span className="text-muted-foreground/70">&mdash;</span>}</td>
+                                        <td className="py-1.5 pr-3 hidden md:table-cell">{s.opened_at ? new Date(s.opened_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : <span className="text-muted-foreground/70">&mdash;</span>}</td>
+                                        <td className="py-1.5 hidden md:table-cell">{s.clicked_at ? new Date(s.clicked_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : <span className="text-muted-foreground/70">&mdash;</span>}</td>
                                       </tr>
                                     ))}
                                   </tbody>
@@ -1002,6 +1032,7 @@ export default function AdminEmailsPage() {
                 })}
               </tbody>
             </table>
+            </div>
           </div>
         ) : (
           <p className="text-sm text-muted-foreground py-8 text-center">No campaigns sent yet. Click &ldquo;New email&rdquo; to get started.</p>
@@ -1010,7 +1041,7 @@ export default function AdminEmailsPage() {
 
       {/* ── Weekly Digest (collapsible) ── */}
       {weeklyDigestOpen && (
-        <div className="rounded-lg border border-border p-5 space-y-4">
+        <div className="rounded-lg border border-border p-3 sm:p-4 md:p-5 space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -1044,12 +1075,12 @@ export default function AdminEmailsPage() {
                   />
                 </div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Button
                   variant="outline"
                   onClick={() => prepareWeeklyDigest(true)}
                   disabled={weeklyDigestLoading}
-                  className="gap-2"
+                  className="gap-2 min-h-[44px] sm:min-h-0"
                 >
                   <IconEye className="h-4 w-4" />
                   {weeklyDigestLoading ? "Checking..." : "Preview eligible users"}
@@ -1057,7 +1088,7 @@ export default function AdminEmailsPage() {
                 <Button
                   onClick={() => prepareWeeklyDigest(false)}
                   disabled={weeklyDigestLoading}
-                  className="gap-2"
+                  className="gap-2 min-h-[44px] sm:min-h-0"
                 >
                   <IconSparkles className="h-4 w-4" />
                   {weeklyDigestLoading ? "Preparing..." : "Prepare batch with AI"}
@@ -1067,7 +1098,7 @@ export default function AdminEmailsPage() {
           ) : (
             <div className="space-y-4">
               {/* Batch summary */}
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div className="rounded-lg bg-muted/40 p-3">
                   <p className="text-xs text-muted-foreground">Recipients</p>
                   <p className="text-lg font-semibold">{weeklyDigestBatch.recipient_count}</p>
@@ -1118,11 +1149,12 @@ export default function AdminEmailsPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-2 pt-2 border-t border-border">
+              <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-border">
                 <Button
                   variant="outline"
                   onClick={cancelWeeklyDigest}
                   disabled={weeklyDigestLoading}
+                  className="min-h-[44px] sm:min-h-0"
                 >
                   Cancel
                 </Button>
@@ -1130,7 +1162,7 @@ export default function AdminEmailsPage() {
                   variant="default"
                   onClick={approveWeeklyDigest}
                   disabled={weeklyDigestLoading}
-                  className="gap-2"
+                  className="gap-2 min-h-[44px] sm:min-h-0"
                 >
                   <IconSend className="h-4 w-4" />
                   {weeklyDigestLoading ? "Sending..." : `Approve & Send ${weeklyDigestBatch.recipient_count} emails`}
@@ -1143,10 +1175,10 @@ export default function AdminEmailsPage() {
 
       {/* ── Leads browser (collapsible) ── */}
       {leadsOpen && (
-        <div className="rounded-lg border border-border p-5 space-y-4">
-          <div className="flex items-start justify-between gap-3">
+        <div className="rounded-lg border border-border p-3 sm:p-4 md:p-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
             <div>
-              <h3 className="text-sm font-semibold flex items-center gap-2">
+              <h3 className="text-sm font-semibold flex flex-wrap items-center gap-2">
                 <IconTarget className="h-4 w-4 text-muted-foreground" />
                 Leads
                 <span className="text-[11px] font-normal text-muted-foreground">
@@ -1157,7 +1189,7 @@ export default function AdminEmailsPage() {
                 Filter, select, and load straight into the composer with the founder offer template.
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 self-end sm:self-auto">
               <Button
                 variant="ghost"
                 size="sm"
@@ -1203,57 +1235,69 @@ export default function AdminEmailsPage() {
           </div>
 
           {/* Toggles + search */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[200px]">
-              <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                placeholder="Search by email or name..."
-                value={leadSearch}
-                onChange={(e) => setLeadSearch(e.target.value)}
-                className="h-8 text-xs pl-8"
-              />
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative flex-1 min-w-[200px]">
+                <IconSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search by email or name..."
+                  value={leadSearch}
+                  onChange={(e) => setLeadSearch(e.target.value)}
+                  className="h-8 text-xs pl-8 w-full"
+                />
+              </div>
+              <button
+                onClick={() => setLeadFiltersOpen(!leadFiltersOpen)}
+                className="sm:hidden inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium border border-border text-muted-foreground hover:text-foreground"
+              >
+                <IconFilter className="h-3.5 w-3.5" />
+                Filters
+                {leadFiltersOpen ? <IconChevronUp className="h-3 w-3" /> : <IconChevronDown className="h-3 w-3" />}
+              </button>
             </div>
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <IconFilter className="h-3.5 w-3.5" />
-              <span>Hide:</span>
+            <div className={`${leadFiltersOpen ? "flex" : "hidden"} sm:flex flex-wrap items-center gap-3`}>
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <IconFilter className="h-3.5 w-3.5" />
+                <span>Hide:</span>
+              </div>
+              {([
+                { key: "apple", label: "Apple SSO", value: hideAppleRelay, set: setHideAppleRelay, icon: IconBrandApple },
+                { key: "paid", label: "Paid", value: hidePaid, set: setHidePaid, icon: IconCrown },
+                { key: "dnc", label: "DNC", value: hideDnc, set: setHideDnc, icon: IconUserOff },
+              ] as { key: string; label: string; value: boolean; set: (v: boolean) => void; icon: typeof IconBolt }[]).map((t) => {
+                const Icon = t.icon;
+                return (
+                  <button
+                    key={t.key}
+                    onClick={() => t.set(!t.value)}
+                    className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border transition-colors ${
+                      t.value
+                        ? "bg-muted border-border text-foreground"
+                        : "border-dashed border-border/60 text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <Icon className="h-3 w-3" />
+                    {t.label}
+                  </button>
+                );
+              })}
+              <button
+                onClick={() => setRequireOptIn(!requireOptIn)}
+                className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border transition-colors ${
+                  requireOptIn
+                    ? "bg-primary/10 border-primary/40 text-primary"
+                    : "border-dashed border-border/60 text-muted-foreground hover:text-foreground"
+                }`}
+                title="Only show users who opted into marketing"
+              >
+                <IconCheck className="h-3 w-3" />
+                Opt-in only
+              </button>
             </div>
-            {([
-              { key: "apple", label: "Apple SSO", value: hideAppleRelay, set: setHideAppleRelay, icon: IconBrandApple },
-              { key: "paid", label: "Paid", value: hidePaid, set: setHidePaid, icon: IconCrown },
-              { key: "dnc", label: "DNC", value: hideDnc, set: setHideDnc, icon: IconUserOff },
-            ] as { key: string; label: string; value: boolean; set: (v: boolean) => void; icon: typeof IconBolt }[]).map((t) => {
-              const Icon = t.icon;
-              return (
-                <button
-                  key={t.key}
-                  onClick={() => t.set(!t.value)}
-                  className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border transition-colors ${
-                    t.value
-                      ? "bg-muted border-border text-foreground"
-                      : "border-dashed border-border/60 text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <Icon className="h-3 w-3" />
-                  {t.label}
-                </button>
-              );
-            })}
-            <button
-              onClick={() => setRequireOptIn(!requireOptIn)}
-              className={`inline-flex items-center gap-1.5 px-2 py-1 rounded text-[11px] font-medium border transition-colors ${
-                requireOptIn
-                  ? "bg-primary/10 border-primary/40 text-primary"
-                  : "border-dashed border-border/60 text-muted-foreground hover:text-foreground"
-              }`}
-              title="Only show users who opted into marketing"
-            >
-              <IconCheck className="h-3 w-3" />
-              Opt-in only
-            </button>
           </div>
 
           {/* Stats bar + bulk actions */}
-          <div className="flex items-center justify-between text-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs">
             <p className="text-muted-foreground">
               <span className="text-foreground font-medium">{filteredLeads.length}</span> eligible
               <span className="mx-1.5 text-muted-foreground/70">·</span>
@@ -1265,7 +1309,7 @@ export default function AdminEmailsPage() {
                 </>
               )}
             </p>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {selectedLeadIds.size > 0 && (
                 <button
                   onClick={() => setSelectedLeadIds(new Set())}
@@ -1308,7 +1352,7 @@ export default function AdminEmailsPage() {
               ))}
             </div>
           ) : filteredLeads.length > 0 ? (
-            <div className="rounded-lg border border-border max-h-[480px] overflow-y-auto">
+            <div className="rounded-lg border border-border max-h-[480px] overflow-y-auto overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="bg-muted/40 sticky top-0 z-10">
                   <tr className="text-muted-foreground">
@@ -1321,9 +1365,9 @@ export default function AdminEmailsPage() {
                       />
                     </th>
                     <th className="text-left px-3 py-2 font-medium">Email</th>
-                    <th className="text-left px-3 py-2 font-medium">Name</th>
-                    <th className="text-left px-3 py-2 font-medium">Joined</th>
-                    <th className="text-left px-3 py-2 font-medium">Tier</th>
+                    <th className="text-left px-3 py-2 font-medium hidden sm:table-cell">Name</th>
+                    <th className="text-left px-3 py-2 font-medium hidden md:table-cell">Joined</th>
+                    <th className="text-left px-3 py-2 font-medium hidden md:table-cell">Tier</th>
                     <th className="text-left px-3 py-2 font-medium">Flags</th>
                   </tr>
                 </thead>
@@ -1347,16 +1391,16 @@ export default function AdminEmailsPage() {
                             className="rounded border-border"
                           />
                         </td>
-                        <td className="px-3 py-1.5 font-mono">{l.email}</td>
-                        <td className="px-3 py-1.5">
+                        <td className="px-3 py-1.5 font-mono break-all">{l.email}</td>
+                        <td className="px-3 py-1.5 hidden sm:table-cell">
                           {l.name || <span className="text-muted-foreground/70">&mdash;</span>}
                         </td>
-                        <td className="px-3 py-1.5 text-muted-foreground">
+                        <td className="px-3 py-1.5 text-muted-foreground hidden md:table-cell">
                           {l.created_at
                             ? new Date(l.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "2-digit" })
                             : <span className="text-muted-foreground/70">&mdash;</span>}
                         </td>
-                        <td className="px-3 py-1.5">
+                        <td className="px-3 py-1.5 hidden md:table-cell">
                           {l.tier_name ? (
                             <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${
                               l.is_active_paid
@@ -1412,7 +1456,7 @@ export default function AdminEmailsPage() {
 
       {/* ── Do-not-contact section (collapsible) ── */}
       {dncOpen && (
-        <div className="rounded-lg border border-border p-5 space-y-4">
+        <div className="rounded-lg border border-border p-3 sm:p-4 md:p-5 space-y-4">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -1438,19 +1482,19 @@ export default function AdminEmailsPage() {
                 <code className="bg-muted px-1 rounded">email</code>{" "}
                 <code className="bg-muted px-1 rounded">{"Name <email>"}</code> or tab-separated
               </p>
-              <div className="flex gap-2 items-end">
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
                 <Textarea
                   placeholder={"friend@example.com\nJane Doe, jane@example.com"}
                   value={dncInput}
                   onChange={(e) => setDncInput(e.target.value)}
                   rows={3}
-                  className="text-sm font-mono"
+                  className="text-sm font-mono w-full"
                 />
                 <Button
                   variant="secondary"
                   onClick={() => addDncEntries(dncInput)}
                   disabled={!dncInput.trim() || dncLoading}
-                  className="gap-1.5"
+                  className="gap-1.5 w-full sm:w-auto min-h-[44px] sm:min-h-0"
                 >
                   <IconPlus className="h-4 w-4" />
                   {dncLoading ? "Adding..." : "Add"}
@@ -1460,22 +1504,22 @@ export default function AdminEmailsPage() {
           )}
 
           {dncEntries.length > 0 ? (
-            <div className="rounded-lg border border-border max-h-72 overflow-y-auto">
+            <div className="rounded-lg border border-border max-h-72 overflow-y-auto overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="bg-muted/30 sticky top-0">
                   <tr className="text-muted-foreground">
                     <th className="text-left px-3 py-2 font-medium">Email</th>
-                    <th className="text-left px-3 py-2 font-medium">Name</th>
-                    <th className="text-left px-3 py-2 font-medium">Added</th>
+                    <th className="text-left px-3 py-2 font-medium hidden sm:table-cell">Name</th>
+                    <th className="text-left px-3 py-2 font-medium hidden md:table-cell">Added</th>
                     <th className="text-right px-3 py-2 font-medium w-10"></th>
                   </tr>
                 </thead>
                 <tbody>
                   {dncEntries.map((e) => (
                     <tr key={e.id} className="border-t border-border/40">
-                      <td className="px-3 py-1.5 font-mono">{e.email}</td>
-                      <td className="px-3 py-1.5">{e.name || <span className="text-muted-foreground/70">&mdash;</span>}</td>
-                      <td className="px-3 py-1.5 text-muted-foreground">
+                      <td className="px-3 py-1.5 font-mono break-all">{e.email}</td>
+                      <td className="px-3 py-1.5 hidden sm:table-cell">{e.name || <span className="text-muted-foreground/70">&mdash;</span>}</td>
+                      <td className="px-3 py-1.5 text-muted-foreground hidden md:table-cell">
                         {e.added_at
                           ? new Date(e.added_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })
                           : <span className="text-muted-foreground/70">&mdash;</span>}
@@ -1504,7 +1548,7 @@ export default function AdminEmailsPage() {
 
       {/* ── Compose section (collapsible) ── */}
       {composeOpen && canSend && (
-        <div ref={composeRef} className="rounded-lg border border-border p-5 space-y-5">
+        <div ref={composeRef} className="rounded-lg border border-border p-3 sm:p-4 md:p-5 space-y-4 sm:space-y-5">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold">Compose</h3>
             <button onClick={() => setComposeOpen(false)} className="text-muted-foreground hover:text-foreground">
@@ -1512,10 +1556,11 @@ export default function AdminEmailsPage() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5">
             {/* Template picker */}
             <div className="lg:col-span-3 space-y-2">
               <Label className="text-xs text-muted-foreground">Template</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2">
               {templates.map((t) => (
                 <button
                   key={t.id}
@@ -1528,6 +1573,7 @@ export default function AdminEmailsPage() {
                   <p className="text-[11px] text-muted-foreground mt-0.5 line-clamp-1">{t.description}</p>
                 </button>
               ))}
+              </div>
             </div>
 
             {/* Variables + Preview */}
@@ -1602,8 +1648,8 @@ export default function AdminEmailsPage() {
                   </div>
 
                   {/* Send controls */}
-                  <div className="rounded-lg border border-border p-4 space-y-4">
-                    <div className="flex gap-2">
+                  <div className="rounded-lg border border-border p-3 sm:p-4 space-y-4">
+                    <div className="flex flex-wrap gap-2">
                       <Button variant={mode === "single" ? "default" : "outline"} size="sm" className="gap-2" onClick={() => setMode("single")}>
                         <IconUser className="h-4 w-4" /> Single
                       </Button>
@@ -1613,7 +1659,7 @@ export default function AdminEmailsPage() {
                       <Button variant={mode === "campaign" ? "default" : "outline"} size="sm" className="gap-2" onClick={() => setMode("campaign")}>
                         <IconUsers className="h-4 w-4" /> Campaign
                       </Button>
-                      <div className="ml-auto flex items-center gap-1.5 text-xs">
+                      <div className="w-full sm:w-auto sm:ml-auto flex flex-wrap items-center gap-1.5 text-xs">
                         <span className="text-muted-foreground">Send via:</span>
                         <Button variant={sendVia === "smtp" ? "default" : "outline"} size="sm" className="h-7 text-xs px-2.5" onClick={() => setSendVia("smtp")}>
                           Gmail
@@ -1625,12 +1671,12 @@ export default function AdminEmailsPage() {
                     </div>
 
                     {mode === "single" ? (
-                      <div className="flex gap-3 items-end">
+                      <div className="flex flex-col sm:flex-row gap-3 sm:items-end">
                         <div className="flex-1">
                           <Label htmlFor="recipient" className="text-xs">Recipient email</Label>
                           <Input id="recipient" type="email" placeholder="user@example.com" value={recipientEmail} onChange={(e) => setRecipientEmail(e.target.value)} className="mt-1" />
                         </div>
-                        <Button onClick={openConfirm} disabled={sending} className="gap-2">
+                        <Button onClick={openConfirm} disabled={sending} className="gap-2 w-full sm:w-auto min-h-[44px] sm:min-h-0">
                           <IconSend className="h-4 w-4" /> Send
                         </Button>
                       </div>
@@ -1644,9 +1690,9 @@ export default function AdminEmailsPage() {
                             <code className="bg-muted px-1 rounded">{"Name <email>"}</code>{" "}
                             or tab-separated
                           </p>
-                          <div className="flex gap-2 items-end">
-                            <Textarea placeholder={"Jane Doe, jane@example.com\njohn@example.com"} value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} rows={3} className="text-sm font-mono" />
-                            <Button variant="secondary" onClick={() => addBulkRecipients(bulkInput)} disabled={!bulkInput.trim()}>Add</Button>
+                          <div className="flex flex-col sm:flex-row gap-2 sm:items-end">
+                            <Textarea placeholder={"Jane Doe, jane@example.com\njohn@example.com"} value={bulkInput} onChange={(e) => setBulkInput(e.target.value)} rows={3} className="text-sm font-mono w-full" />
+                            <Button variant="secondary" onClick={() => addBulkRecipients(bulkInput)} disabled={!bulkInput.trim()} className="w-full sm:w-auto min-h-[44px] sm:min-h-0">Add</Button>
                           </div>
                         </div>
                         {bulkRecipients.length > 0 && (
@@ -1675,30 +1721,44 @@ export default function AdminEmailsPage() {
                             <Input id="scheduled-at" type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="mt-1" />
                           </div>
                         </div>
-                        <Button onClick={openConfirm} disabled={sending || bulkRecipients.length === 0} className="gap-2">
+                        <Button onClick={openConfirm} disabled={sending || bulkRecipients.length === 0} className="gap-2 w-full sm:w-auto min-h-[44px] sm:min-h-0">
                           <IconSend className="h-4 w-4" />
                           {scheduledAt ? `Schedule ${bulkRecipients.length}` : `Send to ${bulkRecipients.length}`} email{bulkRecipients.length !== 1 ? "s" : ""}
                         </Button>
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <div className="flex gap-3 items-end">
-                          <div>
+                        <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3 sm:items-end">
+                          <div className="flex-1 min-w-[180px]">
                             <Label htmlFor="target" className="text-xs">Target audience</Label>
                             <select id="target" value={target} onChange={(e) => setTarget(e.target.value)} className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
                               <option value="all">All users (opt-in)</option>
                               <option value="free">Free tier (opt-in)</option>
                               <option value="paid">Paid tier (opt-in)</option>
-                              <option value="leads">Leads — never used founder code</option>
+                              <option value="leads">Leads, never used founder code</option>
                             </select>
                           </div>
-                          <label className="flex items-center gap-2 text-sm cursor-pointer pb-2">
+                          <div className="flex-1 min-w-[200px]">
+                            <Label htmlFor="campaign-scheduled-at" className="text-xs">Schedule send (optional)</Label>
+                            <Input id="campaign-scheduled-at" type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className="mt-1" />
+                          </div>
+                          <div className="min-w-[150px]">
+                            <Label htmlFor="campaign-tz" className="text-xs">Timezone</Label>
+                            <select id="campaign-tz" value={scheduleTz} onChange={(e) => setScheduleTz(e.target.value)} className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
+                              <option value="America/New_York">Eastern (ET)</option>
+                              <option value="America/Chicago">Central (CT)</option>
+                              <option value="America/Denver">Mountain (MT)</option>
+                              <option value="America/Los_Angeles">Pacific (PT)</option>
+                              <option value="Europe/Istanbul">Turkey (TRT)</option>
+                            </select>
+                          </div>
+                          <label className="flex items-center gap-2 text-sm cursor-pointer sm:pb-2">
                             <input type="checkbox" checked={dryRun} onChange={(e) => setDryRun(e.target.checked)} className="rounded border-border" />
                             Dry run
                           </label>
-                          <Button onClick={openConfirm} disabled={sending} className="gap-2" variant={dryRun ? "secondary" : "default"}>
+                          <Button onClick={openConfirm} disabled={sending} className="gap-2 w-full sm:w-auto min-h-[44px] sm:min-h-0" variant={dryRun ? "secondary" : "default"}>
                             <IconSend className="h-4 w-4" />
-                            {dryRun ? "Preview recipients" : "Send campaign"}
+                            {dryRun ? "Preview recipients" : scheduledAt ? "Schedule campaign" : "Send campaign"}
                           </Button>
                         </div>
 
@@ -1752,7 +1812,7 @@ export default function AdminEmailsPage() {
 
       {/* ── Confirm dialog ── */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent>
+        <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md md:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {mode === "single" ? "Confirm send" : mode === "bulk" ? `Send to ${bulkRecipients.length} recipients?` : dryRun ? "Run dry-run?" : "Confirm campaign send"}
@@ -1761,21 +1821,21 @@ export default function AdminEmailsPage() {
           <div className="text-sm space-y-2 py-2">
             <p><span className="text-muted-foreground">Template:</span> {selected?.name}</p>
             {mode === "single" ? (
-              <p><span className="text-muted-foreground">To:</span> {recipientEmail}</p>
+              <p className="break-all"><span className="text-muted-foreground">To:</span> {recipientEmail}</p>
             ) : mode === "bulk" ? (
               <div>
                 <p className="text-muted-foreground mb-1">To:</p>
                 <div className="max-h-28 overflow-y-auto text-xs space-y-0.5">
-                  {bulkRecipients.map((r) => <p key={r.email}>{r.name ? `${r.name} (${r.email})` : r.email}</p>)}
+                  {bulkRecipients.map((r) => <p key={r.email} className="break-all">{r.name ? `${r.name} (${r.email})` : r.email}</p>)}
                 </div>
               </div>
             ) : (
               <p><span className="text-muted-foreground">Target:</span> {target} {dryRun && "(dry run)"}</p>
             )}
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmOpen(false)}>Cancel</Button>
-            <Button onClick={handleSend} disabled={sending} variant={(mode === "campaign" && !dryRun) || mode === "bulk" ? "destructive" : "default"}>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setConfirmOpen(false)} className="w-full sm:w-auto min-h-[44px] sm:min-h-0">Cancel</Button>
+            <Button onClick={handleSend} disabled={sending} variant={(mode === "campaign" && !dryRun) || mode === "bulk" ? "destructive" : "default"} className="w-full sm:w-auto min-h-[44px] sm:min-h-0">
               {sending ? "Sending..." : "Confirm"}
             </Button>
           </DialogFooter>

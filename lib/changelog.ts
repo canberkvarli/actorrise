@@ -1,3 +1,5 @@
+import api from "@/lib/api";
+
 export const CHANGELOG_STORAGE_KEY = "last_seen_feature_id";
 
 export type ChangelogCategory = "feature" | "improvement" | "fix";
@@ -42,23 +44,39 @@ export function getLastSeenId(): string | null {
 
 /**
  * Persists the given feature id so the modal won't show again for that feature.
+ * Writes to the user record on the backend (cross-device) and mirrors to
+ * localStorage so it's instantly available on the next render.
  */
-export function markAsSeen(id: string): void {
-  if (typeof window === "undefined") return;
+export async function markAsSeen(id: string): Promise<void> {
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(CHANGELOG_STORAGE_KEY, id);
+    } catch {
+      // ignore
+    }
+  }
   try {
-    localStorage.setItem(CHANGELOG_STORAGE_KEY, id);
+    await api.patch("/api/auth/onboarding", { last_seen_feature_id: id });
   } catch {
-    // ignore
+    // Server write failed (offline, logged-out). localStorage still suppresses
+    // the modal on this device; next successful dismiss will resync.
   }
 }
 
 /**
- * Clears the last seen feature id (for testing the modal).
+ * Clears the last seen feature id (for testing the modal in admin preview).
+ * Clears both localStorage and the server-side value.
  */
-export function clearLastSeen(): void {
-  if (typeof window === "undefined") return;
+export async function clearLastSeen(): Promise<void> {
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.removeItem(CHANGELOG_STORAGE_KEY);
+    } catch {
+      // ignore
+    }
+  }
   try {
-    localStorage.removeItem(CHANGELOG_STORAGE_KEY);
+    await api.patch("/api/auth/onboarding", { last_seen_feature_id: "" });
   } catch {
     // ignore
   }

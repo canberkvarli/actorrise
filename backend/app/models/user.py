@@ -28,6 +28,9 @@ class User(Base):
     has_seen_search_tour = Column(Boolean, default=False, nullable=False)
     has_seen_profile_tour = Column(Boolean, default=False, nullable=False)
 
+    # Last changelog entry the user dismissed (drives the "What's new" modal)
+    last_seen_feature_id = Column(String, nullable=True)
+
     # Script upload tracking (monotonic counter — never decremented on delete)
     total_scripts_uploaded = Column(Integer, default=0, nullable=False, server_default=text('0'))
 
