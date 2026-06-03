@@ -117,7 +117,7 @@ export function NewSceneModal({ open, onOpenChange, onSuccess }: NewSceneModalPr
       setDescription("");
       setLines([]);
       onSuccess?.();
-      router.push(`/practice/${data.id}`);
+      router.push(`/practice?script=${data.id}`);
     } catch (err: unknown) {
       const msg =
         err && typeof err === "object" && "response" in err

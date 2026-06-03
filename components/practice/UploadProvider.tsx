@@ -267,7 +267,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
                   window.location.pathname === "/practice";
                 if (onPractice) {
                   await new Promise((r) => setTimeout(r, 500));
-                  router.push(`/practice/${result.id}`);
+                  router.push(`/practice?script=${result.id}`);
                 } else {
                   // Wandered off — leave a dismissible "ready" banner instead.
                   setDoneInfo({ id: result.id, scenes: result.num_scenes_extracted });
@@ -486,7 +486,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
                     onClick={() => {
                       const id = doneInfo.id;
                       setDoneInfo(null);
-                      router.push(`/practice/${id}`);
+                      router.push(`/practice?script=${id}`);
                     }}
                     className="shrink-0 inline-flex items-center gap-1 rounded-md bg-[#CB4B00] hover:bg-[#B03000] text-white px-3 h-8 text-xs font-medium transition-colors"
                   >

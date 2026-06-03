@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { IconArrowRight } from "@tabler/icons-react";
 import { toast } from "sonner";
 
@@ -44,7 +45,14 @@ export function PracticeLibrary({
   const deleteScript = useDeleteScript();
   const { user } = useAuth();
 
-  const defaultId = featuredScriptId ?? demoScriptId ?? ordered[0]?.id ?? null;
+  // ?script={id} (e.g. coming back from the editor, or after an upload) preselects
+  // that script. Falls back to most-recent, then the demo.
+  const searchParams = useSearchParams();
+  const paramScriptId = Number(searchParams.get("script")) || null;
+  const paramId =
+    paramScriptId && ordered.some((s) => s.id === paramScriptId) ? paramScriptId : null;
+
+  const defaultId = paramId ?? featuredScriptId ?? demoScriptId ?? ordered[0]?.id ?? null;
   const isValid = selectedId != null && ordered.some((s) => s.id === selectedId);
   const effectiveId = isValid ? selectedId : defaultId;
   const selectedScript = ordered.find((s) => s.id === effectiveId) ?? null;

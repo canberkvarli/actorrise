@@ -688,7 +688,7 @@ export default function SceneEditPage() {
       dedupingInterval: 60000,
       onError: () => {
         pageToast.error("Failed to load scene");
-        router.push(`/practice/${scriptId}`);
+        router.push(`/practice?script=${scriptId}`);
       },
     }
   );
@@ -2963,7 +2963,7 @@ export default function SceneEditPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => { flushPendingEdits(); cancelAIRef.current?.(); router.push(`/practice/${scriptId}`); }}
+          onClick={() => { flushPendingEdits(); cancelAIRef.current?.(); router.push(`/practice?script=${scriptId}`); }}
           className="text-neutral-400 hover:text-neutral-100 gap-1.5"
         >
           <ArrowLeft className="w-4 h-4" />
