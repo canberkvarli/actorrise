@@ -725,6 +725,7 @@ export default function AdminEmailsPage() {
   const totalOpened = batchHistory.reduce((sum, b) => sum + (b.status_counts["opened"] || 0) + (b.status_counts["clicked"] || 0), 0);
   const totalClicked = batchHistory.reduce((sum, b) => sum + (b.status_counts["clicked"] || 0), 0);
   const totalBounced = batchHistory.reduce((sum, b) => sum + (b.status_counts["bounced"] || 0), 0);
+  const scheduledBatches = batchHistory.filter((b) => b.scheduled_at && new Date(b.scheduled_at).getTime() > Date.now());
 
   if (loading) {
     return (
@@ -875,6 +876,46 @@ export default function AdminEmailsPage() {
           </div>
         </div>
 
+        {scheduledBatches.length > 0 && (
+          <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/5 overflow-hidden">
+            <div className="px-3 py-2 border-b border-amber-500/20 bg-amber-500/10 text-xs font-medium text-amber-600">
+              Scheduled / upcoming ({scheduledBatches.length})
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30 text-muted-foreground text-xs">
+                    <th className="text-left px-3 py-2 font-medium">Subject</th>
+                    <th className="text-left px-3 py-2 font-medium hidden sm:table-cell">Campaign</th>
+                    <th className="text-center px-3 py-2 font-medium">Recipients</th>
+                    <th className="text-left px-3 py-2 font-medium">Sends at</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {scheduledBatches.map((b) => (
+                    <tr key={b.batch_id} className="border-b border-border last:border-0">
+                      <td className="px-3 py-2 text-muted-foreground truncate max-w-[200px]">{b.subject}</td>
+                      <td className="px-3 py-2 hidden sm:table-cell">
+                        {b.campaign_key ? (
+                          <span className="inline-block bg-muted px-2 py-0.5 text-xs">{b.campaign_key}</span>
+                        ) : (
+                          <span className="text-muted-foreground/70">&mdash;</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-center">{b.total}</td>
+                      <td className="px-3 py-2 text-xs font-medium text-amber-600">
+                        {b.scheduled_at ? new Date(b.scheduled_at).toLocaleString("en-US", {
+                          month: "short", day: "numeric", hour: "numeric", minute: "2-digit"
+                        }) : <span className="text-muted-foreground/70">&mdash;</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
         {batchHistory.length > 0 ? (
           <div className="rounded-lg border border-border overflow-hidden">
             <div className="overflow-x-auto">
@@ -899,6 +940,7 @@ export default function AdminEmailsPage() {
                   const clicked = b.status_counts["clicked"] || 0;
                   const bounced = b.status_counts["bounced"] || 0;
                   const isExpanded = expandedBatch === b.batch_id;
+                  const isScheduled = !!(b.scheduled_at && new Date(b.scheduled_at).getTime() > Date.now());
                   return (
                     <React.Fragment key={b.batch_id}>
                       <tr
@@ -920,12 +962,13 @@ export default function AdminEmailsPage() {
                         <td className="px-3 py-2 text-center hidden lg:table-cell">{bounced > 0 ? <span className="text-destructive">{bounced}</span> : <span className="text-muted-foreground/70">&mdash;</span>}</td>
                         <td className="px-3 py-2">
                           <span className={`inline-block px-2 py-0.5 text-xs font-medium ${
+                            isScheduled ? "bg-amber-500/10 text-amber-600" :
                             b.status === "completed" ? "bg-green-500/10 text-green-600" :
                             b.status === "failed" ? "bg-destructive/10 text-destructive" :
                             b.status === "processing" ? "bg-primary/10 text-primary" :
                             "bg-muted text-muted-foreground"
                           }`}>
-                            {b.status}
+                            {isScheduled ? "scheduled" : b.status}
                           </span>
                         </td>
                         <td className="px-3 py-2 text-muted-foreground text-xs hidden md:table-cell">
