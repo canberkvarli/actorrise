@@ -145,6 +145,18 @@ class AdminSubscriptionPatchRequest(BaseModel):
     note: str = Field(min_length=3)
 
 
+class AdminGrantRequest(BaseModel):
+    """Grant a user a comped membership (no Stripe, no card)."""
+
+    tier_id: int
+    duration_days: int | None = None  # None = permanent comp (no expiry)
+    note: str = Field(min_length=3)
+
+
+class AdminGrantRevokeRequest(BaseModel):
+    note: str = Field(min_length=3)
+
+
 class AdminBenefitPatchRequest(BaseModel):
     feature_key: str = Field(min_length=1)
     override_type: Literal["set", "revoke"]
@@ -556,6 +568,109 @@ def patch_admin_user_subscription(
         actor_admin_id=admin.id,
         target_user_id=target.id,
         action_type="admin.user.subscription_update",
+        before_json=before,
+        after_json=after,
+        note=body.note,
+    )
+    db.commit()
+    return after
+
+
+@router.post("/{user_id}/grant")
+def grant_admin_user_membership(
+    user_id: int,
+    body: AdminGrantRequest,
+    admin: User = Depends(require_sensitive_admin),
+    db: Session = Depends(get_db),
+):
+    """Comp a user onto a paid tier with an optional expiry.
+
+    This creates a grant with NO Stripe subscription attached, so nothing is
+    ever charged. ``duration_days`` sets a hard expiry (via ``trial_end``);
+    pass null for a permanent comp. Expiry is enforced at read time by
+    ``UserSubscription.is_active``, so no cron job is required.
+    """
+    target = db.query(User).filter(User.id == user_id).first()
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    tier = db.query(PricingTier).get(body.tier_id)
+    if tier is None:
+        raise HTTPException(status_code=404, detail="Pricing tier not found")
+    if body.duration_days is not None and body.duration_days <= 0:
+        raise HTTPException(status_code=400, detail="duration_days must be positive")
+
+    subscription = db.query(UserSubscription).filter(UserSubscription.user_id == target.id).first()
+    if subscription is None:
+        subscription = UserSubscription(user_id=target.id, tier_id=tier.id)
+        db.add(subscription)
+        db.flush()
+
+    previous_tier = db.query(PricingTier).get(subscription.tier_id) if subscription.tier_id else None
+    before = _serialize_subscription(subscription, previous_tier)
+
+    # Comp grant: detach any Stripe subscription so is_active honors trial_end.
+    subscription.tier_id = tier.id
+    subscription.stripe_subscription_id = None
+    subscription.cancel_at_period_end = False
+    subscription.canceled_at = None
+    subscription.billing_period = subscription.billing_period or "monthly"
+    if body.duration_days is None:
+        subscription.status = "active"
+        subscription.trial_end = None
+        subscription.current_period_end = None
+    else:
+        end = datetime.now(timezone.utc) + timedelta(days=body.duration_days)
+        subscription.status = "trialing"
+        subscription.trial_end = end
+        subscription.current_period_end = end
+
+    db.flush()
+    next_tier = db.query(PricingTier).get(subscription.tier_id)
+    after = _serialize_subscription(subscription, next_tier)
+    _create_audit_log(
+        db,
+        actor_admin_id=admin.id,
+        target_user_id=target.id,
+        action_type="admin.user.membership_grant",
+        before_json=before,
+        after_json=after,
+        note=body.note,
+    )
+    db.commit()
+    return after
+
+
+@router.post("/{user_id}/revoke-grant")
+def revoke_admin_user_grant(
+    user_id: int,
+    body: AdminGrantRevokeRequest,
+    admin: User = Depends(require_sensitive_admin),
+    db: Session = Depends(get_db),
+):
+    """Immediately end a comped membership, dropping the user back to Free."""
+    target = db.query(User).filter(User.id == user_id).first()
+    if target is None:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    subscription = db.query(UserSubscription).filter(UserSubscription.user_id == target.id).first()
+    if subscription is None:
+        raise HTTPException(status_code=404, detail="User has no subscription to revoke")
+
+    current_tier = db.query(PricingTier).get(subscription.tier_id) if subscription.tier_id else None
+    before = _serialize_subscription(subscription, current_tier)
+
+    subscription.status = "canceled"
+    subscription.canceled_at = datetime.now(timezone.utc)
+    subscription.trial_end = None
+
+    db.flush()
+    after = _serialize_subscription(subscription, current_tier)
+    _create_audit_log(
+        db,
+        actor_admin_id=admin.id,
+        target_user_id=target.id,
+        action_type="admin.user.membership_revoke",
         before_json=before,
         after_json=after,
         note=body.note,

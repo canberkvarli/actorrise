@@ -47,7 +47,7 @@ def seed_pricing_tiers():
                     "download_formats": ["pdf", "docx"],
                     "priority_support": False,
                     "scene_partner_scripts": 0,
-                    "scene_partner_sessions": 0,
+                    "scene_partner_sessions": 2,
                     "scene_partner_trial_only": True,
                 },
                 is_active=True,

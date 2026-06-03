@@ -102,9 +102,8 @@ def _get_user_tier(db: Session, user: User) -> str:
     """Get the user's current tier name."""
     sub = db.query(UserSubscription).filter(
         UserSubscription.user_id == user.id,
-        UserSubscription.status.in_(("active", "trialing")),
     ).first()
-    if sub and sub.tier:
+    if sub and sub.is_active and sub.tier:
         return sub.tier.name
     return "free"
 
