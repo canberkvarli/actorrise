@@ -49,7 +49,7 @@ export default function PracticePage() {
       {isLoading ? (
         <div className="space-y-8 sm:space-y-10">
           <Skeleton className="h-12 w-3/4 max-w-md" />
-          <div className="grid gap-6 lg:grid-cols-[240px_1fr] lg:gap-10">
+          <div className="grid gap-6 lg:grid-cols-[300px_1fr] lg:gap-10">
             <div className="space-y-2">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-9 w-full rounded-md" />

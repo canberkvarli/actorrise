@@ -392,6 +392,8 @@ export default function SceneEditPage() {
 
   // Mobile tab
   const [mobileTab, setMobileTab] = useState<"details" | "script">("script");
+  // Rehearsal settings are global, set-once prefs — collapsed by default to keep the panel calm.
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
 
   // Voice — keyed by character name
   const [charVoices, setCharVoices] = useState<CharacterVoices>({});
@@ -1936,72 +1938,96 @@ export default function SceneEditPage() {
         </AnimatePresence>
       </div>
 
-      {/* Rehearsal Settings — inline */}
-      <div className="rounded-xl bg-neutral-900/40 border border-neutral-800 p-4 space-y-4">
-        <h3 className="text-xl font-semibold text-neutral-100">Rehearsal Settings</h3>
+      {/* Rehearsal Settings — collapsible (global prefs, collapsed by default) */}
+      <div className="rounded-xl bg-neutral-900/40 border border-neutral-800 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setSettingsExpanded((v) => !v)}
+          className="flex items-center justify-between w-full px-4 py-3 hover:bg-neutral-800/40 transition-colors"
+        >
+          <h3 className="text-base font-semibold text-neutral-100">Rehearsal settings</h3>
+          {settingsExpanded ? (
+            <ChevronUp className="w-4 h-4 text-neutral-500" />
+          ) : (
+            <ChevronDown className="w-4 h-4 text-neutral-500" />
+          )}
+        </button>
+        <AnimatePresence>
+          {settingsExpanded && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden"
+            >
+              <div className="px-4 pb-4 pt-4 space-y-4 border-t border-neutral-800">
+                {/* Countdown */}
+                <div className="flex items-center justify-between gap-3">
+                  <Label className="text-sm font-normal text-neutral-300">Pre-scene countdown</Label>
+                  <Switch
+                    checked={rehearsalSettings.countdownSeconds > 0}
+                    onCheckedChange={(on) => updateRehearsalSetting({ countdownSeconds: on ? 3 : 0 })}
+                  />
+                </div>
+                {rehearsalSettings.countdownSeconds > 0 && (
+                  <div className="flex items-center gap-2 pl-1">
+                    <Slider
+                      value={rehearsalSettings.countdownSeconds}
+                      onValueChange={(v) => updateRehearsalSetting({ countdownSeconds: v })}
+                      min={1} max={10} step={1}
+                      className="flex-1"
+                    />
+                    <span className="text-xs tabular-nums text-neutral-400 w-6">{rehearsalSettings.countdownSeconds}s</span>
+                  </div>
+                )}
 
-        {/* Countdown */}
-        <div className="flex items-center justify-between gap-3">
-          <Label className="text-sm font-normal text-neutral-300">Pre-scene countdown</Label>
-          <Switch
-            checked={rehearsalSettings.countdownSeconds > 0}
-            onCheckedChange={(on) => updateRehearsalSetting({ countdownSeconds: on ? 3 : 0 })}
-          />
-        </div>
-        {rehearsalSettings.countdownSeconds > 0 && (
-          <div className="flex items-center gap-2 pl-1">
-            <Slider
-              value={rehearsalSettings.countdownSeconds}
-              onValueChange={(v) => updateRehearsalSetting({ countdownSeconds: v })}
-              min={1} max={10} step={1}
-              className="flex-1"
-            />
-            <span className="text-xs tabular-nums text-neutral-400 w-6">{rehearsalSettings.countdownSeconds}s</span>
-          </div>
-        )}
+                {/* Auto-advance */}
+                <div className="flex items-center justify-between gap-3">
+                  <Label className="text-sm font-normal text-neutral-300">Continue after my line</Label>
+                  <Switch
+                    checked={rehearsalSettings.autoAdvanceOnFinish}
+                    onCheckedChange={(v) => updateRehearsalSetting({ autoAdvanceOnFinish: v })}
+                  />
+                </div>
 
-        {/* Auto-advance */}
-        <div className="flex items-center justify-between gap-3">
-          <Label className="text-sm font-normal text-neutral-300">Continue after my line</Label>
-          <Switch
-            checked={rehearsalSettings.autoAdvanceOnFinish}
-            onCheckedChange={(v) => updateRehearsalSetting({ autoAdvanceOnFinish: v })}
-          />
-        </div>
+                {/* Breathing room */}
+                <div className="space-y-1.5">
+                  <Label className="text-sm font-normal text-neutral-300">Pause between lines</Label>
+                  <div className="flex items-center gap-2">
+                    <Slider
+                      value={rehearsalSettings.pauseBetweenLinesSeconds}
+                      onValueChange={(v) => updateRehearsalSetting({ pauseBetweenLinesSeconds: v })}
+                      min={0} max={10} step={1}
+                      className="flex-1"
+                    />
+                    <span className="text-xs tabular-nums text-neutral-400 w-6">{rehearsalSettings.pauseBetweenLinesSeconds}s</span>
+                  </div>
+                </div>
 
-        {/* Breathing room */}
-        <div className="space-y-1.5">
-          <Label className="text-sm font-normal text-neutral-300">Pause between lines</Label>
-          <div className="flex items-center gap-2">
-            <Slider
-              value={rehearsalSettings.pauseBetweenLinesSeconds}
-              onValueChange={(v) => updateRehearsalSetting({ pauseBetweenLinesSeconds: v })}
-              min={0} max={10} step={1}
-              className="flex-1"
-            />
-            <span className="text-xs tabular-nums text-neutral-400 w-6">{rehearsalSettings.pauseBetweenLinesSeconds}s</span>
-          </div>
-        </div>
-
-        {/* Auto-skip silence */}
-        <div className="flex items-center justify-between gap-3">
-          <Label className="text-sm font-normal text-neutral-300">Auto-skip when silent</Label>
-          <Switch
-            checked={rehearsalSettings.skipMyLineIfSilent}
-            onCheckedChange={(v) => updateRehearsalSetting({ skipMyLineIfSilent: v })}
-          />
-        </div>
-        {rehearsalSettings.skipMyLineIfSilent && (
-          <div className="flex items-center gap-2 pl-1">
-            <Slider
-              value={rehearsalSettings.skipAfterSeconds}
-              onValueChange={(v) => updateRehearsalSetting({ skipAfterSeconds: v })}
-              min={3} max={30} step={1}
-              className="flex-1"
-            />
-            <span className="text-xs tabular-nums text-neutral-400 w-6">{rehearsalSettings.skipAfterSeconds}s</span>
-          </div>
-        )}
+                {/* Auto-skip silence */}
+                <div className="flex items-center justify-between gap-3">
+                  <Label className="text-sm font-normal text-neutral-300">Auto-skip when silent</Label>
+                  <Switch
+                    checked={rehearsalSettings.skipMyLineIfSilent}
+                    onCheckedChange={(v) => updateRehearsalSetting({ skipMyLineIfSilent: v })}
+                  />
+                </div>
+                {rehearsalSettings.skipMyLineIfSilent && (
+                  <div className="flex items-center gap-2 pl-1">
+                    <Slider
+                      value={rehearsalSettings.skipAfterSeconds}
+                      onValueChange={(v) => updateRehearsalSetting({ skipAfterSeconds: v })}
+                      min={3} max={30} step={1}
+                      className="flex-1"
+                    />
+                    <span className="text-xs tabular-nums text-neutral-400 w-6">{rehearsalSettings.skipAfterSeconds}s</span>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Scene Info — tone, emotions, relationship, setting grouped */}
