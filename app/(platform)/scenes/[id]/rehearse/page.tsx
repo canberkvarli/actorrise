@@ -536,7 +536,7 @@ export default function RehearsalPage() {
   const [rehearsalSettings] = useState<RehearsalSettings>(() =>
     typeof window !== 'undefined'
       ? getRehearsalSettings()
-      : { pauseBetweenLinesSeconds: 3, skipMyLineIfSilent: false, skipAfterSeconds: 10, countdownSeconds: 3, useAIVoice: true, highlightMyLines: true, autoAdvanceOnFinish: true }
+      : { pauseBetweenLinesSeconds: 0.3, skipMyLineIfSilent: false, skipAfterSeconds: 10, countdownSeconds: 3, useAIVoice: true, highlightMyLines: true, autoAdvanceOnFinish: true }
   );
   const highlightMyLines = rehearsalSettings.highlightMyLines;
   const [useAIVoice] = useState(() =>
