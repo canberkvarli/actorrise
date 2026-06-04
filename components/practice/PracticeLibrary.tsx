@@ -101,7 +101,7 @@ export function PracticeLibrary({
 
   return (
     <>
-      <div className="grid gap-6 lg:grid-cols-[240px_1fr] lg:gap-10">
+      <div className="grid gap-6 lg:grid-cols-[300px_1fr] lg:gap-10">
         <aside className="lg:border-r lg:border-border/60 lg:pr-6">
           <PracticeLibraryRail
             scripts={ordered}
