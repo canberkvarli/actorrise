@@ -726,6 +726,7 @@ export default function RehearsalPage() {
     speak: speakAI,
     preload: preloadTTS,
     cancel: cancelAI,
+    unlock: unlockAudio,
     isSpeaking: isSpeakingAI,
     isLoading: isLoadingAI,
     audioElementRef: aiAudioRef,
@@ -799,6 +800,43 @@ export default function RehearsalPage() {
   speakLineRef.current = speakLine;
   const preloadTTSRef = useRef(preloadTTS);
   preloadTTSRef.current = preloadTTS;
+  const handleTTSEndRef = useRef(handleTTSEnd);
+  handleTTSEndRef.current = handleTTSEnd;
+
+  /* ── AI-turn safety net ─────────────────────────────────────────────
+   * iOS Safari blocks programmatic audio without a recent user gesture, and a
+   * stalled cellular fetch can hang too — either leaves the scene stuck at
+   * "Waiting" on the partner's line. If an AI line hasn't started speaking in a
+   * few seconds, offer a tap to play it (the tap also unlocks iOS audio for the
+   * rest of the scene); auto-advance as a last resort so it can never freeze. */
+  const [aiStuck, setAiStuck] = useState(false);
+
+  const retryAiLine = () => {
+    unlockAudio(); // user gesture → unlocks iOS audio for every subsequent line
+    setAiStuck(false);
+    const lines = orderedLinesRef.current;
+    const idx = activeLineIndexRef.current;
+    const line = idx != null ? lines[idx] : null;
+    if (!line) return;
+    cancelAI();
+    speakLineRef.current(ttsText(line), ttsInstructions(line, sceneVoiceContextRef.current), line.character_name);
+  };
+
+  useEffect(() => {
+    setAiStuck(false);
+    if (paused || (countdown !== null && countdown > 0)) return;
+    if (activeLineIndex == null) return;
+    // Read from refs so the timers aren't reset by unrelated re-renders
+    // (orderedLines/session change identity often during a session).
+    const sess = sessionRef.current;
+    const line = orderedLinesRef.current[activeLineIndex];
+    if (!sess || !line || line.character_name === sess.user_character) return; // AI lines only
+    if (isSpeakingAI || isSpeakingBrowser) return; // audio is actually playing — fine
+    const showT = setTimeout(() => setAiStuck(true), 5000); // offer "tap to play"
+    const autoT = setTimeout(() => { handleTTSEndRef.current(); }, 14000); // self-heal
+    return () => { clearTimeout(showT); clearTimeout(autoT); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeLineIndex, isSpeakingAI, isSpeakingBrowser, isLoadingAI, paused, countdown]);
 
   /* ── Core: advance to a specific line index ────────────────────── */
 
@@ -2227,13 +2265,27 @@ export default function RehearsalPage() {
         )}
       </AnimatePresence>
 
+      {/* AI line didn't start (iOS audio block / slow network) — offer a tap to play it */}
+      {aiStuck && !paused && (
+        <div className="shrink-0 flex justify-center px-4 pb-2">
+          <button
+            type="button"
+            onClick={retryAiLine}
+            className="flex items-center gap-2 rounded-full bg-primary hover:bg-primary/90 text-white px-5 py-2.5 text-sm font-medium shadow-2xl"
+          >
+            <Play className="w-4 h-4" />
+            Tap to play your partner&apos;s line
+          </button>
+        </div>
+      )}
+
       {/* Floating control pill */}
       <div className="shrink-0 flex justify-center px-4 pb-4 safe-area-bottom">
         <div className="flex items-center gap-3 bg-neutral-900/90 backdrop-blur-sm border border-neutral-800 rounded-full shadow-2xl px-5 py-3 min-h-[52px]">
           {/* Pause / Play */}
           <button
             type="button"
-            onClick={paused ? handleResume : handlePause}
+            onClick={() => { unlockAudio(); (paused ? handleResume : handlePause)(); }}
             className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors shrink-0"
             title={paused ? 'Resume rehearsal' : 'Pause rehearsal'}
           >
