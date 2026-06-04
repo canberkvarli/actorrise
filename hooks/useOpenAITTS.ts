@@ -92,6 +92,25 @@ function setCache(key: string, blob: Blob): string {
   return blobUrl;
 }
 
+// ── iOS audio unlock ───────────────────────────────────────────────────────
+// iOS Safari blocks programmatic audio.play() unless audio was first started
+// from a user gesture. Playing a tiny silent clip on the SAME element during a
+// gesture (the "Begin" tap) unlocks it for the rest of the session — provided
+// we then REUSE that element for every line (a fresh `new Audio()` re-locks).
+let _silentUrl: string | null = null;
+function silentAudioUrl(): string {
+  if (_silentUrl) return _silentUrl;
+  const bytes = new Uint8Array(44);
+  const dv = new DataView(bytes.buffer);
+  const w = (o: number, s: string) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); dv.setUint32(4, 36, true); w(8, 'WAVE'); w(12, 'fmt ');
+  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, 8000, true); dv.setUint32(28, 8000, true); dv.setUint16(32, 1, true);
+  dv.setUint16(34, 8, true); w(36, 'data'); dv.setUint32(40, 0, true);
+  _silentUrl = URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
+  return _silentUrl;
+}
+
 // ── Hook ──────────────────────────────────────────────────────────────────
 
 interface UseOpenAITTSOptions {
@@ -103,6 +122,8 @@ interface UseOpenAITTSReturn {
   speak: (text: string, voice?: string, instructions?: string) => Promise<void>;
   preload: (text: string, voice?: string, instructions?: string) => Promise<void>;
   cancel: () => void;
+  /** Unlock audio for iOS — call from a user gesture (e.g. the Begin tap). */
+  unlock: () => void;
   isSpeaking: boolean;
   isLoading: boolean;
   error: string | null;
@@ -156,8 +177,8 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
       audioRef.current.onended = null;
       audioRef.current.onerror = null;
       audioRef.current.pause();
-      audioRef.current.src = '';
-      audioRef.current = null;
+      // Keep the element (don't null it) so an iOS gesture-unlock persists across
+      // lines. A fresh `new Audio()` per line would re-lock playback on iOS.
     }
     // Don't revoke cached URLs — only revoke non-cached ones
     if (ownedUrlRef.current) {
@@ -167,6 +188,35 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
     setIsSpeaking(false);
     setIsLoading(false);
   }, []);
+
+  /** Lazily create the single persistent audio element reused for every line. */
+  const ensureAudioEl = useCallback((): HTMLAudioElement => {
+    if (!audioRef.current) {
+      const a = new Audio();
+      a.preload = 'auto';
+      audioRef.current = a;
+    }
+    return audioRef.current;
+  }, []);
+
+  /** Unlock audio playback on iOS. MUST run inside a user gesture (Begin tap). */
+  const unlock = useCallback(() => {
+    const a = ensureAudioEl();
+    try {
+      a.muted = true;
+      a.src = silentAudioUrl();
+      const p = a.play();
+      if (p && typeof (p as Promise<void>).then === 'function') {
+        (p as Promise<void>)
+          .then(() => { try { a.pause(); a.currentTime = 0; } catch { /* noop */ } a.muted = false; })
+          .catch(() => { a.muted = false; });
+      } else {
+        a.muted = false;
+      }
+    } catch {
+      a.muted = false;
+    }
+  }, [ensureAudioEl]);
 
   /** Fetch audio blob (from cache or API). Does NOT play it. */
   const fetchAudioBlob = useCallback(async (
@@ -184,15 +234,28 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
     } = await supabase.auth.getSession();
     const token = session?.access_token;
 
-    const response = await fetch(`${API_URL}/api/speech/synthesize`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
-      body: JSON.stringify({ text: text.slice(0, 4096), voice, instructions: instructions.slice(0, 2000), response_format: 'mp3' }),
-      signal,
-    });
+    // Hard timeout so a stalled cellular request fails fast into recovery
+    // instead of hanging the rehearsal at "Waiting" forever.
+    const timeoutCtrl = new AbortController();
+    const timeoutId = setTimeout(() => timeoutCtrl.abort(), 12000);
+    if (signal) {
+      if (signal.aborted) timeoutCtrl.abort();
+      else signal.addEventListener('abort', () => timeoutCtrl.abort(), { once: true });
+    }
+    let response: Response;
+    try {
+      response = await fetch(`${API_URL}/api/speech/synthesize`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ text: text.slice(0, 4096), voice, instructions: instructions.slice(0, 2000), response_format: 'mp3' }),
+        signal: timeoutCtrl.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       let detail: unknown = null;
@@ -246,8 +309,8 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
         const audioUrl = URL.createObjectURL(audioBlob);
         ownedUrlRef.current = audioUrl;
 
-        const audio = new Audio(audioUrl);
-        audioRef.current = audio;
+        const audio = ensureAudioEl();
+        audio.src = audioUrl;
 
         audio.onplay = () => {
           setIsSpeaking(true);
@@ -279,16 +342,16 @@ export function useOpenAITTS(options: UseOpenAITTSOptions = {}): UseOpenAITTSRet
 
         await audio.play();
       } catch (err: unknown) {
-        if (err instanceof Error && err.name === 'AbortError') return;
         setIsLoading(false);
         setIsSpeaking(false);
+        if (err instanceof Error && err.name === 'AbortError') return;
         const msg = err instanceof Error ? err.message : 'TTS failed';
         setError(msg);
         onErrorRef.current?.(err);
       }
     },
-    [cancel, fetchAudioBlob],
+    [cancel, fetchAudioBlob, ensureAudioEl],
   );
 
-  return { speak, preload, cancel, isSpeaking, isLoading, error, audioElementRef: audioRef };
+  return { speak, preload, cancel, unlock, isSpeaking, isLoading, error, audioElementRef: audioRef };
 }
