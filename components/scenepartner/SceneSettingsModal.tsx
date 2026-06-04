@@ -28,7 +28,7 @@ interface SceneSettingsModalProps {
 export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSettingsModalProps) {
   const [settings, setSettings] = useState<RehearsalSettings>(() =>
     typeof window !== "undefined" ? getRehearsalSettings() : {
-      pauseBetweenLinesSeconds: 3,
+      pauseBetweenLinesSeconds: 0.3,
       skipMyLineIfSilent: false,
       skipAfterSeconds: 10,
       countdownSeconds: 3,
@@ -119,8 +119,8 @@ export function SceneSettingsModal({ open, onOpenChange, onMicChange }: SceneSet
                   value={settings.pauseBetweenLinesSeconds}
                   onValueChange={(v) => update({ pauseBetweenLinesSeconds: v })}
                   min={0}
-                  max={10}
-                  step={1}
+                  max={5}
+                  step={0.5}
                   className="flex-1"
                 />
                 <span className="text-sm tabular-nums w-8">{settings.pauseBetweenLinesSeconds}s</span>

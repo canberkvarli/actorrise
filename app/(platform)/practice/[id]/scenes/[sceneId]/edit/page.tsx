@@ -573,7 +573,7 @@ export default function SceneEditPage() {
   // Rehearsal settings (inline in left panel)
   const [rehearsalSettings, setRehearsalSettingsLocal] = useState<RehearsalSettings>(() =>
     typeof window !== "undefined" ? getRehearsalSettings() : {
-      pauseBetweenLinesSeconds: 3, skipMyLineIfSilent: false, skipAfterSeconds: 10,
+      pauseBetweenLinesSeconds: 0.3, skipMyLineIfSilent: false, skipAfterSeconds: 10,
       countdownSeconds: 3, useAIVoice: true, autoAdvanceOnFinish: true, highlightMyLines: true,
     }
   );
@@ -1798,7 +1798,7 @@ export default function SceneEditPage() {
       <div className="rounded-xl bg-neutral-900/40 border border-neutral-800 p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Theater className="w-4 h-4 text-primary" />
-          <h3 className="text-lg font-semibold text-neutral-100">Characters</h3>
+          <h3 className="text-xl font-semibold text-neutral-100">Characters</h3>
         </div>
         <p className="text-[11px] text-neutral-400 -mt-1">Select who you&apos;ll play</p>
         <div className="space-y-2">
@@ -1945,7 +1945,7 @@ export default function SceneEditPage() {
           onClick={() => setSettingsExpanded((v) => !v)}
           className="flex items-center justify-between w-full px-4 py-3 hover:bg-neutral-800/40 transition-colors"
         >
-          <h3 className="text-base font-semibold text-neutral-100">Rehearsal settings</h3>
+          <h3 className="text-xl font-semibold text-neutral-100">Rehearsal settings</h3>
           {settingsExpanded ? (
             <ChevronUp className="w-4 h-4 text-neutral-500" />
           ) : (
@@ -1998,10 +1998,10 @@ export default function SceneEditPage() {
                     <Slider
                       value={rehearsalSettings.pauseBetweenLinesSeconds}
                       onValueChange={(v) => updateRehearsalSetting({ pauseBetweenLinesSeconds: v })}
-                      min={0} max={10} step={1}
+                      min={0} max={5} step={0.5}
                       className="flex-1"
                     />
-                    <span className="text-xs tabular-nums text-neutral-400 w-6">{rehearsalSettings.pauseBetweenLinesSeconds}s</span>
+                    <span className="text-xs tabular-nums text-neutral-400 w-8">{rehearsalSettings.pauseBetweenLinesSeconds}s</span>
                   </div>
                 </div>
 
