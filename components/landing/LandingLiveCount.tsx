@@ -196,96 +196,62 @@ export function LandingLiveCount({ variant = "section" }: LandingLiveCountProps)
     );
   }
 
+  // Uniform stat columns: same label, number size and subline, equal width
+  // (flex-1) and equal height (items-stretch), top-aligned so all three line up.
+  const labelCls = "text-xs sm:text-sm font-medium uppercase tracking-widest text-muted-foreground mb-1.5";
+  const numberCls = isInline
+    ? "text-xl sm:text-2xl font-semibold tabular-nums tracking-tight text-foreground"
+    : "text-2xl sm:text-3xl font-semibold tabular-nums tracking-tight text-foreground";
+  const subCls = "mt-1 text-muted-foreground text-sm";
+  const cardCls = "flex-1 min-w-0 flex flex-col";
+  const dividerCls = isInline ? "sm:pl-6 sm:border-l border-border/50" : "sm:pl-8 sm:border-l border-border/50";
+
   const content = (
     <div className={isInline ? "" : "container mx-auto px-4 sm:px-6"}>
       <div
         className={
           isInline
-            ? "flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-10 text-center sm:text-left"
-            : "max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-12 text-center sm:text-left"
+            ? "flex flex-col sm:flex-row items-stretch justify-center gap-6 sm:gap-10 text-center sm:text-left"
+            : "max-w-4xl mx-auto flex flex-col sm:flex-row items-stretch justify-center gap-8 sm:gap-12 text-center sm:text-left"
         }
       >
         {/* Main: monologues found */}
-        <div className={isInline ? "flex-1 min-w-0" : "flex-1 min-w-0"}>
-          <p className="text-xs sm:text-sm font-medium uppercase tracking-widest text-muted-foreground mb-1.5">
-            So far
-          </p>
-          <p
-            className={
-              isInline
-                ? "text-3xl sm:text-4xl font-semibold tabular-nums tracking-tight text-foreground"
-                : "text-4xl sm:text-5xl md:text-5xl font-semibold tabular-nums tracking-tight text-foreground"
-            }
-          >
+        <div className={cardCls}>
+          <p className={labelCls}>So far</p>
+          <p className={numberCls}>
             <motion.span
               key={totalSearches ?? 0}
               initial={false}
               animate={{ scale: isPulsing ? 1.12 : 1 }}
-              transition={{
-                type: "spring",
-                stiffness: 400,
-                damping: 25,
-              }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
               className={`inline-block origin-center ${isPulsing ? "text-primary" : isLoading ? "text-muted-foreground" : "text-foreground"}`}
             >
               {formatted}
             </motion.span>
           </p>
-          <p className={isInline ? "mt-1 text-muted-foreground text-sm" : "mt-1.5 text-muted-foreground text-base"}>
-            monologues found by actors
-          </p>
+          <p className={subCls}>monologues found by actors</p>
         </div>
 
-        {/* Secondary: library size (monologues + film & TV). Show block while loading with placeholders. */}
-        <div
-          className={
-            isInline
-              ? "pl-0 sm:pl-6 sm:border-l border-border/50 flex-1 min-w-0"
-              : "pl-0 sm:pl-8 sm:border-l border-border/50 flex-1 min-w-0"
-          }
-        >
-          <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1.5">
-            Library
+        {/* Library size (monologues + film & TV) */}
+        <div className={`${cardCls} ${dividerCls}`}>
+          <p className={labelCls}>Library</p>
+          <p className={numberCls}>
+            <span className={libraryStats ? "" : "text-muted-foreground"}>
+              {libraryToShow.monologues.toLocaleString("en-US")} monologues
+            </span>
           </p>
-          <p className={isInline ? "text-xl sm:text-2xl font-semibold tabular-nums text-foreground" : "text-2xl sm:text-3xl font-semibold tabular-nums text-foreground"}>
-            <span className={libraryStats ? "" : "text-muted-foreground"}>{libraryToShow.monologues.toLocaleString("en-US")} monologues</span>
-          </p>
-          <p className={isInline ? "mt-0.5 text-muted-foreground text-sm" : "mt-1 text-muted-foreground text-sm"}>
-            from plays, films, and TV
-          </p>
+          <p className={subCls}>from plays, films, and TV</p>
         </div>
 
-        {/* Actors count */}
+        {/* Community */}
         {usersToShow !== null && (
-          <div
-            className={
-              isInline
-                ? "pl-0 sm:pl-6 sm:border-l border-border/50 flex-1 min-w-0"
-                : "pl-0 sm:pl-8 sm:border-l border-border/50 flex-1 min-w-0"
-            }
-          >
-            <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground mb-1.5">
-              Community
-            </p>
-            <p
-              className={
-                isInline
-                  ? "text-xl sm:text-2xl font-semibold tabular-nums text-foreground flex items-center gap-2"
-                  : "text-2xl sm:text-3xl font-semibold tabular-nums text-foreground flex items-center gap-2"
-              }
-            >
+          <div className={`${cardCls} ${dividerCls}`}>
+            <p className={labelCls}>Community</p>
+            <p className={`${numberCls} flex items-center justify-center sm:justify-start gap-2`}>
               <IconUsers size={isInline ? 20 : 24} className="text-primary" />
               {usersToShow.toLocaleString("en-US")}+ actors
             </p>
-            <p
-              className={
-                isInline
-                  ? "mt-0.5 text-muted-foreground text-sm"
-                  : "mt-1 text-muted-foreground text-sm"
-              }
-            >
-              are using ActorRise
-            </p>
+            <p className={subCls}>are using ActorRise</p>
           </div>
         )}
       </div>

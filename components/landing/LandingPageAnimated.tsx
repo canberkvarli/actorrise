@@ -13,7 +13,6 @@ import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions"
 import { LandingFaq } from "@/components/landing/LandingFaq";
 import { LandingFooterAuthLink } from "@/components/landing/LandingFooterAuthLink";
 import { LandingLiveCount } from "@/components/landing/LandingLiveCount";
-import { HeroProofBar } from "@/components/landing/LandingTrustBar";
 import { HeroCta } from "@/components/landing/HeroCta";
 import { RevealSection } from "@/components/landing/RevealSection";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
@@ -98,7 +97,6 @@ export function LandingPageAnimated() {
             {/* Large Primary CTA */}
             <div className="mt-8 sm:mt-10 flex flex-col items-center gap-3">
               <HeroCta />
-              <HeroProofBar />
             </div>
 
             {/* Trust signals — right under stars */}
