@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/rehearse/EmptyState";
 
 export function SavedTab() {
   const { data: scenes, isLoading: scenesLoading } = useSavedScenes();
-  const { data: monologues, isLoading: monologuesLoading } = useBookmarks();
+  const { data: monologues, isLoading: monologuesLoading } = useBookmarks({ alwaysFresh: true });
 
   const savedScenes = scenes ?? [];
   const savedMonologues = monologues ?? [];
