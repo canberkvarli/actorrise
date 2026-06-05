@@ -7,6 +7,7 @@ import { SCRIPTS_FEATURE_ENABLED } from '@/lib/featureFlags';
 import UnderConstructionScripts from '@/components/UnderConstructionScripts';
 import api, { API_URL, getCachedAuthToken } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { ColdReadPrep } from '@/components/rehearse/ColdReadPrep';
 import {
   ArrowLeft,
   Pause,
@@ -460,6 +461,10 @@ export default function RehearsalPage() {
   const sessionId = searchParams.get('session');
   const scriptId = searchParams.get('script');
   const voiceParam = searchParams.get('voice');
+  // Cold-read mode: a timed read-through before the (single-take) performance.
+  const coldRead = searchParams.get('mode') === 'cold';
+  const coldReadCharacter = searchParams.get('character');
+  const [prepDone, setPrepDone] = useState(!coldRead);
 
   const backUrl = scriptId
     ? `/practice/${scriptId}/scenes/${sceneId}/edit`
@@ -1143,11 +1148,11 @@ export default function RehearsalPage() {
     };
   }, [cancelAI, sessionId]);
 
-  // Initial load
+  // Initial load — in cold-read mode we hold until the prep read-through is done.
   useEffect(() => {
-    if (sessionId) loadSession();
-    else setError('No active rehearsal. Pick a scene from the library or one of your scripts to begin.');
-  }, [sessionId]);
+    if (sessionId && prepDone) loadSession();
+    else if (!sessionId) setError('No active rehearsal. Pick a scene from the library or one of your scripts to begin.');
+  }, [sessionId, prepDone]);
 
   // Countdown tick — 1 second per tick
   useEffect(() => {
@@ -1757,6 +1762,16 @@ export default function RehearsalPage() {
   /* ── Render: loading ───────────────────────────────────────────── */
 
   if (!session) {
+    // Cold read: show the timed read-through first, then load + perform.
+    if (coldRead && !prepDone && sessionId) {
+      return (
+        <ColdReadPrep
+          sceneId={sceneId}
+          userCharacter={coldReadCharacter}
+          onReady={() => setPrepDone(true)}
+        />
+      );
+    }
     return (
       <div className="fixed inset-0 bg-neutral-950 flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -1921,15 +1936,20 @@ export default function RehearsalPage() {
               <ArrowLeft className="w-3.5 h-3.5" />
               Back to Script
             </button>
-            <span className="text-neutral-800">·</span>
-            <button
-              type="button"
-              onClick={handleRestart}
-              disabled={isRestarting}
-              className="text-sm text-neutral-400 hover:text-neutral-100 transition-colors disabled:opacity-50"
-            >
-              {isRestarting ? 'Starting...' : 'Run It Again'}
-            </button>
+            {/* Cold read is one take — no restarts. */}
+            {!coldRead && (
+              <>
+                <span className="text-neutral-800">·</span>
+                <button
+                  type="button"
+                  onClick={handleRestart}
+                  disabled={isRestarting}
+                  className="text-sm text-neutral-400 hover:text-neutral-100 transition-colors disabled:opacity-50"
+                >
+                  {isRestarting ? 'Starting...' : 'Run It Again'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
