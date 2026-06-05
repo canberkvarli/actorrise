@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { IconLock, IconLoader2 } from "@tabler/icons-react";
 import { toast } from "sonner";
@@ -111,7 +112,7 @@ export function SceneCard({ scene }: { scene: SceneResponse }) {
         </div>
       )}
 
-      <div className="mt-auto pt-2">
+      <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 pt-2">
         {isLocked ? (
           <Button
             size="sm"
@@ -154,6 +155,16 @@ export function SceneCard({ scene }: { scene: SceneResponse }) {
         ) : (
           <Button size="sm" onClick={() => setPicking(true)}>
             Rehearse
+          </Button>
+        )}
+        {!picking && !starting && (
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="px-2 text-muted-foreground hover:text-foreground"
+          >
+            <Link href={`/scenes/${scene.id}/memorize`}>Memorize lines</Link>
           </Button>
         )}
       </div>
