@@ -2301,7 +2301,7 @@ export default function RehearsalPage() {
 
       {/* Floating control pill */}
       <div className="shrink-0 flex justify-center px-4 pb-4 safe-area-bottom">
-        <div className="flex items-center gap-3 bg-neutral-900/90 backdrop-blur-sm border border-neutral-800 rounded-full shadow-2xl px-5 py-3 min-h-[52px]">
+        <div className="flex items-center gap-2 sm:gap-3 bg-neutral-900/90 backdrop-blur-sm border border-neutral-800 rounded-full shadow-2xl px-3 sm:px-5 py-3 min-h-[52px] max-w-[calc(100vw-1.5rem)]">
           {/* Pause / Play */}
           <button
             type="button"
@@ -2315,8 +2315,8 @@ export default function RehearsalPage() {
             }
           </button>
 
-          {/* Status indicator — wider to fit long character names */}
-          <div className="flex items-center gap-1.5 w-[140px] shrink-0">
+          {/* Status indicator — fixed width on desktop; shrinks + truncates on mobile */}
+          <div className="flex items-center gap-1.5 min-w-0 sm:w-[140px]">
             <div className={cn('w-2 h-2 rounded-full shrink-0', statusInfo.color, statusInfo.pulse && 'animate-pulse')} />
             <span className="text-[11px] text-neutral-400 whitespace-nowrap truncate">{statusInfo.text}</span>
           </div>
@@ -2331,7 +2331,7 @@ export default function RehearsalPage() {
                   transition={{ duration: 0.5 }}
                 />
               </div>
-              <span className="text-[10px] text-neutral-500 tabular-nums whitespace-nowrap">
+              <span className="hidden sm:inline text-[10px] text-neutral-500 tabular-nums whitespace-nowrap">
                 {(activeLineIndex ?? 0) + 1}/{orderedLines.length}
               </span>
             </div>
@@ -2387,7 +2387,7 @@ export default function RehearsalPage() {
           <button
             type="button"
             onClick={() => setShowShortcutsModal(true)}
-            className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors shrink-0"
+            className="hidden sm:flex w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 items-center justify-center transition-colors shrink-0"
             title="Keyboard shortcuts"
           >
             <span className="text-[11px] font-semibold text-neutral-400">?</span>
