@@ -37,18 +37,9 @@ class SceneResponse(BaseModel):
     act: Optional[str]
     scene_number: Optional[str]
     description: Optional[str]
-    character_1_name: Optional[str] = None
-    character_2_name: Optional[str] = None
-    character_1_gender: Optional[str] = None
-    character_2_gender: Optional[str] = None
     difficulty_level: Optional[str] = None
-    primary_emotions: List[str] = []
-    relationship_dynamic: Optional[str] = None
-    tone: Optional[str] = None
-    line_count: Optional[int] = None
-    estimated_duration_seconds: Optional[int] = None
     is_library: bool = False
-    is_favorited: bool = False
+    is_free_library: bool = False
 
     character_1_name: str
     character_2_name: str
@@ -74,6 +65,23 @@ class SceneResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Curated free-tier library scenes (matched by title — stable across
+# environments, unlike ids). Free actors can rehearse these in full; the rest
+# of the library is a Plus perk. Spread across tone + difficulty so the free
+# taste feels generous, not stingy.
+FREE_LIBRARY_SCENE_TITLES = {
+    "Romeo and Juliet — The Balcony",
+    "The Importance of Being Earnest — Gwendolen and Cecily at Tea",
+    "A Midsummer Night's Dream — Helena Pursues Demetrius",
+    "Trifles — Mrs. Hale and Mrs. Peters",
+}
+
+
+def _is_free_library_scene(scene) -> bool:
+    """A library scene that free-tier actors can rehearse in full."""
+    return bool(scene.is_library) and scene.title in FREE_LIBRARY_SCENE_TITLES
 
 
 class SceneLineResponse(BaseModel):
@@ -249,6 +257,7 @@ async def list_scenes(
                 "play_title": scene.play.title if scene.play else "Unknown Play",
                 "play_author": scene.play.author if scene.play else "Unknown Author",
                 "is_favorited": scene.id in favorited_ids,
+                "is_free_library": _is_free_library_scene(scene),
                 "primary_emotions": scene.primary_emotions or []
             }
             results.append(SceneResponse(**scene_dict))
@@ -287,6 +296,7 @@ async def get_scene_detail(
         "play_title": scene.play.title,
         "play_author": scene.play.author,
         "is_favorited": is_favorited,
+        "is_free_library": _is_free_library_scene(scene),
         "primary_emotions": scene.primary_emotions or [],
         "has_original_snapshot": scene.original_snapshot is not None,
         "lines": [SceneLineResponse(**line.__dict__) for line in scene.lines]
@@ -365,6 +375,7 @@ async def list_my_favorite_scenes(
                 "play_title": scene.play.title if scene.play else "Unknown Play",
                 "play_author": scene.play.author if scene.play else "Unknown Author",
                 "is_favorited": True,
+                "is_free_library": _is_free_library_scene(scene),
                 "primary_emotions": scene.primary_emotions or [],
             }))
         except Exception as e:
@@ -427,19 +438,25 @@ async def start_rehearsal(
     )
     benefits = get_effective_benefits(db, current_user.id, subscription)
     if benefits.get("scene_partner_trial_only", False):
-        is_free_allowed = scene.is_library or (
-            script is not None
-            and (script.is_sample or script.title.startswith("Example:"))
+        library_allowed = _is_free_library_scene(scene)
+        sample_allowed = script is not None and (
+            script.is_sample or script.title.startswith("Example:")
         )
-        if not is_free_allowed:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={
+        if not (library_allowed or sample_allowed):
+            if scene.is_library:
+                # A library scene that's outside the free starter set.
+                detail = {
+                    "error": "library_upgrade_required",
+                    "message": "This scene is part of the full library. Your free plan includes a starter set of scenes to rehearse — upgrade to Plus for the whole catalog.",
+                    "upgrade_url": "/pricing",
+                }
+            else:
+                detail = {
                     "error": "trial_example_only",
                     "message": "Free trial rehearsal is limited to the example script. Upgrade to Plus to rehearse your own scripts.",
                     "upgrade_url": "/pricing",
-                },
-            )
+                }
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
     # Validate character choice
     if request.user_character not in [scene.character_1_name, scene.character_2_name]:

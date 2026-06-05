@@ -17,7 +17,7 @@ export function SavedTab() {
   return (
     <div className="space-y-10">
       <section className="space-y-4">
-        <h2 className="text-lg font-bold tracking-tight">Saved scenes</h2>
+        <h2 className="text-xl font-bold tracking-tight">Saved scenes</h2>
         {scenesLoading ? (
           <SceneCardGridSkeleton count={3} />
         ) : savedScenes.length > 0 ? (
@@ -33,15 +33,15 @@ export function SavedTab() {
       </section>
 
       <section className="space-y-4">
-        <h2 className="text-lg font-bold tracking-tight">Saved monologues</h2>
+        <h2 className="text-xl font-bold tracking-tight">Saved monologues</h2>
         {monologuesLoading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-28 w-full rounded-lg" />
+              <Skeleton key={i} className="h-32 w-full rounded-lg" />
             ))}
           </div>
         ) : savedMonologues.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {savedMonologues.map((m) => (
               <MonologueCard key={m.id} monologue={m} />
             ))}

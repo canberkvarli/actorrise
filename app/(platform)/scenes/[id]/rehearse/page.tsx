@@ -463,7 +463,7 @@ export default function RehearsalPage() {
 
   const backUrl = scriptId
     ? `/practice/${scriptId}/scenes/${sceneId}/edit`
-    : '/practice';
+    : '/rehearse';
 
   /* ── Core state ─────────────────────────────────────────────────── */
 
@@ -1072,7 +1072,7 @@ export default function RehearsalPage() {
       }
       setFocusInitialized(true);
     } catch {
-      setError('Session not found. Start rehearsal from your script.');
+      setError('Session not found. Start a new rehearsal from the library or one of your scripts.');
     }
   };
 
@@ -1146,7 +1146,7 @@ export default function RehearsalPage() {
   // Initial load
   useEffect(() => {
     if (sessionId) loadSession();
-    else setError('No session. Start rehearsal from your script.');
+    else setError('No active rehearsal. Pick a scene from the library or one of your scripts to begin.');
   }, [sessionId]);
 
   // Countdown tick — 1 second per tick
@@ -1762,10 +1762,10 @@ export default function RehearsalPage() {
         <div className="text-center space-y-4">
           {error ? (
             <>
-              <p className="text-neutral-400 text-sm max-w-xs">{error}</p>
-              <Button variant="outline" size="sm" className="border-neutral-700 text-neutral-200" onClick={() => router.push(backUrl)}>
+              <p className="text-neutral-300 text-sm max-w-xs">{error}</p>
+              <Button size="sm" className="border border-neutral-600 bg-neutral-800 text-white hover:bg-neutral-700" onClick={() => router.push(backUrl)}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Script
+                {scriptId ? 'Back to script' : 'Back'}
               </Button>
             </>
           ) : (

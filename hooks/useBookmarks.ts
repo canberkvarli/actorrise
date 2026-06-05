@@ -24,6 +24,9 @@ export function useBookmarks() {
     },
     staleTime: 2 * 60 * 1000, // 2 minutes – avoid refetch on every My Monologues visit
     gcTime: 10 * 60 * 1000, // 10 minutes
+    // Always revalidate when a consumer mounts (e.g. landing on the Saved tab)
+    // so a bookmark made elsewhere shows up even within the staleTime window.
+    refetchOnMount: "always",
     retry: 1,
   });
 }
