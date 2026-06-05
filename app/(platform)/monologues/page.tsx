@@ -2056,8 +2056,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {/* Profile completeness nudge — only when user has searched but has no personalization data */}
               {hasSearched && results.length > 0 && profileData && !isPersonalized &&
                 !profileData.preferred_genres?.length && !profileData.experience_level && !isDemoUser && (
-                <div className="flex items-center gap-3 px-4 py-2.5 rounded border border-border bg-muted/30 text-sm text-muted-foreground">
-                  <span>Complete your profile to get personalized results.</span>
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded border border-border/60 bg-muted/20 text-xs text-muted-foreground">
+                  <span>Complete your profile for personalized results.</span>
                   <Link href="/profile" className="text-primary underline underline-offset-2 shrink-0">Set it up →</Link>
                 </div>
               )}

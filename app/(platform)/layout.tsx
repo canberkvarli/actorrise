@@ -179,7 +179,7 @@ export default function PlatformLayout({
 
   const navItems = [
     { href: "/rehearse", label: "Rehearse", icon: IconMicrophone },
-    { href: "/practice", label: "Practice", icon: IconFileText },
+    { href: "/practice", label: "My Scripts", icon: IconFileText },
     { href: "/monologues", label: "Monologues", icon: IconQuote },
     { href: "/progress", label: "Progress", icon: IconChartBar },
   ];
@@ -252,11 +252,15 @@ export default function PlatformLayout({
                     asChild
                     variant={isActive ? "outline" : "ghost"}
                     size="sm"
-                    className="gap-1.5 lg:gap-2 rounded-full px-2.5 lg:px-4 text-xs lg:text-sm"
+                    className={`gap-1.5 lg:gap-2 rounded-full px-2.5 lg:px-4 text-xs lg:text-sm ${
+                      isActive
+                        ? "bg-primary/10 text-primary border-primary/40 hover:bg-primary/15 hover:text-primary"
+                        : ""
+                    }`}
                   >
                     <Link href={item.href}>
                       <Icon className="h-4 w-4" />
-                      <span className={`hidden sm:inline ${isPrimary ? "font-semibold" : ""}`}>{item.label}</span>
+                      <span className={`hidden sm:inline ${isActive || isPrimary ? "font-semibold" : ""}`}>{item.label}</span>
                     </Link>
                   </Button>
                 );
@@ -522,19 +526,6 @@ export default function PlatformLayout({
                   </Link>
                 </Button>
 
-                {/* Your Scripts Link */}
-                <Button
-                  asChild
-                  variant={pathname === "/practice" ? "default" : "ghost"}
-                  size="sm"
-                  className="w-full justify-start gap-2"
-                >
-                  <Link href="/practice" onClick={() => setMobileMenuOpen(false)}>
-                    <IconFileText className="h-4 w-4" />
-                    Your Scripts
-                  </Link>
-                </Button>
-
                 {/* Billing Link */}
                 <Button
                   asChild
@@ -642,7 +633,7 @@ export default function PlatformLayout({
             }`}
           >
             <IconFileText className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] font-medium">Practice</span>
+            <span className="text-[10px] font-medium">My Scripts</span>
           </Link>
           <Link
             href="/monologues"

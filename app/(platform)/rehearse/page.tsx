@@ -10,9 +10,9 @@ function RehearseFallback() {
     <div className="space-y-8">
       <Skeleton className="h-10 w-48" />
       <Skeleton className="h-9 w-72 rounded-lg" />
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-44 w-full rounded-lg" />
+          <Skeleton key={i} className="h-52 w-full rounded-lg" />
         ))}
       </div>
     </div>
@@ -25,7 +25,7 @@ function RehearseFallback() {
  */
 export default function RehearsePage() {
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 max-w-6xl">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 max-w-7xl">
       <Suspense fallback={<RehearseFallback />}>
         <RehearseHub />
       </Suspense>

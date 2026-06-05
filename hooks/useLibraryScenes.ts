@@ -24,6 +24,8 @@ export interface SceneResponse {
   line_count: number | null;
   estimated_duration_seconds: number | null;
   is_library: boolean;
+  /** True when a library scene is in the free-tier starter set. */
+  is_free_library: boolean;
   is_favorited: boolean;
 }
 
