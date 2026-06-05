@@ -186,6 +186,7 @@ class Scene(Base):
     id = Column(Integer, primary_key=True, index=True)
     play_id = Column(Integer, ForeignKey("plays.id"), nullable=False, index=True)
     user_script_id = Column(Integer, ForeignKey("user_scripts.id"), nullable=True, index=True)  # Link to user's uploaded script
+    is_library = Column(Boolean, default=False, nullable=False, index=True)  # Curated public-domain scene available to all users
 
     # Scene Info
     title = Column(String, nullable=False)  # "Romeo & Juliet Balcony Scene"

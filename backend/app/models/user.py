@@ -27,6 +27,10 @@ class User(Base):
     has_seen_welcome = Column(Boolean, default=False, nullable=False)
     has_seen_search_tour = Column(Boolean, default=False, nullable=False)
     has_seen_profile_tour = Column(Boolean, default=False, nullable=False)
+    has_completed_onboarding = Column(Boolean, default=False, nullable=False)
+
+    # Attribution — free-text answer to "How did you hear about us?" (optional)
+    referral_source = Column(String, nullable=True)
 
     # Last changelog entry the user dismissed (drives the "What's new" modal)
     last_seen_feature_id = Column(String, nullable=True)
