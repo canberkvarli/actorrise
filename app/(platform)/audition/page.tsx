@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useVideoRecorder } from '@/hooks/useVideoRecorder';
 import { useSubscription } from '@/hooks/useSubscription';
@@ -30,7 +30,9 @@ import {
   IconArrowLeft,
 } from '@tabler/icons-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import type { Monologue } from '@/types/actor';
+import { MonologueReference } from '@/components/audition/MonologueReference';
 
 // Tier limits
 const FEEDBACK_LIMITS: Record<string, number> = { free: 1, solo: 10, plus: 30, pro: 60 };
@@ -54,7 +56,17 @@ function formatTime(seconds: number): string {
 }
 
 export default function AuditionModePage() {
+  return (
+    <Suspense fallback={<div className="dark min-h-screen bg-black" />}>
+      <AuditionModeContent />
+    </Suspense>
+  );
+}
+
+function AuditionModeContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const monologueId = searchParams.get('monologue');
   const { subscription } = useSubscription();
   const userTier = subscription?.tier_name || 'free';
   const feedbackLimit = FEEDBACK_LIMITS[userTier] || 1;
@@ -72,6 +84,10 @@ export default function AuditionModePage() {
   const [showFeedbackTooltip, setShowFeedbackTooltip] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [savedTapeId, setSavedTapeId] = useState<number | null>(null);
+
+  // Optional monologue context (when opened as /audition?monologue=<id>)
+  const [monologue, setMonologue] = useState<Monologue | null>(null);
+  const [showReference, setShowReference] = useState(true);
 
   // Settings
   const [countdownEnabled, setCountdownEnabled] = useState(true);
@@ -117,6 +133,23 @@ export default function AuditionModePage() {
       .then(({ data }) => setFeedbackUsedThisMonth(data.used))
       .catch(() => {}); // Silently fail — defaults to 0
   }, []);
+
+  // Fetch monologue context once, if provided via ?monologue=<id>
+  useEffect(() => {
+    if (!monologueId) return;
+    api.get<Monologue>(`/api/monologues/${monologueId}`)
+      .then(({ data }) => setMonologue(data))
+      .catch(() => setMonologue(null)); // not found / error — fall back to plain mode
+  }, [monologueId]);
+
+  // Collapse the reference panel automatically while recording so it doesn't block the camera
+  useEffect(() => {
+    if (pageState === 'recording' || pageState === 'countdown') {
+      setShowReference(false);
+    } else if (pageState === 'setup' || pageState === 'preview') {
+      setShowReference(true);
+    }
+  }, [pageState]);
 
   // Start camera preview when entering preview/setup state
   const startPreview = useCallback(async () => {
@@ -269,6 +302,7 @@ export default function AuditionModePage() {
       }>('/api/audition/analyze', {
         frames,
         duration,
+        ...(monologue ? { monologue_id: monologue.id } : {}),
       }, { timeoutMs: 30000 });
 
       setFeedback({
@@ -286,7 +320,7 @@ export default function AuditionModePage() {
     } finally {
       setIsAnalyzing(false);
     }
-  }, [recordedBlob, duration, feedbackUsedThisMonth, feedbackLimit]);
+  }, [recordedBlob, duration, feedbackUsedThisMonth, feedbackLimit, monologue]);
 
   const handleSaveToLibrary = useCallback(async () => {
     if (!recordedBlob || isSaving || savedTapeId) return;
@@ -378,9 +412,23 @@ export default function AuditionModePage() {
             >
               <IconArrowLeft className="w-5 h-5 text-white/70" />
             </button>
-            <div>
-              <h1 className="text-lg font-semibold text-white">Audition Mode</h1>
-              <p className="text-xs text-white/40">Record your self-tape, get AI feedback</p>
+            <div className="min-w-0">
+              {monologue ? (
+                <>
+                  <h1 className="text-lg font-semibold text-white truncate">
+                    Rehearsing: {monologue.title}
+                  </h1>
+                  <p className="text-xs text-white/40 truncate">
+                    {monologue.character_name}
+                    {monologue.play_title ? ` · ${monologue.play_title}` : ''}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <h1 className="text-lg font-semibold text-white">Audition Mode</h1>
+                  <p className="text-xs text-white/40">Record your self-tape, get AI feedback</p>
+                </>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -752,6 +800,15 @@ export default function AuditionModePage() {
                 </motion.div>
               )}
             </AnimatePresence>
+
+            {/* Monologue reference / teleprompter — only when a monologue is loaded */}
+            {monologue && (
+              <MonologueReference
+                monologue={monologue}
+                open={showReference}
+                onToggle={() => setShowReference((v) => !v)}
+              />
+            )}
           </motion.div>
 
           {/* Right Sidebar — appears after recording */}

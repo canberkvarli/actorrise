@@ -123,6 +123,13 @@ export default function MonologueDetailPage() {
               headerActions={
                 <div className="flex items-center gap-2">
                   <Button
+                    onClick={() => router.push(`/audition?monologue=${monologue.id}`)}
+                    className="flex-shrink-0"
+                  >
+                    Rehearse
+                  </Button>
+                  <Button
+                    variant="outline"
                     onClick={() => router.push(`/monologue/${monologue.id}/memorize`)}
                     className="flex-shrink-0"
                   >

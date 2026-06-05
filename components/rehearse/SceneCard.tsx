@@ -39,6 +39,7 @@ export function SceneCard({ scene }: { scene: SceneResponse }) {
   // Pick a role first (every scene is a two-hander) so the AI plays the other.
   const [picking, setPicking] = useState(false);
   const [starting, setStarting] = useState(false);
+  const [cold, setCold] = useState(false);
 
   const characters = joinWithDot([scene.character_1_name, scene.character_2_name]);
   const meta = buildMeta(scene);
@@ -55,7 +56,10 @@ export function SceneCard({ scene }: { scene: SceneResponse }) {
         "/api/scenes/rehearse/start",
         { scene_id: scene.id, user_character: userCharacter },
       );
-      router.push(`/scenes/${scene.id}/rehearse?session=${data.id}`);
+      const coldParams = cold
+        ? `&mode=cold&character=${encodeURIComponent(userCharacter)}`
+        : "";
+      router.push(`/scenes/${scene.id}/rehearse?session=${data.id}${coldParams}`);
     } catch (err) {
       setStarting(false);
       setPicking(false);
@@ -151,6 +155,15 @@ export function SceneCard({ scene }: { scene: SceneResponse }) {
                 Cancel
               </Button>
             </div>
+            <label className="flex w-fit cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={cold}
+                onChange={(e) => setCold(e.target.checked)}
+                className="accent-primary"
+              />
+              Cold read — 45s to prep, then one take
+            </label>
           </div>
         ) : (
           <Button size="sm" onClick={() => setPicking(true)}>
