@@ -14,6 +14,7 @@ from app.models.billing import PricingTier, UserSubscription, UsageMetrics
 from app.models.feedback import ResultFeedback
 from app.models.moderation import MonologueSubmission
 from app.models.user import User
+from app.services.admin_filters import real_user_filter, real_user_ids_query
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import Date, cast, func, text as sql_text
 from sqlalchemy.orm import Session
@@ -83,11 +84,12 @@ def get_admin_stats(
     from_dt = datetime.combine(from_d, time.min)
     to_dt_exclusive = datetime.combine(to_d + timedelta(days=1), time.min)
 
-    # --- Signups ---
-    total_users = db.query(User).count()
+    # --- Signups (test/dev/internal accounts excluded — see admin_filters) ---
+    total_users = db.query(User).filter(real_user_filter()).count()
     signups_by_day_q = (
         db.query(cast(User.created_at, Date).label("d"), sql_count(User.id).label("c"))
         .filter(
+            real_user_filter(),
             User.created_at >= from_dt,
             User.created_at < to_dt_exclusive,
         )
@@ -171,12 +173,17 @@ def get_admin_stats(
     approved_today = today_map.get("approved", 0)
     rejected_today = today_map.get("rejected", 0)
 
-    # --- Usage: all users in date range ---
+    # --- Usage: all real users in date range (test/dev accounts excluded) ---
+    real_ids = real_user_ids_query(db)
     usage_q = db.query(
         func.coalesce(func.sum(UsageMetrics.ai_searches_count), 0).label("ai_searches"),
         func.coalesce(func.sum(UsageMetrics.scene_partner_sessions), 0).label("scene_partner"),
         func.coalesce(func.sum(UsageMetrics.craft_coach_sessions), 0).label("craft_coach"),
-    ).filter(UsageMetrics.date >= from_d, UsageMetrics.date <= to_d)
+    ).filter(
+        UsageMetrics.date >= from_d,
+        UsageMetrics.date <= to_d,
+        UsageMetrics.user_id.in_(real_ids),
+    )
     usage_row = usage_q.first()
     usage: dict[str, Any] = {
         "ai_searches": int(usage_row.ai_searches or 0) if usage_row else 0,
@@ -186,21 +193,29 @@ def get_admin_stats(
     try:
         usage["total_searches"] = int(
             db.query(func.coalesce(func.sum(UsageMetrics.total_searches_count), 0))
-            .filter(UsageMetrics.date >= from_d, UsageMetrics.date <= to_d)
+            .filter(
+                UsageMetrics.date >= from_d,
+                UsageMetrics.date <= to_d,
+                UsageMetrics.user_id.in_(real_ids),
+            )
             .scalar()
             or 0
         )
     except Exception:
         usage["total_searches"] = usage["ai_searches"]
 
-    # All-time searches (all users); fallback if total_searches_count not migrated
+    # All-time searches (real users only); fallback if total_searches_count not migrated
     try:
         alltime_searches = int(
-            db.query(func.coalesce(func.sum(UsageMetrics.total_searches_count), 0)).scalar() or 0
+            db.query(func.coalesce(func.sum(UsageMetrics.total_searches_count), 0))
+            .filter(UsageMetrics.user_id.in_(real_ids))
+            .scalar() or 0
         )
     except Exception:
         alltime_searches = int(
-            db.query(func.coalesce(func.sum(UsageMetrics.ai_searches_count), 0)).scalar() or 0
+            db.query(func.coalesce(func.sum(UsageMetrics.ai_searches_count), 0))
+            .filter(UsageMetrics.user_id.in_(real_ids))
+            .scalar() or 0
         )
     usage["alltime_searches"] = alltime_searches
 
@@ -243,6 +258,7 @@ def get_admin_stats(
         .filter(
             UserSubscription.tier_id != free_tier_id,
             UserSubscription.status.in_(["active", "trialing"]),
+            UserSubscription.user_id.in_(real_ids),
         )
         .count()
     )
