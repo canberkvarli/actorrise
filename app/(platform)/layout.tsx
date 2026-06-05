@@ -8,7 +8,7 @@ import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconQuote, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar } from "@tabler/icons-react";
+import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconQuote, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar, IconChartBar } from "@tabler/icons-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef, Suspense } from "react";
@@ -35,6 +35,17 @@ const ChangelogModal = dynamic(
 );
 const ContactModal = dynamic(
   () => import("@/components/contact/ContactModal").then((m) => ({ default: m.ContactModal })),
+  { ssr: false },
+);
+// First-run onboarding wizard. Self-gates on user.has_completed_onboarding,
+// so it's safe to mount unconditionally.
+const OnboardingWizard = dynamic(
+  () => import("@/components/onboarding/OnboardingWizard"),
+  { ssr: false },
+);
+// Registers the PWA service worker in production (no-op in dev). Renders null.
+const PWARegister = dynamic(
+  () => import("@/components/system/PWARegister"),
   { ssr: false },
 );
 import {
@@ -120,9 +131,16 @@ export default function PlatformLayout({
     }
   }, [mobileMenuOpen]);
 
-  // Show welcome flow for new users who haven't seen it
+  // Show welcome flow for new users who haven't seen it. Suppressed while the
+  // newer full-screen OnboardingWizard is still pending (has_completed_onboarding
+  // === false) so the two first-run experiences never stack.
   useEffect(() => {
-    if (!loading && user && user.has_seen_welcome === false) {
+    if (
+      !loading &&
+      user &&
+      user.has_seen_welcome === false &&
+      user.has_completed_onboarding !== false
+    ) {
       const timer = setTimeout(() => setShowWelcome(true), 600);
       return () => clearTimeout(timer);
     }
@@ -160,8 +178,10 @@ export default function PlatformLayout({
 
 
   const navItems = [
-    { href: "/practice", label: "Practice", icon: IconMicrophone },
+    { href: "/rehearse", label: "Rehearse", icon: IconMicrophone },
+    { href: "/practice", label: "Practice", icon: IconFileText },
     { href: "/monologues", label: "Monologues", icon: IconQuote },
+    { href: "/progress", label: "Progress", icon: IconChartBar },
   ];
   const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/practice\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$/.test(pathname || "");
 
@@ -607,12 +627,21 @@ export default function PlatformLayout({
       >
         <div className="flex items-stretch justify-around min-h-[48px]">
           <Link
+            href="/rehearse"
+            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
+              pathname === "/rehearse" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <IconMicrophone className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] font-medium">Rehearse</span>
+          </Link>
+          <Link
             href="/practice"
             className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
               pathname === "/practice" ? "text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <IconMicrophone className="h-5 w-5 shrink-0" />
+            <IconFileText className="h-5 w-5 shrink-0" />
             <span className="text-[10px] font-medium">Practice</span>
           </Link>
           <Link
@@ -651,6 +680,8 @@ export default function PlatformLayout({
       </nav>
       )}
 
+      <OnboardingWizard />
+      <PWARegister />
       <AnimatePresence>
         {showWelcome && (
           <WelcomeFlow onDismiss={async () => { setShowWelcome(false); await refreshUser(); }} />
