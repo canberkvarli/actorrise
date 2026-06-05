@@ -122,6 +122,12 @@ export default function MonologueDetailPage() {
               onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
               headerActions={
                 <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => router.push(`/monologue/${monologue.id}/memorize`)}
+                    className="flex-shrink-0"
+                  >
+                    Memorize
+                  </Button>
                   {user?.is_moderator && (
                     <Button
                       variant="outline"
