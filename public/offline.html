@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#CB4B00" />
+    <title>Offline · ActorRise</title>
+    <style>
+      :root {
+        --brand: #CB4B00;
+        --brand-hover: #B03000;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100%;
+        padding: 24px;
+        background: #ffffff;
+        color: #1a1a1a;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .card {
+        max-width: 360px;
+        text-align: center;
+      }
+      .badge {
+        display: inline-block;
+        width: 56px;
+        height: 56px;
+        line-height: 56px;
+        margin-bottom: 20px;
+        border: 2px solid var(--brand);
+        color: var(--brand);
+        font-size: 26px;
+        font-weight: 700;
+      }
+      h1 {
+        margin: 0 0 10px;
+        font-size: 22px;
+        font-weight: 700;
+      }
+      p {
+        margin: 0 0 24px;
+        font-size: 15px;
+        line-height: 1.5;
+        color: #555;
+      }
+      button {
+        appearance: none;
+        border: none;
+        cursor: pointer;
+        background: var(--brand);
+        color: #fff;
+        font-size: 15px;
+        font-weight: 600;
+        padding: 12px 22px;
+        border-radius: 8px;
+      }
+      button:hover { background: var(--brand-hover); }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="badge">A</div>
+      <h1>You're offline</h1>
+      <p>Reconnect to keep rehearsing. Your scene partner will be right here when you're back.</p>
+      <button onclick="location.reload()">Try again</button>
+    </div>
+  </body>
+</html>
