@@ -8,7 +8,7 @@ import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconQuote, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar, IconChartBar } from "@tabler/icons-react";
+import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconQuote, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar, IconChartBar, IconBook } from "@tabler/icons-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef, Suspense } from "react";
@@ -178,8 +178,8 @@ export default function PlatformLayout({
 
 
   const navItems = [
-    { href: "/rehearse", label: "Rehearse", icon: IconMicrophone },
-    { href: "/practice", label: "My Scripts", icon: IconFileText },
+    { href: "/rehearse", label: "Practice", icon: IconBook },
+    { href: "/practice", label: "My Scripts", icon: IconMicrophone },
     { href: "/monologues", label: "Monologues", icon: IconQuote },
     { href: "/progress", label: "Progress", icon: IconChartBar },
   ];
@@ -623,8 +623,8 @@ export default function PlatformLayout({
               pathname === "/rehearse" ? "text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <IconMicrophone className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] font-medium">Rehearse</span>
+            <IconBook className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] font-medium">Practice</span>
           </Link>
           <Link
             href="/practice"
@@ -632,7 +632,7 @@ export default function PlatformLayout({
               pathname === "/practice" ? "text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <IconFileText className="h-5 w-5 shrink-0" />
+            <IconMicrophone className="h-5 w-5 shrink-0" />
             <span className="text-[10px] font-medium">My Scripts</span>
           </Link>
           <Link
