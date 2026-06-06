@@ -3152,8 +3152,8 @@ export default function SceneEditPage() {
             }}
             className="gap-2 rounded-full px-4 sm:px-6 h-11 sm:h-12 shadow-lg bg-background"
           >
-            <BookOpen className="w-5 h-5" />
-            <span className="hidden sm:inline">Memorize</span>
+            <BookOpen className="w-5 h-5 text-foreground" />
+            <span className="hidden sm:inline text-foreground">Memorize</span>
           </Button>
           <Button
             size="lg"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
@@ -47,6 +47,10 @@ function Section({
 
 export function RehearseHub() {
   const router = useRouter();
+  // Avoid an SSR/client hydration mismatch: the collection is client-only data,
+  // so render the loading state until mounted, then swap in the real content.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const { data, isLoading } = useBookmarks({ alwaysFresh: true });
 
   const { toStudy, memorized } = useMemo(() => {
@@ -75,7 +79,7 @@ export function RehearseHub() {
         </p>
       </div>
 
-      {isLoading ? (
+      {!mounted || isLoading ? (
         <CollectionSkeletons />
       ) : isEmpty ? (
         <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
