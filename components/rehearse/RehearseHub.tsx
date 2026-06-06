@@ -49,7 +49,6 @@ export function RehearseHub() {
 
   const total = all.length;
   const memorizedCount = memorized.length;
-  const pct = total === 0 ? 0 : Math.round((memorizedCount / total) * 100);
 
   // Default to "To study" when there's something to study, else "All".
   const [filter, setFilter] = useState<Filter>("to-study");
@@ -73,37 +72,13 @@ export function RehearseHub() {
       className="space-y-8"
     >
       {/* Header */}
-      <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <div className="max-w-xl">
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Collection
-          </h1>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Your study shelf. Work through each monologue, then mark it
-            off-book.
-          </p>
-        </div>
-
-        {showContent && total > 0 && (
-          <div className="w-full max-w-xs space-y-2 sm:w-56">
-            <p className="text-xs font-medium text-muted-foreground">
-              <span className="text-foreground">{memorizedCount}</span> of{" "}
-              {total} memorized
-            </p>
-            <div
-              className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
-              role="progressbar"
-              aria-valuenow={pct}
-              aria-valuemin={0}
-              aria-valuemax={100}
-            >
-              <div
-                className="h-full rounded-full bg-foreground/70 transition-all duration-500"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-          </div>
-        )}
+      <header>
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          Collection
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          Your study shelf. Work through each monologue, then mark it off-book.
+        </p>
       </header>
 
       {!showContent ? (
