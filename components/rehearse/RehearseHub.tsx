@@ -1,68 +1,95 @@
 "use client";
 
-import { useCallback } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ScenesTab } from "@/components/rehearse/ScenesTab";
-import { MonologuesTab } from "@/components/rehearse/MonologuesTab";
-import { SavedTab } from "@/components/rehearse/SavedTab";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useBookmarks } from "@/hooks/useBookmarks";
+import { Monologue } from "@/types/actor";
+import { CollectionCard } from "@/components/rehearse/CollectionCard";
 
-const TABS = ["scenes", "monologues", "saved"] as const;
-type TabValue = (typeof TABS)[number];
+function CollectionSkeletons() {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <Skeleton key={i} className="h-44 w-full rounded-lg" />
+      ))}
+    </div>
+  );
+}
 
-function isTabValue(v: string | null): v is TabValue {
-  return v !== null && (TABS as readonly string[]).includes(v);
+function Section({
+  title,
+  items,
+}: {
+  title: string;
+  items: Monologue[];
+}) {
+  if (items.length === 0) return null;
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center gap-3">
+        <h2 className="text-xl font-bold tracking-tight">{title}</h2>
+        <span className="border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground">
+          {items.length}
+        </span>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((m) => (
+          <CollectionCard key={m.id} monologue={m} />
+        ))}
+      </div>
+    </section>
+  );
 }
 
 export function RehearseHub() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const { data, isLoading } = useBookmarks({ alwaysFresh: true });
 
-  const tabParam = searchParams.get("tab");
-  const tab: TabValue = isTabValue(tabParam) ? tabParam : "scenes";
+  const { toStudy, memorized } = useMemo(() => {
+    const all = data ?? [];
+    return {
+      toStudy: all.filter((m) => !m.memorized),
+      memorized: all.filter((m) => m.memorized),
+    };
+  }, [data]);
 
-  const handleTabChange = useCallback(
-    (value: string) => {
-      const params = new URLSearchParams(searchParams.toString());
-      params.set("tab", value);
-      router.replace(`/rehearse?${params.toString()}`, { scroll: false });
-    },
-    [router, searchParams],
-  );
+  const isEmpty = !isLoading && (data?.length ?? 0) === 0;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-      className="space-y-8"
+      className="space-y-10"
     >
       <div>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Practice</h1>
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          Collection
+        </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Browse scenes and monologues to memorize. Rehearse your own scripts with the AI partner in My Scripts.
+          Monologues you&apos;re studying. Memorize them, then mark them off-book.
         </p>
       </div>
 
-      <Tabs value={tab} onValueChange={handleTabChange}>
-        <TabsList>
-          <TabsTrigger value="scenes">Scenes</TabsTrigger>
-          <TabsTrigger value="monologues">Monologues</TabsTrigger>
-          <TabsTrigger value="saved">Saved</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="scenes" className="mt-8">
-          <ScenesTab />
-        </TabsContent>
-        <TabsContent value="monologues" className="mt-8">
-          <MonologuesTab />
-        </TabsContent>
-        <TabsContent value="saved" className="mt-8">
-          <SavedTab />
-        </TabsContent>
-      </Tabs>
+      {isLoading ? (
+        <CollectionSkeletons />
+      ) : isEmpty ? (
+        <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
+          <p className="text-base text-muted-foreground">Nothing here yet.</p>
+          <Button onClick={() => router.push("/monologues")}>
+            Find monologues
+          </Button>
+        </div>
+      ) : (
+        <div className="space-y-10">
+          <Section title="To study" items={toStudy} />
+          <Section title="Memorized" items={memorized} />
+        </div>
+      )}
     </motion.div>
   );
 }

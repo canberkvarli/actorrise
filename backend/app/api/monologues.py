@@ -56,6 +56,7 @@ class MonologueResponse(BaseModel):
     view_count: int
     favorite_count: int
     is_favorited: bool = False
+    memorized: bool = False
     overdone_score: float
     scene_description: Optional[str]
     act: Optional[int] = None  # Act number (for classical plays)
@@ -164,6 +165,7 @@ def _monologue_to_response(
     is_favorited: bool = False,
     relevance_score: Optional[float] = None,
     match_type: Optional[str] = None,
+    memorized: bool = False,
 ) -> MonologueResponse:
     """Build MonologueResponse from ORM instance with correct types for the type checker."""
     play = m.play
@@ -190,6 +192,7 @@ def _monologue_to_response(
         view_count=cast(int, m.view_count),
         favorite_count=cast(int, m.favorite_count),
         is_favorited=is_favorited,
+        memorized=memorized,
         overdone_score=cast(float, m.overdone_score),
         scene_description=cast(Optional[str], m.scene_description),
         act=cast(Optional[int], m.act),
@@ -878,12 +881,51 @@ async def get_my_favorites(
     )
     mono_by_id = {m.id: m for m in monologues}
 
-    # Preserve order: last added first
+    # Preserve order: last added first; carry each favorite's memorized flag.
     return [
-        _monologue_to_response(mono_by_id[f.monologue_id], is_favorited=True)
+        _monologue_to_response(
+            mono_by_id[f.monologue_id],
+            is_favorited=True,
+            memorized=bool(f.memorized),
+        )
         for f in favorites
         if f.monologue_id in mono_by_id
     ]
+
+
+class SetMemorizedRequest(BaseModel):
+    memorized: bool = True
+
+
+@router.post("/{monologue_id:int}/memorized")
+async def set_memorized(
+    monologue_id: int,
+    body: SetMemorizedRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Mark/unmark a monologue as memorized. Adds it to the collection if needed."""
+    monologue = db.query(Monologue).filter(Monologue.id == monologue_id).first()
+    if not monologue:
+        raise HTTPException(status_code=404, detail="Monologue not found")
+
+    fav = (
+        db.query(MonologueFavorite)
+        .filter(
+            MonologueFavorite.user_id == current_user.id,
+            MonologueFavorite.monologue_id == monologue_id,
+        )
+        .first()
+    )
+    if not fav:
+        # Marking memorized implicitly adds it to the collection.
+        fav = MonologueFavorite(user_id=current_user.id, monologue_id=monologue_id)
+        db.add(fav)
+        monologue.favorite_count = int(monologue.favorite_count or 0) + 1  # type: ignore[assignment]
+
+    fav.memorized = body.memorized  # type: ignore[assignment]
+    db.commit()
+    return {"monologue_id": monologue_id, "memorized": body.memorized}
 
 
 @router.get("/plays/all", response_model=List[PlayResponse])

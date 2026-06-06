@@ -2,13 +2,14 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconArrowLeft, IconCheck } from "@tabler/icons-react";
 import api from "@/lib/api";
 import type { Monologue } from "@/types/actor";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { MemorizeView } from "@/components/memorize/MemorizeView";
 import { splitMonologue } from "@/lib/memorize";
+import { useToggleMemorized } from "@/hooks/useMemorized";
 
 const CONTAINER =
   "container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 max-w-3xl";
@@ -18,6 +19,36 @@ function BackLink({ onClick }: { onClick: () => void }) {
     <Button variant="ghost" onClick={onClick} className="mb-6 hover:text-primary">
       <IconArrowLeft className="h-4 w-4" />
       Back
+    </Button>
+  );
+}
+
+function MarkMemorizedButton({
+  monologueId,
+  memorized,
+}: {
+  monologueId: number;
+  memorized: boolean;
+}) {
+  const toggle = useToggleMemorized();
+  // Reflect either the server value or a successful local mutation.
+  const done = memorized || (toggle.isSuccess && toggle.variables?.memorized);
+
+  return (
+    <Button
+      variant="outline"
+      disabled={done || toggle.isPending}
+      onClick={() => toggle.mutate({ monologueId, memorized: true })}
+      className="mb-6"
+    >
+      {done ? (
+        <>
+          <IconCheck className="h-4 w-4" />
+          Memorized
+        </>
+      ) : (
+        "Mark as memorized"
+      )}
     </Button>
   );
 }
@@ -76,7 +107,13 @@ export default function MonologueMemorizePage() {
 
   return (
     <div className={CONTAINER}>
-      <BackLink onClick={() => router.back()} />
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <BackLink onClick={() => router.back()} />
+        <MarkMemorizedButton
+          monologueId={Number(id)}
+          memorized={!!monologue.memorized}
+        />
+      </div>
       <MemorizeView
         title={monologue.title}
         subtitle={[monologue.character_name, monologue.play_title]

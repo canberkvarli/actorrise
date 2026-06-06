@@ -8,7 +8,7 @@ import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconQuote, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar, IconChartBar, IconBook } from "@tabler/icons-react";
+import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconQuote, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar } from "@tabler/icons-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef, Suspense } from "react";
@@ -178,10 +178,9 @@ export default function PlatformLayout({
 
 
   const navItems = [
-    { href: "/rehearse", label: "Practice", icon: IconBook },
-    { href: "/practice", label: "My Scripts", icon: IconMicrophone },
     { href: "/monologues", label: "Monologues", icon: IconQuote },
-    { href: "/progress", label: "Progress", icon: IconChartBar },
+    { href: "/rehearse", label: "Collection", icon: IconBookmark },
+    { href: "/practice", label: "My Scripts", icon: IconMicrophone },
   ];
   const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/practice\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$/.test(pathname || "");
 
@@ -623,8 +622,8 @@ export default function PlatformLayout({
               pathname === "/rehearse" ? "text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <IconBook className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] font-medium">Practice</span>
+            <IconBookmark className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] font-medium">Collection</span>
           </Link>
           <Link
             href="/practice"
