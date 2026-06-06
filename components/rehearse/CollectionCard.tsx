@@ -61,7 +61,7 @@ export function CollectionCard({ monologue }: CollectionCardProps) {
         <div className="space-y-2">
           <Link
             href={memorizeHref}
-            className="block text-2xl font-bold leading-tight tracking-tight text-foreground transition-colors hover:text-foreground/70 sm:text-3xl"
+            className="block text-xl font-bold leading-tight tracking-tight text-foreground transition-colors hover:text-foreground/70 sm:text-2xl"
           >
             {monologue.title}
           </Link>

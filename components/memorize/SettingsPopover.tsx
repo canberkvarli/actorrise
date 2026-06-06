@@ -86,6 +86,7 @@ export function SettingsPopover({ prefs, update }: SettingsPopoverProps) {
             <Segmented
               ariaLabel="Text size"
               size="sm"
+              fullWidth
               options={FONT_SIZE_OPTIONS}
               value={prefs.fontSize}
               onChange={(v) => update({ fontSize: v })}
@@ -99,6 +100,7 @@ export function SettingsPopover({ prefs, update }: SettingsPopoverProps) {
             <Segmented
               ariaLabel="Reading theme"
               size="sm"
+              fullWidth
               options={THEME_OPTIONS}
               value={prefs.theme}
               onChange={(v) => update({ theme: v })}
@@ -114,7 +116,7 @@ export function SettingsPopover({ prefs, update }: SettingsPopoverProps) {
               onClick={() => update({ serif: !prefs.serif })}
               className={cn(
                 "relative h-6 w-11 rounded-full transition-colors cursor-pointer",
-                prefs.serif ? "bg-primary" : "bg-muted-foreground/30",
+                prefs.serif ? "bg-foreground" : "bg-muted-foreground/30",
               )}
             >
               <span
@@ -135,7 +137,7 @@ export function SettingsPopover({ prefs, update }: SettingsPopoverProps) {
               onClick={() => update({ spacious: !prefs.spacious })}
               className={cn(
                 "relative h-6 w-11 rounded-full transition-colors cursor-pointer",
-                prefs.spacious ? "bg-primary" : "bg-muted-foreground/30",
+                prefs.spacious ? "bg-foreground" : "bg-muted-foreground/30",
               )}
             >
               <span
