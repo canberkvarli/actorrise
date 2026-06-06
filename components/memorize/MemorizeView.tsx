@@ -1,8 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { maskFirstLetters } from "@/lib/memorize";
+import { Segmented } from "./Segmented";
+import { SettingsPopover } from "./SettingsPopover";
+import { SelfRecorder } from "./SelfRecorder";
+import {
+  FONT_SIZE_CLASS,
+  THEME_TOKENS,
+  useMemorizePrefs,
+  type ThemeTokens,
+} from "./prefs";
 
 type Level = "full" | "hints" | "blank";
 type Mode = "read" | "buildup";
@@ -33,149 +42,34 @@ const MODES: { value: Mode; label: string }[] = [
   { value: "buildup", label: "Build up" },
 ];
 
-/** A subtle blank bar sized to the (hidden) line length. */
-function BlankBar({ text }: { text: string }) {
-  // Approximate width from the word/char count so longer lines read as longer.
+/** A subtle blank bar sized to the (hidden) line length, themed. */
+function BlankBar({ text, t }: { text: string; t: ThemeTokens }) {
   const ch = Math.max(8, Math.min(text.length, 64));
   return (
     <span
       aria-hidden
-      className="inline-block h-[1.1em] w-full max-w-full align-middle border-b-2 border-dashed border-muted-foreground/40 bg-muted/40"
+      className={cn(
+        "inline-block h-[1.1em] w-full max-w-full align-middle border-b-2 border-dashed",
+        t.blankFill,
+        t.blankBorder,
+      )}
       style={{ width: `${ch}ch` }}
     />
   );
 }
 
-/** Optional, fully-local self-recorder. No upload, no AI — record yourself
- *  reading the piece and play it back. Degrades gracefully if the browser
- *  has no MediaRecorder or mic access is denied. */
-function SelfRecorder() {
-  const [recording, setRecording] = useState(false);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-  const [unavailable, setUnavailable] = useState(false);
-
-  const recorderRef = useRef<MediaRecorder | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const chunksRef = useRef<BlobPart[]>([]);
-  const urlRef = useRef<string | null>(null);
-
-  // Stop tracks + revoke any object URL on unmount.
-  useEffect(() => {
-    return () => {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
-    };
-  }, []);
-
-  const supported =
-    typeof window !== "undefined" &&
-    typeof MediaRecorder !== "undefined" &&
-    !!navigator.mediaDevices?.getUserMedia;
-
-  const start = async () => {
-    if (!supported) {
-      setUnavailable(true);
-      return;
-    }
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-      chunksRef.current = [];
-
-      const recorder = new MediaRecorder(stream);
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-      recorder.onstop = () => {
-        const blob = new Blob(chunksRef.current, {
-          type: recorder.mimeType || "audio/webm",
-        });
-        if (urlRef.current) URL.revokeObjectURL(urlRef.current);
-        const url = URL.createObjectURL(blob);
-        urlRef.current = url;
-        setAudioUrl(url);
-        streamRef.current?.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
-      };
-
-      recorderRef.current = recorder;
-      recorder.start();
-      setRecording(true);
-    } catch {
-      setUnavailable(true);
-    }
-  };
-
-  const stop = () => {
-    recorderRef.current?.stop();
-    recorderRef.current = null;
-    setRecording(false);
-  };
-
-  const reRecord = () => {
-    if (urlRef.current) {
-      URL.revokeObjectURL(urlRef.current);
-      urlRef.current = null;
-    }
-    setAudioUrl(null);
-    void start();
-  };
-
-  return (
-    <div className="mt-10 space-y-2 border-t border-border pt-5">
-      <p className="text-xs text-muted-foreground">
-        Record yourself and play it back.
-      </p>
-
-      {unavailable ? (
-        <p className="text-xs text-muted-foreground/70">Mic unavailable</p>
-      ) : (
-        <div className="flex flex-wrap items-center gap-2">
-          {!recording && !audioUrl && (
-            <button
-              type="button"
-              onClick={start}
-              className="rounded-md border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors cursor-pointer hover:text-foreground"
-            >
-              Record
-            </button>
-          )}
-
-          {recording && (
-            <button
-              type="button"
-              onClick={stop}
-              className="inline-flex items-center gap-2 rounded-md border border-primary px-4 py-1.5 text-sm font-medium text-primary transition-colors cursor-pointer hover:bg-primary/10"
-            >
-              <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-              Stop
-            </button>
-          )}
-
-          {audioUrl && !recording && (
-            <>
-              <audio controls src={audioUrl} className="h-9 max-w-full" />
-              <button
-                type="button"
-                onClick={reRecord}
-                className="rounded-md border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors cursor-pointer hover:text-foreground"
-              >
-                Re-record
-              </button>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export function MemorizeView({ title, subtitle, lines }: MemorizeViewProps) {
+  const { prefs, update } = useMemorizePrefs();
   const [mode, setMode] = useState<Mode>("read");
   const [level, setLevel] = useState<Level>("full");
   const [revealed, setRevealed] = useState<Set<number>>(new Set());
   // Number of lines revealed from the top in Build-up mode (cumulative method).
   const [builtUpTo, setBuiltUpTo] = useState(1);
+
+  const t = THEME_TOKENS[prefs.theme];
+  const sizeClass = FONT_SIZE_CLASS[prefs.fontSize];
+  const leading = prefs.spacious ? "leading-[2]" : "leading-relaxed";
+  const family = prefs.serif ? "font-serif" : "";
 
   const toggleReveal = (index: number) => {
     setRevealed((prev) => {
@@ -218,12 +112,28 @@ export function MemorizeView({ title, subtitle, lines }: MemorizeViewProps) {
       <div
         key={i}
         className={cn(
-          "space-y-1.5",
-          opts.newest && "border-l-2 border-primary pl-3",
+          "relative",
+          // Actor's own line: a quiet accent rail rather than a loud border.
+          line.mine && "pl-4",
         )}
       >
+        {line.mine && (
+          <span
+            aria-hidden
+            className={cn(
+              "absolute left-0 top-1.5 bottom-1.5 w-px rounded-full",
+              opts.newest ? "bg-primary" : "bg-primary/30",
+            )}
+          />
+        )}
+
         {showSpeaker && (
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <p
+            className={cn(
+              "mb-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em]",
+              line.mine ? "text-primary/80" : t.inkFaint,
+            )}
+          >
             {line.speaker}
           </p>
         )}
@@ -233,31 +143,41 @@ export function MemorizeView({ title, subtitle, lines }: MemorizeViewProps) {
             type="button"
             onClick={() => toggleReveal(i)}
             aria-label={isPeeked ? "Hide this line" : "Peek at this line"}
-            className="block w-full cursor-pointer rounded-lg px-1 text-left transition-colors hover:bg-muted/50"
+            className={cn(
+              "-mx-2 block w-full cursor-pointer rounded-lg px-2 py-1 text-left transition-colors",
+              t.hover,
+            )}
           >
             {opts.masked ? (
               level === "hints" && mode === "read" ? (
-                <span className="block font-mono text-lg leading-relaxed tracking-wide text-foreground/90 sm:text-xl">
+                <span
+                  className={cn(
+                    "block font-mono tracking-wide",
+                    sizeClass,
+                    leading,
+                    t.ink,
+                  )}
+                >
                   {maskFirstLetters(line.text)}
                 </span>
               ) : (
-                <BlankBar text={line.text} />
+                <BlankBar text={line.text} t={t} />
               )
             ) : (
-              <span className="block text-lg leading-relaxed text-foreground sm:text-xl">
+              <span className={cn("block", family, sizeClass, leading, t.ink)}>
                 {line.text}
               </span>
             )}
           </button>
         ) : (
-          // Partner / cue lines — always full, slightly muted.
-          <p className="px-1 text-lg leading-relaxed text-muted-foreground sm:text-xl">
+          // Partner / cue lines — always full, visually quieter.
+          <p className={cn(family, sizeClass, leading, t.inkMuted)}>
             {line.text}
           </p>
         )}
 
         {line.stageDirection && (
-          <p className="px-1 text-sm italic text-muted-foreground/80">
+          <p className={cn("mt-1.5 text-sm italic", t.inkFaint)}>
             [{line.stageDirection}]
           </p>
         )}
@@ -266,128 +186,108 @@ export function MemorizeView({ title, subtitle, lines }: MemorizeViewProps) {
   };
 
   return (
-    <div className="space-y-8">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-3xl">
+    <div className="mx-auto max-w-3xl space-y-8">
+      {/* Header */}
+      <header className="space-y-1.5">
+        <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
           {title}
         </h1>
         {subtitle && (
-          <p className="text-sm text-muted-foreground sm:text-base">{subtitle}</p>
+          <p className="text-sm text-muted-foreground sm:text-base">
+            {subtitle}
+          </p>
         )}
       </header>
 
-      {/* Controls */}
-      <div className="space-y-3">
-        {/* Mode toggle */}
-        <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
-          {MODES.map((m) => {
-            const active = mode === m.value;
-            return (
-              <button
-                key={m.value}
-                type="button"
-                aria-pressed={active}
-                onClick={() => switchMode(m.value)}
-                className={cn(
-                  "rounded-md px-4 py-1.5 text-sm font-medium transition-colors cursor-pointer",
-                  active
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground",
-                )}
-              >
-                {m.label}
-              </button>
-            );
-          })}
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3">
+        <Segmented
+          ariaLabel="Learning mode"
+          options={MODES}
+          value={mode}
+          onChange={switchMode}
+        />
+
+        {mode === "read" && (
+          <Segmented
+            ariaLabel="Reveal level"
+            options={LEVELS}
+            value={level}
+            onChange={setLevel}
+          />
+        )}
+
+        {mode === "buildup" && (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setBuiltUpTo((n) => Math.min(n + 1, lines.length))}
+              disabled={atEnd}
+              className={cn(
+                "rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors cursor-pointer hover:bg-[#B03000]",
+                atEnd && "cursor-not-allowed opacity-50 hover:bg-primary",
+              )}
+            >
+              Add next line
+            </button>
+            <button
+              type="button"
+              onClick={startOver}
+              className="rounded-full border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors cursor-pointer hover:text-foreground hover:bg-muted/50"
+            >
+              Start over
+            </button>
+            <span className="text-sm tabular-nums text-muted-foreground">
+              {builtUpTo} / {lines.length}
+            </span>
+          </div>
+        )}
+
+        <div className="ml-auto">
+          <SettingsPopover prefs={prefs} update={update} />
+        </div>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        {mode === "read"
+          ? "Tap a hidden line to peek."
+          : "Recall each line from the top, then add the next. Tap a blank to peek."}
+      </p>
+
+      {/* Reading surface */}
+      <div
+        className={cn(
+          "rounded-2xl border px-5 py-8 transition-colors sm:px-10 sm:py-12",
+          t.surface,
+          t.hair,
+        )}
+      >
+        <div className={cn(prefs.spacious ? "space-y-8" : "space-y-6")}>
+          {mode === "read"
+            ? lines.map((line, i) =>
+                renderLine(line, i, {
+                  masked: line.mine && level !== "full" && !revealed.has(i),
+                }),
+              )
+            : lines.slice(0, builtUpTo).map((line, i) =>
+                renderLine(line, i, {
+                  masked: line.mine && !revealed.has(i),
+                  newest: i === builtUpTo - 1,
+                }),
+              )}
         </div>
 
-        {mode === "read" ? (
-          <div className="space-y-2">
-            {/* Level control */}
-            <div className="inline-flex rounded-lg border border-border bg-muted/40 p-1">
-              {LEVELS.map((l) => {
-                const active = level === l.value;
-                return (
-                  <button
-                    key={l.value}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => setLevel(l.value)}
-                    className={cn(
-                      "rounded-md px-4 py-1.5 text-sm font-medium transition-colors cursor-pointer",
-                      active
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:text-foreground",
-                    )}
-                  >
-                    {l.label}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Tap a hidden line to peek.
-            </p>
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {/* Build-up controls */}
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setBuiltUpTo((n) => Math.min(n + 1, lines.length))
-                }
-                disabled={atEnd}
-                className={cn(
-                  "rounded-md bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors cursor-pointer hover:bg-[#B03000]",
-                  atEnd && "cursor-not-allowed opacity-50 hover:bg-primary",
-                )}
-              >
-                Add next line
-              </button>
-              <button
-                type="button"
-                onClick={startOver}
-                className="rounded-md border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors cursor-pointer hover:text-foreground"
-              >
-                Start over
-              </button>
-              <span className="text-sm tabular-nums text-muted-foreground">
-                {builtUpTo} / {lines.length}
-              </span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Recall each line from the top, then add the next. Tap a blank to
-              peek.
-            </p>
-          </div>
+        {mode === "buildup" && atEnd && (
+          <p className={cn("mt-8 text-sm", t.inkMuted)}>
+            You&apos;ve built the whole piece — run it from the top.
+          </p>
         )}
       </div>
 
-      {/* Lines */}
-      <div className="space-y-5">
-        {mode === "read"
-          ? lines.map((line, i) =>
-              renderLine(line, i, {
-                masked: line.mine && level !== "full" && !revealed.has(i),
-              }),
-            )
-          : lines.slice(0, builtUpTo).map((line, i) =>
-              renderLine(line, i, {
-                masked: line.mine && !revealed.has(i),
-                newest: i === builtUpTo - 1,
-              }),
-            )}
+      {/* Recorder — tucked beneath the reading view so it stays calm. */}
+      <div className="border-t border-border pt-6">
+        <SelfRecorder />
       </div>
-
-      {mode === "buildup" && atEnd && (
-        <p className="text-sm text-muted-foreground">
-          You&apos;ve built the whole piece — run it from the top.
-        </p>
-      )}
-
-      <SelfRecorder />
     </div>
   );
 }
