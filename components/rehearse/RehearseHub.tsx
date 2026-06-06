@@ -40,7 +40,10 @@ export function RehearseHub() {
       className="space-y-8"
     >
       <div>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Rehearse</h1>
+        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Practice</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Browse scenes and monologues to memorize. Rehearse your own scripts with the AI partner in My Scripts.
+        </p>
       </div>
 
       <Tabs value={tab} onValueChange={handleTabChange}>
