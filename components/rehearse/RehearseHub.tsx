@@ -6,42 +6,27 @@ import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Segmented } from "@/components/memorize/Segmented";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { Monologue } from "@/types/actor";
-import { CollectionCard } from "@/components/rehearse/CollectionCard";
+import { CollectionRow } from "@/components/rehearse/CollectionRow";
+
+type Filter = "all" | "to-study" | "memorized";
 
 function CollectionSkeletons() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <Skeleton key={i} className="h-44 w-full rounded-lg" />
+    <div className="divide-y divide-border border-t border-border">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex items-start justify-between gap-6 py-7">
+          <div className="w-full max-w-md space-y-3">
+            <Skeleton className="h-7 w-2/3" />
+            <Skeleton className="h-4 w-1/2" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+          <Skeleton className="h-9 w-24 rounded-md" />
+        </div>
       ))}
     </div>
-  );
-}
-
-function Section({
-  title,
-  items,
-}: {
-  title: string;
-  items: Monologue[];
-}) {
-  if (items.length === 0) return null;
-  return (
-    <section className="space-y-4">
-      <div className="flex items-center gap-3">
-        <h2 className="text-xl font-bold tracking-tight">{title}</h2>
-        <span className="border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground">
-          {items.length}
-        </span>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {items.map((m) => (
-          <CollectionCard key={m.id} monologue={m} />
-        ))}
-      </div>
-    </section>
   );
 }
 
@@ -53,45 +38,121 @@ export function RehearseHub() {
   useEffect(() => setMounted(true), []);
   const { data, isLoading } = useBookmarks({ alwaysFresh: true });
 
-  const { toStudy, memorized } = useMemo(() => {
+  const { all, toStudy, memorized } = useMemo(() => {
     const all = data ?? [];
     return {
+      all,
       toStudy: all.filter((m) => !m.memorized),
       memorized: all.filter((m) => m.memorized),
     };
   }, [data]);
 
-  const isEmpty = !isLoading && (data?.length ?? 0) === 0;
+  const total = all.length;
+  const memorizedCount = memorized.length;
+  const pct = total === 0 ? 0 : Math.round((memorizedCount / total) * 100);
+
+  // Default to "To study" when there's something to study, else "All".
+  const [filter, setFilter] = useState<Filter>("to-study");
+  const [filterTouched, setFilterTouched] = useState(false);
+  useEffect(() => {
+    if (filterTouched || !mounted || isLoading) return;
+    setFilter(toStudy.length > 0 ? "to-study" : "all");
+  }, [filterTouched, mounted, isLoading, toStudy.length]);
+
+  const visible =
+    filter === "to-study" ? toStudy : filter === "memorized" ? memorized : all;
+
+  const isEmpty = !isLoading && total === 0;
+  const showContent = mounted && !isLoading;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-      className="space-y-10"
+      className="space-y-8"
     >
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          Collection
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Monologues you&apos;re studying. Memorize them, then mark them off-book.
-        </p>
-      </div>
+      {/* Header */}
+      <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+        <div className="max-w-xl">
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+            Collection
+          </h1>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Your study shelf. Work through each monologue, then mark it
+            off-book.
+          </p>
+        </div>
 
-      {!mounted || isLoading ? (
+        {showContent && total > 0 && (
+          <div className="w-full max-w-xs space-y-2 sm:w-56">
+            <p className="text-xs font-medium text-muted-foreground">
+              <span className="text-foreground">{memorizedCount}</span> of{" "}
+              {total} memorized
+            </p>
+            <div
+              className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuenow={pct}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div
+                className="h-full rounded-full bg-foreground/70 transition-all duration-500"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          </div>
+        )}
+      </header>
+
+      {!showContent ? (
         <CollectionSkeletons />
       ) : isEmpty ? (
-        <div className="flex flex-col items-center justify-center gap-4 py-20 text-center">
-          <p className="text-base text-muted-foreground">Nothing here yet.</p>
+        <div className="flex flex-col items-center justify-center gap-5 py-24 text-center">
+          <div className="space-y-1.5">
+            <p className="text-lg font-medium text-foreground">
+              Nothing here yet.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Save a monologue and it&apos;ll show up here, ready to study.
+            </p>
+          </div>
           <Button onClick={() => router.push("/monologues")}>
             Find monologues
           </Button>
         </div>
       ) : (
-        <div className="space-y-10">
-          <Section title="To study" items={toStudy} />
-          <Section title="Memorized" items={memorized} />
+        <div className="space-y-6">
+          {/* Filter */}
+          <Segmented<Filter>
+            ariaLabel="Filter collection"
+            value={filter}
+            onChange={(v) => {
+              setFilter(v);
+              setFilterTouched(true);
+            }}
+            options={[
+              { value: "all", label: `All · ${total}` },
+              { value: "to-study", label: `To study · ${toStudy.length}` },
+              { value: "memorized", label: `Memorized · ${memorizedCount}` },
+            ]}
+          />
+
+          {/* List */}
+          {visible.length === 0 ? (
+            <p className="border-t border-border py-16 text-center text-sm text-muted-foreground">
+              {filter === "memorized"
+                ? "Nothing memorized yet. Keep going."
+                : "Nothing to study right now."}
+            </p>
+          ) : (
+            <div className="divide-y divide-border border-t border-border">
+              {visible.map((m: Monologue) => (
+                <CollectionRow key={m.id} monologue={m} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </motion.div>
