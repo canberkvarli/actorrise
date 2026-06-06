@@ -1168,6 +1168,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         if (selectedMonologue?.id === mono.id) {
           setSelectedMonologue(prev => prev ? { ...prev, is_favorited: false, favorite_count: prev.favorite_count - 1 } : null);
         }
+        // Remove from the Collection cache instantly.
+        queryClient.setQueryData<Monologue[]>(["bookmarks"], (old) => (old ?? []).filter((m) => m.id !== mono.id));
         await api.delete(`/api/monologues/${mono.id}/favorite`);
         toastBookmark(false, {
           duration: 5000,
@@ -1190,6 +1192,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         if (selectedMonologue?.id === mono.id) {
           setSelectedMonologue(prev => prev ? { ...prev, is_favorited: true, favorite_count: (prev.favorite_count ?? 0) + 1 } : null);
         }
+        // Write into the Collection cache instantly so it shows up immediately
+        // (search results live in component state, not this query cache).
+        queryClient.setQueryData<Monologue[]>(["bookmarks"], (old) => {
+          const list = old ?? [];
+          return list.some((m) => m.id === mono.id)
+            ? list
+            : [{ ...mono, is_favorited: true, memorized: false, favorite_count: (mono.favorite_count ?? 0) + 1 }, ...list];
+        });
         await api.post(`/api/monologues/${mono.id}/favorite`);
         toastBookmark(true, {
           duration: 5000,

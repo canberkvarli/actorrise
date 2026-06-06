@@ -20,12 +20,11 @@ function RehearseFallback() {
 }
 
 /**
- * /rehearse — the hub for rehearsing scenes and monologues.
- * Tabs (Scenes | Monologues | Saved) are URL-synced via ?tab=.
+ * /rehearse — the Collection: monologues the actor is studying.
  */
 export default function RehearsePage() {
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 max-w-5xl">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 max-w-6xl">
       <Suspense fallback={<RehearseFallback />}>
         <RehearseHub />
       </Suspense>

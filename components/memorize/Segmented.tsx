@@ -15,6 +15,8 @@ interface SegmentedProps<T extends string> {
   ariaLabel?: string;
   /** Compact padding (used for the tiny font-size control). */
   size?: "default" | "sm";
+  /** Stretch to fill the container with equal-width segments. */
+  fullWidth?: boolean;
   className?: string;
 }
 
@@ -26,6 +28,7 @@ export function Segmented<T extends string>({
   onChange,
   ariaLabel,
   size = "default",
+  fullWidth = false,
   className,
 }: SegmentedProps<T>) {
   return (
@@ -33,7 +36,8 @@ export function Segmented<T extends string>({
       role="radiogroup"
       aria-label={ariaLabel}
       className={cn(
-        "inline-flex items-center gap-1 rounded-full border border-border bg-muted/50 p-1",
+        "items-center gap-1 rounded-full border border-border bg-muted/50 p-1",
+        fullWidth ? "flex w-full" : "inline-flex",
         className,
       )}
     >
@@ -49,8 +53,9 @@ export function Segmented<T extends string>({
             className={cn(
               "rounded-full font-medium transition-colors cursor-pointer",
               size === "sm" ? "px-2.5 py-1 text-xs" : "px-4 py-1.5 text-sm",
+              fullWidth && "flex-1 text-center",
               active
-                ? "bg-background text-foreground shadow-sm ring-1 ring-primary/40"
+                ? "bg-background text-foreground shadow-sm ring-1 ring-border"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >

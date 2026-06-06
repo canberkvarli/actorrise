@@ -18,7 +18,7 @@ const CONTAINER =
 
 function BackLink({ onClick }: { onClick: () => void }) {
   return (
-    <Button variant="ghost" onClick={onClick} className="mb-6 hover:text-primary">
+    <Button variant="ghost" onClick={onClick} className="mb-6 text-muted-foreground hover:text-foreground">
       <IconArrowLeft className="h-4 w-4" />
       Back
     </Button>
