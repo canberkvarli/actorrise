@@ -113,7 +113,8 @@ export default function OnboardingWizard() {
   }, [finish]);
 
   const handleStart = useCallback(() => {
-    const target = choice === "monologue" ? "/monologues" : "/rehearse?tab=scenes";
+    // "scene" maps to My Scripts (where scene rehearsal lives); monologue to search.
+    const target = choice === "monologue" ? "/monologues" : "/practice";
     finish(target);
   }, [choice, finish]);
 
