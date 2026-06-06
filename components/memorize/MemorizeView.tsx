@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { maskFirstLetters } from "@/lib/memorize";
 
@@ -43,6 +43,130 @@ function BlankBar({ text }: { text: string }) {
       className="inline-block h-[1.1em] w-full max-w-full align-middle border-b-2 border-dashed border-muted-foreground/40 bg-muted/40"
       style={{ width: `${ch}ch` }}
     />
+  );
+}
+
+/** Optional, fully-local self-recorder. No upload, no AI — record yourself
+ *  reading the piece and play it back. Degrades gracefully if the browser
+ *  has no MediaRecorder or mic access is denied. */
+function SelfRecorder() {
+  const [recording, setRecording] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
+
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<BlobPart[]>([]);
+  const urlRef = useRef<string | null>(null);
+
+  // Stop tracks + revoke any object URL on unmount.
+  useEffect(() => {
+    return () => {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    };
+  }, []);
+
+  const supported =
+    typeof window !== "undefined" &&
+    typeof MediaRecorder !== "undefined" &&
+    !!navigator.mediaDevices?.getUserMedia;
+
+  const start = async () => {
+    if (!supported) {
+      setUnavailable(true);
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
+      chunksRef.current = [];
+
+      const recorder = new MediaRecorder(stream);
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      recorder.onstop = () => {
+        const blob = new Blob(chunksRef.current, {
+          type: recorder.mimeType || "audio/webm",
+        });
+        if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+        const url = URL.createObjectURL(blob);
+        urlRef.current = url;
+        setAudioUrl(url);
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      };
+
+      recorderRef.current = recorder;
+      recorder.start();
+      setRecording(true);
+    } catch {
+      setUnavailable(true);
+    }
+  };
+
+  const stop = () => {
+    recorderRef.current?.stop();
+    recorderRef.current = null;
+    setRecording(false);
+  };
+
+  const reRecord = () => {
+    if (urlRef.current) {
+      URL.revokeObjectURL(urlRef.current);
+      urlRef.current = null;
+    }
+    setAudioUrl(null);
+    void start();
+  };
+
+  return (
+    <div className="mt-10 space-y-2 border-t border-border pt-5">
+      <p className="text-xs text-muted-foreground">
+        Record yourself and play it back.
+      </p>
+
+      {unavailable ? (
+        <p className="text-xs text-muted-foreground/70">Mic unavailable</p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-2">
+          {!recording && !audioUrl && (
+            <button
+              type="button"
+              onClick={start}
+              className="rounded-md border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors cursor-pointer hover:text-foreground"
+            >
+              Record
+            </button>
+          )}
+
+          {recording && (
+            <button
+              type="button"
+              onClick={stop}
+              className="inline-flex items-center gap-2 rounded-md border border-primary px-4 py-1.5 text-sm font-medium text-primary transition-colors cursor-pointer hover:bg-primary/10"
+            >
+              <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+              Stop
+            </button>
+          )}
+
+          {audioUrl && !recording && (
+            <>
+              <audio controls src={audioUrl} className="h-9 max-w-full" />
+              <button
+                type="button"
+                onClick={reRecord}
+                className="rounded-md border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors cursor-pointer hover:text-foreground"
+              >
+                Re-record
+              </button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -262,6 +386,8 @@ export function MemorizeView({ title, subtitle, lines }: MemorizeViewProps) {
           You&apos;ve built the whole piece — run it from the top.
         </p>
       )}
+
+      <SelfRecorder />
     </div>
   );
 }

@@ -32,6 +32,7 @@ STATEMENTS = [
     "CREATE INDEX IF NOT EXISTS ix_scenes_is_library ON scenes (is_library)",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS has_completed_onboarding BOOLEAN NOT NULL DEFAULT FALSE",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_source VARCHAR",
+    "ALTER TABLE monologue_favorites ADD COLUMN IF NOT EXISTS memorized BOOLEAN NOT NULL DEFAULT FALSE",
 ]
 
 

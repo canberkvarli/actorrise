@@ -51,6 +51,7 @@ export interface Monologue {
   view_count: number;
   favorite_count: number;
   is_favorited: boolean;
+  memorized?: boolean;
   overdone_score: number;
   scene_description?: string;
   // For compatibility with old components
