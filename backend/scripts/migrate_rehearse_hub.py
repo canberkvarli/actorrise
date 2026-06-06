@@ -33,6 +33,7 @@ STATEMENTS = [
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS has_completed_onboarding BOOLEAN NOT NULL DEFAULT FALSE",
     "ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_source VARCHAR",
     "ALTER TABLE monologue_favorites ADD COLUMN IF NOT EXISTS memorized BOOLEAN NOT NULL DEFAULT FALSE",
+    "ALTER TABLE monologue_favorites ADD COLUMN IF NOT EXISTS last_studied_at TIMESTAMPTZ",
 ]
 
 

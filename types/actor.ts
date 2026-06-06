@@ -52,6 +52,8 @@ export interface Monologue {
   favorite_count: number;
   is_favorited: boolean;
   memorized?: boolean;
+  notes?: string | null;
+  last_studied_at?: string | null;
   overdone_score: number;
   scene_description?: string;
   // For compatibility with old components

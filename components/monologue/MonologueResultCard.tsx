@@ -109,8 +109,8 @@ export function MonologueResultCard({
                     {mono.character_name}
                   </h3>
                   {mono.is_favorited && (
-                    <span className="px-2 py-0.5 bg-muted/90 text-foreground border border-border text-xs font-medium rounded-md">
-                      Saved
+                    <span className={`px-2 py-0.5 border text-xs font-medium ${accentTeal.bg} ${accentTeal.text} border-transparent`}>
+                      In collection
                     </span>
                   )}
                 </div>
@@ -149,7 +149,8 @@ export function MonologueResultCard({
                     ? `${accentTeal.bg} ${accentTeal.bgHover} ${accentTeal.text}`
                     : `${accentTeal.hoverBg} ${accentTeal.textHover} text-muted-foreground`
                 }`}
-                aria-label={mono.is_favorited ? "Remove bookmark" : "Add bookmark"}
+                aria-label={mono.is_favorited ? "Remove from collection" : "Add to collection"}
+                title={mono.is_favorited ? "In collection" : "Add to collection"}
                 >
                   <BookmarkIcon filled={!!mono.is_favorited} size="md" />
                 </motion.button>

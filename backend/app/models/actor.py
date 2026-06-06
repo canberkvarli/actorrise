@@ -158,6 +158,7 @@ class MonologueFavorite(Base):
     monologue_id = Column(Integer, ForeignKey("monologues.id"), nullable=False, index=True)
     notes = Column(Text, nullable=True)  # User's performance notes
     memorized = Column(Boolean, default=False, nullable=False)  # Actor marked this off-book
+    last_studied_at = Column(DateTime(timezone=True), nullable=True)  # Last time the memorize screen was opened
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
 
     # Relationships

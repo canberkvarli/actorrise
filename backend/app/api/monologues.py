@@ -57,6 +57,8 @@ class MonologueResponse(BaseModel):
     favorite_count: int
     is_favorited: bool = False
     memorized: bool = False
+    notes: Optional[str] = None
+    last_studied_at: Optional[str] = None
     overdone_score: float
     scene_description: Optional[str]
     act: Optional[int] = None  # Act number (for classical plays)
@@ -166,6 +168,8 @@ def _monologue_to_response(
     relevance_score: Optional[float] = None,
     match_type: Optional[str] = None,
     memorized: bool = False,
+    notes: Optional[str] = None,
+    last_studied_at: Optional[str] = None,
 ) -> MonologueResponse:
     """Build MonologueResponse from ORM instance with correct types for the type checker."""
     play = m.play
@@ -193,6 +197,8 @@ def _monologue_to_response(
         favorite_count=cast(int, m.favorite_count),
         is_favorited=is_favorited,
         memorized=memorized,
+        notes=notes,
+        last_studied_at=last_studied_at,
         overdone_score=cast(float, m.overdone_score),
         scene_description=cast(Optional[str], m.scene_description),
         act=cast(Optional[int], m.act),
@@ -881,12 +887,14 @@ async def get_my_favorites(
     )
     mono_by_id = {m.id: m for m in monologues}
 
-    # Preserve order: last added first; carry each favorite's memorized flag.
+    # Preserve order: last added first; carry each favorite's collection state.
     return [
         _monologue_to_response(
             mono_by_id[f.monologue_id],
             is_favorited=True,
             memorized=bool(f.memorized),
+            notes=f.notes,
+            last_studied_at=f.last_studied_at.isoformat() if f.last_studied_at else None,
         )
         for f in favorites
         if f.monologue_id in mono_by_id
@@ -895,6 +903,69 @@ async def get_my_favorites(
 
 class SetMemorizedRequest(BaseModel):
     memorized: bool = True
+
+
+class SetNotesRequest(BaseModel):
+    notes: str = ""
+
+
+@router.post("/{monologue_id:int}/notes")
+async def set_notes(
+    monologue_id: int,
+    body: SetNotesRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Save the actor's notes on a monologue (adds it to the collection if needed)."""
+    monologue = db.query(Monologue).filter(Monologue.id == monologue_id).first()
+    if not monologue:
+        raise HTTPException(status_code=404, detail="Monologue not found")
+
+    fav = (
+        db.query(MonologueFavorite)
+        .filter(
+            MonologueFavorite.user_id == current_user.id,
+            MonologueFavorite.monologue_id == monologue_id,
+        )
+        .first()
+    )
+    if not fav:
+        fav = MonologueFavorite(user_id=current_user.id, monologue_id=monologue_id)
+        db.add(fav)
+        monologue.favorite_count = int(monologue.favorite_count or 0) + 1  # type: ignore[assignment]
+
+    fav.notes = body.notes.strip() or None  # type: ignore[assignment]
+    db.commit()
+    return {"monologue_id": monologue_id, "notes": fav.notes}
+
+
+@router.post("/{monologue_id:int}/studied")
+async def mark_studied(
+    monologue_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Touch last_studied_at when a collection item's memorize screen opens.
+
+    No-op if the monologue isn't in the user's collection (so merely opening
+    memorize for a non-collection piece doesn't silently add it)."""
+    from datetime import datetime, timezone
+
+    fav = (
+        db.query(MonologueFavorite)
+        .filter(
+            MonologueFavorite.user_id == current_user.id,
+            MonologueFavorite.monologue_id == monologue_id,
+        )
+        .first()
+    )
+    if not fav:
+        return {"monologue_id": monologue_id, "last_studied_at": None}
+
+    now = datetime.now(timezone.utc)
+    fav.last_studied_at = now  # type: ignore[assignment]
+    db.commit()
+    return {"monologue_id": monologue_id, "last_studied_at": now.isoformat()}
 
 
 @router.post("/{monologue_id:int}/memorized")

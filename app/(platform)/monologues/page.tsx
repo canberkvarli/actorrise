@@ -1847,7 +1847,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                             : filmTvTotal > 0 ? filmTvTotal : filmTvResults.length}
                         </span>
                         <span className="text-sm text-muted-foreground">
-                          {showBookmarkedOnly ? "bookmarked" : "monologues found"}
+                          {showBookmarkedOnly ? "in your collection" : "monologues found"}
                         </span>
                       </div>
                       {!showBookmarkedOnly && queryUsedForResults && (
@@ -1861,7 +1861,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       className={`sm:hidden gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
                     >
                       <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                      Bookmarked
+                      Collection
                     </Button>
                   </div>
                   <div className="flex-1 flex justify-center min-w-0">
@@ -1878,7 +1878,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     className={`hidden sm:inline-flex gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
                   >
                     <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                    Bookmarked only
+                    In your collection
                   </Button>
                 </div>
                 {/* Monologue cards grid */}
@@ -1890,7 +1890,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <CardContent className="pt-12 pb-12 text-center">
                           <p className="text-muted-foreground text-sm">
                             {showBookmarkedOnly
-                              ? "No bookmarked results"
+                              ? "Nothing in your collection yet"
                               : "No results found"}
                           </p>
                         </CardContent>
@@ -2081,7 +2081,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           : total > 0 ? total : results.length}
                       </span>
                       <span className="text-sm text-muted-foreground">
-                        {showBookmarkedOnly ? "bookmarked" : "monologues found"}
+                        {showBookmarkedOnly ? "in your collection" : "monologues found"}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
@@ -2114,7 +2114,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     className={`sm:hidden gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
                   >
                     <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                    Bookmarked
+                    Collection
                   </Button>
                 </div>
                 {/* Center: feedback — flex justify-center fills the 1fr middle column */}
@@ -2125,7 +2125,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     onOpenContact={() => setContactOpen(true)}
                   />
                 </div>
-                {/* Right: desktop bookmark button */}
+                {/* Right: desktop collection filter button */}
                 <Button
                   variant={showBookmarkedOnly ? "secondary" : "outline"}
                   size="sm"
@@ -2133,7 +2133,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   className={`hidden sm:inline-flex gap-2 rounded-full shrink-0 justify-self-end ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
                 >
                   <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                  Bookmarked only
+                  In your collection
                 </Button>
               </div>
 
@@ -2323,7 +2323,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                             ? `${accentTeal.bg} ${accentTeal.bgHover} ${accentTeal.text}`
                             : `${accentTeal.hoverBg} ${accentTeal.textHover} text-muted-foreground`
                         }`}
-                        aria-label={selectedMonologue.is_favorited ? "Remove bookmark" : "Add bookmark"}
+                        aria-label={selectedMonologue.is_favorited ? "Remove from collection" : "Add to collection"}
                       >
                         <BookmarkIcon filled={!!selectedMonologue.is_favorited} size="md" />
                       </Button>
