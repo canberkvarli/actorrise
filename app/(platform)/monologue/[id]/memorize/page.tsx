@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { IconArrowLeft, IconCheck } from "@tabler/icons-react";
@@ -10,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MemorizeView } from "@/components/memorize/MemorizeView";
 import { splitMonologue } from "@/lib/memorize";
 import { useToggleMemorized } from "@/hooks/useMemorized";
+import { useMarkStudied } from "@/hooks/useCollectionMeta";
 
 const CONTAINER =
   "container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 max-w-3xl";
@@ -56,6 +58,15 @@ function MarkMemorizedButton({
 export default function MonologueMemorizePage() {
   const router = useRouter();
   const id = useParams().id as string;
+
+  const markStudied = useMarkStudied();
+  const studiedFor = useRef<string | null>(null);
+  useEffect(() => {
+    const numId = Number(id);
+    if (!id || Number.isNaN(numId) || studiedFor.current === id) return;
+    studiedFor.current = id;
+    markStudied.mutate(numId);
+  }, [id, markStudied]);
 
   const {
     data: monologue,

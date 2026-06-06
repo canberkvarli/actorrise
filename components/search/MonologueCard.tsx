@@ -5,9 +5,10 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { isMeaningfulMonologueTitle } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { IconExternalLink, IconSparkles } from "@tabler/icons-react";
+import { IconExternalLink, IconSparkles, IconPlus, IconCheck } from "@tabler/icons-react";
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
+import { useToggleFavorite } from "@/hooks/useBookmarks";
 
 interface MonologueCardProps {
   monologue: Monologue;
@@ -19,6 +20,14 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
     triggerOnce: true,
     threshold: 0.1,
   });
+  const toggleFavorite = useToggleFavorite();
+  const isInCollection = !!monologue.is_favorited;
+
+  // One tap: pass the CURRENT favorited state so the hook toggles it.
+  const handleCollection = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    toggleFavorite.mutate({ monologueId: monologue.id, isFavorited: isInCollection });
+  };
 
   return (
     <motion.div
@@ -42,6 +51,29 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
               </CardTitle>
                 <CardDescription className="text-base">by {monologue.author}</CardDescription>
               </div>
+              {isInCollection ? (
+                <button
+                  type="button"
+                  onClick={handleCollection}
+                  disabled={toggleFavorite.isPending}
+                  aria-label="In your collection. Tap to remove."
+                  className="shrink-0 inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-emerald-700 bg-emerald-500/10 border border-emerald-500/30 dark:text-emerald-400 cursor-pointer transition-colors hover:bg-emerald-500/20"
+                >
+                  <IconCheck className="h-3.5 w-3.5" />
+                  In collection
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleCollection}
+                  disabled={toggleFavorite.isPending}
+                  aria-label="Add to collection"
+                  className="shrink-0 inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground border border-border cursor-pointer transition-colors hover:text-primary hover:border-primary/40 hover:bg-primary/5"
+                >
+                  <IconPlus className="h-3.5 w-3.5" />
+                  Add to collection
+                </button>
+              )}
               {monologue.relevance_score !== undefined && (
                 <motion.div
                   initial={{ scale: 0 }}
