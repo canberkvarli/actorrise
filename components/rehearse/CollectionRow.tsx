@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { IconBulb, IconBulbFilled } from "@tabler/icons-react";
 
 import {
@@ -83,29 +84,38 @@ export function CollectionRow({ monologue }: CollectionRowProps) {
 
         <Tooltip>
           <TooltipTrigger asChild>
-            <button
+            <motion.button
               type="button"
               onClick={() =>
                 mark.mutate({ monologueId: monologue.id, memorized: !memorized })
               }
               aria-pressed={memorized}
-              className="shrink-0 rounded-full p-1 transition-transform cursor-pointer hover:scale-110"
+              whileTap={{ scale: 0.8 }}
+              className="shrink-0 rounded-full p-1 cursor-pointer"
             >
-              {memorized ? (
-                <IconBulbFilled
-                  className="size-6 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.55)]"
-                  aria-hidden
-                />
-              ) : (
-                <IconBulb
-                  className="size-6 text-muted-foreground/35 transition-colors hover:text-muted-foreground"
-                  aria-hidden
-                />
-              )}
+              <motion.span
+                key={memorized ? "on" : "off"}
+                initial={{ scale: 0.5 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 520, damping: 14 }}
+                className="inline-flex"
+              >
+                {memorized ? (
+                  <IconBulbFilled
+                    className="size-6 text-amber-400 drop-shadow-[0_0_7px_rgba(251,191,36,0.6)]"
+                    aria-hidden
+                  />
+                ) : (
+                  <IconBulb
+                    className="size-6 text-muted-foreground/35 transition-colors hover:text-muted-foreground"
+                    aria-hidden
+                  />
+                )}
+              </motion.span>
               <span className="sr-only">
                 {memorized ? "Memorized" : "Mark as memorized"}
               </span>
-            </button>
+            </motion.button>
           </TooltipTrigger>
           <TooltipContent>
             {memorized ? "Memorized — tap to unmark" : "Mark as memorized"}
