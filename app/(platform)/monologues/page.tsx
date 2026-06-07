@@ -84,6 +84,7 @@ import { ContentGapBanner } from "@/components/search/ContentGapBanner";
 import { useProfileStats, useProfileFormData } from "@/hooks/useDashboardData";
 import { computeProfileMatch, type ProfileMatch } from "@/lib/profileMatch";
 import { useQueryClient } from "@tanstack/react-query";
+import { useBookmarks } from "@/hooks/useBookmarks";
 import {
   Dialog,
   DialogContent,
@@ -161,6 +162,30 @@ function SearchContent() {
   const isLoading = searchMode === "film_tv" ? isFilmTvLoading : isPlaysLoading;
   const [filmTvResults, setFilmTvResults] = useState<Monologue[]>([]);
   const [filmTvTotal, setFilmTvTotal] = useState(0);
+
+  // Keep search results in sync with the actual collection so that returning to
+  // the results (often restored from a cached snapshot with stale flags) still
+  // shows "In collection" for anything already added.
+  const { data: collectionData } = useBookmarks();
+  const favoritedIds = useMemo(
+    () => new Set((collectionData ?? []).map((m) => m.id)),
+    [collectionData],
+  );
+  useEffect(() => {
+    if (!collectionData) return;
+    const reconcile = (list: Monologue[]) => {
+      let changed = false;
+      const next = list.map((m) => {
+        const fav = favoritedIds.has(m.id);
+        if (m.is_favorited === fav) return m;
+        changed = true;
+        return { ...m, is_favorited: fav };
+      });
+      return changed ? next : list;
+    };
+    setResults((prev) => reconcile(prev));
+    setFilmTvResults((prev) => reconcile(prev));
+  }, [favoritedIds, collectionData, results, filmTvResults]);
   const [filmTvHasSearched, setFilmTvHasSearched] = useState(false);
   /** Brief viewport outline "woosh" when switching tabs: orange (plays) or purple (film/tv) */
   const [outlineFlash, setOutlineFlash] = useState<"plays" | "film_tv" | null>(null);
@@ -1168,6 +1193,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         if (selectedMonologue?.id === mono.id) {
           setSelectedMonologue(prev => prev ? { ...prev, is_favorited: false, favorite_count: prev.favorite_count - 1 } : null);
         }
+        // Remove from the Collection cache instantly.
+        queryClient.setQueryData<Monologue[]>(["bookmarks"], (old) => (old ?? []).filter((m) => m.id !== mono.id));
         await api.delete(`/api/monologues/${mono.id}/favorite`);
         toastBookmark(false, {
           duration: 5000,
@@ -1190,6 +1217,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         if (selectedMonologue?.id === mono.id) {
           setSelectedMonologue(prev => prev ? { ...prev, is_favorited: true, favorite_count: (prev.favorite_count ?? 0) + 1 } : null);
         }
+        // Write into the Collection cache instantly so it shows up immediately
+        // (search results live in component state, not this query cache).
+        queryClient.setQueryData<Monologue[]>(["bookmarks"], (old) => {
+          const list = old ?? [];
+          return list.some((m) => m.id === mono.id)
+            ? list
+            : [{ ...mono, is_favorited: true, memorized: false, favorite_count: (mono.favorite_count ?? 0) + 1 }, ...list];
+        });
         await api.post(`/api/monologues/${mono.id}/favorite`);
         toastBookmark(true, {
           duration: 5000,
@@ -1847,7 +1882,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                             : filmTvTotal > 0 ? filmTvTotal : filmTvResults.length}
                         </span>
                         <span className="text-sm text-muted-foreground">
-                          {showBookmarkedOnly ? "bookmarked" : "monologues found"}
+                          {showBookmarkedOnly ? "in your collection" : "monologues found"}
                         </span>
                       </div>
                       {!showBookmarkedOnly && queryUsedForResults && (
@@ -1861,7 +1896,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       className={`sm:hidden gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
                     >
                       <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                      Bookmarked
+                      Collection
                     </Button>
                   </div>
                   <div className="flex-1 flex justify-center min-w-0">
@@ -1878,7 +1913,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     className={`hidden sm:inline-flex gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
                   >
                     <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                    Bookmarked only
+                    In your collection
                   </Button>
                 </div>
                 {/* Monologue cards grid */}
@@ -1890,7 +1925,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         <CardContent className="pt-12 pb-12 text-center">
                           <p className="text-muted-foreground text-sm">
                             {showBookmarkedOnly
-                              ? "No bookmarked results"
+                              ? "Nothing in your collection yet"
                               : "No results found"}
                           </p>
                         </CardContent>
@@ -2056,8 +2091,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {/* Profile completeness nudge — only when user has searched but has no personalization data */}
               {hasSearched && results.length > 0 && profileData && !isPersonalized &&
                 !profileData.preferred_genres?.length && !profileData.experience_level && !isDemoUser && (
-                <div className="flex items-center gap-3 px-4 py-2.5 rounded border border-border bg-muted/30 text-sm text-muted-foreground">
-                  <span>Complete your profile to get personalized results.</span>
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded border border-border/60 bg-muted/20 text-xs text-muted-foreground">
+                  <span>Complete your profile for personalized results.</span>
                   <Link href="/profile" className="text-primary underline underline-offset-2 shrink-0">Set it up →</Link>
                 </div>
               )}
@@ -2081,7 +2116,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           : total > 0 ? total : results.length}
                       </span>
                       <span className="text-sm text-muted-foreground">
-                        {showBookmarkedOnly ? "bookmarked" : "monologues found"}
+                        {showBookmarkedOnly ? "in your collection" : "monologues found"}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
@@ -2114,7 +2149,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     className={`sm:hidden gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
                   >
                     <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                    Bookmarked
+                    Collection
                   </Button>
                 </div>
                 {/* Center: feedback — flex justify-center fills the 1fr middle column */}
@@ -2125,7 +2160,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     onOpenContact={() => setContactOpen(true)}
                   />
                 </div>
-                {/* Right: desktop bookmark button */}
+                {/* Right: desktop collection filter button */}
                 <Button
                   variant={showBookmarkedOnly ? "secondary" : "outline"}
                   size="sm"
@@ -2133,7 +2168,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   className={`hidden sm:inline-flex gap-2 rounded-full shrink-0 justify-self-end ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
                 >
                   <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                  Bookmarked only
+                  In your collection
                 </Button>
               </div>
 
@@ -2323,7 +2358,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                             ? `${accentTeal.bg} ${accentTeal.bgHover} ${accentTeal.text}`
                             : `${accentTeal.hoverBg} ${accentTeal.textHover} text-muted-foreground`
                         }`}
-                        aria-label={selectedMonologue.is_favorited ? "Remove bookmark" : "Add bookmark"}
+                        aria-label={selectedMonologue.is_favorited ? "Remove from collection" : "Add to collection"}
                       >
                         <BookmarkIcon filled={!!selectedMonologue.is_favorited} size="md" />
                       </Button>

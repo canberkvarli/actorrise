@@ -9,8 +9,8 @@ from app.api.auth import get_current_user
 from app.core.database import get_db
 from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import require_scene_partner
-from app.models.actor import (RehearsalLineDelivery, RehearsalSession, Scene,
-                              SceneFavorite, UserScript)
+from app.models.actor import (Play, RehearsalLineDelivery, RehearsalSession,
+                              Scene, SceneFavorite, UserScript)
 from app.models.billing import UserSubscription
 from app.models.user import User
 from app.services.ai.langchain.scene_partner import (ScenePartnerGraph,
@@ -37,6 +37,9 @@ class SceneResponse(BaseModel):
     act: Optional[str]
     scene_number: Optional[str]
     description: Optional[str]
+    difficulty_level: Optional[str] = None
+    is_library: bool = False
+    is_free_library: bool = False
 
     character_1_name: str
     character_2_name: str
@@ -62,6 +65,23 @@ class SceneResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+# Curated free-tier library scenes (matched by title — stable across
+# environments, unlike ids). Free actors can rehearse these in full; the rest
+# of the library is a Plus perk. Spread across tone + difficulty so the free
+# taste feels generous, not stingy.
+FREE_LIBRARY_SCENE_TITLES = {
+    "Romeo and Juliet — The Balcony",
+    "The Importance of Being Earnest — Gwendolen and Cecily at Tea",
+    "A Midsummer Night's Dream — Helena Pursues Demetrius",
+    "Trifles — Mrs. Hale and Mrs. Peters",
+}
+
+
+def _is_free_library_scene(scene) -> bool:
+    """A library scene that free-tier actors can rehearse in full."""
+    return bool(scene.is_library) and scene.title in FREE_LIBRARY_SCENE_TITLES
 
 
 class SceneLineResponse(BaseModel):
@@ -169,6 +189,9 @@ async def list_scenes(
     play_id: Optional[int] = None,
     character_gender: Optional[str] = None,
     user_scripts_only: bool = False,
+    library_only: bool = False,
+    difficulty: Optional[str] = None,
+    q: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -179,6 +202,9 @@ async def list_scenes(
     - play_id: Filter by specific play
     - character_gender: male, female, any
     - user_scripts_only: if True, only return scenes from the current user's uploaded scripts
+    - library_only: if True, only return curated public-domain library scenes
+    - difficulty: beginner, intermediate, advanced
+    - q: case-insensitive search over scene title, play title, and author
     """
     query = db.query(Scene)
 
@@ -187,6 +213,9 @@ async def list_scenes(
             UserScript, Scene.user_script_id == UserScript.id
         ).filter(UserScript.user_id == current_user.id)
 
+    if library_only:
+        query = query.filter(Scene.is_library.is_(True))
+
     if play_id:
         query = query.filter(Scene.play_id == play_id)
 
@@ -194,6 +223,17 @@ async def list_scenes(
         query = query.filter(
             (Scene.character_1_gender == character_gender) |
             (Scene.character_2_gender == character_gender)
+        )
+
+    if difficulty:
+        query = query.filter(Scene.difficulty_level == difficulty)
+
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.join(Play, Scene.play_id == Play.id).filter(
+            (Scene.title.ilike(like)) |
+            (Play.title.ilike(like)) |
+            (Play.author.ilike(like))
         )
 
     scenes = query.offset(skip).limit(limit).all()
@@ -217,6 +257,7 @@ async def list_scenes(
                 "play_title": scene.play.title if scene.play else "Unknown Play",
                 "play_author": scene.play.author if scene.play else "Unknown Author",
                 "is_favorited": scene.id in favorited_ids,
+                "is_free_library": _is_free_library_scene(scene),
                 "primary_emotions": scene.primary_emotions or []
             }
             results.append(SceneResponse(**scene_dict))
@@ -255,6 +296,7 @@ async def get_scene_detail(
         "play_title": scene.play.title,
         "play_author": scene.play.author,
         "is_favorited": is_favorited,
+        "is_free_library": _is_free_library_scene(scene),
         "primary_emotions": scene.primary_emotions or [],
         "has_original_snapshot": scene.original_snapshot is not None,
         "lines": [SceneLineResponse(**line.__dict__) for line in scene.lines]
@@ -303,6 +345,45 @@ async def toggle_favorite(
         return {"favorited": True}
 
 
+@router.get("/favorites/my", response_model=List[SceneResponse])
+async def list_my_favorite_scenes(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List the current user's bookmarked scenes (newest first)."""
+    favorites = (
+        db.query(SceneFavorite)
+        .filter(SceneFavorite.user_id == current_user.id)
+        .order_by(SceneFavorite.created_at.desc())
+        .all()
+    )
+    fav_scene_ids = [f.scene_id for f in favorites]
+    if not fav_scene_ids:
+        return []
+
+    scenes_by_id = {
+        s.id: s for s in db.query(Scene).filter(Scene.id.in_(fav_scene_ids)).all()
+    }
+    results = []
+    for sid in fav_scene_ids:  # preserve favorite ordering (newest first)
+        scene = scenes_by_id.get(sid)
+        if not scene:
+            continue
+        try:
+            results.append(SceneResponse(**{
+                **scene.__dict__,
+                "play_title": scene.play.title if scene.play else "Unknown Play",
+                "play_author": scene.play.author if scene.play else "Unknown Author",
+                "is_favorited": True,
+                "is_free_library": _is_free_library_scene(scene),
+                "primary_emotions": scene.primary_emotions or [],
+            }))
+        except Exception as e:
+            print(f"Error processing favorite scene {sid}: {e}")
+            continue
+    return results
+
+
 # ============================================================================
 # Rehearsal Session Management
 # ============================================================================
@@ -324,27 +405,32 @@ async def start_rehearsal(
             detail="Scene not found"
         )
 
-    # Enforce custom-script-only: rehearsal only for scenes from user's scripts or sample scripts
-    if not scene.user_script_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Rehearsal is only available for scenes from your own scripts. Upload or paste a script in My Scripts first."
-        )
-    from sqlalchemy import or_
-    script = db.query(UserScript).filter(
-        UserScript.id == scene.user_script_id,
-        or_(
-            UserScript.user_id == current_user.id,
-            UserScript.is_sample == True,
-        )
-    ).first()
-    if not script:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Rehearsal is only available for scenes from your own scripts."
-        )
+    # Curated library scenes (public-domain) are rehearsable by everyone, like
+    # the built-in sample scripts — no upload required. User-uploaded scenes
+    # still require ownership (or the shared sample script).
+    script = None
+    if not scene.is_library:
+        if not scene.user_script_id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Rehearsal is only available for scenes from your own scripts. Upload or paste a script in My Scripts first."
+            )
+        from sqlalchemy import or_
+        script = db.query(UserScript).filter(
+            UserScript.id == scene.user_script_id,
+            or_(
+                UserScript.user_id == current_user.id,
+                UserScript.is_sample == True,
+            )
+        ).first()
+        if not script:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Rehearsal is only available for scenes from your own scripts."
+            )
 
-    # Free tier: only allow rehearsal with the example script
+    # Free tier: only allow rehearsal with the example/sample script or the
+    # curated library (the free "try it" surface that fixes cold-start).
     subscription = (
         db.query(UserSubscription)
         .filter(UserSubscription.user_id == current_user.id)
@@ -352,15 +438,25 @@ async def start_rehearsal(
     )
     benefits = get_effective_benefits(db, current_user.id, subscription)
     if benefits.get("scene_partner_trial_only", False):
-        if not script.is_sample and not script.title.startswith("Example:"):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail={
+        library_allowed = _is_free_library_scene(scene)
+        sample_allowed = script is not None and (
+            script.is_sample or script.title.startswith("Example:")
+        )
+        if not (library_allowed or sample_allowed):
+            if scene.is_library:
+                # A library scene that's outside the free starter set.
+                detail = {
+                    "error": "library_upgrade_required",
+                    "message": "This scene is part of the full library. Your free plan includes a starter set of scenes to rehearse — upgrade to Plus for the whole catalog.",
+                    "upgrade_url": "/pricing",
+                }
+            else:
+                detail = {
                     "error": "trial_example_only",
                     "message": "Free trial rehearsal is limited to the example script. Upgrade to Plus to rehearse your own scripts.",
                     "upgrade_url": "/pricing",
-                },
-            )
+                }
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
     # Validate character choice
     if request.user_character not in [scene.character_1_name, scene.character_2_name]:
@@ -729,6 +825,77 @@ async def list_rehearsal_sessions(
     ).offset(skip).limit(limit).all()
 
     return [RehearsalSessionResponse(**s.__dict__) for s in sessions]
+
+
+@router.get("/rehearse/stats")
+async def rehearsal_stats(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Aggregate rehearsal stats for the Progress page (streaks, ratings, focus areas)."""
+    from collections import Counter
+    from datetime import datetime as _dt
+    from datetime import timedelta, timezone
+
+    sessions = db.query(RehearsalSession).filter_by(user_id=current_user.id).all()
+
+    total = len(sessions)
+    completed = sum(1 for s in sessions if s.status == "completed")
+    rated = [float(s.overall_rating) for s in sessions if s.overall_rating is not None]
+    avg_rating = round(sum(rated) / len(rated), 2) if rated else None
+
+    def _session_dt(s):
+        return s.created_at or s.started_at
+
+    def _as_date(ts):
+        return ts.astimezone(timezone.utc).date() if ts.tzinfo else ts.date()
+
+    # Streaks: consecutive calendar days (UTC) with at least one session.
+    day_set = {_as_date(ts) for s in sessions if (ts := _session_dt(s)) is not None}
+    longest = current = 0
+    if day_set:
+        days = sorted(day_set)
+        run = longest = 1
+        for i in range(1, len(days)):
+            run = run + 1 if (days[i] - days[i - 1]).days == 1 else 1
+            longest = max(longest, run)
+        today = _dt.now(timezone.utc).date()
+        anchor = today if today in day_set else (
+            today - timedelta(days=1) if (today - timedelta(days=1)) in day_set else None
+        )
+        while anchor is not None and anchor in day_set:
+            current += 1
+            anchor -= timedelta(days=1)
+
+    # Rating trend: most recent 10 rated sessions, oldest-first (for a sparkline).
+    rated_sessions = sorted(
+        (s for s in sessions if s.overall_rating is not None),
+        key=lambda s: _session_dt(s) or _dt.min.replace(tzinfo=timezone.utc),
+    )[-10:]
+    rating_trend = [
+        {
+            "date": _session_dt(s).isoformat() if _session_dt(s) else None,
+            "rating": float(s.overall_rating),
+        }
+        for s in rated_sessions
+    ]
+
+    # Most common "areas to improve" across all sessions.
+    counter: Counter = Counter()
+    for s in sessions:
+        for area in (s.areas_to_improve or []):
+            counter[area] += 1
+    top_areas = [{"area": a, "count": c} for a, c in counter.most_common(5)]
+
+    return {
+        "total_sessions": total,
+        "completed_sessions": completed,
+        "average_rating": avg_rating,
+        "current_streak": current,
+        "longest_streak": longest,
+        "rating_trend": rating_trend,
+        "top_areas_to_improve": top_areas,
+    }
 
 
 @router.get("/rehearse/sessions/{session_id}", response_model=RehearsalSessionResponse)

@@ -37,6 +37,17 @@ const ContactModal = dynamic(
   () => import("@/components/contact/ContactModal").then((m) => ({ default: m.ContactModal })),
   { ssr: false },
 );
+// First-run onboarding wizard. Self-gates on user.has_completed_onboarding,
+// so it's safe to mount unconditionally.
+const OnboardingWizard = dynamic(
+  () => import("@/components/onboarding/OnboardingWizard"),
+  { ssr: false },
+);
+// Registers the PWA service worker in production (no-op in dev). Renders null.
+const PWARegister = dynamic(
+  () => import("@/components/system/PWARegister"),
+  { ssr: false },
+);
 import {
   getLatestModalEntry,
   getLastSeenId,
@@ -120,9 +131,16 @@ export default function PlatformLayout({
     }
   }, [mobileMenuOpen]);
 
-  // Show welcome flow for new users who haven't seen it
+  // Show welcome flow for new users who haven't seen it. Suppressed while the
+  // newer full-screen OnboardingWizard is still pending (has_completed_onboarding
+  // === false) so the two first-run experiences never stack.
   useEffect(() => {
-    if (!loading && user && user.has_seen_welcome === false) {
+    if (
+      !loading &&
+      user &&
+      user.has_seen_welcome === false &&
+      user.has_completed_onboarding !== false
+    ) {
       const timer = setTimeout(() => setShowWelcome(true), 600);
       return () => clearTimeout(timer);
     }
@@ -160,8 +178,9 @@ export default function PlatformLayout({
 
 
   const navItems = [
-    { href: "/practice", label: "Practice", icon: IconMicrophone },
     { href: "/monologues", label: "Monologues", icon: IconQuote },
+    { href: "/rehearse", label: "Collection", icon: IconBookmark },
+    { href: "/practice", label: "My Scripts", icon: IconMicrophone },
   ];
   const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/practice\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$/.test(pathname || "");
 
@@ -232,11 +251,15 @@ export default function PlatformLayout({
                     asChild
                     variant={isActive ? "outline" : "ghost"}
                     size="sm"
-                    className="gap-1.5 lg:gap-2 rounded-full px-2.5 lg:px-4 text-xs lg:text-sm"
+                    className={`gap-1.5 lg:gap-2 rounded-full px-2.5 lg:px-4 text-xs lg:text-sm ${
+                      isActive
+                        ? "bg-primary/10 text-primary border-primary/40 hover:bg-primary/15 hover:text-primary"
+                        : ""
+                    }`}
                   >
                     <Link href={item.href}>
                       <Icon className="h-4 w-4" />
-                      <span className={`hidden sm:inline ${isPrimary ? "font-semibold" : ""}`}>{item.label}</span>
+                      <span className={`hidden sm:inline ${isActive || isPrimary ? "font-semibold" : ""}`}>{item.label}</span>
                     </Link>
                   </Button>
                 );
@@ -502,19 +525,6 @@ export default function PlatformLayout({
                   </Link>
                 </Button>
 
-                {/* Your Scripts Link */}
-                <Button
-                  asChild
-                  variant={pathname === "/practice" ? "default" : "ghost"}
-                  size="sm"
-                  className="w-full justify-start gap-2"
-                >
-                  <Link href="/practice" onClick={() => setMobileMenuOpen(false)}>
-                    <IconFileText className="h-4 w-4" />
-                    Your Scripts
-                  </Link>
-                </Button>
-
                 {/* Billing Link */}
                 <Button
                   asChild
@@ -607,13 +617,22 @@ export default function PlatformLayout({
       >
         <div className="flex items-stretch justify-around min-h-[48px]">
           <Link
+            href="/rehearse"
+            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
+              pathname === "/rehearse" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <IconBookmark className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] font-medium">Collection</span>
+          </Link>
+          <Link
             href="/practice"
             className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
               pathname === "/practice" ? "text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <IconMicrophone className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] font-medium">Practice</span>
+            <span className="text-[10px] font-medium">My Scripts</span>
           </Link>
           <Link
             href="/monologues"
@@ -651,6 +670,8 @@ export default function PlatformLayout({
       </nav>
       )}
 
+      <OnboardingWizard />
+      <PWARegister />
       <AnimatePresence>
         {showWelcome && (
           <WelcomeFlow onDismiss={async () => { setShowWelcome(false); await refreshUser(); }} />

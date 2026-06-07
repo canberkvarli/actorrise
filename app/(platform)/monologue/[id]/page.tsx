@@ -10,6 +10,7 @@ import { Monologue } from "@/types/actor";
 import api from "@/lib/api";
 import { motion } from "framer-motion";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
+import { useSaveNotes } from "@/hooks/useCollectionMeta";
 import { useAuth } from "@/lib/auth";
 import { EditMonologueModal } from "@/components/admin/EditMonologueModal";
 import type { EditMonologueBody } from "@/components/admin/EditMonologueModal";
@@ -22,8 +23,10 @@ export default function MonologueDetailPage() {
   const [monologue, setMonologue] = useState<Monologue | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
+  const [notes, setNotes] = useState("");
   const [editMonologueId, setEditMonologueId] = useState<number | null>(null);
   const [editMonologueSaving, setEditMonologueSaving] = useState(false);
+  const saveNotes = useSaveNotes();
 
   useEffect(() => {
     if (params.id) {
@@ -36,6 +39,7 @@ export default function MonologueDetailPage() {
       const response = await api.get<Monologue>(`/api/monologues/${id}`);
       setMonologue(response.data);
       setIsFavorited(response.data.is_favorited);
+      setNotes(response.data.notes ?? "");
     } catch (error) {
       const status = (error as Error & { response?: { status?: number } })?.response?.status;
       if (status === 404) {
@@ -122,6 +126,19 @@ export default function MonologueDetailPage() {
               onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
               headerActions={
                 <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => router.push(`/audition?monologue=${monologue.id}`)}
+                    className="flex-shrink-0"
+                  >
+                    Rehearse
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => router.push(`/monologue/${monologue.id}/memorize`)}
+                    className="flex-shrink-0"
+                  >
+                    Memorize
+                  </Button>
                   {user?.is_moderator && (
                     <Button
                       variant="outline"
@@ -137,12 +154,38 @@ export default function MonologueDetailPage() {
                     variant={isFavorited ? "default" : "outline"}
                     size="icon"
                     onClick={toggleFavorite}
+                    aria-label={isFavorited ? "In collection" : "Add to collection"}
+                    title={isFavorited ? "In collection" : "Add to collection"}
                     className={`flex-shrink-0 ${isFavorited ? "bg-accent text-accent-foreground hover:bg-accent/90" : "hover:text-accent"}`}
                   >
                     <IconBookmark className={`h-5 w-5 ${isFavorited ? "fill-current" : ""}`} />
                   </Button>
                 </div>
               }
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-lg">
+          <CardContent className="space-y-3 pt-6">
+            <div>
+              <h2 className="text-base font-semibold">Your notes</h2>
+              <p className="text-sm text-muted-foreground">
+                Beats, intentions, reminders. Saved to your collection.
+              </p>
+            </div>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              onBlur={() => {
+                if ((notes ?? "") !== (monologue.notes ?? "")) {
+                  saveNotes.mutate({ monologueId: monologue.id, notes });
+                  setMonologue((prev) => (prev ? { ...prev, notes } : prev));
+                }
+              }}
+              placeholder="Add a note…"
+              rows={4}
+              className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
             />
           </CardContent>
         </Card>

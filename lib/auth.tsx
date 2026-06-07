@@ -16,6 +16,8 @@ interface User {
   has_seen_welcome?: boolean;
   has_seen_search_tour?: boolean;
   has_seen_profile_tour?: boolean;
+  has_completed_onboarding?: boolean;
+  referral_source?: string | null;
   last_seen_feature_id?: string | null;
   is_moderator?: boolean;
   can_approve_submissions?: boolean;
