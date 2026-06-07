@@ -159,6 +159,8 @@ class MonologueFavorite(Base):
     notes = Column(Text, nullable=True)  # User's performance notes
     memorized = Column(Boolean, default=False, nullable=False)  # Actor marked this off-book
     last_studied_at = Column(DateTime(timezone=True), nullable=True)  # Last time the memorize screen was opened
+    cut_start_line = Column(Integer, nullable=True)  # Audition cut: first line index (over split text)
+    cut_end_line = Column(Integer, nullable=True)  # Audition cut: last line index (inclusive)
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
 
     # Relationships
