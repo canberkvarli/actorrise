@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { maskFirstLetters } from "@/lib/memorize";
 import { Segmented } from "./Segmented";
@@ -109,8 +110,15 @@ export function MemorizeView({ title, subtitle, lines }: MemorizeViewProps) {
     const isPeeked = revealed.has(i);
 
     return (
-      <div
+      <motion.div
         key={i}
+        initial={opts.newest ? { opacity: 0, y: 10 } : false}
+        animate={{ opacity: 1, y: 0 }}
+        transition={
+          opts.newest
+            ? { duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }
+            : { duration: 0 }
+        }
         className={cn(
           "relative",
           // Actor's own line: a quiet accent rail rather than a loud border.
@@ -181,7 +189,7 @@ export function MemorizeView({ title, subtitle, lines }: MemorizeViewProps) {
             [{line.stageDirection}]
           </p>
         )}
-      </div>
+      </motion.div>
     );
   };
 
@@ -189,7 +197,7 @@ export function MemorizeView({ title, subtitle, lines }: MemorizeViewProps) {
     <div className="mx-auto max-w-3xl space-y-8">
       {/* Header */}
       <header className="space-y-1.5">
-        <h1 className="text-3xl font-bold leading-tight tracking-tight sm:text-4xl">
+        <h1 className="text-2xl font-bold leading-snug tracking-tight sm:text-3xl">
           {title}
         </h1>
         {subtitle && (

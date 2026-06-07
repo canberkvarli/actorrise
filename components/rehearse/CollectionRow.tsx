@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { IconBulb, IconBulbFilled } from "@tabler/icons-react";
 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Monologue } from "@/types/actor";
 import { useToggleMemorized } from "@/hooks/useMemorized";
 import { useToggleFavorite } from "@/hooks/useBookmarks";
@@ -76,30 +81,36 @@ export function CollectionRow({ monologue }: CollectionRowProps) {
           Memorize
         </Link>
 
-        <button
-          type="button"
-          onClick={() =>
-            mark.mutate({ monologueId: monologue.id, memorized: !memorized })
-          }
-          title={memorized ? "Memorized — tap to unmark" : "Mark as memorized"}
-          aria-pressed={memorized}
-          className="shrink-0 rounded-full p-1 transition-transform cursor-pointer hover:scale-110"
-        >
-          {memorized ? (
-            <IconBulbFilled
-              className="size-6 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.55)]"
-              aria-hidden
-            />
-          ) : (
-            <IconBulb
-              className="size-6 text-muted-foreground/35 transition-colors hover:text-muted-foreground"
-              aria-hidden
-            />
-          )}
-          <span className="sr-only">
-            {memorized ? "Memorized" : "Mark as memorized"}
-          </span>
-        </button>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() =>
+                mark.mutate({ monologueId: monologue.id, memorized: !memorized })
+              }
+              aria-pressed={memorized}
+              className="shrink-0 rounded-full p-1 transition-transform cursor-pointer hover:scale-110"
+            >
+              {memorized ? (
+                <IconBulbFilled
+                  className="size-6 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.55)]"
+                  aria-hidden
+                />
+              ) : (
+                <IconBulb
+                  className="size-6 text-muted-foreground/35 transition-colors hover:text-muted-foreground"
+                  aria-hidden
+                />
+              )}
+              <span className="sr-only">
+                {memorized ? "Memorized" : "Mark as memorized"}
+              </span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent>
+            {memorized ? "Memorized — tap to unmark" : "Mark as memorized"}
+          </TooltipContent>
+        </Tooltip>
       </div>
     </article>
   );
