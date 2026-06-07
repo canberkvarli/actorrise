@@ -11,7 +11,7 @@ import { useBookmarks } from "@/hooks/useBookmarks";
 import { Monologue } from "@/types/actor";
 import { CollectionRow } from "@/components/rehearse/CollectionRow";
 
-type Filter = "all" | "to-study" | "memorized";
+type Filter = "all" | "to-study" | "memorized" | "due";
 
 function CollectionSkeletons() {
   return (
@@ -38,12 +38,23 @@ export function RehearseHub() {
   useEffect(() => setMounted(true), []);
   const { data, isLoading } = useBookmarks({ alwaysFresh: true });
 
-  const { all, toStudy, memorized } = useMemo(() => {
+  const { all, toStudy, memorized, due } = useMemo(() => {
     const all = data ?? [];
+    const memorized = all.filter((m) => m.memorized);
+    // Spaced review: a memorized piece is "due" if it hasn't been studied in a
+    // week (or never since being marked off-book), so it doesn't quietly fade.
+    const DUE_MS = 7 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const due = memorized.filter((m) => {
+      if (!m.last_studied_at) return true;
+      const studied = new Date(m.last_studied_at).getTime();
+      return Number.isNaN(studied) || now - studied > DUE_MS;
+    });
     return {
       all,
       toStudy: all.filter((m) => !m.memorized),
-      memorized: all.filter((m) => m.memorized),
+      memorized,
+      due,
     };
   }, [data]);
 
@@ -59,7 +70,13 @@ export function RehearseHub() {
   }, [filterTouched, mounted, isLoading, toStudy.length]);
 
   const visible =
-    filter === "to-study" ? toStudy : filter === "memorized" ? memorized : all;
+    filter === "to-study"
+      ? toStudy
+      : filter === "memorized"
+        ? memorized
+        : filter === "due"
+          ? due
+          : all;
 
   const isEmpty = !isLoading && total === 0;
   const showContent = mounted && !isLoading;
@@ -111,6 +128,9 @@ export function RehearseHub() {
               { value: "all", label: `All · ${total}` },
               { value: "to-study", label: `To study · ${toStudy.length}` },
               { value: "memorized", label: `Memorized · ${memorizedCount}` },
+              ...(due.length > 0
+                ? [{ value: "due" as const, label: `Due · ${due.length}` }]
+                : []),
             ]}
           />
 
@@ -119,7 +139,9 @@ export function RehearseHub() {
             <p className="border-t border-border py-16 text-center text-sm text-muted-foreground">
               {filter === "memorized"
                 ? "Nothing memorized yet. Keep going."
-                : "Nothing to study right now."}
+                : filter === "due"
+                  ? "Nothing due — your memorized pieces are fresh."
+                  : "Nothing to study right now."}
             </p>
           ) : (
             <div className="divide-y divide-border border-t border-border">
