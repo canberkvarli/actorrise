@@ -34,6 +34,8 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
   const toggleFavorite = useToggleFavorite();
 
   const memorized = Boolean(monologue.memorized);
+  const hasCut =
+    monologue.cut_start_line != null && monologue.cut_end_line != null;
   const duration = formatDuration(monologue.estimated_duration_seconds);
   const memorizeHref = `/monologue/${monologue.id}/memorize`;
 
@@ -59,12 +61,22 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
     >
       {/* Left: title + one-line meta */}
       <div className="min-w-0">
-        <Link
-          href={memorizeHref}
-          className="block min-w-0 text-2xl font-bold leading-snug tracking-tight text-foreground transition-colors hover:text-foreground/70 sm:text-3xl"
-        >
-          {monologue.title}
-        </Link>
+        <div className="flex min-w-0 items-center gap-2">
+          <Link
+            href={memorizeHref}
+            className="block min-w-0 truncate text-2xl font-bold leading-snug tracking-tight text-foreground transition-colors hover:text-foreground/70 sm:text-3xl"
+          >
+            {monologue.title}
+          </Link>
+          {hasCut && (
+            <span
+              className="shrink-0 border border-border px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
+              title="This monologue has an audition cut"
+            >
+              ✂ Cut
+            </span>
+          )}
+        </div>
         {meta && (
           <p className="mt-1 truncate text-sm text-muted-foreground">
             {meta}
