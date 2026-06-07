@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MemorizeView } from "@/components/memorize/MemorizeView";
 import { splitMonologue } from "@/lib/memorize";
 import { useToggleMemorized } from "@/hooks/useMemorized";
-import { useMarkStudied } from "@/hooks/useCollectionMeta";
+import { useMarkStudied, useSaveCut } from "@/hooks/useCollectionMeta";
 
 const CONTAINER =
   "container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 max-w-3xl";
@@ -60,6 +60,7 @@ export default function MonologueMemorizePage() {
   const id = useParams().id as string;
 
   const markStudied = useMarkStudied();
+  const saveCut = useSaveCut();
   const studiedFor = useRef<string | null>(null);
   useEffect(() => {
     const numId = Number(id);
@@ -116,6 +117,11 @@ export default function MonologueMemorizePage() {
     mine: true,
   }));
 
+  const cut =
+    monologue.cut_start_line != null && monologue.cut_end_line != null
+      ? { start: monologue.cut_start_line, end: monologue.cut_end_line }
+      : null;
+
   return (
     <div className={CONTAINER}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -131,6 +137,14 @@ export default function MonologueMemorizePage() {
           .filter(Boolean)
           .join(" · ")}
         lines={lines}
+        cut={cut}
+        onSaveCut={async (c) => {
+          await saveCut.mutateAsync({
+            monologueId: Number(id),
+            start: c?.start ?? null,
+            end: c?.end ?? null,
+          });
+        }}
       />
     </div>
   );
