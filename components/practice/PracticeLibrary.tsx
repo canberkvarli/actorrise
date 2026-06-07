@@ -35,10 +35,10 @@ export function PracticeLibrary({
   demoScriptId,
 }: PracticeLibraryProps) {
   const userScripts = scripts.filter((s) => !s.is_sample);
-  const demoScript = scripts.find((s) => s.is_sample) ?? null;
-  // User scripts first, demo pinned last. The demo stays available as a quick
-  // "see how it works" even for returning users — it's just one quiet row.
-  const ordered = [...userScripts, ...(demoScript ? [demoScript] : [])];
+  const demoScripts = scripts.filter((s) => s.is_sample);
+  // User scripts first, demos pinned last (The Breakup + Hamlet). They stay
+  // available as a quick "see how it works" even for returning users.
+  const ordered = [...userScripts, ...demoScripts];
 
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserScript | null>(null);

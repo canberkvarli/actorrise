@@ -7,6 +7,7 @@ import { SCRIPTS_FEATURE_ENABLED } from '@/lib/featureFlags';
 import UnderConstructionScripts from '@/components/UnderConstructionScripts';
 import api, { API_URL, getCachedAuthToken } from '@/lib/api';
 import { Button } from '@/components/ui/button';
+import { ColdReadPrep } from '@/components/rehearse/ColdReadPrep';
 import {
   ArrowLeft,
   Pause,
@@ -460,10 +461,14 @@ export default function RehearsalPage() {
   const sessionId = searchParams.get('session');
   const scriptId = searchParams.get('script');
   const voiceParam = searchParams.get('voice');
+  // Cold-read mode: a timed read-through before the (single-take) performance.
+  const coldRead = searchParams.get('mode') === 'cold';
+  const coldReadCharacter = searchParams.get('character');
+  const [prepDone, setPrepDone] = useState(!coldRead);
 
   const backUrl = scriptId
     ? `/practice/${scriptId}/scenes/${sceneId}/edit`
-    : '/practice';
+    : '/rehearse';
 
   /* ── Core state ─────────────────────────────────────────────────── */
 
@@ -1072,7 +1077,7 @@ export default function RehearsalPage() {
       }
       setFocusInitialized(true);
     } catch {
-      setError('Session not found. Start rehearsal from your script.');
+      setError('Session not found. Start a new rehearsal from the library or one of your scripts.');
     }
   };
 
@@ -1143,11 +1148,11 @@ export default function RehearsalPage() {
     };
   }, [cancelAI, sessionId]);
 
-  // Initial load
+  // Initial load — in cold-read mode we hold until the prep read-through is done.
   useEffect(() => {
-    if (sessionId) loadSession();
-    else setError('No session. Start rehearsal from your script.');
-  }, [sessionId]);
+    if (sessionId && prepDone) loadSession();
+    else if (!sessionId) setError('No active rehearsal. Pick a scene from the library or one of your scripts to begin.');
+  }, [sessionId, prepDone]);
 
   // Countdown tick — 1 second per tick
   useEffect(() => {
@@ -1757,15 +1762,25 @@ export default function RehearsalPage() {
   /* ── Render: loading ───────────────────────────────────────────── */
 
   if (!session) {
+    // Cold read: show the timed read-through first, then load + perform.
+    if (coldRead && !prepDone && sessionId) {
+      return (
+        <ColdReadPrep
+          sceneId={sceneId}
+          userCharacter={coldReadCharacter}
+          onReady={() => setPrepDone(true)}
+        />
+      );
+    }
     return (
       <div className="fixed inset-0 bg-neutral-950 flex items-center justify-center">
         <div className="text-center space-y-4">
           {error ? (
             <>
-              <p className="text-neutral-400 text-sm max-w-xs">{error}</p>
-              <Button variant="outline" size="sm" className="border-neutral-700 text-neutral-200" onClick={() => router.push(backUrl)}>
+              <p className="text-neutral-300 text-sm max-w-xs">{error}</p>
+              <Button size="sm" className="border border-neutral-600 bg-neutral-800 text-white hover:bg-neutral-700" onClick={() => router.push(backUrl)}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Script
+                {scriptId ? 'Back to script' : 'Back'}
               </Button>
             </>
           ) : (
@@ -1921,15 +1936,20 @@ export default function RehearsalPage() {
               <ArrowLeft className="w-3.5 h-3.5" />
               Back to Script
             </button>
-            <span className="text-neutral-800">·</span>
-            <button
-              type="button"
-              onClick={handleRestart}
-              disabled={isRestarting}
-              className="text-sm text-neutral-400 hover:text-neutral-100 transition-colors disabled:opacity-50"
-            >
-              {isRestarting ? 'Starting...' : 'Run It Again'}
-            </button>
+            {/* Cold read is one take — no restarts. */}
+            {!coldRead && (
+              <>
+                <span className="text-neutral-800">·</span>
+                <button
+                  type="button"
+                  onClick={handleRestart}
+                  disabled={isRestarting}
+                  className="text-sm text-neutral-400 hover:text-neutral-100 transition-colors disabled:opacity-50"
+                >
+                  {isRestarting ? 'Starting...' : 'Run It Again'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
@@ -2281,7 +2301,7 @@ export default function RehearsalPage() {
 
       {/* Floating control pill */}
       <div className="shrink-0 flex justify-center px-4 pb-4 safe-area-bottom">
-        <div className="flex items-center gap-3 bg-neutral-900/90 backdrop-blur-sm border border-neutral-800 rounded-full shadow-2xl px-5 py-3 min-h-[52px]">
+        <div className="flex items-center gap-2 sm:gap-3 bg-neutral-900/90 backdrop-blur-sm border border-neutral-800 rounded-full shadow-2xl px-3 sm:px-5 py-3 min-h-[52px] max-w-[calc(100vw-1.5rem)]">
           {/* Pause / Play */}
           <button
             type="button"
@@ -2295,8 +2315,8 @@ export default function RehearsalPage() {
             }
           </button>
 
-          {/* Status indicator — wider to fit long character names */}
-          <div className="flex items-center gap-1.5 w-[140px] shrink-0">
+          {/* Status indicator — fixed width on desktop; shrinks + truncates on mobile */}
+          <div className="flex items-center gap-1.5 min-w-0 sm:w-[140px]">
             <div className={cn('w-2 h-2 rounded-full shrink-0', statusInfo.color, statusInfo.pulse && 'animate-pulse')} />
             <span className="text-[11px] text-neutral-400 whitespace-nowrap truncate">{statusInfo.text}</span>
           </div>
@@ -2311,7 +2331,7 @@ export default function RehearsalPage() {
                   transition={{ duration: 0.5 }}
                 />
               </div>
-              <span className="text-[10px] text-neutral-500 tabular-nums whitespace-nowrap">
+              <span className="hidden sm:inline text-[10px] text-neutral-500 tabular-nums whitespace-nowrap">
                 {(activeLineIndex ?? 0) + 1}/{orderedLines.length}
               </span>
             </div>
@@ -2367,7 +2387,7 @@ export default function RehearsalPage() {
           <button
             type="button"
             onClick={() => setShowShortcutsModal(true)}
-            className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors shrink-0"
+            className="hidden sm:flex w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 items-center justify-center transition-colors shrink-0"
             title="Keyboard shortcuts"
           >
             <span className="text-[11px] font-semibold text-neutral-400">?</span>

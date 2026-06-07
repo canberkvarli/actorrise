@@ -38,6 +38,7 @@ import {
   MessageSquare,
   Mic,
   Settings,
+  BookOpen,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
@@ -368,6 +369,8 @@ export default function SceneEditPage() {
   // Character & rehearsal
   const [selectedCharacter, setSelectedCharacter] = useState<string>("");
   const [startingRehearsal, setStartingRehearsal] = useState(false);
+  // Cold-read: a timed read-through before a single-take performance.
+  const [coldRead, setColdRead] = useState(false);
   const [showRehearsalModal, setShowRehearsalModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [generatingSynopsis, setGeneratingSynopsis] = useState(false);
@@ -980,8 +983,11 @@ export default function SceneEditPage() {
       const primaryAiChar = allSceneCharacters.find(c => c !== selectedCharacter);
       const aiCharVoice = primaryAiChar ? (charVoices[primaryAiChar] ?? "coral") : "coral";
       const voiceParam = aiCharVoice ? `&voice=${aiCharVoice}` : '';
+      const coldParam = coldRead
+        ? `&mode=cold&character=${encodeURIComponent(selectedCharacter)}`
+        : '';
       // Navigate immediately — no animation delay
-      router.push(`/scenes/${scene.id}/rehearse?session=${data.id}&script=${scriptId}${voiceParam}`);
+      router.push(`/scenes/${scene.id}/rehearse?session=${data.id}&script=${scriptId}${voiceParam}${coldParam}`);
     } catch (err: unknown) {
       setStartingRehearsal(false); // only reset on error — on success the page navigates away
       const upgrade = parseUpgradeError(err);
@@ -995,7 +1001,7 @@ export default function SceneEditPage() {
         pageToast.error(typeof message === "string" ? message : "Failed to start rehearsal");
       }
     }
-  }, [scene, selectedCharacter, router, rehearsalStartLineIndex, charVoices]);
+  }, [scene, selectedCharacter, router, rehearsalStartLineIndex, charVoices, coldRead]);
 
   // ---------------------------------------------------------------------------
   // Voice helpers
@@ -3124,35 +3130,61 @@ export default function SceneEditPage() {
         )}
       </AnimatePresence>
 
-      {/* Floating Rehearse button — starts immediately if character selected + mic granted */}
-      <Button
-        size="lg"
-        disabled={startingRehearsal}
-        onClick={() => {
-          if (editingLineId !== null) {
-            toast("Please finish editing the current line first", { duration: 2000 });
-            return;
-          }
-          if (!selectedCharacter) {
-            setShowRehearsalModal(true);
-            return;
-          }
-          if (!micGranted) {
-            setShowMicModal(true);
-            return;
-          }
-          // Character selected + mic granted → start immediately, no modal
-          handleStartRehearsal();
-        }}
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 gap-2 shadow-xl shadow-primary/20 rounded-full px-4 sm:px-6 h-11 sm:h-12"
-      >
-        {startingRehearsal ? (
-          <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-        ) : (
-          <Play className="w-5 h-5" />
-        )}
-        <span className="hidden sm:inline">{startingRehearsal ? 'Starting...' : 'Rehearse'}</span>
-      </Button>
+      {/* Floating launch cluster: Memorize · Cold-read toggle · Rehearse */}
+      <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-2">
+        <label className="flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-card/95 px-3 py-1 text-xs font-medium text-muted-foreground shadow-md backdrop-blur-sm">
+          <input
+            type="checkbox"
+            checked={coldRead}
+            onChange={(e) => setColdRead(e.target.checked)}
+            className="accent-primary"
+          />
+          Cold read
+        </label>
+        <div className="flex items-center gap-2">
+          <Button
+            size="lg"
+            variant="outline"
+            onClick={() => {
+              if (!scene) return;
+              const c = selectedCharacter ? `?character=${encodeURIComponent(selectedCharacter)}` : '';
+              router.push(`/scenes/${scene.id}/memorize${c}`);
+            }}
+            className="gap-2 rounded-full px-4 sm:px-6 h-11 sm:h-12 shadow-lg bg-background"
+          >
+            <BookOpen className="w-5 h-5 text-foreground" />
+            <span className="hidden sm:inline text-foreground">Memorize</span>
+          </Button>
+          <Button
+            size="lg"
+            disabled={startingRehearsal}
+            onClick={() => {
+              if (editingLineId !== null) {
+                toast("Please finish editing the current line first", { duration: 2000 });
+                return;
+              }
+              if (!selectedCharacter) {
+                setShowRehearsalModal(true);
+                return;
+              }
+              if (!micGranted) {
+                setShowMicModal(true);
+                return;
+              }
+              // Character selected + mic granted → start immediately, no modal
+              handleStartRehearsal();
+            }}
+            className="gap-2 shadow-xl shadow-primary/20 rounded-full px-4 sm:px-6 h-11 sm:h-12"
+          >
+            {startingRehearsal ? (
+              <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+            ) : (
+              <Play className="w-5 h-5" />
+            )}
+            <span className="hidden sm:inline">{startingRehearsal ? 'Starting...' : (coldRead ? 'Cold read' : 'Rehearse')}</span>
+          </Button>
+        </div>
+      </div>
 
       <SceneSettingsModal
         open={showSettingsModal}

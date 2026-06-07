@@ -9,7 +9,7 @@ import { trackMonologueSaved } from "@/lib/analytics";
 import { Monologue } from "@/types/actor";
 
 // Hook for fetching bookmarks (cached – shared with dashboard, My Monologues, etc.)
-export function useBookmarks() {
+export function useBookmarks(opts?: { alwaysFresh?: boolean }) {
   return useQuery<Monologue[]>({
     queryKey: ["bookmarks"],
     queryFn: async () => {
@@ -22,8 +22,12 @@ export function useBookmarks() {
         return true;
       });
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes – avoid refetch on every My Monologues visit
+    // alwaysFresh callers (e.g. the Saved tab) revalidate on mount so a bookmark
+    // made elsewhere shows up immediately. Everyone else (nav badge counts) keeps
+    // the 2-min cache so we don't round-trip the remote DB on every page change.
+    staleTime: opts?.alwaysFresh ? 0 : 2 * 60 * 1000,
     gcTime: 10 * 60 * 1000, // 10 minutes
+    refetchOnMount: opts?.alwaysFresh ? "always" : true,
     retry: 1,
   });
 }

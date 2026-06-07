@@ -157,6 +157,8 @@ class MonologueFavorite(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     monologue_id = Column(Integer, ForeignKey("monologues.id"), nullable=False, index=True)
     notes = Column(Text, nullable=True)  # User's performance notes
+    memorized = Column(Boolean, default=False, nullable=False)  # Actor marked this off-book
+    last_studied_at = Column(DateTime(timezone=True), nullable=True)  # Last time the memorize screen was opened
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
 
     # Relationships
@@ -186,6 +188,7 @@ class Scene(Base):
     id = Column(Integer, primary_key=True, index=True)
     play_id = Column(Integer, ForeignKey("plays.id"), nullable=False, index=True)
     user_script_id = Column(Integer, ForeignKey("user_scripts.id"), nullable=True, index=True)  # Link to user's uploaded script
+    is_library = Column(Boolean, default=False, nullable=False, index=True)  # Curated public-domain scene available to all users
 
     # Scene Info
     title = Column(String, nullable=False)  # "Romeo & Juliet Balcony Scene"
