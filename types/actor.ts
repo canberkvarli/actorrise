@@ -54,6 +54,8 @@ export interface Monologue {
   memorized?: boolean;
   notes?: string | null;
   last_studied_at?: string | null;
+  cut_start_line?: number | null;
+  cut_end_line?: number | null;
   overdone_score: number;
   scene_description?: string;
   // For compatibility with old components

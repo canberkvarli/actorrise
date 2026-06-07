@@ -35,3 +35,33 @@ export function useMarkStudied() {
     },
   });
 }
+
+/**
+ * Save (or clear, with nulls) an audition cut (line range) for a monologue.
+ */
+export function useSaveCut() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({
+      monologueId,
+      start,
+      end,
+    }: {
+      monologueId: number;
+      start: number | null;
+      end: number | null;
+    }) => {
+      await api.post(`/api/monologues/${monologueId}/cut`, {
+        start_line: start,
+        end_line: end,
+      });
+      return { monologueId, start, end };
+    },
+    onSettled: (_data, _err, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+      queryClient.invalidateQueries({
+        queryKey: ["monologue-memorize", String(vars.monologueId)],
+      });
+    },
+  });
+}

@@ -59,6 +59,8 @@ class MonologueResponse(BaseModel):
     memorized: bool = False
     notes: Optional[str] = None
     last_studied_at: Optional[str] = None
+    cut_start_line: Optional[int] = None
+    cut_end_line: Optional[int] = None
     overdone_score: float
     scene_description: Optional[str]
     act: Optional[int] = None  # Act number (for classical plays)
@@ -170,6 +172,8 @@ def _monologue_to_response(
     memorized: bool = False,
     notes: Optional[str] = None,
     last_studied_at: Optional[str] = None,
+    cut_start_line: Optional[int] = None,
+    cut_end_line: Optional[int] = None,
 ) -> MonologueResponse:
     """Build MonologueResponse from ORM instance with correct types for the type checker."""
     play = m.play
@@ -199,6 +203,8 @@ def _monologue_to_response(
         memorized=memorized,
         notes=notes,
         last_studied_at=last_studied_at,
+        cut_start_line=cut_start_line,
+        cut_end_line=cut_end_line,
         overdone_score=cast(float, m.overdone_score),
         scene_description=cast(Optional[str], m.scene_description),
         act=cast(Optional[int], m.act),
@@ -895,6 +901,8 @@ async def get_my_favorites(
             memorized=bool(f.memorized),
             notes=f.notes,
             last_studied_at=f.last_studied_at.isoformat() if f.last_studied_at else None,
+            cut_start_line=f.cut_start_line,
+            cut_end_line=f.cut_end_line,
         )
         for f in favorites
         if f.monologue_id in mono_by_id
@@ -966,6 +974,51 @@ async def mark_studied(
     fav.last_studied_at = now  # type: ignore[assignment]
     db.commit()
     return {"monologue_id": monologue_id, "last_studied_at": now.isoformat()}
+
+
+class SetCutRequest(BaseModel):
+    start_line: Optional[int] = None
+    end_line: Optional[int] = None
+
+
+@router.post("/{monologue_id:int}/cut")
+async def set_cut(
+    monologue_id: int,
+    body: SetCutRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Save or clear an audition cut (a line range) for a collection monologue.
+
+    Both null clears the cut. Adds the monologue to the collection if needed."""
+    monologue = db.query(Monologue).filter(Monologue.id == monologue_id).first()
+    if not monologue:
+        raise HTTPException(status_code=404, detail="Monologue not found")
+
+    fav = (
+        db.query(MonologueFavorite)
+        .filter(
+            MonologueFavorite.user_id == current_user.id,
+            MonologueFavorite.monologue_id == monologue_id,
+        )
+        .first()
+    )
+    if not fav:
+        fav = MonologueFavorite(user_id=current_user.id, monologue_id=monologue_id)
+        db.add(fav)
+        monologue.favorite_count = int(monologue.favorite_count or 0) + 1  # type: ignore[assignment]
+
+    start, end = body.start_line, body.end_line
+    if start is not None and end is not None and start > end:
+        start, end = end, start
+    fav.cut_start_line = start  # type: ignore[assignment]
+    fav.cut_end_line = end  # type: ignore[assignment]
+    db.commit()
+    return {
+        "monologue_id": monologue_id,
+        "cut_start_line": fav.cut_start_line,
+        "cut_end_line": fav.cut_end_line,
+    }
 
 
 @router.post("/{monologue_id:int}/memorized")
