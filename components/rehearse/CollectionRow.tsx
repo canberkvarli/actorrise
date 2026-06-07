@@ -21,14 +21,15 @@ function formatDuration(seconds?: number): string | null {
 
 interface CollectionRowProps {
   monologue: Monologue;
+  index?: number;
 }
 
 /**
  * Minimal index row: a large title, a single muted meta line, and a calm
- * status/action on the right (a quiet "Memorize" link, or a green check once
+ * status/action on the right (a quiet "Memorize" link, or a lit bulb once
  * off-book). Secondary actions surface on hover (always visible on mobile).
  */
-export function CollectionRow({ monologue }: CollectionRowProps) {
+export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
   const mark = useToggleMemorized();
   const toggleFavorite = useToggleFavorite();
 
@@ -41,7 +42,16 @@ export function CollectionRow({ monologue }: CollectionRowProps) {
     .join(" · ");
 
   return (
-    <article className="group flex items-center justify-between gap-6 py-6">
+    <motion.article
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{
+        duration: 0.3,
+        ease: [0.25, 0.1, 0.25, 1],
+        delay: Math.min(index * 0.04, 0.32),
+      }}
+      className="group -mx-3 flex items-center justify-between gap-6 rounded-lg px-3 py-6 transition-colors hover:bg-muted/30"
+    >
       {/* Left: title + one-line meta */}
       <div className="min-w-0">
         <Link
@@ -122,7 +132,7 @@ export function CollectionRow({ monologue }: CollectionRowProps) {
           </TooltipContent>
         </Tooltip>
       </div>
-    </article>
+    </motion.article>
   );
 }
 
