@@ -218,29 +218,9 @@ export function MemorizeView({ title, subtitle, lines }: MemorizeViewProps) {
         )}
 
         {mode === "buildup" && (
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setBuiltUpTo((n) => Math.min(n + 1, lines.length))}
-              disabled={atEnd}
-              className={cn(
-                "rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors cursor-pointer hover:bg-[#B03000]",
-                atEnd && "cursor-not-allowed opacity-50 hover:bg-primary",
-              )}
-            >
-              Add next line
-            </button>
-            <button
-              type="button"
-              onClick={startOver}
-              className="rounded-full border border-border px-4 py-1.5 text-sm font-medium text-muted-foreground transition-colors cursor-pointer hover:text-foreground hover:bg-muted/50"
-            >
-              Start over
-            </button>
-            <span className="text-sm tabular-nums text-muted-foreground">
-              {builtUpTo} / {lines.length}
-            </span>
-          </div>
+          <span className="text-sm tabular-nums text-muted-foreground">
+            {builtUpTo} / {lines.length}
+          </span>
         )}
 
         <div className="ml-auto">
@@ -277,10 +257,39 @@ export function MemorizeView({ title, subtitle, lines }: MemorizeViewProps) {
               )}
         </div>
 
-        {mode === "buildup" && atEnd && (
-          <p className={cn("mt-8 text-sm", t.inkMuted)}>
-            You&apos;ve built the whole piece — run it from the top.
-          </p>
+        {mode === "buildup" && (
+          <div className={cn("mt-8 flex flex-wrap items-center gap-3 border-t pt-6", t.hair)}>
+            {atEnd ? (
+              <p className={cn("text-sm", t.inkMuted)}>
+                You&apos;ve built the whole piece — run it from the top.
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setBuiltUpTo((n) => Math.min(n + 1, lines.length))}
+                className={cn(
+                  "rounded-full border px-5 py-2 text-sm font-semibold transition-opacity cursor-pointer hover:opacity-80",
+                  t.hair,
+                  t.ink,
+                )}
+              >
+                Add next line
+              </button>
+            )}
+            {builtUpTo > 1 && (
+              <button
+                type="button"
+                onClick={startOver}
+                className={cn(
+                  "rounded-full border px-4 py-2 text-sm font-medium transition-opacity cursor-pointer hover:opacity-80",
+                  t.hair,
+                  t.inkMuted,
+                )}
+              >
+                Start over
+              </button>
+            )}
+          </div>
         )}
       </div>
 

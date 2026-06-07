@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { IconCheck } from "@tabler/icons-react";
+import { IconBulb, IconBulbFilled } from "@tabler/icons-react";
 
 import { Monologue } from "@/types/actor";
 import { useToggleMemorized } from "@/hooks/useMemorized";
@@ -54,60 +54,52 @@ export function CollectionRow({ monologue }: CollectionRowProps) {
         )}
       </div>
 
-      {/* Right: secondary actions (hover/mobile) + primary status */}
+      {/* Right: Remove (hover) · Memorize · a bulb that lights up once off-book */}
       <div className="flex shrink-0 items-center gap-4">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground/70 opacity-0 transition-opacity group-hover:opacity-100 max-sm:opacity-100">
-          {memorized ? (
-            <button
-              type="button"
-              className="underline-offset-4 transition-colors hover:text-foreground hover:underline"
-              onClick={() =>
-                mark.mutate({ monologueId: monologue.id, memorized: false })
-              }
-            >
-              Move to study
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="underline-offset-4 transition-colors hover:text-foreground hover:underline"
-              onClick={() =>
-                mark.mutate({ monologueId: monologue.id, memorized: true })
-              }
-            >
-              Mark memorized
-            </button>
-          )}
-          <button
-            type="button"
-            className="underline-offset-4 transition-colors hover:text-foreground hover:underline"
-            onClick={() =>
-              toggleFavorite.mutate({
-                monologueId: monologue.id,
-                isFavorited: true,
-              })
-            }
-          >
-            Remove
-          </button>
-        </div>
+        <button
+          type="button"
+          className="text-xs text-muted-foreground/70 underline-offset-4 opacity-0 transition-opacity hover:text-foreground hover:underline group-hover:opacity-100 max-sm:opacity-100"
+          onClick={() =>
+            toggleFavorite.mutate({
+              monologueId: monologue.id,
+              isFavorited: true,
+            })
+          }
+        >
+          Remove
+        </button>
 
-        {memorized ? (
-          <span
-            className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-emerald-600/10 text-emerald-600 dark:text-emerald-400"
-            title="Memorized"
-          >
-            <IconCheck className="size-4" aria-hidden />
-            <span className="sr-only">Memorized</span>
+        <Link
+          href={memorizeHref}
+          className="shrink-0 text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+        >
+          Memorize
+        </Link>
+
+        <button
+          type="button"
+          onClick={() =>
+            mark.mutate({ monologueId: monologue.id, memorized: !memorized })
+          }
+          title={memorized ? "Memorized — tap to unmark" : "Mark as memorized"}
+          aria-pressed={memorized}
+          className="shrink-0 rounded-full p-1 transition-transform cursor-pointer hover:scale-110"
+        >
+          {memorized ? (
+            <IconBulbFilled
+              className="size-6 text-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.55)]"
+              aria-hidden
+            />
+          ) : (
+            <IconBulb
+              className="size-6 text-muted-foreground/35 transition-colors hover:text-muted-foreground"
+              aria-hidden
+            />
+          )}
+          <span className="sr-only">
+            {memorized ? "Memorized" : "Mark as memorized"}
           </span>
-        ) : (
-          <Link
-            href={memorizeHref}
-            className="shrink-0 text-sm font-semibold text-foreground underline-offset-4 hover:underline"
-          >
-            Memorize
-          </Link>
-        )}
+        </button>
       </div>
     </article>
   );
