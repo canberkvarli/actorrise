@@ -123,8 +123,8 @@ export function RehearseHub() {
             </p>
           ) : (
             <div className="divide-y divide-border border-t border-border">
-              {visible.map((m: Monologue) => (
-                <CollectionRow key={m.id} monologue={m} />
+              {visible.map((m: Monologue, i: number) => (
+                <CollectionRow key={m.id} monologue={m} index={i} />
               ))}
             </div>
           )}
