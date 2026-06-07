@@ -84,6 +84,7 @@ import { ContentGapBanner } from "@/components/search/ContentGapBanner";
 import { useProfileStats, useProfileFormData } from "@/hooks/useDashboardData";
 import { computeProfileMatch, type ProfileMatch } from "@/lib/profileMatch";
 import { useQueryClient } from "@tanstack/react-query";
+import { useBookmarks } from "@/hooks/useBookmarks";
 import {
   Dialog,
   DialogContent,
@@ -161,6 +162,30 @@ function SearchContent() {
   const isLoading = searchMode === "film_tv" ? isFilmTvLoading : isPlaysLoading;
   const [filmTvResults, setFilmTvResults] = useState<Monologue[]>([]);
   const [filmTvTotal, setFilmTvTotal] = useState(0);
+
+  // Keep search results in sync with the actual collection so that returning to
+  // the results (often restored from a cached snapshot with stale flags) still
+  // shows "In collection" for anything already added.
+  const { data: collectionData } = useBookmarks();
+  const favoritedIds = useMemo(
+    () => new Set((collectionData ?? []).map((m) => m.id)),
+    [collectionData],
+  );
+  useEffect(() => {
+    if (!collectionData) return;
+    const reconcile = (list: Monologue[]) => {
+      let changed = false;
+      const next = list.map((m) => {
+        const fav = favoritedIds.has(m.id);
+        if (m.is_favorited === fav) return m;
+        changed = true;
+        return { ...m, is_favorited: fav };
+      });
+      return changed ? next : list;
+    };
+    setResults((prev) => reconcile(prev));
+    setFilmTvResults((prev) => reconcile(prev));
+  }, [favoritedIds, collectionData, results, filmTvResults]);
   const [filmTvHasSearched, setFilmTvHasSearched] = useState(false);
   /** Brief viewport outline "woosh" when switching tabs: orange (plays) or purple (film/tv) */
   const [outlineFlash, setOutlineFlash] = useState<"plays" | "film_tv" | null>(null);
