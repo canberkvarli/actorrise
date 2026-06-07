@@ -41,6 +41,11 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
     .filter(Boolean)
     .join(" · ");
 
+  // Most monologue titles are generic ("Hamlet's speech from Hamlet"), so show
+  // the opening line as a synopsis — the quickest "which one is this" cue.
+  const opening = monologue.scene_description?.trim()
+    || monologue.text?.replace(/\s+/g, " ").trim().slice(0, 140);
+
   return (
     <motion.article
       initial={{ opacity: 0, y: 8 }}
@@ -66,6 +71,11 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
             {duration && (
               <span className="text-muted-foreground/60"> · {duration}</span>
             )}
+          </p>
+        )}
+        {opening && (
+          <p className="mt-1.5 truncate text-sm italic text-muted-foreground/70">
+            {opening}
           </p>
         )}
       </div>
