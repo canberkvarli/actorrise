@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { IconArrowLeft, IconCheck } from "@tabler/icons-react";
 import api from "@/lib/api";
 import type { Monologue } from "@/types/actor";
@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { MemorizeView } from "@/components/memorize/MemorizeView";
 import { splitMonologue } from "@/lib/memorize";
 import { useToggleMemorized } from "@/hooks/useMemorized";
-import { useMarkStudied, useSaveCut } from "@/hooks/useCollectionMeta";
+import { useMarkStudied } from "@/hooks/useCollectionMeta";
 
 const CONTAINER =
   "container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 max-w-3xl";
@@ -60,7 +60,7 @@ export default function MonologueMemorizePage() {
   const id = useParams().id as string;
 
   const markStudied = useMarkStudied();
-  const saveCut = useSaveCut();
+  const queryClient = useQueryClient();
   const studiedFor = useRef<string | null>(null);
   useEffect(() => {
     const numId = Number(id);
@@ -80,6 +80,14 @@ export default function MonologueMemorizePage() {
       const res = await api.get<Monologue>(`/api/monologues/${id}`);
       return res.data;
     },
+    // Open instantly when coming from the Collection: the bookmarks cache already
+    // holds the full monologue (incl. text). Falls back to a fetch otherwise.
+    initialData: () => {
+      const cached = queryClient.getQueryData<Monologue[]>(["bookmarks"]);
+      return cached?.find((m) => String(m.id) === id);
+    },
+    initialDataUpdatedAt: () =>
+      queryClient.getQueryState(["bookmarks"])?.dataUpdatedAt,
     staleTime: 60 * 1000,
     retry: 1,
   });
@@ -117,11 +125,6 @@ export default function MonologueMemorizePage() {
     mine: true,
   }));
 
-  const cut =
-    monologue.cut_start_line != null && monologue.cut_end_line != null
-      ? { start: monologue.cut_start_line, end: monologue.cut_end_line }
-      : null;
-
   return (
     <div className={CONTAINER}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -137,14 +140,6 @@ export default function MonologueMemorizePage() {
           .filter(Boolean)
           .join(" · ")}
         lines={lines}
-        cut={cut}
-        onSaveCut={async (c) => {
-          await saveCut.mutateAsync({
-            monologueId: Number(id),
-            start: c?.start ?? null,
-            end: c?.end ?? null,
-          });
-        }}
       />
     </div>
   );
