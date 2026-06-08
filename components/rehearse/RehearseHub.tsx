@@ -10,6 +10,7 @@ import { Segmented } from "@/components/memorize/Segmented";
 import { useBookmarks } from "@/hooks/useBookmarks";
 import { Monologue } from "@/types/actor";
 import { CollectionRow } from "@/components/rehearse/CollectionRow";
+import { RecentlyRemoved } from "@/components/rehearse/RecentlyRemoved";
 
 type Filter = "all" | "to-study" | "memorized" | "due";
 
@@ -161,6 +162,8 @@ export function RehearseHub() {
           )}
         </div>
       )}
+
+      {showContent && <RecentlyRemoved />}
     </motion.div>
   );
 }
