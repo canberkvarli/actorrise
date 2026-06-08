@@ -1989,11 +1989,12 @@ export default function RehearsalPage() {
           >
             <motion.span
               key={countdown}
+              aria-hidden
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 0.3, scale: 1 }}
               exit={{ opacity: 0, scale: 1.1 }}
               transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-              className="text-[10rem] font-extralight text-neutral-400 tabular-nums select-none"
+              className="text-[6rem] sm:text-[10rem] font-extralight text-neutral-400 tabular-nums select-none"
             >
               {countdown}
             </motion.span>
@@ -2306,12 +2307,13 @@ export default function RehearsalPage() {
           <button
             type="button"
             onClick={() => { unlockAudio(); (paused ? handleResume : handlePause)(); }}
-            className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors shrink-0"
+            className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            aria-label={paused ? 'Resume rehearsal' : 'Pause rehearsal'}
             title={paused ? 'Resume rehearsal' : 'Pause rehearsal'}
           >
             {paused
-              ? <Play className="w-4.5 h-4.5 text-neutral-300 ml-0.5" />
-              : <Pause className="w-4.5 h-4.5 text-neutral-300" />
+              ? <Play className="w-4.5 h-4.5 text-neutral-300 ml-0.5" aria-hidden />
+              : <Pause className="w-4.5 h-4.5 text-neutral-300" aria-hidden />
             }
           </button>
 
@@ -2350,12 +2352,13 @@ export default function RehearsalPage() {
                 setShowMicPicker(true);
               }}
               className={cn(
-                'w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors',
+                'w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
                 showMicPicker && 'bg-neutral-700'
               )}
+              aria-label="Select microphone"
               title="Select microphone"
             >
-              <Mic className="w-4 h-4 text-neutral-400" />
+              <Mic className="w-4 h-4 text-neutral-400" aria-hidden />
             </button>
             {showMicPicker && (
               <div className="absolute bottom-full mb-2 right-0 w-60 bg-neutral-900 border border-neutral-700 rounded-xl shadow-2xl py-1.5 z-50">
@@ -2387,20 +2390,22 @@ export default function RehearsalPage() {
           <button
             type="button"
             onClick={() => setShowShortcutsModal(true)}
-            className="hidden sm:flex w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 items-center justify-center transition-colors shrink-0"
+            className="hidden sm:flex w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 items-center justify-center transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            aria-label="Keyboard shortcuts"
             title="Keyboard shortcuts"
           >
-            <span className="text-[11px] font-semibold text-neutral-400">?</span>
+            <span className="text-[11px] font-semibold text-neutral-400" aria-hidden>?</span>
           </button>
 
           {/* Exit */}
           <button
             type="button"
             onClick={() => { handlePause(); setShowPausePlayOverlay(null); setShowExitModal(true); }}
-            className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors shrink-0"
+            className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            aria-label="Exit rehearsal"
             title="Exit rehearsal"
           >
-            <X className="w-4 h-4 text-neutral-400" />
+            <X className="w-4 h-4 text-neutral-400" aria-hidden />
           </button>
         </div>
       </div>
