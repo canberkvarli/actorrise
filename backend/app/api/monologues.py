@@ -769,6 +769,12 @@ async def favorite_monologue(
     ).first()
 
     if existing:
+        # Re-adding a soft-deleted item restores it (with its memorized/notes/cut).
+        if existing.removed_at is not None:
+            existing.removed_at = None  # type: ignore[assignment]
+            monologue.favorite_count = int(monologue.favorite_count or 0) + 1  # type: ignore[assignment]
+            db.commit()
+            return {"message": "Restored", "id": existing.id}
         return {"message": "Already favorited", "id": existing.id}
 
     # Create favorite
@@ -799,10 +805,13 @@ async def unfavorite_monologue(
         MonologueFavorite.monologue_id == monologue_id
     ).first()
 
-    if not favorite:
+    if not favorite or favorite.removed_at is not None:
         raise HTTPException(status_code=404, detail="Favorite not found")
 
-    db.delete(favorite)
+    # Soft-delete: keep the row (with memorized/notes/cut) so it can be restored
+    # from "Recently removed".
+    from datetime import datetime, timezone
+    favorite.removed_at = datetime.now(timezone.utc)  # type: ignore[assignment]
 
     # Update favorite count
     monologue = db.query(Monologue).get(monologue_id)
@@ -811,7 +820,7 @@ async def unfavorite_monologue(
 
     db.commit()
 
-    return {"message": "Unfavorited successfully"}
+    return {"message": "Removed", "id": favorite.id}
 
 
 @router.patch("/{monologue_id:int}/favorite/notes")
@@ -877,7 +886,10 @@ async def get_my_favorites(
 
     favorites = (
         db.query(MonologueFavorite)
-        .filter(MonologueFavorite.user_id == current_user.id)
+        .filter(
+            MonologueFavorite.user_id == current_user.id,
+            MonologueFavorite.removed_at.is_(None),
+        )
         .order_by(MonologueFavorite.created_at.desc())
         .all()
     )
@@ -907,6 +919,70 @@ async def get_my_favorites(
         for f in favorites
         if f.monologue_id in mono_by_id
     ]
+
+
+@router.get("/removed/my", response_model=List[MonologueResponse])
+async def get_recently_removed(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Recently removed monologues (soft-deleted in the last 30 days), newest first."""
+    from datetime import datetime, timedelta, timezone
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=30)
+    removed = (
+        db.query(MonologueFavorite)
+        .filter(
+            MonologueFavorite.user_id == current_user.id,
+            MonologueFavorite.removed_at.isnot(None),
+            MonologueFavorite.removed_at >= cutoff,
+        )
+        .order_by(MonologueFavorite.removed_at.desc())
+        .all()
+    )
+    if not removed:
+        return []
+
+    monos = {
+        m.id: m
+        for m in db.query(Monologue)
+        .options(joinedload(Monologue.play))
+        .filter(Monologue.id.in_([f.monologue_id for f in removed]))
+        .all()
+    }
+    return [
+        _monologue_to_response(
+            monos[f.monologue_id], is_favorited=False, memorized=bool(f.memorized)
+        )
+        for f in removed
+        if f.monologue_id in monos
+    ]
+
+
+@router.post("/{monologue_id:int}/restore")
+async def restore_favorite(
+    monologue_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Restore a soft-deleted favorite back into the collection."""
+    fav = (
+        db.query(MonologueFavorite)
+        .filter(
+            MonologueFavorite.user_id == current_user.id,
+            MonologueFavorite.monologue_id == monologue_id,
+        )
+        .first()
+    )
+    if not fav:
+        raise HTTPException(status_code=404, detail="Not found")
+    if fav.removed_at is not None:
+        fav.removed_at = None  # type: ignore[assignment]
+        monologue = db.query(Monologue).filter(Monologue.id == monologue_id).first()
+        if monologue:
+            monologue.favorite_count = int(monologue.favorite_count or 0) + 1  # type: ignore[assignment]
+    db.commit()
+    return {"monologue_id": monologue_id, "restored": True}
 
 
 class SetMemorizedRequest(BaseModel):
