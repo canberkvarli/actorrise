@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -129,10 +129,17 @@ export function RehearseHub() {
               { value: "to-study", label: `To study · ${toStudy.length}` },
               { value: "memorized", label: `Memorized · ${memorizedCount}` },
               ...(due.length > 0
-                ? [{ value: "due" as const, label: `Due · ${due.length}` }]
+                ? [{ value: "due" as const, label: `Review · ${due.length}` }]
                 : []),
             ]}
           />
+
+          {filter === "due" && (
+            <p className="-mt-3 text-sm text-muted-foreground">
+              Memorized pieces you haven&apos;t run in a week — give them a
+              refresh.
+            </p>
+          )}
 
           {/* List */}
           {visible.length === 0 ? (
@@ -145,9 +152,11 @@ export function RehearseHub() {
             </p>
           ) : (
             <div className="divide-y divide-border border-t border-border">
-              {visible.map((m: Monologue, i: number) => (
-                <CollectionRow key={m.id} monologue={m} index={i} />
-              ))}
+              <AnimatePresence mode="popLayout" initial={false}>
+                {visible.map((m: Monologue, i: number) => (
+                  <CollectionRow key={m.id} monologue={m} index={i} />
+                ))}
+              </AnimatePresence>
             </div>
           )}
         </div>
