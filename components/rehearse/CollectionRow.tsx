@@ -52,6 +52,7 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
   // Remove from collection, with an Undo toast that restores the exact item.
   const handleRemove = () => {
     toggleFavorite.mutate({ monologueId: monologue.id, isFavorited: true });
+    queryClient.invalidateQueries({ queryKey: ["recently-removed"] });
     toastBookmark(false, {
       label: "Monologue",
       duration: 6000,
@@ -68,6 +69,7 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
           toast.error("Couldn't restore. Try again.");
         }
         queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+        queryClient.invalidateQueries({ queryKey: ["recently-removed"] });
       },
     });
   };
