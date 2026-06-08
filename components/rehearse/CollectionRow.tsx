@@ -48,6 +48,16 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
     .filter(Boolean)
     .join(" · ");
 
+  // Adaptive title size: longer titles step down so they fit (and wrap) instead
+  // of getting cut off. (e.g. "Lady Bracknell's speech from The Importance…")
+  const titleLen = monologue.title?.length ?? 0;
+  const titleSize =
+    titleLen > 54
+      ? "text-lg sm:text-xl"
+      : titleLen > 36
+        ? "text-xl sm:text-2xl"
+        : "text-2xl sm:text-3xl";
+
   // Most monologue titles are generic ("Hamlet's speech from Hamlet"), so lead
   // with the opening line — the quickest "which one is this" cue. A short scene
   // description, when present, sets the stage before the quote.
@@ -87,7 +97,7 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
       <div className="min-w-0">
         <Link
           href={memorizeHref}
-          className="block min-w-0 truncate text-2xl font-bold leading-snug tracking-tight text-foreground transition-colors hover:text-foreground/70 sm:text-3xl"
+          className={`block min-w-0 text-balance break-words font-bold leading-snug tracking-tight text-foreground transition-colors hover:text-foreground/70 ${titleSize}`}
         >
           {monologue.title}
         </Link>
