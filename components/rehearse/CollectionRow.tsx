@@ -16,7 +16,14 @@ import { useToggleFavorite } from "@/hooks/useBookmarks";
 function formatDuration(seconds?: number): string | null {
   if (!seconds || seconds <= 0) return null;
   const minutes = Math.max(1, Math.round(seconds / 60));
-  return `${minutes} min`;
+  return `~${minutes} min`;
+}
+
+// "contemporary" -> "Contemporary", "high-stakes" -> "High-stakes".
+function titleCase(value?: string | null): string | null {
+  const v = value?.trim();
+  if (!v) return null;
+  return v.charAt(0).toUpperCase() + v.slice(1);
 }
 
 interface CollectionRowProps {
@@ -25,75 +32,94 @@ interface CollectionRowProps {
 }
 
 /**
- * Minimal index row: a large title, a single muted meta line, and a calm
- * status/action on the right (a quiet "Memorize" link, or a lit bulb once
- * off-book). Secondary actions surface on hover (always visible on mobile).
+ * Collection row: a large title (matching the memorize screen's title font), a
+ * clear character/play/author meta line, an opening-line synopsis, and a small
+ * set of sharp-cornered info chips. The right rail keeps the calm actions —
+ * Remove, Memorize, and a bulb that lights up once the piece is off-book.
  */
 export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
   const mark = useToggleMemorized();
   const toggleFavorite = useToggleFavorite();
 
   const memorized = Boolean(monologue.memorized);
-  const hasCut =
-    monologue.cut_start_line != null && monologue.cut_end_line != null;
-  const duration = formatDuration(monologue.estimated_duration_seconds);
   const memorizeHref = `/monologue/${monologue.id}/memorize`;
 
   const meta = [monologue.character_name, monologue.play_title, monologue.author]
     .filter(Boolean)
     .join(" · ");
 
-  // Most monologue titles are generic ("Hamlet's speech from Hamlet"), so show
-  // the opening line as a synopsis — the quickest "which one is this" cue.
-  const opening = monologue.scene_description?.trim()
-    || monologue.text?.replace(/\s+/g, " ").trim().slice(0, 140);
+  // Most monologue titles are generic ("Hamlet's speech from Hamlet"), so lead
+  // with the opening line — the quickest "which one is this" cue. A short scene
+  // description, when present, sets the stage before the quote.
+  const excerpt = monologue.text?.replace(/\s+/g, " ").trim().slice(0, 160);
+  const scene = monologue.scene_description?.replace(/\s+/g, " ").trim();
+  const synopsis = scene && excerpt
+    ? `${scene} — “${excerpt}…”`
+    : excerpt
+      ? `“${excerpt}…”`
+      : scene || null;
+
+  // A few sharp-cornered chips for whatever's present (capped, empties skipped).
+  const chips = [
+    formatDuration(monologue.estimated_duration_seconds),
+    titleCase(monologue.tone),
+    titleCase(monologue.primary_emotion),
+    titleCase(monologue.category),
+    monologue.character_age_range?.trim(),
+  ]
+    .filter((c): c is string => Boolean(c))
+    .slice(0, 4);
 
   return (
     <motion.article
+      layout
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, height: 0, marginTop: 0, marginBottom: 0 }}
       transition={{
         duration: 0.3,
         ease: [0.25, 0.1, 0.25, 1],
         delay: Math.min(index * 0.04, 0.32),
       }}
-      className="group -mx-3 flex items-center justify-between gap-6 rounded-lg px-3 py-6 transition-colors hover:bg-muted/30"
+      className="group -mx-3 flex flex-col gap-4 overflow-hidden rounded-lg px-3 py-6 transition-colors hover:bg-muted/30 sm:flex-row sm:items-start sm:justify-between sm:gap-6"
     >
-      {/* Left: title + one-line meta */}
+      {/* Left: title, meta, synopsis, chips */}
       <div className="min-w-0">
-        <div className="flex min-w-0 items-center gap-2">
-          <Link
-            href={memorizeHref}
-            className="block min-w-0 truncate text-2xl font-bold leading-snug tracking-tight text-foreground transition-colors hover:text-foreground/70 sm:text-3xl"
-          >
-            {monologue.title}
-          </Link>
-          {hasCut && (
-            <span
-              className="shrink-0 border border-border px-1.5 py-0.5 text-[0.65rem] font-medium uppercase tracking-wide text-muted-foreground"
-              title="This monologue has an audition cut"
-            >
-              ✂ Cut
-            </span>
-          )}
-        </div>
+        <Link
+          href={memorizeHref}
+          className="block min-w-0 truncate text-2xl font-bold leading-snug tracking-tight text-foreground transition-colors hover:text-foreground/70 sm:text-3xl"
+        >
+          {monologue.title}
+        </Link>
+
         {meta && (
-          <p className="mt-1 truncate text-sm text-muted-foreground">
+          <p className="mt-1.5 truncate text-sm text-muted-foreground">
             {meta}
-            {duration && (
-              <span className="text-muted-foreground/60"> · {duration}</span>
-            )}
           </p>
         )}
-        {opening && (
-          <p className="mt-1.5 truncate text-sm italic text-muted-foreground/70">
-            {opening}
+
+        {synopsis && (
+          <p className="mt-2 line-clamp-2 text-sm italic leading-relaxed text-muted-foreground/70">
+            {synopsis}
           </p>
+        )}
+
+        {chips.length > 0 && (
+          <ul className="mt-3 flex flex-wrap items-center gap-1.5">
+            {chips.map((chip) => (
+              <li
+                key={chip}
+                className="border border-border px-2 py-0.5 text-xs text-muted-foreground"
+              >
+                {chip}
+              </li>
+            ))}
+          </ul>
         )}
       </div>
 
       {/* Right: Remove (hover) · Memorize · a bulb that lights up once off-book */}
-      <div className="flex shrink-0 items-center gap-4">
+      <div className="flex shrink-0 items-center gap-4 sm:pt-1">
         <button
           type="button"
           className="text-xs text-muted-foreground/70 underline-offset-4 opacity-0 transition-opacity hover:text-foreground hover:underline group-hover:opacity-100 max-sm:opacity-100"
