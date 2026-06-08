@@ -3,12 +3,16 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { IconBulb, IconBulbFilled } from "@tabler/icons-react";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import api from "@/lib/api";
+import { toastBookmark } from "@/lib/toast";
 import { Monologue } from "@/types/actor";
 import { useToggleMemorized } from "@/hooks/useMemorized";
 import { useToggleFavorite } from "@/hooks/useBookmarks";
@@ -40,9 +44,33 @@ interface CollectionRowProps {
 export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
   const mark = useToggleMemorized();
   const toggleFavorite = useToggleFavorite();
+  const queryClient = useQueryClient();
 
   const memorized = Boolean(monologue.memorized);
   const memorizeHref = `/monologue/${monologue.id}/memorize`;
+
+  // Remove from collection, with an Undo toast that restores the exact item.
+  const handleRemove = () => {
+    toggleFavorite.mutate({ monologueId: monologue.id, isFavorited: true });
+    toastBookmark(false, {
+      label: "Monologue",
+      duration: 6000,
+      onUndo: async () => {
+        queryClient.setQueryData<Monologue[]>(["bookmarks"], (old) => {
+          const list = old ?? [];
+          return list.some((m) => m.id === monologue.id)
+            ? list
+            : [{ ...monologue, is_favorited: true }, ...list];
+        });
+        try {
+          await api.post(`/api/monologues/${monologue.id}/favorite`);
+        } catch {
+          toast.error("Couldn't restore. Try again.");
+        }
+        queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+      },
+    });
+  };
 
   const meta = [monologue.character_name, monologue.play_title, monologue.author]
     .filter(Boolean)
@@ -133,12 +161,7 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
         <button
           type="button"
           className="text-xs text-muted-foreground/70 underline-offset-4 opacity-0 transition-opacity hover:text-foreground hover:underline group-hover:opacity-100 max-sm:opacity-100"
-          onClick={() =>
-            toggleFavorite.mutate({
-              monologueId: monologue.id,
-              isFavorited: true,
-            })
-          }
+          onClick={handleRemove}
         >
           Remove
         </button>
