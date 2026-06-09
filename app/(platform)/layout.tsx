@@ -8,7 +8,7 @@ import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconQuote, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar } from "@tabler/icons-react";
+import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconQuote, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar, IconHelpCircle } from "@tabler/icons-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef, Suspense } from "react";
@@ -264,6 +264,17 @@ export default function PlatformLayout({
                   </Button>
                 );
               })}
+              <Button
+                asChild
+                variant={pathname === "/help" ? "outline" : "ghost"}
+                size="sm"
+                className="gap-1.5 lg:gap-2 rounded-full px-2.5 lg:px-4 text-xs lg:text-sm"
+              >
+                <Link href="/help" aria-label="Help">
+                  <IconHelpCircle className="h-4 w-4" />
+                  <span className="sr-only">Help</span>
+                </Link>
+              </Button>
               {user?.is_moderator && (
                 <Button
                   asChild
@@ -548,6 +559,19 @@ export default function PlatformLayout({
                   <Link href="/settings" onClick={() => setMobileMenuOpen(false)}>
                     <IconSettings className="h-4 w-4" />
                     Account settings
+                  </Link>
+                </Button>
+
+                {/* Help */}
+                <Button
+                  asChild
+                  variant={pathname === "/help" ? "default" : "ghost"}
+                  size="sm"
+                  className="w-full justify-start gap-2"
+                >
+                  <Link href="/help" onClick={() => setMobileMenuOpen(false)}>
+                    <IconHelpCircle className="h-4 w-4" />
+                    Help
                   </Link>
                 </Button>
 

@@ -4,7 +4,11 @@ from app.models.actor import ActorProfile
 from app.models.founding_actor import FoundingActor
 from app.models.user import User
 from app.services.email.marketing import verify_unsubscribe_token
-from app.services.email.notifications import send_welcome_email
+from app.services.email.notifications import (
+    send_founder_offer_email,
+    send_welcome_email,
+)
+from app.services import app_settings
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -118,6 +122,17 @@ def get_current_user(
             send_welcome_email(user_email=user.email, user_name=user.name)
         except Exception:
             pass  # Logged inside send_welcome_email
+        # While founding spots are open, also send the FOUNDER3 offer as a
+        # separate personal email. Admin-toggleable via the console.
+        try:
+            if app_settings.get_bool(
+                db, app_settings.FOUNDER_OFFER_ON_SIGNUP, default=True
+            ):
+                send_founder_offer_email(user_email=user.email, user_name=user.name)
+        except Exception as e:
+            # Fire-and-forget; never block auth. Log so a misconfig (e.g. missing
+            # app_settings table) isn't completely silent.
+            print(f"Error sending founder offer on signup to {user.email}: {e}")
     else:
         # Update name if it's in the token and different from stored value
         if name and user.name != name:

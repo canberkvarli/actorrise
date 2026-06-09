@@ -3,13 +3,15 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { IconArrowRight } from "@tabler/icons-react";
+import { IconArrowRight, IconPlayerPlayFilled } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { HelpVideoDialog } from "@/components/help/HelpVideoDialog";
+import { FIRST_SCENE_VIDEO } from "@/lib/help-videos";
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
 import { PracticeLibraryRail } from "@/components/practice/PracticeLibraryRail";
 import { PracticeScenePanel } from "@/components/practice/PracticeScenePanel";
@@ -129,6 +131,8 @@ export function PracticeLibrary({
 }
 
 function EmptyState({ demoScriptId }: { demoScriptId: number | null }) {
+  const [videoOpen, setVideoOpen] = useState(false);
+
   return (
     <section className="max-w-lg space-y-6">
       <p className="text-base text-muted-foreground leading-relaxed">
@@ -150,6 +154,25 @@ function EmptyState({ demoScriptId }: { demoScriptId: number | null }) {
           </Button>
         )}
       </div>
+
+      {FIRST_SCENE_VIDEO.youtubeId && (
+        <>
+          <button
+            type="button"
+            onClick={() => setVideoOpen(true)}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <IconPlayerPlayFilled className="h-3.5 w-3.5" />
+            Watch how it works ({FIRST_SCENE_VIDEO.durationLabel})
+          </button>
+          <HelpVideoDialog
+            youtubeId={FIRST_SCENE_VIDEO.youtubeId}
+            title={FIRST_SCENE_VIDEO.title}
+            open={videoOpen}
+            onOpenChange={setVideoOpen}
+          />
+        </>
+      )}
     </section>
   );
 }

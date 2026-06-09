@@ -21,6 +21,7 @@ type MonologueSearchResponse = {
   total: number;
   page: number;
   page_size: number;
+  weak_match?: boolean;
 };
 
 type SearchFilters = {
@@ -60,6 +61,7 @@ export function SearchInterface() {
   // Era toggle: "" = either, "classical" or "contemporary"
   const [era, setEra] = useState<"" | "classical" | "contemporary">("");
   const [results, setResults] = useState<Monologue[]>([]);
+  const [weakMatch, setWeakMatch] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
@@ -84,12 +86,14 @@ export function SearchInterface() {
           era: "" | "classical" | "contemporary";
           filters: typeof filters;
           results: Monologue[];
+          weakMatch?: boolean;
         };
         setQuery(parsed.query);
         setProfileBias(parsed.profileBias);
         setEra(parsed.era);
         setFilters(parsed.filters);
         setResults(parsed.results);
+        setWeakMatch(Boolean(parsed.weakMatch));
         setHasSearched(parsed.results.length > 0);
       }
     } catch (err) {
@@ -148,6 +152,7 @@ export function SearchInterface() {
         { timeoutMs: 180000 }
       );
       setResults(response.data.results);
+      setWeakMatch(Boolean(response.data.weak_match));
 
       // Persist full search state so a refresh or navigation keeps results
       try {
@@ -158,6 +163,7 @@ export function SearchInterface() {
             era,
             filters,
             results: response.data.results,
+            weakMatch: Boolean(response.data.weak_match),
           };
           window.sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
         }
@@ -201,6 +207,7 @@ export function SearchInterface() {
               : "Search failed. Please try again.";
       setSearchError(message);
       setResults([]);
+      setWeakMatch(false);
     } finally {
       setIsLoading(false);
     }
@@ -730,11 +737,21 @@ export function SearchInterface() {
             <motion.div
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center justify-between"
             >
-              <p className="text-sm text-muted-foreground">
-                Found <span className="font-semibold text-foreground">{results.length}</span> monologue{results.length !== 1 ? "s" : ""}
-              </p>
+              {weakMatch ? (
+                <div className="border border-border border-l-2 border-l-[#CB4B00] bg-muted/40 px-4 py-3">
+                  <p className="text-sm font-medium text-foreground">
+                    No strong matches for that.
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Here are the closest ones I found. Try simpler terms or fewer filters to narrow in.
+                  </p>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Found <span className="font-semibold text-foreground">{results.length}</span> monologue{results.length !== 1 ? "s" : ""}
+                </p>
+              )}
             </motion.div>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
               {results.map((monologue, index) => (
