@@ -2,7 +2,7 @@
 Billing and subscription models for ActorRise monetization system.
 
 This module contains models for:
-- PricingTier: Subscription plan definitions (Free, Pro, Elite)
+- PricingTier: Subscription plan definitions (Free, Solo, Plus, Pro)
 - UserSubscription: User's current subscription status and billing info
 - UsageMetrics: Track usage for rate limiting and analytics
 - BillingHistory: Payment and invoice history
@@ -22,7 +22,7 @@ class PricingTier(Base):
     """
     Pricing tier definitions (seeded data, not user-editable).
 
-    Defines available subscription plans (Free, Pro, Elite) with pricing,
+    Defines available subscription plans (Free, Solo, Plus, Pro) with pricing,
     Stripe integration, and feature limits stored as JSON for flexibility.
 
     Example features JSON:
@@ -30,7 +30,7 @@ class PricingTier(Base):
         "ai_searches_per_month": 150,  # -1 = unlimited
         "bookmarks_limit": -1,  # -1 = unlimited
         "recommendations": true,
-        "scene_partner_sessions": 10,  # 1 = one-time for Free/Plus; 10 = per month for Unlimited
+        "scene_partner_sessions": 30,  # per month; -1 = unlimited (Pro), 0 = unavailable
         "download_formats": ["txt", "pdf"],
         "priority_support": true,
         "advanced_analytics": false

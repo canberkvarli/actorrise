@@ -23,7 +23,7 @@ interface UpgradeModalProps {
 const PLUS_BENEFITS = [
   "Unlimited AI searches",
   "Up to 5 script uploads",
-  "10 ScenePartner sessions/month",
+  "30 ScenePartner sessions/month",
   "AI Voice with expressive delivery",
 ];
 
