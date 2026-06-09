@@ -14,6 +14,7 @@ import {
   IconStar,
   IconSearch,
   IconMicrophone,
+  IconClipboardCheck,
 } from "@tabler/icons-react";
 
 export default function AdminLayout({
@@ -57,6 +58,7 @@ export default function AdminLayout({
     { href: "/admin/users", label: "Users", icon: IconUsers },
     { href: "/admin/moderation", label: "Moderation", icon: IconShieldCheck },
     { href: "/admin/content", label: "Content", icon: IconFileSearch },
+    { href: "/admin/monologues/review", label: "Review", icon: IconClipboardCheck },
     { href: "/admin/searches", label: "Searches", icon: IconSearch },
     { href: "/admin/sessions", label: "Sessions", icon: IconMicrophone },
     { href: "/admin/emails", label: "Emails", icon: IconMail },
