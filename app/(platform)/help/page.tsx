@@ -11,7 +11,7 @@ export default function HelpPage() {
   const active = HELP_VIDEOS.find((v) => v.slug === activeSlug) ?? null;
 
   return (
-    <div className="max-w-4xl space-y-8">
+    <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
       <header className="space-y-2">
         <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight">
           Quick guides
@@ -21,7 +21,7 @@ export default function HelpPage() {
         </p>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {HELP_VIDEOS.map((video) =>
           video.youtubeId ? (
             <ReadyCard
