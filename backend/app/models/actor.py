@@ -141,6 +141,13 @@ class Monologue(Base):
     is_verified = Column(Boolean, default=False)  # Manual verification
     quality_score = Column(Float, nullable=True)  # AI quality assessment
 
+    # Repair / review queue (deferred so DBs without these columns still load;
+    # add columns via add_review_columns.py). Set by scripts/repair_monologues.py
+    # when a broken monologue cannot be auto-fixed and needs a human decision.
+    review_status = deferred(Column(String, nullable=True, index=True))  # None | "pending"
+    review_reasons = deferred(Column(ARRAY(String), nullable=True))  # residual quality-gate reasons
+    proposed_text = deferred(Column(Text, nullable=True))  # AI's best attempt, awaiting approval
+
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
     updated_at = Column(DateTime(timezone=True), onupdate=sql_text('now()'))
 
