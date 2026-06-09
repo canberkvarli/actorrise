@@ -264,17 +264,6 @@ export default function PlatformLayout({
                   </Button>
                 );
               })}
-              <Button
-                asChild
-                variant={pathname === "/help" ? "outline" : "ghost"}
-                size="sm"
-                className="gap-1.5 lg:gap-2 rounded-full px-2.5 lg:px-4 text-xs lg:text-sm"
-              >
-                <Link href="/help" aria-label="Help">
-                  <IconHelpCircle className="h-4 w-4" />
-                  <span className="sr-only">Help</span>
-                </Link>
-              </Button>
               {user?.is_moderator && (
                 <Button
                   asChild
@@ -292,6 +281,17 @@ export default function PlatformLayout({
 
             {/* Desktop Profile Dropdown - right aligned */}
             <div className="hidden md:flex items-center gap-1">
+              <Button
+                asChild
+                variant={pathname === "/help" ? "secondary" : "ghost"}
+                size="icon"
+                className="h-9 w-9"
+              >
+                <Link href="/help" aria-label="Help">
+                  <IconHelpCircle className="h-4 w-4" />
+                  <span className="sr-only">Help</span>
+                </Link>
+              </Button>
               <ThemeToggle />
               <div className="relative" ref={dropdownRef}>
                 <Button
