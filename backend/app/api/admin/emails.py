@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from app.api.auth import get_current_user
 from app.core.database import SessionLocal, get_db
+from app.services import app_settings
 from app.models.billing import AdminAuditLog, UserSubscription
 from app.models.email_do_not_contact import EmailDoNotContact
 from app.models.email_tracking import EmailBatch, EmailSend
@@ -72,6 +73,39 @@ def require_approval_permission(current_user: User = Depends(get_current_user)) 
             detail="You do not have permission to send emails",
         )
     return current_user
+
+
+# ========================================
+# Founder-offer-on-signup toggle
+# ========================================
+
+class FounderOfferToggle(BaseModel):
+    enabled: bool
+
+
+@router.get("/founder-offer-on-signup", response_model=FounderOfferToggle)
+def get_founder_offer_on_signup(
+    _: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+) -> FounderOfferToggle:
+    """Whether new signups currently receive the FOUNDER3 offer email."""
+    enabled = app_settings.get_bool(
+        db, app_settings.FOUNDER_OFFER_ON_SIGNUP, default=True
+    )
+    return FounderOfferToggle(enabled=enabled)
+
+
+@router.put("/founder-offer-on-signup", response_model=FounderOfferToggle)
+def set_founder_offer_on_signup(
+    payload: FounderOfferToggle,
+    _: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+) -> FounderOfferToggle:
+    """Turn the FOUNDER3-on-signup email on/off (e.g. when founding spots close)."""
+    enabled = app_settings.set_bool(
+        db, app_settings.FOUNDER_OFFER_ON_SIGNUP, payload.enabled
+    )
+    return FounderOfferToggle(enabled=enabled)
 
 
 # ========================================

@@ -64,10 +64,46 @@ def _evict_if_needed(cache: OrderedDict, max_size: int) -> None:
         cache.popitem(last=False)
 
 
-# Minimum relevance (0–1) to show any results. Below this, the query is treated as no match
-# (e.g. unrelated language, gibberish) and we return empty instead of weak semantic hits.
-# Tuned so queries like "at hirsizi" (unrelated to corpus) return no results.
+# Minimum relevance (0–1) to treat results as STRONG matches and show them normally.
 MIN_RELEVANCE_TO_SHOW = 0.48
+
+# Floor for the soft-fail "weak match" band. When the best match scores in
+# [WEAK_MATCH_FLOOR, MIN_RELEVANCE_TO_SHOW) we still surface the closest matches
+# (flagged weak so the UI can say "no strong matches, here are the closest") instead
+# of a blank screen. Below the floor the query is treated as no match (e.g. unrelated
+# language / gibberish like "at hirsizi") and we return empty.
+WEAK_MATCH_FLOOR = 0.30
+
+
+def classify_relevance(
+    top_results: list,
+    limit: int,
+):
+    """Split scored results into relevance bands.
+
+    ``top_results`` is a list of ``(monologue, score)`` tuples. Returns
+    ``(results, is_weak)``:
+
+      * best >= MIN_RELEVANCE_TO_SHOW       -> (matches at/above the bar, False)
+      * floor <= best < MIN_RELEVANCE_TO_SHOW -> (closest matches >= floor, True)
+      * best < WEAK_MATCH_FLOOR             -> ([], False)   # gibberish / unrelated
+
+    The empty-input case returns ``([], False)``; the caller distinguishes
+    "no semantic candidates at all" (text fallback) from "below floor" itself.
+    """
+    if not top_results:
+        return [], False
+    best = max(s for _, s in top_results)
+    if best < WEAK_MATCH_FLOOR:
+        return [], False
+    if best < MIN_RELEVANCE_TO_SHOW:
+        weak = sorted(
+            (ms for ms in top_results if ms[1] >= WEAK_MATCH_FLOOR),
+            key=lambda ms: ms[1],
+            reverse=True,
+        )
+        return weak[:limit], True
+    return [(m, s) for m, s in top_results if s >= MIN_RELEVANCE_TO_SHOW], False
 
 
 def _canonicalize_query_for_cache(raw_query: str) -> str:
@@ -1115,18 +1151,33 @@ class SemanticSearch:
             boosted_results.append((m, s))
         top_results = boosted_results
 
-        # No real match: if best score is below threshold (e.g. unrelated language / gibberish), return empty
+        # Relevance bands (soft-fail): strong matches show normally; matches in the
+        # weak band [WEAK_MATCH_FLOOR, MIN_RELEVANCE_TO_SHOW) are surfaced as the
+        # closest results (flagged weak by score); below the floor we return empty.
         no_semantic_match = False
         if top_results:
             best_score = max(s for _, s in top_results)
-            if best_score < MIN_RELEVANCE_TO_SHOW:
+            banded, is_weak = classify_relevance(top_results, limit)
+            if is_weak:
                 logger.debug(
-                    "Best relevance %.3f below threshold %.2f; returning no results",
+                    "Best relevance %.3f in weak band [%.2f, %.2f); surfacing %d closest match(es)",
                     best_score,
+                    WEAK_MATCH_FLOOR,
                     MIN_RELEVANCE_TO_SHOW,
+                    len(banded),
+                )
+                self._debug_timing["total_ms"] = round((time.time() - overall_start) * 1000)
+                self._debug_timing["result_count"] = len(banded)
+                self._debug_timing["results_source"] = "semantic_weak"
+                return (banded, quote_match_type_by_id)
+            if not banded:
+                logger.debug(
+                    "Best relevance %.3f below floor %.2f; returning no results",
+                    best_score,
+                    WEAK_MATCH_FLOOR,
                 )
                 return ([], {})
-            top_results = [(m, s) for m, s in top_results if s >= MIN_RELEVANCE_TO_SHOW]
+            top_results = banded
         else:
             no_semantic_match = True
 

@@ -18,7 +18,7 @@ from app.models.actor import Monologue, MonologueFavorite, Play
 from app.models.user import User
 from app.services.search.query_optimizer import correct_query_typos, validate_query
 from app.services.search.recommender import Recommender
-from app.services.search.semantic_search import SemanticSearch
+from app.services.search.semantic_search import MIN_RELEVANCE_TO_SHOW, SemanticSearch
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
@@ -90,6 +90,7 @@ class SearchResponse(BaseModel):
     query_may_have_typos: bool = False
     content_gap: Optional[dict] = None
     query_invalid_reason: Optional[str] = None
+    weak_match: bool = False  # True when results exist but none clear the strong-match bar
     debug_timing: Optional[dict] = None  # Timing data for dev/admin debug overlay
 
 
@@ -462,6 +463,13 @@ async def search_monologues(
             except Exception:
                 db.rollback()
 
+        # Soft-fail: results exist but the top one is below the strong-match bar.
+        # The UI surfaces these under a "closest matches" banner.
+        scores = [
+            m.relevance_score for m in monologue_responses if m.relevance_score is not None
+        ]
+        weak_match = has_scores and bool(scores) and max(scores) < MIN_RELEVANCE_TO_SHOW
+
         # Collect debug timing from search service (available for dev/admin)
         debug_timing = getattr(search_service, '_debug_timing', None)
         if debug_timing:
@@ -475,6 +483,7 @@ async def search_monologues(
             corrected_query=ai_corrected,
             query_may_have_typos=ai_corrected is not None,
             content_gap=content_gap,
+            weak_match=weak_match,
             debug_timing=debug_timing,
         )
     except HTTPException:

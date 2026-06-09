@@ -70,3 +70,9 @@ backend/.next/
 
 # Firecrawl scrape artifacts
 .firecrawl/
+
+# data backups (reversible DB snapshots, not code)
+backend/backups/
+
+# stray hashed uv lock files (real lock is backend/uv.lock)
+/uv-*.lock

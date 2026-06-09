@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -240,6 +241,10 @@ export default function AdminEmailsPage() {
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<number>>(new Set());
   const [leadFiltersOpen, setLeadFiltersOpen] = useState(false);
 
+  // Founder-offer-on-signup toggle
+  const [founderOfferOn, setFounderOfferOn] = useState<boolean | null>(null);
+  const [founderOfferSaving, setFounderOfferSaving] = useState(false);
+
   // Dialogs
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [sending, setSending] = useState(false);
@@ -260,8 +265,32 @@ export default function AdminEmailsPage() {
       api.get<BatchHistoryItem[]>("/api/admin/emails/batches").then(({ data }) => setBatchHistory(data)).catch(() => {}),
       api.get<DncEntry[]>("/api/admin/emails/do-not-contact").then(({ data }) => setDncEntries(data)).catch(() => {}),
       api.get<Lead[]>("/api/admin/emails/leads").then(({ data }) => setLeads(data)).catch(() => {}),
+      api.get<{ enabled: boolean }>("/api/admin/emails/founder-offer-on-signup").then(({ data }) => setFounderOfferOn(data.enabled)).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
+
+  async function updateFounderOfferOnSignup(enabled: boolean) {
+    const prev = founderOfferOn;
+    setFounderOfferOn(enabled); // optimistic
+    setFounderOfferSaving(true);
+    try {
+      const { data } = await api.put<{ enabled: boolean }>(
+        "/api/admin/emails/founder-offer-on-signup",
+        { enabled },
+      );
+      setFounderOfferOn(data.enabled);
+      toast.success(
+        data.enabled
+          ? "New signups will get the FOUNDER3 offer email"
+          : "Founder offer email off. New signups get the plain welcome only.",
+      );
+    } catch {
+      setFounderOfferOn(prev); // revert
+      toast.error("Failed to update the founder offer setting");
+    } finally {
+      setFounderOfferSaving(false);
+    }
+  }
 
   function refreshLeads() {
     setLeadsLoading(true);
@@ -810,6 +839,29 @@ export default function AdminEmailsPage() {
           </Button>
         </div>
       </div>
+
+      {/* ── Founder offer on signup ── */}
+      {canSend && founderOfferOn !== null && (
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-3 sm:p-4">
+          <div className="flex items-start gap-2.5">
+            <IconCrown className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Founder offer on signup</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {founderOfferOn
+                  ? "New signups get a personal FOUNDER3 email (3 months of Plus free)."
+                  : "Off. New signups get the plain welcome email only."}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={founderOfferOn}
+            disabled={founderOfferSaving}
+            onCheckedChange={updateFounderOfferOnSignup}
+            aria-label="Toggle founder offer email on signup"
+          />
+        </div>
+      )}
 
       {/* ── Overview stats ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
