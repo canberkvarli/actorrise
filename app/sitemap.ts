@@ -23,6 +23,14 @@
       { url: `${baseUrl}/monologues/comedic-woman-under-2-minutes`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
       { url: `${baseUrl}/monologues/dramatic-contemporary`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
       { url: `${baseUrl}/monologues/classical-monologues`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
+      { url: `${baseUrl}/monologues/comedic-monologues-for-women`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
+      { url: `${baseUrl}/monologues/contemporary-monologues-for-women`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
+      { url: `${baseUrl}/monologues/dramatic-monologues-for-men`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
+      { url: `${baseUrl}/monologues/one-minute-monologues`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
+      { url: `${baseUrl}/monologues/two-minute-monologues`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
+      { url: `${baseUrl}/monologues/monologues-for-teens`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
+      { url: `${baseUrl}/monologues/shakespeare-monologues-for-women`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
+      { url: `${baseUrl}/monologues/movie-monologues`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
 
       /* ── Feature / AI pages ─────────────────────────────────── */
       { url: `${baseUrl}/scene-partner-ai`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.9 },
