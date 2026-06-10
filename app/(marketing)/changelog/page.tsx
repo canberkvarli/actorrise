@@ -16,6 +16,13 @@ export const metadata: Metadata = {
     description: "Latest updates to ActorRise: new features, improvements, and fixes.",
     url: `${siteUrl}/changelog`,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Changelog | ActorRise",
+    description:
+      "Latest updates to ActorRise: new features, improvements, and fixes.",
+    images: ["/opengraph-image"],
+  },
   alternates: { canonical: `${siteUrl}/changelog` },
 };
 

@@ -13,6 +13,13 @@ export const metadata: Metadata = {
     description: "Get in touch with ActorRise for support and inquiries.",
     url: `${siteUrl}/contact`,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Contact | ActorRise",
+    description:
+      "Get in touch with ActorRise for support and inquiries.",
+    images: ["/opengraph-image"],
+  },
   alternates: { canonical: `${siteUrl}/contact` },
 };
 

@@ -12,6 +12,13 @@ export const metadata: Metadata = {
     description: "Built by an actor who believes technology should support the art, not get in the way of it.",
     url: `${siteUrl}/about`,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "About | ActorRise",
+    description:
+      "Built by an actor who believes technology should support the art, not get in the way of it.",
+    images: ["/opengraph-image"],
+  },
   alternates: { canonical: `${siteUrl}/about` },
 };
 

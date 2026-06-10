@@ -14,6 +14,13 @@ export const metadata: Metadata = {
       "Search 7,500+ monologues for classical pieces. Shakespeare and more. AI-powered discovery.",
     url: `${siteUrl}/monologues/classical-monologues`,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Classical Monologues for Auditions | ActorRise",
+    description:
+      "Search 7,500+ monologues for classical pieces. Shakespeare and more. AI-powered discovery.",
+    images: ["/opengraph-image"],
+  },
   alternates: { canonical: `${siteUrl}/monologues/classical-monologues` },
 };
 

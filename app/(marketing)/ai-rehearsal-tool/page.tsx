@@ -14,6 +14,13 @@ export const metadata: Metadata = {
       "Practice scenes and monologues with AI that reads the other lines. 7,500+ monologues from plays, films, and TV. Free to try.",
     url: `${siteUrl}/ai-rehearsal-tool`,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "AI Rehearsal Tool for Actors | ActorRise",
+    description:
+      "Practice scenes and monologues with AI that reads the other lines. 7,500+ monologues from plays, films, and TV. Free to try.",
+    images: ["/opengraph-image"],
+  },
   alternates: { canonical: `${siteUrl}/ai-rehearsal-tool` },
 };
 

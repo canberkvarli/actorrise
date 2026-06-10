@@ -14,6 +14,13 @@ export const metadata: Metadata = {
       "Search 7,500+ monologues for women. Comedic, dramatic, classical, contemporary. AI-powered discovery.",
     url: `${siteUrl}/monologues-for-women`,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Monologues for Women | ActorRise",
+    description:
+      "Search 7,500+ monologues for women. Comedic, dramatic, classical, contemporary. AI-powered discovery.",
+    images: ["/opengraph-image"],
+  },
   alternates: { canonical: `${siteUrl}/monologues-for-women` },
 };
 
