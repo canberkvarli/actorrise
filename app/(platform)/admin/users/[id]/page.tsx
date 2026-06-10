@@ -601,7 +601,6 @@ export default function AdminUserDetailPage() {
                       <SelectItem value="30">30 days</SelectItem>
                       <SelectItem value="90">90 days</SelectItem>
                       <SelectItem value="180">6 months</SelectItem>
-                      <SelectItem value="365">12 months</SelectItem>
                       <SelectItem value="custom">Custom days</SelectItem>
                       <SelectItem value="permanent">No expiry (permanent)</SelectItem>
                     </SelectContent>
@@ -625,7 +624,7 @@ export default function AdminUserDetailPage() {
               <Input
                 value={grantNote}
                 onChange={(e) => setGrantNote(e.target.value)}
-                placeholder="Reason (e.g. Founding actor, 12 months free)"
+                placeholder="Reason (e.g. Founding actor, 3 months free)"
               />
 
               <div className="flex flex-wrap gap-2">

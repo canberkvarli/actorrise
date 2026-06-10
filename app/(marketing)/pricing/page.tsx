@@ -213,7 +213,7 @@ export default function PricingPage() {
           <span className="h-2 w-2 mt-1.5 sm:mt-0 rounded-full bg-primary animate-pulse shrink-0" />
           <p className="text-xs sm:text-sm text-left sm:text-center">
             <span className="font-medium">50 founding member spots.</span>{" "}
-            <span className="text-muted-foreground">100% off Plus for 12 months.</span>
+            <span className="text-muted-foreground">100% off Plus for 3 months.</span>
           </p>
         </motion.div>
 
