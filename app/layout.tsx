@@ -44,7 +44,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "ActorRise - Find Your Monologue in Seconds, Spend Your Time Rehearsing",
+    default: "Find Your Audition Monologue in Seconds | ActorRise",
     template: "%s | ActorRise",
   },
   description:
@@ -76,7 +76,7 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: siteUrl,
     siteName: "ActorRise",
-    title: "ActorRise - Find Your Monologue in Seconds, Spend Your Time Rehearsing",
+    title: "Find Your Audition Monologue in Seconds | ActorRise",
     description:
       "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 7,500+ monologues from plays, films, and TV. Free while in early access.",
     images: [
@@ -90,7 +90,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ActorRise - Find Your Monologue in Seconds, Spend Your Time Rehearsing",
+    title: "Find Your Audition Monologue in Seconds | ActorRise",
     description:
       "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 7,500+ monologues from plays, films, and TV. Free while in early access.",
     images: ["/opengraph-image"],

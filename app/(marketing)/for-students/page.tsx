@@ -6,14 +6,21 @@ import { ForStudentsDiscountCTA } from "@/components/landing/ForStudentsDiscount
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
 export const metadata: Metadata = {
-  title: "Students & educators",
+  title: "Student & Educator Discounts for Actors",
   description:
     "Discounts for students, teachers, and coaches. Request a code and we'll email you.",
   openGraph: {
-    title: "Students & educators | ActorRise",
+    title: "Student & Educator Discounts for Actors | ActorRise",
     description:
       "Discounts for students, teachers, and coaches. Request a code and we'll email you.",
     url: `${siteUrl}/for-students`,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Student & Educator Discounts for Actors | ActorRise",
+    description:
+      "Discounts for students, teachers, and coaches. Request a code and we'll email you.",
+    images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/for-students` },
 };

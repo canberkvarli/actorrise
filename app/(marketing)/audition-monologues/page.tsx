@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
 export const metadata: Metadata = {
-  title: "Audition Monologues: Classical, Contemporary, Comedic | ActorRise",
+  title: "Audition Monologues: Classical, Contemporary, Comedic",
   description:
     "Browse and search audition monologues by style, length, and role type. Find fresh pieces quickly with AI-powered discovery and overdone filtering.",
   openGraph: {
@@ -13,6 +13,13 @@ export const metadata: Metadata = {
     description:
       "Audition monologues for every casting need. Classical, contemporary, comedic. 7,500+ pieces, AI search, Overdone filter.",
     url: `${siteUrl}/audition-monologues`,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Audition Monologues | ActorRise",
+    description:
+      "Audition monologues for every casting need. Classical, contemporary, comedic. 7,500+ pieces, AI search, Overdone filter.",
+    images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/audition-monologues` },
 };

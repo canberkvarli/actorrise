@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
 export const metadata: Metadata = {
-  title: "Monologue Finder for Actors | Find Audition Pieces Fast | ActorRise",
+  title: "Monologue Finder for Actors | Find Audition Pieces Fast",
   description:
     "Use ActorRise's monologue finder to search 7,500+ real monologues by tone, length, and character type. No keyword guessing. Free to start.",
   openGraph: {
@@ -13,6 +13,13 @@ export const metadata: Metadata = {
     description:
       "Find your next audition piece in seconds. 7,500+ monologues, AI search, no keyword hunting. Free tier available.",
     url: `${siteUrl}/monologue-finder`,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Monologue Finder for Actors | ActorRise",
+    description:
+      "Find your next audition piece in seconds. 7,500+ monologues, AI search, no keyword hunting. Free tier available.",
+    images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/monologue-finder` },
 };

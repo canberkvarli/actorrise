@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
 export const metadata: Metadata = {
-  title: "Audition AI: Monologue Search, ScenePartner & Audition Mode | ActorRise",
+  title: "Audition AI: Monologue Search, ScenePartner & Audition Mode",
   description:
     "AI for auditions: monologue search, ScenePartner for rehearsal, and Audition Mode. Real scripts, not AI-generated. Less time searching, more time rehearsing.",
   openGraph: {
@@ -13,6 +13,13 @@ export const metadata: Metadata = {
     description:
       "Monologue search, ScenePartner, and Audition Mode. AI that helps you prep with real scripts.",
     url: `${siteUrl}/audition-ai`,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Audition AI | ActorRise",
+    description:
+      "Monologue search, ScenePartner, and Audition Mode. AI that helps you prep with real scripts.",
+    images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/audition-ai` },
 };

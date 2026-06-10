@@ -5,14 +5,21 @@ import { Button } from "@/components/ui/button";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
 export const metadata: Metadata = {
-  title: "For Teachers & Coaches",
+  title: "Monologues for Drama Teachers & Acting Coaches",
   description:
     "Your students find the right audition monologue in seconds. 7,500+ monologues, AI search, Overdone filter. Free resource for drama teachers and acting coaches.",
   openGraph: {
-    title: "For Teachers & Coaches | ActorRise",
+    title: "Monologues for Drama Teachers & Acting Coaches | ActorRise",
     description:
       "Find the right audition monologue in seconds. 7,500+ pieces, AI fit to type and casting, Overdone filter. We're starting with teachers and coaches; students spread it.",
     url: `${siteUrl}/for-teachers`,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Monologues for Drama Teachers & Acting Coaches | ActorRise",
+    description:
+      "Find the right audition monologue in seconds. 7,500+ pieces, AI fit to type and casting, Overdone filter. We're starting with teachers and coaches; students spread it.",
+    images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/for-teachers` },
 };
@@ -32,7 +39,7 @@ export default function ForTeachersPage() {
       <ul className="space-y-3 text-muted-foreground mb-10">
         <li className="flex gap-2">
           <span className="text-primary">·</span>
-          <span>Largest searchable monologue database (4-8× bigger than Backstage)</span>
+          <span>One of the largest searchable monologue databases (7,500+ pieces)</span>
         </li>
         <li className="flex gap-2">
           <span className="text-primary">·</span>

@@ -12,7 +12,7 @@ const UPDATE_DURATION_MS = 1200;
 const FALLBACK_LIBRARY = { monologues: 7500, filmTv: 870 };
 /** Fallback search count shown immediately before API responds — prevents showing "0". */
 const FALLBACK_SEARCHES = 600;
-const FALLBACK_USERS = 120;
+const FALLBACK_USERS = 200;
 
 const STATS_CACHE_KEY = "actorrise_public_stats_v1";
 
