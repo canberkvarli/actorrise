@@ -14,6 +14,13 @@ export const metadata: Metadata = {
       "Rehearse scenes with AI that reads the other lines. Run sides, film & TV scenes, and monologues. Free to try.",
     url: `${siteUrl}/scene-partner-ai`,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Scene Partner AI | ActorRise",
+    description:
+      "Rehearse scenes with AI that reads the other lines. Run sides, film & TV scenes, and monologues. Free to try.",
+    images: ["/opengraph-image"],
+  },
   alternates: { canonical: `${siteUrl}/scene-partner-ai` },
 };
 

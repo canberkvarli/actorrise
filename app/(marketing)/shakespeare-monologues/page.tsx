@@ -14,6 +14,13 @@ export const metadata: Metadata = {
       "Search Shakespeare monologues by character, play, tone, and length. AI-powered discovery from 7,500+ pieces.",
     url: `${siteUrl}/shakespeare-monologues`,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Shakespeare Monologues for Auditions | ActorRise",
+    description:
+      "Search Shakespeare monologues by character, play, tone, and length. AI-powered discovery from 7,500+ pieces.",
+    images: ["/opengraph-image"],
+  },
   alternates: { canonical: `${siteUrl}/shakespeare-monologues` },
 };
 

@@ -14,6 +14,13 @@ export const metadata: Metadata = {
       "Search 7,500+ monologues for dramatic, emotional pieces. AI-powered discovery by tone, length, and character.",
     url: `${siteUrl}/dramatic-monologues`,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Dramatic Monologues for Auditions | ActorRise",
+    description:
+      "Search 7,500+ monologues for dramatic, emotional pieces. AI-powered discovery by tone, length, and character.",
+    images: ["/opengraph-image"],
+  },
   alternates: { canonical: `${siteUrl}/dramatic-monologues` },
 };
 

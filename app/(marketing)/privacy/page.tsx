@@ -12,6 +12,13 @@ export const metadata: Metadata = {
     description: "How we collect, use, and protect your personal data.",
     url: `${siteUrl}/privacy`,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Privacy Policy | ActorRise",
+    description:
+      "How we collect, use, and protect your personal data.",
+    images: ["/opengraph-image"],
+  },
   alternates: { canonical: `${siteUrl}/privacy` },
 };
 

@@ -12,6 +12,13 @@ export const metadata: Metadata = {
     description: "Rules and conditions for using ActorRise.",
     url: `${siteUrl}/terms`,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Terms of Service | ActorRise",
+    description:
+      "Rules and conditions for using ActorRise.",
+    images: ["/opengraph-image"],
+  },
   alternates: { canonical: `${siteUrl}/terms` },
 };
 

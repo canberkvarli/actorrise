@@ -14,6 +14,13 @@ export const metadata: Metadata = {
       "Search 7,500+ monologues for contemporary pieces from modern plays. AI-powered discovery.",
     url: `${siteUrl}/contemporary-monologues`,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Contemporary Monologues for Auditions | ActorRise",
+    description:
+      "Search 7,500+ monologues for contemporary pieces from modern plays. AI-powered discovery.",
+    images: ["/opengraph-image"],
+  },
   alternates: { canonical: `${siteUrl}/contemporary-monologues` },
 };
 

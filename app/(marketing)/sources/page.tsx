@@ -13,6 +13,13 @@ export const metadata: Metadata = {
       "Our content is from public domain and licensed sources. We don't distribute copyrighted play text.",
     url: `${siteUrl}/sources`,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Sources & Copyright | ActorRise",
+    description:
+      "Our content is from public domain and licensed sources. We don't distribute copyrighted play text.",
+    images: ["/opengraph-image"],
+  },
   alternates: { canonical: `${siteUrl}/sources` },
 };
 

@@ -14,6 +14,13 @@ export const metadata: Metadata = {
       "Search 7,500+ monologues for comedic pieces for women under 2 minutes. AI-powered, natural language search.",
     url: `${siteUrl}/monologues/comedic-woman-under-2-minutes`,
   },
+  twitter: {
+    card: "summary_large_image",
+    title: "Comedic Monologue for Woman Under 2 Minutes | ActorRise",
+    description:
+      "Search 7,500+ monologues for comedic pieces for women under 2 minutes. AI-powered, natural language search.",
+    images: ["/opengraph-image"],
+  },
   alternates: { canonical: `${siteUrl}/monologues/comedic-woman-under-2-minutes` },
 };
 
