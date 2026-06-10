@@ -32,6 +32,7 @@
       { url: `${baseUrl}/about`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
       { url: `${baseUrl}/changelog`, lastModified: lastMod, changeFrequency: "weekly", priority: 0.8 },
       { url: `${baseUrl}/for-teachers`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
+      { url: `${baseUrl}/guides`, lastModified: lastMod, changeFrequency: "weekly", priority: 0.7 },
       { url: `${baseUrl}/5-monologues`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
       { url: `${baseUrl}/actors`, lastModified: lastMod, changeFrequency: "weekly", priority: 0.7 },
       { url: `${baseUrl}/for-students`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.7 },
