@@ -8,8 +8,11 @@ import {
   useSpring,
 } from "framer-motion";
 import { IconPlayerPlayFilled } from "@tabler/icons-react";
+import { VideoSchema } from "@/components/seo/VideoSchema";
 
 const YOUTUBE_ID = "TTZxo3bZPI4";
+// TODO(Canberk): set to the real YouTube publish date of the ScenePartner demo.
+const VIDEO_UPLOAD_DATE = "2026-03-01";
 
 const spring = { stiffness: 100, damping: 30, restDelta: 0.001 };
 
@@ -51,6 +54,15 @@ export function LandingVideoShowcase() {
       ref={sectionRef}
       className="relative py-28 sm:py-36 md:py-44 border-t border-border/60 overflow-hidden"
     >
+      <VideoSchema
+        name="ActorRise ScenePartner demo"
+        description="See how ActorRise's ScenePartner lets actors rehearse scenes with an AI reading partner, anytime."
+        thumbnailUrl={`https://img.youtube.com/vi/${YOUTUBE_ID}/maxresdefault.jpg`}
+        uploadDate={VIDEO_UPLOAD_DATE}
+        embedUrl={`https://www.youtube.com/embed/${YOUTUBE_ID}`}
+        duration="PT1M30S"
+      />
+
       {/* ── Subtle grid texture ── */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.02]"
