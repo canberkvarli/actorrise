@@ -1,4 +1,5 @@
   import type { MetadataRoute } from "next";
+  import { BLOG_POSTS } from "@/lib/blog/posts";
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -41,6 +42,13 @@
       { url: `${baseUrl}/changelog`, lastModified: lastMod, changeFrequency: "weekly", priority: 0.8 },
       { url: `${baseUrl}/for-teachers`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
       { url: `${baseUrl}/guides`, lastModified: lastMod, changeFrequency: "weekly", priority: 0.7 },
+      { url: `${baseUrl}/blog`, lastModified: lastMod, changeFrequency: "weekly", priority: 0.7 },
+      ...BLOG_POSTS.map((p) => ({
+        url: `${baseUrl}/blog/${p.slug}`,
+        lastModified: new Date(p.date),
+        changeFrequency: "monthly" as const,
+        priority: 0.7,
+      })),
       { url: `${baseUrl}/5-monologues`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.8 },
       { url: `${baseUrl}/actors`, lastModified: lastMod, changeFrequency: "weekly", priority: 0.7 },
       { url: `${baseUrl}/for-students`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.7 },
