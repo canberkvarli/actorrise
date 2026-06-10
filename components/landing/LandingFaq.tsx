@@ -22,12 +22,31 @@ const FAQ_ITEMS = [
   },
 ];
 
+// FAQPage structured data, built from the same items shown below so the schema
+// never drifts from the visible content (a Google rich-results requirement).
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: FAQ_ITEMS.map((item) => ({
+    "@type": "Question",
+    name: item.q,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: item.link ? `${item.a}${item.link.label}.` : item.a,
+    },
+  })),
+};
+
 export function LandingFaq() {
   return (
     <section
       className="border-t border-border/60 py-16 md:py-20 bg-muted/20"
       aria-label="FAQ"
     >
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <div className="container mx-auto px-4 sm:px-6">
         <div className="max-w-2xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
