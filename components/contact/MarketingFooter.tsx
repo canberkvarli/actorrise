@@ -68,6 +68,9 @@ export function MarketingFooter() {
               <Link href="/audition-ai" className="hover:text-foreground transition-colors shrink-0">
                 Audition AI
               </Link>
+              <Link href="/guides" className="hover:text-foreground transition-colors shrink-0">
+                Guides
+              </Link>
               <Link href="/about" className="hover:text-foreground transition-colors shrink-0">
                 About
               </Link>

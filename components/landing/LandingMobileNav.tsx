@@ -11,6 +11,7 @@ const MOBILE_LINKS = [
   { href: "#pricing", label: "Pricing" },
   { href: "/for-students", label: "For students" },
   { href: "/for-teachers", label: "For teachers" },
+  { href: "/guides", label: "Guides" },
 ] as const;
 
 export function LandingMobileNav() {

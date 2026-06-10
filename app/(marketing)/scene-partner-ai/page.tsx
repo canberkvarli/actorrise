@@ -24,9 +24,45 @@ export const metadata: Metadata = {
   alternates: { canonical: `${siteUrl}/scene-partner-ai` },
 };
 
+// Matches the visible FAQ below (Google requires schema to reflect on-page content).
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "How does ScenePartner AI work?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Pick a scene or monologue, choose which character you want to play, and hit start. ScenePartner reads the other lines out loud using text-to-speech. It listens for your cue lines and advances automatically, so you can rehearse hands-free.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Is ScenePartner free?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "The free tier includes limited ScenePartner sessions. For unlimited rehearsal, check the pricing page.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Can I use my own sides or scripts?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Yes. You can paste or upload your own audition sides and rehearse them with ScenePartner. It works with any text, not just material from the ActorRise database.",
+      },
+    },
+  ],
+};
+
 export default function Page() {
   return (
     <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+      />
       <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
         Scene partner AI: rehearse anytime, no scheduling
       </h1>

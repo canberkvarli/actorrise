@@ -45,6 +45,13 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               </Link>
               <span className="h-4 w-px bg-border/60" />
               <Link
+                href="/guides"
+                className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
+              >
+                Guides
+              </Link>
+              <span className="h-4 w-px bg-border/60" />
+              <Link
                 href="/for-students"
                 className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
               >
