@@ -3,7 +3,7 @@
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
   /** Stable date for sitemap entries so crawlers get consistent signals (update when doing larger content refreshes). */
-  const lastMod = new Date("2026-03-06");
+  const lastMod = new Date("2026-06-10");
 
   export default function sitemap(): MetadataRoute.Sitemap {
     return [
