@@ -90,6 +90,171 @@ function useAdminStats(from?: string, to?: string) {
   });
 }
 
+const BRAND = "#CB4B00";
+
+export interface GrowthStats {
+  from: string;
+  to: string;
+  active_users: {
+    dau: number;
+    wau: number;
+    mau: number;
+    stickiness_percent: number | null;
+    by_day: { date: string; count: number }[];
+  };
+  retention: {
+    weeks: {
+      week_start: string;
+      active: number;
+      new: number;
+      returning: number;
+      wow_retention_percent: number | null;
+    }[];
+    dormant: number;
+  };
+  activation: { step: string; count: number; percent: number }[];
+  revenue: {
+    total_users: number;
+    paid_active: number;
+    trialing: number;
+    free: number;
+    conversion_percent: number;
+    mrr_usd: number;
+    by_tier: { tier: string; count: number }[];
+  };
+}
+
+function useGrowthStats(from?: string, to?: string) {
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  const qs = params.toString();
+  return useQuery({
+    queryKey: ["admin-growth", from, to],
+    queryFn: async () => {
+      const res = await api.get<GrowthStats>(`/api/admin/growth${qs ? `?${qs}` : ""}`);
+      return res.data;
+    },
+  });
+}
+
+/** Compact, sharp-cornered metric tile (non-interactive → no rounding). */
+function MiniStat({
+  label,
+  value,
+  hint,
+  accent,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="border border-border bg-card px-3 py-2.5">
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground truncate">{label}</p>
+      <p className="text-xl font-bold tabular-nums leading-tight mt-0.5" style={accent ? { color: BRAND } : undefined}>
+        {value}
+      </p>
+      {hint && <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{hint}</p>}
+    </div>
+  );
+}
+
+function ActivationFunnel({ steps }: { steps: GrowthStats["activation"] }) {
+  return (
+    <div className="border border-border bg-card p-4 space-y-3">
+      <div>
+        <p className="text-sm font-medium">Activation funnel</p>
+        <p className="text-xs text-muted-foreground">Share of real signups reaching each step</p>
+      </div>
+      <div className="space-y-1.5">
+        {steps.map((s) => (
+          <div key={s.step} className="flex items-center gap-2 text-xs">
+            <span className="w-40 shrink-0 text-muted-foreground">{s.step}</span>
+            <div className="flex-1 bg-muted/40 h-4">
+              <div className="h-4" style={{ width: `${s.percent}%`, backgroundColor: BRAND }} />
+            </div>
+            <span className="w-24 text-right tabular-nums">
+              {s.count} <span className="text-muted-foreground">({s.percent}%)</span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RetentionPanel({ retention }: { retention: GrowthStats["retention"] }) {
+  const weeks = retention.weeks;
+  return (
+    <div className="border border-border bg-card p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium">Weekly retention</p>
+          <p className="text-xs text-muted-foreground">New vs returning active users</p>
+        </div>
+        <span className="text-xs text-muted-foreground">
+          {retention.dormant} dormant (14d+ silent)
+        </span>
+      </div>
+      {weeks.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No activity history.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border text-muted-foreground">
+                <th className="py-1.5 text-left font-medium">Week of</th>
+                <th className="py-1.5 text-right font-medium">Active</th>
+                <th className="py-1.5 text-right font-medium">New</th>
+                <th className="py-1.5 text-right font-medium">Returning</th>
+                <th className="py-1.5 text-right font-medium">WoW</th>
+              </tr>
+            </thead>
+            <tbody>
+              {weeks.map((w) => (
+                <tr key={w.week_start} className="border-b border-border/50 last:border-0">
+                  <td className="py-1.5 text-muted-foreground whitespace-nowrap">{w.week_start.slice(5)}</td>
+                  <td className="py-1.5 text-right tabular-nums">{w.active}</td>
+                  <td className="py-1.5 text-right tabular-nums">{w.new}</td>
+                  <td className="py-1.5 text-right tabular-nums" style={{ color: w.returning > 0 ? BRAND : undefined }}>
+                    {w.returning}
+                  </td>
+                  <td className="py-1.5 text-right tabular-nums text-muted-foreground">
+                    {w.wow_retention_percent != null ? `${w.wow_retention_percent}%` : "-"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RevenuePanel({ revenue }: { revenue: GrowthStats["revenue"] }) {
+  return (
+    <div className="border border-border bg-card p-4 space-y-3">
+      <p className="text-sm font-medium">Revenue &amp; conversion</p>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        <div className="flex justify-between"><span className="text-muted-foreground">MRR</span><span className="font-semibold tabular-nums" style={{ color: BRAND }}>${revenue.mrr_usd.toLocaleString()}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Free→paid</span><span className="font-semibold tabular-nums">{revenue.conversion_percent}%</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Paid</span><span className="tabular-nums">{revenue.paid_active}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Trialing</span><span className="tabular-nums">{revenue.trialing}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Free</span><span className="tabular-nums">{revenue.free}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="tabular-nums">{revenue.total_users}</span></div>
+      </div>
+      {revenue.by_tier.length > 0 && (
+        <div className="pt-2 border-t border-border/50 text-xs text-muted-foreground">
+          {revenue.by_tier.map((t) => `${t.tier}: ${t.count}`).join(" · ")}
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface HealthTableRow {
   name: string;
   size_pretty: string;
@@ -220,6 +385,7 @@ export default function AdminOverviewPage() {
   }, [useCustom, customFrom, customTo, rangePreset]);
 
   const { data: stats, isLoading, error, isError } = useAdminStats(from, to);
+  const { data: growth } = useGrowthStats(from, to);
   const {
     data: health,
     isLoading: healthLoading,
@@ -371,24 +537,53 @@ export default function AdminOverviewPage() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <Card key={card.title}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2 p-3 sm:p-4 md:p-6">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  {card.title}
-                </CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
-                <p className="text-2xl font-bold">{card.value}</p>
-              </CardContent>
-            </Card>
-          );
-        })}
+      {/* Compact KPI strip (was 8 chunky cards) */}
+      <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
+        {cards.map((card) => (
+          <MiniStat key={card.title} label={card.title} value={card.value.toLocaleString()} />
+        ))}
       </div>
+
+      {/* Growth & health */}
+      {growth && (
+        <>
+          <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
+            <MiniStat label="MRR" value={`$${growth.revenue.mrr_usd.toLocaleString()}`} hint={`${growth.revenue.conversion_percent}% free→paid`} accent />
+            <MiniStat label="Active (7d)" value={growth.active_users.wau.toLocaleString()} hint="WAU" />
+            <MiniStat label="Active (30d)" value={growth.active_users.mau.toLocaleString()} hint="MAU" />
+            <MiniStat label="Stickiness" value={growth.active_users.stickiness_percent != null ? `${growth.active_users.stickiness_percent}%` : "-"} hint="DAU÷MAU" />
+            <MiniStat label="Paid" value={growth.revenue.paid_active.toLocaleString()} hint={`${growth.revenue.trialing} trialing`} />
+            <MiniStat label="Dormant" value={growth.retention.dormant.toLocaleString()} hint="14d+ silent" />
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            <ActivationFunnel steps={growth.activation} />
+            <RevenuePanel revenue={growth.revenue} />
+          </div>
+
+          <RetentionPanel retention={growth.retention} />
+
+          {/* Active users over time */}
+          <Card>
+            <CardHeader className="p-3 sm:p-4 md:p-6 pb-0">
+              <CardTitle className="text-base sm:text-lg">Active users per day</CardTitle>
+            </CardHeader>
+            <CardContent className="p-3 sm:p-4 md:p-6 pt-2">
+              <div className="h-44 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={growth.active_users.by_day}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="date" tick={{ fontSize: 12 }} tickFormatter={(v) => v.slice(5)} />
+                    <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                    <Tooltip labelFormatter={(v) => v} contentStyle={chartTooltipStyle} />
+                    <Line type="monotone" dataKey="count" name="Active users" stroke={BRAND} strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       {/* Founding Actors Goal */}
       <Card>
@@ -427,7 +622,7 @@ export default function AdminOverviewPage() {
           <CardTitle className="text-base sm:text-lg md:text-xl">Signups over time</CardTitle>
         </CardHeader>
         <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
-          <div className="h-64 w-full">
+          <div className="h-44 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={stats.signups.by_day}>
                 <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
