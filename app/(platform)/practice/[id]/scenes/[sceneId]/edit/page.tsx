@@ -379,6 +379,16 @@ export default function SceneEditPage() {
   // Microphone permission
   const { status: micStatus, isGranted: micGranted, requestMic } = useMicPermission({ recheckOnVisible: true });
 
+  // Ask for the mic here in the editor (once) so the browser permission prompt
+  // is dealt with before the user begins performing — not mid-rehearsal.
+  const micAutoRequestedRef = useRef(false);
+  useEffect(() => {
+    if (!micAutoRequestedRef.current && micStatus === "prompt") {
+      micAutoRequestedRef.current = true;
+      requestMic();
+    }
+  }, [micStatus, requestMic]);
+
   // Original scene snapshot for reset
   const originalSceneRef = useRef<SceneDetail | null>(null);
 
