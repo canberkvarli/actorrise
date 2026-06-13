@@ -180,6 +180,143 @@ def get_rehearsal_sessions(
     }
 
 
+@router.get("/sessions/analytics")
+def get_session_analytics(
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date: Optional[str] = Query(None, alias="to"),
+    db: Session = Depends(get_db),
+    _mod: User = Depends(require_moderator),
+) -> dict[str, Any]:
+    """Aggregate rehearsal analytics: completion funnel, drop-off, per-scene, per-user."""
+    start_dt, end_dt = _date_range(from_date, to_date)
+    window = (
+        RehearsalSession.started_at >= start_dt,
+        RehearsalSession.started_at < end_dt,
+    )
+
+    # --- Funnel + completion rate ---
+    f = (
+        db.query(
+            func.count().label("total"),
+            func.count().filter(RehearsalSession.status == "completed").label("completed"),
+            func.count().filter(RehearsalSession.status == "abandoned").label("abandoned"),
+            func.count().filter(RehearsalSession.status == "in_progress").label("in_progress"),
+            func.avg(RehearsalSession.duration_seconds).filter(
+                RehearsalSession.duration_seconds.isnot(None)
+            ).label("avg_duration"),
+            func.avg(RehearsalSession.duration_seconds).filter(
+                RehearsalSession.status == "completed",
+                RehearsalSession.duration_seconds.isnot(None),
+            ).label("avg_completed_duration"),
+        )
+        .filter(*window)
+        .first()
+    )
+    completed = f.completed if f else 0
+    abandoned = f.abandoned if f else 0
+    ended = completed + abandoned
+    completion_rate = round(completed / ended * 100, 1) if ended else None
+
+    # --- Drop-off: abandoned sessions bucketed by how far they got ---
+    abandoned_pcts = [
+        float(p or 0.0)
+        for (p,) in db.query(RehearsalSession.completion_percentage)
+        .filter(*window, RehearsalSession.status == "abandoned")
+        .all()
+    ]
+    buckets = [
+        ("Quit immediately (0%)", lambda x: x <= 0),
+        ("1-25%", lambda x: 0 < x <= 25),
+        ("26-50%", lambda x: 25 < x <= 50),
+        ("51-75%", lambda x: 50 < x <= 75),
+        ("76-99%", lambda x: 75 < x < 100),
+    ]
+    dropoff = [
+        {"bucket": label, "count": sum(1 for x in abandoned_pcts if test(x))}
+        for label, test in buckets
+    ]
+
+    # --- Per-scene engagement ---
+    scene_rows = (
+        db.query(
+            Scene.title.label("scene_title"),
+            Play.title.label("play_title"),
+            func.count().label("total"),
+            func.count().filter(RehearsalSession.status == "completed").label("completed"),
+            func.count().filter(RehearsalSession.status == "abandoned").label("abandoned"),
+            func.count().filter(RehearsalSession.status == "in_progress").label("in_progress"),
+            func.avg(RehearsalSession.duration_seconds).filter(
+                RehearsalSession.duration_seconds.isnot(None)
+            ).label("avg_duration"),
+        )
+        .join(Scene, RehearsalSession.scene_id == Scene.id)
+        .join(Play, Scene.play_id == Play.id)
+        .filter(*window)
+        .group_by(Scene.title, Play.title)
+        .order_by(desc("total"))
+        .limit(10)
+        .all()
+    )
+    by_scene = [
+        {
+            "scene_title": r.scene_title,
+            "play_title": r.play_title,
+            "total": r.total,
+            "completed": r.completed,
+            "abandoned": r.abandoned,
+            "in_progress": r.in_progress,
+            "completion_rate": round(r.completed / (r.completed + r.abandoned) * 100, 1)
+            if (r.completed + r.abandoned) else None,
+            "avg_duration_seconds": round(r.avg_duration) if r.avg_duration else None,
+        }
+        for r in scene_rows
+    ]
+
+    # --- Per-user activity / retention ---
+    user_rows = (
+        db.query(
+            User.email.label("email"),
+            func.count().label("total"),
+            func.count().filter(RehearsalSession.status == "completed").label("completed"),
+            func.count().filter(RehearsalSession.status == "abandoned").label("abandoned"),
+            func.max(RehearsalSession.started_at).label("last_active"),
+        )
+        .join(User, RehearsalSession.user_id == User.id)
+        .filter(*window)
+        .group_by(User.email)
+        .order_by(desc("total"))
+        .limit(15)
+        .all()
+    )
+    by_user = [
+        {
+            "email": r.email,
+            "total": r.total,
+            "completed": r.completed,
+            "abandoned": r.abandoned,
+            "completion_rate": round(r.completed / (r.completed + r.abandoned) * 100, 1)
+            if (r.completed + r.abandoned) else None,
+            "last_active": r.last_active.isoformat() if r.last_active else None,
+        }
+        for r in user_rows
+    ]
+
+    return {
+        "funnel": {
+            "total": f.total if f else 0,
+            "completed": completed,
+            "abandoned": abandoned,
+            "in_progress": f.in_progress if f else 0,
+            "completion_rate": completion_rate,
+        },
+        "avg_duration_seconds": round(f.avg_duration) if f and f.avg_duration else None,
+        "avg_completed_duration_seconds": round(f.avg_completed_duration) if f and f.avg_completed_duration else None,
+        "dropoff": dropoff,
+        "by_scene": by_scene,
+        "by_user": by_user,
+    }
+
+
 @router.get("/sessions/{session_id}/lines")
 def get_session_line_deliveries(
     session_id: int,
