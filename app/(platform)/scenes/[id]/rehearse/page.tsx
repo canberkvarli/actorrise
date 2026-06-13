@@ -34,6 +34,7 @@ import {
   type RehearsalSettings,
 } from '@/lib/scenepartnerStorage';
 import { MicAccessWarning } from '@/components/scenepartner/MicAccessWarning';
+import { useMicPermission } from '@/hooks/useMicPermission';
 import { TTSWaveform } from '@/components/scenepartner/TTSWaveform';
 import { AudioWaveform } from '@/components/scenepartner/AudioWaveform';
 import { parseUpgradeError } from '@/lib/upgradeError';
@@ -964,6 +965,12 @@ export default function RehearsalPage() {
   const cancelTranscriptionRef = useRef(cancelTranscription);
   cancelTranscriptionRef.current = cancelTranscription;
 
+  // Explicit "Begin" gate: the scene doesn't auto-start until the user taps
+  // Begin. That tap (a) is a clear start cue, and (b) is the user gesture iOS
+  // Safari requires before the opening AI line's audio can play.
+  const [armed, setArmed] = useState(false);
+  const { isBlocked: isMicBlocked, requestMic } = useMicPermission({ recheckOnVisible: true });
+
   /* ── Load session ──────────────────────────────────────────────── */
 
   const loadSession = async () => {
@@ -977,6 +984,7 @@ export default function RehearsalPage() {
     setActiveLineIndex(null);
     setLastAiLine(null);
     setFocusInitialized(false);
+    setArmed(false);
     autoStartedRef.current = false;
     lineAudioBlobsRef.current.clear();
     lineTranscriptsRef.current.clear();
@@ -1068,17 +1076,32 @@ export default function RehearsalPage() {
       } catch {
         // Non-fatal
       }
-      // Respect countdown setting
-      const countdownSec = rehearsalSettings.countdownSeconds;
-      if (countdownSec && countdownSec > 0) {
-        setCountdown(countdownSec);
-      } else {
-        setCountdown(null);
-      }
+      // Countdown is started by the explicit "Begin" tap (handleBegin), not here,
+      // so the opening AI line plays from a user gesture (iOS autoplay) and the
+      // user gets a clear start cue instead of a silent auto-start.
       setFocusInitialized(true);
     } catch {
       setError('Session not found. Start a new rehearsal from the library or one of your scripts.');
     }
+  };
+
+  /** User tapped "Begin": unlock audio within the gesture, then arm the start. */
+  const handleBegin = () => {
+    // Best-effort iOS audio unlock: a programmatic play() later is blocked unless
+    // preceded by a user gesture. Play/pause the TTS element now while we have one.
+    try {
+      const a = aiAudioRef.current;
+      if (a) {
+        a.muted = true;
+        const p = a.play();
+        if (p && typeof p.then === 'function') {
+          p.then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => { a.muted = false; });
+        }
+      }
+    } catch { /* ignore — the existing aiStuck tap-to-play net is the backstop */ }
+    const countdownSec = rehearsalSettings.countdownSeconds;
+    setCountdown(countdownSec && countdownSec > 0 ? countdownSec : null);
+    setArmed(true);
   };
 
   const loadFeedback = async () => {
@@ -1173,6 +1196,7 @@ export default function RehearsalPage() {
   // Auto-start: begin from session.current_line_index (respects "Start from here")
   useEffect(() => {
     if (autoStartedRef.current) return;
+    if (!armed) return;
     if (countdown !== null) return;
     if (paused) return;
     if (!focusInitialized || !session || !orderedLines.length) return;
@@ -1190,7 +1214,7 @@ export default function RehearsalPage() {
       // User's line — auto-listen will handle
       setLastAiLine(null);
     }
-  }, [countdown, paused, focusInitialized, session?.id, orderedLines.length]);
+  }, [armed, countdown, paused, focusInitialized, session?.id, orderedLines.length]);
 
   // Stable ref so the auto-listen timer always calls the latest startListening
   // without making it a dep (which re-fires the effect every time isListening changes)
@@ -1978,6 +2002,40 @@ export default function RehearsalPage() {
         </div>
       )}
 
+      {/* Begin gate — explicit start so iOS can play audio and the user has a clear cue */}
+      <AnimatePresence>
+        {focusInitialized && !armed && !showFeedback && !error && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.25 } }}
+            className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 bg-neutral-950 px-6 text-center"
+          >
+            {sceneWithLines && (
+              <div className="max-w-md">
+                <p className="text-xs uppercase tracking-widest text-neutral-500">Ready to rehearse</p>
+                <h2 className="mt-2 text-2xl font-semibold text-neutral-100">{sceneWithLines.title}</h2>
+                {session && (
+                  <p className="mt-1 text-sm text-neutral-400">
+                    You&apos;re playing <span className="font-medium text-neutral-200">{session.user_character}</span>
+                  </p>
+                )}
+              </div>
+            )}
+            <Button
+              onClick={handleBegin}
+              className="min-h-[52px] px-8 text-base"
+              style={{ backgroundColor: '#CB4B00' }}
+            >
+              <Play className="mr-2 h-5 w-5" /> Begin scene
+            </Button>
+            <p className="max-w-xs text-xs text-neutral-500">
+              Your scene partner reads their lines aloud. When it&apos;s your turn, just speak.
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Countdown overlay */}
       <AnimatePresence>
         {countdown !== null && countdown > 0 && (
@@ -2006,6 +2064,47 @@ export default function RehearsalPage() {
       <div className="shrink-0 px-4 pt-3">
         <MicAccessWarning />
       </div>
+
+      {/* Bottom action prompt: clear "what to do now" cue + mic recovery */}
+      {armed && !showFeedback && countdown === null && (
+        <AnimatePresence>
+          {isMicBlocked ? (
+            <motion.div
+              key="mic-blocked"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
+              className="fixed bottom-5 left-1/2 z-30 -translate-x-1/2 flex items-center gap-3 rounded-full border border-orange-500/40 bg-neutral-900/95 px-4 py-2.5 shadow-lg"
+            >
+              <Mic className="h-4 w-4 shrink-0 text-orange-400" />
+              <span className="text-sm text-neutral-200">
+                Microphone blocked — rehearsal needs it to hear you.
+              </span>
+              <Button
+                size="sm"
+                className="h-8 rounded-full px-3 text-xs"
+                style={{ backgroundColor: '#CB4B00' }}
+                onClick={requestMic}
+              >
+                Enable mic
+              </Button>
+            </motion.div>
+          ) : isUserTurn ? (
+            <motion.div
+              key="your-turn"
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 12 }}
+              className="pointer-events-none fixed bottom-5 left-1/2 z-30 -translate-x-1/2 flex items-center gap-2.5 rounded-full border border-neutral-700 bg-neutral-900/95 px-4 py-2.5 shadow-lg"
+            >
+              <span className={cn('inline-block h-2.5 w-2.5 rounded-full', isListening ? 'animate-pulse bg-orange-500' : 'bg-neutral-500')} />
+              <span className="text-sm font-medium text-neutral-100">
+                {isListening ? 'Your turn — speak now' : 'Your turn — tap your line to speak'}
+              </span>
+            </motion.div>
+          ) : null}
+        </AnimatePresence>
+      )}
 
       {/* Script parchment */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 sm:p-6">
