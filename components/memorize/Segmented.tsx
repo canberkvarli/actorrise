@@ -55,7 +55,7 @@ export function Segmented<T extends string>({
               size === "sm" ? "px-2.5 py-1 text-xs" : "px-4 py-1.5 text-sm",
               fullWidth && "flex-1 text-center",
               active
-                ? "bg-background text-foreground shadow-sm ring-1 ring-border"
+                ? "bg-background text-primary shadow-sm ring-1 ring-primary/25"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
