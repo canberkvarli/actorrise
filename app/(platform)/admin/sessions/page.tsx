@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
 const PAGE_SIZE = 25;
+const BRAND = "#CB4B00";
 
 interface SessionEntry {
   id: number;
@@ -30,7 +31,6 @@ interface SessionEntry {
   total_lines_delivered: number;
   lines_retried: number;
   completion_percentage: number;
-  overall_rating: number | null;
   duration_seconds: number | null;
   started_at: string | null;
   completed_at: string | null;
@@ -41,16 +41,37 @@ interface SessionsResponse {
   total: number;
   page: number;
   limit: number;
-  summary: {
-    total_sessions: number;
+}
+
+interface Analytics {
+  funnel: {
+    total: number;
     completed: number;
     abandoned: number;
     in_progress: number;
-    avg_duration_seconds: number | null;
-    avg_rating: number | null;
-    avg_completion: number | null;
-    top_scenes: { scene: string; count: number }[];
+    completion_rate: number | null;
   };
+  avg_duration_seconds: number | null;
+  avg_completed_duration_seconds: number | null;
+  dropoff: { bucket: string; count: number }[];
+  by_scene: {
+    scene_title: string;
+    play_title: string;
+    total: number;
+    completed: number;
+    abandoned: number;
+    in_progress: number;
+    completion_rate: number | null;
+    avg_duration_seconds: number | null;
+  }[];
+  by_user: {
+    email: string;
+    total: number;
+    completed: number;
+    abandoned: number;
+    completion_rate: number | null;
+    last_active: string | null;
+  }[];
 }
 
 interface LineDelivery {
@@ -76,23 +97,19 @@ function formatDuration(seconds: number | null): string {
   if (!seconds) return "-";
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
-  return mins > 0
-    ? `${mins}m ${secs}s`
-    : `${secs}s`;
+  return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
 }
 
 function timeAgo(dateStr: string | null): string {
   if (!dateStr) return "-";
   const now = new Date();
   const d = new Date(dateStr);
-  const diffMs = now.getTime() - d.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
+  const diffMins = Math.floor((now.getTime() - d.getTime()) / 60000);
   if (diffMins < 1) return "just now";
   if (diffMins < 60) return `${diffMins}m ago`;
   const diffHours = Math.floor(diffMins / 60);
   if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
+  return `${Math.floor(diffHours / 24)}d ago`;
 }
 
 function statusColor(status: string): string {
@@ -110,6 +127,187 @@ function pacingColor(pacing: string | null): string {
   return "text-muted-foreground";
 }
 
+/** Sharp-cornered stat tile (non-interactive → no rounding). */
+function Stat({
+  label,
+  value,
+  hint,
+  accent,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  accent?: boolean;
+}) {
+  return (
+    <div className="border border-border bg-card p-4">
+      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p
+        className="text-3xl font-bold mt-1 tabular-nums"
+        style={accent ? { color: BRAND } : undefined}
+      >
+        {value}
+      </p>
+      {hint && <p className="text-xs text-muted-foreground mt-1">{hint}</p>}
+    </div>
+  );
+}
+
+function FunnelBar({ f }: { f: Analytics["funnel"] }) {
+  const total = Math.max(1, f.total);
+  const seg = (n: number) => `${(n / total) * 100}%`;
+  return (
+    <div className="border border-border bg-card p-4 space-y-2">
+      <div className="flex items-center justify-between">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">Funnel</p>
+        <p className="text-xs text-muted-foreground tabular-nums">{f.total} sessions</p>
+      </div>
+      <div className="flex h-3 w-full overflow-hidden">
+        <div style={{ width: seg(f.completed), backgroundColor: BRAND }} title={`${f.completed} completed`} />
+        <div className="bg-muted-foreground/30" style={{ width: seg(f.in_progress) }} title={`${f.in_progress} in progress`} />
+        <div className="bg-red-400/70 dark:bg-red-500/50" style={{ width: seg(f.abandoned) }} title={`${f.abandoned} abandoned`} />
+      </div>
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5" style={{ backgroundColor: BRAND }} />
+          {f.completed} completed
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 bg-muted-foreground/30" />
+          {f.in_progress} in progress
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 bg-red-400/70 dark:bg-red-500/50" />
+          {f.abandoned} abandoned
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function DropOff({ rows }: { rows: Analytics["dropoff"] }) {
+  const max = Math.max(1, ...rows.map((r) => r.count));
+  const totalAbandoned = rows.reduce((a, r) => a + r.count, 0);
+  return (
+    <div className="border border-border bg-card p-4 space-y-3">
+      <div>
+        <p className="text-sm font-medium">Where actors drop off</p>
+        <p className="text-xs text-muted-foreground">
+          {totalAbandoned} abandoned sessions, by how far they got
+        </p>
+      </div>
+      {totalAbandoned === 0 ? (
+        <p className="text-xs text-muted-foreground">No abandoned sessions in range.</p>
+      ) : (
+        <div className="space-y-1.5">
+          {rows.map((r) => (
+            <div key={r.bucket} className="flex items-center gap-2 text-xs">
+              <span className="w-36 shrink-0 text-muted-foreground">{r.bucket}</span>
+              <div className="flex-1 bg-muted/40 h-4">
+                <div
+                  className="h-4 bg-red-400/70 dark:bg-red-500/50"
+                  style={{ width: `${(r.count / max) * 100}%` }}
+                />
+              </div>
+              <span className="w-6 text-right tabular-nums">{r.count}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CompletionPill({ rate }: { rate: number | null }) {
+  if (rate == null) return <span className="text-muted-foreground">-</span>;
+  return (
+    <span className="tabular-nums font-medium" style={{ color: rate >= 50 ? BRAND : undefined }}>
+      {rate}%
+    </span>
+  );
+}
+
+function SceneTable({ rows }: { rows: Analytics["by_scene"] }) {
+  return (
+    <div className="border border-border bg-card p-4 space-y-3">
+      <p className="text-sm font-medium">Scenes by engagement</p>
+      {rows.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No data in range.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border text-muted-foreground">
+                <th className="py-1.5 text-left font-medium">Scene</th>
+                <th className="py-1.5 text-right font-medium">Sessions</th>
+                <th className="py-1.5 text-right font-medium">Done</th>
+                <th className="py-1.5 text-right font-medium">Compl.</th>
+                <th className="py-1.5 text-right font-medium">Avg</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={i} className="border-b border-border/50 last:border-0">
+                  <td className="py-1.5 pr-2 max-w-[220px]">
+                    <p className="truncate font-medium text-foreground">{r.scene_title}</p>
+                    <p className="truncate text-muted-foreground">{r.play_title}</p>
+                  </td>
+                  <td className="py-1.5 text-right tabular-nums">{r.total}</td>
+                  <td className="py-1.5 text-right tabular-nums">{r.completed}</td>
+                  <td className="py-1.5 text-right"><CompletionPill rate={r.completion_rate} /></td>
+                  <td className="py-1.5 text-right tabular-nums text-muted-foreground">
+                    {formatDuration(r.avg_duration_seconds)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function UserTable({ rows }: { rows: Analytics["by_user"] }) {
+  return (
+    <div className="border border-border bg-card p-4 space-y-3">
+      <p className="text-sm font-medium">Most active actors</p>
+      {rows.length === 0 ? (
+        <p className="text-xs text-muted-foreground">No data in range.</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border text-muted-foreground">
+                <th className="py-1.5 text-left font-medium">Actor</th>
+                <th className="py-1.5 text-right font-medium">Sessions</th>
+                <th className="py-1.5 text-right font-medium">Done</th>
+                <th className="py-1.5 text-right font-medium">Compl.</th>
+                <th className="py-1.5 text-right font-medium">Last active</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
+                <tr key={i} className="border-b border-border/50 last:border-0">
+                  <td className="py-1.5 pr-2 max-w-[220px]">
+                    <span className="truncate block text-foreground">{r.email}</span>
+                  </td>
+                  <td className="py-1.5 text-right tabular-nums">{r.total}</td>
+                  <td className="py-1.5 text-right tabular-nums">{r.completed}</td>
+                  <td className="py-1.5 text-right"><CompletionPill rate={r.completion_rate} /></td>
+                  <td className="py-1.5 text-right text-muted-foreground whitespace-nowrap">
+                    {timeAgo(r.last_active)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ExpandableLines({ sessionId }: { sessionId: number }) {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-session-lines", sessionId],
@@ -122,44 +320,32 @@ function ExpandableLines({ sessionId }: { sessionId: number }) {
   });
 
   if (isLoading) {
-    return (
-      <p className="py-3 text-sm text-muted-foreground">Loading lines...</p>
-    );
+    return <p className="py-3 text-sm text-muted-foreground">Loading lines...</p>;
   }
 
   const lines = data?.lines ?? [];
 
   return (
     <div className="py-3 space-y-3">
-      {/* Feedback summary */}
       {data?.overall_feedback && (
         <div className="border border-border/60 bg-muted/20 p-3 text-sm space-y-2">
           <p className="font-medium">AI Feedback</p>
           <p className="text-muted-foreground">{data.overall_feedback}</p>
           {data.strengths && data.strengths.length > 0 && (
             <div>
-              <span className="text-xs font-medium text-green-600 dark:text-green-400">
-                Strengths:
-              </span>{" "}
-              <span className="text-xs text-muted-foreground">
-                {data.strengths.join(", ")}
-              </span>
+              <span className="text-xs font-medium text-green-600 dark:text-green-400">Strengths:</span>{" "}
+              <span className="text-xs text-muted-foreground">{data.strengths.join(", ")}</span>
             </div>
           )}
           {data.areas_to_improve && data.areas_to_improve.length > 0 && (
             <div>
-              <span className="text-xs font-medium text-orange-600 dark:text-orange-400">
-                To improve:
-              </span>{" "}
-              <span className="text-xs text-muted-foreground">
-                {data.areas_to_improve.join(", ")}
-              </span>
+              <span className="text-xs font-medium text-orange-600 dark:text-orange-400">To improve:</span>{" "}
+              <span className="text-xs text-muted-foreground">{data.areas_to_improve.join(", ")}</span>
             </div>
           )}
         </div>
       )}
 
-      {/* Line deliveries */}
       {lines.length === 0 ? (
         <p className="text-sm text-muted-foreground">No lines delivered yet.</p>
       ) : (
@@ -169,27 +355,15 @@ function ExpandableLines({ sessionId }: { sessionId: number }) {
               key={l.id}
               className="border border-border/60 bg-muted/20 p-2.5 text-sm flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-start"
             >
-              <span className="text-xs text-muted-foreground font-mono shrink-0 pt-0.5">
-                #{l.delivery_order}
-              </span>
+              <span className="text-xs text-muted-foreground font-mono shrink-0 pt-0.5">#{l.delivery_order}</span>
               <div className="flex-1 min-w-0 space-y-1">
                 <p className="text-foreground break-words">{l.user_input}</p>
-                {l.ai_response && (
-                  <p className="text-muted-foreground italic break-words">
-                    {l.ai_response}
-                  </p>
-                )}
-                {l.feedback && (
-                  <p className="text-xs text-muted-foreground break-words">
-                    {l.feedback}
-                  </p>
-                )}
+                {l.ai_response && <p className="text-muted-foreground italic break-words">{l.ai_response}</p>}
+                {l.feedback && <p className="text-xs text-muted-foreground break-words">{l.feedback}</p>}
               </div>
               <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                 {l.emotion_detected && (
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                    {l.emotion_detected}
-                  </Badge>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0">{l.emotion_detected}</Badge>
                 )}
                 {l.pacing_feedback && (
                   <span className={`text-[10px] ${pacingColor(l.pacing_feedback)}`}>
@@ -229,14 +403,22 @@ export default function AdminSessionsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [offset, setOffset] = useState(0);
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [stickySummary, setStickySummary] = useState<SessionsResponse["summary"] | null>(null);
 
-  // Reset to page 1 when filters change so page=1's summary refetch lands.
   useEffect(() => {
     setOffset(0);
   }, [debouncedQ, statusFilter]);
 
   const page = Math.floor(offset / PAGE_SIZE) + 1;
+
+  const analyticsQuery = useQuery({
+    queryKey: ["admin-sessions-analytics"],
+    queryFn: async () => {
+      const res = await api.get<Analytics>("/api/admin/sessions/analytics");
+      return res.data;
+    },
+    staleTime: 30_000,
+  });
+  const a = analyticsQuery.data;
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["admin-sessions", debouncedQ, statusFilter, page],
@@ -246,112 +428,80 @@ export default function AdminSessionsPage() {
       if (statusFilter !== "all") params.set("status", statusFilter);
       params.set("page", String(page));
       params.set("limit", String(PAGE_SIZE));
-      const res = await api.get<SessionsResponse>(
-        `/api/admin/sessions?${params}`
-      );
+      const res = await api.get<SessionsResponse>(`/api/admin/sessions?${params}`);
       return res.data;
     },
     staleTime: 30_000,
     placeholderData: keepPreviousData,
   });
 
-  // Backend only returns summary on page 1 — preserve the last value so
-  // paginating doesn't blank out the summary cards.
-  useEffect(() => {
-    if (data?.summary) setStickySummary(data.summary);
-  }, [data?.summary]);
-
   const total = data?.total ?? 0;
-  const summary = data?.summary ?? stickySummary;
   const pageStart = offset + 1;
   const pageEnd = Math.min(offset + PAGE_SIZE, total);
   const canPrev = offset > 0;
   const canNext = offset + PAGE_SIZE < total;
 
+  const refreshAll = () => {
+    refetch();
+    analyticsQuery.refetch();
+  };
+
   return (
     <div className="space-y-4 p-3 sm:p-4 md:p-6">
-      {/* Summary cards */}
-      {summary && (
-        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">Total Sessions</p>
-              <p className="text-2xl font-bold">
-                {summary.total_sessions.toLocaleString()}
-              </p>
-              <div className="flex gap-3 text-xs text-muted-foreground mt-1">
-                <span className="text-green-600 dark:text-green-400">
-                  {summary.completed} completed
-                </span>
-                <span className="text-red-600 dark:text-red-400">
-                  {summary.abandoned} abandoned
-                </span>
-                <span className="text-blue-600 dark:text-blue-400">
-                  {summary.in_progress} active
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">Avg Duration</p>
-              <p className="text-2xl font-bold">
-                {formatDuration(summary.avg_duration_seconds)}
-              </p>
-              {summary.avg_completion != null && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {summary.avg_completion}% avg completion
-                </p>
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">Avg Rating</p>
-              <p className="text-2xl font-bold">
-                {summary.avg_rating != null
-                  ? `${summary.avg_rating}/5`
-                  : "-"}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm font-medium mb-2">Top Scenes</p>
-              {summary.top_scenes.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No data yet</p>
-              ) : (
-                <div className="space-y-1">
-                  {summary.top_scenes.map((ts, i) => (
-                    <div key={i} className="flex justify-between text-xs">
-                      <span className="truncate mr-2">{ts.scene}</span>
-                      <span className="text-muted-foreground shrink-0">
-                        {ts.count}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <div>
+          <h1 className="text-lg sm:text-xl font-semibold">ScenePartner Sessions</h1>
+          <p className="text-xs text-muted-foreground">Last 30 days</p>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2 min-h-[44px] sm:min-h-0 w-full sm:w-auto"
+          onClick={refreshAll}
+        >
+          <IconRefresh className={`h-4 w-4 ${isFetching || analyticsQuery.isFetching ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </div>
+
+      {/* Top metrics */}
+      {a && (
+        <>
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+            <Stat
+              label="Completion rate"
+              value={a.funnel.completion_rate != null ? `${a.funnel.completion_rate}%` : "-"}
+              hint={`${a.funnel.completed} of ${a.funnel.completed + a.funnel.abandoned} ended`}
+              accent
+            />
+            <Stat label="Total sessions" value={a.funnel.total.toLocaleString()} hint={`${a.funnel.in_progress} still active`} />
+            <Stat label="Avg duration" value={formatDuration(a.avg_duration_seconds)} hint="all ended sessions" />
+            <Stat
+              label="Avg completed"
+              value={formatDuration(a.avg_completed_duration_seconds)}
+              hint="completed only"
+            />
+          </div>
+
+          <FunnelBar f={a.funnel} />
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            <DropOff rows={a.dropoff} />
+            <SceneTable rows={a.by_scene} />
+          </div>
+
+          <UserTable rows={a.by_user} />
+        </>
+      )}
+      {analyticsQuery.isLoading && (
+        <p className="py-4 text-sm text-muted-foreground">Loading analytics…</p>
       )}
 
       {/* Filters */}
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-          <CardTitle className="text-base sm:text-lg">ScenePartner Sessions</CardTitle>
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-2 min-h-[44px] sm:min-h-0 w-full sm:w-auto"
-            onClick={() => refetch()}
-          >
-            <IconRefresh
-              className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </Button>
+          <CardTitle className="text-base sm:text-lg">All sessions</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 p-3 sm:p-4 md:p-6">
           <div className="grid gap-2 grid-cols-1 md:grid-cols-3">
@@ -388,9 +538,7 @@ export default function AdminSessionsPage() {
       <Card>
         <CardContent className="pt-6 p-3 sm:p-4 md:p-6">
           {isLoading ? (
-            <p className="py-8 text-center text-muted-foreground">
-              Loading sessions...
-            </p>
+            <p className="py-8 text-center text-muted-foreground">Loading sessions...</p>
           ) : isError ? (
             <p className="py-8 text-center text-destructive">
               {(error as Error)?.message || "Failed to load sessions"}
@@ -400,25 +548,16 @@ export default function AdminSessionsPage() {
               {/* Mobile: stacked cards */}
               <div className="md:hidden space-y-2">
                 {data?.sessions.map((s) => (
-                  <div
-                    key={s.id}
-                    className="border border-border/60 bg-card"
-                  >
+                  <div key={s.id} className="border border-border/60 bg-card">
                     <button
                       type="button"
-                      onClick={() =>
-                        setExpandedId(expandedId === s.id ? null : s.id)
-                      }
+                      onClick={() => setExpandedId(expandedId === s.id ? null : s.id)}
                       className="w-full text-left p-3 min-h-[44px] flex flex-col gap-2 hover:bg-muted/30"
                     >
                       <div className="flex items-start justify-between gap-2">
                         <div className="min-w-0 flex-1">
-                          <p className="font-medium text-sm break-words">
-                            {s.scene_title}
-                          </p>
-                          <p className="text-xs text-muted-foreground break-words">
-                            {s.play_title}
-                          </p>
+                          <p className="font-medium text-sm break-words">{s.scene_title}</p>
+                          <p className="text-xs text-muted-foreground break-words">{s.play_title}</p>
                         </div>
                         {expandedId === s.id ? (
                           <IconChevronUp className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
@@ -427,10 +566,7 @@ export default function AdminSessionsPage() {
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-xs">
-                        <Badge
-                          variant="outline"
-                          className={statusColor(s.status)}
-                        >
+                        <Badge variant="outline" className={statusColor(s.status)}>
                           {s.status.replace("_", " ")}
                         </Badge>
                         <span className="text-muted-foreground">
@@ -445,15 +581,9 @@ export default function AdminSessionsPage() {
                           {s.lines_retried > 0 && ` (${s.lines_retried} retried)`}
                         </span>
                         <span>·</span>
+                        <span>{Math.round(s.completion_percentage)}%</span>
+                        <span>·</span>
                         <span>{formatDuration(s.duration_seconds)}</span>
-                        {s.overall_rating != null && (
-                          <>
-                            <span>·</span>
-                            <span className="font-medium text-foreground">
-                              {s.overall_rating.toFixed(1)}/5
-                            </span>
-                          </>
-                        )}
                         <span>·</span>
                         <span>{timeAgo(s.started_at)}</span>
                       </div>
@@ -477,8 +607,8 @@ export default function AdminSessionsPage() {
                       <th className="py-2 text-left font-medium">Playing</th>
                       <th className="py-2 text-left font-medium">Status</th>
                       <th className="py-2 text-left font-medium">Lines</th>
+                      <th className="py-2 text-left font-medium">Completion</th>
                       <th className="py-2 text-left font-medium">Duration</th>
-                      <th className="py-2 text-left font-medium">Rating</th>
                       <th className="py-2 text-left font-medium">When</th>
                       <th className="py-2 text-left font-medium w-8"></th>
                     </tr>
@@ -488,38 +618,22 @@ export default function AdminSessionsPage() {
                       <Fragment key={s.id}>
                         <tr
                           className="border-b border-border/60 hover:bg-muted/30 cursor-pointer"
-                          onClick={() =>
-                            setExpandedId(
-                              expandedId === s.id ? null : s.id
-                            )
-                          }
+                          onClick={() => setExpandedId(expandedId === s.id ? null : s.id)}
                         >
                           <td className="py-2 max-w-[200px]">
-                            <p className="font-medium truncate">
-                              {s.scene_title}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {s.play_title}
-                            </p>
+                            <p className="font-medium truncate">{s.scene_title}</p>
+                            <p className="text-xs text-muted-foreground truncate">{s.play_title}</p>
                           </td>
                           <td className="py-2">
-                            <span className="text-xs text-muted-foreground">
-                              {s.user_email || "unknown"}
-                            </span>
+                            <span className="text-xs text-muted-foreground">{s.user_email || "unknown"}</span>
                           </td>
                           <td className="py-2">
                             <span className="text-xs">
-                              as{" "}
-                              <span className="font-medium">
-                                {s.user_character}
-                              </span>
+                              as <span className="font-medium">{s.user_character}</span>
                             </span>
                           </td>
                           <td className="py-2">
-                            <Badge
-                              variant="outline"
-                              className={statusColor(s.status)}
-                            >
+                            <Badge variant="outline" className={statusColor(s.status)}>
                               {s.status.replace("_", " ")}
                             </Badge>
                           </td>
@@ -531,17 +645,11 @@ export default function AdminSessionsPage() {
                               </span>
                             )}
                           </td>
+                          <td className="py-2 tabular-nums text-muted-foreground">
+                            {Math.round(s.completion_percentage)}%
+                          </td>
                           <td className="py-2 text-muted-foreground whitespace-nowrap">
                             {formatDuration(s.duration_seconds)}
-                          </td>
-                          <td className="py-2">
-                            {s.overall_rating != null ? (
-                              <span className="font-medium">
-                                {s.overall_rating.toFixed(1)}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
                           </td>
                           <td className="py-2 text-muted-foreground whitespace-nowrap">
                             {timeAgo(s.started_at)}
@@ -578,9 +686,7 @@ export default function AdminSessionsPage() {
                       variant="outline"
                       size="sm"
                       disabled={!canPrev}
-                      onClick={() =>
-                        setOffset(Math.max(0, offset - PAGE_SIZE))
-                      }
+                      onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
                       className="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none"
                     >
                       Previous
