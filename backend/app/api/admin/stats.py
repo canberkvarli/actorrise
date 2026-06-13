@@ -292,6 +292,200 @@ def get_admin_stats(
     }
 
 
+@router.get("/growth")
+def get_growth_stats(
+    current_user: User = Depends(require_moderator),
+    db: Session = Depends(get_db),
+    from_date: Optional[str] = Query(None, alias="from", description="Start date (ISO)"),
+    to_date: Optional[str] = Query(None, alias="to", description="End date (ISO)"),
+) -> dict[str, Any]:
+    """Founder growth/health metrics: active users, retention, activation, revenue.
+
+    Activity is read from usage_metrics (one row per real user per active day).
+    Test/dev/internal accounts are excluded via real_user_filter / real_user_ids.
+    """
+    from_d, to_d = _parse_date_range(from_date, to_date)
+    real_ids = real_user_ids_query(db)
+
+    def distinct_active(start: date, end: date) -> int:
+        return (
+            db.query(func.count(func.distinct(UsageMetrics.user_id)))
+            .filter(
+                UsageMetrics.date >= start,
+                UsageMetrics.date <= end,
+                UsageMetrics.user_id.in_(real_ids),
+            )
+            .scalar()
+            or 0
+        )
+
+    # --- Active users: DAU / WAU / MAU anchored on the range end ---
+    dau = distinct_active(to_d, to_d)
+    wau = distinct_active(to_d - timedelta(days=6), to_d)
+    mau = distinct_active(to_d - timedelta(days=29), to_d)
+    stickiness = round(dau / mau * 100, 1) if mau else None
+
+    active_by_day_q = (
+        db.query(UsageMetrics.date.label("d"), func.count(func.distinct(UsageMetrics.user_id)).label("c"))
+        .filter(
+            UsageMetrics.date >= from_d,
+            UsageMetrics.date <= to_d,
+            UsageMetrics.user_id.in_(real_ids),
+        )
+        .group_by(UsageMetrics.date)
+    )
+    active_map = {row.d: row.c for row in active_by_day_q}
+    days_count = (to_d - from_d).days + 1
+    active_by_day = [
+        {"date": (from_d + timedelta(days=i)).isoformat(), "count": active_map.get(from_d + timedelta(days=i), 0)}
+        for i in range(days_count)
+    ]
+
+    # --- Retention (weekly, computed in Python over full activity history) ---
+    # Pull distinct (user_id, date) for real users — tiny table, cheap to materialize.
+    activity = (
+        db.query(UsageMetrics.user_id, UsageMetrics.date)
+        .filter(UsageMetrics.user_id.in_(real_ids))
+        .distinct()
+        .all()
+    )
+
+    def week_start(d: date) -> date:
+        return d - timedelta(days=d.weekday())  # Monday
+
+    week_users: dict[date, set[int]] = {}
+    user_last_active: dict[int, date] = {}
+    for uid, d in activity:
+        week_users.setdefault(week_start(d), set()).add(uid)
+        if uid not in user_last_active or d > user_last_active[uid]:
+            user_last_active[uid] = d
+
+    # Signup week per real user (for new-vs-returning).
+    signup_rows = (
+        db.query(User.id, cast(User.created_at, Date))
+        .filter(real_user_filter())
+        .all()
+    )
+    signup_week = {uid: week_start(d) for uid, d in signup_rows if d is not None}
+
+    sorted_weeks = sorted(week_users.keys())
+    recent_weeks = sorted_weeks[-8:]
+    retention_weeks = []
+    seen_before: set[int] = set()
+    for w in sorted_weeks:
+        users = week_users[w]
+        if w in recent_weeks:
+            prev = week_users.get(w - timedelta(days=7), set())
+            returning = len(users & seen_before)
+            new = sum(1 for u in users if signup_week.get(u) == w)
+            wow = round(len(users & prev) / len(prev) * 100, 1) if prev else None
+            retention_weeks.append({
+                "week_start": w.isoformat(),
+                "active": len(users),
+                "new": new,
+                "returning": returning,
+                "wow_retention_percent": wow,
+            })
+        seen_before |= users
+
+    dormant = sum(1 for uid, last in user_last_active.items() if (to_d - last).days > 14)
+
+    # --- Activation funnel (all-time, share of real signups) ---
+    total_real = db.query(func.count(User.id)).filter(real_user_filter()).scalar() or 0
+    # email_verified is effectively unused; has_completed_onboarding is the real
+    # activation signal, so the funnel uses onboarding rather than verification.
+    onboarded = (
+        db.query(func.count(User.id))
+        .filter(real_user_filter(), User.has_completed_onboarding.is_(True))
+        .scalar()
+        or 0
+    )
+    searched = (
+        db.query(func.count(func.distinct(UsageMetrics.user_id)))
+        .filter(
+            UsageMetrics.user_id.in_(real_ids),
+            func.coalesce(UsageMetrics.total_searches_count, UsageMetrics.ai_searches_count, 0) > 0,
+        )
+        .scalar()
+        or 0
+    )
+    rehearsed = (
+        db.query(func.count(func.distinct(UsageMetrics.user_id)))
+        .filter(
+            UsageMetrics.user_id.in_(real_ids),
+            func.coalesce(UsageMetrics.scene_partner_sessions, 0) > 0,
+        )
+        .scalar()
+        or 0
+    )
+
+    def pct(n: int) -> float:
+        return round(n / total_real * 100, 1) if total_real else 0.0
+
+    activation = [
+        {"step": "Signed up", "count": total_real, "percent": 100.0},
+        {"step": "Completed onboarding", "count": onboarded, "percent": pct(onboarded)},
+        {"step": "Ran a search", "count": searched, "percent": pct(searched)},
+        {"step": "Rehearsed a scene", "count": rehearsed, "percent": pct(rehearsed)},
+    ]
+
+    # --- Revenue / conversion (current state) ---
+    free_tier = db.query(PricingTier).filter(PricingTier.name == "free").first()
+    free_tier_id = free_tier.id if free_tier else 1
+    sub_rows = (
+        db.query(
+            PricingTier.display_name.label("tier"),
+            UserSubscription.status,
+            UserSubscription.billing_period,
+            PricingTier.monthly_price_cents,
+            PricingTier.annual_price_cents,
+        )
+        .join(PricingTier, UserSubscription.tier_id == PricingTier.id)
+        .filter(
+            UserSubscription.tier_id != free_tier_id,
+            UserSubscription.status.in_(["active", "trialing"]),
+            UserSubscription.user_id.in_(real_ids),
+        )
+        .all()
+    )
+    by_tier: dict[str, int] = {}
+    mrr_cents = 0
+    paid_active = trials = 0
+    for r in sub_rows:
+        by_tier[r.tier] = by_tier.get(r.tier, 0) + 1
+        if r.status == "trialing":
+            trials += 1
+            continue
+        paid_active += 1
+        if r.billing_period == "annual" and r.annual_price_cents:
+            mrr_cents += r.annual_price_cents / 12
+        elif r.monthly_price_cents:
+            mrr_cents += r.monthly_price_cents
+
+    revenue = {
+        "total_users": total_real,
+        "paid_active": paid_active,
+        "trialing": trials,
+        "free": max(0, total_real - paid_active - trials),
+        "conversion_percent": pct(paid_active),
+        "mrr_usd": round(mrr_cents / 100, 2),
+        "by_tier": [{"tier": t, "count": c} for t, c in sorted(by_tier.items(), key=lambda x: -x[1])],
+    }
+
+    return {
+        "from": from_d.isoformat(),
+        "to": to_d.isoformat(),
+        "active_users": {
+            "dau": dau, "wau": wau, "mau": mau,
+            "stickiness_percent": stickiness,
+            "by_day": active_by_day,
+        },
+        "retention": {"weeks": retention_weeks, "dormant": dormant},
+        "activation": activation,
+        "revenue": revenue,
+    }
+
+
 # ── DB size limit (Supabase free tier) ─────────────────────────────────────────
 _SUPABASE_FREE_LIMIT_MB = 500
 
