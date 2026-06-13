@@ -37,25 +37,41 @@ QUERY_PARSE_CACHE: OrderedDict[str, Dict] = OrderedDict()
 SEARCH_RESULTS_CACHE: OrderedDict[str, List[Any]] = OrderedDict()
 
 
-_AGE_RANGE_ORDER = ["teens", "20s", "30s", "40s", "50s", "60s", "70s"]
+_AGE_RANGE_ORDER = ["teens", "20s", "30s", "40s", "50s", "60+"]
+
+# Different ingestion pipelines stored ages in different vocabularies (e.g. some
+# wrote "30s", others wrote "30-40"). Map each canonical bucket (matching the search
+# dropdown) to every stored variant so a dropdown selection reaches all equivalent
+# rows. Variants must match the real stored casing for the `IN` comparison to hit.
+_AGE_SYNONYMS = {
+    "teens": ["teens"],
+    "20s": ["20s", "20-30"],
+    "30s": ["30s", "30-40"],
+    "40s": ["40s", "40-50"],
+    "50s": ["50s", "50-60", "50+"],
+    "60+": ["60+", "60s", "70s", "70+"],
+}
 
 
 def _expand_age_range(age_range: str) -> List[str]:
-    """Expand an age range to include adjacent ranges + 'any'.
-    e.g. '30s' → ['20s', '30s', '40s', 'any']
+    """Expand an age range to its stored variants + adjacent buckets + 'any'.
+    e.g. '30s' → ['20s', '20-30', '30s', '30-40', '40s', '40-50', 'any']
     """
     age_lower = age_range.lower().strip()
     try:
         idx = _AGE_RANGE_ORDER.index(age_lower)
     except ValueError:
-        return [age_range, "any"]
-    adjacent = {_AGE_RANGE_ORDER[idx]}
+        return [*_AGE_SYNONYMS.get(age_lower, [age_range]), "any"]
+    buckets = {_AGE_RANGE_ORDER[idx]}
     if idx > 0:
-        adjacent.add(_AGE_RANGE_ORDER[idx - 1])
+        buckets.add(_AGE_RANGE_ORDER[idx - 1])
     if idx < len(_AGE_RANGE_ORDER) - 1:
-        adjacent.add(_AGE_RANGE_ORDER[idx + 1])
-    adjacent.add("any")
-    return list(adjacent)
+        buckets.add(_AGE_RANGE_ORDER[idx + 1])
+    expanded = set()
+    for b in buckets:
+        expanded.update(_AGE_SYNONYMS.get(b, [b]))
+    expanded.add("any")
+    return list(expanded)
 
 
 def _evict_if_needed(cache: OrderedDict, max_size: int) -> None:

@@ -148,6 +148,12 @@ class Monologue(Base):
     review_reasons = deferred(Column(ARRAY(String), nullable=True))  # residual quality-gate reasons
     proposed_text = deferred(Column(Text, nullable=True))  # AI's best attempt, awaiting approval
 
+    # Overdone scoring (deferred; add columns via add_overdone_columns.py).
+    # overdone_score above is the numeric 0..1 signal; these explain + timestamp it.
+    # Set by scripts/score_overdone.py --apply.
+    overdone_reason = deferred(Column(Text, nullable=True))  # one-line "why" from the scorer
+    overdone_scored_at = deferred(Column(DateTime(timezone=True), nullable=True))  # when scored (idempotency guard)
+
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
     updated_at = Column(DateTime(timezone=True), onupdate=sql_text('now()'))
 
