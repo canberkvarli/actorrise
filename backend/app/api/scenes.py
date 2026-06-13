@@ -2,7 +2,7 @@
 API endpoints for ScenePartner - AI Scene Rehearsal feature
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from app.api.auth import get_current_user
@@ -503,6 +503,35 @@ async def start_rehearsal(
     return RehearsalSessionResponse(**out)
 
 
+def _duration_seconds(started_at, ended_at) -> Optional[int]:
+    """Whole seconds between two timestamps, tolerant of naive/aware mismatch.
+
+    started_at comes from a timezone-aware column; ended_at may be naive
+    (datetime.utcnow()). Normalize both to UTC before subtracting so we never
+    raise on a naive/aware comparison.
+    """
+    if started_at is None or ended_at is None:
+        return None
+    s = started_at if started_at.tzinfo else started_at.replace(tzinfo=timezone.utc)
+    e = ended_at if ended_at.tzinfo else ended_at.replace(tzinfo=timezone.utc)
+    return max(0, int((e - s).total_seconds()))
+
+
+def _compute_completion(total_delivered: int, user_line_count: int) -> tuple[float, bool]:
+    """Completion measured against the actor's OWN lines, not the whole scene.
+
+    A user only delivers their character's lines (~half a scene), so dividing by
+    the total line count capped completion near 50% and made "completed"
+    unreachable. Delivering every one of your lines means the scene is finished.
+
+    Returns (completion_percentage 0..100, is_complete).
+    """
+    if user_line_count <= 0:
+        return 0.0, False
+    pct = min(100.0, total_delivered / user_line_count * 100.0)
+    return pct, total_delivered >= user_line_count
+
+
 @router.post("/rehearse/deliver", response_model=DeliverLineResponse)
 async def deliver_line(
     request: DeliverLineRequest,
@@ -648,14 +677,26 @@ async def deliver_line(
     else:
         session.current_line_index = current_index + 1  # type: ignore
 
-    # Calculate completion
+    # Completion is measured against the user's OWN lines (see _compute_completion):
+    # delivering every line of your character means the scene is finished. Dividing
+    # by len(all_lines) (user + AI lines) used to cap completion near 50% and made
+    # "completed" unreachable. new_index counts non-retry deliveries (= user turns).
     new_index = current_index + 1 if not request.request_retry else current_index
-    completion_pct = (new_index / len(all_lines)) * 100 if all_lines else 0.0
+    user_char = str(session.user_character) if session.user_character is not None else ""
+    user_line_count = sum(
+        1 for line in all_lines
+        if (str(line.character_name) if line.character_name is not None else "") == user_char
+    )
+    completion_pct, is_complete = _compute_completion(new_index, user_line_count)
     session.completion_percentage = completion_pct  # type: ignore
+    if is_complete and str(session.status) == "in_progress":
+        completed_at = datetime.now(timezone.utc)
+        session.status = "completed"  # type: ignore
+        session.completed_at = completed_at  # type: ignore
+        session.duration_seconds = _duration_seconds(session.started_at, completed_at)  # type: ignore
 
     # Get next line preview (user's next line)
     next_user_line = None
-    user_char = str(session.user_character) if session.user_character is not None else ""
     for i in range(new_index, len(all_lines)):
         line_char = str(all_lines[i].character_name) if all_lines[i].character_name is not None else ""
         if line_char == user_char:
@@ -700,8 +741,10 @@ async def abandon_session(
         raise HTTPException(status_code=404, detail="Session not found")
     if str(session.status) != "in_progress":
         return {"ok": True, "status": str(session.status)}
+    ended_at = datetime.now(timezone.utc)
     session.status = "abandoned"  # type: ignore
-    session.completed_at = datetime.utcnow()  # type: ignore
+    session.completed_at = ended_at  # type: ignore
+    session.duration_seconds = _duration_seconds(session.started_at, ended_at)  # type: ignore
     db.commit()
     return {"ok": True, "status": "abandoned"}
 
