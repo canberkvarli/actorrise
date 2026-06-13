@@ -48,20 +48,29 @@ from app.models.actor import Monologue, Play
 BACKUP_DIR = backend_dir / "backups"
 BACKUP_PATH = BACKUP_DIR / "overdone_score_backup.json"
 
-SYSTEM_RUBRIC = """\
+_STAGE_WARHORSES = (
+    '"To be or not to be", Romeo\'s balcony, "Tomorrow and tomorrow", '
+    '"Quality of mercy", "All the world\'s a stage", St. Crispin\'s Day, '
+    'Lady Macbeth "unsex me here", Shylock "Hath not a Jew", Medea\'s revenge'
+)
+_SCREEN_WARHORSES = (
+    '"You can\'t handle the truth" (A Few Good Men), "You talkin\' to me?" '
+    '(Taxi Driver), "I\'m as mad as hell" (Network), the Ezekiel 25:17 speech '
+    '(Pulp Fiction), "Greed is good" (Wall Street), "Coffee\'s for closers" '
+    '(Glengarry Glen Ross), Quint\'s USS Indianapolis story (Jaws), the Joker\'s monologues'
+)
+
+SYSTEM_RUBRIC_TEMPLATE = """\
 You are a veteran casting director rating how OVERDONE each audition monologue is.
 "Overdone" means: how often you, in a real audition room, see actors bring THIS
-specific speech. Judge the specific speech, not the play's overall fame — a famous
-play can have obscure monologues. Anchor to audition-room frequency, not literary
-importance.
+specific speech. Judge the specific speech, not the source's overall fame — a famous
+work can have obscure monologues. Anchor to audition-room frequency, not fame on its own.
 
 Return a number 0.0–1.0 per the bands:
 - 0.85–1.0  Warhorse: the pieces casting directors beg actors to retire.
-            e.g. "To be or not to be", Romeo's balcony, "Tomorrow and tomorrow",
-            "Quality of mercy", "All the world's a stage", St. Crispin's Day,
-            Lady Macbeth "unsex me here", Shylock "Hath not a Jew", Medea's revenge.
+            e.g. {warhorses}.
 - 0.6–0.84  Very common: well-worn, instantly recognizable, still seen a lot.
-- 0.3–0.59  Recognizable: from a known play but a less-common speech.
+- 0.3–0.59  Recognizable: from a known work but a less-common speech.
 - 0.0–0.29  Fresh: obscure speech, rarely brought to auditions.
 
 If you cannot confidently identify the piece, score it LOW (<=0.2): a false
@@ -70,8 +79,12 @@ If you cannot confidently identify the piece, score it LOW (<=0.2): a false
 For each item return: id, overdone_score (float), tier (warhorse|common|recognizable|fresh),
 and reason (one sentence, <=15 words, plain language).
 
-Respond ONLY as JSON: {"scores": [{"id": <int>, "overdone_score": <float>, "tier": <str>, "reason": <str>}, ...]}
+Respond ONLY as JSON: {{"scores": [{{"id": <int>, "overdone_score": <float>, "tier": <str>, "reason": <str>}}, ...]}}
 Include exactly one object per input id."""
+
+
+def _rubric(warhorses: str) -> str:
+    return SYSTEM_RUBRIC_TEMPLATE.format(warhorses=warhorses)
 
 
 class QuotaExhausted(RuntimeError):
@@ -84,20 +97,20 @@ def _opening(text: str, words: int = 120) -> str:
     return snippet + (" …" if len(toks) > words else "")
 
 
-def _build_prompt(batch: list[dict]) -> str:
+def _build_prompt(batch: list[dict], rubric: str) -> str:
     items = [
         {
             "id": m["id"],
             "title": m["title"],
             "character": m["character_name"],
-            "play": m["play_title"],
+            "source": m["play_title"],
             "author": m["play_author"],
             "opening": _opening(m["text"]),
         }
         for m in batch
     ]
     return (
-        SYSTEM_RUBRIC
+        rubric
         + "\n\nScore these monologues (JSON input):\n"
         + json.dumps(items, ensure_ascii=False)
     )
@@ -171,14 +184,25 @@ def restore(backup_path: Path) -> None:
     print(f"Restored overdone_score for {len(data)} monologues from {backup_path}")
 
 
-def run(*, apply: bool, limit: int | None, model: str, batch_size: int, rescore: bool) -> None:
+def run(*, apply: bool, limit: int | None, model: str, batch_size: int,
+        rescore: bool, scope: str) -> None:
     db = SessionLocal()
 
-    q = (
-        db.query(Monologue, Play.title, Play.author)
-        .join(Play, Monologue.play_id == Play.id)
-        .filter(Play.category.ilike("%classical%"))
-    )
+    # Scope selects both the rows to score and the warhorse anchors in the rubric
+    # (stage canon vs screen canon), since "overdone" examples differ by medium.
+    if scope == "film-tv":
+        scope_filter = Play.source_type.in_(["film", "tv"])
+        rubric = _rubric(_SCREEN_WARHORSES)
+    elif scope == "all":
+        scope_filter = None
+        rubric = _rubric(_STAGE_WARHORSES + "; (screen) " + _SCREEN_WARHORSES)
+    else:  # classical (default)
+        scope_filter = Play.category.ilike("%classical%")
+        rubric = _rubric(_STAGE_WARHORSES)
+
+    q = db.query(Monologue, Play.title, Play.author).join(Play, Monologue.play_id == Play.id)
+    if scope_filter is not None:
+        q = q.filter(scope_filter)
     if not rescore:
         q = q.filter(Monologue.overdone_scored_at.is_(None))
     q = q.order_by(Monologue.id)
@@ -186,7 +210,7 @@ def run(*, apply: bool, limit: int | None, model: str, batch_size: int, rescore:
         q = q.limit(limit)
 
     rows = q.all()
-    print(f"{len(rows)} classical monologue(s) to score "
+    print(f"{len(rows)} {scope} monologue(s) to score "
           f"(model={model}, batch={batch_size}, {'APPLY' if apply else 'DRY-RUN'})")
     if not rows:
         db.close()
@@ -224,7 +248,7 @@ def run(*, apply: bool, limit: int | None, model: str, batch_size: int, rescore:
     for start in range(0, len(batch_data), batch_size):
         batch = batch_data[start:start + batch_size]
         try:
-            raw = invoke(_build_prompt(batch))
+            raw = invoke(_build_prompt(batch, rubric))
         except QuotaExhausted as exc:
             print(f"\n!! OpenAI quota exhausted (out of credits): {exc}")
             print("   Top up at https://platform.openai.com/account/billing, then re-run")
@@ -269,13 +293,15 @@ def run(*, apply: bool, limit: int | None, model: str, batch_size: int, rescore:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="AI-score overdone-ness of classical monologues.")
+    ap = argparse.ArgumentParser(description="AI-score overdone-ness of monologues (classical | film-tv | all).")
     ap.add_argument("--apply", action="store_true", help="persist scores (default: dry-run)")
     ap.add_argument("--limit", type=int, default=None, help="only the first N rows (calibration)")
     ap.add_argument("--model", default="gpt-4o", help="OpenAI model (default: gpt-4o)")
     ap.add_argument("--batch-size", type=int, default=15, help="monologues per LLM call")
     ap.add_argument("--rescore", action="store_true", help="re-score already-scored rows")
     ap.add_argument("--restore", type=Path, default=None, help="restore from a backup JSON and exit")
+    ap.add_argument("--scope", choices=["classical", "film-tv", "all"], default="classical",
+                    help="which monologues to score (default: classical). film-tv uses screen warhorse anchors.")
     args = ap.parse_args()
 
     if args.restore:
@@ -283,7 +309,7 @@ def main() -> None:
         return
 
     run(apply=args.apply, limit=args.limit, model=args.model,
-        batch_size=args.batch_size, rescore=args.rescore)
+        batch_size=args.batch_size, rescore=args.rescore, scope=args.scope)
 
 
 if __name__ == "__main__":
