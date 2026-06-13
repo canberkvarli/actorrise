@@ -809,38 +809,20 @@ export default function RehearsalPage() {
   const handleTTSEndRef = useRef(handleTTSEnd);
   handleTTSEndRef.current = handleTTSEnd;
 
-  /* ── AI-turn safety net ─────────────────────────────────────────────
-   * iOS Safari blocks programmatic audio without a recent user gesture, and a
-   * stalled cellular fetch can hang too — either leaves the scene stuck at
-   * "Waiting" on the partner's line. If an AI line hasn't started speaking in a
-   * few seconds, offer a tap to play it (the tap also unlocks iOS audio for the
-   * rest of the scene); auto-advance as a last resort so it can never freeze. */
-  const [aiStuck, setAiStuck] = useState(false);
-
-  const retryAiLine = () => {
-    unlockAudio(); // user gesture → unlocks iOS audio for every subsequent line
-    setAiStuck(false);
-    const lines = orderedLinesRef.current;
-    const idx = activeLineIndexRef.current;
-    const line = idx != null ? lines[idx] : null;
-    if (!line) return;
-    cancelAI();
-    speakLineRef.current(ttsText(line), ttsInstructions(line, sceneVoiceContextRef.current), line.character_name);
-  };
-
+  /* ── AI-turn self-heal ──────────────────────────────────────────────
+   * If an AI line hasn't started speaking after a while (e.g. a stalled fetch),
+   * auto-advance so the scene can never freeze on "Waiting". */
   useEffect(() => {
-    setAiStuck(false);
     if (paused || (countdown !== null && countdown > 0)) return;
     if (activeLineIndex == null) return;
-    // Read from refs so the timers aren't reset by unrelated re-renders
+    // Read from refs so the timer isn't reset by unrelated re-renders
     // (orderedLines/session change identity often during a session).
     const sess = sessionRef.current;
     const line = orderedLinesRef.current[activeLineIndex];
     if (!sess || !line || line.character_name === sess.user_character) return; // AI lines only
     if (isSpeakingAI || isSpeakingBrowser) return; // audio is actually playing — fine
-    const showT = setTimeout(() => setAiStuck(true), 5000); // offer "tap to play"
     const autoT = setTimeout(() => { handleTTSEndRef.current(); }, 14000); // self-heal
-    return () => { clearTimeout(showT); clearTimeout(autoT); };
+    return () => clearTimeout(autoT);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeLineIndex, isSpeakingAI, isSpeakingBrowser, isLoadingAI, paused, countdown]);
 
@@ -1098,9 +1080,11 @@ export default function RehearsalPage() {
           p.then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => { a.muted = false; });
         }
       }
-    } catch { /* ignore — the existing aiStuck tap-to-play net is the backstop */ }
-    const countdownSec = rehearsalSettings.countdownSeconds;
-    setCountdown(countdownSec && countdownSec > 0 ? countdownSec : null);
+    } catch { /* ignore — the 14s self-heal auto-advance is the backstop */ }
+    // Start immediately. The Begin tap is the "get ready" moment, so an extra
+    // countdown just delays the opening line and feels laggy. The first AI line
+    // was preloaded during the load screen, so it plays right away.
+    setCountdown(null);
     setArmed(true);
   };
 
@@ -2065,45 +2049,22 @@ export default function RehearsalPage() {
         <MicAccessWarning />
       </div>
 
-      {/* Bottom action prompt: clear "what to do now" cue + mic recovery */}
-      {armed && !showFeedback && countdown === null && (
-        <AnimatePresence>
-          {isMicBlocked ? (
-            <motion.div
-              key="mic-blocked"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 12 }}
-              className="fixed bottom-5 left-1/2 z-30 -translate-x-1/2 flex items-center gap-3 rounded-full border border-orange-500/40 bg-neutral-900/95 px-4 py-2.5 shadow-lg"
-            >
-              <Mic className="h-4 w-4 shrink-0 text-orange-400" />
-              <span className="text-sm text-neutral-200">
-                Microphone blocked — rehearsal needs it to hear you.
-              </span>
-              <Button
-                size="sm"
-                className="h-8 rounded-full px-3 text-xs"
-                style={{ backgroundColor: '#CB4B00' }}
-                onClick={requestMic}
-              >
-                Enable mic
-              </Button>
-            </motion.div>
-          ) : isUserTurn ? (
-            <motion.div
-              key="your-turn"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 12 }}
-              className="pointer-events-none fixed bottom-5 left-1/2 z-30 -translate-x-1/2 flex items-center gap-2.5 rounded-full border border-neutral-700 bg-neutral-900/95 px-4 py-2.5 shadow-lg"
-            >
-              <span className={cn('inline-block h-2.5 w-2.5 rounded-full', isListening ? 'animate-pulse bg-orange-500' : 'bg-neutral-500')} />
-              <span className="text-sm font-medium text-neutral-100">
-                {isListening ? 'Your turn — speak now' : 'Your turn — tap your line to speak'}
-              </span>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
+      {/* Mic-blocked recovery prompt */}
+      {armed && !showFeedback && isMicBlocked && (
+        <div className="fixed bottom-5 left-1/2 z-30 -translate-x-1/2 flex items-center gap-3 rounded-full border border-orange-500/40 bg-neutral-900/95 px-4 py-2.5 shadow-lg">
+          <Mic className="h-4 w-4 shrink-0 text-orange-400" />
+          <span className="text-sm text-neutral-200">
+            Microphone blocked — rehearsal needs it to hear you.
+          </span>
+          <Button
+            size="sm"
+            className="h-8 rounded-full px-3 text-xs"
+            style={{ backgroundColor: '#CB4B00' }}
+            onClick={requestMic}
+          >
+            Enable mic
+          </Button>
+        </div>
       )}
 
       {/* Script parchment */}
@@ -2384,20 +2345,6 @@ export default function RehearsalPage() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      {/* AI line didn't start (iOS audio block / slow network) — offer a tap to play it */}
-      {aiStuck && !paused && (
-        <div className="shrink-0 flex justify-center px-4 pb-2">
-          <button
-            type="button"
-            onClick={retryAiLine}
-            className="flex items-center gap-2 rounded-full bg-primary hover:bg-primary/90 text-white px-5 py-2.5 text-sm font-medium shadow-2xl"
-          >
-            <Play className="w-4 h-4" />
-            Tap to play your partner&apos;s line
-          </button>
-        </div>
-      )}
 
       {/* Floating control pill */}
       <div className="shrink-0 flex justify-center px-4 pb-4 safe-area-bottom">
