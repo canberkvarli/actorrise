@@ -39,13 +39,13 @@ export const getDurationLabel = (seconds: string) =>
   DURATION_OPTIONS.find((d) => d.value === seconds)?.label ?? `${seconds}s`;
 
 const CHARACTER_FILTERS = [
-  { key: "gender" as const, label: "Gender", options: ["male", "female", "non-binary", "any"] },
+  { key: "gender" as const, label: "Gender", options: ["male", "female", "any"] },
   { key: "age_range" as const, label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
 ];
 
 const MOOD_FILTERS = [
   { key: "emotion" as const, label: "Emotion", options: ["joy", "sadness", "anger", "fear", "melancholy", "hope"] },
-  { key: "tone" as const, label: "Tone", options: ["dramatic", "comedic", "dark", "romantic", "philosophical", "contemplative"] },
+  { key: "tone" as const, label: "Tone", options: ["dramatic", "defiant", "anguished", "comedic", "dark", "romantic", "philosophical", "contemplative"] },
   { key: "theme" as const, label: "Theme", options: ["love", "death", "betrayal", "identity", "power", "revenge"] },
 ];
 
