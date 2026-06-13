@@ -94,7 +94,11 @@ export function RehearseHub() {
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           Collection
         </h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+        <div
+          aria-hidden
+          className="mt-3 h-0.5 w-12 rounded-full bg-gradient-to-r from-primary to-primary/30"
+        />
+        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
           Your study shelf. Work through each monologue, then mark it off-book.
         </p>
       </header>

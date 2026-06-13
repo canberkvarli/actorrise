@@ -121,16 +121,30 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
         ease: [0.25, 0.1, 0.25, 1],
         delay: Math.min(index * 0.04, 0.32),
       }}
-      className="group -mx-3 flex flex-col gap-4 overflow-hidden rounded-lg px-3 py-6 transition-colors hover:bg-muted/30 sm:flex-row sm:items-start sm:justify-between sm:gap-6"
+      className="group relative -mx-3 flex flex-col gap-4 overflow-hidden rounded-lg px-3 py-6 transition-colors hover:bg-primary/[0.04] sm:flex-row sm:items-start sm:justify-between sm:gap-6"
     >
+      {/* Left accent bar: amber once off-book, a quick orange slide-in on hover. */}
+      <span
+        aria-hidden
+        className={`pointer-events-none absolute inset-y-3 left-0 w-[3px] rounded-full transition-all duration-300 ${
+          memorized
+            ? "bg-amber-400/80"
+            : "-translate-x-1 bg-primary opacity-0 group-hover:translate-x-0 group-hover:opacity-100"
+        }`}
+      />
+
       {/* Left: title, meta, synopsis, chips */}
       <div className="min-w-0">
-        <Link
-          href={memorizeHref}
-          className={`block min-w-0 text-balance break-words font-bold leading-snug tracking-tight text-foreground transition-colors hover:text-foreground/70 ${titleSize}`}
-        >
-          {monologue.title}
-        </Link>
+        {/* h2 so the title renders in the Cormorant Garamond heading face (same as
+            the "Collection" title), and for proper heading semantics. */}
+        <h2 className="min-w-0">
+          <Link
+            href={memorizeHref}
+            className={`block min-w-0 text-balance break-words font-bold leading-snug tracking-tight text-foreground transition-colors hover:text-primary ${titleSize}`}
+          >
+            {monologue.title}
+          </Link>
+        </h2>
 
         {meta && (
           <p className="mt-1.5 truncate text-sm text-muted-foreground">
@@ -149,7 +163,7 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
             {chips.map((chip) => (
               <li
                 key={chip}
-                className="border border-border px-2 py-0.5 text-xs text-muted-foreground"
+                className="border border-border/70 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground"
               >
                 {chip}
               </li>
@@ -170,7 +184,7 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
 
         <Link
           href={memorizeHref}
-          className="shrink-0 text-sm font-semibold text-foreground underline-offset-4 hover:underline"
+          className="shrink-0 text-sm font-semibold text-primary underline-offset-4 hover:underline"
         >
           Memorize
         </Link>
