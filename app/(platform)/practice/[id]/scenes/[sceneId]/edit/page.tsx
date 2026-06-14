@@ -75,6 +75,7 @@ import { ContactModal } from "@/components/contact/ContactModal";
 import { SceneSettingsModal } from "@/components/scenepartner/SceneSettingsModal";
 import { TTSWaveform } from "@/components/scenepartner/TTSWaveform";
 import { useMicPermission } from "@/hooks/useMicPermission";
+import { ColdReadStage } from "@/components/rehearse/ColdReadStage";
 
 // ---------------------------------------------------------------------------
 // Rehearsal loading overlay (whimsical texts)
@@ -993,8 +994,10 @@ export default function SceneEditPage() {
       const primaryAiChar = allSceneCharacters.find(c => c !== selectedCharacter);
       const aiCharVoice = primaryAiChar ? (charVoices[primaryAiChar] ?? "coral") : "coral";
       const voiceParam = aiCharVoice ? `&voice=${aiCharVoice}` : '';
+      // mode=cold keeps single-take semantics; prep=done tells the rehearse page
+      // the read-through already happened here in the editor's cold-read stage.
       const coldParam = coldRead
-        ? `&mode=cold&character=${encodeURIComponent(selectedCharacter)}`
+        ? `&mode=cold&character=${encodeURIComponent(selectedCharacter)}&prep=done`
         : '';
       // Navigate immediately — no animation delay
       router.push(`/scenes/${scene.id}/rehearse?session=${data.id}&script=${scriptId}${voiceParam}${coldParam}`);
@@ -3140,17 +3143,43 @@ export default function SceneEditPage() {
         )}
       </AnimatePresence>
 
+      {/* In-editor cold-read stage — crossfades in so the edit chrome recedes
+          and the script comes into focus; "Begin performance" launches the take. */}
+      <AnimatePresence>
+        {coldRead && scene && (
+          <ColdReadStage
+            sceneId={String(scene.id)}
+            userCharacter={selectedCharacter}
+            onExit={() => setColdRead(false)}
+            onBegin={() => {
+              if (!micGranted) { setShowMicModal(true); return; }
+              handleStartRehearsal();
+            }}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Floating launch cluster: Memorize · Cold-read toggle · Rehearse */}
       <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end gap-2">
-        <label className="flex cursor-pointer items-center gap-1.5 rounded-full border border-border bg-card/95 px-3 py-1 text-xs font-medium text-muted-foreground shadow-md backdrop-blur-sm">
-          <input
-            type="checkbox"
-            checked={coldRead}
-            onChange={(e) => setColdRead(e.target.checked)}
-            className="accent-primary"
-          />
+        <button
+          type="button"
+          aria-pressed={coldRead}
+          onClick={() => {
+            if (coldRead) { setColdRead(false); return; }
+            if (!selectedCharacter) { setShowRehearsalModal(true); return; }
+            setColdRead(true); // opens the in-editor cold-read stage
+          }}
+          className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium shadow-md backdrop-blur-sm transition-colors ${
+            coldRead
+              ? "border-primary bg-primary text-white"
+              : "border-border bg-card/95 text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <span className={`relative inline-flex h-3.5 w-6 items-center rounded-full transition-colors ${coldRead ? "bg-white/30" : "bg-muted-foreground/30"}`}>
+            <span className={`absolute h-2.5 w-2.5 rounded-full bg-white transition-all ${coldRead ? "left-3" : "left-0.5"}`} />
+          </span>
           Cold read
-        </label>
+        </button>
         <div className="flex items-center gap-2">
           <Button
             size="lg"

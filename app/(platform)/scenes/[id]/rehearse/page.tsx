@@ -465,7 +465,10 @@ export default function RehearsalPage() {
   // Cold-read mode: a timed read-through before the (single-take) performance.
   const coldRead = searchParams.get('mode') === 'cold';
   const coldReadCharacter = searchParams.get('character');
-  const [prepDone, setPrepDone] = useState(!coldRead);
+  // prep=done means the cold-read read-through already happened (in the editor's
+  // cold-read stage), so skip the on-rehearse prep screen and keep the single-take
+  // semantics. Otherwise cold-read shows the prep screen here first.
+  const [prepDone, setPrepDone] = useState(!coldRead || searchParams.get('prep') === 'done');
 
   const backUrl = scriptId
     ? `/practice/${scriptId}/scenes/${sceneId}/edit`
