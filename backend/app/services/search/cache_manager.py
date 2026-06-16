@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 # (duration, category, overdone) enforced on the pgvector path; gender includes any.
 # v3: deterministic duration backstop (range floors, fuzzy short/long); age_range
 # is now a hard filter (tight numeric synonyms) on both paths.
-CACHE_VERSION = "3"
+# v4: graceful relaxation — broaden (drop least-important filters) + backfill when
+# too few rows pass all hard filters.
+CACHE_VERSION = "4"
 
 
 class CacheManager:

@@ -91,6 +91,7 @@ class SearchResponse(BaseModel):
     content_gap: Optional[dict] = None
     query_invalid_reason: Optional[str] = None
     weak_match: bool = False  # True when results exist but none clear the strong-match bar
+    broadened: Optional[dict] = None  # {"relaxed": ["length","age",...]} when filters were loosened to fill results
     debug_timing: Optional[dict] = None  # Timing data for dev/admin debug overlay
 
 
@@ -470,6 +471,19 @@ async def search_monologues(
         ]
         weak_match = has_scores and bool(scores) and max(scores) < MIN_RELEVANCE_TO_SHOW
 
+        # Graceful relaxation: too few exact matches, so the search was broadened
+        # by dropping the least-important filters. Surface which kinds were relaxed.
+        broadened = None
+        if getattr(search_service, '_search_broadened', False):
+            _label = {"min_duration": "length", "max_duration": "length", "age_range": "age", "category": "era"}
+            relaxed: list[str] = []
+            for k in getattr(search_service, '_broadened_dropped', []) or []:
+                lab = _label.get(k, k)
+                if lab not in relaxed:
+                    relaxed.append(lab)
+            if relaxed:
+                broadened = {"relaxed": relaxed}
+
         # Collect debug timing from search service (available for dev/admin)
         debug_timing = getattr(search_service, '_debug_timing', None)
         if debug_timing:
@@ -484,6 +498,7 @@ async def search_monologues(
             query_may_have_typos=ai_corrected is not None,
             content_gap=content_gap,
             weak_match=weak_match,
+            broadened=broadened,
             debug_timing=debug_timing,
         )
     except HTTPException:

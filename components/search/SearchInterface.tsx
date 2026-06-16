@@ -22,6 +22,7 @@ type MonologueSearchResponse = {
   page: number;
   page_size: number;
   weak_match?: boolean;
+  broadened?: { relaxed: string[] } | null;
 };
 
 type SearchFilters = {
@@ -62,6 +63,7 @@ export function SearchInterface() {
   const [era, setEra] = useState<"" | "classical" | "contemporary">("");
   const [results, setResults] = useState<Monologue[]>([]);
   const [weakMatch, setWeakMatch] = useState(false);
+  const [broadened, setBroadened] = useState<{ relaxed: string[] } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
@@ -87,6 +89,7 @@ export function SearchInterface() {
           filters: typeof filters;
           results: Monologue[];
           weakMatch?: boolean;
+          broadened?: { relaxed: string[] } | null;
         };
         setQuery(parsed.query);
         setProfileBias(parsed.profileBias);
@@ -94,6 +97,7 @@ export function SearchInterface() {
         setFilters(parsed.filters);
         setResults(parsed.results);
         setWeakMatch(Boolean(parsed.weakMatch));
+        setBroadened(parsed.broadened ?? null);
         setHasSearched(parsed.results.length > 0);
       }
     } catch (err) {
@@ -153,6 +157,7 @@ export function SearchInterface() {
       );
       setResults(response.data.results);
       setWeakMatch(Boolean(response.data.weak_match));
+      setBroadened(response.data.broadened ?? null);
 
       // Persist full search state so a refresh or navigation keeps results
       try {
@@ -164,6 +169,7 @@ export function SearchInterface() {
             filters,
             results: response.data.results,
             weakMatch: Boolean(response.data.weak_match),
+            broadened: response.data.broadened ?? null,
           };
           window.sessionStorage.setItem(PERSIST_KEY, JSON.stringify(payload));
         }
@@ -208,6 +214,7 @@ export function SearchInterface() {
       setSearchError(message);
       setResults([]);
       setWeakMatch(false);
+      setBroadened(null);
     } finally {
       setIsLoading(false);
     }
@@ -745,6 +752,15 @@ export function SearchInterface() {
                   </p>
                   <p className="text-sm text-muted-foreground mt-0.5">
                     Here are the closest ones I found. Try simpler terms or fewer filters to narrow in.
+                  </p>
+                </div>
+              ) : broadened && broadened.relaxed.length > 0 ? (
+                <div className="border border-border border-l-2 border-l-[#CB4B00] bg-muted/40 px-4 py-3">
+                  <p className="text-sm font-medium text-foreground">
+                    Only a few exact matches, so I broadened the {broadened.relaxed.join(" and ")}.
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-0.5">
+                    Showing <span className="font-semibold text-foreground">{results.length}</span> closest monologue{results.length !== 1 ? "s" : ""}.
                   </p>
                 </div>
               ) : (
