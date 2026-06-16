@@ -76,3 +76,6 @@ backend/backups/
 
 # stray hashed uv lock files (real lock is backend/uv.lock)
 /uv-*.lock
+
+# tiktoken tokenizer cache (created at runtime, not code)
+data-gym-cache/
