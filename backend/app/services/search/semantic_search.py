@@ -74,6 +74,15 @@ def _expand_age_range(age_range: str) -> List[str]:
     return list(expanded)
 
 
+def _age_hard_values(age_range: str) -> List[str]:
+    """Tight value set for HARD age filtering: the requested bucket's stored
+    numeric variants + 'any' (age-agnostic pieces). No decade adjacency, so
+    "40s" matches 40s/40-50 (not 30-40), while "30s" still picks up the big
+    "30-40" bucket. Keeps the filter precise without over-restricting."""
+    a = age_range.lower().strip()
+    return [*_AGE_SYNONYMS.get(a, [a]), "any"]
+
+
 def _evict_if_needed(cache: OrderedDict, max_size: int) -> None:
     """Remove oldest entries until cache is within max_size."""
     while len(cache) > max_size:
@@ -670,7 +679,6 @@ class SemanticSearch:
         # since they're fuzzier (embedding handles the nuance).
         BOOST_ONLY_KEYS = {
             "tone",
-            "age_range",
             "theme",
             "themes",
             "intended_play",
@@ -841,9 +849,10 @@ class SemanticSearch:
                 )
 
             if hard_filters.get("age_range"):
-                expanded_ages = _expand_age_range(hard_filters["age_range"])
                 base_query = base_query.filter(
-                    Monologue.character_age_range.in_(expanded_ages)
+                    Monologue.character_age_range.in_(
+                        _age_hard_values(hard_filters["age_range"])
+                    )
                 )
 
             if hard_filters.get("emotion"):
@@ -987,6 +996,11 @@ class SemanticSearch:
                 cats = cat if isinstance(cat, list) else [cat]
                 cat_sql = " OR ".join(f"p.category ILIKE '%{c.replace(chr(39), '')}%'" for c in cats)
                 where_clauses.append(f"({cat_sql})")
+            if hard_filters.get("age_range"):
+                ages = ",".join(
+                    "'" + a.replace("'", "") + "'" for a in _age_hard_values(hard_filters["age_range"])
+                )
+                where_clauses.append(f"m.character_age_range IN ({ages})")
             if hard_filters.get("source_type"):
                 st = hard_filters["source_type"]
                 if isinstance(st, list):

@@ -5,7 +5,54 @@ while maintaining 100% backward compatibility with existing code.
 """
 
 import os
+import re
 from typing import Dict, List, Optional
+
+_DUR_UNIT = r"(min(?:ute)?s?|sec(?:ond)?s?)"
+
+
+def _augment_duration_bounds(query: str, result: Dict) -> None:
+    """Deterministic backstop: fill min_duration/max_duration (seconds) from the
+    query text when the LLM parser misses them. Handles ranges ("2-3 min"),
+    explicit bounds ("at least 90 seconds"), and fuzzy words ("short"/"long").
+    Only fills a bound the parser left empty; never overrides the LLM."""
+    q = " " + query.lower() + " "
+
+    def to_sec(num: str, unit: str) -> int:
+        return int(float(num) * 60) if unit.startswith("m") else int(float(num))
+
+    # Range: "2-3 min", "2 to 3 minutes", "between 1 and 2 min"
+    rng = re.search(rf"(\d+(?:\.\d+)?)\s*(?:-|–|to|and)\s*(\d+(?:\.\d+)?)\s*{_DUR_UNIT}", q)
+    if rng:
+        lo, hi = to_sec(rng.group(1), rng.group(3)), to_sec(rng.group(2), rng.group(3))
+        if lo > hi:
+            lo, hi = hi, lo
+        if result.get("min_duration") is None:
+            result["min_duration"] = lo
+        if result.get("max_duration") is None:
+            result["max_duration"] = hi
+        return
+
+    # Explicit bounds
+    for m in re.finditer(
+        rf"(under|less than|at most|no longer than|up to|over|more than|at least|longer than)\s+(\d+(?:\.\d+)?)\s*{_DUR_UNIT}",
+        q,
+    ):
+        word, secs = m.group(1), to_sec(m.group(2), m.group(3))
+        if word in ("over", "more than", "at least", "longer than"):
+            if result.get("min_duration") is None:
+                result["min_duration"] = secs
+        elif result.get("max_duration") is None:
+            result["max_duration"] = secs
+
+    # Fuzzy words — only if no numeric duration was found at all
+    if result.get("min_duration") is None and result.get("max_duration") is None:
+        if "very short" in q:
+            result["max_duration"] = 60
+        elif re.search(r"\b(short|brief|quick)\b", q):
+            result["max_duration"] = 120
+        elif re.search(r"\b(long|lengthy)\b", q):
+            result["min_duration"] = 180
 
 # LangChain imports
 from .langchain.chains import (
@@ -318,6 +365,10 @@ Write the introduction:""")
         try:
             # Use LangChain chain instead of direct OpenAI call
             result = self.query_chain.invoke({"query": query})
+            # Deterministic backstop for durations the LLM tends to miss
+            # (ranges keep their floor, fuzzy "short"/"long" become bounds).
+            if isinstance(result, dict):
+                _augment_duration_bounds(query, result)
             return result
 
         except Exception as e:
