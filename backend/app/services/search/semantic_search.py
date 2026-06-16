@@ -967,6 +967,7 @@ class SemanticSearch:
         # fall back to legacy JSON embeddings + Python cosine similarity when
         # pgvector is not available or no vectors exist yet.
         MAX_CANDIDATES = 75  # Upper bound for candidate pool size
+        RELAX_THRESHOLD = 8  # Below this many strict matches, broaden (relax) filters
 
         results_with_scores: List[tuple[Monologue, float]] = []
 
@@ -983,76 +984,93 @@ class SemanticSearch:
             vec_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
 
             # Build WHERE clause for hard filters
-            where_clauses = ["m.embedding_vector IS NOT NULL"]
-            if hard_filters.get("gender"):
-                # Include gender-neutral pieces so "woman" doesn't exclude rows
-                # tagged any/either (matches the scoring path's treatment).
-                g = hard_filters["gender"].replace("'", "")
-                where_clauses.append(f"m.character_gender IN ('{g}', 'any', 'either gender')")
-            if hard_filters.get("emotion"):
-                where_clauses.append(f"m.primary_emotion = '{hard_filters['emotion']}'")
-            if hard_filters.get("category"):
-                cat = hard_filters["category"]
-                cats = cat if isinstance(cat, list) else [cat]
-                cat_sql = " OR ".join(f"p.category ILIKE '%{c.replace(chr(39), '')}%'" for c in cats)
-                where_clauses.append(f"({cat_sql})")
-            if hard_filters.get("age_range"):
-                ages = ",".join(
-                    "'" + a.replace("'", "") + "'" for a in _age_hard_values(hard_filters["age_range"])
-                )
-                where_clauses.append(f"m.character_age_range IN ({ages})")
-            if hard_filters.get("source_type"):
-                st = hard_filters["source_type"]
-                if isinstance(st, list):
-                    st_list = ",".join(f"'{s}'" for s in st)
-                    where_clauses.append(f"p.source_type IN ({st_list})")
-                else:
-                    where_clauses.append(f"p.source_type = '{st}'")
-
-            # Numeric hard filters — the pgvector path used to drop these (so e.g.
-            # "under 2 min" leaked 3-minute results). Cast to numbers so they're
-            # injection-safe to inline. Mirrors the ORM hard-filter block above.
-            if hard_filters.get("max_duration"):
-                where_clauses.append(
-                    f"m.estimated_duration_seconds <= {int(hard_filters['max_duration'])}"
-                )
-            if hard_filters.get("min_duration"):
-                where_clauses.append(
-                    f"m.estimated_duration_seconds >= {int(hard_filters['min_duration'])}"
-                )
-            if hard_filters.get("max_overdone_score") is not None:
-                where_clauses.append(
-                    f"(m.overdone_score IS NULL OR m.overdone_score <= {float(hard_filters['max_overdone_score'])})"
-                )
-            if hard_filters.get("act"):
-                where_clauses.append(f"m.act = {int(hard_filters['act'])}")
-            if hard_filters.get("scene"):
-                where_clauses.append(f"m.scene = {int(hard_filters['scene'])}")
-
-            where_sql = " AND ".join(where_clauses)
-
-            # Step 1: Get IDs with pgvector similarity search
-            id_query = text(f"""
-                SELECT m.id
-                FROM monologues m
-                JOIN plays p ON p.id = m.play_id
-                WHERE {where_sql}
-                ORDER BY m.embedding_vector <=> '{vec_str}'::vector
-                LIMIT :limit
-            """)
+            # Build the hard-filter WHERE for a given filter set. Defined as a
+            # closure so graceful relaxation can re-run it with fewer filters.
+            # Values are enums (from the parser/dropdowns) or numeric casts, so
+            # inlining is injection-safe. Mirrors the ORM hard-filter block above.
+            def build_where(hf: Dict) -> str:
+                wc = ["m.embedding_vector IS NOT NULL"]
+                if hf.get("gender"):
+                    # Include gender-neutral pieces (any/either) like the scoring path.
+                    g = hf["gender"].replace("'", "")
+                    wc.append(f"m.character_gender IN ('{g}', 'any', 'either gender')")
+                if hf.get("emotion"):
+                    wc.append(f"m.primary_emotion = '{hf['emotion']}'")
+                if hf.get("category"):
+                    cat = hf["category"]
+                    cats = cat if isinstance(cat, list) else [cat]
+                    cat_sql = " OR ".join(f"p.category ILIKE '%{c.replace(chr(39), '')}%'" for c in cats)
+                    wc.append(f"({cat_sql})")
+                if hf.get("age_range"):
+                    ages = ",".join(
+                        "'" + a.replace("'", "") + "'" for a in _age_hard_values(hf["age_range"])
+                    )
+                    wc.append(f"m.character_age_range IN ({ages})")
+                if hf.get("source_type"):
+                    st = hf["source_type"]
+                    if isinstance(st, list):
+                        wc.append(f"p.source_type IN ({','.join(repr(str(s)) for s in st)})")
+                    else:
+                        wc.append(f"p.source_type = '{st}'")
+                if hf.get("max_duration"):
+                    wc.append(f"m.estimated_duration_seconds <= {int(hf['max_duration'])}")
+                if hf.get("min_duration"):
+                    wc.append(f"m.estimated_duration_seconds >= {int(hf['min_duration'])}")
+                if hf.get("max_overdone_score") is not None:
+                    wc.append(f"(m.overdone_score IS NULL OR m.overdone_score <= {float(hf['max_overdone_score'])})")
+                if hf.get("act"):
+                    wc.append(f"m.act = {int(hf['act'])}")
+                if hf.get("scene"):
+                    wc.append(f"m.scene = {int(hf['scene'])}")
+                return " AND ".join(wc)
 
             try:
                 self.db.execute(text("SET hnsw.ef_search = 40"))
             except Exception:
                 pass
 
-            id_results = self.db.execute(id_query, {"limit": VECTOR_CANDIDATES}).fetchall()
-            candidate_ids = [row[0] for row in id_results]
+            def fetch_ids(hf: Dict, exclude: list, n: int) -> list:
+                """Vector-ordered candidate IDs for a filter set, excluding seen IDs."""
+                if n <= 0:
+                    return []
+                excl = (
+                    f" AND m.id NOT IN ({','.join(str(int(i)) for i in exclude)})"
+                    if exclude else ""
+                )
+                q = text(
+                    f"SELECT m.id FROM monologues m JOIN plays p ON p.id = m.play_id "
+                    f"WHERE {build_where(hf)}{excl} "
+                    f"ORDER BY m.embedding_vector <=> '{vec_str}'::vector LIMIT :limit"
+                )
+                return [row[0] for row in self.db.execute(q, {"limit": n}).fetchall()]
+
+            candidate_ids = fetch_ids(hard_filters, [], VECTOR_CANDIDATES)
+
+            # Graceful relaxation: if too few rows pass ALL hard filters, drop the
+            # least-important ones (duration floor → age → cap → era) and backfill,
+            # flagging that the search was broadened so the UI can say so.
+            self._search_broadened = False
+            self._broadened_dropped = []
+            self._broadened_ids = set()
+            relax_target = min(limit, RELAX_THRESHOLD)
+            if len(candidate_ids) < relax_target:
+                relaxed = dict(hard_filters)
+                for key in ("min_duration", "age_range", "max_duration", "category"):
+                    if key not in relaxed:
+                        continue
+                    relaxed.pop(key)
+                    more = fetch_ids(relaxed, candidate_ids, VECTOR_CANDIDATES - len(candidate_ids))
+                    if more:
+                        self._broadened_dropped.append(key)
+                        self._broadened_ids.update(more)
+                        candidate_ids = candidate_ids + more
+                    if len(candidate_ids) >= relax_target:
+                        break
+                self._search_broadened = bool(self._broadened_ids)
 
             logger.debug(
-                "pgvector returned %s candidate IDs (max: %s)",
-                len(candidate_ids),
-                VECTOR_CANDIDATES,
+                "pgvector returned %s candidate IDs (broadened=%s, dropped=%s)",
+                len(candidate_ids), self._search_broadened, self._broadened_dropped,
             )
 
             # Step 2: Load full Monologue objects (without heavy columns)
