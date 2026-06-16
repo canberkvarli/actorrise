@@ -91,23 +91,33 @@ Extract the following information if present in the query (return null if not me
    - Examples of valid extractions: love, betrayal, identity, power, family, revenge, loss, etc.
    - Return array or null
 
-5. category: Classical or contemporary? ONLY extract if user explicitly requests classical/contemporary era.
-   - Keywords: "classical plays", "classical theatre", "greek tragedy", "elizabethan" → "classical"
-   - Keywords: "modern plays", "contemporary theatre", "recent plays", "new works" → "contemporary"
-   - DO NOT extract category if user mentions specific play titles (Hamlet, Macbeth, etc.) or author names
+5. category: Classical or contemporary era? Extract whenever the user signals an era.
+   - "modern", "contemporary", "modern monologue", "modern piece", "recent", "current", "today's", "new works" → "contemporary"
+   - "classical", "classic", "period", "old"/"older" (as in era), "greek", "elizabethan", "restoration", "verse drama", "tragedy (classical)" → "classical"
+   - DO NOT extract category if the user names a specific play title or author (their work already implies the era) — leave it to intended_play/intended_author
    - Otherwise → null
 
-6. tone: What tone is requested?
-   - Keywords: funny/comedic/humorous → "comedic"
-   - Keywords: serious/dramatic/tragic → "dramatic"
-   - Keywords: dark/grim → "dark"
-   - Keywords: romantic/loving → "romantic"
-   - Otherwise → null
+6. tone: What tone/vibe is requested? Map to exactly ONE of these allowed values
+   (these are the only valid tones): dramatic, comedic, sarcastic, philosophical,
+   romantic, dark, inspirational, melancholic, defiant, contemplative, anguished, joyful.
+   - funny/comedic/humorous/light/witty → "comedic"
+   - serious/dramatic/heavy/tragic → "dramatic"
+   - dark/grim/gritty/raw/edgy/intense/harsh → "dark"
+   - romantic/loving/tender → "romantic"
+   - uplifting/inspiring/hopeful/empowering/triumphant → "inspirational"
+   - wistful/mournful/sorrowful → "melancholic"
+   - fierce/rebellious/bold → "defiant"
+   - reflective/thoughtful/introspective → "contemplative"
+   - philosophical/existential → "philosophical"
+   - Only output one of the allowed values above, or null. Never invent a tone.
 
-7. max_duration: What maximum duration in SECONDS is requested?
-   - Extract any duration mention and convert to seconds
-   - Examples: "2 minute" → 120, "under 3 minutes" → 180, "90 second" → 90, "1 min" → 60
-   - Return integer seconds or null if not mentioned
+7. max_duration / min_duration: duration limits in SECONDS (integers, or null each).
+   - Explicit times: "2 minute"/"2 min" → 120, "90 second" → 90, "1 min" → 60, "3 minutes" → 180.
+   - "under X" / "less than X" / "at most X" / "no longer than X" → max_duration = X.
+   - "over X" / "more than X" / "at least X" / "longer than X" → min_duration = X.
+   - Ranges: "1-2 minutes" / "between 1 and 2 min" / "2 to 3 minutes" → min_duration = low end, max_duration = high end.
+   - Fuzzy (no number): "short"/"brief"/"quick" → max_duration = 120; "very short" → max_duration = 60; "long"/"lengthy" → min_duration = 180.
+   - Return null for whichever bound the user did not imply.
 
 8. exclude_author: Is the user explicitly excluding a specific author?
    - Keywords: "not Shakespeare", "no Shakespeare", "except Shakespeare", "anything but Shakespeare" → "William Shakespeare"

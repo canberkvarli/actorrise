@@ -10,6 +10,12 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+# Bump this whenever query parsing or filter/scoring logic changes, so stale
+# cached parses/results (Redis TTLs up to 24h) don't mask the new behavior.
+# v2: smarter NL parsing (era/tone vocab, fuzzy+range duration) + hard filters
+# (duration, category, overdone) enforced on the pgvector path; gender includes any.
+CACHE_VERSION = "2"
+
 
 class CacheManager:
     """
@@ -88,6 +94,7 @@ class CacheManager:
             Cache key string
         """
         cache_data = {
+            "v": CACHE_VERSION,
             "query": query.lower().strip(),
             "filters": sorted(filters.items()) if filters else [],
         }

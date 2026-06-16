@@ -832,8 +832,12 @@ class SemanticSearch:
         # as score boosts in _calculate_relevance_score_multiplicative instead.
         if hard_filters:
             if hard_filters.get("gender"):
+                # Include gender-neutral pieces (any/either) so a gendered request
+                # doesn't drop monologues that explicitly work for any gender.
                 base_query = base_query.filter(
-                    Monologue.character_gender == hard_filters["gender"]
+                    Monologue.character_gender.in_(
+                        [hard_filters["gender"], "any", "either gender"]
+                    )
                 )
 
             if hard_filters.get("age_range"):
@@ -972,9 +976,17 @@ class SemanticSearch:
             # Build WHERE clause for hard filters
             where_clauses = ["m.embedding_vector IS NOT NULL"]
             if hard_filters.get("gender"):
-                where_clauses.append(f"m.character_gender = '{hard_filters['gender']}'")
+                # Include gender-neutral pieces so "woman" doesn't exclude rows
+                # tagged any/either (matches the scoring path's treatment).
+                g = hard_filters["gender"].replace("'", "")
+                where_clauses.append(f"m.character_gender IN ('{g}', 'any', 'either gender')")
             if hard_filters.get("emotion"):
                 where_clauses.append(f"m.primary_emotion = '{hard_filters['emotion']}'")
+            if hard_filters.get("category"):
+                cat = hard_filters["category"]
+                cats = cat if isinstance(cat, list) else [cat]
+                cat_sql = " OR ".join(f"p.category ILIKE '%{c.replace(chr(39), '')}%'" for c in cats)
+                where_clauses.append(f"({cat_sql})")
             if hard_filters.get("source_type"):
                 st = hard_filters["source_type"]
                 if isinstance(st, list):
