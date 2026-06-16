@@ -983,6 +983,26 @@ class SemanticSearch:
                 else:
                     where_clauses.append(f"p.source_type = '{st}'")
 
+            # Numeric hard filters — the pgvector path used to drop these (so e.g.
+            # "under 2 min" leaked 3-minute results). Cast to numbers so they're
+            # injection-safe to inline. Mirrors the ORM hard-filter block above.
+            if hard_filters.get("max_duration"):
+                where_clauses.append(
+                    f"m.estimated_duration_seconds <= {int(hard_filters['max_duration'])}"
+                )
+            if hard_filters.get("min_duration"):
+                where_clauses.append(
+                    f"m.estimated_duration_seconds >= {int(hard_filters['min_duration'])}"
+                )
+            if hard_filters.get("max_overdone_score") is not None:
+                where_clauses.append(
+                    f"(m.overdone_score IS NULL OR m.overdone_score <= {float(hard_filters['max_overdone_score'])})"
+                )
+            if hard_filters.get("act"):
+                where_clauses.append(f"m.act = {int(hard_filters['act'])}")
+            if hard_filters.get("scene"):
+                where_clauses.append(f"m.scene = {int(hard_filters['scene'])}")
+
             where_sql = " AND ".join(where_clauses)
 
             # Step 1: Get IDs with pgvector similarity search
