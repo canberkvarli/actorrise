@@ -26,7 +26,7 @@ export function FilmTvMonologueCard({
   index = 0,
 }: FilmTvMonologueCardProps) {
   const toneTags = mono.tone?.slice(0, 3) ?? [];
-  const sourceTypeLabel = mono.source_type === "tv_series" ? "TV" : mono.source_type === "film" ? "Film" : null;
+  const sourceTypeLabel = mono.source_type === "tv" ? "TV" : mono.source_type === "film" ? "Film" : null;
   const yearLabel = mono.source_year != null ? mono.source_year : "";
 
   return (
