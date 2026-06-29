@@ -1024,8 +1024,20 @@ class SemanticSearch:
                     wc.append(f"m.scene = {int(hf['scene'])}")
                 return " AND ".join(wc)
 
+            # Enable pgvector 0.8 iterative index scan. Without it, a HARD-FILTERED
+            # query (e.g. source_type IN ('film','tv')) returns the ef_search
+            # global-nearest vectors and only THEN applies the filter — and since
+            # play monologues dominate the HNSW index, most of those near neighbours
+            # are plays that get filtered out, leaving sparse or even ZERO film/TV
+            # results (e.g. "power and ambition" returned 0; TV showed up far less
+            # than film). Iterative scan keeps pulling from the index until LIMIT is
+            # satisfied (up to max_scan_tuples), which fixes both the blank-screen
+            # queries and TV under-representation. Plain (unfiltered) play searches
+            # fill on the first batch, so the overhead there is negligible.
             try:
-                self.db.execute(text("SET hnsw.ef_search = 40"))
+                self.db.execute(text("SET hnsw.ef_search = 100"))
+                self.db.execute(text("SET hnsw.iterative_scan = relaxed_order"))
+                self.db.execute(text("SET hnsw.max_scan_tuples = 20000"))
             except Exception:
                 pass
 
