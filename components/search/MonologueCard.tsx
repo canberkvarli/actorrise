@@ -5,7 +5,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { isMeaningfulMonologueTitle } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { IconExternalLink, IconSparkles, IconPlus, IconCheck } from "@tabler/icons-react";
+import { IconExternalLink, IconSparkles, IconPlus, IconCheck, IconArrowRight } from "@tabler/icons-react";
+import Link from "next/link";
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { useToggleFavorite } from "@/hooks/useBookmarks";
@@ -109,33 +110,48 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
               {monologue.excerpt}
             </p>
           </CardContent>
-          <CardFooter className="flex justify-between mt-auto">
-            {monologue.source_url && (
-              <motion.a
-                href={monologue.source_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-accent hover:underline flex items-center gap-1"
-                whileHover={{ x: 4 }}
-                transition={{ duration: 0.2 }}
-              >
-                View Source
-                <IconExternalLink className="h-3 w-3" />
-              </motion.a>
-            )}
-            {monologue.full_text_url && (
-              <motion.a
-                href={monologue.full_text_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-accent hover:underline flex items-center gap-1"
-                whileHover={{ x: 4 }}
-                transition={{ duration: 0.2 }}
-              >
-                Full Text
-                <IconExternalLink className="h-3 w-3" />
-              </motion.a>
-            )}
+          <CardFooter className="flex items-center justify-between gap-2 mt-auto">
+            {/* Primary action: bridge straight from a found monologue into
+                practicing it (memorize + self-record), instead of dead-ending
+                on "add to collection". */}
+            <Link
+              href={`/monologue/${monologue.id}/memorize`}
+              onClick={(e) => e.stopPropagation()}
+              className="inline-flex items-center gap-1.5 rounded-md bg-[#CB4B00] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[#B03000]"
+            >
+              Practice this
+              <IconArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <div className="flex items-center gap-3">
+              {monologue.source_url && (
+                <motion.a
+                  href={monologue.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-accent hover:underline flex items-center gap-1"
+                  whileHover={{ x: 4 }}
+                  transition={{ duration: 0.2 }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Source
+                  <IconExternalLink className="h-3 w-3" />
+                </motion.a>
+              )}
+              {monologue.full_text_url && (
+                <motion.a
+                  href={monologue.full_text_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-accent hover:underline flex items-center gap-1"
+                  whileHover={{ x: 4 }}
+                  transition={{ duration: 0.2 }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  Full Text
+                  <IconExternalLink className="h-3 w-3" />
+                </motion.a>
+              )}
+            </div>
           </CardFooter>
         </Card>
       </motion.div>

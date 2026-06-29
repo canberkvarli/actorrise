@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { IconLoader2 } from "@tabler/icons-react";
+import { IconLoader2, IconEye, IconEyeOff } from "@tabler/icons-react";
 import { trackSignupCompleted } from "@/lib/analytics";
 
 const signupSchema = z.object({
@@ -22,6 +22,7 @@ export function SignupForm() {
   const { signup } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const {
     register,
@@ -61,6 +62,12 @@ export function SignupForm() {
           <Input
             id="email"
             type="email"
+            inputMode="email"
+            autoComplete="email"
+            autoCapitalize="none"
+            autoCorrect="off"
+            autoFocus
+            enterKeyHint="next"
             placeholder="you@example.com"
             {...register("email")}
           />
@@ -71,12 +78,25 @@ export function SignupForm() {
 
         <div className="space-y-1.5">
           <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            placeholder="At least 6 characters"
-            {...register("password")}
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              autoComplete="new-password"
+              enterKeyHint="go"
+              placeholder="At least 6 characters"
+              className="pr-10"
+              {...register("password")}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((s) => !s)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+              className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+            >
+              {showPassword ? <IconEyeOff className="h-4 w-4" /> : <IconEye className="h-4 w-4" />}
+            </button>
+          </div>
           <p className={`text-xs text-destructive h-4 truncate ${errors.password ? '' : 'invisible'}`}>
             {errors.password?.message ?? '\u00A0'}
           </p>

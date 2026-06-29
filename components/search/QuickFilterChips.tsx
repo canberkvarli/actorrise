@@ -21,31 +21,41 @@ interface QuickFilterChipsProps {
 
 export function QuickFilterChips({ filters, onToggle }: QuickFilterChipsProps) {
   return (
-    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-      {GROUPS.map((group, gi) => (
-        <div key={group.key} className="flex items-center gap-1.5 shrink-0">
-          {gi > 0 && <span className="w-px h-4 bg-border/60 mx-0.5" aria-hidden />}
-          <div className="inline-flex rounded-lg border border-border/60 overflow-hidden">
-            {group.options.map((opt) => {
-              const isActive = filters[group.key] === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  type="button"
-                  onClick={() => onToggle(group.key, isActive ? "" : opt.value)}
-                  className={`px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-                    isActive
-                      ? "bg-foreground text-background"
-                      : "bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                  } ${group.options.length > 1 ? "border-r border-border/60 last:border-r-0" : ""}`}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
+    // Relative wrapper so we can fade the right edge on mobile — a cue that the
+    // filter row scrolls horizontally (otherwise the off-screen filters are
+    // invisible until you happen to swipe).
+    <div className="relative">
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pr-6 sm:pr-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {GROUPS.map((group, gi) => (
+          <div key={group.key} className="flex items-center gap-1.5 shrink-0">
+            {gi > 0 && <span className="w-px h-4 bg-border/60 mx-0.5" aria-hidden />}
+            <div className="inline-flex rounded-lg border border-border/60 overflow-hidden">
+              {group.options.map((opt) => {
+                const isActive = filters[group.key] === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => onToggle(group.key, isActive ? "" : opt.value)}
+                    className={`px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                      isActive
+                        ? "bg-foreground text-background"
+                        : "bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                    } ${group.options.length > 1 ? "border-r border-border/60 last:border-r-0" : ""}`}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
+      {/* Right-edge fade — mobile only — signals "more filters this way". */}
+      <div
+        className="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-background to-transparent sm:hidden"
+        aria-hidden
+      />
     </div>
   );
 }

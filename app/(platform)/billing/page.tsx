@@ -166,12 +166,22 @@ export default function BillingPage() {
             </CardContent>
             <CardFooter className="px-5 py-4 pt-0 border-t-0 flex-col items-start gap-3">
               {subscription?.tier_name === "free" ? (
-                <Button asChild size="sm" className="gap-2 w-fit">
-                  <Link href="/pricing">
-                    <IconSparkles className="h-4 w-4" />
-                    Upgrade Plan
-                  </Link>
-                </Button>
+                <div className="flex flex-col items-start gap-2 w-full">
+                  <Button asChild size="sm" className="gap-2 w-fit">
+                    <Link href="/pricing">
+                      <IconSparkles className="h-4 w-4" />
+                      Upgrade Plan
+                    </Link>
+                  </Button>
+                  {/* Self-serve founder coupon: deep-links checkout with the
+                      coupon pre-applied (3 months of Plus, free). */}
+                  <Button asChild size="sm" variant="outline" className="gap-2 w-fit border-[#CB4B00]/40 text-[#CB4B00] hover:bg-[#CB4B00]/5 hover:text-[#CB4B00]">
+                    <Link href="/checkout?tier=plus&period=monthly&promo=FOUNDER3">
+                      <IconGift className="h-4 w-4" />
+                      Get 3 months of Plus, free
+                    </Link>
+                  </Button>
+                </div>
               ) : subscription?.has_stripe_customer ? (
                 <Button
                   onClick={handleManageSubscription}

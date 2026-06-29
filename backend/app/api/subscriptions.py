@@ -265,14 +265,14 @@ async def create_checkout_session(
     trial_period_days: int | None = None
     if request.promo_code:
         promo = request.promo_code.strip().upper()
-        if promo in ("FOUNDER", "FOUNDER3", "FOUNDER6", "FOUNDER12"):
+        if promo == "FOUNDER3":
             if tier.name != "plus":
                 raise HTTPException(
                     status_code=400,
                     detail="The founding actor offer is only valid for the Plus plan.",
                 )
-            # 3, 6, or 12 months free, then auto-converts to Plus monthly ($12/mo).
-            trial_period_days = {"FOUNDER3": 90, "FOUNDER6": 180}.get(promo, 365)
+            # 3 months free, then auto-converts to Plus monthly ($12/mo).
+            trial_period_days = 90
             # Force monthly rollover regardless of the billing toggle they picked.
             price_id = tier.stripe_monthly_price_id
             if not price_id:
@@ -280,6 +280,12 @@ async def create_checkout_session(
                     status_code=400,
                     detail="Stripe price ID not configured for the Plus monthly plan.",
                 )
+        elif promo in ("FOUNDER", "FOUNDER6", "FOUNDER12"):
+            # Retired founder codes — only FOUNDER3 (3 months) is live now.
+            raise HTTPException(
+                status_code=400,
+                detail="That founder code has expired. Use FOUNDER3 for 3 months of Plus free.",
+            )
         elif promo in ("STARTUPS", "STARTUPS24"):
             startups_coupon_id = os.getenv("STRIPE_STARTUPS_COUPON_ID")
             if startups_coupon_id:
