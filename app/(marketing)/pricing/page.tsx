@@ -154,7 +154,9 @@ function FAQAccordion() {
 }
 
 export default function PricingPage() {
-  const [isAnnual, setIsAnnual] = useState(false);
+  // Default to annual — it's the better deal for the actor and better LTV for us,
+  // so lead with it (they can flip to monthly).
+  const [isAnnual, setIsAnnual] = useState(true);
   const { data: tiers = DEFAULT_PRICING_TIERS, isLoading } = usePricingTiers();
 
   const formatPrice = (cents: number) => {

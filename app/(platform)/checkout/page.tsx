@@ -77,8 +77,19 @@ function CheckoutContent() {
       });
   }, [tierName, router]);
 
-  const applyPromo = () => {
-    const code = promoCode.trim().toUpperCase();
+  // Deep-linked promo (e.g. the "get your founder coupon" button on /billing
+  // sends ?promo=FOUNDER3) — auto-apply it once the tier has loaded.
+  useEffect(() => {
+    const p = searchParams.get("promo");
+    if (p && tier && !promoApplied) {
+      applyPromo(p);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tier]);
+
+  const applyPromo = (rawCode?: string) => {
+    const code = (rawCode ?? promoCode).trim().toUpperCase();
+    if (rawCode) setPromoCode(code);
     const triggerShake = (msg: string) => {
       setPromoApplied(null);
       setPromoError(msg);
@@ -86,13 +97,17 @@ function CheckoutContent() {
       setTimeout(() => setPromoShake(false), 500);
     };
 
-    if (["FOUNDER", "FOUNDER3", "FOUNDER6", "FOUNDER12"].includes(code)) {
+    // Founder coupon is now FOUNDER3 only (3 months of Plus free). The older
+    // FOUNDER / FOUNDER6 / FOUNDER12 codes are retired.
+    if (code === "FOUNDER3") {
       if (tier?.name !== "plus") {
-        triggerShake("Founder codes are only valid for the Plus plan.");
+        triggerShake("The founder coupon is only valid for the Plus plan.");
         return;
       }
       setPromoApplied(code);
       setPromoError(null);
+    } else if (["FOUNDER", "FOUNDER6", "FOUNDER12"].includes(code)) {
+      triggerShake("That founder code has expired. Use FOUNDER3 for 3 months of Plus free.");
     } else if (code === "STARTUPS" || code === "STARTUPS24") {
       setPromoApplied("STARTUPS");
       setPromoError(null);
@@ -300,12 +315,31 @@ function CheckoutContent() {
                       onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), applyPromo())}
                       className={`flex-1${promoError ? " border-destructive focus-visible:ring-destructive/30" : ""}`}
                     />
-                    <Button type="button" variant="outline" onClick={applyPromo}>
+                    <Button type="button" variant="outline" onClick={() => applyPromo()}>
                       Apply
                     </Button>
                   </div>
                   {promoError && (
                     <p className="text-sm text-destructive font-medium">{promoError}</p>
+                  )}
+                  {tier?.name === "plus" && (
+                    <div className="rounded-xl border-2 border-[#CB4B00]/30 bg-[#CB4B00]/5 p-4">
+                      <p className="text-base font-semibold text-foreground mb-1">
+                        Founding actor? Get 3 months of Plus, free.
+                      </p>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        No waiting. I&apos;ll apply your founder coupon right now. Card required, nothing charged for 90 days, cancel anytime.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="gap-2 bg-[#CB4B00] text-white hover:bg-[#B03000]"
+                        onClick={() => applyPromo("FOUNDER3")}
+                      >
+                        <IconGift className="h-4 w-4" />
+                        Get my founder coupon
+                      </Button>
+                    </div>
                   )}
                   <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4">
                     <p className="text-base font-semibold text-foreground mb-1">

@@ -289,9 +289,15 @@ function SearchContent() {
     setIsLoadingMore(false);
   }, [searchMode]);
 
-  // Show search tour for first-time visitors
+  // Show search tour for first-time visitors — but only AFTER they've finished
+  // onboarding, so it never stacks on top of the welcome/first-rehearsal flow
+  // (especially cramped on mobile).
   useEffect(() => {
-    if (user && user.has_seen_search_tour === false) {
+    if (
+      user &&
+      user.has_seen_search_tour === false &&
+      user.has_completed_onboarding === true
+    ) {
       const timer = setTimeout(() => setShowSearchTour(true), 800);
       return () => clearTimeout(timer);
     }

@@ -464,12 +464,21 @@ async def search_monologues(
             except Exception:
                 db.rollback()
 
-        # Soft-fail: results exist but the top one is below the strong-match bar.
-        # The UI surfaces these under a "closest matches" banner.
+        # Soft-fail: results exist but they're closer to "padding" than real
+        # matches. The UI surfaces these under a "closest matches" banner so a
+        # specific query we can't satisfy (e.g. a play we don't carry) doesn't
+        # silently return dozens of loosely-related pieces as if they fit.
         scores = [
             m.relevance_score for m in monologue_responses if m.relevance_score is not None
         ]
-        weak_match = has_scores and bool(scores) and max(scores) < MIN_RELEVANCE_TO_SHOW
+        strong = [s for s in scores if s >= MIN_RELEVANCE_TO_SHOW]
+        weak_match = has_scores and bool(scores) and (
+            # the best result doesn't even clear the strong bar, OR
+            max(scores) < MIN_RELEVANCE_TO_SHOW
+            # we returned a big set but almost none of it is actually strong —
+            # the long tail is filler, so call it what it is.
+            or (len(scores) >= 8 and len(strong) <= 2)
+        )
 
         # Graceful relaxation: too few exact matches, so the search was broadened
         # by dropping the least-important filters. Surface which kinds were relaxed.
