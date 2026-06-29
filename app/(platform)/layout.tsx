@@ -43,6 +43,12 @@ const OnboardingWizard = dynamic(
   () => import("@/components/onboarding/OnboardingWizard"),
   { ssr: false },
 );
+// Zero-setup first rehearsal gate. Self-gates on the auth user (never rehearsed
+// + finished onboarding) and redirects once to /first-scene. Renders null.
+const FirstRehearsalGate = dynamic(
+  () => import("@/components/onboarding/FirstRehearsalGate").then((m) => ({ default: m.FirstRehearsalGate })),
+  { ssr: false },
+);
 // Registers the PWA service worker in production (no-op in dev). Renders null.
 const PWARegister = dynamic(
   () => import("@/components/system/PWARegister"),
@@ -182,7 +188,7 @@ export default function PlatformLayout({
     { href: "/rehearse", label: "Collection", icon: IconBookmark },
     { href: "/practice", label: "My Scripts", icon: IconMicrophone },
   ];
-  const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/practice\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$/.test(pathname || "");
+  const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/practice\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$|^\/first-scene$/.test(pathname || "");
 
   return (
     <>
@@ -696,6 +702,7 @@ export default function PlatformLayout({
 
       <OnboardingWizard />
       <PWARegister />
+      <FirstRehearsalGate />
       <AnimatePresence>
         {showWelcome && (
           <WelcomeFlow onDismiss={async () => { setShowWelcome(false); await refreshUser(); }} />

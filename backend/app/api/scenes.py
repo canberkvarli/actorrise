@@ -269,6 +269,65 @@ async def list_scenes(
     return results
 
 
+# The single scene every new actor is dropped into for the zero-setup first
+# rehearsal. Matched by title (stable across environments, unlike ids). Comedic
+# two-hander, both parts meaty, accessible language — a strong first taste.
+FIRST_REHEARSAL_SCENE_TITLE = (
+    "The Importance of Being Earnest — Gwendolen and Cecily at Tea"
+)
+
+
+class FirstRehearsalSceneResponse(BaseModel):
+    """The scene to drop a brand-new user into, pre-cast."""
+    scene_id: int
+    user_character: str
+    ai_character: str
+    title: str
+    play_title: Optional[str] = None
+
+
+# NOTE: must be declared BEFORE "/{scene_id}" or FastAPI matches
+# "first-rehearsal" as a scene_id and 422s on int parsing.
+@router.get("/first-rehearsal", response_model=FirstRehearsalSceneResponse)
+def get_first_rehearsal_scene(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return the hero scene + a guaranteed-valid casting for first-run.
+
+    Falls back to any free-tier library scene if the hero scene isn't seeded
+    in this environment, so the activation flow degrades gracefully.
+    """
+    scene = (
+        db.query(Scene)
+        .filter(Scene.is_library.is_(True), Scene.title == FIRST_REHEARSAL_SCENE_TITLE)
+        .first()
+    )
+    if scene is None:
+        scene = (
+            db.query(Scene)
+            .filter(Scene.is_library.is_(True), Scene.title.in_(FREE_LIBRARY_SCENE_TITLES))
+            .first()
+        )
+    if scene is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No first-rehearsal scene is available",
+        )
+    play_title = (
+        db.query(Play.title).filter(Play.id == scene.play_id).scalar()
+        if scene.play_id
+        else None
+    )
+    return FirstRehearsalSceneResponse(
+        scene_id=scene.id,
+        user_character=scene.character_1_name,
+        ai_character=scene.character_2_name,
+        title=scene.title,
+        play_title=play_title,
+    )
+
+
 @router.get("/{scene_id}", response_model=SceneDetailResponse)
 async def get_scene_detail(
     scene_id: int,

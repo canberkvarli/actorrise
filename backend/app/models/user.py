@@ -28,6 +28,12 @@ class User(Base):
     has_seen_search_tour = Column(Boolean, default=False, nullable=False)
     has_seen_profile_tour = Column(Boolean, default=False, nullable=False)
     has_completed_onboarding = Column(Boolean, default=False, nullable=False)
+    # Whether the user has been shown the zero-setup first rehearsal (the
+    # "drop straight into a scene" activation flow). Set once they start or
+    # skip it, so it never fires again.
+    has_seen_first_rehearsal = Column(
+        Boolean, default=False, nullable=False, server_default=text("false")
+    )
 
     # Attribution — free-text answer to "How did you hear about us?" (optional)
     referral_source = Column(String, nullable=True)

@@ -1,6 +1,7 @@
 from app.core.database import get_db
 from app.core.security import verify_supabase_token
 from app.models.actor import ActorProfile
+from app.models.billing import UsageMetrics
 from app.models.founding_actor import FoundingActor
 from app.models.user import User
 from app.services.email.marketing import verify_unsubscribe_token
@@ -13,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
-from sqlalchemy import exists
+from sqlalchemy import exists, func
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -32,6 +33,7 @@ class UpdateOnboardingRequest(BaseModel):
     has_seen_search_tour: bool | None = None
     has_seen_profile_tour: bool | None = None
     has_completed_onboarding: bool | None = None
+    has_seen_first_rehearsal: bool | None = None
     referral_source: str | None = None
     last_seen_feature_id: str | None = None
 
@@ -185,6 +187,13 @@ def get_me(
     headshot_url = db.query(ActorProfile.headshot_url).filter(
         ActorProfile.user_id == current_user.id
     ).scalar()
+    # Has the user ever actually rehearsed a scene? Drives the zero-setup
+    # first-rehearsal flow: people who already rehearsed (pre-flag) must not
+    # be funneled back into it.
+    rehearsed_total = db.query(
+        func.coalesce(func.sum(UsageMetrics.scene_partner_sessions), 0)
+    ).filter(UsageMetrics.user_id == current_user.id).scalar()
+    has_ever_rehearsed = bool(rehearsed_total and rehearsed_total > 0)
     return {
         "id": current_user.id,
         "email": current_user.email,
@@ -195,6 +204,8 @@ def get_me(
         "has_seen_search_tour": current_user.has_seen_search_tour,
         "has_seen_profile_tour": current_user.has_seen_profile_tour,
         "has_completed_onboarding": current_user.has_completed_onboarding,
+        "has_seen_first_rehearsal": current_user.has_seen_first_rehearsal,
+        "has_ever_rehearsed": has_ever_rehearsed,
         "referral_source": current_user.referral_source,
         "last_seen_feature_id": current_user.last_seen_feature_id,
         "is_moderator": current_user.is_moderator,
@@ -243,6 +254,8 @@ def update_onboarding(
         current_user.has_seen_profile_tour = body.has_seen_profile_tour
     if body.has_completed_onboarding is not None:
         current_user.has_completed_onboarding = body.has_completed_onboarding
+    if body.has_seen_first_rehearsal is not None:
+        current_user.has_seen_first_rehearsal = body.has_seen_first_rehearsal
     if body.referral_source is not None:
         # Trim and cap; empty string clears it.
         cleaned = body.referral_source.strip()[:280]
@@ -257,6 +270,7 @@ def update_onboarding(
         "has_seen_search_tour": current_user.has_seen_search_tour,
         "has_seen_profile_tour": current_user.has_seen_profile_tour,
         "has_completed_onboarding": current_user.has_completed_onboarding,
+        "has_seen_first_rehearsal": current_user.has_seen_first_rehearsal,
         "referral_source": current_user.referral_source,
         "last_seen_feature_id": current_user.last_seen_feature_id,
     }

@@ -465,6 +465,10 @@ export default function RehearsalPage() {
   // Cold-read mode: a timed read-through before the (single-take) performance.
   const coldRead = searchParams.get('mode') === 'cold';
   const coldReadCharacter = searchParams.get('character');
+  // First-run: the user was dropped here straight from /first-scene. On the
+  // completion screen we add a win beat + one clear next step (search with
+  // intent) instead of leaving them at "now what?".
+  const firstRun = searchParams.get('firstRun') === '1';
   const [prepDone, setPrepDone] = useState(!coldRead);
 
   const backUrl = scriptId
@@ -1833,6 +1837,25 @@ export default function RehearsalPage() {
                 <p className="text-sm text-neutral-500">from {playTitle}</p>
               )}
             </div>
+
+            {/* First-run: celebrate the aha, then one clear next step. */}
+            {firstRun && (
+              <div className="rounded-lg border border-[#CB4B00]/30 bg-[#CB4B00]/10 p-5 text-center space-y-3">
+                <p className="text-base font-semibold text-neutral-100">
+                  That was your first scene.
+                </p>
+                <p className="text-sm text-neutral-400">
+                  Now find one that&apos;s actually yours, a monologue or scene for your
+                  type, and run it the same way.
+                </p>
+                <Button
+                  onClick={() => router.push('/monologues')}
+                  className="bg-[#CB4B00] text-white hover:bg-[#B03000]"
+                >
+                  Find a scene that&apos;s yours
+                </Button>
+              </div>
+            )}
 
             {/* Stats bar */}
             <div className="flex items-center justify-center gap-2 text-sm text-neutral-400 flex-wrap">
