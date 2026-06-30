@@ -18,7 +18,7 @@ from app.models.actor import Monologue, MonologueFavorite, Play
 from app.models.user import User
 from app.services.search.query_optimizer import correct_query_typos, validate_query
 from app.services.search.recommender import Recommender
-from app.services.search.semantic_search import MIN_RELEVANCE_TO_SHOW, SemanticSearch
+from app.services.search.semantic_search import MIN_RELEVANCE_TO_SHOW, STRONG_COSINE_SIM, SemanticSearch
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
@@ -468,17 +468,22 @@ async def search_monologues(
         # matches. The UI surfaces these under a "closest matches" banner so a
         # specific query we can't satisfy (e.g. a play we don't carry) doesn't
         # silently return dozens of loosely-related pieces as if they fit.
-        scores = [
-            m.relevance_score for m in monologue_responses if m.relevance_score is not None
-        ]
-        strong = [s for s in scores if s >= MIN_RELEVANCE_TO_SHOW]
-        weak_match = has_scores and bool(scores) and (
-            # the best result doesn't even clear the strong bar, OR
-            max(scores) < MIN_RELEVANCE_TO_SHOW
-            # we returned a big set but almost none of it is actually strong —
-            # the long tail is filler, so call it what it is.
-            or (len(scores) >= 8 and len(strong) <= 2)
-        )
+        best_cosine = getattr(search_service, "_best_cosine_sim", None)
+        if best_cosine is not None:
+            # Primary (pgvector) path: per-result scores are rank-based and can't
+            # gauge match quality, so judge on the REAL cosine of the best hit.
+            weak_match = best_cosine < STRONG_COSINE_SIM
+        else:
+            # Legacy / text-fallback path: no real cosine, so fall back to the
+            # score-based heuristic.
+            scores = [
+                m.relevance_score for m in monologue_responses if m.relevance_score is not None
+            ]
+            strong = [s for s in scores if s >= MIN_RELEVANCE_TO_SHOW]
+            weak_match = has_scores and bool(scores) and (
+                max(scores) < MIN_RELEVANCE_TO_SHOW
+                or (len(scores) >= 8 and len(strong) <= 2)
+            )
 
         # Graceful relaxation: too few exact matches, so the search was broadened
         # by dropping the least-important filters. Surface which kinds were relaxed.

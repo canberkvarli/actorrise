@@ -99,6 +99,15 @@ MIN_RELEVANCE_TO_SHOW = 0.48
 # language / gibberish like "at hirsizi") and we return empty.
 WEAK_MATCH_FLOOR = 0.30
 
+# Bar on the RAW pgvector cosine similarity of the best match. The primary search
+# path scores results by rank (0.6–1.0), which can't tell a strong match from the
+# nearest of an irrelevant set — so the weak-match banner above never fired there.
+# This is measured against the real cosine instead. Calibrated on the live corpus
+# (text-embedding-3-large, 1536d): genuine queries land ~0.44–0.54, gibberish /
+# off-domain ~0.18–0.35, so 0.38 cleanly separates them. Best cosine below this →
+# "no strong matches, here are the closest".
+STRONG_COSINE_SIM = 0.38
+
 
 def classify_relevance(
     top_results: list,
@@ -1057,6 +1066,26 @@ class SemanticSearch:
                 return [row[0] for row in self.db.execute(q, {"limit": n}).fetchall()]
 
             candidate_ids = fetch_ids(hard_filters, [], VECTOR_CANDIDATES)
+
+            # Best RAW cosine similarity of the nearest candidate. The per-result
+            # scores below are rank-based (0.6–1.0), so they can't distinguish a
+            # great match from "nearest of a bad bunch" — the real cosine can, and
+            # it drives the honest "closest matches" banner. candidate_ids[0] is the
+            # global nearest under the hard filters (relaxed rows are appended after).
+            self._best_cosine_sim = None
+            if candidate_ids:
+                try:
+                    _d = self.db.execute(
+                        text(
+                            f"SELECT m.embedding_vector <=> '{vec_str}'::vector "
+                            f"FROM monologues m WHERE m.id = :id"
+                        ),
+                        {"id": int(candidate_ids[0])},
+                    ).scalar()
+                    if _d is not None:
+                        self._best_cosine_sim = 1.0 - float(_d)
+                except Exception:
+                    self._best_cosine_sim = None
 
             # Graceful relaxation: if too few rows pass ALL hard filters, drop the
             # least-important ones (duration floor → age → cap → era) and backfill,
