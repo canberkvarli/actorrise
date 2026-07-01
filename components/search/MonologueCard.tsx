@@ -50,7 +50,10 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
                   ? monologue.title
                   : monologue.character_name}
               </CardTitle>
-                <CardDescription className="text-base">by {monologue.author}</CardDescription>
+                <CardDescription className="text-base">
+                  by {monologue.author}
+                  {monologue.translator ? `, translated by ${monologue.translator}` : ""}
+                </CardDescription>
               </div>
               {isInCollection ? (
                 <button

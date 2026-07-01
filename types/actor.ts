@@ -38,6 +38,7 @@ export interface Monologue {
   play_title: string;
   play_id: number;
   author: string;
+  translator?: string | null;
   category: string;
   character_gender?: string;
   character_age_range?: string;

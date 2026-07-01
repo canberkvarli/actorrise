@@ -65,6 +65,7 @@ class Play(Base):
     source_url = Column(String, nullable=True)
     purchase_url = Column(String, nullable=True)  # Link to buy full script
     publisher = Column(String, nullable=True)
+    translator = Column(String, nullable=True)  # Translator/adaptor — important for translated classical work
 
     # Full text storage (public domain only)
     full_text = Column(Text, nullable=True)  # Only for public domain
