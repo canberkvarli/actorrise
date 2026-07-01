@@ -1,0 +1,496 @@
+{
+  "monologue_moves": [
+    {
+      "id": 5749,
+      "old_play_id": 77,
+      "old_title": "Julie's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Julie's speech from Miss Julie"
+    },
+    {
+      "id": 5745,
+      "old_play_id": 77,
+      "old_title": "Julie's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Julie's speech from Miss Julie"
+    },
+    {
+      "id": 5761,
+      "old_play_id": 77,
+      "old_title": "Julie's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Julie's speech from Miss Julie"
+    },
+    {
+      "id": 5790,
+      "old_play_id": 77,
+      "old_title": "Gunnar's speech from The Father",
+      "new_play_id": 1637,
+      "new_title": "Gunnar's speech from The Outlaw"
+    },
+    {
+      "id": 5793,
+      "old_play_id": 77,
+      "old_title": "Gunnar's speech from The Father",
+      "new_play_id": 1637,
+      "new_title": "Gunnar's speech from The Outlaw"
+    },
+    {
+      "id": 5798,
+      "old_play_id": 77,
+      "old_title": "Thorfinn's speech from The Father",
+      "new_play_id": 1637,
+      "new_title": "Thorfinn's speech from The Outlaw"
+    },
+    {
+      "id": 5809,
+      "old_play_id": 77,
+      "old_title": "Mme X's speech from The Father",
+      "new_play_id": 122,
+      "new_title": "Mme X's speech from The Stronger"
+    },
+    {
+      "id": 5810,
+      "old_play_id": 77,
+      "old_title": "Mme's speech from The Father",
+      "new_play_id": 122,
+      "new_title": "Mme's speech from The Stronger"
+    },
+    {
+      "id": 5800,
+      "old_play_id": 77,
+      "old_title": "Orm's speech from The Father",
+      "new_play_id": 1637,
+      "new_title": "Orm's speech from The Outlaw"
+    },
+    {
+      "id": 5739,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    },
+    {
+      "id": 5746,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    },
+    {
+      "id": 5747,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    },
+    {
+      "id": 5748,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    },
+    {
+      "id": 5750,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    },
+    {
+      "id": 5751,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    },
+    {
+      "id": 5753,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    },
+    {
+      "id": 5755,
+      "old_play_id": 77,
+      "old_title": "Julie's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Julie's speech from Miss Julie"
+    },
+    {
+      "id": 5757,
+      "old_play_id": 77,
+      "old_title": "Julie's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Julie's speech from Miss Julie"
+    },
+    {
+      "id": 5758,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    },
+    {
+      "id": 5759,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    },
+    {
+      "id": 5760,
+      "old_play_id": 77,
+      "old_title": "Julie's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Julie's speech from Miss Julie"
+    },
+    {
+      "id": 5762,
+      "old_play_id": 77,
+      "old_title": "Julie's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Julie's speech from Miss Julie"
+    },
+    {
+      "id": 5763,
+      "old_play_id": 77,
+      "old_title": "Julie's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Julie's speech from Miss Julie"
+    },
+    {
+      "id": 5765,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    },
+    {
+      "id": 5766,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    },
+    {
+      "id": 5767,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    },
+    {
+      "id": 5768,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    },
+    {
+      "id": 5769,
+      "old_play_id": 77,
+      "old_title": "Kristin's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Kristin's speech from Miss Julie"
+    },
+    {
+      "id": 5770,
+      "old_play_id": 77,
+      "old_title": "Kristin's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Kristin's speech from Miss Julie"
+    },
+    {
+      "id": 5772,
+      "old_play_id": 77,
+      "old_title": "Julie's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Julie's speech from Miss Julie"
+    },
+    {
+      "id": 5777,
+      "old_play_id": 77,
+      "old_title": "Kristin's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Kristin's speech from Miss Julie"
+    },
+    {
+      "id": 5779,
+      "old_play_id": 77,
+      "old_title": "Julie's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Julie's speech from Miss Julie"
+    },
+    {
+      "id": 5780,
+      "old_play_id": 77,
+      "old_title": "Julie's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Julie's speech from Miss Julie"
+    },
+    {
+      "id": 5781,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    },
+    {
+      "id": 5782,
+      "old_play_id": 77,
+      "old_title": "Julie's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Julie's speech from Miss Julie"
+    },
+    {
+      "id": 5784,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    },
+    {
+      "id": 5785,
+      "old_play_id": 77,
+      "old_title": "Valgerd's speech from The Father",
+      "new_play_id": 1637,
+      "new_title": "Valgerd's speech from The Outlaw"
+    },
+    {
+      "id": 5786,
+      "old_play_id": 77,
+      "old_title": "Valgerd's speech from The Father",
+      "new_play_id": 1637,
+      "new_title": "Valgerd's speech from The Outlaw"
+    },
+    {
+      "id": 5788,
+      "old_play_id": 77,
+      "old_title": "Gunnar's speech from The Father",
+      "new_play_id": 1637,
+      "new_title": "Gunnar's speech from The Outlaw"
+    },
+    {
+      "id": 5792,
+      "old_play_id": 77,
+      "old_title": "Gunnar's speech from The Father",
+      "new_play_id": 1637,
+      "new_title": "Gunnar's speech from The Outlaw"
+    },
+    {
+      "id": 5794,
+      "old_play_id": 77,
+      "old_title": "Gunnar's speech from The Father",
+      "new_play_id": 1637,
+      "new_title": "Gunnar's speech from The Outlaw"
+    },
+    {
+      "id": 5796,
+      "old_play_id": 77,
+      "old_title": "Valgerd's speech from The Father",
+      "new_play_id": 1637,
+      "new_title": "Valgerd's speech from The Outlaw"
+    },
+    {
+      "id": 5799,
+      "old_play_id": 77,
+      "old_title": "Orm's speech from The Father",
+      "new_play_id": 1637,
+      "new_title": "Orm's speech from The Outlaw"
+    },
+    {
+      "id": 5801,
+      "old_play_id": 77,
+      "old_title": "Thorfinn's speech from The Father",
+      "new_play_id": 1637,
+      "new_title": "Thorfinn's speech from The Outlaw"
+    },
+    {
+      "id": 5803,
+      "old_play_id": 77,
+      "old_title": "Valgerd's speech from The Father",
+      "new_play_id": 1637,
+      "new_title": "Valgerd's speech from The Outlaw"
+    },
+    {
+      "id": 5804,
+      "old_play_id": 77,
+      "old_title": "Mme X's speech from The Father",
+      "new_play_id": 122,
+      "new_title": "Mme X's speech from The Stronger"
+    },
+    {
+      "id": 5805,
+      "old_play_id": 77,
+      "old_title": "Mme X's speech from The Father",
+      "new_play_id": 122,
+      "new_title": "Mme X's speech from The Stronger"
+    },
+    {
+      "id": 5806,
+      "old_play_id": 77,
+      "old_title": "Mme X's speech from The Father",
+      "new_play_id": 122,
+      "new_title": "Mme X's speech from The Stronger"
+    },
+    {
+      "id": 5807,
+      "old_play_id": 77,
+      "old_title": "Mme X's speech from The Father",
+      "new_play_id": 122,
+      "new_title": "Mme X's speech from The Stronger"
+    },
+    {
+      "id": 5808,
+      "old_play_id": 77,
+      "old_title": "Mme X's speech from The Father",
+      "new_play_id": 122,
+      "new_title": "Mme X's speech from The Stronger"
+    },
+    {
+      "id": 5774,
+      "old_play_id": 77,
+      "old_title": "Jean's speech from The Father",
+      "new_play_id": 1636,
+      "new_title": "Jean's speech from Miss Julie"
+    }
+  ],
+  "play_swaps": [
+    {
+      "id": 250,
+      "old_title": "John Galsworthy",
+      "old_author": "The Pigeon"
+    },
+    {
+      "id": 251,
+      "old_title": "John Galsworthy",
+      "old_author": "The Eldest Son"
+    },
+    {
+      "id": 253,
+      "old_title": "John Millington Synge",
+      "old_author": "The Playboy of the Western World"
+    },
+    {
+      "id": 255,
+      "old_title": "John Millington Synge",
+      "old_author": "The Shadow of the Glen"
+    },
+    {
+      "id": 256,
+      "old_title": "Lady Gregory",
+      "old_author": "The Rising of the Moon"
+    },
+    {
+      "id": 257,
+      "old_title": "W.B. Yeats",
+      "old_author": "The Land of Heart's Desire"
+    },
+    {
+      "id": 185,
+      "old_title": "William Congreve",
+      "old_author": "The Way of the World"
+    },
+    {
+      "id": 192,
+      "old_title": "William Congreve",
+      "old_author": "The Double Dealer"
+    },
+    {
+      "id": 232,
+      "old_title": "William Congreve",
+      "old_author": "The Old Bachelor"
+    },
+    {
+      "id": 233,
+      "old_title": "Richard Brinsley Sheridan",
+      "old_author": "The School for Scandal"
+    },
+    {
+      "id": 234,
+      "old_title": "Richard Brinsley Sheridan",
+      "old_author": "The Rivals"
+    },
+    {
+      "id": 235,
+      "old_title": "Richard Brinsley Sheridan",
+      "old_author": "The Critic"
+    },
+    {
+      "id": 236,
+      "old_title": "Richard Brinsley Sheridan",
+      "old_author": "A Trip to Scarborough"
+    },
+    {
+      "id": 241,
+      "old_title": "Arthur Wing Pinero",
+      "old_author": "The Second Mrs. Tanqueray"
+    },
+    {
+      "id": 243,
+      "old_title": "Arthur Wing Pinero",
+      "old_author": "The Magistrate"
+    },
+    {
+      "id": 245,
+      "old_title": "Arthur Wing Pinero",
+      "old_author": "The Notorious Mrs. Ebbsmith"
+    },
+    {
+      "id": 246,
+      "old_title": "Alexandre Dumas fils",
+      "old_author": "The Lady of the Camellias"
+    },
+    {
+      "id": 247,
+      "old_title": "John Galsworthy",
+      "old_author": "The Silver Box"
+    },
+    {
+      "id": 260,
+      "old_title": "John Millington Synge",
+      "old_author": "The Well of the Saints"
+    },
+    {
+      "id": 237,
+      "old_title": "Oliver Goldsmith",
+      "old_author": "She Stoops to Conquer"
+    },
+    {
+      "id": 240,
+      "old_title": "William Wycherley",
+      "old_author": "Love in a Wood"
+    },
+    {
+      "id": 248,
+      "old_title": "John Galsworthy",
+      "old_author": "Strife"
+    },
+    {
+      "id": 249,
+      "old_title": "John Galsworthy",
+      "old_author": "Justice"
+    }
+  ],
+  "play_translators": [
+    {
+      "id": 77,
+      "old": null
+    },
+    {
+      "id": 1636,
+      "old": null
+    },
+    {
+      "id": 122,
+      "old": null
+    },
+    {
+      "id": 1637,
+      "old": null
+    }
+  ]
+}
