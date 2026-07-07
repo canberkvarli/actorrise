@@ -134,11 +134,18 @@ function EmptyState({ demoScriptId }: { demoScriptId: number | null }) {
   const [videoOpen, setVideoOpen] = useState(false);
 
   return (
-    <section className="max-w-lg space-y-6">
-      <p className="text-base text-muted-foreground leading-relaxed">
-        Upload a script and rehearse with a partner reading every other role.
+    <section className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-12 text-center">
+      <p className="stage-direction text-xs sm:text-sm text-muted-foreground/70">
+        (an empty stage. for now.)
       </p>
-      <div className="flex flex-col sm:flex-row gap-3 sm:items-center">
+      <h1 className="mt-4 max-w-xl font-serif text-3xl sm:text-4xl font-medium tracking-[-0.02em] text-balance">
+        Your first <em className="italic text-primary">scene</em> starts here.
+      </h1>
+      <p className="mt-4 max-w-md text-base text-muted-foreground leading-relaxed">
+        Upload any script and rehearse with a partner that reads every other
+        role, holds your lines, and never misses a cue.
+      </p>
+      <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:items-center justify-center">
         <UploadScriptButton variant="primary">Upload a script</UploadScriptButton>
         {demoScriptId != null && (
           <Button
@@ -160,7 +167,7 @@ function EmptyState({ demoScriptId }: { demoScriptId: number | null }) {
           <button
             type="button"
             onClick={() => setVideoOpen(true)}
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            className="mt-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <IconPlayerPlayFilled className="h-3.5 w-3.5" />
             Watch how it works ({FIRST_SCENE_VIDEO.durationLabel})

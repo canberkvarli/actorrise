@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { ForStudentsDiscountCTA } from "@/components/landing/ForStudentsDiscountCTA";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -27,14 +28,21 @@ export const metadata: Metadata = {
 
 export default function ForStudentsPage() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-        Students & educators
-      </h1>
+    <>
+      <StageHero
+        direction="(the student rush.)"
+        title={
+          <>
+            Students & <em className="italic text-primary">educators</em>.
+          </>
+        }
+        lede="I offer discounts because I've been there. Training's expensive and every bit helps."
+      />
+
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <p className="text-lg text-muted-foreground mb-8">
-        I offer discounts because I've been there. Training's expensive and every bit helps.
         Students get a lower rate; teachers, schools, and acting coaches get a discounted rate too.
-        Request a code and we'll review and email you. No codes are shown on the site; you'll get yours by email after approval.
+        Request a code and I'll review and email you. No codes are shown on the site; you'll get yours by email after approval.
       </p>
       <div className="flex flex-wrap gap-4">
         <ForStudentsDiscountCTA />
@@ -42,6 +50,7 @@ export default function ForStudentsPage() {
           <Link href="/">Try the search</Link>
         </Button>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

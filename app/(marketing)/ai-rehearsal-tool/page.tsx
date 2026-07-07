@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -26,15 +27,18 @@ export const metadata: Metadata = {
 
 export default function Page() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-        AI rehearsal tool for actors
-      </h1>
-      <p className="text-lg text-muted-foreground mb-8">
-        Find your material and rehearse it in one place. ActorRise combines AI monologue search with
-        ScenePartner, a rehearsal tool that reads the other lines out loud so you can practice scenes
-        and monologues on your own schedule.
-      </p>
+    <>
+      <StageHero
+        direction="(the work.)"
+        title={
+          <>
+            AI <em className="italic text-primary">rehearsal</em> tool for actors
+          </>
+        }
+        lede="Find your material and rehearse it in one place. ActorRise combines AI monologue search with ScenePartner, a rehearsal tool that reads the other lines out loud so you can practice scenes and monologues on your own schedule."
+      />
+
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <ul className="space-y-3 text-muted-foreground mb-10">
         <li className="flex gap-2">
           <span className="text-primary">&middot;</span>
@@ -130,6 +134,7 @@ export default function Page() {
           </div>
         </div>
       </section>
-    </div>
+      </div>
+    </>
   );
 }

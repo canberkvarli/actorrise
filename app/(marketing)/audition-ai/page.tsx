@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -55,20 +56,24 @@ const faqJsonLd = {
 
 export default function AuditionAiPage() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
+    <>
+      <StageHero
+        direction="(the callback.)"
+        title={
+          <>
+            Audition AI that helps you <em className="italic text-primary">prep</em>, not replace
+            performance
+          </>
+        }
+        lede="ActorRise uses AI to help you find the right material and rehearse, without generating scripts or replacing the work you do as an actor. Everything you search and practice with is from real published plays and film/TV."
+      />
+
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-        Audition AI that helps you prep, not replace performance
-      </h1>
-      <p className="text-lg text-muted-foreground mb-8">
-        ActorRise uses AI to help you find the right material and rehearse, without generating scripts
-        or replacing the work you do as an actor. Everything you search and practice with is from real
-        published plays and film/TV.
-      </p>
       <ul className="space-y-3 text-muted-foreground mb-10">
         <li className="flex gap-2">
           <span className="text-primary">·</span>
@@ -188,6 +193,7 @@ export default function AuditionAiPage() {
           <Link href="/">Try the search</Link>
         </Button>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

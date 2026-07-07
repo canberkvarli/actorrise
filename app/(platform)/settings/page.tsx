@@ -18,7 +18,8 @@ export default function SettingsPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-xl">
-      <h1 className="text-2xl font-semibold mb-6">Account settings</h1>
+      <p className="stage-direction text-xs text-muted-foreground/70 mb-2">(backstage.)</p>
+      <h1 className="font-serif text-2xl font-medium tracking-[-0.02em] mb-6">Account settings</h1>
 
       {user?.email && (
         <p className="text-sm text-muted-foreground mb-6">

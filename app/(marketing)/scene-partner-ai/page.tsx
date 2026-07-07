@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -58,19 +59,23 @@ const faqJsonLd = {
 
 export default function Page() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
+    <>
+      <StageHero
+        direction="(the rehearsal.)"
+        title={
+          <>
+            Scene partner AI: <em className="italic text-primary">rehearse</em> anytime, no
+            scheduling
+          </>
+        }
+        lede="ScenePartner reads the other lines out loud so you can rehearse scenes on your own. Run your sides before an audition, practice film and TV scenes, or work through monologues with context. It listens for your lines and responds with the next cue."
+      />
+
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-        Scene partner AI: rehearse anytime, no scheduling
-      </h1>
-      <p className="text-lg text-muted-foreground mb-8">
-        ScenePartner reads the other lines out loud so you can rehearse scenes on your own. Run your
-        sides before an audition, practice film and TV scenes, or work through monologues with
-        context. It listens for your lines and responds with the next cue.
-      </p>
       <ul className="space-y-3 text-muted-foreground mb-10">
         <li className="flex gap-2">
           <span className="text-primary">&middot;</span>
@@ -161,6 +166,7 @@ export default function Page() {
           </div>
         </div>
       </section>
-    </div>
+      </div>
+    </>
   );
 }

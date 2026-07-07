@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -26,15 +27,21 @@ export const metadata: Metadata = {
 
 export default function ForTeachersPage() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-        For teachers & coaches
-      </h1>
+    <>
+      <StageHero
+        direction="(notes for the faculty.)"
+        title={
+          <>
+            For <em className="italic text-primary">teachers</em> & coaches.
+          </>
+        }
+        lede="Your students find the right audition monologue in seconds, so they spend less time digging and more time rehearsing."
+      />
+
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <p className="text-lg text-muted-foreground mb-8">
-        Your students find the right audition monologue in seconds. ActorRise gives them
-        7,500+ searchable pieces, AI that matches to their type and the casting scenario, and an
-        Overdone filter so they bring something different. So they spend less time digging and more
-        time rehearsing.
+        ActorRise gives them 7,500+ searchable pieces, AI that matches to their type and the
+        casting scenario, and an Overdone filter so they bring something different.
       </p>
       <ul className="space-y-3 text-muted-foreground mb-10">
         <li className="flex gap-2">
@@ -74,6 +81,7 @@ export default function ForTeachersPage() {
           <Link href="/">Explore the search</Link>
         </Button>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

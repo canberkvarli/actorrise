@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -68,21 +69,24 @@ const faqJsonLd = {
 
 export default function MonologueFinderPage() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
+    <>
+      <StageHero
+        direction="(the search.)"
+        title={
+          <>
+            Monologue finder: find your next <em className="italic text-primary">audition piece</em>{" "}
+            in seconds
+          </>
+        }
+        lede="ActorRise is a monologue finder and database built for actors. Instead of scrolling books or generic lists, you describe what you need in plain English and get a shortlist of real monologues in seconds. No keyword guessing, no flipping through anthologies the night before a callback."
+      />
+
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-        Monologue finder: find your next audition piece in seconds
-      </h1>
-      <p className="text-lg text-muted-foreground mb-8">
-        ActorRise is a monologue finder and database built for actors. Instead of scrolling books or
-        generic lists, you describe what you need in plain English and get a shortlist of real
-        monologues in seconds. No keyword guessing, no flipping through anthologies the night before
-        a callback.
-      </p>
       <ul className="space-y-3 text-muted-foreground mb-10">
         <li className="flex gap-2">
           <span className="text-primary">·</span>
@@ -233,6 +237,7 @@ export default function MonologueFinderPage() {
           <Link href="/">Try the monologue finder</Link>
         </Button>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
