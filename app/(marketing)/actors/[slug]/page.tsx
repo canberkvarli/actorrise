@@ -9,6 +9,7 @@ import { useFoundingActor, useMyFoundingActor } from "@/hooks/useFoundingActors"
 import { HeadshotGallery } from "@/components/founding-actor/HeadshotGallery";
 import { SocialLinkIcons } from "@/components/founding-actor/SocialLinkIcons";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StageHero } from "@/components/marketing/StageHero";
 
 export default function FoundingActorPage() {
   const params = useParams();
@@ -57,7 +58,24 @@ export default function FoundingActorPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-12 md:py-20 max-w-5xl">
+    <>
+      <StageHero
+        direction="(now playing.)"
+        title={actor.name}
+        lede={actor.descriptor || undefined}
+      >
+        {canEdit && (
+          <Link
+            href={isOwnPage ? "/founding-actor" : "/admin/founding-actors"}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <IconEdit className="h-4 w-4" />
+            Edit
+          </Link>
+        )}
+      </StageHero>
+
+      <div className="container mx-auto px-4 sm:px-6 py-12 md:py-16 max-w-5xl">
       {/* Back link */}
       <Link
         href="/actors"
@@ -76,26 +94,6 @@ export default function FoundingActorPage() {
 
         {/* Content */}
         <div className="flex flex-col">
-          <div className="flex items-start justify-between gap-3">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground font-brand">
-              {actor.name}
-            </h1>
-            {canEdit && (
-              <Link
-                href={isOwnPage ? "/founding-actor" : "/admin/founding-actors"}
-                className="shrink-0 mt-1 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-              >
-                <IconEdit className="h-4 w-4" />
-                Edit
-              </Link>
-            )}
-          </div>
-          {actor.descriptor && (
-            <p className="mt-1 text-muted-foreground text-base md:text-lg">
-              {actor.descriptor}
-            </p>
-          )}
-
           {/* Social links */}
           <SocialLinkIcons
             socialLinks={actor.social_links}
@@ -128,6 +126,7 @@ export default function FoundingActorPage() {
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

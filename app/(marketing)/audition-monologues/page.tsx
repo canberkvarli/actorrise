@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -67,20 +68,36 @@ const faqJsonLd = {
 
 export default function AuditionMonologuesPage() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
+    <>
+      <StageHero
+        direction="(the audition.)"
+        title={
+          <>
+            <em className="italic text-primary">Audition</em> monologues for every casting need.
+          </>
+        }
+        lede={
+          <>
+            Whether you need classical, contemporary, or comedic audition monologues, ActorRise lets you
+            search 7,500+ real pieces by style, length, gender, and tone. The AI finds what fits, so you
+            spend less time digging and more time rehearsing.
+          </>
+        }
+      >
+        <Button asChild size="lg" className="rounded-full px-6">
+          <Link href="/signup">Get started free</Link>
+        </Button>
+        <Button asChild variant="outline" size="lg" className="rounded-full px-6">
+          <Link href="/">Search audition monologues</Link>
+        </Button>
+      </StageHero>
+
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
       />
 
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-        Audition monologues for every casting need
-      </h1>
-      <p className="text-lg text-muted-foreground mb-8">
-        Whether you need classical, contemporary, or comedic audition monologues, ActorRise lets you
-        search 7,500+ real pieces by style, length, gender, and tone. The AI finds what fits, so you
-        spend less time digging and more time rehearsing.
-      </p>
       <ul className="space-y-3 text-muted-foreground mb-10">
         <li className="flex gap-2">
           <span className="text-primary">·</span>
@@ -113,14 +130,6 @@ export default function AuditionMonologuesPage() {
           <span>Overdone filter so you can bring something different to the room</span>
         </li>
       </ul>
-      <div className="flex flex-wrap gap-4 mb-16">
-        <Button asChild size="lg" className="rounded-full px-6">
-          <Link href="/signup">Get started free</Link>
-        </Button>
-        <Button asChild variant="outline" size="lg" className="rounded-full px-6">
-          <Link href="/">Search audition monologues</Link>
-        </Button>
-      </div>
 
       <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4">
         How to pick the right audition monologue
@@ -244,6 +253,7 @@ export default function AuditionMonologuesPage() {
           <Link href="/">Search audition monologues</Link>
         </Button>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

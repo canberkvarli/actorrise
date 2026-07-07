@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -28,20 +29,26 @@ const SEARCH_QUERY = "comedic monologue woman under 2 minutes";
 
 export default function Page() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-        Comedic monologue for woman under 2 minutes
-      </h1>
-      <p className="text-lg text-muted-foreground mb-8">
-        One of the most common searches we see. ActorRise has thousands of comedic monologues for
-        women, and you can filter by length, tone, and style. Or just describe what you need in
-        plain English.
-      </p>
+    <StageHero
+      direction="(quick comedy.)"
+      title={
+        <>
+          <em className="italic text-primary">Comedic</em> monologue for woman under 2 minutes
+        </>
+      }
+      lede={
+        <>
+          One of the most common searches we see. ActorRise has thousands of comedic monologues for
+          women, and you can filter by length, tone, and style. Or just describe what you need in
+          plain English.
+        </>
+      }
+    >
       <Button asChild size="lg" className="rounded-full px-6">
         <Link href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
           Search 7,500+ monologues
         </Link>
       </Button>
-    </div>
+    </StageHero>
   );
 }

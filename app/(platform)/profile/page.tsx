@@ -19,7 +19,8 @@ export default function ProfilePage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Actor Profile</h1>
+        <p className="stage-direction text-xs text-muted-foreground/70 mb-2">(your dressing room.)</p>
+        <h1 className="font-serif text-3xl font-medium tracking-[-0.02em] mb-2">Actor Profile</h1>
         <p className="text-muted-foreground">
           Better profile = better matches and recommendations.
         </p>

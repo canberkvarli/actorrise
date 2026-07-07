@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -24,10 +25,13 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-3xl">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-2">
-        Terms of Service
-      </h1>
+    <>
+      <StageHero
+        direction="(the house rules.)"
+        title={<>Terms of Service</>}
+      />
+
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-3xl">
       <p className="text-sm text-muted-foreground mb-10">
         Last updated: February 2025
       </p>
@@ -177,6 +181,7 @@ export default function TermsPage() {
         {" · "}
         <Link href="/privacy" className="text-foreground underline hover:no-underline">Privacy Policy</Link>
       </p>
-    </div>
+      </div>
+    </>
   );
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -28,23 +29,32 @@ const SEARCH_QUERY = "Shakespeare monologue for audition";
 
 export default function Page() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-        Shakespeare monologues for auditions
-      </h1>
-      <p className="text-lg text-muted-foreground mb-8">
-        Hamlet, Macbeth, Twelfth Night, A Midsummer Night&apos;s Dream, and dozens more. Search
-        Shakespeare monologues by character, tone, or length. The AI understands what you need, so
-        you can search like &quot;angry speech from a king&quot; or &quot;comedic woman from a
-        Shakespeare comedy&quot; and get real matches.
-      </p>
-      <Button asChild size="lg" className="rounded-full px-6">
-        <Link href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
-          Search Shakespeare monologues
-        </Link>
-      </Button>
+    <>
+      <StageHero
+        direction="(the bard.)"
+        title={
+          <>
+            <em className="italic text-primary">Shakespeare</em> monologues for auditions.
+          </>
+        }
+        lede={
+          <>
+            Hamlet, Macbeth, Twelfth Night, A Midsummer Night&apos;s Dream, and dozens more. Search
+            Shakespeare monologues by character, tone, or length. The AI understands what you need, so
+            you can search like &quot;angry speech from a king&quot; or &quot;comedic woman from a
+            Shakespeare comedy&quot; and get real matches.
+          </>
+        }
+      >
+        <Button asChild size="lg" className="rounded-full px-6">
+          <Link href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
+            Search Shakespeare monologues
+          </Link>
+        </Button>
+      </StageHero>
 
-      <div className="mt-12 space-y-3 text-sm text-muted-foreground">
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
+      <div className="mt-0 space-y-3 text-sm text-muted-foreground">
         <p>
           Also browse{" "}
           <Link href="/monologues/classical-monologues" className="text-foreground underline hover:no-underline">
@@ -104,6 +114,7 @@ export default function Page() {
           </div>
         </div>
       </section>
-    </div>
+      </div>
+    </>
   );
 }
