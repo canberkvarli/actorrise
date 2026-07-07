@@ -1347,11 +1347,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       {/* Hero Search Section - compact on mobile */}
       <div className="mb-4 sm:mb-6 md:mb-10">
         <div className="text-center mb-3 sm:mb-4 md:mb-8">
-          <p className="hidden md:inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-primary font-medium mb-4">
-            <IconSparkles className="h-3 w-3" />
-            AI-Powered Search
+          <p className="hidden md:block stage-direction text-xs text-muted-foreground/70 mb-3">
+            (the search.)
           </p>
-          <h1 className="text-2xl sm:text-3xl md:text-5xl font-bold tracking-tight mb-1 md:mb-3">Find your next piece</h1>
+          <h1 className="font-serif text-2xl sm:text-3xl md:text-5xl font-medium tracking-[-0.02em] mb-1 md:mb-3">
+            Find your next <em className="italic text-primary">piece</em>
+          </h1>
           <p className="hidden md:block text-muted-foreground text-lg max-w-lg mx-auto">
             Describe what you&apos;re looking for in plain English; filters narrow results or let you browse by criteria.
           </p>

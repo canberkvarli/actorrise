@@ -91,7 +91,8 @@ export function RehearseHub() {
     >
       {/* Header */}
       <header>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+        <p className="stage-direction text-xs text-muted-foreground/70">(your repertoire.)</p>
+        <h1 className="mt-2 font-serif text-3xl font-medium tracking-[-0.02em] sm:text-4xl">
           Collection
         </h1>
         <div
@@ -108,7 +109,10 @@ export function RehearseHub() {
       ) : isEmpty ? (
         <div className="flex flex-col items-center justify-center gap-5 py-24 text-center">
           <div className="space-y-1.5">
-            <p className="text-lg font-medium text-foreground">
+            <p className="stage-direction text-xs text-muted-foreground/70">
+              (the shelf is bare.)
+            </p>
+            <p className="font-serif text-xl font-medium text-foreground">
               Nothing here yet.
             </p>
             <p className="text-sm text-muted-foreground">
