@@ -3,25 +3,30 @@
 import { useFoundingActors } from "@/hooks/useFoundingActors";
 import { FoundingActorCard } from "@/components/founding-actor/FoundingActorCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { StageHero } from "@/components/marketing/StageHero";
 
 export default function ActorsPage() {
   const { data: actors, isLoading } = useFoundingActors();
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-16 md:py-24">
-      <div className="max-w-5xl mx-auto">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground font-brand">
-            Meet Our Founding Actors
-          </h1>
-          <p className="mt-3 text-muted-foreground text-base md:text-lg max-w-2xl mx-auto">
+    <>
+      <StageHero
+        direction="(the company.)"
+        title={
+          <>
+            Meet the <em className="italic text-primary">founding</em> actors
+          </>
+        }
+        lede={
+          <>
             The actors who believed in ActorRise from day one. They shape the
-            platform, provide feedback, and help us build something that truly
+            platform, provide feedback, and help build something that truly
             serves the craft.
-          </p>
-        </div>
-
+          </>
+        }
+      />
+      <div className="container mx-auto px-4 sm:px-6 py-12 md:py-16">
+        <div className="max-w-5xl mx-auto">
         {/* Grid */}
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -55,7 +60,8 @@ export default function ActorsPage() {
             No founding actors to display yet.
           </p>
         )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

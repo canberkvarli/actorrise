@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -25,15 +26,23 @@ export const metadata: Metadata = {
 
 export default function SourcesPage() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-        Sources & copyright
-      </h1>
-      <p className="text-lg text-muted-foreground mb-6">
-        ActorRise is a search and discovery tool for monologues. We do not sell or distribute
-        copyrighted play text. All full text we host comes from legal, traceable sources.
-      </p>
+    <>
+      <StageHero
+        direction="(the source texts.)"
+        title={
+          <>
+            Sources &amp; <em className="italic text-primary">copyright</em>.
+          </>
+        }
+        lede={
+          <>
+            ActorRise is a search and discovery tool for monologues. We do not sell or distribute
+            copyrighted play text. All full text we host comes from legal, traceable sources.
+          </>
+        }
+      />
 
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <h2 className="text-xl font-semibold text-foreground mt-8 mb-3">Where our content comes from</h2>
       <ul className="space-y-3 text-muted-foreground mb-6">
         <li className="flex gap-2">
@@ -78,6 +87,7 @@ export default function SourcesPage() {
         </Link>
         .
       </p>
-    </div>
+      </div>
+    </>
   );
 }
