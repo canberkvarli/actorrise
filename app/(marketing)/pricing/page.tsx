@@ -16,6 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const faqs = [
   {
@@ -186,25 +187,19 @@ export default function PricingPage() {
   }
 
   return (
+    <>
+    <StageHero
+      direction="(the ticket.)"
+      title={
+        <>
+          Your <em className="italic text-primary">craft</em>, your plan.
+        </>
+      }
+      lede="Start free, no credit card. Upgrade when you need more."
+    />
     <div className="container mx-auto px-4 py-10 sm:py-16 max-w-7xl">
       {/* Header */}
       <div className="text-center mb-8 sm:mb-12">
-        <motion.h1
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-3xl sm:text-4xl lg:text-5xl font-bold mb-3 sm:mb-4"
-        >
-          Your craft, your plan.
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="text-base sm:text-lg text-muted-foreground max-w-2xl mx-auto"
-        >
-          Start free, upgrade when you need more.
-        </motion.p>
-
         {/* Founding member banner */}
         <motion.div
           initial={{ opacity: 0, y: -10 }}
@@ -365,5 +360,6 @@ export default function PricingPage() {
         <FAQAccordion />
       </div>
     </div>
+    </>
   );
 }
