@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -28,20 +29,26 @@ const SEARCH_QUERY = "dramatic monologue contemporary play";
 
 export default function Page() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-        Dramatic monologue from a contemporary play
-      </h1>
-      <p className="text-lg text-muted-foreground mb-8">
-        Looking for something serious, modern, and not overdone? We have thousands of dramatic
-        monologues from contemporary plays. Search by emotion, relationship, or length. No keyword
-        guessing.
-      </p>
+    <StageHero
+      direction="(modern drama.)"
+      title={
+        <>
+          Dramatic monologue from a <em className="italic text-primary">contemporary</em> play
+        </>
+      }
+      lede={
+        <>
+          Looking for something serious, modern, and not overdone? We have thousands of dramatic
+          monologues from contemporary plays. Search by emotion, relationship, or length. No keyword
+          guessing.
+        </>
+      }
+    >
       <Button asChild size="lg" className="rounded-full px-6">
         <Link href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
           Search 7,500+ monologues
         </Link>
       </Button>
-    </div>
+    </StageHero>
   );
 }

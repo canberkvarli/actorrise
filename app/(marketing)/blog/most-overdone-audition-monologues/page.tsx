@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { StageHero } from "@/components/marketing/StageHero";
 import { BLOG_POSTS } from "@/lib/blog/posts";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
@@ -48,7 +49,16 @@ function formatDate(iso: string) {
 
 export default function Page() {
   return (
-    <article className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
+    <>
+      <StageHero
+        direction="(warhorse warning.)"
+        title={
+          <>
+            The most <em className="italic text-primary">overdone</em> audition monologues (and what to do instead)
+          </>
+        }
+      />
+      <article className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
@@ -57,9 +67,6 @@ export default function Page() {
       <p className="text-xs uppercase tracking-widest text-muted-foreground mb-3">
         {formatDate(post.date)} · {post.readingMinutes} min read · by Canberk
       </p>
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-6">
-        The most overdone audition monologues (and what to do instead)
-      </h1>
 
       <div className="space-y-5 text-muted-foreground leading-relaxed">
         <p>
@@ -199,5 +206,6 @@ export default function Page() {
         </Button>
       </div>
     </article>
+    </>
   );
 }

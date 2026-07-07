@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { API_URL } from "@/lib/api";
+import { StageHero } from "@/components/marketing/StageHero";
 
 type LeadMagnetItem = {
   id: number;
@@ -99,15 +100,23 @@ export default function FiveMonologuesPage() {
   }
 
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-        5 Monologues Casting Directors Would Rather See
-      </h1>
-      <p className="text-lg text-muted-foreground mb-8">
-        Tired of overdone pieces? Get a curated list of fresh monologues, the kind that make
-        casting directors sit up. Enter your email and we&apos;ll send you the list and links to
-        find them on ActorRise.
-      </p>
+    <>
+      <StageHero
+        direction="(your shortlist.)"
+        title={
+          <>
+            5 monologues casting directors would rather <em className="italic text-primary">see</em>
+          </>
+        }
+        lede={
+          <>
+            Tired of overdone pieces? Get a curated list of fresh monologues, the kind that make
+            casting directors sit up. Enter your email and we&apos;ll send you the list and links to
+            find them on ActorRise.
+          </>
+        }
+      />
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-2">
           <Label htmlFor="lead-magnet-email">Email</Label>
@@ -133,6 +142,7 @@ export default function FiveMonologuesPage() {
         No spam. We&apos;ll only use your email to send this list and occasional ActorRise updates.
         Unsubscribe anytime.
       </p>
-    </div>
+      </div>
+    </>
   );
 }
