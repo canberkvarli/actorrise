@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { StageHero } from "@/components/marketing/StageHero";
 import { VideoSchema } from "@/components/seo/VideoSchema";
 import { GuideVideoCard } from "@/components/guides/GuideVideoCard";
 
@@ -51,15 +52,23 @@ const GUIDES: Guide[] = [
 
 export default function GuidesPage() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-        Guides & tutorials for actors
-      </h1>
-      <p className="text-lg text-muted-foreground mb-12">
-        Short videos on getting the most out of ActorRise, from finding the right monologue to
-        rehearsing with ScenePartner. More are on the way.
-      </p>
+    <>
+      <StageHero
+        direction="(director's notes.)"
+        title={
+          <>
+            Guides &amp; tutorials for <em className="italic text-primary">actors</em>.
+          </>
+        }
+        lede={
+          <>
+            Short videos on getting the most out of ActorRise, from finding the right monologue to
+            rehearsing with ScenePartner. More are on the way.
+          </>
+        }
+      />
 
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <div className="space-y-16">
         {GUIDES.map((guide) => (
           <section key={guide.youtubeId} aria-label={guide.title}>
@@ -101,6 +110,7 @@ export default function GuidesPage() {
           </Button>
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

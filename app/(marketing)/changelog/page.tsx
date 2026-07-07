@@ -3,6 +3,7 @@ import { readFile } from "fs/promises";
 import path from "path";
 import type { ChangelogData, ChangelogEntry, ChangelogCategory } from "@/lib/changelog";
 import Image from "next/image";
+import { StageHero } from "@/components/marketing/StageHero";
 import { cn } from "@/lib/utils";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
@@ -68,14 +69,14 @@ export default async function ChangelogPage() {
   );
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-12 md:py-20 max-w-2xl">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-2 font-brand">
-        Changelog
-      </h1>
-      <p className="text-sm text-muted-foreground mb-10">
-        What&apos;s new in ActorRise
-      </p>
+    <>
+      <StageHero
+        direction="(the callsheet.)"
+        title={<>Changelog</>}
+        lede={<>What&apos;s new in ActorRise</>}
+      />
 
+      <div className="container mx-auto px-4 sm:px-6 py-12 md:py-16 max-w-2xl">
       <ul className="space-y-8">
         {sorted.map((entry: ChangelogEntry) => (
           <li key={entry.id} className="border-b border-border/60 pb-8 last:border-0 last:pb-0">
@@ -113,6 +114,7 @@ export default async function ChangelogPage() {
       {sorted.length === 0 && (
         <p className="text-muted-foreground">No updates yet. Check back soon.</p>
       )}
-    </div>
+      </div>
+    </>
   );
 }

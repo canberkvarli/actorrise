@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { StageHero } from "@/components/marketing/StageHero";
 import { BLOG_POSTS } from "@/lib/blog/posts";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
@@ -30,15 +31,19 @@ function formatDate(iso: string) {
 
 export default function BlogIndexPage() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-        Blog
-      </h1>
-      <p className="text-lg text-muted-foreground mb-12">
-        Practical writing for actors on choosing monologues, prepping auditions, and rehearsing
-        smarter. Written by an actor, not a marketing team.
-      </p>
+    <>
+      <StageHero
+        direction="(from the wings.)"
+        title={<>Blog</>}
+        lede={
+          <>
+            Practical writing for actors on choosing monologues, prepping auditions, and rehearsing
+            smarter. Written by an actor, not a marketing team.
+          </>
+        }
+      />
 
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <ul className="space-y-8">
         {BLOG_POSTS.map((post) => (
           <li key={post.slug} className="border-b border-border/60 pb-8 last:border-0">
@@ -60,6 +65,7 @@ export default function BlogIndexPage() {
           </li>
         ))}
       </ul>
-    </div>
+      </div>
+    </>
   );
 }

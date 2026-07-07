@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -28,22 +29,31 @@ const SEARCH_QUERY = "dramatic monologue for audition";
 
 export default function Page() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-4">
-        Dramatic monologues for auditions
-      </h1>
-      <p className="text-lg text-muted-foreground mb-8">
-        Serious, emotional, high-stakes. Search dramatic monologues by tone, era, or character type.
-        Whether you need something gut-wrenching or quietly intense, the AI matches you to real
-        pieces from published plays. No keyword guessing.
-      </p>
-      <Button asChild size="lg" className="rounded-full px-6">
-        <Link href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
-          Search dramatic monologues
-        </Link>
-      </Button>
+    <>
+      <StageHero
+        direction="(the dramatic register.)"
+        title={
+          <>
+            Dramatic monologues for <em className="italic text-primary">auditions</em>.
+          </>
+        }
+        lede={
+          <>
+            Serious, emotional, high-stakes. Search dramatic monologues by tone, era, or character type.
+            Whether you need something gut-wrenching or quietly intense, the AI matches you to real
+            pieces from published plays. No keyword guessing.
+          </>
+        }
+      >
+        <Button asChild size="lg" className="rounded-full px-6">
+          <Link href={`/search?q=${encodeURIComponent(SEARCH_QUERY)}`}>
+            Search dramatic monologues
+          </Link>
+        </Button>
+      </StageHero>
 
-      <div className="mt-12 space-y-3 text-sm text-muted-foreground">
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
+      <div className="mt-0 space-y-3 text-sm text-muted-foreground">
         <p>
           Looking for something specific? Try{" "}
           <Link href="/shakespeare-monologues" className="text-foreground underline hover:no-underline">
@@ -102,6 +112,7 @@ export default function Page() {
           </div>
         </div>
       </section>
-    </div>
+      </div>
+    </>
   );
 }
