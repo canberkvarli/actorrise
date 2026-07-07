@@ -113,7 +113,8 @@ export default function BillingPage() {
   return (
     <div className="container mx-auto px-4 py-6 max-w-lg">
       <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
-        <h1 className="text-2xl font-bold text-foreground">Billing</h1>
+        <p className="stage-direction text-xs text-muted-foreground/70 mb-1">(the box office.)</p>
+        <h1 className="font-serif text-2xl font-medium tracking-[-0.02em] text-foreground">Billing</h1>
         <p className="text-muted-foreground text-sm mt-0.5">
           Manage your plan and usage.
         </p>

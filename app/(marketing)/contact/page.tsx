@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ContactPageForm } from "@/components/contact/ContactPageForm";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -25,14 +26,18 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-3xl">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-2">
-        Contact
-      </h1>
-      <p className="text-muted-foreground mb-10">
-        Have a question, feedback, or need support? I&apos;d love to hear from you.
-      </p>
+    <>
+      <StageHero
+        direction="(a note to the director.)"
+        title={
+          <>
+            Say <em className="italic text-primary">hello</em>.
+          </>
+        }
+        lede="Questions, feedback, bug reports, anything. It goes straight to my inbox, and I read every message."
+      />
 
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-3xl">
       <div className="space-y-8 text-muted-foreground">
         <section>
           <ContactPageForm />
@@ -76,6 +81,7 @@ export default function ContactPage() {
           </ul>
         </section>
       </div>
-    </div>
+      </div>
+    </>
   );
 }

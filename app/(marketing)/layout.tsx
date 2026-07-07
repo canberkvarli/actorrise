@@ -14,60 +14,60 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
   return (
     <div className="min-h-screen flex flex-col bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-20 border-b border-border/40 bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="dark sticky top-0 z-20 border-b border-[var(--stage-line)] bg-[color-mix(in_oklab,var(--stage)_84%,transparent)] backdrop-blur-md text-[var(--stage-fg)]">
         <div className="container mx-auto px-4 sm:px-6 py-3">
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <Link href="/" className="flex items-center text-foreground hover:opacity-80 transition-opacity">
-                <BrandLogo size="header" />
+              <Link href="/" className="flex items-center hover:opacity-85 transition-opacity">
+                <BrandLogo size="header" onDark />
               </Link>
             </div>
-            <nav className="hidden md:flex items-center gap-1 rounded-full border border-border/60 bg-card/60 px-2 py-1">
+            <nav className="hidden md:flex items-center gap-1 rounded-full border border-[var(--stage-line)] bg-[var(--stage-raised)]/70 px-2 py-1">
               <Link
                 href="/"
-                className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
+                className="px-3 py-1.5 text-sm text-[var(--stage-muted)] hover:text-[var(--stage-fg)] transition-colors"
               >
                 Home
               </Link>
-              <span className="h-4 w-px bg-border/60" />
+              <span className="h-4 w-px bg-[var(--stage-line)]" />
               <Link
                 href="/about"
-                className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
+                className="px-3 py-1.5 text-sm text-[var(--stage-muted)] hover:text-[var(--stage-fg)] transition-colors"
               >
                 About
               </Link>
-              <span className="h-4 w-px bg-border/60" />
+              <span className="h-4 w-px bg-[var(--stage-line)]" />
               <Link
                 href="/pricing"
-                className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
+                className="px-3 py-1.5 text-sm text-[var(--stage-muted)] hover:text-[var(--stage-fg)] transition-colors"
               >
                 Pricing
               </Link>
-              <span className="h-4 w-px bg-border/60" />
+              <span className="h-4 w-px bg-[var(--stage-line)]" />
               <Link
                 href="/guides"
-                className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
+                className="px-3 py-1.5 text-sm text-[var(--stage-muted)] hover:text-[var(--stage-fg)] transition-colors"
               >
                 Guides
               </Link>
-              <span className="h-4 w-px bg-border/60" />
+              <span className="h-4 w-px bg-[var(--stage-line)]" />
               <Link
                 href="/for-students"
-                className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
+                className="px-3 py-1.5 text-sm text-[var(--stage-muted)] hover:text-[var(--stage-fg)] transition-colors"
               >
                 Students & educators
               </Link>
-              <span className="h-4 w-px bg-border/60" />
+              <span className="h-4 w-px bg-[var(--stage-line)]" />
               <Link
                 href="/changelog"
-                className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
+                className="px-3 py-1.5 text-sm text-[var(--stage-muted)] hover:text-[var(--stage-fg)] transition-colors"
               >
                 What&apos;s New
               </Link>
-              <span className="h-4 w-px bg-border/60" />
+              <span className="h-4 w-px bg-[var(--stage-line)]" />
               <Link
                 href="/contact"
-                className="px-3 py-1.5 text-sm text-foreground/90 hover:text-foreground transition-colors"
+                className="px-3 py-1.5 text-sm text-[var(--stage-muted)] hover:text-[var(--stage-fg)] transition-colors"
               >
                 Contact
               </Link>

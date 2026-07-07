@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { StageHero } from "@/components/marketing/StageHero";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -24,11 +25,18 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <div className="container mx-auto px-6 py-16 md:py-24 max-w-3xl">
-      <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-8 font-brand">
-        About ActorRise
-      </h1>
+    <>
+      <StageHero
+        direction="(enter, stage left: the founder.)"
+        title={
+          <>
+            Built by an <em className="italic text-primary">actor</em>, for actors.
+          </>
+        }
+        lede="ActorRise is a solo project. One actor, one codebase, and a strong opinion about where your rehearsal time should go."
+      />
 
+      <div className="container mx-auto px-6 py-12 md:py-16 max-w-3xl">
       <div className="prose prose-neutral dark:prose-invert max-w-none space-y-6 text-muted-foreground">
         <p className="text-base md:text-lg leading-relaxed">
           I&apos;m Canberk. I act with Inferno Theater in Berkeley and I&apos;m also a software engineer.
@@ -85,6 +93,7 @@ export default function AboutPage() {
           Contact
         </Link>
       </p>
-    </div>
+      </div>
+    </>
   );
 }
