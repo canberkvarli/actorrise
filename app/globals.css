@@ -259,6 +259,119 @@
   animation: section-reveal 0.45s cubic-bezier(0.25, 0.1, 0.25, 1) both;
 }
 
+/* ============================================================
+   Ghost Light — landing/marketing stage aesthetic
+   A dark warm stage, one spotlight, orange as the single hot accent.
+   These tokens are theme-independent: the stage is always dark.
+   ============================================================ */
+:root {
+  --stage: oklch(0.16 0.015 50);
+  --stage-deep: oklch(0.115 0.012 50);
+  --stage-raised: oklch(0.20 0.018 52);
+  --stage-fg: oklch(0.95 0.012 78);
+  --stage-muted: oklch(0.67 0.022 62);
+  --stage-faint: oklch(0.46 0.02 58);
+  --stage-line: oklch(0.30 0.02 55);
+  --stage-glow: oklch(0.72 0.17 55);
+}
+
+/* Scene wrapper: sets stage colors so children can use them plainly */
+.stage-scene {
+  background: var(--stage);
+  color: var(--stage-fg);
+}
+
+/* Courier stage directions — "(lights up.)" eyebrows */
+.stage-direction {
+  font-family: var(--font-typewriter);
+  font-style: italic;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+}
+
+/* Cursor-following spotlight (driven by --spot-x/--spot-y from JS) */
+.stage-spotlight {
+  background:
+    radial-gradient(
+      42rem circle at var(--spot-x, 50%) var(--spot-y, 32%),
+      color-mix(in oklab, var(--stage-glow) 16%, transparent) 0%,
+      color-mix(in oklab, var(--stage-glow) 7%, transparent) 32%,
+      transparent 68%
+    );
+}
+
+/* Warm overhead wash so the hero never reads as flat black */
+.stage-wash {
+  background: radial-gradient(
+    120% 90% at 50% -20%,
+    color-mix(in oklab, var(--stage-glow) 11%, transparent) 0%,
+    transparent 60%
+  );
+}
+
+/* Film grain — feTurbulence noise, keeps the dark sections from banding */
+.stage-grain::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Ghost-light flicker for the hero bulb accent */
+@keyframes ghost-flicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  93% { opacity: 0.55; }
+  94% { opacity: 0.9; }
+  96% { opacity: 0.65; }
+  97% { opacity: 1; }
+}
+.animate-ghost-flicker {
+  animation: ghost-flicker 7s linear infinite;
+}
+
+/* Marquee of source titles */
+@keyframes marquee-left {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+@keyframes marquee-right {
+  from { transform: translateX(-50%); }
+  to   { transform: translateX(0); }
+}
+.animate-marquee-left {
+  animation: marquee-left 48s linear infinite;
+}
+.animate-marquee-right {
+  animation: marquee-right 56s linear infinite;
+}
+.marquee-mask {
+  mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
+}
+
+/* Hero line reveal — rises like a curtain, pure CSS so it runs from first paint */
+@keyframes stage-rise {
+  from { opacity: 0; transform: translateY(0.55em); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-stage-rise {
+  animation: stage-rise 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-marquee-left,
+  .animate-marquee-right,
+  .animate-ghost-flicker {
+    animation: none;
+  }
+  .animate-stage-rise {
+    animation-duration: 0.01ms;
+  }
+}
+
 /* Search bar jitter when submitting empty */
 @keyframes search-jitter {
   0%, 100% { transform: translateX(0); }
