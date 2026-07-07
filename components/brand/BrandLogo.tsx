@@ -32,9 +32,12 @@ const sizes: Record<Size, { iconClass: string; fullLogoClass: string }> = {
 export function BrandLogo({
   size = "header",
   iconOnly = false,
+  onDark = false,
 }: {
   size?: Size;
   iconOnly?: boolean;
+  /** Force the white-text wordmark for surfaces that are always dark (e.g. the stage header). */
+  onDark?: boolean;
 }) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -56,7 +59,8 @@ export function BrandLogo({
     );
   }
 
-  const logoSrc = mounted && resolvedTheme === "light" ? LOGO_WITH_TEXT_DARK : LOGO_WITH_TEXT;
+  const logoSrc =
+    !onDark && mounted && resolvedTheme === "light" ? LOGO_WITH_TEXT_DARK : LOGO_WITH_TEXT;
 
   return (
     <Image

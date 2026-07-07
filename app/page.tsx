@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { LandingPageAnimated } from "@/components/landing/LandingPageAnimated";
+import { LandingGhostLight } from "@/components/landing/v2/LandingGhostLight";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -10,5 +10,5 @@ export const metadata: Metadata = {
 };
 
 export default function LandingPage() {
-  return <LandingPageAnimated />;
+  return <LandingGhostLight />;
 }
