@@ -601,10 +601,10 @@ function SearchContent() {
             emotion: last.filters.emotion ?? "",
             theme: last.filters.theme ?? "",
             category: last.filters.category ?? "",
-            tone: (last.filters as any).tone ?? "",
-            difficulty: (last.filters as any).difficulty ?? "",
-            author: (last.filters as any).author ?? "",
-            max_duration: (last.filters as any).max_duration ?? "",
+            tone: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).tone ?? "",
+            difficulty: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).difficulty ?? "",
+            author: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).author ?? "",
+            max_duration: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).max_duration ?? "",
           });
           const m = last.filters.max_overdone_score;
           setMaxOverdoneScore(typeof m === "number" && m >= 0 && m <= 1 ? m : last.filters.exclude_overdone === "true" ? 0.3 : 1);
@@ -655,10 +655,10 @@ function SearchContent() {
           emotion: last.filters.emotion ?? "",
           theme: last.filters.theme ?? "",
           category: last.filters.category ?? "",
-          tone: (last.filters as any).tone ?? "",
-          difficulty: (last.filters as any).difficulty ?? "",
-          author: (last.filters as any).author ?? "",
-          max_duration: (last.filters as any).max_duration ?? "",
+          tone: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).tone ?? "",
+          difficulty: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).difficulty ?? "",
+          author: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).author ?? "",
+          max_duration: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).max_duration ?? "",
         });
         const m = last.filters.max_overdone_score;
         setMaxOverdoneScore(typeof m === "number" && m >= 0 && m <= 1 ? m : last.filters.exclude_overdone === "true" ? 0.3 : 1);
@@ -1004,10 +1004,11 @@ function SearchContent() {
       } catch {
         // ignore
       }
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as { response?: { status?: number }; message?: string };
       const isProfileError =
-        error?.response?.status === 400 ||
-        (typeof error?.message === "string" && /profile|complete your profile|actor profile not found/i.test(error.message));
+        err?.response?.status === 400 ||
+        (typeof err?.message === "string" && /profile|complete your profile|actor profile not found/i.test(err.message));
       if (isProfileError) {
         setShowProfileCompleteModal(true);
       } else {

@@ -166,14 +166,14 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   }
 
   return (
-    <div className="relative flex h-full w-full flex-col overflow-hidden bg-[#0b0908] text-[#ece5d8]">
-      {/* Ambient stage vignette */}
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-[#1a1512] text-[#f4eee2]">
+      {/* Ambient stage: warm wash from above, soft shadow pooling at the foot */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(120% 80% at 50% 8%, rgba(203,75,0,0.10), transparent 55%), radial-gradient(100% 60% at 50% 120%, rgba(0,0,0,0.6), transparent)",
+            "radial-gradient(135% 95% at 50% -8%, rgba(255,140,64,0.18), transparent 58%), linear-gradient(180deg, rgba(38,28,22,0.55) 0%, transparent 30%, transparent 68%, rgba(0,0,0,0.5) 100%)",
         }}
       />
 
@@ -187,15 +187,13 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
           <IconArrowLeft className="h-5 w-5" />
         </button>
         <div className="min-w-0">
-          <p className="truncate text-[0.68rem] uppercase tracking-[0.22em] text-white/40">
+          <h1 className="truncate text-xl leading-tight text-white" style={{ fontFamily: SERIF }}>
             {monologue.character_name}
-          </p>
-          <h1 className="truncate text-sm text-white/70" style={{ fontFamily: SERIF }}>
-            {monologue.title}
           </h1>
+          <p className="truncate text-xs text-white/50">{monologue.title}</p>
         </div>
         {started && !completed && (
-          <span className="ml-auto text-[0.68rem] uppercase tracking-[0.22em] text-white/30">
+          <span className="ml-auto text-[0.7rem] uppercase tracking-[0.22em] text-white/45">
             {Math.min(activeIndex + 1, lines.length)} / {lines.length}
           </span>
         )}
@@ -330,7 +328,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             <div className="flex h-16 items-end justify-center">
               {activeIndex > 0 && (
                 <p
-                  className="max-w-2xl text-center text-base leading-relaxed text-white/20"
+                  className="max-w-2xl text-center text-base leading-relaxed text-white/35"
                   style={{ fontFamily: SERIF }}
                 >
                   {lines[activeIndex - 1]}
@@ -363,8 +361,8 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                         key={i}
                         className="transition-all duration-300"
                         style={{
-                          color: spoken ? "#FF8A3D" : masked ? "transparent" : "rgba(236,229,216,0.85)",
-                          textShadow: spoken ? "0 0 22px rgba(255,120,40,0.45)" : "none",
+                          color: spoken ? "#FF9147" : masked ? "transparent" : "rgba(246,240,229,0.94)",
+                          textShadow: spoken ? "0 0 26px rgba(255,130,50,0.5)" : "none",
                         }}
                       >
                         {masked ? (
@@ -383,7 +381,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             <div className="flex h-16 items-start justify-center">
               {activeIndex + 1 < lines.length && (
                 <p
-                  className="max-w-2xl text-center text-base leading-relaxed text-white/10"
+                  className="max-w-2xl text-center text-base leading-relaxed text-white/25"
                   style={{ fontFamily: SERIF }}
                 >
                   {offBook ? "" : lines[activeIndex + 1]}
