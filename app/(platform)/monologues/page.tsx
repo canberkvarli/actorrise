@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { toastBookmark } from "@/lib/toast";
 import { trackSearchPerformed, trackResultClicked } from "@/lib/analytics";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconEye, IconEyeOff, IconDownload, IconAdjustments, IconTargetArrow, IconSend, IconFlag, IconDeviceTv, IconCheck } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconEye, IconEyeOff, IconDownload, IconAdjustments, IconSend, IconFlag, IconDeviceTv, IconCheck } from "@tabler/icons-react";
 
 // Fun loading messages for AI search (theater)
 const LOADING_MESSAGES = [
@@ -63,7 +63,6 @@ import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
 import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueResultCard } from "@/components/monologue/MonologueResultCard";
@@ -1546,28 +1545,17 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </div>
 
             {searchMode === "plays" && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      id="search-find-for-me"
-                      onClick={handleFindForMe}
-                      disabled={isLoading}
-                      variant="outline"
-                      size="sm"
-                      className="gap-2 min-h-[44px] md:min-h-0"
-                    >
-                      <IconSparkles className="h-4 w-4 text-primary" />
-                      Find for me
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p className="text-sm">
-                      Get AI-powered recommendations based on your actor profile.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Button
+                id="search-find-for-me"
+                onClick={handleFindForMe}
+                disabled={isLoading}
+                variant="outline"
+                size="sm"
+                className="gap-2 min-h-[44px] md:min-h-0"
+              >
+                <IconSparkles className="h-4 w-4 text-primary" />
+                Find for me
+              </Button>
             )}
           </div>
 
@@ -2190,15 +2178,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 return (
                   <>
                     {!showBookmarkedOnly && showConfidence && bestMatches.length > 0 && (
-                      <div className="flex items-center gap-2 mb-8">
-                        <div className="p-2 rounded-lg bg-muted/80 ring-1 ring-border">
-                          <IconTargetArrow className="h-5 w-5 text-foreground" />
-                        </div>
-                        <div>
-                          <h2 className="text-lg font-semibold text-foreground">This is the monologue</h2>
-                          <p className="text-sm text-muted-foreground">We found the piece that contains your quote</p>
-                        </div>
-                      </div>
+                      <p className="mb-6 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                        Best match
+                      </p>
                     )}
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {!showBookmarkedOnly && bestMatches.map((mono, idx) => (
