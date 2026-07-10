@@ -2458,6 +2458,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   <MonologueDetailContent
                     monologue={selectedMonologue}
                     onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
+                    headerActions={
+                      <button
+                        onClick={() => router.push(`/monologue/${selectedMonologue.id}/work`)}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-[#CB4B00] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#B03000]"
+                      >
+                        Work on this
+                      </button>
+                    }
                   />
                       </motion.div>
                     )}
