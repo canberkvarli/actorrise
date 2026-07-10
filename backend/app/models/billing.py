@@ -171,6 +171,7 @@ class UsageMetrics(Base):
     total_searches_count = Column(Integer, default=0, nullable=False)
     scene_partner_sessions = Column(Integer, default=0, nullable=False)
     craft_coach_sessions = Column(Integer, default=0, nullable=False)
+    monologue_sessions = Column(Integer, default=0, nullable=False)
 
     # Composite index for efficient monthly queries
     __table_args__ = (
