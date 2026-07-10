@@ -6,13 +6,14 @@ import { IconArrowLeft } from "@tabler/icons-react";
 import api from "@/lib/api";
 import type { Monologue } from "@/types/actor";
 import { MonologueReference } from "@/components/audition/MonologueReference";
+import { MonologueCueing } from "@/components/monologue-work/MonologueCueing";
 
 export default function MonologueWorkPage() {
   const id = useParams().id as string;
   const router = useRouter();
   const [monologue, setMonologue] = useState<Monologue | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "notfound" | "error">("loading");
-  const [refOpen, setRefOpen] = useState(true);
+  const [refOpen, setRefOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -72,12 +73,8 @@ export default function MonologueWorkPage() {
         </div>
       </header>
 
-      <main className="flex flex-1 flex-col items-center justify-center gap-6 p-6">
-        {/* Placeholder for the off-book cueing UI (Increment 2). */}
-        <div className="rounded-md border border-dashed px-6 py-10 text-center text-muted-foreground">
-          <p className="font-medium text-foreground">Off-book coaching is coming next.</p>
-          <p className="mt-1 text-sm">For now, open the script below and run the piece.</p>
-        </div>
+      <main className="flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto p-6">
+        <MonologueCueing monologue={monologue} />
       </main>
 
       <MonologueReference
