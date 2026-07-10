@@ -1,319 +1,167 @@
 "use client";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { IconSparkles, IconExternalLink, IconInfoCircle, IconBookmark, IconEdit, IconScript } from "@tabler/icons-react";
+import { IconExternalLink, IconEdit } from "@tabler/icons-react";
 import Image from "next/image";
 import { Monologue } from "@/types/actor";
 import { isMeaningfulMonologueTitle } from "@/lib/utils";
-import { getEmotionBadgeClassName, getEmotionBarClassName } from "@/lib/emotionColors";
 import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueTextRenderer } from "@/components/monologue/MonologueTextRenderer";
 import { isBibliographicText, stageDirectionPercentage } from "@/lib/monologueText";
 
 export interface MonologueDetailContentProps {
   monologue: Monologue;
-  /** Optional actions to render in the header row (e.g. favorite button on full page) */
+  /** Optional actions to render in the header row (e.g. "Work on this" / favorite) */
   headerActions?: React.ReactNode;
-  /** When provided (e.g. for moderators), show an Edit button inside the detail content */
+  /** When provided (e.g. for moderators), show an Edit link in the footer */
   onEdit?: (monologueId: number) => void;
 }
 
+function clean(value?: string | null): string | null {
+  const s = value?.trim();
+  if (!s || s.toLowerCase() === "any" || s.toLowerCase() === "unknown") return null;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+/**
+ * Calm, single-column detail view: character + source, one quiet metadata line,
+ * the scene, then the piece itself as the clear focus, and a light footer.
+ * Deliberately flat — no competing "Details / Analysis" sections or stat cards —
+ * so the eye goes to the monologue, not the chrome.
+ */
 export function MonologueDetailContent({
   monologue,
   headerActions,
   onEdit,
 }: MonologueDetailContentProps) {
-  const duration = Math.floor(monologue.estimated_duration_seconds / 60);
+  const minutes = Math.floor(monologue.estimated_duration_seconds / 60);
   const seconds = monologue.estimated_duration_seconds % 60;
+
+  const meta = [
+    clean(monologue.character_gender),
+    monologue.character_age_range && monologue.character_age_range.toLowerCase() !== "any"
+      ? monologue.character_age_range
+      : null,
+    clean(monologue.category),
+    clean(monologue.tone),
+    clean(monologue.primary_emotion),
+    monologue.estimated_duration_seconds
+      ? `${minutes}:${seconds.toString().padStart(2, "0")}`
+      : null,
+    monologue.word_count ? `${monologue.word_count} words` : null,
+  ].filter((x): x is string => Boolean(x));
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="space-y-3">
-        <div className="flex items-start justify-between gap-4">
-          {monologue.poster_url && (
-            <div className="shrink-0 w-20 h-28 rounded-lg overflow-hidden bg-muted border border-border">
-              <Image
-                src={monologue.poster_url}
-                alt={monologue.play_title || "Poster"}
-                width={80}
-                height={112}
-                className="w-full h-full object-cover"
-                unoptimized
-              />
-            </div>
-          )}
-          <div className="flex-1 min-w-0">
-            <h1 className="text-3xl font-bold font-typewriter">{monologue.character_name}</h1>
-            {isMeaningfulMonologueTitle(monologue.title, monologue.character_name) && (
-              <p className="text-lg text-foreground/90 font-typewriter mt-0.5">{monologue.title}</p>
-            )}
-            <p className="text-lg text-muted-foreground font-typewriter mt-1">
-              From <span className="font-semibold">{monologue.play_title}</span> by {monologue.author}
-            </p>
-            {monologue.director && (
-              <p className="text-sm text-muted-foreground mt-0.5">Directed by {monologue.director}</p>
-            )}
-            {monologue.imdb_rating && (
-              <span className="text-xs text-muted-foreground">IMDb {monologue.imdb_rating}/10</span>
-            )}
-          </div>
-          {headerActions}
-        </div>
-
-        {/* Scene Description */}
-        {monologue.scene_description && (
-          <div className="bg-muted/50 p-4 rounded-lg border border-border">
-            <p className="text-sm italic text-muted-foreground flex items-start gap-2">
-              <IconSparkles className="h-4 w-4 mt-0.5 flex-shrink-0 text-foreground" />
-              {monologue.scene_description}
-            </p>
+      {/* Header: character, title, source — and the primary action */}
+      <div className="flex items-start justify-between gap-4">
+        {monologue.poster_url && (
+          <div className="h-24 w-16 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
+            <Image
+              src={monologue.poster_url}
+              alt={monologue.play_title || "Poster"}
+              width={64}
+              height={96}
+              className="h-full w-full object-cover"
+              unoptimized
+            />
           </div>
         )}
+        <div className="min-w-0 flex-1">
+          <h1 className="font-typewriter text-2xl font-bold sm:text-3xl">{monologue.character_name}</h1>
+          {isMeaningfulMonologueTitle(monologue.title, monologue.character_name) && (
+            <p className="mt-0.5 font-typewriter text-base text-foreground/80">{monologue.title}</p>
+          )}
+          <p className="mt-1 text-sm text-muted-foreground">
+            {monologue.play_title}
+            {monologue.author ? ` · ${monologue.author}` : ""}
+          </p>
+        </div>
+        {headerActions}
       </div>
 
-      <Separator />
-
-      {/* Details */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-xl font-bold text-foreground">Details</h3>
-          {onEdit && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 shrink-0"
-              onClick={() => onEdit(monologue.id)}
-              aria-label="Edit monologue"
-            >
-              <IconEdit className="h-4 w-4" />
-              Edit monologue
-            </Button>
-          )}
+      {/* One quiet metadata line (replaces the old Details + Analysis blocks) */}
+      {meta.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+          {meta.map((m, i) => (
+            <span key={m} className="flex items-center gap-2">
+              {i > 0 && <span className="text-muted-foreground/40">·</span>}
+              <span className="capitalize">{m}</span>
+            </span>
+          ))}
         </div>
-        <div className="space-y-4">
-          <div className="flex flex-wrap gap-2 items-center">
-            {monologue.character_gender && monologue.character_gender.toLowerCase() !== "any" && (
-              <Badge variant="outline" className="font-normal capitalize">
-                {monologue.character_gender}
-              </Badge>
-            )}
-            {monologue.character_age_range && monologue.character_age_range.toLowerCase() !== "any" && (
-              <Badge variant="outline" className="font-normal">
-                {monologue.character_age_range}
-              </Badge>
-            )}
-          </div>
-          {monologue.category && (
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-sm text-muted-foreground mr-1">Genre:</span>
-              <Badge
-                variant="secondary"
-                className={`font-normal capitalize ${
-                  monologue.category.toLowerCase() === "classical"
-                    ? "bg-amber-500/10 text-amber-700 border-amber-300/40 dark:text-amber-400 dark:border-amber-500/30"
-                    : monologue.category.toLowerCase() === "contemporary"
-                    ? "bg-teal-500/10 text-teal-700 border-teal-300/40 dark:text-teal-400 dark:border-teal-500/30"
-                    : ""
-                }`}
-              >
-                {monologue.category}
-              </Badge>
-            </div>
-          )}
-          {monologue.themes && monologue.themes.length > 0 && (
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-sm text-muted-foreground mr-1">Themes:</span>
-              <div className="flex flex-wrap gap-1.5">
-                {monologue.themes.map((theme) => (
-                  <span
-                    key={theme}
-                    className="px-2 py-0.5 bg-muted/80 text-muted-foreground text-xs font-medium capitalize"
-                  >
-                    {theme}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* AI Analysis */}
-      {(monologue.primary_emotion ||
-        monologue.tone ||
-        (monologue.emotion_scores && Object.keys(monologue.emotion_scores).length > 0)) && (
-        <>
-          <div className="space-y-3">
-            <h3 className="text-xl font-bold text-foreground">
-              Analysis
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {monologue.primary_emotion && monologue.primary_emotion.toLowerCase() !== "unknown" && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Primary Emotion:</p>
-                  <Badge
-                    variant="outline"
-                    className={`font-normal capitalize ${getEmotionBadgeClassName(monologue.primary_emotion)}`}
-                  >
-                    {monologue.primary_emotion}
-                  </Badge>
-                </div>
-              )}
-              {monologue.tone && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Tone:</p>
-                  <Badge variant="outline" className={`font-normal capitalize ${getEmotionBadgeClassName(monologue.tone)}`}>
-                    {monologue.tone}
-                  </Badge>
-                </div>
-              )}
-              <div>
-                <p className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
-                  Duration
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <IconInfoCircle className="h-3.5 w-3.5 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent className="max-w-xs">
-                        <p className="text-sm">~130 WPM with pauses</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </p>
-                <Badge variant="outline" className="font-normal">
-                  {duration}:{seconds.toString().padStart(2, "0")} min
-                </Badge>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Word Count:</p>
-                <Badge variant="outline" className="font-normal">
-                  {monologue.word_count} words
-                </Badge>
-              </div>
-            </div>
-
-            {/* Emotion Scores */}
-            {monologue.emotion_scores && Object.keys(monologue.emotion_scores).length > 0 && (
-              <div className="pt-2">
-                <p className="text-sm text-muted-foreground mb-2">Emotion Breakdown:</p>
-                <div className="flex flex-wrap gap-2">
-                  {Object.entries(monologue.emotion_scores)
-                    .sort(([, a], [, b]) => b - a)
-                    .slice(0, 5)
-                    .map(([emotion, score]) => (
-                      <div key={emotion} className="flex items-center gap-2 text-sm">
-                        <span className="capitalize text-muted-foreground">{emotion}:</span>
-                        <div className="w-16 h-2 bg-muted rounded-full overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${getEmotionBarClassName(emotion)}`}
-                            style={{ width: `${score * 100}%` }}
-                          />
-                        </div>
-                        <span className="text-muted-foreground">{Math.round(score * 100)}%</span>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-          </div>
-          <Separator />
-        </>
       )}
 
-      {/* Monologue Text */}
-      <div className="space-y-4">
-        <h3 className="text-xl font-bold text-foreground">
-          Monologue Text
-        </h3>
-        {isBibliographicText(monologue.text) ? (
-          <div className="bg-muted/40 p-4 border border-border text-sm text-muted-foreground">
-            <p className="font-medium text-foreground mb-1">Text not available</p>
-            <p>This entry appears to contain catalog data rather than the actual monologue text. The script may need to be sourced directly.</p>
-            {monologue.source_url && (
-              <a href={monologue.source_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 mt-2 text-primary hover:underline text-xs">
-                View source
-              </a>
-            )}
-          </div>
-        ) : (
-          <div className="bg-muted/30 p-6 rounded-lg border border-border space-y-3">
-            {stageDirectionPercentage(monologue.text) > 50 && (
-              <p className="text-xs text-muted-foreground bg-muted/50 px-3 py-2 border border-border/50">
-                This monologue contains a lot of stage directions. The spoken lines are shown in normal text.
-              </p>
-            )}
-            {(monologue.text_segments && monologue.text_segments.length > 0)
-              ? <MonologueTextRenderer text={monologue.text} segments={monologue.text_segments} className="text-base font-typewriter" />
-              : <p className="text-base leading-relaxed font-typewriter">
-                  <MonologueText text={monologue.text} />
-                </p>}
-          </div>
-        )}
-      </div>
+      {/* Scene, if we have one */}
+      {monologue.scene_description && (
+        <p className="border-l-2 border-primary/30 pl-3 text-sm italic leading-relaxed text-muted-foreground">
+          {monologue.scene_description}
+        </p>
+      )}
 
-      {/* Footer Stats */}
-      <Separator />
-      <div className="flex flex-wrap items-center justify-between gap-4 text-sm text-muted-foreground">
-        <div className="flex gap-6 items-center">
-          <span>👁️ {monologue.view_count} views</span>
-          <span className="flex items-center gap-1">
-            <IconBookmark className="h-4 w-4" />
-            {monologue.favorite_count} bookmarks
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <IconInfoCircle className="h-3.5 w-3.5 cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  <p className="text-sm">Number of users who have bookmarked this monologue.</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </span>
+      {/* The piece — the focus */}
+      {isBibliographicText(monologue.text) ? (
+        <div className="rounded-lg border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
+          <p className="mb-1 font-medium text-foreground">Text not available</p>
+          <p>This entry appears to contain catalog data rather than the monologue itself.</p>
+          {monologue.source_url && (
+            <a
+              href={monologue.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+            >
+              View source
+            </a>
+          )}
         </div>
-        {monologue.overdone_score > 0.7 && (
-          <Badge variant="outline" className="text-amber-600 border-amber-600">
-            ⚠️ Frequently performed
-          </Badge>
-        )}
-      </div>
-
-      {/* Source Attribution */}
-      <Card className="rounded-lg">
-        <CardContent className="pt-6">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div>
-              <h4 className="font-semibold mb-1">Source</h4>
-              <p className="text-sm text-muted-foreground">
-                {monologue.play_title} by {monologue.author}
-              </p>
-            </div>
-            {monologue.source_url && (
-              <Button variant="outline" asChild className="hover:bg-foreground hover:text-background">
-                <a
-                  href={monologue.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2"
-                >
-                  {monologue.source_type === "film" || monologue.source_type === "tv"
-                    ? "View Script"
-                    : "View Full Play"}
-                  <IconExternalLink className="h-4 w-4" />
-                </a>
-              </Button>
+      ) : (
+        <div className="space-y-3">
+          {stageDirectionPercentage(monologue.text) > 50 && (
+            <p className="text-xs text-muted-foreground">
+              Stage directions are dimmed; the spoken lines are in normal text.
+            </p>
+          )}
+          <div className="font-typewriter text-base leading-relaxed">
+            {monologue.text_segments && monologue.text_segments.length > 0 ? (
+              <MonologueTextRenderer text={monologue.text} segments={monologue.text_segments} />
+            ) : (
+              <MonologueText text={monologue.text} />
             )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
+
+      {/* Light footer: quiet stats, edit (mods), and the source link */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-4 text-xs text-muted-foreground">
+        <span className="flex items-center gap-4">
+          <span>{monologue.view_count} views</span>
+          <span>{monologue.favorite_count} saved</span>
+          {monologue.overdone_score > 0.7 && <span className="text-amber-600">Frequently performed</span>}
+        </span>
+        <span className="flex items-center gap-3">
+          {onEdit && (
+            <button
+              onClick={() => onEdit(monologue.id)}
+              className="inline-flex items-center gap-1 hover:text-foreground"
+            >
+              <IconEdit className="h-3.5 w-3.5" /> Edit
+            </button>
+          )}
+          {monologue.source_url && (
+            <a
+              href={monologue.source_url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 text-primary hover:underline"
+            >
+              {monologue.source_type === "film" || monologue.source_type === "tv"
+                ? "View script"
+                : "View full play"}
+              <IconExternalLink className="h-3.5 w-3.5" />
+            </a>
+          )}
+        </span>
+      </div>
     </div>
   );
 }

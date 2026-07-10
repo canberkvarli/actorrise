@@ -67,6 +67,24 @@ export function wordMatchScore(expected: string, transcript: string): number {
 }
 
 /**
+ * How many leading words of `line` have been spoken so far, in order.
+ * Drives live word-by-word highlighting (karaoke style): a greedy sequential
+ * matcher that advances a pointer through the line as matching spoken words
+ * arrive, skipping filler/misheard words that don't match the next target.
+ */
+export function spokenPrefixCount(line: string, transcript: string): number {
+  const target = normWords(line);
+  const spoken = normWords(transcript);
+  if (target.length === 0 || spoken.length === 0) return 0;
+  let p = 0;
+  for (const w of spoken) {
+    if (p >= target.length) break;
+    if (wordsMatch(w, target[p])) p += 1;
+  }
+  return p;
+}
+
+/**
  * Split a block of monologue text into deliverable "lines" (sentences).
  * Stage directions in [brackets] are stripped first.
  */

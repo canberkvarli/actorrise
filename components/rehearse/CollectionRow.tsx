@@ -183,8 +183,15 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
         </button>
 
         <Link
-          href={memorizeHref}
+          href={`/monologue/${monologue.id}/work`}
           className="shrink-0 text-sm font-semibold text-primary underline-offset-4 hover:underline"
+        >
+          Work on this
+        </Link>
+
+        <Link
+          href={memorizeHref}
+          className="shrink-0 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
           Memorize
         </Link>

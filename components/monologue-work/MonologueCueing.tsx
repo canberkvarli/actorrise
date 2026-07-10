@@ -1,10 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { IconMicrophone, IconPlayerPlay, IconEye, IconRefresh, IconArrowRight } from "@tabler/icons-react";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  IconPlayerPlayFilled,
+  IconEye,
+  IconRefresh,
+  IconArrowLeft,
+} from "@tabler/icons-react";
 import type { Monologue } from "@/types/actor";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
-import { wordMatchScore, toDeliverableLines } from "@/lib/lineMatching";
+import { wordMatchScore, toDeliverableLines, spokenPrefixCount } from "@/lib/lineMatching";
 import api from "@/lib/api";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 
@@ -12,6 +18,8 @@ import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePayw
 const MATCH_THRESHOLD = 0.7;
 /** Silence (ms) on the current line before we cue it (reveal the text). */
 const STALL_MS = 3000;
+
+const SERIF = "var(--font-serif), Georgia, 'Times New Roman', serif";
 
 interface DeliveryFeedback {
   rating: number;
@@ -24,6 +32,7 @@ interface DeliveryFeedback {
 
 interface MonologueCueingProps {
   monologue: Monologue;
+  onExit?: () => void;
 }
 
 function linesFromMonologue(m: Monologue): string[] {
@@ -35,19 +44,19 @@ function linesFromMonologue(m: Monologue): string[] {
   return toDeliverableLines(dialogue || m.text || "");
 }
 
-export function MonologueCueing({ monologue }: MonologueCueingProps) {
+export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   const lines = useMemo(() => linesFromMonologue(monologue), [monologue]);
 
   const [started, setStarted] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [revealCurrent, setRevealCurrent] = useState(false);
+  const [offBook, setOffBook] = useState(false);
   const [notes, setNotes] = useState<DeliveryFeedback | null>(null);
   const [notesStatus, setNotesStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
   const [paywallOpen, setPaywallOpen] = useState(false);
 
   const completed = started && activeIndex >= lines.length;
 
-  // Everything the actor said this run (for the delivery notes), plus timing.
   const heardRef = useRef<string[]>([]);
   const startTimeRef = useRef<number | null>(null);
   const fetchedRef = useRef(false);
@@ -68,8 +77,6 @@ export function MonologueCueing({ monologue }: MonologueCueingProps) {
     }
   }, [monologue.id]);
 
-  // Move to a line and hide it. When we advance past the last line the run is
-  // done, so kick off the delivery notes here (an event handler, not an effect).
   const goToLine = useCallback(
     (next: number) => {
       setRevealCurrent(false);
@@ -82,8 +89,6 @@ export function MonologueCueing({ monologue }: MonologueCueingProps) {
     [lines.length, runAnalysis],
   );
 
-  // Called by the speech hook on each finalized utterance (external system →
-  // setState in a callback, which is the supported pattern — no effect needed).
   const handleHeard = useCallback(
     (heard: string) => {
       if (!started || completed) return;
@@ -97,18 +102,25 @@ export function MonologueCueing({ monologue }: MonologueCueingProps) {
     [started, completed, lines, activeIndex, goToLine],
   );
 
-  const { transcript, isListening, isSupported, startListening, stopListening } =
+  const { transcript, isListening, isSupported, startListening, stopListening, resetTranscript } =
     useSpeechRecognition({ continuous: true, interimResults: true, onResult: handleHeard });
 
-  // Stall timer: if the current line goes quiet, cue it (reveal the text).
-  // Each interim `transcript` update resets the timer, so speaking prevents it.
+  // Reset the live transcript when we move to a new line so highlighting is fresh.
+  const goToLineAndReset = useCallback(
+    (next: number) => {
+      resetTranscript();
+      goToLine(next);
+    },
+    [resetTranscript, goToLine],
+  );
+
+  // Stall timer: quiet on the current line → cue it (reveal the text).
   useEffect(() => {
     if (!started || completed || !isListening) return;
     const t = setTimeout(() => setRevealCurrent(true), STALL_MS);
     return () => clearTimeout(t);
   }, [transcript, activeIndex, started, completed, isListening]);
 
-  // Stop the mic once we're through.
   useEffect(() => {
     if (completed && isListening) stopListening();
   }, [completed, isListening, stopListening]);
@@ -117,14 +129,14 @@ export function MonologueCueing({ monologue }: MonologueCueingProps) {
     heardRef.current = [];
     startTimeRef.current = Date.now();
     fetchedRef.current = false;
+    resetTranscript();
     setNotes(null);
     setNotesStatus("idle");
     setRevealCurrent(false);
     setActiveIndex(0);
-  }, []);
+  }, [resetTranscript]);
 
   const begin = useCallback(async () => {
-    // Meter the session; a 403 means the free cap is hit → show the paywall.
     try {
       await api.post("/api/monologue-work/start", { monologue_id: monologue.id });
     } catch (error) {
@@ -133,7 +145,6 @@ export function MonologueCueing({ monologue }: MonologueCueingProps) {
         setPaywallOpen(true);
         return;
       }
-      // Non-limit errors (network/metering hiccup): fail open, let them rehearse.
     }
     resetRun();
     setStarted(true);
@@ -145,175 +156,315 @@ export function MonologueCueing({ monologue }: MonologueCueingProps) {
     if (isSupported && !isListening) startListening();
   }, [resetRun, isSupported, isListening, startListening]);
 
+  // Live per-word progress for the current line.
+  const currentLine = lines[activeIndex] ?? "";
+  const currentWords = useMemo(() => currentLine.split(/\s+/).filter(Boolean), [currentLine]);
+  const spokenCount = spokenPrefixCount(currentLine, transcript);
+
   if (lines.length === 0) {
-    return <p className="text-muted-foreground">This piece has no usable text to run.</p>;
+    return <p className="text-white/50" style={{ fontFamily: SERIF }}>This piece has no usable text to run.</p>;
   }
 
-  // ---- Start screen ----
-  if (!started) {
-    return (
-      <div className="flex max-w-md flex-col items-center gap-5 text-center">
-        <h2 className="text-lg font-semibold">Run it off book</h2>
-        <p className="text-sm text-muted-foreground">
-          Say the piece out loud. I&apos;ll follow along and only show you a line if you
-          get stuck. {lines.length} line{lines.length === 1 ? "" : "s"} to go.
-        </p>
-        {!isSupported && (
-          <p className="text-xs text-amber-600 dark:text-amber-500">
-            Live listening isn&apos;t supported in this browser. You can still step through
-            the lines manually (try Chrome or Edge for voice).
-          </p>
-        )}
-        <button
-          onClick={() => void begin()}
-          className="inline-flex items-center gap-2 rounded-md bg-[#CB4B00] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#B03000]"
-        >
-          <IconPlayerPlay className="h-4 w-4" />
-          Start
-        </button>
-        <MonologuePaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
-      </div>
-    );
-  }
-
-  // ---- Completed screen ----
-  if (completed) {
-    return (
-      <div className="flex w-full max-w-md flex-col items-center gap-5 text-center">
-        <h2 className="text-lg font-semibold">You made it through.</h2>
-
-        {notesStatus === "loading" && (
-          <p className="text-sm text-muted-foreground">Getting your notes…</p>
-        )}
-        {notesStatus === "error" && (
-          <div className="flex flex-col items-center gap-2">
-            <p className="text-sm text-muted-foreground">Couldn&apos;t load your notes.</p>
-            <button onClick={runAnalysis} className="text-sm text-[#CB4B00] hover:underline">
-              Try again
-            </button>
-          </div>
-        )}
-        {notesStatus === "done" && notes && (
-          <div className="flex w-full flex-col gap-3 text-left">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold">Your notes</span>
-              {notes.rating > 0 && (
-                <span className="text-sm text-muted-foreground">{notes.rating} / 5</span>
-              )}
-            </div>
-            <p className="text-sm leading-relaxed">{notes.overall_notes}</p>
-            {notes.line_accuracy && <NoteRow label="Line accuracy" value={notes.line_accuracy} />}
-            {notes.pacing && <NoteRow label="Pacing" value={notes.pacing} />}
-            {notes.emotional_tone && <NoteRow label="Emotional tone" value={notes.emotional_tone} />}
-            {notes.tips && notes.tips.length > 0 && (
-              <div>
-                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  Try next
-                </p>
-                <ul className="flex flex-col gap-1">
-                  {notes.tips.map((tip, i) => (
-                    <li key={i} className="flex gap-2 text-sm">
-                      <span className="text-[#CB4B00]">•</span>
-                      <span>{tip}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-
-        <button
-          onClick={restart}
-          className="inline-flex items-center gap-2 rounded-md bg-[#CB4B00] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#B03000]"
-        >
-          <IconRefresh className="h-4 w-4" />
-          Run it again
-        </button>
-      </div>
-    );
-  }
-
-  // ---- Running: line list ----
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-6">
-      <div className="flex flex-col gap-3">
-        {lines.map((line, i) => {
-          if (i < activeIndex) {
-            return (
-              <p key={i} className="text-sm leading-relaxed text-muted-foreground/60">
-                {line}
-              </p>
-            );
-          }
-          if (i === activeIndex) {
-            return (
-              <div key={i} className="rounded-md border-l-2 border-[#CB4B00] bg-[#CB4B00]/5 px-3 py-2">
-                {revealCurrent ? (
-                  <p className="text-base font-medium leading-relaxed">{line}</p>
-                ) : (
-                  <p className="select-none text-base leading-relaxed tracking-widest text-muted-foreground">
-                    {line.replace(/[^\s]/g, "•")}
-                  </p>
-                )}
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {revealCurrent ? "Here it is — keep going." : "Your line. Say it, or tap Show line."}
-                </p>
-              </div>
-            );
-          }
-          // Upcoming lines stay hidden.
-          return (
-            <p key={i} aria-hidden className="select-none text-base leading-relaxed text-transparent">
-              •
-            </p>
-          );
-        })}
-      </div>
+    <div className="relative flex h-full w-full flex-col overflow-hidden bg-[#0b0908] text-[#ece5d8]">
+      {/* Ambient stage vignette */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(120% 80% at 50% 8%, rgba(203,75,0,0.10), transparent 55%), radial-gradient(100% 60% at 50% 120%, rgba(0,0,0,0.6), transparent)",
+        }}
+      />
 
-      {/* Controls */}
-      <div className="flex flex-wrap items-center gap-2 border-t pt-4">
-        {isSupported && (
-          <span
-            className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium ${
-              isListening ? "bg-[#CB4B00]/10 text-[#CB4B00]" : "bg-muted text-muted-foreground"
-            }`}
-          >
-            <IconMicrophone className="h-3.5 w-3.5" />
-            {isListening ? "Listening" : "Mic paused"}
+      {/* Top bar — playbill */}
+      <header className="relative z-10 flex items-center gap-3 px-5 pt-5">
+        <button
+          onClick={onExit}
+          aria-label="Leave"
+          className="text-white/40 transition-colors hover:text-white/80"
+        >
+          <IconArrowLeft className="h-5 w-5" />
+        </button>
+        <div className="min-w-0">
+          <p className="truncate text-[0.68rem] uppercase tracking-[0.22em] text-white/40">
+            {monologue.character_name}
+          </p>
+          <h1 className="truncate text-sm text-white/70" style={{ fontFamily: SERIF }}>
+            {monologue.title}
+          </h1>
+        </div>
+        {started && !completed && (
+          <span className="ml-auto text-[0.68rem] uppercase tracking-[0.22em] text-white/30">
+            {Math.min(activeIndex + 1, lines.length)} / {lines.length}
           </span>
         )}
-        <button
-          onClick={() => setRevealCurrent(true)}
-          className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
-        >
-          <IconEye className="h-3.5 w-3.5" />
-          Show line
-        </button>
-        <button
-          onClick={() => goToLine(activeIndex + 1)}
-          className="inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
-        >
-          <IconArrowRight className="h-3.5 w-3.5" />
-          Next line
-        </button>
-        <button
-          onClick={restart}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
-        >
-          <IconRefresh className="h-3.5 w-3.5" />
-          Restart
-        </button>
-      </div>
+      </header>
+
+      <AnimatePresence mode="wait">
+        {/* ---------- Start ---------- */}
+        {!started && (
+          <motion.div
+            key="start"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-6 text-center"
+          >
+            <div className="flex flex-col items-center gap-3">
+              <span className="text-[0.68rem] uppercase tracking-[0.3em] text-[#CB4B00]">Off book</span>
+              <p className="max-w-sm text-lg leading-relaxed text-white/70" style={{ fontFamily: SERIF }}>
+                Say it out loud. The words light up as you speak them. Lose your place, and the
+                line comes to you.
+              </p>
+              <p className="text-xs text-white/35">
+                {lines.length} line{lines.length === 1 ? "" : "s"}
+                {!isSupported && " · voice needs Chrome or Edge"}
+              </p>
+            </div>
+
+            <button
+              onClick={() => void begin()}
+              className="group inline-flex items-center gap-2.5 rounded-full bg-[#CB4B00] px-8 py-3.5 text-sm font-semibold tracking-wide text-white shadow-[0_0_40px_-8px_rgba(203,75,0,0.7)] transition-all hover:bg-[#B03000] hover:shadow-[0_0_55px_-6px_rgba(203,75,0,0.85)]"
+            >
+              <IconPlayerPlayFilled className="h-4 w-4" />
+              Begin
+            </button>
+
+            <button
+              onClick={() => setOffBook((v) => !v)}
+              className={`text-xs uppercase tracking-[0.18em] transition-colors ${offBook ? "text-[#CB4B00]" : "text-white/35 hover:text-white/60"}`}
+            >
+              {offBook ? "Hidden-line mode: on" : "Hide the lines (harder)"}
+            </button>
+
+            <MonologuePaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
+          </motion.div>
+        )}
+
+        {/* ---------- Completed ---------- */}
+        {completed && (
+          <motion.div
+            key="done"
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="relative z-10 flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 py-10 text-center"
+          >
+            <span className="text-[0.68rem] uppercase tracking-[0.3em] text-[#CB4B00]">Curtain</span>
+            <h2 className="text-3xl text-white/90" style={{ fontFamily: SERIF }}>
+              You made it through.
+            </h2>
+
+            {notesStatus === "loading" && (
+              <div className="flex items-center gap-2 text-sm text-white/50">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#CB4B00]" />
+                Reading your performance…
+              </div>
+            )}
+            {notesStatus === "error" && (
+              <button onClick={runAnalysis} className="text-sm text-[#CB4B00] hover:underline">
+                Notes didn&apos;t load — try again
+              </button>
+            )}
+            {notesStatus === "done" && notes && (
+              <motion.div
+                initial="hidden"
+                animate="show"
+                variants={{ show: { transition: { staggerChildren: 0.08 } } }}
+                className="flex w-full max-w-md flex-col gap-4 text-left"
+              >
+                <Reveal>
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <span className="text-[0.68rem] uppercase tracking-[0.22em] text-white/40">
+                      Director&apos;s notes
+                    </span>
+                    {notes.rating > 0 && <Stars rating={notes.rating} />}
+                  </div>
+                </Reveal>
+                <Reveal>
+                  <p className="text-base leading-relaxed text-white/85" style={{ fontFamily: SERIF }}>
+                    {notes.overall_notes}
+                  </p>
+                </Reveal>
+                {notes.line_accuracy && <NoteRow label="Line accuracy" value={notes.line_accuracy} />}
+                {notes.pacing && <NoteRow label="Pacing" value={notes.pacing} />}
+                {notes.emotional_tone && <NoteRow label="Emotional tone" value={notes.emotional_tone} />}
+                {notes.tips && notes.tips.length > 0 && (
+                  <Reveal>
+                    <div className="pt-1">
+                      <p className="mb-2 text-[0.68rem] uppercase tracking-[0.22em] text-white/40">Try next</p>
+                      <ul className="flex flex-col gap-2">
+                        {notes.tips.map((tip, i) => (
+                          <li key={i} className="flex gap-2.5 text-sm text-white/70">
+                            <span className="text-[#CB4B00]">—</span>
+                            <span>{tip}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </Reveal>
+                )}
+              </motion.div>
+            )}
+
+            <button
+              onClick={restart}
+              className="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-medium text-white/80 transition-colors hover:border-[#CB4B00] hover:text-white"
+            >
+              <IconRefresh className="h-4 w-4" />
+              Run it again
+            </button>
+          </motion.div>
+        )}
+
+        {/* ---------- Running (the stage) ---------- */}
+        {started && !completed && (
+          <motion.div
+            key="stage"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="relative z-10 flex flex-1 flex-col items-center justify-center px-6"
+          >
+            {/* delivered line, receding */}
+            <div className="flex h-16 items-end justify-center">
+              {activeIndex > 0 && (
+                <p
+                  className="max-w-2xl text-center text-base leading-relaxed text-white/20"
+                  style={{ fontFamily: SERIF }}
+                >
+                  {lines[activeIndex - 1]}
+                </p>
+              )}
+            </div>
+
+            {/* current line — spotlit, word-by-word */}
+            <div className="relative flex min-h-[36vh] max-w-3xl items-center justify-center py-6">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute inset-0 -z-10 blur-3xl"
+                style={{ background: "radial-gradient(60% 55% at 50% 50%, rgba(203,75,0,0.18), transparent 70%)" }}
+              />
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={activeIndex}
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -18 }}
+                  transition={{ type: "spring", stiffness: 220, damping: 26 }}
+                  className="text-center text-[clamp(1.6rem,4.2vw,2.9rem)] leading-[1.35]"
+                  style={{ fontFamily: SERIF }}
+                >
+                  {currentWords.map((word, i) => {
+                    const spoken = i < spokenCount;
+                    const masked = offBook && !revealCurrent && !spoken;
+                    return (
+                      <span
+                        key={i}
+                        className="transition-all duration-300"
+                        style={{
+                          color: spoken ? "#FF8A3D" : masked ? "transparent" : "rgba(236,229,216,0.85)",
+                          textShadow: spoken ? "0 0 22px rgba(255,120,40,0.45)" : "none",
+                        }}
+                      >
+                        {masked ? (
+                          <span className="text-white/15">{"•".repeat(Math.max(2, word.replace(/[^\p{L}\p{N}]/gu, "").length))}</span>
+                        ) : (
+                          word
+                        )}{" "}
+                      </span>
+                    );
+                  })}
+                </motion.p>
+              </AnimatePresence>
+            </div>
+
+            {/* upcoming line, veiled */}
+            <div className="flex h-16 items-start justify-center">
+              {activeIndex + 1 < lines.length && (
+                <p
+                  className="max-w-2xl text-center text-base leading-relaxed text-white/10"
+                  style={{ fontFamily: SERIF }}
+                >
+                  {offBook ? "" : lines[activeIndex + 1]}
+                </p>
+              )}
+            </div>
+
+            {/* control dock */}
+            <div className="mt-6 flex items-center gap-5">
+              <MicPulse active={isListening} supported={isSupported} />
+              <button
+                onClick={() => setRevealCurrent(true)}
+                className="flex items-center gap-1.5 text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
+              >
+                <IconEye className="h-4 w-4" /> Line
+              </button>
+              <button
+                onClick={() => goToLineAndReset(activeIndex + 1)}
+                className="text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
+              >
+                Skip
+              </button>
+              <button
+                onClick={restart}
+                className="text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
+              >
+                Restart
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
+  );
+}
+
+function MicPulse({ active, supported }: { active: boolean; supported: boolean }) {
+  if (!supported) {
+    return <span className="text-xs uppercase tracking-[0.16em] text-white/30">no mic</span>;
+  }
+  return (
+    <span className="relative flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-white/50">
+      <span className="relative flex h-2.5 w-2.5">
+        {active && (
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#CB4B00] opacity-60" />
+        )}
+        <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${active ? "bg-[#CB4B00]" : "bg-white/25"}`} />
+      </span>
+      {active ? "Listening" : "Paused"}
+    </span>
+  );
+}
+
+function Reveal({ children }: { children: React.ReactNode }) {
+  return (
+    <motion.div variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}>
+      {children}
+    </motion.div>
   );
 }
 
 function NoteRow({ label, value }: { label: string; value: string }) {
   return (
-    <div>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="text-sm leading-relaxed">{value}</p>
-    </div>
+    <Reveal>
+      <div>
+        <p className="mb-1 text-[0.68rem] uppercase tracking-[0.22em] text-white/40">{label}</p>
+        <p className="text-sm leading-relaxed text-white/70">{value}</p>
+      </div>
+    </Reveal>
+  );
+}
+
+function Stars({ rating }: { rating: number }) {
+  return (
+    <span className="flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((n) => (
+        <span key={n} className={n <= rating ? "text-[#CB4B00]" : "text-white/15"}>
+          ★
+        </span>
+      ))}
+    </span>
   );
 }
