@@ -1552,9 +1552,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 disabled={isLoading}
                 variant="outline"
                 size="sm"
-                className="gap-2 min-h-[44px] md:min-h-0"
+                className="gap-2 min-h-[44px] md:min-h-0 border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
               >
-                <IconSparkles className="h-4 w-4 text-primary" />
+                <IconSparkles className="h-4 w-4" />
                 Find for me
               </Button>
             )}
