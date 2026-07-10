@@ -67,9 +67,14 @@ export function MonologueDetailContent({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <h1 className="font-typewriter text-2xl font-bold sm:text-3xl">{monologue.character_name}</h1>
+          <h1
+            className="text-3xl font-semibold leading-tight sm:text-4xl"
+            style={{ fontFamily: "var(--font-serif), Georgia, serif" }}
+          >
+            {monologue.character_name}
+          </h1>
           {isMeaningfulMonologueTitle(monologue.title, monologue.character_name) && (
-            <p className="mt-0.5 font-typewriter text-base text-foreground/80">{monologue.title}</p>
+            <p className="mt-1 text-base text-foreground/70">{monologue.title}</p>
           )}
           <p className="mt-1 text-sm text-muted-foreground">
             {monologue.play_title}
