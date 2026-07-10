@@ -114,17 +114,26 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
             </p>
           </CardContent>
           <CardFooter className="flex items-center justify-between gap-2 mt-auto">
-            {/* Primary action: bridge straight from a found monologue into
-                practicing it (memorize + self-record), instead of dead-ending
-                on "add to collection". */}
-            <Link
-              href={`/monologue/${monologue.id}/memorize`}
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1.5 rounded-md bg-[#CB4B00] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[#B03000]"
-            >
-              Practice this
-              <IconArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            {/* Primary actions: bridge straight from a found monologue into
+                practicing it (memorize) or working the piece off-book with the
+                AI, instead of dead-ending on "add to collection". */}
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/monologue/${monologue.id}/memorize`}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 rounded-md bg-[#CB4B00] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[#B03000]"
+              >
+                Practice this
+                <IconArrowRight className="h-3.5 w-3.5" />
+              </Link>
+              <Link
+                href={`/monologue/${monologue.id}/work`}
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-1.5 rounded-md border border-[#CB4B00] px-3 py-1.5 text-sm font-semibold text-[#CB4B00] transition-colors hover:bg-[#CB4B00]/10"
+              >
+                Work on this
+              </Link>
+            </div>
             <div className="flex items-center gap-3">
               {monologue.source_url && (
                 <motion.a
