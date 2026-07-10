@@ -211,15 +211,14 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             exit={{ opacity: 0 }}
             className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-6 text-center"
           >
-            <div className="flex flex-col items-center gap-3">
-              <span className="text-[0.68rem] uppercase tracking-[0.3em] text-[#CB4B00]">Off book</span>
-              <p className="max-w-sm text-lg leading-relaxed text-white/70" style={{ fontFamily: SERIF }}>
-                Say it out loud. The words light up as you speak them. Lose your place, and the
-                line comes to you.
+            <div className="flex flex-col items-center gap-4">
+              <span className="text-xs uppercase tracking-[0.3em] text-[#CB4B00]">Off book</span>
+              <p className="max-w-md text-2xl font-medium leading-snug text-white">
+                Say it out loud. I&apos;ll follow along.
               </p>
-              <p className="text-xs text-white/35">
+              <p className="text-sm text-white/45">
                 {lines.length} line{lines.length === 1 ? "" : "s"}
-                {!isSupported && " · voice needs Chrome or Edge"}
+                {!isSupported && " · needs Chrome or Edge for voice"}
               </p>
             </div>
 
