@@ -105,6 +105,15 @@ class FeatureGate:
                 feature_name="ScenePartner sessions",
             )
 
+        elif self.feature == "monologue_work":
+            return await self._check_usage_limit(
+                current_user.id,
+                "monologue_sessions",
+                features.get("monologue_sessions", 0),
+                db,
+                feature_name="Monologue work sessions",
+            )
+
         elif self.feature == "craft_coach":
             return await self._check_usage_limit(
                 current_user.id,
@@ -389,6 +398,11 @@ async def require_ai_search_when_query(
 def require_scene_partner(increment: bool = True) -> Callable:
     """Require ScenePartner access (and optionally increment usage)."""
     return FeatureGate("scene_partner", increment=increment)
+
+
+def require_monologue_work(increment: bool = True) -> Callable:
+    """Require Monologue Work access (and optionally increment usage)."""
+    return FeatureGate("monologue_work", increment=increment)
 
 
 def require_craft_coach(increment: bool = True) -> Callable:

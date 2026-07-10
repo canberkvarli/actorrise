@@ -14,12 +14,30 @@ from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
 from app.core.database import get_db
+from app.middleware.rate_limiting import require_monologue_work
 from app.models.actor import Monologue
 from app.services.ai.langchain.monologue_coach import get_monologue_coach
 
 logger = logging.getLogger("uvicorn.error")
 
 router = APIRouter(prefix="/api/monologue-work", tags=["monologue-work"])
+
+
+class StartSessionRequest(BaseModel):
+    monologue_id: int
+
+
+@router.post("/start")
+def start_session(
+    request: StartSessionRequest,
+    _gate: bool = Depends(require_monologue_work(increment=True)),
+):
+    """
+    Meter the start of a monologue-work session and enforce the free-tier cap.
+    The gate raises 403 (with limit/used detail) when the monthly cap is hit;
+    the frontend catches that and shows the founder-offer paywall.
+    """
+    return {"ok": True}
 
 
 class AnalyzeRunRequest(BaseModel):

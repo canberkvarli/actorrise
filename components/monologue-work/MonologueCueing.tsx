@@ -6,6 +6,7 @@ import type { Monologue } from "@/types/actor";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { wordMatchScore, toDeliverableLines } from "@/lib/lineMatching";
 import api from "@/lib/api";
+import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 
 /** Fraction of the line's words we need to hear before advancing. */
 const MATCH_THRESHOLD = 0.7;
@@ -42,6 +43,7 @@ export function MonologueCueing({ monologue }: MonologueCueingProps) {
   const [revealCurrent, setRevealCurrent] = useState(false);
   const [notes, setNotes] = useState<DeliveryFeedback | null>(null);
   const [notesStatus, setNotesStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [paywallOpen, setPaywallOpen] = useState(false);
 
   const completed = started && activeIndex >= lines.length;
 
@@ -121,11 +123,22 @@ export function MonologueCueing({ monologue }: MonologueCueingProps) {
     setActiveIndex(0);
   }, []);
 
-  const begin = useCallback(() => {
+  const begin = useCallback(async () => {
+    // Meter the session; a 403 means the free cap is hit → show the paywall.
+    try {
+      await api.post("/api/monologue-work/start", { monologue_id: monologue.id });
+    } catch (error) {
+      const code = (error as Error & { response?: { status?: number } })?.response?.status;
+      if (code === 403) {
+        setPaywallOpen(true);
+        return;
+      }
+      // Non-limit errors (network/metering hiccup): fail open, let them rehearse.
+    }
     resetRun();
     setStarted(true);
     if (isSupported) startListening();
-  }, [resetRun, isSupported, startListening]);
+  }, [monologue.id, resetRun, isSupported, startListening]);
 
   const restart = useCallback(() => {
     resetRun();
@@ -152,12 +165,13 @@ export function MonologueCueing({ monologue }: MonologueCueingProps) {
           </p>
         )}
         <button
-          onClick={begin}
+          onClick={() => void begin()}
           className="inline-flex items-center gap-2 rounded-md bg-[#CB4B00] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#B03000]"
         >
           <IconPlayerPlay className="h-4 w-4" />
           Start
         </button>
+        <MonologuePaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
       </div>
     );
   }
