@@ -2143,7 +2143,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 return (
                   <>
                     {!showBookmarkedOnly && showConfidence && bestMatches.length > 0 && (
-                      <p className="mb-6 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                      <p className="mb-6 flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                        <span aria-hidden className="inline-block h-3 w-0.5 bg-primary" />
                         Best match
                       </p>
                     )}
