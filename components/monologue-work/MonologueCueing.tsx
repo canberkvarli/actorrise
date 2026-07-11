@@ -20,6 +20,8 @@ const MATCH_THRESHOLD = 0.7;
 const STALL_MS = 3000;
 
 const SERIF = "var(--font-serif), Georgia, 'Times New Roman', serif";
+/** Typewriter face — reserved for the monologue TEXT itself (never titles/UI). */
+const SCRIPT = "var(--font-typewriter), 'Courier Prime', 'Courier New', monospace";
 
 interface DeliveryFeedback {
   rating: number;
@@ -329,7 +331,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
               {activeIndex > 0 && (
                 <p
                   className="max-w-2xl text-center text-base leading-relaxed text-white/35"
-                  style={{ fontFamily: SERIF }}
+                  style={{ fontFamily: SCRIPT }}
                 >
                   {lines[activeIndex - 1]}
                 </p>
@@ -350,8 +352,8 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -18 }}
                   transition={{ type: "spring", stiffness: 220, damping: 26 }}
-                  className="text-center text-[clamp(1.6rem,4.2vw,2.9rem)] leading-[1.35]"
-                  style={{ fontFamily: SERIF }}
+                  className="text-center text-[clamp(1.5rem,3.8vw,2.6rem)] leading-[1.4]"
+                  style={{ fontFamily: SCRIPT }}
                 >
                   {currentWords.map((word, i) => {
                     const spoken = i < spokenCount;
@@ -382,7 +384,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
               {activeIndex + 1 < lines.length && (
                 <p
                   className="max-w-2xl text-center text-base leading-relaxed text-white/25"
-                  style={{ fontFamily: SERIF }}
+                  style={{ fontFamily: SCRIPT }}
                 >
                   {offBook ? "" : lines[activeIndex + 1]}
                 </p>

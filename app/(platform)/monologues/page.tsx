@@ -1350,12 +1350,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           <p className="hidden md:block stage-direction text-xs text-muted-foreground/70 mb-3">
             (the search.)
           </p>
-          <h1 className="font-serif text-2xl sm:text-3xl md:text-5xl font-medium tracking-[-0.02em] mb-1 md:mb-3">
+          <h1 className="font-serif text-2xl sm:text-3xl md:text-5xl font-medium tracking-[-0.02em]">
             Find your next <em className="italic text-primary">piece</em>
           </h1>
-          <p className="hidden md:block text-muted-foreground text-lg max-w-lg mx-auto">
-            Describe what you&apos;re looking for in plain English; filters narrow results or let you browse by criteria.
-          </p>
         </div>
 
         {/* Plays vs Film & TV toggle: spacious on mobile, 44px touch targets */}
@@ -2104,39 +2101,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               <div className="flex flex-col gap-3 mb-8 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4">
                 {/* Left: count + mobile bookmark */}
                 <div className="flex items-center justify-between sm:justify-start gap-3 min-w-0">
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-2xl font-semibold tabular-nums text-foreground">
-                        {showBookmarkedOnly
-                          ? results.filter((m) => m.is_favorited).length
-                          : total > 0 ? total : results.length}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {showBookmarkedOnly ? "in your collection" : "monologues found"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-                      {!showBookmarkedOnly && queryUsedForResults && (
-                        <span className="text-muted-foreground/50">from 7,500+ in our library</span>
-                      )}
-                      {!showBookmarkedOnly && queryUsedForResults && !showConfidence && relatedResults.length > 0 && (
-                        <span aria-hidden className="text-border">·</span>
-                      )}
-                      {!showBookmarkedOnly && !showConfidence && relatedResults.length > 0 && (
-                        <span>Sorted by relevance</span>
-                      )}
-                      {restoredFromLastSearch && searchParams.get("q") === null && (
-                        <>
-                          {!showBookmarkedOnly && !showConfidence && relatedResults.length > 0 && (
-                            <span aria-hidden className="text-border">·</span>
-                          )}
-                          <span>From your last search</span>
-                        </>
-                      )}
-                    </div>
-                    {isPersonalized && !showBookmarkedOnly && (
-                      <span className="text-xs text-primary dark:text-orange-400">Matched to your profile</span>
-                    )}
+                  <div className="flex items-baseline gap-2 flex-wrap min-w-0">
+                    <span className="text-2xl font-semibold tabular-nums text-foreground">
+                      {showBookmarkedOnly
+                        ? results.filter((m) => m.is_favorited).length
+                        : total > 0 ? total : results.length}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {showBookmarkedOnly ? "in your collection" : "monologues"}
+                    </span>
                   </div>
                   <Button
                     variant={showBookmarkedOnly ? "secondary" : "outline"}
