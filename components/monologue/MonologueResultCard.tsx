@@ -194,10 +194,10 @@ export function MonologueResultCard({
             {/* The piece — the focus. It's the monologue text, so: typewriter. */}
             <p
               className={`font-typewriter text-[15px] leading-relaxed text-foreground/80 ${
-                size === "dashboard" ? "line-clamp-5" : "line-clamp-4"
+                size === "dashboard" ? "line-clamp-7" : "line-clamp-6"
               }`}
             >
-              &ldquo;{mono.text.substring(0, size === "dashboard" ? 300 : 220)}…&rdquo;
+              &ldquo;{mono.text.substring(0, size === "dashboard" ? 440 : 340)}…&rdquo;
             </p>
           </div>
 
