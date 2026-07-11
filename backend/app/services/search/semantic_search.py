@@ -266,6 +266,14 @@ def _filter_match_boost(mono: Monologue, merged_filters: Dict) -> float:
     return min(0.35, boost)
 
 
+# Mis-parsed "character names" that are really stage directions / speech tags,
+# not real audition roles. Entries like these should never top a result set.
+_JUNK_CHARACTER_NAMES = {
+    "sings", "voice", "chorus", "all", "narrator", "announcer", "both",
+    "offstage", "off", "voiceover", "voice-over", "vo", "aside",
+}
+
+
 def _calculate_relevance_score_multiplicative(
     base_similarity: float,
     mono: Monologue,
@@ -376,6 +384,21 @@ def _calculate_relevance_score_multiplicative(
     # 3. Bookmark boost
     if is_bookmarked:
         score *= 1 + WEIGHTS["bookmark"]
+
+    # 4. Quality gate — keep mis-parsed / fragment entries from outranking real
+    # pieces just because their embedding sits close (e.g. a character literally
+    # named "Sings"). Conservative + multiplicative: it re-ranks, never hard-drops.
+    name = (mono.character_name or "").strip().lower()
+    if name in _JUNK_CHARACTER_NAMES or len(name.replace(".", "").replace(" ", "")) <= 1:
+        score *= 0.5
+    if mono.word_count and mono.word_count < 25:
+        score *= 0.8
+    if mono.quality_score is not None:
+        try:
+            q = max(0.0, min(1.0, float(mono.quality_score)))
+            score *= 0.9 + 0.2 * q
+        except (TypeError, ValueError):
+            pass
 
     # Soft cap at 1.0, but allow exceptional matches to go slightly higher
     return min(1.0, score)
