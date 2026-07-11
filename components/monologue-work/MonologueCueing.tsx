@@ -13,6 +13,7 @@ import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { wordMatchScore, toDeliverableLines, spokenPrefixCount } from "@/lib/lineMatching";
 import api from "@/lib/api";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
+import { MicWaveform } from "@/components/scenepartner/MicWaveform";
 
 /** Fraction of the line's words we need to hear before advancing. */
 const MATCH_THRESHOLD = 0.7;
@@ -433,13 +434,8 @@ function MicPulse({ active, supported }: { active: boolean; supported: boolean }
     return <span className="text-xs uppercase tracking-[0.16em] text-white/30">no mic</span>;
   }
   return (
-    <span className="relative flex items-center gap-2 text-xs uppercase tracking-[0.16em] text-white/50">
-      <span className="relative flex h-2.5 w-2.5">
-        {active && (
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#CB4B00] opacity-60" />
-        )}
-        <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${active ? "bg-[#CB4B00]" : "bg-white/25"}`} />
-      </span>
+    <span className="flex items-center gap-2.5 text-xs uppercase tracking-[0.16em] text-white/50">
+      <MicWaveform active={active} className="w-16" />
       {active ? "Listening" : "Paused"}
     </span>
   );
