@@ -77,14 +77,14 @@ export function MonologueResultCard({
     >
       {indicatorLabel && <MatchIndicatorTag label={indicatorLabel} />}
       <Card
-        className={`hover:shadow-xl transition-all cursor-pointer flex flex-col group rounded-lg ${
-          size === "dashboard" ? "h-[380px]" : "h-full min-h-[360px]"
+        className={`shadow-sm hover:shadow-xl transition-all cursor-pointer flex flex-col group rounded-lg ${
+          size === "dashboard" ? "h-[440px]" : "h-full min-h-[420px]"
         } ${
           isBestMatch ? "border-l-4 border-border hover:border-muted-foreground/40" : "hover:border-secondary/50"
         }`}
         onClick={onSelect}
       >
-        <CardContent className="pt-6 flex-1 flex flex-col">
+        <CardContent className="p-6 flex-1 flex flex-col">
           <div className="space-y-4 flex-1">
             <div className="flex items-start justify-between gap-2">
               {mono.poster_url && (
