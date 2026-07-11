@@ -78,7 +78,7 @@ export function MonologueResultCard({
       {indicatorLabel && <MatchIndicatorTag label={indicatorLabel} />}
       <Card
         className={`shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col group rounded-lg ${
-          size === "dashboard" ? "h-[440px]" : "h-full min-h-[420px]"
+          size === "dashboard" ? "h-[500px]" : "h-full min-h-[480px]"
         } ${
           isBestMatch ? "border-l-4 border-border hover:border-muted-foreground/40" : "hover:border-secondary/50"
         }`}
@@ -194,10 +194,10 @@ export function MonologueResultCard({
             {/* The piece — the focus. It's the monologue text, so: typewriter. */}
             <p
               className={`font-typewriter text-[15px] leading-relaxed text-foreground/80 ${
-                size === "dashboard" ? "line-clamp-7" : "line-clamp-6"
+                size === "dashboard" ? "line-clamp-[10]" : "line-clamp-[8]"
               }`}
             >
-              &ldquo;{mono.text.substring(0, size === "dashboard" ? 440 : 340)}…&rdquo;
+              &ldquo;{mono.text.substring(0, size === "dashboard" ? 640 : 500)}…&rdquo;
             </p>
           </div>
 
