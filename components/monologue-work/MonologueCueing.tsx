@@ -332,10 +332,8 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="relative z-10 flex min-h-0 flex-1 flex-col px-6"
+            className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center gap-2 overflow-hidden px-6"
           >
-            {/* Script area: fills the space; long lines shrink to fit so the dock never gets pushed off-screen */}
-            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 overflow-hidden">
               {/* delivered line, receding */}
               <div className="flex min-h-[2rem] items-end justify-center">
                 {activeIndex > 0 && (
@@ -400,26 +398,25 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                   </p>
                 )}
               </div>
-            </div>
 
-            {/* control dock — pinned, always visible */}
-            <div className="flex shrink-0 items-center justify-center gap-5 pb-6 pt-4">
+            {/* control dock — just under the line */}
+            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
               <MicPulse active={isListening} supported={isSupported} />
               <button
                 onClick={() => setRevealCurrent(true)}
-                className="flex items-center gap-1.5 text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
+                className="flex min-h-[40px] items-center gap-1.5 px-2 text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
               >
                 <IconEye className="h-4 w-4" /> Line
               </button>
               <button
                 onClick={() => goToLineAndReset(activeIndex + 1)}
-                className="text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
+                className="min-h-[40px] px-2 text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
               >
                 Skip
               </button>
               <button
                 onClick={restart}
-                className="text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
+                className="min-h-[40px] px-2 text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
               >
                 Restart
               </button>
