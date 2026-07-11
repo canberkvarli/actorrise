@@ -72,14 +72,21 @@ export function wordMatchScore(expected: string, transcript: string): number {
  * matcher that advances a pointer through the line as matching spoken words
  * arrive, skipping filler/misheard words that don't match the next target.
  */
-export function spokenPrefixCount(line: string, transcript: string): number {
+export function spokenPrefixCount(line: string, transcript: string, lookahead = 3): number {
   const target = normWords(line);
   const spoken = normWords(transcript);
   if (target.length === 0 || spoken.length === 0) return 0;
   let p = 0;
   for (const w of spoken) {
     if (p >= target.length) break;
-    if (wordsMatch(w, target[p])) p += 1;
+    // Look for this spoken word among the next few target words, so a dropped or
+    // misheard word doesn't freeze the highlight — we jump past it and keep up.
+    for (let k = 0; k < lookahead && p + k < target.length; k++) {
+      if (wordsMatch(w, target[p + k])) {
+        p = p + k + 1;
+        break;
+      }
+    }
   }
   return p;
 }
