@@ -23,6 +23,14 @@ const SERIF = "var(--font-serif), Georgia, 'Times New Roman', serif";
 /** Typewriter face — reserved for the monologue TEXT itself (never titles/UI). */
 const SCRIPT = "var(--font-typewriter), 'Courier Prime', 'Courier New', monospace";
 
+/** Auto-scale a line's font to its length so long lines fit and the dock stays visible. */
+function lineFontSize(len: number): string {
+  if (len > 170) return "clamp(0.95rem, 2.1vw, 1.4rem)";
+  if (len > 110) return "clamp(1.1rem, 2.7vw, 1.75rem)";
+  if (len > 60) return "clamp(1.3rem, 3.3vw, 2.1rem)";
+  return "clamp(1.55rem, 4.2vw, 2.7rem)";
+}
+
 interface DeliveryFeedback {
   rating: number;
   overall_notes: string;
@@ -189,10 +197,10 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
           <IconArrowLeft className="h-5 w-5" />
         </button>
         <div className="min-w-0">
-          <h1 className="truncate text-xl leading-tight text-white" style={{ fontFamily: SERIF }}>
+          <h1 className="truncate text-2xl leading-tight text-white sm:text-3xl" style={{ fontFamily: SERIF }}>
             {monologue.character_name}
           </h1>
-          <p className="truncate text-xs text-white/50">{monologue.title}</p>
+          <p className="truncate text-sm text-white/55">{monologue.title}</p>
         </div>
         {started && !completed && (
           <span className="ml-auto text-[0.7rem] uppercase tracking-[0.22em] text-white/45">
@@ -324,75 +332,78 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="relative z-10 flex flex-1 flex-col items-center justify-center px-6"
+            className="relative z-10 flex min-h-0 flex-1 flex-col px-6"
           >
-            {/* delivered line, receding */}
-            <div className="flex h-16 items-end justify-center">
-              {activeIndex > 0 && (
-                <p
-                  className="max-w-2xl text-center text-base leading-relaxed text-white/35"
-                  style={{ fontFamily: SCRIPT }}
-                >
-                  {lines[activeIndex - 1]}
-                </p>
-              )}
+            {/* Script area: fills the space; long lines shrink to fit so the dock never gets pushed off-screen */}
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 overflow-hidden">
+              {/* delivered line, receding */}
+              <div className="flex min-h-[2rem] items-end justify-center">
+                {activeIndex > 0 && (
+                  <p
+                    className="max-w-2xl text-center text-sm leading-relaxed text-white/30"
+                    style={{ fontFamily: SCRIPT }}
+                  >
+                    {lines[activeIndex - 1]}
+                  </p>
+                )}
+              </div>
+
+              {/* current line — spotlit, word-by-word, font auto-scaled to length */}
+              <div className="relative flex max-w-3xl items-center justify-center py-2">
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 -z-10 blur-3xl"
+                  style={{ background: "radial-gradient(60% 55% at 50% 50%, rgba(203,75,0,0.18), transparent 70%)" }}
+                />
+                <AnimatePresence mode="wait">
+                  <motion.p
+                    key={activeIndex}
+                    initial={{ opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -18 }}
+                    transition={{ type: "spring", stiffness: 220, damping: 26 }}
+                    className="text-center leading-[1.4]"
+                    style={{ fontFamily: SCRIPT, fontSize: lineFontSize(currentLine.length) }}
+                  >
+                    {currentWords.map((word, i) => {
+                      const spoken = i < spokenCount;
+                      const masked = offBook && !revealCurrent && !spoken;
+                      return (
+                        <span
+                          key={i}
+                          className="transition-all duration-300"
+                          style={{
+                            color: spoken ? "#FF9147" : masked ? "transparent" : "rgba(246,240,229,0.94)",
+                            textShadow: spoken ? "0 0 26px rgba(255,130,50,0.5)" : "none",
+                          }}
+                        >
+                          {masked ? (
+                            <span className="text-white/15">{"•".repeat(Math.max(2, word.replace(/[^\p{L}\p{N}]/gu, "").length))}</span>
+                          ) : (
+                            word
+                          )}{" "}
+                        </span>
+                      );
+                    })}
+                  </motion.p>
+                </AnimatePresence>
+              </div>
+
+              {/* upcoming line, veiled */}
+              <div className="flex min-h-[2rem] items-start justify-center">
+                {activeIndex + 1 < lines.length && (
+                  <p
+                    className="max-w-2xl text-center text-sm leading-relaxed text-white/20"
+                    style={{ fontFamily: SCRIPT }}
+                  >
+                    {offBook ? "" : lines[activeIndex + 1]}
+                  </p>
+                )}
+              </div>
             </div>
 
-            {/* current line — spotlit, word-by-word */}
-            <div className="relative flex min-h-[36vh] max-w-3xl items-center justify-center py-6">
-              <div
-                aria-hidden
-                className="pointer-events-none absolute inset-0 -z-10 blur-3xl"
-                style={{ background: "radial-gradient(60% 55% at 50% 50%, rgba(203,75,0,0.18), transparent 70%)" }}
-              />
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={activeIndex}
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -18 }}
-                  transition={{ type: "spring", stiffness: 220, damping: 26 }}
-                  className="text-center text-[clamp(1.5rem,3.8vw,2.6rem)] leading-[1.4]"
-                  style={{ fontFamily: SCRIPT }}
-                >
-                  {currentWords.map((word, i) => {
-                    const spoken = i < spokenCount;
-                    const masked = offBook && !revealCurrent && !spoken;
-                    return (
-                      <span
-                        key={i}
-                        className="transition-all duration-300"
-                        style={{
-                          color: spoken ? "#FF9147" : masked ? "transparent" : "rgba(246,240,229,0.94)",
-                          textShadow: spoken ? "0 0 26px rgba(255,130,50,0.5)" : "none",
-                        }}
-                      >
-                        {masked ? (
-                          <span className="text-white/15">{"•".repeat(Math.max(2, word.replace(/[^\p{L}\p{N}]/gu, "").length))}</span>
-                        ) : (
-                          word
-                        )}{" "}
-                      </span>
-                    );
-                  })}
-                </motion.p>
-              </AnimatePresence>
-            </div>
-
-            {/* upcoming line, veiled */}
-            <div className="flex h-16 items-start justify-center">
-              {activeIndex + 1 < lines.length && (
-                <p
-                  className="max-w-2xl text-center text-base leading-relaxed text-white/25"
-                  style={{ fontFamily: SCRIPT }}
-                >
-                  {offBook ? "" : lines[activeIndex + 1]}
-                </p>
-              )}
-            </div>
-
-            {/* control dock */}
-            <div className="mt-6 flex items-center gap-5">
+            {/* control dock — pinned, always visible */}
+            <div className="flex shrink-0 items-center justify-center gap-5 pb-6 pt-4">
               <MicPulse active={isListening} supported={isSupported} />
               <button
                 onClick={() => setRevealCurrent(true)}
