@@ -939,6 +939,12 @@ class SemanticSearch:
                     ~Play.author.ilike(f"%{hard_filters['exclude_author']}%")
                 )
 
+            # Exclude a specific play/show (e.g., "NOT from Dear Evan Hansen")
+            if hard_filters.get("exclude_play"):
+                base_query = base_query.filter(
+                    ~Play.title.ilike(f"%{hard_filters['exclude_play']}%")
+                )
+
             if hard_filters.get("character_name"):
                 base_query = base_query.filter(
                     Monologue.character_name.ilike(
@@ -1505,6 +1511,12 @@ class SemanticSearch:
             if filters.get("exclude_author"):
                 base_query = base_query.filter(
                     ~Play.author.ilike(f"%{filters['exclude_author']}%")
+                )
+
+            # Exclude play/show filter (e.g., "NOT from Dear Evan Hansen")
+            if filters.get("exclude_play"):
+                base_query = base_query.filter(
+                    ~Play.title.ilike(f"%{filters['exclude_play']}%")
                 )
 
             # Duration filter

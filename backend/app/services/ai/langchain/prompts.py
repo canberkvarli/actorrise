@@ -146,6 +146,12 @@ Extract the following information if present in the query (return null if not me
    - "hamlat" → "hamlet"
    - Return null if the query has no typos or is gibberish
 
+13. exclude_play: Is the user explicitly excluding a specific play, movie, or show they do NOT want a piece from?
+   - Keywords: "not from Dear Evan Hansen", "NOT from the show", "anything but Hamlet", "except Death of a Salesman" → the work's full title
+   - Common when the user names a show/character but wants a piece that is NOT from it (e.g. "monologue to audition for Zoe in Dear Evan Hansen, NOT from the show" → "Dear Evan Hansen")
+   - Only extract when the user explicitly says NOT / NO / EXCEPT / ANYTHING BUT + a specific work title
+   - Return the canonical/full title or null
+
 Return ONLY valid JSON with these keys. Use null for any filter not mentioned in the query."""
 
 QUERY_PARSING_TEMPLATE = ChatPromptTemplate.from_messages([
