@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { toastBookmark } from "@/lib/toast";
 import { trackSearchPerformed, trackResultClicked } from "@/lib/analytics";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconEye, IconEyeOff, IconDownload, IconAdjustments, IconSend, IconFlag, IconDeviceTv, IconCheck } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconEye, IconEyeOff, IconDownload, IconAdjustments, IconFlag, IconDeviceTv, IconCheck } from "@tabler/icons-react";
 
 // Fun loading messages for AI search (theater)
 const LOADING_MESSAGES = [
@@ -1531,15 +1531,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </Badge>
                 )}
               </Button>
-              {searchMode === "plays" && (
-                <Link
-                  href="/submit-monologue"
-                  className="hidden md:inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
-                >
-                  <IconSend className="h-4 w-4" />
-                  Submit monologue
-                </Link>
-              )}
             </div>
 
             {searchMode === "plays" && (
@@ -2389,11 +2380,16 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       >
                     {/* Minimal Header */}
                     <div className="text-center space-y-2">
-                      <h1 className="text-4xl font-bold font-typewriter">{selectedMonologue.character_name}</h1>
-                      <div>
-                        <p className="text-xl font-semibold font-typewriter text-muted-foreground">{selectedMonologue.play_title}</p>
-                        <p className="text-muted-foreground font-typewriter">by {selectedMonologue.author}</p>
-                      </div>
+                      <h1
+                        className="text-4xl font-semibold"
+                        style={{ fontFamily: "var(--font-serif), Georgia, serif" }}
+                      >
+                        {selectedMonologue.character_name}
+                      </h1>
+                      <p className="text-muted-foreground">
+                        {selectedMonologue.play_title}
+                        {selectedMonologue.author ? ` · ${selectedMonologue.author}` : ""}
+                      </p>
                     </div>
 
                     {/* Monologue Text - Large and Centered */}
