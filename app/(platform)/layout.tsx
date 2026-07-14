@@ -43,6 +43,12 @@ const OnboardingWizard = dynamic(
   () => import("@/components/onboarding/OnboardingWizard"),
   { ssr: false },
 );
+// Soft, dismissible invite for legacy-onboarded users to fill the 5-tap profile.
+// Self-gates on the auth user; renders null for new users. Corner card.
+const ProfileBackfillCard = dynamic(
+  () => import("@/components/onboarding/ProfileBackfillCard"),
+  { ssr: false },
+);
 // Zero-setup first rehearsal gate. Self-gates on the auth user (never rehearsed
 // + finished onboarding) and redirects once to /first-scene. Renders null.
 const FirstRehearsalGate = dynamic(
@@ -701,6 +707,7 @@ export default function PlatformLayout({
       )}
 
       <OnboardingWizard />
+      <ProfileBackfillCard />
       <PWARegister />
       <FirstRehearsalGate />
       <AnimatePresence>

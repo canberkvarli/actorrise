@@ -26,6 +26,7 @@ class ActorProfileCreate(BaseModel):
     training_background: Optional[str] = None
     union_status: Optional[str] = None
     preferred_genres: List[str] = []
+    preferred_mediums: List[str] = []
     overdone_alert_sensitivity: float = 0.5
     profile_bias_enabled: bool = True
     headshot_url: Optional[str] = None
@@ -46,6 +47,7 @@ class ActorProfileResponse(BaseModel):
     training_background: Optional[str] = None
     union_status: Optional[str] = None
     preferred_genres: List[str] = []
+    preferred_mediums: List[str] = []
     overdone_alert_sensitivity: float = 0.5
     profile_bias_enabled: bool = True
     headshot_url: Optional[str] = None
@@ -82,6 +84,7 @@ def get_profile(
             training_background=None,
             union_status=None,
             preferred_genres=[],
+            preferred_mediums=[],
             overdone_alert_sensitivity=0.5,
             profile_bias_enabled=True,
             headshot_url=None,

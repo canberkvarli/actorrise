@@ -30,6 +30,7 @@ class ActorProfile(Base):
 
     # Search Preferences
     preferred_genres = Column(JSON, default=list)
+    preferred_mediums = Column(JSON, default=list)  # ["theatre","film","tv"] -> Play.source_type
     overdone_alert_sensitivity = Column(Float, default=0.5)
     profile_bias_enabled = Column(Boolean, default=True)
 

@@ -33,6 +33,7 @@ class UpdateOnboardingRequest(BaseModel):
     has_seen_search_tour: bool | None = None
     has_seen_profile_tour: bool | None = None
     has_completed_onboarding: bool | None = None
+    has_completed_profile_onboarding: bool | None = None
     has_seen_first_rehearsal: bool | None = None
     referral_source: str | None = None
     last_seen_feature_id: str | None = None
@@ -204,6 +205,7 @@ def get_me(
         "has_seen_search_tour": current_user.has_seen_search_tour,
         "has_seen_profile_tour": current_user.has_seen_profile_tour,
         "has_completed_onboarding": current_user.has_completed_onboarding,
+        "has_completed_profile_onboarding": current_user.has_completed_profile_onboarding,
         "has_seen_first_rehearsal": current_user.has_seen_first_rehearsal,
         "has_ever_rehearsed": has_ever_rehearsed,
         "referral_source": current_user.referral_source,
@@ -254,6 +256,8 @@ def update_onboarding(
         current_user.has_seen_profile_tour = body.has_seen_profile_tour
     if body.has_completed_onboarding is not None:
         current_user.has_completed_onboarding = body.has_completed_onboarding
+    if body.has_completed_profile_onboarding is not None:
+        current_user.has_completed_profile_onboarding = body.has_completed_profile_onboarding
     if body.has_seen_first_rehearsal is not None:
         current_user.has_seen_first_rehearsal = body.has_seen_first_rehearsal
     if body.referral_source is not None:
@@ -270,6 +274,7 @@ def update_onboarding(
         "has_seen_search_tour": current_user.has_seen_search_tour,
         "has_seen_profile_tour": current_user.has_seen_profile_tour,
         "has_completed_onboarding": current_user.has_completed_onboarding,
+        "has_completed_profile_onboarding": current_user.has_completed_profile_onboarding,
         "has_seen_first_rehearsal": current_user.has_seen_first_rehearsal,
         "referral_source": current_user.referral_source,
         "last_seen_feature_id": current_user.last_seen_feature_id,
