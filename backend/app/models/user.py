@@ -28,6 +28,12 @@ class User(Base):
     has_seen_search_tour = Column(Boolean, default=False, nullable=False)
     has_seen_profile_tour = Column(Boolean, default=False, nullable=False)
     has_completed_onboarding = Column(Boolean, default=False, nullable=False)
+    # Distinct from the legacy flag above: set once the user finishes the
+    # 5-tap profile-first onboarding that actually captures gender/age/type/
+    # mediums/stage. Drives the soft backfill card for pre-existing users.
+    has_completed_profile_onboarding = Column(
+        Boolean, default=False, nullable=False, server_default=text("false")
+    )
     # Whether the user has been shown the zero-setup first rehearsal (the
     # "drop straight into a scene" activation flow). Set once they start or
     # skip it, so it never fires again.
