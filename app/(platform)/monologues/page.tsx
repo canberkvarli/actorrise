@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { toastBookmark } from "@/lib/toast";
 import { trackSearchPerformed, trackResultClicked } from "@/lib/analytics";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconEye, IconEyeOff, IconDownload, IconAdjustments, IconTargetArrow, IconSend, IconFlag, IconDeviceTv, IconCheck } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconEye, IconEyeOff, IconDownload, IconAdjustments, IconFlag, IconDeviceTv, IconCheck } from "@tabler/icons-react";
 
 // Fun loading messages for AI search (theater)
 const LOADING_MESSAGES = [
@@ -63,7 +63,6 @@ import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
 import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueResultCard } from "@/components/monologue/MonologueResultCard";
@@ -602,10 +601,10 @@ function SearchContent() {
             emotion: last.filters.emotion ?? "",
             theme: last.filters.theme ?? "",
             category: last.filters.category ?? "",
-            tone: (last.filters as any).tone ?? "",
-            difficulty: (last.filters as any).difficulty ?? "",
-            author: (last.filters as any).author ?? "",
-            max_duration: (last.filters as any).max_duration ?? "",
+            tone: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).tone ?? "",
+            difficulty: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).difficulty ?? "",
+            author: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).author ?? "",
+            max_duration: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).max_duration ?? "",
           });
           const m = last.filters.max_overdone_score;
           setMaxOverdoneScore(typeof m === "number" && m >= 0 && m <= 1 ? m : last.filters.exclude_overdone === "true" ? 0.3 : 1);
@@ -656,10 +655,10 @@ function SearchContent() {
           emotion: last.filters.emotion ?? "",
           theme: last.filters.theme ?? "",
           category: last.filters.category ?? "",
-          tone: (last.filters as any).tone ?? "",
-          difficulty: (last.filters as any).difficulty ?? "",
-          author: (last.filters as any).author ?? "",
-          max_duration: (last.filters as any).max_duration ?? "",
+          tone: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).tone ?? "",
+          difficulty: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).difficulty ?? "",
+          author: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).author ?? "",
+          max_duration: (last.filters as { tone?: string; difficulty?: string; author?: string; max_duration?: string }).max_duration ?? "",
         });
         const m = last.filters.max_overdone_score;
         setMaxOverdoneScore(typeof m === "number" && m >= 0 && m <= 1 ? m : last.filters.exclude_overdone === "true" ? 0.3 : 1);
@@ -1005,10 +1004,11 @@ function SearchContent() {
       } catch {
         // ignore
       }
-    } catch (error: any) {
+    } catch (error) {
+      const err = error as { response?: { status?: number }; message?: string };
       const isProfileError =
-        error?.response?.status === 400 ||
-        (typeof error?.message === "string" && /profile|complete your profile|actor profile not found/i.test(error.message));
+        err?.response?.status === 400 ||
+        (typeof err?.message === "string" && /profile|complete your profile|actor profile not found/i.test(err.message));
       if (isProfileError) {
         setShowProfileCompleteModal(true);
       } else {
@@ -1350,12 +1350,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           <p className="hidden md:block stage-direction text-xs text-muted-foreground/70 mb-3">
             (the search.)
           </p>
-          <h1 className="font-serif text-2xl sm:text-3xl md:text-5xl font-medium tracking-[-0.02em] mb-1 md:mb-3">
+          <h1 className="font-serif text-2xl sm:text-3xl md:text-5xl font-medium tracking-[-0.02em]">
             Find your next <em className="italic text-primary">piece</em>
           </h1>
-          <p className="hidden md:block text-muted-foreground text-lg max-w-lg mx-auto">
-            Describe what you&apos;re looking for in plain English; filters narrow results or let you browse by criteria.
-          </p>
         </div>
 
         {/* Plays vs Film & TV toggle: spacious on mobile, 44px touch targets */}
@@ -1534,40 +1531,20 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </Badge>
                 )}
               </Button>
-              {searchMode === "plays" && (
-                <Link
-                  href="/submit-monologue"
-                  className="hidden md:inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors"
-                >
-                  <IconSend className="h-4 w-4" />
-                  Submit monologue
-                </Link>
-              )}
             </div>
 
             {searchMode === "plays" && (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      id="search-find-for-me"
-                      onClick={handleFindForMe}
-                      disabled={isLoading}
-                      variant="outline"
-                      size="sm"
-                      className="gap-2 min-h-[44px] md:min-h-0"
-                    >
-                      <IconSparkles className="h-4 w-4 text-primary" />
-                      Find for me
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p className="text-sm">
-                      Get AI-powered recommendations based on your actor profile.
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
+              <Button
+                id="search-find-for-me"
+                onClick={handleFindForMe}
+                disabled={isLoading}
+                variant="outline"
+                size="sm"
+                className="gap-2 min-h-[44px] md:min-h-0 border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
+              >
+                <IconSparkles className="h-4 w-4" />
+                Find for me
+              </Button>
             )}
           </div>
 
@@ -2115,39 +2092,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               <div className="flex flex-col gap-3 mb-8 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4">
                 {/* Left: count + mobile bookmark */}
                 <div className="flex items-center justify-between sm:justify-start gap-3 min-w-0">
-                  <div className="flex flex-col gap-0.5 min-w-0">
-                    <div className="flex items-baseline gap-2 flex-wrap">
-                      <span className="text-2xl font-semibold tabular-nums text-foreground">
-                        {showBookmarkedOnly
-                          ? results.filter((m) => m.is_favorited).length
-                          : total > 0 ? total : results.length}
-                      </span>
-                      <span className="text-sm text-muted-foreground">
-                        {showBookmarkedOnly ? "in your collection" : "monologues found"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-                      {!showBookmarkedOnly && queryUsedForResults && (
-                        <span className="text-muted-foreground/50">from 7,500+ in our library</span>
-                      )}
-                      {!showBookmarkedOnly && queryUsedForResults && !showConfidence && relatedResults.length > 0 && (
-                        <span aria-hidden className="text-border">·</span>
-                      )}
-                      {!showBookmarkedOnly && !showConfidence && relatedResults.length > 0 && (
-                        <span>Sorted by relevance</span>
-                      )}
-                      {restoredFromLastSearch && searchParams.get("q") === null && (
-                        <>
-                          {!showBookmarkedOnly && !showConfidence && relatedResults.length > 0 && (
-                            <span aria-hidden className="text-border">·</span>
-                          )}
-                          <span>From your last search</span>
-                        </>
-                      )}
-                    </div>
-                    {isPersonalized && !showBookmarkedOnly && (
-                      <span className="text-xs text-primary dark:text-orange-400">Matched to your profile</span>
-                    )}
+                  <div className="flex items-baseline gap-2 flex-wrap min-w-0">
+                    <span className="text-2xl font-semibold tabular-nums text-foreground">
+                      {showBookmarkedOnly
+                        ? results.filter((m) => m.is_favorited).length
+                        : total > 0 ? total : results.length}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      {showBookmarkedOnly ? "in your collection" : "monologues"}
+                    </span>
                   </div>
                   <Button
                     variant={showBookmarkedOnly ? "secondary" : "outline"}
@@ -2190,15 +2143,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 return (
                   <>
                     {!showBookmarkedOnly && showConfidence && bestMatches.length > 0 && (
-                      <div className="flex items-center gap-2 mb-8">
-                        <div className="p-2 rounded-lg bg-muted/80 ring-1 ring-border">
-                          <IconTargetArrow className="h-5 w-5 text-foreground" />
-                        </div>
-                        <div>
-                          <h2 className="text-lg font-semibold text-foreground">This is the monologue</h2>
-                          <p className="text-sm text-muted-foreground">We found the piece that contains your quote</p>
-                        </div>
-                      </div>
+                      <p className="mb-6 flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+                        <span aria-hidden className="inline-block h-3 w-0.5 bg-primary" />
+                        Best match
+                      </p>
                     )}
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                       {!showBookmarkedOnly && bestMatches.map((mono, idx) => (
@@ -2433,11 +2381,16 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       >
                     {/* Minimal Header */}
                     <div className="text-center space-y-2">
-                      <h1 className="text-4xl font-bold font-typewriter">{selectedMonologue.character_name}</h1>
-                      <div>
-                        <p className="text-xl font-semibold font-typewriter text-muted-foreground">{selectedMonologue.play_title}</p>
-                        <p className="text-muted-foreground font-typewriter">by {selectedMonologue.author}</p>
-                      </div>
+                      <h1
+                        className="text-4xl font-semibold"
+                        style={{ fontFamily: "var(--font-serif), Georgia, serif" }}
+                      >
+                        {selectedMonologue.character_name}
+                      </h1>
+                      <p className="text-muted-foreground">
+                        {selectedMonologue.play_title}
+                        {selectedMonologue.author ? ` · ${selectedMonologue.author}` : ""}
+                      </p>
                     </div>
 
                     {/* Monologue Text - Large and Centered */}
@@ -2458,6 +2411,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   <MonologueDetailContent
                     monologue={selectedMonologue}
                     onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
+                    headerActions={
+                      <button
+                        onClick={() => router.push(`/monologue/${selectedMonologue.id}/work`)}
+                        className="inline-flex items-center gap-1.5 rounded-md bg-[#CB4B00] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#B03000]"
+                      >
+                        Work on this
+                      </button>
+                    }
                   />
                       </motion.div>
                     )}

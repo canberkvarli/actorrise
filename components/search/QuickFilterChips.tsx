@@ -26,30 +26,25 @@ export function QuickFilterChips({ filters, onToggle }: QuickFilterChipsProps) {
     // invisible until you happen to swipe).
     <div className="relative">
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pr-6 sm:pr-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {GROUPS.map((group, gi) => (
-          <div key={group.key} className="flex items-center gap-1.5 shrink-0">
-            {gi > 0 && <span className="w-px h-4 bg-border/60 mx-0.5" aria-hidden />}
-            <div className="inline-flex rounded-lg border border-border/60 overflow-hidden">
-              {group.options.map((opt) => {
-                const isActive = filters[group.key] === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => onToggle(group.key, isActive ? "" : opt.value)}
-                    className={`px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
-                      isActive
-                        ? "bg-foreground text-background"
-                        : "bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                    } ${group.options.length > 1 ? "border-r border-border/60 last:border-r-0" : ""}`}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        ))}
+        {GROUPS.flatMap((group) =>
+          group.options.map((opt) => {
+            const isActive = filters[group.key] === opt.value;
+            return (
+              <button
+                key={`${group.key}-${opt.value}`}
+                type="button"
+                onClick={() => onToggle(group.key, isActive ? "" : opt.value)}
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                  isActive
+                    ? "border-primary bg-primary/10 text-primary"
+                    : "border-border/60 text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+                }`}
+              >
+                {opt.label}
+              </button>
+            );
+          })
+        )}
       </div>
       {/* Right-edge fade — mobile only — signals "more filters this way". */}
       <div
