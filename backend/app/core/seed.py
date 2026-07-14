@@ -39,7 +39,7 @@ def canonical_tiers() -> list[PricingTier]:
                 "priority_support": False,
                 "scene_partner_scripts": 0,
                 "scene_partner_sessions": 2,
-                "monologue_sessions": 2,  # PLACEHOLDER (mirrors scene_partner) — Canberk to confirm free cap
+                "monologue_sessions": -1,  # launch: unlimited for all tiers (2026-07-15), revisit once /work usage is understood
                 "scene_partner_trial_only": True,
             },
             is_active=True,
@@ -62,7 +62,7 @@ def canonical_tiers() -> list[PricingTier]:
                 "priority_support": False,
                 "scene_partner_scripts": 1,
                 "scene_partner_sessions": 3,  # 3 unique scenes/month
-                "monologue_sessions": 3,  # PLACEHOLDER (mirrors scene_partner) — confirm
+                "monologue_sessions": -1,  # launch: unlimited for all tiers (2026-07-15), revisit once /work usage is understood
             },
             is_active=True,
             sort_order=1,
@@ -84,7 +84,7 @@ def canonical_tiers() -> list[PricingTier]:
                 "priority_support": False,
                 "scene_partner_scripts": 5,
                 "scene_partner_sessions": 30,  # 30 unique scenes/month
-                "monologue_sessions": 30,  # PLACEHOLDER (mirrors scene_partner) — confirm
+                "monologue_sessions": -1,  # launch: unlimited for all tiers (2026-07-15), revisit once /work usage is understood
             },
             is_active=True,
             sort_order=2,
@@ -106,7 +106,7 @@ def canonical_tiers() -> list[PricingTier]:
                 "priority_support": False,
                 "scene_partner_scripts": -1,  # unlimited
                 "scene_partner_sessions": -1,  # unlimited scenes
-                "monologue_sessions": -1,  # PLACEHOLDER (mirrors scene_partner) — confirm
+                "monologue_sessions": -1,  # launch: unlimited for all tiers (2026-07-15), revisit once /work usage is understood
             },
             is_active=True,
             sort_order=3,
