@@ -400,6 +400,13 @@ def get_growth_stats(
         .scalar()
         or 0
     )
+    # Adoption of the 5-tap profile-first onboarding (populates the search levers).
+    profile_onboarded = (
+        db.query(func.count(User.id))
+        .filter(real_user_filter(), User.has_completed_profile_onboarding.is_(True))
+        .scalar()
+        or 0
+    )
     searched = (
         db.query(func.count(func.distinct(UsageMetrics.user_id)))
         .filter(
@@ -418,6 +425,17 @@ def get_growth_stats(
         .scalar()
         or 0
     )
+    # /work (audio-first monologue) sessions — the new, content-abundant rehearse
+    # path that the profile onboarding funnels new actors into.
+    rehearsed_monologue = (
+        db.query(func.count(func.distinct(UsageMetrics.user_id)))
+        .filter(
+            UsageMetrics.user_id.in_(real_ids),
+            func.coalesce(UsageMetrics.monologue_sessions, 0) > 0,
+        )
+        .scalar()
+        or 0
+    )
 
     def pct(n: int) -> float:
         return round(n / total_real * 100, 1) if total_real else 0.0
@@ -425,7 +443,9 @@ def get_growth_stats(
     activation = [
         {"step": "Signed up", "count": total_real, "percent": 100.0},
         {"step": "Completed onboarding", "count": onboarded, "percent": pct(onboarded)},
+        {"step": "Personalized profile", "count": profile_onboarded, "percent": pct(profile_onboarded)},
         {"step": "Ran a search", "count": searched, "percent": pct(searched)},
+        {"step": "Rehearsed a monologue", "count": rehearsed_monologue, "percent": pct(rehearsed_monologue)},
         {"step": "Rehearsed a scene", "count": rehearsed, "percent": pct(rehearsed)},
     ]
 
