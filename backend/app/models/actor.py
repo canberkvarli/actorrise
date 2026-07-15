@@ -27,6 +27,7 @@ class ActorProfile(Base):
     type = Column(JSON, default=list)  # Can be array of types or single type for backward compatibility
     training_background = Column(String, nullable=True)
     union_status = Column(String)
+    special_skills = Column(JSON, default=list)  # résumé: list of skill strings
 
     # Search Preferences
     preferred_genres = Column(JSON, default=list)
@@ -42,6 +43,27 @@ class ActorProfile(Base):
 
     # Relationship to user
     user = relationship("User", back_populates="actor_profile")
+
+
+class ActorCredit(Base):
+    """A single résumé credit (one past role). Grouped by category on the résumé."""
+
+    __tablename__ = "actor_credits"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+
+    # theatre | film | tv | commercial | other  (drives résumé grouping)
+    category = Column(String, nullable=False, default="theatre")
+    production = Column(String, nullable=False)  # show / film / series title
+    role = Column(String, nullable=True)
+    company = Column(String, nullable=True)  # theatre, studio, network, or production co.
+    director = Column(String, nullable=True)
+    year = Column(String, nullable=True)  # free-text ("2024", "2023–24") — kept as string
+    sort_order = Column(Integer, nullable=False, default=0)
+
+    created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
+    updated_at = Column(DateTime(timezone=True), onupdate=sql_text('now()'))
 
 
 class Play(Base):
