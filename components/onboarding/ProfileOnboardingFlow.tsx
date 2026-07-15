@@ -177,7 +177,9 @@ export default function ProfileOnboardingFlow({
   const rehearse = useCallback(
     (id: number) => {
       endFlow();
-      router.push(`/monologue/${id}/memorize`);
+      // /work = the audio-first rehearsal flow (richer than /memorize); this is
+      // the payoff's whole point — drop them straight into rehearsing.
+      router.push(`/monologue/${id}/work`);
     },
     [endFlow, router]
   );
