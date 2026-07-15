@@ -25,6 +25,7 @@ class ActorProfileCreate(BaseModel):
     type: Optional[Union[str, List[str]]] = None  # Can be string (backward compat) or list of strings
     training_background: Optional[str] = None
     union_status: Optional[str] = None
+    special_skills: List[str] = []
     preferred_genres: List[str] = []
     preferred_mediums: List[str] = []
     overdone_alert_sensitivity: float = 0.5
@@ -46,6 +47,7 @@ class ActorProfileResponse(BaseModel):
     type: Optional[Union[str, List[str]]] = None  # Can be string or list
     training_background: Optional[str] = None
     union_status: Optional[str] = None
+    special_skills: List[str] = []
     preferred_genres: List[str] = []
     preferred_mediums: List[str] = []
     overdone_alert_sensitivity: float = 0.5
@@ -83,6 +85,7 @@ def get_profile(
             type=None,
             training_background=None,
             union_status=None,
+            special_skills=[],
             preferred_genres=[],
             preferred_mediums=[],
             overdone_alert_sensitivity=0.5,

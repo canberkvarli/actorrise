@@ -22,6 +22,7 @@ from app.api.founding_actors import router as founding_actors_router
 from app.api.monologues import router as monologues_router
 from app.api.pricing import router as pricing_router
 from app.api.profile import router as profile_router
+from app.api.resume import router as resume_router
 from app.api.public import router as public_router
 from app.api.scenes import router as scenes_router
 from app.api.speech import router as speech_router
@@ -152,6 +153,7 @@ app.include_router(auth_router)
 app.include_router(contact_router)
 app.include_router(feedback_router)
 app.include_router(profile_router)
+app.include_router(resume_router)
 app.include_router(monologues_router)
 app.include_router(film_tv_router)
 app.include_router(scenes_router)
