@@ -64,13 +64,14 @@ export function buildPayoffParams(a: OnboardingAnswers, opts?: { limit?: number;
   if (!opts?.broad) {
     const sources = MEDIUMS.filter((m) => a.mediums.includes(m.id)).map((m) => m.sourceType);
     if (sources.length) p.set("source_type", sources.join(","));
-    // `category` is single-valued; only send it when the actor picked exactly one era.
+    // `category` and `tone` are single-valued; only send when the actor picked exactly one.
     const eras = WORK_ON.filter((w) => a.workOn.includes(w.id) && w.kind === "era").map((w) => w.id);
     if (eras.length === 1) p.set("category", eras[0]);
+    const tones = WORK_ON.filter((w) => a.workOn.includes(w.id) && w.kind === "tone").map((w) => w.id);
+    if (tones.length === 1) p.set("tone", tones[0]);
+    // Working pros get fresh material; dropped in the broad fallback so results never go empty.
+    if (a.stage === "working_pro") p.set("exclude_overdone", "true");
   }
-
-  // Working pros get fresh material by default; everyone else keeps warhorses in play.
-  if (a.stage === "working_pro") p.set("exclude_overdone", "true");
   p.set("limit", String(opts?.limit ?? 3));
   return p.toString();
 }

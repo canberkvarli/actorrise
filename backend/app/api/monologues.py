@@ -285,6 +285,7 @@ async def search_monologues(
     emotion: Optional[str] = None,
     theme: Optional[str] = None,
     difficulty: Optional[str] = None,
+    tone: Optional[str] = Query(None, description="Filter by tone (e.g. 'dramatic', 'comedic'). Exact match on the monologue's tone."),
     category: Optional[str] = None,
     author: Optional[str] = None,
     act: Optional[int] = Query(None, ge=1, le=10, description="Act number (1-10)"),
@@ -324,6 +325,8 @@ async def search_monologues(
         filters['theme'] = theme
     if difficulty:
         filters['difficulty'] = difficulty
+    if tone:
+        filters['tone'] = tone
     if category:
         filters['category'] = category
     if author:
