@@ -116,6 +116,7 @@ export interface GrowthStats {
   revenue: {
     total_users: number;
     paid_active: number;
+    comped: number;
     trialing: number;
     free: number;
     conversion_percent: number;
@@ -241,7 +242,8 @@ function RevenuePanel({ revenue }: { revenue: GrowthStats["revenue"] }) {
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <div className="flex justify-between"><span className="text-muted-foreground">MRR</span><span className="font-semibold tabular-nums" style={{ color: BRAND }}>${revenue.mrr_usd.toLocaleString()}</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground">Free→paid</span><span className="font-semibold tabular-nums">{revenue.conversion_percent}%</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Paid</span><span className="tabular-nums">{revenue.paid_active}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Paid (card on file)</span><span className="tabular-nums">{revenue.paid_active}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Comped</span><span className="tabular-nums">{revenue.comped}</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground">Trialing</span><span className="tabular-nums">{revenue.trialing}</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground">Free</span><span className="tabular-nums">{revenue.free}</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="tabular-nums">{revenue.total_users}</span></div>
