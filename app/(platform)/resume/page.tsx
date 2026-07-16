@@ -134,7 +134,47 @@ export default function ResumePage() {
   );
 
   if (loading) {
-    return <div className="p-8 text-sm text-muted-foreground">Loading your résumé…</div>;
+    return (
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <div className="mb-6 space-y-2">
+          <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+          <div className="h-8 w-40 animate-pulse rounded bg-muted" />
+          <div className="h-4 w-80 max-w-full animate-pulse rounded bg-muted/60" />
+        </div>
+        <div className="grid gap-8 lg:grid-cols-2">
+          {/* Editor skeleton */}
+          <div className="space-y-4">
+            <div className="h-52 animate-pulse rounded-md border border-border bg-muted/30" />
+            <div className="space-y-2">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="h-14 animate-pulse rounded border border-border bg-muted/20" />
+              ))}
+            </div>
+            <div className="h-28 animate-pulse rounded-md border border-border bg-muted/30" />
+          </div>
+          {/* Paper preview skeleton */}
+          <div className="lg:sticky lg:top-6 lg:self-start">
+            <div className="mx-auto w-full max-w-[8.5in] bg-white p-8 shadow-sm ring-1 ring-black/10">
+              <div className="flex items-start justify-between border-b border-neutral-200 pb-5">
+                <div className="space-y-2">
+                  <div className="h-7 w-48 animate-pulse rounded bg-neutral-200" />
+                  <div className="h-3 w-32 animate-pulse rounded bg-neutral-100" />
+                </div>
+                <div className="h-24 w-20 animate-pulse bg-neutral-200 ring-1 ring-black/10" />
+              </div>
+              {[0, 1, 2].map((s) => (
+                <div key={s} className="mt-5 space-y-2">
+                  <div className="h-3 w-24 animate-pulse rounded bg-neutral-100" />
+                  <div className="h-3 w-full animate-pulse rounded bg-neutral-100" />
+                  <div className="h-3 w-4/5 animate-pulse rounded bg-neutral-100" />
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-center text-xs text-muted-foreground">Building your preview…</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
