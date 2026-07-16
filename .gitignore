@@ -79,3 +79,8 @@ backend/backups/
 
 # tiktoken tokenizer cache (created at runtime, not code)
 data-gym-cache/
+
+# Local marketing drafts / trackers (not part of the app)
+*.xlsx
+.~lock.*#
+/*_Draft.md
