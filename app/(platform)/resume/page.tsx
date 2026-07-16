@@ -1,8 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { IconPlus, IconTrash, IconPencil, IconX } from "@tabler/icons-react";
+import { Reorder, useDragControls } from "framer-motion";
+import {
+  IconPlus,
+  IconTrash,
+  IconPencil,
+  IconX,
+  IconGripVertical,
+} from "@tabler/icons-react";
 import { useAuth } from "@/lib/auth";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -14,7 +21,72 @@ interface ProfileResp extends ResumeProfile {
   name?: string | null;
 }
 
-const EMPTY_FORM: CreditInput = { category: "theatre", production: "", role: "", company: "", director: "", year: "" };
+const EMPTY_FORM: CreditInput = {
+  category: "theatre",
+  production: "",
+  role: "",
+  company: "",
+  director: "",
+  year: "",
+};
+
+// ── One draggable credit row ────────────────────────────────────────────────
+function CreditRow({
+  credit,
+  onEdit,
+  onDelete,
+  onDropped,
+}: {
+  credit: Credit;
+  onEdit: (c: Credit) => void;
+  onDelete: (id: number) => void;
+  onDropped: () => void;
+}) {
+  const controls = useDragControls();
+  return (
+    <Reorder.Item
+      value={credit}
+      dragListener={false}
+      dragControls={controls}
+      onDragEnd={onDropped}
+      className="flex items-center gap-2 border border-border bg-background px-2.5 py-2"
+    >
+      <button
+        type="button"
+        onPointerDown={(e) => controls.start(e)}
+        aria-label="Drag to reorder"
+        className="shrink-0 cursor-grab touch-none text-muted-foreground/60 hover:text-foreground active:cursor-grabbing [&_svg]:size-4"
+      >
+        <IconGripVertical />
+      </button>
+      <div className="min-w-0 flex-1 text-sm">
+        <span className="font-medium text-foreground">{credit.production}</span>
+        {credit.role ? <span className="text-muted-foreground"> · {credit.role}</span> : null}
+        {(credit.company || credit.director || credit.year) && (
+          <div className="truncate text-xs text-muted-foreground">
+            {[credit.company, credit.director, credit.year].filter(Boolean).join(" · ")}
+          </div>
+        )}
+      </div>
+      <button
+        type="button"
+        onClick={() => onEdit(credit)}
+        aria-label="Edit"
+        className="shrink-0 p-1 text-muted-foreground hover:text-foreground [&_svg]:size-4"
+      >
+        <IconPencil />
+      </button>
+      <button
+        type="button"
+        onClick={() => onDelete(credit.id)}
+        aria-label="Delete"
+        className="shrink-0 p-1 text-muted-foreground hover:text-destructive [&_svg]:size-4"
+      >
+        <IconTrash />
+      </button>
+    </Reorder.Item>
+  );
+}
 
 export default function ResumePage() {
   const { user } = useAuth();
@@ -26,6 +98,13 @@ export default function ResumePage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [skillInput, setSkillInput] = useState("");
+
+  // Keep the latest credits in a ref so the drag-end persist always sends the
+  // current order without reading state during render.
+  const creditsRef = useRef<Credit[]>([]);
+  useEffect(() => {
+    creditsRef.current = credits;
+  }, [credits]);
 
   useEffect(() => {
     let cancelled = false;
@@ -79,6 +158,7 @@ export default function ResumePage() {
       director: c.director || "",
       year: c.year || "",
     });
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
   const deleteCredit = useCallback(
@@ -88,20 +168,33 @@ export default function ResumePage() {
       try {
         await api.delete(`/api/resume/credits/${id}`);
       } catch {
-        // Best-effort; a stale row will resolve on next load.
+        /* best-effort; resolves on next load */
       }
     },
     [editingId, resetForm]
   );
 
-  const saveSkills = useCallback(
-    async (next: string[]) => {
-      setProfile((p) => (p ? { ...p, special_skills: next } : p));
-      // POST does a partial update (exclude_unset) so other profile fields are untouched.
-      await api.post("/api/profile", { special_skills: next });
-    },
-    []
-  );
+  // Reorder within a category → rebuild the flat list (categories stay in their
+  // canonical order); persist on drop.
+  const handleReorder = useCallback((categoryId: string, newRows: Credit[]) => {
+    setCredits((prev) =>
+      CREDIT_CATEGORIES.flatMap((cat) =>
+        cat.id === categoryId ? newRows : prev.filter((c) => c.category === cat.id)
+      )
+    );
+  }, []);
+
+  const persistOrder = useCallback(() => {
+    api
+      .put("/api/resume/credits/reorder", { ordered_ids: creditsRef.current.map((c) => c.id) })
+      .catch(() => {});
+  }, []);
+
+  // Special skills (partial POST so other profile fields are untouched).
+  const saveSkills = useCallback(async (next: string[]) => {
+    setProfile((p) => (p ? { ...p, special_skills: next } : p));
+    await api.post("/api/profile", { special_skills: next });
+  }, []);
 
   const addSkill = useCallback(() => {
     const s = skillInput.trim();
@@ -142,7 +235,6 @@ export default function ResumePage() {
           <div className="h-4 w-80 max-w-full animate-pulse rounded bg-muted/60" />
         </div>
         <div className="grid gap-8 lg:grid-cols-2">
-          {/* Editor skeleton */}
           <div className="space-y-4">
             <div className="h-52 animate-pulse rounded-md border border-border bg-muted/30" />
             <div className="space-y-2">
@@ -152,7 +244,6 @@ export default function ResumePage() {
             </div>
             <div className="h-28 animate-pulse rounded-md border border-border bg-muted/30" />
           </div>
-          {/* Paper preview skeleton */}
           <div className="lg:sticky lg:top-6 lg:self-start">
             <div className="mx-auto w-full max-w-[8.5in] bg-white p-8 shadow-sm ring-1 ring-black/10">
               <div className="flex items-start justify-between border-b border-neutral-200 pb-5">
@@ -180,30 +271,51 @@ export default function ResumePage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <header className="mb-6">
-        <p className="font-typewriter text-xs uppercase tracking-widest text-muted-foreground">(your résumé.)</p>
-        <h1 className="mt-1 font-sans text-3xl font-semibold text-foreground">Résumé</h1>
+        <p className="font-typewriter text-xs uppercase tracking-widest text-muted-foreground">
+          (your résumé.)
+        </p>
+        <h1 className="mt-1 text-3xl font-semibold text-foreground">Résumé</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Add your credits and I&apos;ll build the one-pager. Name, stats, and headshot come from your{" "}
-          <Link href="/profile" className="underline underline-offset-4 hover:text-foreground">profile</Link>.
+          Add credits, drag to reorder. Name, stats, and headshot come from your{" "}
+          <Link href="/profile" className="underline underline-offset-4 hover:text-foreground">
+            profile
+          </Link>
+          .
         </p>
       </header>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        {/* Editor */}
+        {/* Builder */}
         <div className="space-y-6">
           {/* Add / edit credit */}
           <section className="border border-border bg-card p-4">
-            <h2 className="text-sm font-medium text-foreground">{editingId != null ? "Edit credit" : "Add a credit"}</h2>
+            <h2 className="text-sm font-medium text-foreground">
+              {editingId != null ? "Edit credit" : "Add a credit"}
+            </h2>
+
+            {/* category pills */}
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {CREDIT_CATEGORIES.map((c) => {
+                const active = form.category === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, category: c.id }))}
+                    aria-pressed={active}
+                    className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                      active
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border bg-background text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="mt-3 space-y-2.5">
-              <select
-                value={form.category}
-                onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
-                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-              >
-                {CREDIT_CATEGORIES.map((c) => (
-                  <option key={c.id} value={c.id}>{c.label}</option>
-                ))}
-              </select>
               <input
                 value={form.production}
                 onChange={(e) => setForm((f) => ({ ...f, production: e.target.value }))}
@@ -237,11 +349,20 @@ export default function ResumePage() {
                 />
               </div>
               <div className="flex items-center gap-2 pt-1">
-                <Button onClick={submitCredit} disabled={!form.production.trim() || saving} size="sm" className="rounded-full">
+                <Button
+                  onClick={submitCredit}
+                  disabled={!form.production.trim() || saving}
+                  size="sm"
+                  className="rounded-full"
+                >
                   {editingId != null ? "Save" : (<><IconPlus className="size-4" />Add credit</>)}
                 </Button>
                 {editingId != null && (
-                  <button type="button" onClick={resetForm} className="text-xs text-muted-foreground hover:text-foreground">
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="text-xs text-muted-foreground hover:text-foreground"
+                  >
                     Cancel
                   </button>
                 )}
@@ -249,46 +370,58 @@ export default function ResumePage() {
             </div>
           </section>
 
-          {/* Existing credits by category */}
-          {CREDIT_CATEGORIES.map(({ id }) => {
-            const rows = credits.filter((c) => c.category === id);
-            if (rows.length === 0) return null;
-            return (
-              <section key={id}>
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{CATEGORY_HEADING[id]}</h3>
-                <ul className="mt-2 space-y-1.5">
-                  {rows.map((c) => (
-                    <li key={c.id} className="flex items-start justify-between gap-3 border border-border bg-background px-3 py-2">
-                      <div className="min-w-0 text-sm">
-                        <span className="font-medium text-foreground">{c.production}</span>
-                        {c.role ? <span className="text-muted-foreground"> · {c.role}</span> : null}
-                        <div className="text-xs text-muted-foreground">
-                          {[c.company, c.director, c.year].filter(Boolean).join(" · ")}
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-1">
-                        <button type="button" onClick={() => editCredit(c)} aria-label="Edit" className="p-1 text-muted-foreground hover:text-foreground [&_svg]:size-4">
-                          <IconPencil />
-                        </button>
-                        <button type="button" onClick={() => deleteCredit(c.id)} aria-label="Delete" className="p-1 text-muted-foreground hover:text-destructive [&_svg]:size-4">
-                          <IconTrash />
-                        </button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            );
-          })}
+          {/* Credits by category — draggable */}
+          {credits.length === 0 ? (
+            <p className="border border-dashed border-border px-4 py-6 text-center text-sm text-muted-foreground">
+              No credits yet. Add your first one above.
+            </p>
+          ) : (
+            CREDIT_CATEGORIES.map(({ id }) => {
+              const rows = credits.filter((c) => c.category === id);
+              if (rows.length === 0) return null;
+              return (
+                <section key={id}>
+                  <h3 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    {CATEGORY_HEADING[id]}
+                    <span className="text-muted-foreground/60">{rows.length}</span>
+                  </h3>
+                  <Reorder.Group
+                    axis="y"
+                    values={rows}
+                    onReorder={(newRows) => handleReorder(id, newRows as Credit[])}
+                    className="mt-2 space-y-1.5"
+                  >
+                    {rows.map((c) => (
+                      <CreditRow
+                        key={c.id}
+                        credit={c}
+                        onEdit={editCredit}
+                        onDelete={deleteCredit}
+                        onDropped={persistOrder}
+                      />
+                    ))}
+                  </Reorder.Group>
+                </section>
+              );
+            })
+          )}
 
           {/* Special skills */}
           <section className="border border-border bg-card p-4">
             <h2 className="text-sm font-medium text-foreground">Special skills</h2>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {(profile?.special_skills || []).map((s) => (
-                <span key={s} className="inline-flex items-center gap-1 border border-border bg-background px-2 py-1 text-xs text-foreground">
+                <span
+                  key={s}
+                  className="inline-flex items-center gap-1 border border-border bg-background px-2 py-1 text-xs text-foreground"
+                >
                   {s}
-                  <button type="button" onClick={() => removeSkill(s)} aria-label={`Remove ${s}`} className="text-muted-foreground hover:text-foreground [&_svg]:size-3">
+                  <button
+                    type="button"
+                    onClick={() => removeSkill(s)}
+                    aria-label={`Remove ${s}`}
+                    className="text-muted-foreground hover:text-foreground [&_svg]:size-3"
+                  >
                     <IconX />
                   </button>
                 </span>
@@ -298,11 +431,24 @@ export default function ResumePage() {
               <input
                 value={skillInput}
                 onChange={(e) => setSkillInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addSkill(); } }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addSkill();
+                  }
+                }}
                 placeholder="Dialects, stage combat, singing…"
                 className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm"
               />
-              <Button onClick={addSkill} disabled={!skillInput.trim()} size="sm" variant="outline" className="rounded-full">Add</Button>
+              <Button
+                onClick={addSkill}
+                disabled={!skillInput.trim()}
+                size="sm"
+                variant="outline"
+                className="rounded-full"
+              >
+                Add
+              </Button>
             </div>
           </section>
         </div>
@@ -310,7 +456,9 @@ export default function ResumePage() {
         {/* Live preview */}
         <div className="lg:sticky lg:top-6 lg:self-start">
           <ResumePreview profile={previewProfile} credits={credits} email={user?.email} />
-          <p className="mt-2 text-center text-xs text-muted-foreground">Download coming next — this is a live preview.</p>
+          <p className="mt-2 text-center text-xs text-muted-foreground">
+            Download coming next — this is a live preview.
+          </p>
         </div>
       </div>
     </div>
