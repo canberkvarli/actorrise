@@ -172,11 +172,15 @@
     text-rendering: geometricPrecision;
   }
 
+  /* Titles/subtitles/headings use the clean sans (Canberk: the classical serif
+     "just doesn't look good" on UI titles — 2026-07-16). Serif stays only where
+     opted in explicitly (.font-brand wordmark); monologue text uses .font-typewriter. */
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-serif), ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+    font-family: var(--font-sans), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+      "Segoe UI", Arial, sans-serif;
     font-weight: 600;
-    line-height: 1.08;
-    letter-spacing: -0.03em;
+    line-height: 1.12;
+    letter-spacing: -0.02em;
   }
 
   button:focus-visible,
