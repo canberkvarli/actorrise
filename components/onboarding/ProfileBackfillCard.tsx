@@ -68,7 +68,7 @@ export default function ProfileBackfillCard() {
               <IconSparkles />
               <span className="text-xs font-medium uppercase tracking-wide">Make it yours</span>
             </div>
-            <p className="mt-2 font-brand text-lg leading-tight text-foreground">
+            <p className="mt-2 font-sans text-lg font-semibold leading-tight text-foreground">
               Tune your results in 5 taps
             </p>
             <p className="mt-1 text-xs leading-relaxed text-muted-foreground">

@@ -37,10 +37,7 @@ export default function ResumePreview({
         {/* Header */}
         <div className="flex items-start justify-between gap-6 border-b border-neutral-300 pb-5">
           <div className="min-w-0">
-            <h1
-              className="text-3xl font-semibold leading-tight text-neutral-900"
-              style={{ fontFamily: "var(--font-serif)" }}
-            >
+            <h1 className="text-3xl font-semibold leading-tight text-neutral-900">
               {profile.name?.trim() || "Your Name"}
             </h1>
             {stats.length > 0 && (
