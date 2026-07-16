@@ -19,12 +19,14 @@ export interface CreditInput {
 }
 
 // Order here drives the section order on the résumé.
+// Order here drives the résumé section order (theatre-first, the NY/stage default).
 export const CREDIT_CATEGORIES: { id: string; label: string; heading: string }[] = [
   { id: "theatre", label: "Theatre", heading: "Theatre" },
   { id: "film", label: "Film", heading: "Film" },
   { id: "tv", label: "TV", heading: "Television" },
-  { id: "commercial", label: "Commercial", heading: "Commercial" },
-  { id: "other", label: "Other", heading: "Other" },
+  { id: "commercial", label: "Commercial", heading: "Commercials" },
+  { id: "voiceover", label: "Voiceover", heading: "Voiceover" },
+  { id: "other", label: "Other", heading: "New Media & Other" },
 ];
 
 export const CATEGORY_HEADING: Record<string, string> = Object.fromEntries(

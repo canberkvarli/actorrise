@@ -20,6 +20,8 @@ class ActorProfile(Base):
     ethnicity = Column(String, nullable=True)
     height = Column(String, nullable=True)
     build = Column(String, nullable=True)
+    hair_color = Column(String, nullable=True)  # résumé header stat
+    eye_color = Column(String, nullable=True)  # résumé header stat
     location = Column(String)
 
     # Acting Info
