@@ -141,7 +141,7 @@ export default function ResumePage() {
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
       <header className="mb-6">
         <p className="font-typewriter text-xs uppercase tracking-widest text-muted-foreground">(your résumé.)</p>
-        <h1 className="mt-1 font-serif text-3xl font-semibold text-foreground">Résumé</h1>
+        <h1 className="mt-1 font-sans text-3xl font-semibold text-foreground">Résumé</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Add your credits and I&apos;ll build the one-pager. Name, stats, and headshot come from your{" "}
           <Link href="/profile" className="underline underline-offset-4 hover:text-foreground">profile</Link>.

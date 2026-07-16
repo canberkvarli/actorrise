@@ -226,7 +226,7 @@ export default function ProfileOnboardingFlow({
                 exit={{ opacity: 0, x: direction * -24 }}
                 transition={stepTransition}
               >
-                <h2 className="font-brand text-2xl font-semibold text-foreground">
+                <h2 className="font-sans text-2xl font-semibold text-foreground">
                   {QUESTIONS[step].prompt}
                 </h2>
                 {QUESTIONS[step].hint ? (
@@ -340,7 +340,7 @@ function OnboardingPayoff({
   if (phase === "loading") {
     return (
       <div className="py-10 text-center">
-        <p className="font-brand text-xl text-foreground">Setting your stage…</p>
+        <p className="font-sans text-xl font-semibold text-foreground">Setting your stage…</p>
         <p className="mt-2 text-sm text-muted-foreground">Pulling monologues that fit you.</p>
       </div>
     );
@@ -349,7 +349,7 @@ function OnboardingPayoff({
   if (phase === "empty") {
     return (
       <div>
-        <h2 className="font-brand text-2xl font-semibold text-foreground">Your profile&apos;s set.</h2>
+        <h2 className="font-sans text-2xl font-semibold text-foreground">Your profile&apos;s set.</h2>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           Search will lean toward your type from here on. Let&apos;s find something to rehearse.
         </p>
@@ -362,7 +362,7 @@ function OnboardingPayoff({
 
   return (
     <div>
-      <h2 className="font-brand text-2xl font-semibold text-foreground">
+      <h2 className="font-sans text-2xl font-semibold text-foreground">
         {items.length === 1 ? "A monologue for you" : `${items.length} monologues for you`}
       </h2>
       {summary ? (
@@ -375,7 +375,7 @@ function OnboardingPayoff({
           const meta = [m.character_name, m.tone, `${mins} min`].filter(Boolean).join(" · ");
           return (
             <li key={m.id} className="border border-border bg-background p-4">
-              <p className="font-brand text-lg leading-tight text-foreground">{m.title}</p>
+              <p className="font-sans text-lg font-semibold leading-tight text-foreground">{m.title}</p>
               <p className="mt-0.5 text-xs text-muted-foreground">{m.author}</p>
               <p className="mt-2 text-xs text-muted-foreground">{meta}</p>
               <Button onClick={() => onRehearse(m.id)} size="sm" className="mt-3 rounded-full">
