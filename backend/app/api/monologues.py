@@ -345,6 +345,16 @@ async def search_monologues(
         parts = [s.strip() for s in source_type.split(",") if s.strip()]
         filters['source_type'] = parts if len(parts) > 1 else parts[0]
 
+    # Era (classical/contemporary) only applies to plays. Film/TV content is
+    # inherently contemporary, so a 'classical' era + film/TV-only source is
+    # contradictory (0 rows exist) — a stale era toggle would otherwise return
+    # nothing or confusing play results. Drop the era so the source wins.
+    if filters.get('category') == 'classical' and filters.get('source_type'):
+        st = filters['source_type']
+        st_list = st if isinstance(st, list) else [st]
+        if st_list and all(s in ('film', 'tv') for s in st_list):
+            filters.pop('category', None)
+
     # Pre-validate query before running search
     if q and q.strip():
         is_valid, invalid_reason = validate_query(q.strip())
