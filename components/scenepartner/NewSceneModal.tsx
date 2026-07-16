@@ -133,7 +133,7 @@ export function NewSceneModal({ open, onOpenChange, onSuccess }: NewSceneModalPr
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="font-serif">New Script</DialogTitle>
+          <DialogTitle className="font-sans">New Script</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
           Create a script from scratch. Add a title, characters, and lines below. No file needed.

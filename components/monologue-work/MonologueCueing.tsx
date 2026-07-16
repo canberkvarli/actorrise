@@ -20,7 +20,7 @@ const MATCH_THRESHOLD = 0.7;
 /** Silence (ms) on the current line before we cue it (reveal the text). */
 const STALL_MS = 3000;
 
-const SERIF = "var(--font-serif), Georgia, 'Times New Roman', serif";
+const SERIF = "var(--font-sans), Georgia, 'Times New Roman', serif";
 /** Typewriter face — reserved for the monologue TEXT itself (never titles/UI). */
 const SCRIPT = "var(--font-typewriter), 'Courier Prime', 'Courier New', monospace";
 

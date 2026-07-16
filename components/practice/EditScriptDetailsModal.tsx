@@ -73,7 +73,7 @@ export function EditScriptDetailsModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-serif text-xl">Edit details</DialogTitle>
+          <DialogTitle className="font-sans text-xl">Edit details</DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-4 py-1">

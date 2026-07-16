@@ -92,7 +92,7 @@ export function RehearseHub() {
       {/* Header */}
       <header>
         <p className="stage-direction text-xs text-muted-foreground/70">(your repertoire.)</p>
-        <h1 className="mt-2 font-serif text-3xl font-medium tracking-[-0.02em] sm:text-4xl">
+        <h1 className="mt-2 font-sans text-3xl font-medium tracking-[-0.02em] sm:text-4xl">
           Collection
         </h1>
         <div
@@ -112,7 +112,7 @@ export function RehearseHub() {
             <p className="stage-direction text-xs text-muted-foreground/70">
               (the shelf is bare.)
             </p>
-            <p className="font-serif text-xl font-medium text-foreground">
+            <p className="font-sans text-xl font-medium text-foreground">
               Nothing here yet.
             </p>
             <p className="text-sm text-muted-foreground">

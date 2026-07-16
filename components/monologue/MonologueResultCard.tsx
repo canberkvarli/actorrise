@@ -102,8 +102,8 @@ export function MonologueResultCard({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <h3
-                    className="font-serif font-semibold text-xl sm:text-2xl mb-1 group-hover:text-foreground transition-colors line-clamp-2 break-words"
-                    style={{ fontFamily: "var(--font-serif), Georgia, serif" }}
+                    className="font-sans font-semibold text-xl sm:text-2xl mb-1 group-hover:text-foreground transition-colors line-clamp-2 break-words"
+                    style={{ fontFamily: "var(--font-sans), Georgia, serif" }}
                   >
                     {mono.character_name}
                   </h3>
