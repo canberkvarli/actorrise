@@ -16,20 +16,23 @@ _env = Environment(
     autoescape=select_autoescape(["html", "xml"]),
 )
 
-# Résumé section order.
+# Résumé section order (matches frontend CREDIT_CATEGORIES).
 _CATEGORY_ORDER = [
     ("theatre", "Theatre"),
     ("film", "Film"),
     ("tv", "Television"),
-    ("commercial", "Commercial"),
-    ("other", "Other"),
+    ("commercial", "Commercials"),
+    ("voiceover", "Voiceover"),
+    ("other", "New Media & Other"),
 ]
 
 
 def render_resume_pdf(
     *,
     name: str,
-    contact: Optional[str],
+    email: Optional[str],
+    location: Optional[str],
+    union: Optional[str],
     stats: List[str],
     credits: List[Dict[str, Any]],
     training: Optional[str],
@@ -41,11 +44,14 @@ def render_resume_pdf(
     for cid, heading in _CATEGORY_ORDER:
         rows = [c for c in credits if (c.get("category") or "other") == cid]
         if rows:
-            grouped.append({"heading": heading, "rows": rows})
+            grouped.append({"id": cid, "heading": heading, "rows": rows})
+
+    contact = "  ·  ".join([p for p in (location, email) if p])
 
     html = _env.get_template("resume.html").render(
         name=name,
         contact=contact,
+        union=union,
         stats=stats,
         grouped=grouped,
         training=training,

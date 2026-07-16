@@ -189,15 +189,17 @@ def download_resume(
     is_paid = bool(sub and sub.is_active and sub.is_paid_tier)
 
     name = (profile.name if profile else None) or current_user.name or "Your Name"
-    stats = [
-        v
-        for v in (
-            profile.age_range if profile else None,
-            profile.height if profile else None,
-            profile.union_status if profile else None,
-        )
-        if v
-    ]
+    # Standard actor résumé stats — height/hair/eyes. Age is deliberately omitted.
+    stats = []
+    if profile:
+        if profile.height:
+            stats.append(profile.height)
+        if profile.hair_color:
+            stats.append(f"Hair: {profile.hair_color}")
+        if profile.eye_color:
+            stats.append(f"Eyes: {profile.eye_color}")
+    union = profile.union_status if profile else None
+    location = profile.location if profile else None
     skills = list(profile.special_skills) if profile and profile.special_skills else []
     training = profile.training_background if profile else None
     credit_dicts = [
@@ -215,7 +217,9 @@ def download_resume(
     try:
         pdf_bytes = render_resume_pdf(
             name=name,
-            contact=current_user.email,
+            email=current_user.email,
+            location=location,
+            union=union,
             stats=stats,
             credits=credit_dicts,
             training=training,

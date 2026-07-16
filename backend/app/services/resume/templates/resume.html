@@ -16,9 +16,7 @@
         margin: 0;
       }
       .header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
+        text-align: center;
         border-bottom: 1px solid #cfcfcf;
         padding-bottom: 12px;
       }
@@ -29,11 +27,20 @@
         margin: 0;
         line-height: 1.05;
       }
+      .union {
+        margin-top: 3px;
+        font-size: 8.5pt;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #555;
+      }
       .stats, .contact {
-        margin-top: 4px;
+        margin-top: 3px;
         color: #444;
         font-size: 10pt;
       }
+      .upon-request { margin-top: 4px; font-style: italic; color: #444; }
       h2.section {
         font-size: 8.5pt;
         font-weight: 700;
@@ -70,27 +77,30 @@
     {% if watermark %}<div class="watermark">actorrise.com</div>{% endif %}
 
     <div class="header">
-      <div>
-        <p class="name">{{ name }}</p>
-        {% if stats %}<div class="stats">{{ stats | join("  ·  ") }}</div>{% endif %}
-        {% if contact %}<div class="contact">{{ contact }}</div>{% endif %}
-      </div>
+      <p class="name">{{ name }}</p>
+      {% if union %}<div class="union">{{ union }}</div>{% endif %}
+      {% if contact %}<div class="contact">{{ contact }}</div>{% endif %}
+      {% if stats %}<div class="stats">{{ stats | join("  ·  ") }}</div>{% endif %}
     </div>
 
     {% for group in grouped %}
       <h2 class="section">{{ group.heading }}</h2>
-      <table class="credits">
-        {% for c in group.rows %}
-          <tr>
-            <td class="prod">{{ c.production }}</td>
-            <td class="role">{{ c.role or "" }}</td>
-            <td class="meta">
-              {%- set bits = [c.company, c.director, c.year] | select | list -%}
-              {{ bits | join(" · ") }}
-            </td>
-          </tr>
-        {% endfor %}
-      </table>
+      {% if group.id == "commercial" %}
+        <div class="upon-request">Conflicts available upon request</div>
+      {% else %}
+        <table class="credits">
+          {% for c in group.rows %}
+            <tr>
+              <td class="prod">{{ c.production }}</td>
+              <td class="role">{{ c.role or "" }}</td>
+              <td class="meta">
+                {%- set bits = [c.company, c.director, c.year] | select | list -%}
+                {{ bits | join(" · ") }}
+              </td>
+            </tr>
+          {% endfor %}
+        </table>
+      {% endif %}
     {% endfor %}
 
     {% if training %}

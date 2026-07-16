@@ -1,23 +1,25 @@
 "use client";
 
-import Image from "next/image";
 import type { Credit } from "@/types/resume";
 import { CREDIT_CATEGORIES } from "@/types/resume";
 
 export interface ResumeProfile {
   name?: string | null;
-  age_range?: string | null;
   height?: string | null;
+  hair_color?: string | null;
+  eye_color?: string | null;
   union_status?: string | null;
+  location?: string | null;
   training_background?: string | null;
   special_skills?: string[];
-  headshot_url?: string | null;
 }
 
 /**
- * The résumé document itself — a clean industry one-pager rendered from profile
- * + credits. Always light ("paper"), since it represents a printed page. This
- * same structure will back the server-side PDF in Increment 2.
+ * The résumé document — a standard US actor one-pager rendered from profile +
+ * credits. Deliberately follows industry format: name → union → contact →
+ * physical stats (NO age), credits grouped by medium, commercials shown as
+ * "conflicts available upon request" (never listed), no headshot on the page
+ * itself. Always light ("paper"). Same structure backs the server-side PDF.
  */
 export default function ResumePreview({
   profile,
@@ -28,27 +30,30 @@ export default function ResumePreview({
   credits: Credit[];
   email?: string | null;
 }) {
-  const stats = [profile.age_range, profile.height, profile.union_status].filter(Boolean);
+  const contact = [profile.location, email].filter(Boolean).join("  ·  ");
+  const stats = [
+    profile.height,
+    profile.hair_color ? `Hair: ${profile.hair_color}` : null,
+    profile.eye_color ? `Eyes: ${profile.eye_color}` : null,
+  ].filter(Boolean);
   const skills = (profile.special_skills || []).filter(Boolean);
 
   return (
     <div className="mx-auto w-full max-w-[8.5in] bg-white text-neutral-900 shadow-sm ring-1 ring-black/10">
       <div className="p-8 sm:p-10" style={{ fontFamily: "var(--font-sans)" }}>
         {/* Header */}
-        <div className="flex items-start justify-between gap-6 border-b border-neutral-300 pb-5">
-          <div className="min-w-0">
-            <h1 className="text-3xl font-semibold leading-tight text-neutral-900">
-              {profile.name?.trim() || "Your Name"}
-            </h1>
-            {stats.length > 0 && (
-              <p className="mt-1.5 text-sm text-neutral-700">{stats.join("  ·  ")}</p>
-            )}
-            {email && <p className="mt-0.5 text-sm text-neutral-700">{email}</p>}
-          </div>
-          {profile.headshot_url && (
-            <div className="relative h-24 w-20 shrink-0 overflow-hidden ring-1 ring-black/10">
-              <Image src={profile.headshot_url} alt="" fill className="object-cover" sizes="80px" unoptimized />
-            </div>
+        <div className="border-b border-neutral-300 pb-5 text-center">
+          <h1 className="text-3xl font-semibold leading-tight text-neutral-900">
+            {profile.name?.trim() || "Your Name"}
+          </h1>
+          {profile.union_status && (
+            <p className="mt-1 text-xs font-medium uppercase tracking-wider text-neutral-600">
+              {profile.union_status}
+            </p>
+          )}
+          {contact && <p className="mt-1.5 text-sm text-neutral-700">{contact}</p>}
+          {stats.length > 0 && (
+            <p className="mt-0.5 text-sm text-neutral-700">{stats.join("  ·  ")}</p>
           )}
         </div>
 
@@ -56,6 +61,21 @@ export default function ResumePreview({
         {CREDIT_CATEGORIES.map(({ id, heading }) => {
           const rows = credits.filter((c) => c.category === id);
           if (rows.length === 0) return null;
+
+          // Commercials are never listed — industry convention.
+          if (id === "commercial") {
+            return (
+              <section key={id} className="mt-5">
+                <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">
+                  {heading}
+                </h2>
+                <p className="mt-1.5 text-sm italic text-neutral-700">
+                  Conflicts available upon request
+                </p>
+              </section>
+            );
+          }
+
           return (
             <section key={id} className="mt-5">
               <h2 className="text-xs font-semibold uppercase tracking-wider text-neutral-500">

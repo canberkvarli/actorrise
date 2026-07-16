@@ -20,6 +20,8 @@ class ActorProfileCreate(BaseModel):
     ethnicity: Optional[str] = None
     height: Optional[str] = None
     build: Optional[str] = None
+    hair_color: Optional[str] = None
+    eye_color: Optional[str] = None
     location: Optional[str] = None
     experience_level: Optional[str] = None
     type: Optional[Union[str, List[str]]] = None  # Can be string (backward compat) or list of strings
@@ -42,6 +44,8 @@ class ActorProfileResponse(BaseModel):
     ethnicity: Optional[str] = None
     height: Optional[str] = None
     build: Optional[str] = None
+    hair_color: Optional[str] = None
+    eye_color: Optional[str] = None
     location: Optional[str] = None
     experience_level: Optional[str] = None
     type: Optional[Union[str, List[str]]] = None  # Can be string or list
@@ -80,6 +84,8 @@ def get_profile(
             ethnicity=None,
             height=None,
             build=None,
+            hair_color=None,
+            eye_color=None,
             location=None,
             experience_level=None,
             type=None,
