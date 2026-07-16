@@ -459,6 +459,7 @@ def get_growth_stats(
             UserSubscription.billing_period,
             PricingTier.monthly_price_cents,
             PricingTier.annual_price_cents,
+            UserSubscription.stripe_subscription_id,
         )
         .join(PricingTier, UserSubscription.tier_id == PricingTier.id)
         .filter(
@@ -470,13 +471,19 @@ def get_growth_stats(
     )
     by_tier: dict[str, int] = {}
     mrr_cents = 0
-    paid_active = trials = 0
+    paid_active = comped = trials = 0
     for r in sub_rows:
-        by_tier[r.tier] = by_tier.get(r.tier, 0) + 1
         if r.status == "trialing":
             trials += 1
+        # A real Stripe subscription = a card on file (Stripe drops it, and the
+        # `stripe_payment_method_id` column is unreliable). Complimentary grants
+        # (admin comps with no Stripe sub) are real access but $0 revenue, so they
+        # must NOT inflate MRR — only card-on-file subs generate it.
+        if r.stripe_subscription_id is None:
+            comped += 1
             continue
         paid_active += 1
+        by_tier[r.tier] = by_tier.get(r.tier, 0) + 1
         if r.billing_period == "annual" and r.annual_price_cents:
             mrr_cents += r.annual_price_cents / 12
         elif r.monthly_price_cents:
@@ -484,9 +491,10 @@ def get_growth_stats(
 
     revenue = {
         "total_users": total_real,
-        "paid_active": paid_active,
+        "paid_active": paid_active,  # card on file (real / committed revenue)
+        "comped": comped,            # complimentary grants (no card, $0 MRR)
         "trialing": trials,
-        "free": max(0, total_real - paid_active - trials),
+        "free": max(0, total_real - paid_active - comped),
         "conversion_percent": pct(paid_active),
         "mrr_usd": round(mrr_cents / 100, 2),
         "by_tier": [{"tier": t, "count": c} for t, c in sorted(by_tier.items(), key=lambda x: -x[1])],
