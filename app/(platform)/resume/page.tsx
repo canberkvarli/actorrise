@@ -9,9 +9,10 @@ import {
   IconPencil,
   IconX,
   IconGripVertical,
+  IconDownload,
 } from "@tabler/icons-react";
 import { useAuth } from "@/lib/auth";
-import api from "@/lib/api";
+import api, { downloadFile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import type { Credit, CreditInput } from "@/types/resume";
 import { CREDIT_CATEGORIES, CATEGORY_HEADING } from "@/types/resume";
@@ -98,6 +99,7 @@ export default function ResumePage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [saving, setSaving] = useState(false);
   const [skillInput, setSkillInput] = useState("");
+  const [downloading, setDownloading] = useState(false);
 
   // Keep the latest credits in a ref so the drag-end persist always sends the
   // current order without reading state during render.
@@ -212,6 +214,18 @@ export default function ResumePage() {
     (s: string) => void saveSkills((profile?.special_skills || []).filter((x) => x !== s)),
     [profile, saveSkills]
   );
+
+  const handleDownload = useCallback(async () => {
+    if (downloading) return;
+    setDownloading(true);
+    try {
+      await downloadFile("/api/resume/download", "resume.pdf");
+    } catch {
+      /* let them retry; nothing to trap */
+    } finally {
+      setDownloading(false);
+    }
+  }, [downloading]);
 
   const previewProfile: ResumeProfile = useMemo(
     () => ({
@@ -456,9 +470,15 @@ export default function ResumePage() {
         {/* Live preview */}
         <div className="lg:sticky lg:top-6 lg:self-start">
           <ResumePreview profile={previewProfile} credits={credits} email={user?.email} />
-          <p className="mt-2 text-center text-xs text-muted-foreground">
-            Download coming next — this is a live preview.
-          </p>
+          <div className="mt-3 flex flex-col items-center gap-1">
+            <Button onClick={handleDownload} disabled={downloading} size="sm" className="rounded-full">
+              <IconDownload className="size-4" />
+              {downloading ? "Preparing…" : "Download PDF"}
+            </Button>
+            <p className="text-center text-xs text-muted-foreground">
+              Free downloads include a small watermark.
+            </p>
+          </div>
         </div>
       </div>
     </div>

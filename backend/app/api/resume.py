@@ -4,13 +4,15 @@ The résumé itself is composed from the actor's profile + these credits.
 PDF export + gating land in Increment 2.
 """
 
+import re
 from typing import List, Optional
 
 from app.api.auth import get_current_user
 from app.core.database import get_db
-from app.models.actor import ActorCredit
+from app.models.actor import ActorCredit, ActorProfile
 from app.models.user import User
-from fastapi import APIRouter, Depends, HTTPException, status
+from app.services.resume.pdf import render_resume_pdf
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -160,3 +162,74 @@ def delete_credit(
     credit = _owned_credit(credit_id, current_user, db)
     db.delete(credit)
     db.commit()
+
+
+def _safe_filename(name: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9]+", "_", (name or "").strip()).strip("_") or "actor"
+    return f"{slug}_resume.pdf"
+
+
+@router.get("/download")
+def download_resume(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Render the actor's résumé to PDF. Free tier gets a watermark; paid = clean."""
+    profile = (
+        db.query(ActorProfile).filter(ActorProfile.user_id == current_user.id).first()
+    )
+    credits = (
+        db.query(ActorCredit)
+        .filter(ActorCredit.user_id == current_user.id)
+        .order_by(ActorCredit.sort_order, ActorCredit.id)
+        .all()
+    )
+
+    sub = current_user.subscription
+    is_paid = bool(sub and sub.is_active and sub.is_paid_tier)
+
+    name = (profile.name if profile else None) or current_user.name or "Your Name"
+    stats = [
+        v
+        for v in (
+            profile.age_range if profile else None,
+            profile.height if profile else None,
+            profile.union_status if profile else None,
+        )
+        if v
+    ]
+    skills = list(profile.special_skills) if profile and profile.special_skills else []
+    training = profile.training_background if profile else None
+    credit_dicts = [
+        {
+            "category": c.category,
+            "production": c.production,
+            "role": c.role,
+            "company": c.company,
+            "director": c.director,
+            "year": c.year,
+        }
+        for c in credits
+    ]
+
+    try:
+        pdf_bytes = render_resume_pdf(
+            name=name,
+            contact=current_user.email,
+            stats=stats,
+            credits=credit_dicts,
+            training=training,
+            skills=skills,
+            watermark=not is_paid,
+        )
+    except Exception as e:  # WeasyPrint / system-lib failure — surface cleanly
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Résumé PDF generation is temporarily unavailable.",
+        ) from e
+
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{_safe_filename(name)}"'},
+    )

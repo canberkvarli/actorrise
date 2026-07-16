@@ -3,6 +3,13 @@ FROM python:3.12-slim
 
 WORKDIR /app
 
+# System libraries WeasyPrint needs at runtime to render the résumé PDF
+# (Pango/Cairo/GDK-Pixbuf + fonts). Kept as an early layer so it's cached.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpangocairo-1.0-0 libpango-1.0-0 libgdk-pixbuf-2.0-0 libffi8 \
+    shared-mime-info fonts-liberation \
+    && rm -rf /var/lib/apt/lists/*
+
 # Install uv for fast, reproducible installs
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
