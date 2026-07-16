@@ -66,6 +66,25 @@ export function primeSessionCache(accessToken: string, expiresAt: number): void 
   cachedSession = { access_token: accessToken, expires_at: expiryMs };
 }
 
+/** Fetch a binary endpoint (e.g. a PDF) with auth and trigger a browser download. */
+export async function downloadFile(url: string, filename: string): Promise<void> {
+  const authToken = await getAuthToken();
+  const fullUrl = url.startsWith("http") ? url : `${API_URL}${url}`;
+  const res = await fetch(fullUrl, {
+    headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
+  });
+  if (!res.ok) throw new Error(`Download failed (${res.status})`);
+  const blob = await res.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = objectUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(objectUrl);
+}
+
 // Fetch wrapper that mimics axios API for easy migration
 async function request<T = unknown>(
   method: string,
