@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 # is now a hard filter (tight numeric synonyms) on both paths.
 # v4: graceful relaxation — broaden (drop least-important filters) + backfill when
 # too few rows pass all hard filters.
-CACHE_VERSION = "4"
+# v5: multilingual duration parsing (minuti/minutos/etc.) + bare "X minutes" is a
+# window (floor..ceiling), so a 5-minute request no longer returns 25-second clips.
+CACHE_VERSION = "5"
 
 
 class CacheManager:
