@@ -77,6 +77,9 @@ export function MarketingFooter() {
               <Link href="/about" className="hover:text-foreground transition-colors shrink-0">
                 About
               </Link>
+              <Link href="/actors" className="hover:text-foreground transition-colors shrink-0">
+                Founding actors
+              </Link>
               <Link href="/for-students" className="hover:text-foreground transition-colors shrink-0">
                 Students & educators
               </Link>

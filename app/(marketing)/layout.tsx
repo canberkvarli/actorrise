@@ -45,6 +45,13 @@ export default function MarketingLayout({ children }: { children: React.ReactNod
               </Link>
               <span className="h-4 w-px bg-[var(--stage-line)]" />
               <Link
+                href="/actors"
+                className="px-3 py-1.5 text-sm text-[var(--stage-muted)] hover:text-[var(--stage-fg)] transition-colors"
+              >
+                Founding Actors
+              </Link>
+              <span className="h-4 w-px bg-[var(--stage-line)]" />
+              <Link
                 href="/guides"
                 className="px-3 py-1.5 text-sm text-[var(--stage-muted)] hover:text-[var(--stage-fg)] transition-colors"
               >
