@@ -20,7 +20,9 @@ logger = logging.getLogger(__name__)
 # too few rows pass all hard filters.
 # v5: multilingual duration parsing (minuti/minutos/etc.) + bare "X minutes" is a
 # window (floor..ceiling), so a 5-minute request no longer returns 25-second clips.
-CACHE_VERSION = "5"
+# v6: multilingual tone/gender/era vocab (comico->comedic, donna->female, …) +
+# drop contradictory classical-era filter on film/TV-only searches.
+CACHE_VERSION = "6"
 
 
 class CacheManager:

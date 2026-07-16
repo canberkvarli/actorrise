@@ -194,6 +194,13 @@ class KeywordExtractor:
             'he': 'male', 'him': 'male', 'men': 'male', 'gentleman': 'male',
             'female': 'female', 'woman': 'female', 'girl': 'female', 'feminine': 'female',
             'she': 'female', 'her': 'female', 'women': 'female', 'lady': 'female',
+            # Non-English (IT/ES/FR/PT)
+            'uomo': 'male', 'maschile': 'male', 'ragazzo': 'male', 'hombre': 'male',
+            'masculino': 'male', 'homme': 'male', 'masculin': 'male', 'homem': 'male',
+            'donna': 'female', 'femminile': 'female', 'ragazza': 'female',
+            'mujer': 'female', 'femenino': 'female', 'chica': 'female',
+            'femme': 'female', 'feminin': 'female', 'féminin': 'female',
+            'fille': 'female', 'mulher': 'female',
         },
 
         'age_range': {
@@ -297,6 +304,13 @@ class KeywordExtractor:
             # Contemporary
             'modern': 'contemporary', 'contemporary': 'contemporary',
             'new': 'contemporary', 'recent': 'contemporary',
+
+            # Non-English (IT/ES/FR/PT)
+            'classico': 'classical', 'clasico': 'classical', 'clásico': 'classical',
+            'classique': 'classical', 'clássico': 'classical',
+            'contemporaneo': 'contemporary', 'contemporáneo': 'contemporary',
+            'contemporain': 'contemporary', 'contemporâneo': 'contemporary',
+            'moderno': 'contemporary',
         },
 
         'author': {
@@ -327,10 +341,19 @@ class KeywordExtractor:
             # Comedic
             'funny': 'comedic', 'comedic': 'comedic', 'humorous': 'comedic',
             'comic': 'comedic', 'lighthearted': 'comedic',
+            # Non-English comedic (IT/ES/FR/PT)
+            'comico': 'comedic', 'comica': 'comedic', 'cómico': 'comedic',
+            'commedia': 'comedic', 'comedia': 'comedic', 'comédia': 'comedic',
+            'divertente': 'comedic', 'comique': 'comedic', 'comédie': 'comedic',
+            'drole': 'comedic', 'drôle': 'comedic', 'gracioso': 'comedic',
 
             # Dramatic
             'serious': 'dramatic', 'dramatic': 'dramatic', 'tragic': 'dramatic',
             'heavy': 'dramatic', 'intense': 'dramatic',
+            # Non-English dramatic (IT/ES/FR/PT)
+            'drammatico': 'dramatic', 'drammatica': 'dramatic', 'dramma': 'dramatic',
+            'dramatico': 'dramatic', 'dramático': 'dramatic', 'dramatique': 'dramatic',
+            'serio': 'dramatic', 'serieux': 'dramatic', 'sérieux': 'dramatic',
 
             # Dark
             'dark': 'dark', 'grim': 'dark', 'noir': 'dark',
