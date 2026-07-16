@@ -112,7 +112,7 @@ export function MemorizeView({
   const t = THEME_TOKENS[prefs.theme];
   const sizeClass = FONT_SIZE_CLASS[prefs.fontSize];
   const leading = prefs.spacious ? "leading-[2]" : "leading-relaxed";
-  const family = prefs.serif ? "font-serif" : "";
+  const family = prefs.serif ? "font-sans" : "";
 
   const toggleReveal = (index: number) => {
     setRevealed((prev) => {

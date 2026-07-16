@@ -182,7 +182,7 @@ export function AddSceneToScriptModal({
         )}
 
         <DialogHeader>
-          <DialogTitle className="font-serif">Add Scene</DialogTitle>
+          <DialogTitle className="font-sans">Add Scene</DialogTitle>
         </DialogHeader>
 
         <style jsx global>{`

@@ -530,7 +530,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       >
         <DialogContent className="w-full max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-serif">
+            <DialogTitle className="text-xl font-sans">
               How should we extract scenes?
             </DialogTitle>
           </DialogHeader>

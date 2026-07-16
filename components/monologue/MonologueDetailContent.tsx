@@ -69,7 +69,7 @@ export function MonologueDetailContent({
         <div className="min-w-0 flex-1">
           <h1
             className="text-3xl font-semibold leading-tight sm:text-4xl"
-            style={{ fontFamily: "var(--font-serif), Georgia, serif" }}
+            style={{ fontFamily: "var(--font-sans), Georgia, serif" }}
           >
             {monologue.character_name}
           </h1>

@@ -82,6 +82,21 @@ Trigger phrases that mean "go into marketing mode" and invoke the `marketing` sk
 
 Reference example of Canberk's actual voice: user memory `email-voice.md`.
 
+## Opt-out requirement (current-user emails)
+
+Any marketing email sent to existing platform users (not cold outreach) must include a plain reply-to-opt-out option in the body or sign-off, not just the unsubscribe link. Reason: the /unsubscribe page's "Other" feedback reason has no free-text field (bug, not yet fixed as of 2026-07-09), so users who want to explain why they're leaving get stuck and end up emailing instead.
+
+Standard line, place near the sign-off:
+"reply CURTAIN and I'll take you off the list, no hard feelings"
+
+If a user replies CURTAIN (or otherwise asks to stop), add their email to `email_do_not_contact` in Supabase right away. Keep the unsubscribe link too, this is in addition to it, not a replacement.
+
+## FOUNDER3 reply CTA (dramatic one-word ask)
+
+When offering the FOUNDER3 code (3 months of Plus, card on file, rolls into paid after) to actors, studios, or community theaters, close with a short, theatrical, one-word reply CTA instead of a generic "happy to answer questions" line. Example (based on the 5/28/2026 email to Khwezi that converted well): "If you want in, reply CURTAIN and I'll set you up myself, card on file for when the 3 months end, no forms." This has a strong reply rate historically, keep using it.
+
+Note: CURTAIN is intentionally reused as BOTH the FOUNDER3 opt-in word AND the marketing opt-out word above. Canberk confirmed this on 2026-07-13 and wants to rely on context to tell them apart (a reply to a cold FOUNDER3 pitch = sign-up; a reply to a re-engagement/marketing email he already sent to an existing user = opt-out). If a CURTAIN reply's intent is genuinely ambiguous, flag it for Canberk rather than assuming either way.
+
 ## Brand
 
 - Primary `#CB4B00`, hover `#B03000`

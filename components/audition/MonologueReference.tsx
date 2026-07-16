@@ -47,7 +47,7 @@ export function MonologueReference({ monologue, open, onToggle }: MonologueRefer
           >
             <div className="border-t border-white/10 px-5 py-4 max-h-[40vh] overflow-y-auto">
               <p
-                className="font-serif text-[15px] sm:text-base text-white/85 leading-[1.9] whitespace-pre-wrap"
+                className="font-sans text-[15px] sm:text-base text-white/85 leading-[1.9] whitespace-pre-wrap"
               >
                 {monologue.text}
               </p>

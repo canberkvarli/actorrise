@@ -42,7 +42,7 @@ export default function MonologueWorkPage() {
   if (status === "notfound" || status === "error" || !monologue) {
     return (
       <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-[#0b0908] text-[#ece5d8]">
-        <p className="text-white/60" style={{ fontFamily: "var(--font-serif), Georgia, serif" }}>
+        <p className="text-white/60" style={{ fontFamily: "var(--font-sans), Georgia, serif" }}>
           {status === "notfound" ? "This piece has left the stage." : "Something went dark loading this piece."}
         </p>
         <button onClick={() => router.back()} className="text-sm text-[#CB4B00] hover:underline">

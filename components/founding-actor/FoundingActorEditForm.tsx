@@ -362,7 +362,7 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
             )}
 
             <div>
-              <h2 className="text-2xl font-bold text-foreground font-brand">
+              <h2 className="text-2xl font-bold text-foreground font-sans">
                 {actor.name}
               </h2>
               {descriptor && (
@@ -380,7 +380,7 @@ export function FoundingActorEditForm({ actor }: FoundingActorEditFormProps) {
               )}
               {quote && (
                 <div className="mt-6 relative rounded-lg border border-border/60 bg-background p-4">
-                  <span className="absolute top-2 left-3 text-3xl font-serif text-muted-foreground/30 leading-none select-none" aria-hidden>
+                  <span className="absolute top-2 left-3 text-3xl font-sans text-muted-foreground/30 leading-none select-none" aria-hidden>
                     &ldquo;
                   </span>
                   <p className="pl-5 text-sm text-foreground leading-relaxed font-medium">

@@ -138,7 +138,7 @@ function EmptyState({ demoScriptId }: { demoScriptId: number | null }) {
       <p className="stage-direction text-xs sm:text-sm text-muted-foreground/70">
         (an empty stage. for now.)
       </p>
-      <h1 className="mt-4 max-w-xl font-serif text-3xl sm:text-4xl font-medium tracking-[-0.02em] text-balance">
+      <h1 className="mt-4 max-w-xl font-sans text-3xl sm:text-4xl font-medium tracking-[-0.02em] text-balance">
         Your first <em className="italic text-primary">scene</em> starts here.
       </h1>
       <p className="mt-4 max-w-md text-base text-muted-foreground leading-relaxed">

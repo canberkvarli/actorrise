@@ -69,7 +69,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
       <div className="flex flex-wrap items-start justify-between gap-3 pb-5 border-b border-border/60">
         <div className="min-w-0 space-y-2">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            <h2 className="font-serif text-2xl md:text-3xl tracking-tight text-foreground">
+            <h2 className="font-sans text-2xl md:text-3xl tracking-tight text-foreground">
               {script.title}
             </h2>
             {script.genre && (
@@ -137,7 +137,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
               <div key={group.act ?? `g${gi}`} className="space-y-3">
                 {group.act && (
                   <div className="flex items-baseline justify-between gap-3">
-                    <h3 className="font-serif text-2xl md:text-3xl tracking-tight text-foreground">
+                    <h3 className="font-sans text-2xl md:text-3xl tracking-tight text-foreground">
                       {group.act}
                     </h3>
                     <span className="shrink-0 text-sm text-muted-foreground/60 tabular-nums">

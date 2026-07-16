@@ -158,7 +158,7 @@ export function WelcomeFlow({ onDismiss }: WelcomeFlowProps) {
                 <p className="text-xs font-medium uppercase tracking-widest text-primary/80">
                   {slide.eyebrow}
                 </p>
-                <h2 className="font-brand text-3xl font-semibold text-foreground leading-tight">
+                <h2 className="font-sans text-3xl font-semibold text-foreground leading-tight">
                   {slide.headline}
                 </h2>
                 <p className="text-base text-muted-foreground leading-relaxed">

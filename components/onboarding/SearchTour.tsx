@@ -205,7 +205,7 @@ export function SearchTour({ onDismiss }: SearchTourProps) {
             <p className="text-[10px] font-medium uppercase tracking-widest text-primary/70 mb-2">
               {step + 1} of {TOUR_STEPS.length}
             </p>
-            <h3 className="font-brand text-lg font-semibold text-foreground mb-1.5">
+            <h3 className="font-sans text-lg font-semibold text-foreground mb-1.5">
               {currentStep.title}
             </h3>
             <p className="text-sm text-muted-foreground leading-relaxed mb-4">

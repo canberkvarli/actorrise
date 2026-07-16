@@ -44,7 +44,7 @@ export default function FoundingActorEditPage() {
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <div className="mb-8">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-foreground font-brand">
+          <h1 className="text-2xl font-bold text-foreground font-sans">
             My Founding Actor Page
           </h1>
           <Link
