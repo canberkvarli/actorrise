@@ -408,8 +408,13 @@ class KeywordExtractor:
         filters = {}
         themes_found = []
 
-        # Age range from "X-Y years old" / "18-21 years old" – avoid treating "old" as elderly
-        age_range_match = re.search(r'\b(\d+)\s*-\s*(\d+)\s*(?:years?\s*old)?|\b(?:years?\s*old)\s*(\d+)\s*-\s*(\d+)', query_lower)
+        # Age range from "X-Y years old" / "18-21 years old" – avoid treating "old" as elderly.
+        # The trailing lookahead keeps duration ranges ("60-90 seconds") out of age intent.
+        age_range_match = re.search(
+            r'\b(\d+)\s*-\s*(\d+)\b(?!\s*(?:seconds?|secs?|minutes?|mins?)\b)\s*(?:years?\s*old)?'
+            r'|\b(?:years?\s*old)\s*(\d+)\s*-\s*(\d+)',
+            query_lower,
+        )
         if age_range_match and 'age_range' not in filters:
             low, high = None, None
             for g in age_range_match.groups():
@@ -561,53 +566,75 @@ class KeywordExtractor:
         # clips (they're technically "under 5 min"), which is useless.
         MIN = r'(?:minutes?|mins?|minut[oi]|minutos?|minuten)'
         SEC = r'(?:seconds?|secs?|second[oi]|segundos?|secondes?)'
+        NUM = r'(\d+(?:\.\d+)?)'
+        # "X min" or the compound "X min Y sec" ("2 min 30 seconds" = 150s).
+        CMP = NUM + r'\s*-?\s*' + MIN + r'(?:\s*(?:and\s+)?(\d+)\s*' + SEC + r')?'
 
         if 'min_duration' not in filters and 'max_duration' not in filters:
-            # Floor phrasing: "at least X" / "over X" / "more than X" / "longer than X".
+            # Word-number + "and a half" normalization, for duration parsing only
+            # ("one minute" → "1 minute", "2 and a half minutes" → "2.5 minutes").
+            dq = query_lower
+            for word, digit in (('one', '1'), ('two', '2'), ('three', '3'), ('four', '4'),
+                                ('five', '5'), ('six', '6'), ('seven', '7'), ('eight', '8'),
+                                ('nine', '9'), ('ten', '10')):
+                dq = re.sub(rf'\b{word}\b', digit, dq)
+            dq = re.sub(r'(\d+)\s+and\s+a\s+half', lambda m: m.group(1) + '.5', dq)
+
+            def _cmp_secs(m: 're.Match') -> int:
+                secs = round(float(m.group(1)) * 60)
+                if m.group(2):
+                    secs += int(m.group(2))
+                return secs
+
+            # Floor and ceiling are detected INDEPENDENTLY, so "at least 1 minute
+            # up to 2 min 30 seconds" keeps both bounds (an audit zero-result bug:
+            # the ceiling was skipped once a floor had matched).
             floor_match = re.search(
-                r'(?:at\s+least|over|more\s+than|longer\s+than|minimum|almeno|al\s+menos)\s+(\d+)\s*'
-                + MIN + r'\b',
-                query_lower,
-            )
+                r'\b(?:at\s+least|over|more\s+than|longer\s+than|minimum|almeno|al\s+menos)\s+' + CMP,
+                dq,
+            ) or re.search(CMP + r'\s*(?:or\s+(?:more|longer)|and\s+up|\+)\b', dq)
             if floor_match:
-                filters['min_duration'] = int(floor_match.group(1)) * 60
+                filters['min_duration'] = _cmp_secs(floor_match)
 
-        if 'max_duration' not in filters and 'min_duration' not in filters:
-            range_match = re.search(r'(\d+)\s*-\s*(\d+)\s*' + MIN + r'\b', query_lower)
             ceil_match = re.search(
-                r'(?:under|less\s+than|max|no\s+more\s+than|up\s+to|meno\s+di|menos\s+de)\s+(\d+)\s*'
-                + MIN + r'\b',
-                query_lower,
-            )
-            if range_match:
-                filters['min_duration'] = int(range_match.group(1)) * 60
-                filters['max_duration'] = int(range_match.group(2)) * 60
-            elif ceil_match:
-                # Explicit ceiling — respect it as an upper bound only.
-                filters['max_duration'] = int(ceil_match.group(1)) * 60
-            else:
-                # Bare target "X min(uti)" → a window around X (floor + ceiling)
-                # so tiny clips don't satisfy a request for a several-minute piece.
-                target_match = re.search(r'(\d+)\s*-?\s*' + MIN + r'\b', query_lower)
-                if target_match:
-                    secs = int(target_match.group(1)) * 60
-                    filters['min_duration'] = round(secs * 0.5)
-                    filters['max_duration'] = secs
+                r'\b(?:under|less\s+than|max(?:imum)?|no\s+more\s+than|up\s+to|meno\s+di|menos\s+de)\s+' + CMP,
+                dq,
+            ) or re.search(CMP + r'\s*(?:max\b|tops\b|or\s+(?:less|under|shorter))', dq)
+            if ceil_match:
+                filters['max_duration'] = _cmp_secs(ceil_match)
 
-            # Seconds ceiling ("under 30 seconds", "30 sec").
-            if 'max_duration' not in filters and 'min_duration' not in filters:
-                sec_match = re.search(
-                    r'(?:under\s+|less\s+than\s+)?(\d+)\s*' + SEC + r'\b', query_lower
-                )
-                if sec_match:
-                    filters['max_duration'] = int(sec_match.group(1))
+            if not floor_match and not ceil_match:
+                minute_range = re.search(NUM + r'\s*(?:-|–|to|a|à)\s*' + NUM + r'\s*' + MIN + r'\b', dq)
+                second_range = re.search(NUM + r'\s*(?:-|–|to)\s*' + NUM + r'\s*' + SEC + r'\b', dq)
+                if minute_range:
+                    filters['min_duration'] = round(float(minute_range.group(1)) * 60)
+                    filters['max_duration'] = round(float(minute_range.group(2)) * 60)
+                elif second_range:
+                    filters['min_duration'] = round(float(second_range.group(1)))
+                    filters['max_duration'] = round(float(second_range.group(2)))
+                else:
+                    # Bare target "X min(uti)" → a window around X (floor + ceiling)
+                    # so tiny clips don't satisfy a request for a several-minute piece.
+                    target_match = re.search(NUM + r'\s*-?\s*' + MIN + r'\b', dq)
+                    if target_match:
+                        secs = round(float(target_match.group(1)) * 60)
+                        filters['min_duration'] = round(secs * 0.5)
+                        filters['max_duration'] = secs
 
-            # Qualitative: "short" (~90s) / "long" (floor 3 min), a few languages.
-            if 'max_duration' not in filters and 'min_duration' not in filters:
-                if re.search(r'\b(?:short|corto|breve|court)\b', query_lower):
-                    filters['max_duration'] = 90
-                elif re.search(r'\b(?:long|lungo|largo)\b', query_lower):
-                    filters['min_duration'] = 180
+                # Seconds ceiling ("under 30 seconds", "30 sec").
+                if 'max_duration' not in filters and 'min_duration' not in filters:
+                    sec_match = re.search(
+                        r'(?:under\s+|less\s+than\s+)?(\d+)\s*' + SEC + r'\b', dq
+                    )
+                    if sec_match:
+                        filters['max_duration'] = int(sec_match.group(1))
+
+                # Qualitative: "short" (~90s) / "long" (floor 3 min), a few languages.
+                if 'max_duration' not in filters and 'min_duration' not in filters:
+                    if re.search(r'\b(?:short|corto|breve|court)\b', dq):
+                        filters['max_duration'] = 90
+                    elif re.search(r'\b(?:long|lungo|largo)\b', dq):
+                        filters['min_duration'] = 180
 
         return filters
 

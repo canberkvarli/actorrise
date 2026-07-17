@@ -22,7 +22,11 @@ logger = logging.getLogger(__name__)
 # window (floor..ceiling), so a 5-minute request no longer returns 25-second clips.
 # v6: multilingual tone/gender/era vocab (comico->comedic, donna->female, …) +
 # drop contradictory classical-era filter on film/TV-only searches.
-CACHE_VERSION = "6"
+# v7: duration edge cases from the 2026-07 log audit — word numbers ("one minute"),
+# decimals ("1.5 minutes", "1 to 1.5"), compound "X min Y sec", independent
+# floor+ceiling ("at least 1 min up to 2 min 30 sec"), postfix qualifiers
+# ("2 mins max", "3 mins or more"), seconds ranges ("60-90 seconds").
+CACHE_VERSION = "7"
 
 
 class CacheManager:

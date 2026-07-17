@@ -31,7 +31,7 @@
   {"id": "duration-30s-teen-comedy", "class": "duration", "query": "comedic monologue 30 seconds for teenager suitable for audition for children's show",
    "expect": {"min_results": 5, "parse": {"tone": "comedic"}}},
   {"id": "duration-3min-plus", "class": "duration", "query": "womens rights teen defiance 3 mins or more",
-   "expect": {"min_results": 3, "parse": {"min_duration": 90}}},
+   "expect": {"min_results": 3, "parse": {"min_duration": 180, "max_duration": null}}},
   {"id": "duration-under-3min", "class": "duration", "query": "quirky loyal teenage male under 3 minutes",
    "expect": {"min_results": 3, "results_gender": "male", "parse": {"max_duration": 180, "min_duration": null}}},
   {"id": "duration-funny-1-to-1p5", "class": "duration", "query": "Funny monologue for any gender, 1 to 1.5 minutes long",
