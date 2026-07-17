@@ -714,7 +714,12 @@ function SearchContent() {
     content_gap?: { play: string | null; author: string | null } | null;
     query_invalid_reason?: string | null;
     debug_timing?: DebugTiming | null;
+    search_log_id?: number | null;
   };
+
+  // Links a monologue open back to the search that produced it (?slid= on the
+  // detail fetch -> monologue_views.search_log_id, funnel analytics).
+  const searchLogIdRef = useRef<number | null>(null);
 
   const performSearch = async (
     searchQuery: string,
@@ -760,6 +765,7 @@ function SearchContent() {
       setFrontendSearchMs(_searchEnd - _searchStart);
       const data = response.data;
       if (data.debug_timing) setDebugTiming(data.debug_timing);
+      searchLogIdRef.current = data.search_log_id ?? null;
       const newResults = data.results;
 
       if (append) {
@@ -892,6 +898,7 @@ function SearchContent() {
         );
         setFrontendSearchMs(Date.now() - _ftSearchStart);
         if (res.data.debug_timing) setDebugTiming(res.data.debug_timing);
+        searchLogIdRef.current = res.data.search_log_id ?? null;
 
         // Check if query was flagged as invalid (gibberish, etc.)
         if (res.data.query_invalid_reason) {
@@ -1034,8 +1041,10 @@ function SearchContent() {
     const params = new URLSearchParams(searchParams.toString());
     params.set("m", mono.id.toString());
     router.replace(`/monologues?${params.toString()}`, { scroll: false });
-    // Fetch fresh data in background (view count, etc.)
-    api.get<Monologue>(`/api/monologues/${mono.id}`)
+    // Fetch fresh data in background (view count, etc.); slid ties the open
+    // back to the search that produced it.
+    const slid = searchLogIdRef.current;
+    api.get<Monologue>(`/api/monologues/${mono.id}${slid ? `?slid=${slid}` : ""}`)
       .then((response) => setSelectedMonologue(response.data))
       .catch(() => {});
   };
