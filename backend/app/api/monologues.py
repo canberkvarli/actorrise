@@ -17,6 +17,7 @@ from app.middleware.rate_limiting import require_ai_search_when_query
 from app.models.actor import Monologue, MonologueFavorite, Play
 from app.models.user import User
 from app.services.search.query_optimizer import correct_query_typos, validate_query
+from app.services.search.title_lookup import compute_content_gap
 from app.services.search.recommender import Recommender
 from app.services.search.semantic_search import MIN_RELEVANCE_TO_SHOW, STRONG_COSINE_SIM, SemanticSearch
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -439,27 +440,17 @@ async def search_monologues(
                 query_invalid_reason="gibberish",
             )
 
-        # Content gap detection: check if the user wanted a specific play/author we don't have
-        content_gap = None
-        intended_play = getattr(search_service, '_intended_play', None)
-        intended_author = getattr(search_service, '_intended_author', None)
-        if intended_play or intended_author:
-            # Check if any result actually matches the intended play/author
-            found_match = False
-            for m, _ in all_results_with_scores:
-                play_title = (m.play.title or "").lower()
-                author_name = (m.play.author or "").lower()
-                if intended_play and intended_play.lower() in play_title:
-                    found_match = True
-                    break
-                if intended_author and intended_author.lower() in author_name:
-                    found_match = True
-                    break
-            if not found_match:
-                content_gap = {
-                    "play": intended_play,
-                    "author": intended_author,
-                }
+        # Content gap detection: the user wanted a specific play/show/author we
+        # don't have. AI-extracted intent first; curated title dictionary as
+        # fallback (audit: "Bridgerton"-style lookups are 15% of searches and
+        # the AI extraction alone fired 0 times in 60 days).
+        content_gap = compute_content_gap(
+            q or "",
+            getattr(search_service, '_intended_play', None),
+            getattr(search_service, '_intended_author', None),
+            [(m.play.title or "") if m.play else "" for m, _ in all_results_with_scores],
+            [(m.play.author or "") if m.play else "" for m, _ in all_results_with_scores],
+        )
 
         # Log search for analytics
         if q and q.strip():

@@ -106,16 +106,11 @@ PARSE_ONLY_KEYS = {"parse", "gap_play_ilike"}
 def _observe_parse_only(query: str) -> dict:
     from app.services.search.query_optimizer import KeywordExtractor
 
-    parsed = KeywordExtractor.extract(query)
-    content_gap = None
-    try:
-        from app.services.search.title_lookup import detect_title_lookup
+    from app.services.search.title_lookup import detect_title_lookup
 
-        hit = detect_title_lookup(query)
-        if hit:
-            content_gap = {"play": hit["title"], "author": None}
-    except ImportError:
-        pass
+    parsed = KeywordExtractor.extract(query)
+    hit = detect_title_lookup(query)
+    content_gap = {"play": hit["title"], "author": None} if hit else None
     return {"parsed": parsed, "results": [], "total": 0, "content_gap": content_gap}
 
 
@@ -135,24 +130,15 @@ def _observe_full(query: str, filters: dict | None) -> dict:
             scores = [s for _, s in results_with_scores if s is not None]
             weak = bool(scores) and max(scores) < 0.48
 
-        content_gap = None
-        intended = getattr(svc, "_intended_play", None)
-        if intended and not any(
-            intended.lower() in (m.play.title or "").lower() for m, _ in results_with_scores
-        ):
-            content_gap = {"play": intended, "author": getattr(svc, "_intended_author", None)}
-        if content_gap is None:
-            try:
-                from app.services.search.title_lookup import detect_title_lookup
+        from app.services.search.title_lookup import compute_content_gap
 
-                hit = detect_title_lookup(query)
-                if hit and not any(
-                    hit["title"].lower() in (m.play.title or "").lower()
-                    for m, _ in results_with_scores
-                ):
-                    content_gap = {"play": hit["title"], "author": None}
-            except ImportError:
-                pass
+        content_gap = compute_content_gap(
+            query,
+            getattr(svc, "_intended_play", None),
+            getattr(svc, "_intended_author", None),
+            [(m.play.title or "") if m.play else "" for m, _ in results_with_scores],
+            [(m.play.author or "") if m.play else "" for m, _ in results_with_scores],
+        )
 
         return {
             "parsed": KeywordExtractor.extract(query),
