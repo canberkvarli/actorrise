@@ -103,6 +103,13 @@
   {"id": "scene-two-sisters", "class": "scene_demand", "query": "two sisters arguing about their mother",
    "expect": {"min_results": 5}},
 
+  {"id": "gate-tv-clips-hidden", "class": "gate", "query": "dramatic monologue",
+   "filters": {"source_type": "tv"},
+   "expect": {"min_results": 5, "results_min_duration_s": 30}},
+  {"id": "gate-lifted-for-short-request", "class": "gate", "query": "30 second monologue",
+   "filters": {"source_type": "tv", "max_duration": 30},
+   "expect": {"min_results": 3}},
+
   {"id": "foreign-hindi", "class": "foreign", "query": "Monologues in Hindi",
    "expect": {"min_results": 1}},
   {"id": "profile-overdone-17-22", "class": "generic", "query": "male contemporary monologue (ages 17-22) that's not overdone and preferably modern",

@@ -67,6 +67,12 @@ class ScoreQueryTests(unittest.TestCase):
         obs["results"].append(_result(gender="male"))
         self.assertEqual(self._fails(score_query({"results_gender": "female"}, obs)), ["results_gender"])
 
+    def test_results_min_duration_s(self):
+        obs = {"results": [_result(dur=35), _result(dur=90)], "total": 2}
+        self.assertEqual(self._fails(score_query({"results_min_duration_s": 30}, obs)), [])
+        obs["results"].append(_result(dur=20))
+        self.assertEqual(self._fails(score_query({"results_min_duration_s": 30}, obs)), ["results_min_duration_s"])
+
     def test_results_max_duration_tolerates_ten_percent(self):
         obs = {"results": [_result(dur=125)], "total": 1}
         self.assertEqual(self._fails(score_query({"results_max_duration_s": 120}, obs)), [])

@@ -86,6 +86,11 @@ def score_query(expect: dict, observed: dict) -> list[Check]:
         bad = [r for r in results if r.get("gender") not in (want, "any", None)]
         checks.append(("results_gender", not bad, f"{len(bad)} results with other gender"))
 
+    if "results_min_duration_s" in expect:
+        floor = expect["results_min_duration_s"]
+        bad = [r for r in results if (r.get("duration_s") or 0) < floor]
+        checks.append(("results_min_duration_s", not bad, f"{len(bad)} results under {floor}s"))
+
     if "results_max_duration_s" in expect:
         cap = expect["results_max_duration_s"] * 1.1
         bad = [r for r in results if (r.get("duration_s") or 0) > cap]

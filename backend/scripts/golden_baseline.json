@@ -68,6 +68,13 @@
  "foreign-hindi": {
   "min_results": true
  },
+ "gate-lifted-for-short-request": {
+  "min_results": true
+ },
+ "gate-tv-clips-hidden": {
+  "min_results": true,
+  "results_min_duration_s": true
+ },
  "generic-angry-male-2min": {
   "min_results": true,
   "parse.gender": true,
@@ -93,7 +100,7 @@
   "min_results": true
  },
  "generic-lesbian-coming-out": {
-  "expect_strong": false,
+  "expect_strong": true,
   "min_results": true
  },
  "generic-nurse-under-2min": {

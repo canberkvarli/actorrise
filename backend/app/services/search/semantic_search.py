@@ -99,6 +99,18 @@ MIN_RELEVANCE_TO_SHOW = 0.48
 # language / gibberish like "at hirsizi") and we return empty.
 WEAK_MATCH_FLOOR = 0.30
 
+# TV pieces under this length are line readings, not monologues (68% of the tv
+# corpus at the 2026-07 audit: 1,492/2,192 rows under 30s). They are hidden
+# from search unless the user explicitly asks for very short material.
+TV_CLIP_MIN_SECONDS = 30
+
+
+def tv_clip_gate_active(filters: Optional[Dict]) -> bool:
+    """The clip gate is ON unless an explicit max_duration at or under 45s
+    says the user genuinely wants clip-length pieces."""
+    md = (filters or {}).get("max_duration")
+    return not (md and md <= 45)
+
 # Bar on the RAW pgvector cosine similarity of the best match. The primary search
 # path scores results by rank (0.6–1.0), which can't tell a strong match from the
 # nearest of an irrelevant set — so the weak-match banner above never fired there.
@@ -984,6 +996,14 @@ class SemanticSearch:
                 else:
                     base_query = base_query.filter(Play.source_type == st)
 
+        if tv_clip_gate_active(hard_filters):
+            base_query = base_query.filter(
+                or_(
+                    Play.source_type != "tv",
+                    Monologue.estimated_duration_seconds >= TV_CLIP_MIN_SECONDS,
+                )
+            )
+
         # Get user's bookmarked monologues if user_id provided
         # NOTE: Fetches all bookmarks because boost is applied during scoring
         # Capped at 1000 most recent to avoid pathological cases
@@ -1060,6 +1080,10 @@ class SemanticSearch:
                     wc.append(f"m.act = {int(hf['act'])}")
                 if hf.get("scene"):
                     wc.append(f"m.scene = {int(hf['scene'])}")
+                if tv_clip_gate_active(hf):
+                    wc.append(
+                        f"NOT (p.source_type = 'tv' AND m.estimated_duration_seconds < {TV_CLIP_MIN_SECONDS})"
+                    )
                 return " AND ".join(wc)
 
             # Enable pgvector 0.8 iterative index scan. Without it, a HARD-FILTERED
@@ -1553,6 +1577,14 @@ class SemanticSearch:
                 else:
                     base_query = base_query.filter(Play.source_type == st)
 
+        if tv_clip_gate_active(filters):
+            base_query = base_query.filter(
+                or_(
+                    Play.source_type != "tv",
+                    Monologue.estimated_duration_seconds >= TV_CLIP_MIN_SECONDS,
+                )
+            )
+
         # Simple keyword-friendly text search: play title, character, author, monologue title/text.
         # We search both the full query and important keywords so that
         # multi-word queries like "give me the hamlet monologue" still match "Hamlet".
@@ -1759,5 +1791,13 @@ class SemanticSearch:
                     query = query.filter(Play.source_type.in_(st))
                 else:
                     query = query.filter(Play.source_type == st)
+
+        if tv_clip_gate_active(filters):
+            query = query.filter(
+                or_(
+                    Play.source_type != "tv",
+                    Monologue.estimated_duration_seconds >= TV_CLIP_MIN_SECONDS,
+                )
+            )
 
         return query.order_by(func.random()).limit(limit).all()

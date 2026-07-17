@@ -26,7 +26,9 @@ logger = logging.getLogger(__name__)
 # decimals ("1.5 minutes", "1 to 1.5"), compound "X min Y sec", independent
 # floor+ceiling ("at least 1 min up to 2 min 30 sec"), postfix qualifiers
 # ("2 mins max", "3 mins or more"), seconds ranges ("60-90 seconds").
-CACHE_VERSION = "7"
+# v8: TV clip gate — tv pieces under 30s hidden from search/discover unless an
+# explicit max_duration <= 45 asks for clip-length material.
+CACHE_VERSION = "8"
 
 
 class CacheManager:
