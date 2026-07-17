@@ -95,6 +95,7 @@ class SearchResponse(BaseModel):
     weak_match: bool = False  # True when results exist but none clear the strong-match bar
     broadened: Optional[dict] = None  # {"relaxed": ["length","age",...]} when filters were loosened to fill results
     debug_timing: Optional[dict] = None  # Timing data for dev/admin debug overlay
+    search_log_id: Optional[int] = None  # search_logs row id; pass as ?slid= when opening a result (funnel analytics)
 
 
 class LeadMagnetItem(BaseModel):
@@ -452,24 +453,6 @@ async def search_monologues(
             [(m.play.author or "") if m.play else "" for m, _ in all_results_with_scores],
         )
 
-        # Log search for analytics
-        if q and q.strip():
-            try:
-                from app.models.search_log import SearchLog
-                all_result_ids = [int(m.id) for m, _ in all_results_with_scores]
-                db.add(SearchLog(
-                    query=q.strip(),
-                    filters_used=filters if filters else None,
-                    results_count=total,
-                    result_ids=all_result_ids,
-                    user_id=int(current_user.id),
-                    source="search",
-                    content_gap=content_gap,
-                ))
-                db.commit()
-            except Exception:
-                db.rollback()
-
         # Soft-fail: results exist but they're closer to "padding" than real
         # matches. The UI surfaces these under a "closest matches" banner so a
         # specific query we can't satisfy (e.g. a play we don't carry) doesn't
@@ -509,6 +492,33 @@ async def search_monologues(
         if debug_timing:
             debug_timing["hard_filters"] = {k: str(v) for k, v in (filters or {}).items()}
 
+        # Log search for analytics. Logged AFTER quality signals are computed so
+        # weak_match/best_cosine land in the row (the 2026-07 audit was blind to
+        # post-fix result quality without them). `page` separates a new search
+        # from a pagination fetch of the same query.
+        search_log_id = None
+        if q and q.strip():
+            try:
+                from app.models.search_log import SearchLog
+                all_result_ids = [int(m.id) for m, _ in all_results_with_scores]
+                log_row = SearchLog(
+                    query=q.strip(),
+                    filters_used=filters if filters else None,
+                    results_count=total,
+                    result_ids=all_result_ids,
+                    user_id=int(current_user.id),
+                    source="search",
+                    content_gap=content_gap,
+                    page=page,
+                    weak_match=bool(weak_match) if has_scores else None,
+                    best_cosine=best_cosine,
+                )
+                db.add(log_row)
+                db.commit()
+                search_log_id = int(log_row.id)
+            except Exception:
+                db.rollback()
+
         return SearchResponse(
             results=monologue_responses,
             total=total,
@@ -520,6 +530,7 @@ async def search_monologues(
             weak_match=weak_match,
             broadened=broadened,
             debug_timing=debug_timing,
+            search_log_id=search_log_id,
         )
     except HTTPException:
         raise  # Re-raise HTTP exceptions (e.g. from auth/rate-limiting) as-is
@@ -765,6 +776,7 @@ async def get_trending(
 @router.get("/{monologue_id:int}", response_model=MonologueResponse)
 async def get_monologue(
     monologue_id: int,
+    slid: Optional[int] = Query(None, description="search_logs id that led to this open (funnel analytics)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -783,6 +795,20 @@ async def get_monologue(
     # Increment view count
     monologue.view_count = int(monologue.view_count) + 1  # type: ignore[assignment]
     db.commit()
+
+    # Record the open as an event (search -> open funnel; aggregate view_count
+    # can't answer "did this search lead anywhere"). Separate commit so a
+    # missing table (pre-migration) can't break the detail page.
+    try:
+        from app.models.search_log import MonologueView
+        db.add(MonologueView(
+            monologue_id=monologue_id,
+            user_id=int(current_user.id),
+            search_log_id=slid,
+        ))
+        db.commit()
+    except Exception:
+        db.rollback()
 
     # Check if favorited
     is_favorited = db.query(MonologueFavorite).filter(
