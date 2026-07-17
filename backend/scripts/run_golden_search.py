@@ -123,6 +123,13 @@ def _observe_full(query: str, filters: dict | None) -> dict:
     try:
         svc = SemanticSearch(db)
         results_with_scores, _ = svc.search(query, limit=20, filters=dict(filters or {}))
+
+        # Mirror the endpoint: named-title matches lead the results.
+        from app.services.search.title_lookup import detect_title_lookup, promote_title_matches
+
+        hit = detect_title_lookup(query)
+        if hit:
+            results_with_scores = promote_title_matches(hit["title"], results_with_scores)
         best_cosine = getattr(svc, "_best_cosine_sim", None)
         if best_cosine is not None:
             weak = best_cosine < STRONG_COSINE_SIM

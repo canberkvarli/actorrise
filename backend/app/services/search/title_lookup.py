@@ -162,6 +162,26 @@ def detect_title_lookup(query: str) -> Optional[Dict[str, str]]:
     return None
 
 
+def promote_title_matches(title: str, results_with_scores: list) -> list:
+    """Stable-move monologues whose play title matches `title` to the front.
+
+    Used when the query names a show the library carries: semantic ranking can
+    bury the literal title matches under thematically-similar pieces (golden
+    known-fail: 'Cady Heron in mean girls jr' left the four real Mean Girls
+    monologues below the top 5). Scores and relative order are preserved; when
+    nothing matches this is a no-op.
+    """
+    needle = (title or "").lower()
+    if not needle:
+        return results_with_scores
+    hits, rest = [], []
+    for m, score in results_with_scores:
+        play = getattr(m, "play", None)
+        play_title = (getattr(play, "title", "") or "") if play else ""
+        (hits if needle in play_title.lower() else rest).append((m, score))
+    return hits + rest if hits else results_with_scores
+
+
 def compute_content_gap(
     query: str,
     intended_play: Optional[str],

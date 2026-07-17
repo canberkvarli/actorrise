@@ -17,7 +17,9 @@ from app.middleware.rate_limiting import require_ai_search_when_query
 from app.models.actor import Monologue, MonologueFavorite, Play
 from app.models.user import User
 from app.services.search.query_optimizer import correct_query_typos, validate_query
-from app.services.search.title_lookup import compute_content_gap
+from app.services.search.title_lookup import (compute_content_gap,
+                                              detect_title_lookup,
+                                              promote_title_matches)
 from app.services.search.recommender import Recommender
 from app.services.search.semantic_search import MIN_RELEVANCE_TO_SHOW, STRONG_COSINE_SIM, SemanticSearch
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -397,6 +399,14 @@ async def search_monologues(
                 actor_profile=actor_profile_for_search,
             )
             has_scores = True
+            # If the query names a show we carry ("mean girls jr"), its pieces
+            # must lead the results — semantic ranking can bury literal title
+            # matches under thematically-similar pieces. No-op otherwise.
+            title_hit = detect_title_lookup(search_q)
+            if title_hit:
+                all_results_with_scores = promote_title_matches(
+                    title_hit["title"], all_results_with_scores
+                )
         else:
             # Random/discover returns just Monologues, wrap with None score
             random_results = search_service.get_random_monologues(limit=fetch_limit, filters=filters)

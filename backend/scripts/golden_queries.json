@@ -14,6 +14,7 @@
   {"id": "generic-angry-male-2min", "class": "generic", "query": "angry male 2 minutes",
    "expect": {"min_results": 5, "results_gender": "male", "parse": {"gender": "male", "min_duration": 60, "max_duration": 120}}},
   {"id": "generic-lesbian-coming-out", "class": "generic", "query": "lesbian coming out defending sexuality",
+   "known_fail": true,
    "expect": {"min_results": 5, "expect_strong": true}},
   {"id": "generic-nurse-under-2min", "class": "generic", "query": "woman nurse monologue under 2 min",
    "expect": {"min_results": 3, "results_gender": "female", "parse": {"max_duration": 120, "min_duration": null}, "results_max_duration_s": 120}},

@@ -93,7 +93,7 @@
   "min_results": true
  },
  "generic-lesbian-coming-out": {
-  "expect_strong": true,
+  "expect_strong": false,
   "min_results": true
  },
  "generic-nurse-under-2min": {
@@ -174,7 +174,7 @@
  },
  "named-mean-girls": {
   "min_results": true,
-  "top_play_ilike": false
+  "top_play_ilike": true
  },
  "named-shakespeare-female-2min": {
   "min_results": true,

@@ -9,7 +9,22 @@ and the miss lands in search_logs.content_gap as a sourcing signal.
 
 import unittest
 
-from app.services.search.title_lookup import compute_content_gap, detect_title_lookup
+from app.services.search.title_lookup import (
+    compute_content_gap,
+    detect_title_lookup,
+    promote_title_matches,
+)
+
+
+class _Play:
+    def __init__(self, title):
+        self.title = title
+
+
+class _Mono:
+    def __init__(self, mid, play_title):
+        self.id = mid
+        self.play = _Play(play_title)
 
 
 class DetectTitleLookupTests(unittest.TestCase):
@@ -106,6 +121,44 @@ class ComputeContentGapTests(unittest.TestCase):
     def test_no_gap_on_descriptive_query(self):
         gap = compute_content_gap("angry male 2 minutes", None, None, ["Hamlet"])
         self.assertIsNone(gap)
+
+
+class PromoteTitleMatchesTests(unittest.TestCase):
+    """When a query names a title we DO carry, its pieces must lead the results.
+
+    Golden known-fail this fixes: 'Cady Heron in mean girls jr' left the four
+    real Mean Girls monologues below the top 5.
+    """
+
+    def _results(self):
+        return [
+            (_Mono(1, "Hamlet"), 0.95),
+            (_Mono(2, "Mean Girls"), 0.80),
+            (_Mono(3, "Macbeth"), 0.75),
+            (_Mono(4, "Mean Girls"), 0.70),
+        ]
+
+    def test_matching_play_moves_to_front_stable(self):
+        out = promote_title_matches("Mean Girls", self._results())
+        self.assertEqual([m.id for m, _ in out], [2, 4, 1, 3])
+
+    def test_scores_are_preserved(self):
+        out = promote_title_matches("Mean Girls", self._results())
+        self.assertEqual([s for _, s in out], [0.80, 0.70, 0.95, 0.75])
+
+    def test_match_is_case_insensitive_substring(self):
+        out = promote_title_matches("bridgerton", [(_Mono(7, "Queen Charlotte A Bridgerton Story"), 0.6), (_Mono(8, "Hamlet"), 0.9)])
+        self.assertEqual([m.id for m, _ in out], [7, 8])
+
+    def test_no_match_is_a_no_op(self):
+        results = self._results()
+        self.assertEqual(promote_title_matches("Wicked", results), results)
+
+    def test_monologue_without_play_is_kept(self):
+        mono = _Mono(9, "x")
+        mono.play = None
+        out = promote_title_matches("Mean Girls", [(mono, 0.9), (_Mono(2, "Mean Girls"), 0.8)])
+        self.assertEqual([m.id for m, _ in out], [2, 9])
 
 
 if __name__ == "__main__":
