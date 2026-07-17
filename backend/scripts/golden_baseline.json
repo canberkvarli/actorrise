@@ -1,0 +1,220 @@
+{
+ "comedy-60-90s-female": {
+  "min_results": true,
+  "parse.max_duration": true,
+  "parse.min_duration": true,
+  "parse.tone": true,
+  "results_gender": true
+ },
+ "comedy-contemporary-female": {
+  "min_results": true,
+  "parse.tone": true,
+  "results_gender": true
+ },
+ "comedy-gay-dating-twist": {
+  "min_results": true,
+  "parse.tone": true
+ },
+ "comedy-male-late-20s": {
+  "min_results": true,
+  "parse.gender": true,
+  "parse.tone": true,
+  "results_gender": true
+ },
+ "duration-30s-teen-comedy": {
+  "min_results": true,
+  "parse.tone": true
+ },
+ "duration-3min-plus": {
+  "min_results": true,
+  "parse.max_duration": true,
+  "parse.min_duration": true
+ },
+ "duration-5min-bare": {
+  "min_results": true,
+  "parse.max_duration": true,
+  "parse.min_duration": true
+ },
+ "duration-funny-1-to-1p5": {
+  "min_results": true,
+  "parse.max_duration": true,
+  "parse.min_duration": true
+ },
+ "duration-it-5-minuti": {
+  "min_results": true,
+  "parse.max_duration": true,
+  "parse.min_duration": true,
+  "parse.tone": true
+ },
+ "duration-one-minute": {
+  "min_results": true,
+  "parse.max_duration": true,
+  "parse.min_duration": true,
+  "results_max_duration_s": true
+ },
+ "duration-range-1-to-2p5": {
+  "min_results": true,
+  "parse.max_duration": true,
+  "parse.min_duration": true,
+  "results_gender": true,
+  "results_max_duration_s": true
+ },
+ "duration-under-3min": {
+  "min_results": true,
+  "parse.max_duration": true,
+  "parse.min_duration": true,
+  "results_gender": true
+ },
+ "foreign-hindi": {
+  "min_results": true
+ },
+ "generic-angry-male-2min": {
+  "min_results": true,
+  "parse.gender": true,
+  "parse.max_duration": true,
+  "parse.min_duration": true,
+  "results_gender": true
+ },
+ "generic-dark-comedy-male": {
+  "min_results": true,
+  "results_gender": true
+ },
+ "generic-emotional-17-girl": {
+  "min_results": true,
+  "results_gender": true
+ },
+ "generic-guarded-vulnerability": {
+  "expect_strong": true,
+  "min_results": true,
+  "results_gender": true
+ },
+ "generic-identity-crisis": {
+  "expect_strong": true,
+  "min_results": true
+ },
+ "generic-lesbian-coming-out": {
+  "expect_strong": false,
+  "min_results": true
+ },
+ "generic-nurse-under-2min": {
+  "min_results": true,
+  "parse.max_duration": true,
+  "parse.min_duration": true,
+  "results_gender": true,
+  "results_max_duration_s": true
+ },
+ "generic-philosophical-male-30s": {
+  "min_results": true,
+  "parse.gender": true,
+  "results_gender": true
+ },
+ "generic-quiet-manipulative": {
+  "expect_strong": true,
+  "min_results": true,
+  "results_gender": true
+ },
+ "generic-self-respect": {
+  "expect_strong": true,
+  "min_results": true
+ },
+ "legacy-low-silly-british": {
+  "min_results": true,
+  "results_gender": true
+ },
+ "legacy-zero-drama-filmtv": {
+  "min_results": true
+ },
+ "legacy-zero-modern-overconstrained": {
+  "min_results": true
+ },
+ "legacy-zero-queen-warrior": {
+  "min_results": true
+ },
+ "named-beetlejuice": {
+  "gap_play_ilike": true,
+  "min_results": true
+ },
+ "named-breaking-bad": {
+  "min_results": true,
+  "top_play_ilike": true
+ },
+ "named-bridgerton": {
+  "min_results": true,
+  "top_play_ilike": true
+ },
+ "named-clue-professor-plum": {
+  "gap_play_ilike": true,
+  "min_results": true,
+  "results_gender": true
+ },
+ "named-clueless-cher": {
+  "gap_play_ilike": true,
+  "min_results": true
+ },
+ "named-dear-evan-hansen": {
+  "gap_play_ilike": true,
+  "min_results": true
+ },
+ "named-dolls-house-nora": {
+  "expect_strong": true,
+  "min_results": true,
+  "top_play_ilike": true
+ },
+ "named-heathers": {
+  "gap_play_ilike": true,
+  "min_results": true
+ },
+ "named-into-the-woods-witch": {
+  "gap_play_ilike": true,
+  "min_results": true
+ },
+ "named-matilda": {
+  "gap_play_ilike": true,
+  "min_results": true
+ },
+ "named-mean-girls": {
+  "min_results": true,
+  "top_play_ilike": true
+ },
+ "named-shakespeare-female-2min": {
+  "min_results": true,
+  "parse.max_duration": true,
+  "parse.min_duration": true,
+  "results_gender": true,
+  "top_author_ilike": true
+ },
+ "profile-overdone-17-22": {
+  "min_results": true,
+  "results_gender": true
+ },
+ "scene-two-actors-films": {
+  "min_results": true
+ },
+ "scene-two-sisters": {
+  "min_results": true
+ },
+ "teen-12-year-old-kid": {
+  "min_results": true
+ },
+ "teen-8yo-failure-rejection": {
+  "min_results": true,
+  "results_gender": true
+ },
+ "teen-funny-13-girl": {
+  "min_results": true,
+  "parse.tone": true,
+  "results_gender": true
+ },
+ "teen-high-school-2min": {
+  "min_results": true,
+  "parse.max_duration": true,
+  "parse.min_duration": true,
+  "results_max_duration_s": true
+ },
+ "teen-sixteen": {
+  "min_results": true
+ },
+ "teen-witty-15": {
+  "min_results": true
+ }
+}

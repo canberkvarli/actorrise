@@ -17,6 +17,9 @@ from app.middleware.rate_limiting import require_ai_search_when_query
 from app.models.actor import Monologue, MonologueFavorite, Play
 from app.models.user import User
 from app.services.search.query_optimizer import correct_query_typos, validate_query
+from app.services.search.title_lookup import (compute_content_gap,
+                                              detect_title_lookup,
+                                              promote_title_matches)
 from app.services.search.recommender import Recommender
 from app.services.search.semantic_search import MIN_RELEVANCE_TO_SHOW, STRONG_COSINE_SIM, SemanticSearch
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -94,6 +97,7 @@ class SearchResponse(BaseModel):
     weak_match: bool = False  # True when results exist but none clear the strong-match bar
     broadened: Optional[dict] = None  # {"relaxed": ["length","age",...]} when filters were loosened to fill results
     debug_timing: Optional[dict] = None  # Timing data for dev/admin debug overlay
+    search_log_id: Optional[int] = None  # search_logs row id; pass as ?slid= when opening a result (funnel analytics)
 
 
 class LeadMagnetItem(BaseModel):
@@ -395,6 +399,14 @@ async def search_monologues(
                 actor_profile=actor_profile_for_search,
             )
             has_scores = True
+            # If the query names a show we carry ("mean girls jr"), its pieces
+            # must lead the results — semantic ranking can bury literal title
+            # matches under thematically-similar pieces. No-op otherwise.
+            title_hit = detect_title_lookup(search_q)
+            if title_hit:
+                all_results_with_scores = promote_title_matches(
+                    title_hit["title"], all_results_with_scores
+                )
         else:
             # Random/discover returns just Monologues, wrap with None score
             random_results = search_service.get_random_monologues(limit=fetch_limit, filters=filters)
@@ -439,45 +451,17 @@ async def search_monologues(
                 query_invalid_reason="gibberish",
             )
 
-        # Content gap detection: check if the user wanted a specific play/author we don't have
-        content_gap = None
-        intended_play = getattr(search_service, '_intended_play', None)
-        intended_author = getattr(search_service, '_intended_author', None)
-        if intended_play or intended_author:
-            # Check if any result actually matches the intended play/author
-            found_match = False
-            for m, _ in all_results_with_scores:
-                play_title = (m.play.title or "").lower()
-                author_name = (m.play.author or "").lower()
-                if intended_play and intended_play.lower() in play_title:
-                    found_match = True
-                    break
-                if intended_author and intended_author.lower() in author_name:
-                    found_match = True
-                    break
-            if not found_match:
-                content_gap = {
-                    "play": intended_play,
-                    "author": intended_author,
-                }
-
-        # Log search for analytics
-        if q and q.strip():
-            try:
-                from app.models.search_log import SearchLog
-                all_result_ids = [int(m.id) for m, _ in all_results_with_scores]
-                db.add(SearchLog(
-                    query=q.strip(),
-                    filters_used=filters if filters else None,
-                    results_count=total,
-                    result_ids=all_result_ids,
-                    user_id=int(current_user.id),
-                    source="search",
-                    content_gap=content_gap,
-                ))
-                db.commit()
-            except Exception:
-                db.rollback()
+        # Content gap detection: the user wanted a specific play/show/author we
+        # don't have. AI-extracted intent first; curated title dictionary as
+        # fallback (audit: "Bridgerton"-style lookups are 15% of searches and
+        # the AI extraction alone fired 0 times in 60 days).
+        content_gap = compute_content_gap(
+            q or "",
+            getattr(search_service, '_intended_play', None),
+            getattr(search_service, '_intended_author', None),
+            [(m.play.title or "") if m.play else "" for m, _ in all_results_with_scores],
+            [(m.play.author or "") if m.play else "" for m, _ in all_results_with_scores],
+        )
 
         # Soft-fail: results exist but they're closer to "padding" than real
         # matches. The UI surfaces these under a "closest matches" banner so a
@@ -518,6 +502,33 @@ async def search_monologues(
         if debug_timing:
             debug_timing["hard_filters"] = {k: str(v) for k, v in (filters or {}).items()}
 
+        # Log search for analytics. Logged AFTER quality signals are computed so
+        # weak_match/best_cosine land in the row (the 2026-07 audit was blind to
+        # post-fix result quality without them). `page` separates a new search
+        # from a pagination fetch of the same query.
+        search_log_id = None
+        if q and q.strip():
+            try:
+                from app.models.search_log import SearchLog
+                all_result_ids = [int(m.id) for m, _ in all_results_with_scores]
+                log_row = SearchLog(
+                    query=q.strip(),
+                    filters_used=filters if filters else None,
+                    results_count=total,
+                    result_ids=all_result_ids,
+                    user_id=int(current_user.id),
+                    source="search",
+                    content_gap=content_gap,
+                    page=page,
+                    weak_match=bool(weak_match) if has_scores else None,
+                    best_cosine=best_cosine,
+                )
+                db.add(log_row)
+                db.commit()
+                search_log_id = int(log_row.id)
+            except Exception:
+                db.rollback()
+
         return SearchResponse(
             results=monologue_responses,
             total=total,
@@ -529,6 +540,7 @@ async def search_monologues(
             weak_match=weak_match,
             broadened=broadened,
             debug_timing=debug_timing,
+            search_log_id=search_log_id,
         )
     except HTTPException:
         raise  # Re-raise HTTP exceptions (e.g. from auth/rate-limiting) as-is
@@ -774,6 +786,7 @@ async def get_trending(
 @router.get("/{monologue_id:int}", response_model=MonologueResponse)
 async def get_monologue(
     monologue_id: int,
+    slid: Optional[int] = Query(None, description="search_logs id that led to this open (funnel analytics)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -792,6 +805,20 @@ async def get_monologue(
     # Increment view count
     monologue.view_count = int(monologue.view_count) + 1  # type: ignore[assignment]
     db.commit()
+
+    # Record the open as an event (search -> open funnel; aggregate view_count
+    # can't answer "did this search lead anywhere"). Separate commit so a
+    # missing table (pre-migration) can't break the detail page.
+    try:
+        from app.models.search_log import MonologueView
+        db.add(MonologueView(
+            monologue_id=monologue_id,
+            user_id=int(current_user.id),
+            search_log_id=slid,
+        ))
+        db.commit()
+    except Exception:
+        db.rollback()
 
     # Check if favorited
     is_favorited = db.query(MonologueFavorite).filter(
