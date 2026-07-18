@@ -75,6 +75,17 @@ _EN_STOPWORDS = {
 }
 
 
+_SPEAKER_LEAK_RE = re.compile(r"[A-ZÀ-Þ]{3,}\s*\.\s")
+_DIRECTION_LEAK_RE = re.compile(r"\b(?:Re-enter|Enter|Exit|Exeunt)\s+[A-Z]")
+
+
+def piece_has_leaks(text: str) -> bool:
+    """Mid-speech speaker headers ('... FRANÇOISE . Where are you') or
+    unbracketed stage directions ('Re-enter Ophelia') that survived
+    segmentation — always another speaker's cue, never monologue text."""
+    return bool(_SPEAKER_LEAK_RE.search(text) or _DIRECTION_LEAK_RE.search(text))
+
+
 def looks_foreign(text: str) -> bool:
     """True when the text is probably not English (low English-stopword density)."""
     words = re.sub(r"[^a-z\s]", " ", (text or "").lower()).split()
@@ -118,8 +129,18 @@ def folger_speeches(text: str) -> list[tuple[str, str]]:
             # "PIERROT. But the moon..." — speaker header and speech on one
             # line (audit: 193 pieces leaked these headers into the text).
             flush()
-            speaker = inline.group(1).strip()
-            line = inline.group(2)
+            name = inline.group(1).strip()
+            rest = inline.group(2)
+            # Abbreviated multi-part names ("MRS. LEZINSKY. No, no...") —
+            # keep consuming leading CAPS-word-period chunks into the name.
+            while True:
+                more = re.match(r"^([A-Z][A-Z'\-]{1,15})\s*\.\s+(\S.*)$", rest)
+                if not more or len(name) + len(more.group(1)) > 25:
+                    break
+                name += ". " + more.group(1)
+                rest = more.group(2)
+            speaker = name
+            line = rest
         elif speaker is None:
             continue
         line = _FTLN_RE.sub("", line)
@@ -263,6 +284,8 @@ def main() -> int:
                 if looks_foreign(speech):
                     continue
                 if len(re.findall(r"\b[A-Z]{4,}\b", speech)) >= 3:
+                    continue
+                if piece_has_leaks(speech):
                     continue
                 if (not character or len(character) > 25
                         or character.lower() in {"all", "chorus", "both", "unknown", "omnes"}):

@@ -107,6 +107,33 @@ class FolgerSpeechesTests(unittest.TestCase):
         self.assertNotIn("1789", speeches["Theseus"])
 
 
+class PieceGuardTests(unittest.TestCase):
+    def test_mid_speech_speaker_leak_is_flagged(self):
+        from extract_pd_monologues import piece_has_leaks
+        self.assertTrue(piece_has_leaks("I admire you both more than I can say. FRANÇOISE . Where are you going?"))
+        self.assertTrue(piece_has_leaks("He may give you a card. McCOMAS. Boon. Mr. Boon."))
+
+    def test_unbracketed_direction_is_flagged(self):
+        from extract_pd_monologues import piece_has_leaks
+        self.assertTrue(piece_has_leaks("What noise is that? Re-enter Ophelia, fantastically dressed."))
+
+    def test_clean_verse_is_not_flagged(self):
+        from extract_pd_monologues import piece_has_leaks
+        self.assertFalse(piece_has_leaks(
+            "Anon he finds him, striking too short at Greeks. His antique sword, "
+            "rebellious to his arm, lies where it falls. O, I am fortune's fool!"
+        ))
+
+
+class MultiPartInlineSpeakerTests(unittest.TestCase):
+    def test_abbreviated_two_part_name_is_fully_consumed(self):
+        # "MRS. LEZINSKY. No, no, Solly..." must not leave "LEZINSKY." in the text.
+        snippet = "MRS. LEZINSKY. No, no, Solly, you should not speak that word to me.\n"
+        speeches = dict(folger_speeches(snippet))
+        self.assertIn("Mrs. Lezinsky", speeches)
+        self.assertTrue(speeches["Mrs. Lezinsky"].startswith("No, no, Solly"))
+
+
 class LooksForeignTests(unittest.TestCase):
     def test_dutch_text_is_flagged(self):
         # id 15099 in the audited batch: a Dutch source ingested as English.
