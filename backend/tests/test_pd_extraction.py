@@ -15,6 +15,7 @@ from extract_pd_monologues import (  # noqa: E402
     dedupe_key,
     folger_speeches,
     gutenberg_id_from_url,
+    looks_foreign,
 )
 
 FOLGER_SNIPPET = """ACT 1
@@ -82,6 +83,43 @@ class FolgerSpeechesTests(unittest.TestCase):
 
     def test_plain_prose_yields_nothing(self):
         self.assertEqual(folger_speeches("Just an essay.\nNothing dramatic here at all."), [])
+
+    # -- defects found auditing the 2026-07-18 insert batch ----------------
+    def test_gutenberg_underscore_markup_is_stripped(self):
+        snippet = "HELENA\nCall you me _fair_? That _fair_ again unsay.\n"
+        speeches = dict(folger_speeches(snippet))
+        self.assertEqual(speeches["Helena"], "Call you me fair? That fair again unsay.")
+
+    def test_same_line_caps_speaker_starts_a_new_speech(self):
+        # 193 inserted pieces leaked headers like "PIERROT . But sir..." into
+        # the previous speaker's text.
+        snippet = (
+            "COLUMBINE\nI have waited all night in the garden for you to come home.\n"
+            "PIERROT. But the moon was my mistress long before you were.\n"
+        )
+        speeches = dict(folger_speeches(snippet))
+        self.assertNotIn("PIERROT", speeches["Columbine"])
+        self.assertTrue(speeches["Pierrot"].startswith("But the moon"))
+
+    def test_trailing_line_numbers_stripped_even_without_ftln(self):
+        snippet = "THESEUS\nThe lunatic, the lover, and the poet 1789\nAre of imagination all compact.\n"
+        speeches = dict(folger_speeches(snippet))
+        self.assertNotIn("1789", speeches["Theseus"])
+
+
+class LooksForeignTests(unittest.TestCase):
+    def test_dutch_text_is_flagged(self):
+        # id 15099 in the audited batch: a Dutch source ingested as English.
+        self.assertTrue(looks_foreign(
+            "Hoe wijs ook, hebt ge u toch vergist, Gij zaagt mij nog als eertijds "
+            "thuis. Met ouderliefde en met een hart dat niet vergeet."
+        ))
+
+    def test_english_verse_is_not_flagged(self):
+        self.assertFalse(looks_foreign(
+            "The lunatic, the lover, and the poet are of imagination all compact. "
+            "One sees more devils than vast hell can hold."
+        ))
 
 
 if __name__ == "__main__":

@@ -60,7 +60,28 @@ def dedupe_key(text: str) -> str:
 
 
 _CAPS_SPEAKER_RE = re.compile(r"^[A-Z][A-Z'\-\. ]{1,30}$")
+_CAPS_SPEAKER_INLINE_RE = re.compile(r"^([A-Z][A-Z'\- ]{1,25})\s*\.\s+(\S.*)$")
+_PURE_NUMBER_LINE_RE = re.compile(r"^[\dIVXLC\.\s]+$")
 _FTLN_RE = re.compile(r"^FTLN\s+\d+\s*")
+
+# Words common in English (incl. verse: thou/thee/thy). A text whose word
+# stream barely touches this set is a foreign-language source that slipped
+# into the library mislabeled (audit: Dutch pieces inserted as English).
+_EN_STOPWORDS = {
+    "the", "and", "of", "to", "a", "in", "that", "is", "you", "it", "for",
+    "not", "with", "he", "she", "but", "my", "me", "i", "this", "what",
+    "all", "are", "so", "no", "on", "at", "we", "his", "her", "thy",
+    "thou", "thee", "was", "be", "have", "your", "will", "shall", "as",
+}
+
+
+def looks_foreign(text: str) -> bool:
+    """True when the text is probably not English (low English-stopword density)."""
+    words = re.sub(r"[^a-z\s]", " ", (text or "").lower()).split()
+    if len(words) < 15:
+        return False
+    hits = sum(1 for w in words if w in _EN_STOPWORDS)
+    return hits / len(words) < 0.12
 _TRAILING_VERSE_NUM_RE = re.compile(r"\s+\d+\s*$")
 _DIRECTION_LINE_RE = re.compile(r"^[\[\(]?\s*(re-?enter|enter|exit|exeunt)\b", re.I)
 _HEADING_RE = re.compile(r"^(ACT|SCENE|PROLOGUE|EPILOGUE)\b", re.I)
@@ -86,17 +107,26 @@ def folger_speeches(text: str) -> list[tuple[str, str]]:
         line = raw_line.strip()
         if not line:
             continue
-        if _HEADING_RE.match(line) or _DIRECTION_LINE_RE.match(line):
+        if _HEADING_RE.match(line) or _DIRECTION_LINE_RE.match(line) or _PURE_NUMBER_LINE_RE.match(line):
             continue
         if _CAPS_SPEAKER_RE.match(line) and not line.startswith("FTLN"):
             flush()
             speaker = line.rstrip(".").strip()
             continue
-        if speaker is None:
+        inline = _CAPS_SPEAKER_INLINE_RE.match(line)
+        if inline and not line.startswith("FTLN"):
+            # "PIERROT. But the moon..." — speaker header and speech on one
+            # line (audit: 193 pieces leaked these headers into the text).
+            flush()
+            speaker = inline.group(1).strip()
+            line = inline.group(2)
+        elif speaker is None:
             continue
         line = _FTLN_RE.sub("", line)
         line = _TRAILING_VERSE_NUM_RE.sub("", line)
-        line = re.sub(r"[\[\(][^\]\)]*[\]\)]", "", line).strip()
+        line = re.sub(r"[\[\(][^\]\)]*[\]\)]", "", line)
+        line = line.replace("_", "")  # Gutenberg _italics_ markup
+        line = re.sub(r"\s{2,}", " ", line).strip()
         if line:
             lines.append(line)
     flush()
@@ -192,28 +222,50 @@ def main() -> int:
 
         candidates: list[dict] = []
         no_text: list[str] = []
+        skipped_foreign: list[str] = []
+        skipped_nondramatic: list[str] = []
         for play in plays:
             text = _get_play_text(play, scraper)
             if not text:
                 no_text.append(f"{play.title} ({play.author})")
                 continue
+            if looks_foreign(text[:8000]):
+                skipped_foreign.append(f"{play.title} ({play.author})")
+                continue
             found = parser.extract_monologues(text, min_words=MIN_WORDS, max_words=MAX_WORDS)
             if len(found) < 3:
                 # Folger-format fallback (bare CAPS speaker lines, FTLN prefixes)
+                speeches = folger_speeches(text)
+                # Non-dramatic sources (books mislabeled as plays) have almost
+                # no speaker transitions; real drama switches constantly.
+                words_total = len(text.split())
+                if words_total and len(speeches) / (words_total / 1000) < 2:
+                    skipped_nondramatic.append(f"{play.title} ({play.author})")
+                    speeches = []
                 found = [
                     {"character": ch, "text": sp}
-                    for ch, sp in folger_speeches(text)
+                    for ch, sp in speeches
                     if MIN_WORDS <= len(sp.split()) <= MAX_WORDS
                 ]
             kept = 0
             seen_this_play: set[str] = set()
             for m in found:
-                speech = (m.get("text") or "").strip()
+                speech = (m.get("text") or "").replace("_", "").strip()
+                character = (m.get("character") or "").strip()
                 key = dedupe_key(speech)
                 if not key or key in existing_keys or key in seen_this_play:
                     continue
                 q = assess_monologue_quality(speech)
                 if not q.ok:
+                    continue
+                # Final piece-level sanity (audit-derived): no foreign text, no
+                # caps residue (leaked headers), plausible character name.
+                if looks_foreign(speech):
+                    continue
+                if len(re.findall(r"\b[A-Z]{4,}\b", speech)) >= 3:
+                    continue
+                if (not character or len(character) > 25
+                        or character.lower() in {"all", "chorus", "both", "unknown", "omnes"}):
                     continue
                 seen_this_play.add(key)
                 kept += 1
@@ -222,7 +274,7 @@ def main() -> int:
                         "play_id": int(play.id),
                         "play_title": play.title,
                         "play_author": play.author,
-                        "character": m.get("character") or "Unknown",
+                        "character": character,
                         "text": speech,
                         "word_count": q.word_count,
                     }
@@ -230,7 +282,9 @@ def main() -> int:
             if kept:
                 print(f"  {play.title[:45]:45} ({play.author[:20]:20}) +{kept}")
 
-        print(f"\nplays scanned: {len(plays)}  no-text: {len(no_text)}  candidates: {len(candidates)}")
+        print(f"\nplays scanned: {len(plays)}  no-text: {len(no_text)}  "
+              f"foreign-skipped: {len(skipped_foreign)}  non-dramatic-skipped: {len(skipped_nondramatic)}  "
+              f"candidates: {len(candidates)}")
         wc = [c["word_count"] for c in candidates]
         if wc:
             wc.sort()
