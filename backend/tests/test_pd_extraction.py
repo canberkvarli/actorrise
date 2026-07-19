@@ -124,6 +124,22 @@ class PieceGuardTests(unittest.TestCase):
             "rebellious to his arm, lies where it falls. O, I am fortune's fool!"
         ))
 
+    def test_titlecase_interleave_is_flagged(self):
+        # The "Anne/Ruth" class: other characters' cue lines in Title Case
+        # ("...aren't they? Anne. What do you mean? Ruth. No, really I didn't.")
+        from extract_pd_monologues import piece_has_leaks
+        self.assertTrue(piece_has_leaks(
+            "Girls are funny things, aren't they? Anne. What do you mean? "
+            "I lent her my notebook once. Ruth. No, really I didn't."
+        ))
+
+    def test_honorifics_are_not_interleave(self):
+        from extract_pd_monologues import piece_has_leaks
+        self.assertFalse(piece_has_leaks(
+            "I saw him yesterday. Mr. Darcy was there, and so was Mrs. Bennet. "
+            "Dr. Jones arrived later. St. Petersburg was lovely that year."
+        ))
+
 
 class MultiPartInlineSpeakerTests(unittest.TestCase):
     def test_abbreviated_two_part_name_is_fully_consumed(self):

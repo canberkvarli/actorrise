@@ -77,13 +77,24 @@ _EN_STOPWORDS = {
 
 _SPEAKER_LEAK_RE = re.compile(r"[A-ZÀ-Þ]{3,}\s*\.\s")
 _DIRECTION_LEAK_RE = re.compile(r"\b(?:Re-enter|Enter|Exit|Exeunt)\s+[A-Z]")
+# Title-case cue lines woven into prose ("...aren't they? Anne. What do you
+# mean?"). Two distinct non-honorific names = interleaved dialogue.
+_INTERLEAVE_RE = re.compile(r"(?:[.?!”\"] )([A-Z][a-z]{2,12})\.\s+[A-Z“\"]")
+_HONORIFICS = {
+    "Mr", "Mrs", "Dr", "St", "Ms", "Sir", "Mme", "Mlle", "Rev", "Prof",
+    "Capt", "Lieut", "Col", "Gen", "Sgt", "Jr", "Sr",
+}
 
 
 def piece_has_leaks(text: str) -> bool:
-    """Mid-speech speaker headers ('... FRANÇOISE . Where are you') or
-    unbracketed stage directions ('Re-enter Ophelia') that survived
-    segmentation — always another speaker's cue, never monologue text."""
-    return bool(_SPEAKER_LEAK_RE.search(text) or _DIRECTION_LEAK_RE.search(text))
+    """Mid-speech speaker headers ('... FRANÇOISE . Where are you'),
+    unbracketed stage directions ('Re-enter Ophelia'), or interleaved
+    Title-case cue lines — always another speaker's material, never
+    monologue text."""
+    if _SPEAKER_LEAK_RE.search(text) or _DIRECTION_LEAK_RE.search(text):
+        return True
+    names = [n for n in _INTERLEAVE_RE.findall(text) if n not in _HONORIFICS]
+    return len(names) >= 2 and len(set(names)) >= 2
 
 
 def looks_foreign(text: str) -> bool:

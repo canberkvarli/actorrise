@@ -1359,7 +1359,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           <p className="hidden md:block stage-direction text-xs text-muted-foreground/70 mb-3">
             (the search.)
           </p>
-          <h1 className="font-typewriter text-2xl sm:text-3xl md:text-5xl font-medium tracking-[-0.02em]">
+          <h1 className="font-sans text-2xl sm:text-3xl md:text-5xl font-medium tracking-[-0.02em]">
             Find your next <em className="italic text-primary">piece</em>
           </h1>
         </div>
