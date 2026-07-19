@@ -45,7 +45,7 @@ function ScaleBlock() {
         Scale
       </p>
       <p className="text-lg text-foreground/95 leading-snug">
-        <span className="font-semibold tabular-nums text-foreground">7,500+</span> monologues. AI
+        <span className="font-semibold tabular-nums text-foreground">12,000+</span> monologues. AI
         search, no keyword frustration.
       </p>
     </div>

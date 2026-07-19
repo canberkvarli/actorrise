@@ -101,10 +101,7 @@ export function MonologueResultCard({
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3
-                    className="font-sans font-semibold text-xl sm:text-2xl mb-1 group-hover:text-foreground transition-colors line-clamp-2 break-words"
-                    style={{ fontFamily: "var(--font-sans), Georgia, serif" }}
-                  >
+                  <h3 className="font-typewriter font-semibold text-xl sm:text-2xl mb-1 group-hover:text-foreground transition-colors line-clamp-2 break-words">
                     {mono.character_name}
                   </h3>
                   {mono.is_favorited && (
@@ -116,7 +113,7 @@ export function MonologueResultCard({
                 {isMeaningfulMonologueTitle(mono.title, mono.character_name) && (
                   <p className="text-sm font-medium text-foreground/90 line-clamp-1">{mono.title}</p>
                 )}
-                <p className="text-sm text-muted-foreground line-clamp-1">
+                <p className="font-typewriter text-sm text-muted-foreground line-clamp-1">
                   {mono.play_title}
                   {mono.author ? ` · ${mono.author}` : ""}
                 </p>

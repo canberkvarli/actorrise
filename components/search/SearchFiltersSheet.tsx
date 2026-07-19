@@ -58,6 +58,8 @@ export interface SearchFiltersSheetProps {
   setFilters: (f: SearchFiltersState | ((prev: SearchFiltersState) => SearchFiltersState)) => void;
   maxOverdoneScore: number;
   setMaxOverdoneScore: (v: number) => void;
+  /** Film/TV mode: era is meaningless there (everything is contemporary). */
+  hideCategory?: boolean;
 }
 
 function CollapsibleSection({
@@ -160,6 +162,7 @@ export function SearchFiltersSheet({
   setFilters,
   maxOverdoneScore,
   setMaxOverdoneScore,
+  hideCategory,
 }: SearchFiltersSheetProps) {
   const countActive = (keys: readonly string[]) =>
     keys.filter((k) => filters[k as keyof SearchFiltersState] !== "").length;
@@ -217,12 +220,14 @@ export function SearchFiltersSheet({
           </CollapsibleSection>
 
           <CollapsibleSection title="Practical" icon={IconSettings} activeCount={practicalCount}>
-            <FilterSelect
-              label="Category"
-              value={filters.category}
-              onChange={(v) => setFilters({ ...filters, category: v })}
-              options={["classical", "contemporary"]}
-            />
+            {!hideCategory && (
+              <FilterSelect
+                label="Category"
+                value={filters.category}
+                onChange={(v) => setFilters({ ...filters, category: v })}
+                options={["classical", "contemporary"]}
+              />
+            )}
             <FilterSelect
               label="Difficulty"
               value={filters.difficulty}

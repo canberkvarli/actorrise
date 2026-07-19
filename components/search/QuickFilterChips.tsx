@@ -17,16 +17,19 @@ const GROUPS: FilterGroup[] = [
 interface QuickFilterChipsProps {
   filters: SearchFiltersState;
   onToggle: (key: keyof SearchFiltersState, value: string) => void;
+  /** Film/TV mode: era is meaningless there (everything is contemporary). */
+  hideCategory?: boolean;
 }
 
-export function QuickFilterChips({ filters, onToggle }: QuickFilterChipsProps) {
+export function QuickFilterChips({ filters, onToggle, hideCategory }: QuickFilterChipsProps) {
+  const groups = hideCategory ? GROUPS.filter((g) => g.key !== "category") : GROUPS;
   return (
     // Relative wrapper so we can fade the right edge on mobile — a cue that the
     // filter row scrolls horizontally (otherwise the off-screen filters are
     // invisible until you happen to swipe).
     <div className="relative">
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pr-6 sm:pr-0 [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {GROUPS.flatMap((group) =>
+        {groups.flatMap((group) =>
           group.options.map((opt) => {
             const isActive = filters[group.key] === opt.value;
             return (

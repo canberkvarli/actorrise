@@ -44,7 +44,7 @@ const LOADING_MESSAGES_FILM_TV = [
 
 const SEARCH_LOADING_STEPS = [
   "Consulting the drama gods",
-  "Rifling through 7,500+ scripts and plays",
+  "Rifling through 12,000+ scripts and plays",
   "Asking Shakespeare which one hits hardest",
   "Weighing every speech for emotional weight",
   "Finding the ones that'll stop the room",
@@ -1359,7 +1359,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           <p className="hidden md:block stage-direction text-xs text-muted-foreground/70 mb-3">
             (the search.)
           </p>
-          <h1 className="font-sans text-2xl sm:text-3xl md:text-5xl font-medium tracking-[-0.02em]">
+          <h1 className="font-typewriter text-2xl sm:text-3xl md:text-5xl font-medium tracking-[-0.02em]">
             Find your next <em className="italic text-primary">piece</em>
           </h1>
         </div>
@@ -1562,6 +1562,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             <QuickFilterChips
               filters={filters}
               onToggle={(key, value) => setFilters({ ...filters, [key]: value })}
+              hideCategory={searchMode === "film_tv"}
             />
           </div>
 
@@ -1573,6 +1574,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             setFilters={setFilters}
             maxOverdoneScore={maxOverdoneScore}
             setMaxOverdoneScore={setMaxOverdoneScore}
+            hideCategory={searchMode === "film_tv"}
           />
 
           {selectedMonologue && (

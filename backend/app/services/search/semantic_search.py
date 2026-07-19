@@ -105,6 +105,22 @@ WEAK_MATCH_FLOOR = 0.30
 TV_CLIP_MIN_SECONDS = 30
 
 
+# Graceful-relaxation order: least-important first. The duration FLOOR is the
+# user's explicit intent ("2 min monologue") and goes LAST — and even then it
+# is softened, not dropped, so a 2-minute ask never surfaces 20-second clips.
+RELAX_ORDER = ("age_range", "category", "max_duration", "min_duration")
+
+
+def relax_step(relaxed: Dict, key: str) -> None:
+    """Apply one relaxation step in place."""
+    if key not in relaxed:
+        return
+    if key == "min_duration" and relaxed[key] > 45:
+        relaxed[key] = relaxed[key] // 2
+    else:
+        relaxed.pop(key)
+
+
 def tv_clip_gate_active(filters: Optional[Dict]) -> bool:
     """The clip gate is ON unless an explicit max_duration at or under 45s
     says the user genuinely wants clip-length pieces."""
@@ -1140,19 +1156,20 @@ class SemanticSearch:
                 except Exception:
                     self._best_cosine_sim = None
 
-            # Graceful relaxation: if too few rows pass ALL hard filters, drop the
-            # least-important ones (duration floor → age → cap → era) and backfill,
-            # flagging that the search was broadened so the UI can say so.
+            # Graceful relaxation: if too few rows pass ALL hard filters, relax
+            # the least-important ones (age → era → cap → duration floor, the
+            # floor softened rather than dropped) and backfill, flagging that
+            # the search was broadened so the UI can say so.
             self._search_broadened = False
             self._broadened_dropped = []
             self._broadened_ids = set()
             relax_target = min(limit, RELAX_THRESHOLD)
             if len(candidate_ids) < relax_target:
                 relaxed = dict(hard_filters)
-                for key in ("min_duration", "age_range", "max_duration", "category"):
+                for key in RELAX_ORDER:
                     if key not in relaxed:
                         continue
-                    relaxed.pop(key)
+                    relax_step(relaxed, key)
                     more = fetch_ids(relaxed, candidate_ids, VECTOR_CANDIDATES - len(candidate_ids))
                     if more:
                         self._broadened_dropped.append(key)

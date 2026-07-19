@@ -28,7 +28,9 @@ logger = logging.getLogger(__name__)
 # ("2 mins max", "3 mins or more"), seconds ranges ("60-90 seconds").
 # v8: TV clip gate — tv pieces under 30s hidden from search/discover unless an
 # explicit max_duration <= 45 asks for clip-length material.
-CACHE_VERSION = "8"
+# v9: relaxation order — duration floor is relaxed LAST and softened (halved)
+# instead of dropped, so "2 min" queries stop surfacing 20-second clips.
+CACHE_VERSION = "9"
 
 
 class CacheManager:

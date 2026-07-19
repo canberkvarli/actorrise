@@ -66,7 +66,7 @@ export function SpotlightHero() {
           className="mt-6 sm:mt-8 max-w-2xl mx-auto text-sm sm:text-base md:text-lg text-[var(--stage-muted)] leading-relaxed animate-stage-rise"
           style={{ animationDelay: "0.45s" }}
         >
-          AI search across 7,500+ monologues from plays, film, and TV. Then run
+          AI search across 12,000+ monologues from plays, film, and TV. Then run
           your lines with a scene partner that never cancels on you.
         </p>
 

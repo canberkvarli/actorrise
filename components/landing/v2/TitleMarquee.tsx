@@ -56,7 +56,7 @@ export function TitleMarquee() {
   return (
     <section aria-label="A few of the plays in the library" className="py-10 sm:py-14">
       <p className="stage-direction text-center text-xs text-[var(--stage-faint)] mb-6">
-        (7,500+ pieces. plays, film, and tv. these are a few of the plays.)
+        (12,000+ pieces. plays, film, and tv. these are a few of the plays.)
       </p>
       <div className="space-y-4">
         <MarqueeRow titles={ROW_ONE} />

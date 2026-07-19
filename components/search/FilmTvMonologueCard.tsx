@@ -45,7 +45,7 @@ export function FilmTvMonologueCard({
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="font-bold text-lg sm:text-xl lg:text-2xl mb-1 group-hover:text-foreground transition-colors line-clamp-2 break-words">
+                  <h3 className="font-typewriter font-bold text-lg sm:text-xl lg:text-2xl mb-1 group-hover:text-foreground transition-colors line-clamp-2 break-words">
                     {mono.character_name}
                   </h3>
                   <Badge
@@ -55,7 +55,7 @@ export function FilmTvMonologueCard({
                     Reference only
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground line-clamp-1">
+                <p className="font-typewriter text-sm text-muted-foreground line-clamp-1">
                   {mono.source_title}
                   {yearLabel ? ` (${yearLabel})` : ""}
                 </p>
