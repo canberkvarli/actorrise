@@ -80,6 +80,7 @@ import { ActiveFilterChips } from "@/components/search/ActiveFilterChips";
 import { computeMatchReasons } from "@/lib/matchReasons";
 import { QuickFilterChips } from "@/components/search/QuickFilterChips";
 import { ContentGapBanner } from "@/components/search/ContentGapBanner";
+import { SceneGapBanner } from "@/components/search/SceneGapBanner";
 import { useProfileStats, useProfileFormData } from "@/hooks/useDashboardData";
 import { computeProfileMatch, type ProfileMatch } from "@/lib/profileMatch";
 import { useQueryClient } from "@tanstack/react-query";
@@ -226,6 +227,7 @@ function SearchContent() {
   const [correctedQuery, setCorrectedQuery] = useState<string | null>(null);
   const [queryMayHaveTypos, setQueryMayHaveTypos] = useState(false);
   const [contentGap, setContentGap] = useState<{ play: string | null; author: string | null } | null>(null);
+  const [sceneGap, setSceneGap] = useState(false);
   const [queryInvalidReason, setQueryInvalidReason] = useState<string | null>(null);
   const PAGE_SIZE = 20;
   const [hasMore, setHasMore] = useState(false);
@@ -712,6 +714,7 @@ function SearchContent() {
     corrected_query?: string | null;
     query_may_have_typos?: boolean;
     content_gap?: { play: string | null; author: string | null } | null;
+    scene_gap?: boolean;
     query_invalid_reason?: string | null;
     debug_timing?: DebugTiming | null;
     search_log_id?: number | null;
@@ -775,6 +778,7 @@ function SearchContent() {
         setCorrectedQuery(data.corrected_query ?? null);
         setQueryMayHaveTypos(data.query_may_have_typos ?? false);
         setContentGap(data.content_gap ?? null);
+        setSceneGap(data.scene_gap ?? false);
         setQueryInvalidReason(data.query_invalid_reason ?? null);
       }
       setTotal(data.total);
@@ -1356,10 +1360,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       {/* Hero Search Section - compact on mobile */}
       <div className="mb-4 sm:mb-6 md:mb-10">
         <div className="text-center mb-3 sm:mb-4 md:mb-8">
-          <p className="hidden md:block stage-direction text-xs text-muted-foreground/70 mb-3">
+          <p className="hidden md:block stage-direction text-sm md:text-base text-muted-foreground/70 mb-3">
             (the search.)
           </p>
-          <h1 className="font-sans text-2xl sm:text-3xl md:text-5xl font-medium tracking-[-0.02em]">
+          <h1 className="font-serif font-medium tracking-[-0.03em] leading-[1.05] text-4xl sm:text-5xl md:text-6xl">
             Find your next <em className="italic text-primary">piece</em>
           </h1>
         </div>
@@ -2099,6 +2103,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {contentGap && (
                 <ContentGapBanner play={contentGap.play} author={contentGap.author} />
               )}
+              {sceneGap && <SceneGapBanner />}
               {/* Results header: 3-col grid on desktop so feedback is always truly centered */}
               <div className="flex flex-col gap-3 mb-8 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4">
                 {/* Left: count + mobile bookmark */}

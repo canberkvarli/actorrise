@@ -22,6 +22,7 @@ from app.services.search.query_optimizer import (correct_query_typos,
 from app.services.search.title_lookup import (compute_content_gap,
                                               detect_title_lookup,
                                               promote_title_matches)
+from app.services.search.scene_intent import detect_two_person_scene_intent
 from app.services.search.recommender import Recommender
 from app.services.search.semantic_search import MIN_RELEVANCE_TO_SHOW, STRONG_COSINE_SIM, SemanticSearch
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -95,6 +96,7 @@ class SearchResponse(BaseModel):
     corrected_query: Optional[str] = None
     query_may_have_typos: bool = False
     content_gap: Optional[dict] = None
+    scene_gap: bool = False  # True when the query explicitly wants a two-person scene (we only carry monologues)
     query_invalid_reason: Optional[str] = None
     weak_match: bool = False  # True when results exist but none clear the strong-match bar
     broadened: Optional[dict] = None  # {"relaxed": ["length","age",...]} when filters were loosened to fill results
@@ -492,6 +494,11 @@ async def search_monologues(
         if weak_match and q and is_filter_only_query(q.strip()):
             weak_match = False
 
+        # Two-person scene intent: users search this monologue surface for scenes
+        # ("Scenes from films for two actors") and get monologues that don't fit.
+        # We only carry monologues, so surface an honest note rather than pretend.
+        scene_gap = bool(q and detect_two_person_scene_intent(q))
+
         # Graceful relaxation: too few exact matches, so the search was broadened
         # by dropping the least-important filters. Surface which kinds were relaxed.
         broadened = None
@@ -545,6 +552,7 @@ async def search_monologues(
             corrected_query=ai_corrected,
             query_may_have_typos=ai_corrected is not None,
             content_gap=content_gap,
+            scene_gap=scene_gap,
             weak_match=weak_match,
             broadened=broadened,
             debug_timing=debug_timing,
