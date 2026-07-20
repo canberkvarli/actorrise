@@ -16,7 +16,9 @@ from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import require_ai_search_when_query
 from app.models.actor import Monologue, MonologueFavorite, Play
 from app.models.user import User
-from app.services.search.query_optimizer import correct_query_typos, validate_query
+from app.services.search.query_optimizer import (correct_query_typos,
+                                                 is_filter_only_query,
+                                                 validate_query)
 from app.services.search.title_lookup import (compute_content_gap,
                                               detect_title_lookup,
                                               promote_title_matches)
@@ -483,6 +485,12 @@ async def search_monologues(
                 max(scores) < MIN_RELEVANCE_TO_SHOW
                 or (len(scores) >= 8 and len(strong) <= 2)
             )
+
+        # Filter-vocabulary queries ("funny and for women 2 min") are served by
+        # hard filters; their cosine against monologue TEXT is meaningless and
+        # must not trigger the "no strong matches" banner.
+        if weak_match and q and is_filter_only_query(q.strip()):
+            weak_match = False
 
         # Graceful relaxation: too few exact matches, so the search was broadened
         # by dropping the least-important filters. Surface which kinds were relaxed.

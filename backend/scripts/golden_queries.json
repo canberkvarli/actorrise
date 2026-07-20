@@ -76,6 +76,9 @@
   {"id": "teen-sixteen", "class": "teen_kid", "query": "Monologues for sixteen year olds",
    "expect": {"min_results": 5}},
 
+  {"id": "comedy-filter-only-not-weak", "class": "comedy", "query": "funny and for women 2 min",
+   "expect": {"min_results": 5, "expect_strong": true, "results_gender": "female",
+              "parse": {"gender": "female", "min_duration": 60, "max_duration": 120}}},
   {"id": "comedy-contemporary-female", "class": "comedy", "query": "Contemporary comedic female",
    "expect": {"min_results": 5, "results_gender": "female", "parse": {"tone": "comedic"}}},
   {"id": "comedy-male-late-20s", "class": "comedy", "query": "Contemporary comedic male monologue late 20s",

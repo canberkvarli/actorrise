@@ -141,6 +141,11 @@ def _observe_full(query: str, filters: dict | None) -> dict:
         else:
             scores = [s for _, s in results_with_scores if s is not None]
             weak = bool(scores) and max(scores) < 0.48
+        if weak:
+            from app.services.search.query_optimizer import is_filter_only_query
+
+            if is_filter_only_query(query):
+                weak = False
 
         from app.services.search.title_lookup import compute_content_gap
 

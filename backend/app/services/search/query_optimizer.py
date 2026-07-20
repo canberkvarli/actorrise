@@ -72,6 +72,42 @@ def validate_query(query: str) -> tuple[bool, str]:
     return True, ""
 
 
+# Words that express FILTERS (tone/gender/age/era/duration) rather than
+# semantic content. A query made only of these is fully served by hard
+# filters — its cosine against monologue TEXT is meaningless and must not
+# trigger the weak-match banner ("funny and for women 2 min" scored 0.33
+# in prod telemetry while returning exactly-right pieces).
+_FILTER_WORDS = frozenset("""
+    a an the and or for with in of to that is me my i please find want need
+    monologue monologues piece pieces play plays script scripts
+    min mins minute minutes second seconds sec secs
+    funny comedic comedy comic witty hilarious humorous
+    dramatic drama sad serious dark
+    female male woman women man men girl girls boy boys guy lady gentleman
+    gender nonbinary
+    teen teens teenage teenager teenagers kid kids child children
+    adult adults senior seniors elderly old older young younger
+    year years yr yrs age aged
+    classical contemporary modern
+    under over max maximum minimum long short around any either about
+    one two three four five six seven eight nine ten
+""".split())
+
+
+def is_filter_only_query(query) -> bool:
+    """True when the query has no semantic content beyond filter vocabulary."""
+    if not query or not str(query).strip():
+        return False
+    words = re.sub(r"[^a-z0-9\s-]", " ", str(query).lower()).split()
+    residual = [
+        w for w in words
+        if w not in _FILTER_WORDS
+        and not re.fullmatch(r"\d+[a-z]*|\d+-\d+", w)
+        and w.replace("-", "") not in _FILTER_WORDS
+    ]
+    return not residual
+
+
 class QueryClassifier:
     """Classify search queries by complexity to optimize API usage"""
 

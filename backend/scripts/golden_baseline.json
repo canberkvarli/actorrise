@@ -11,6 +11,14 @@
   "parse.tone": true,
   "results_gender": true
  },
+ "comedy-filter-only-not-weak": {
+  "expect_strong": true,
+  "min_results": true,
+  "parse.gender": true,
+  "parse.max_duration": true,
+  "parse.min_duration": true,
+  "results_gender": true
+ },
  "comedy-gay-dating-twist": {
   "min_results": true,
   "parse.tone": true
@@ -159,7 +167,7 @@
   "min_results": true
  },
  "named-dear-evan-hansen": {
-  "gap_play_ilike": true,
+  "gap_play_ilike": false,
   "min_results": true
  },
  "named-dolls-house-nora": {

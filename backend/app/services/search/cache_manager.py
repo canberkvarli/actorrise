@@ -30,7 +30,9 @@ logger = logging.getLogger(__name__)
 # explicit max_duration <= 45 asks for clip-length material.
 # v9: relaxation order — duration floor is relaxed LAST and softened (halved)
 # instead of dropped, so "2 min" queries stop surfacing 20-second clips.
-CACHE_VERSION = "9"
+# v10: filter-only queries ("funny and for women 2 min") no longer trigger the
+# weak-match banner — their results are filter-validated, not cosine-ranked.
+CACHE_VERSION = "10"
 
 
 class CacheManager:
