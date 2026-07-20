@@ -32,7 +32,9 @@ logger = logging.getLogger(__name__)
 # instead of dropped, so "2 min" queries stop surfacing 20-second clips.
 # v10: filter-only queries ("funny and for women 2 min") no longer trigger the
 # weak-match banner — their results are filter-validated, not cosine-ranked.
-CACHE_VERSION = "10"
+# v11: search-result cache payload is now {rows, best_cosine} so a cache-hit
+# search restores real weak-match quality + logs best_cosine (was NULL).
+CACHE_VERSION = "11"
 
 
 class CacheManager:

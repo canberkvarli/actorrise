@@ -127,6 +127,24 @@ def tv_clip_gate_active(filters: Optional[Dict]) -> bool:
     md = (filters or {}).get("max_duration")
     return not (md and md <= 45)
 
+
+def encode_search_cache(rows: list, best_cosine):
+    """Wrap cached result rows with the best raw cosine so a cache-hit search
+    can restore weak-match quality (per-result scores are rank-based and can't
+    recover it). JSON-serializable for both cache backends."""
+    return {"rows": rows, "best_cosine": best_cosine}
+
+
+def decode_search_cache(cached):
+    """Return (rows, best_cosine) from any cache payload shape:
+    dict (current, carries cosine), list-of-[id,score,quote] or list-of-ids
+    (legacy — no stored cosine)."""
+    if not cached:
+        return [], None
+    if isinstance(cached, dict):
+        return cached.get("rows") or [], cached.get("best_cosine")
+    return cached, None
+
 # Bar on the RAW pgvector cosine similarity of the best match. The primary search
 # path scores results by rank (0.6–1.0), which can't tell a strong match from the
 # nearest of an irrelevant set — so the weak-match banner above never fired there.
@@ -790,13 +808,17 @@ class SemanticSearch:
                 query,
                 cache_filters_for_results,
             )
-            # Cache format: list of [id, score] so we preserve confidence scores for UI
-            if cached and isinstance(cached[0], (list, tuple)):
-                cached_ids = [item[0] for item in cached]
-                cached_scores = {item[0]: float(item[1]) for item in cached}
+            # Decode payload: the dict shape carries best_cosine so weak-match
+            # quality survives a cache hit (legacy shapes don't — cosine stays None).
+            rows, cached_best_cosine = decode_search_cache(cached)
+            self._best_cosine_sim = cached_best_cosine
+            # Rows: list of [id, score, quote] preserving confidence scores for UI
+            if rows and isinstance(rows[0], (list, tuple)):
+                cached_ids = [item[0] for item in rows]
+                cached_scores = {item[0]: float(item[1]) for item in rows}
             else:
                 # Legacy: list of ids only
-                cached_ids = list(cached)
+                cached_ids = list(rows)
                 cached_scores = {}
             mons = (
                 self.db.query(Monologue)
@@ -821,9 +843,9 @@ class SemanticSearch:
             self._debug_timing["results_source"] = "cache"
             # Restore quote_match_type from cache if stored (payload item length >= 3)
             quote_types: Dict[int, str] = {}
-            if cached and isinstance(cached[0], (list, tuple)) and len(cached[0]) >= 3:
+            if rows and isinstance(rows[0], (list, tuple)) and len(rows[0]) >= 3:
                 quote_types = {
-                    item[0]: item[2] for item in cached if len(item) >= 3 and item[2]
+                    item[0]: item[2] for item in rows if len(item) >= 3 and item[2]
                 }
             return (ordered_with_scores[:limit], quote_types)
 
@@ -1405,11 +1427,14 @@ class SemanticSearch:
             ]
             final_results = [mono for mono, _ in final_results_with_scores]
 
-            # Cache final ordered results with scores and quote match types
-            cache_payload = [
-                [m.id, round(s, 4), quote_match_type_by_id.get(m.id, "")]
-                for m, s in final_results_with_scores
-            ]
+            # Cache final ordered results with scores, quote types, and best cosine
+            cache_payload = encode_search_cache(
+                [
+                    [m.id, round(s, 4), quote_match_type_by_id.get(m.id, "")]
+                    for m, s in final_results_with_scores
+                ],
+                getattr(self, "_best_cosine_sim", None),
+            )
             if self.cache.redis_enabled:
                 self.cache.set_search_results(
                     canonical_query,
@@ -1451,11 +1476,14 @@ class SemanticSearch:
                 dict(author_dist.most_common(5)),
             )
 
-        # Cache final ordered results with scores and quote match types
-        cache_payload = [
-            [m.id, round(s, 4), quote_match_type_by_id.get(m.id, "")]
-            for m, s in top_results
-        ]
+        # Cache final ordered results with scores, quote types, and best cosine
+        cache_payload = encode_search_cache(
+            [
+                [m.id, round(s, 4), quote_match_type_by_id.get(m.id, "")]
+                for m, s in top_results
+            ],
+            getattr(self, "_best_cosine_sim", None),
+        )
         if self.cache.redis_enabled:
             self.cache.set_search_results(
                 canonical_query,
