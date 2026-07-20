@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconQuote, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar, IconHelpCircle } from "@tabler/icons-react";
@@ -239,7 +240,16 @@ export default function PlatformLayout({
       </AnimatePresence>
       {/* Navigation */}
       {!isImmersive && (
-      <nav className="bg-background/95 backdrop-blur-sm border-b border-border/40 relative z-[9998]" style={{ position: 'relative' }}>
+      /* Dark theatrical shell: the chrome always lives on the warm stage and
+         carries the cursor glow. wash/overflow off so it stays subtle and the
+         profile dropdown + mobile menu aren't clipped. */
+      <SpotlightSurface
+        as="nav"
+        wash={false}
+        overflowHidden={false}
+        className="dark bg-[color-mix(in_oklab,var(--background)_92%,transparent)] backdrop-blur-md border-b border-border text-foreground z-[9998]"
+        style={{ position: 'relative' }}
+      >
         <div className="container mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-20 gap-3">
             {/* Logo: left on all breakpoints */}
@@ -248,7 +258,7 @@ export default function PlatformLayout({
               className="flex items-center min-w-0 shrink-0 text-foreground hover:opacity-80 transition-opacity"
               aria-label="ActorRise Home"
             >
-              <BrandLogo size="header" />
+              <BrandLogo size="header" onDark />
             </Link>
 
             {/* Desktop Navigation - centered */}
@@ -646,7 +656,7 @@ export default function PlatformLayout({
             </div>
         </div>
         </div>
-      </nav>
+      </SpotlightSurface>
       )}
 
       {/* Main Content - extra padding on mobile so content scrolls above bottom nav */}
@@ -657,7 +667,7 @@ export default function PlatformLayout({
       {/* Mobile Bottom Navigation - one-thumb access to primary actions */}
       {!isImmersive && (
       <nav
-        className="md:hidden fixed bottom-0 left-0 right-0 z-[9998] bg-background/95 backdrop-blur-sm border-t border-border/40 safe-area-bottom"
+        className="dark md:hidden fixed bottom-0 left-0 right-0 z-[9998] bg-[color-mix(in_oklab,var(--background)_92%,transparent)] backdrop-blur-md border-t border-border text-foreground safe-area-bottom"
       >
         <div className="flex items-stretch justify-around min-h-[48px]">
           <Link

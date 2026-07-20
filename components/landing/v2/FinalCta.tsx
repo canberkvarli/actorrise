@@ -1,4 +1,5 @@
 import { HeroCta } from "@/components/landing/HeroCta";
+import { GhostLight } from "@/components/brand/GhostLight";
 
 /**
  * Closing scene: the ghost light. A single bulb on a stand, the theatre's
@@ -11,19 +12,7 @@ export function FinalCta() {
 
       <div className="container mx-auto px-4 sm:px-6 pt-20 pb-16 sm:pt-24 sm:pb-20 flex flex-col items-center text-center">
         {/* The ghost light */}
-        <div aria-hidden className="relative flex flex-col items-center animate-ghost-flicker">
-          <div className="relative">
-            <span className="block h-3.5 w-3.5 rounded-full bg-[var(--stage-glow)]" />
-            <span
-              className="absolute -inset-8 rounded-full"
-              style={{
-                background:
-                  "radial-gradient(circle, color-mix(in oklab, var(--stage-glow) 38%, transparent) 0%, transparent 70%)",
-              }}
-            />
-          </div>
-          <span className="mt-1 h-16 w-px bg-gradient-to-b from-[var(--stage-line)] to-transparent" />
-        </div>
+        <GhostLight stem />
 
         <p className="stage-direction mt-6 text-xs sm:text-sm text-[var(--stage-muted)]">
           (the ghost light stays on. the stage is never empty.)

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 import { LandingFaq } from "@/components/landing/LandingFaq";
 import { LandingFooterAuthLink } from "@/components/landing/LandingFooterAuthLink";
@@ -21,7 +22,7 @@ import { TitleMarquee } from "@/components/landing/v2/TitleMarquee";
 /** Courier "stage direction" eyebrow above the light sections */
 function SceneMark({ children }: { children: string }) {
   return (
-    <p className="stage-direction text-center text-xs sm:text-sm text-muted-foreground/70 pt-14 sm:pt-20">
+    <p className="stage-direction text-center text-sm sm:text-base md:text-lg text-muted-foreground/70 pt-14 sm:pt-20">
       {children}
     </p>
   );
@@ -30,8 +31,15 @@ function SceneMark({ children }: { children: string }) {
 export function LandingGhostLight() {
   return (
     <div className="min-h-screen bg-background overflow-x-hidden">
-      {/* Header lives on the stage: always dark, floats over every scene */}
-      <header className="dark sticky top-0 z-20 border-b border-[var(--stage-line)] bg-[color-mix(in_oklab,var(--stage)_84%,transparent)] backdrop-blur-md text-[var(--stage-fg)] animate-header-enter">
+      {/* Header lives on the stage: always dark, floats over every scene.
+          The cursor spotlight tracks across it like the hero. wash + overflow
+          off so the glow stays subtle and the mobile-nav dropdown isn't clipped. */}
+      <SpotlightSurface
+        as="header"
+        wash={false}
+        overflowHidden={false}
+        className="dark sticky top-0 z-20 border-b border-[var(--stage-line)] bg-[color-mix(in_oklab,var(--stage)_84%,transparent)] backdrop-blur-md text-[var(--stage-fg)] animate-header-enter"
+      >
         <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-3.5">
           <div className="flex items-center gap-4">
             <Link
@@ -68,7 +76,7 @@ export function LandingGhostLight() {
             </div>
           </div>
         </div>
-      </header>
+      </SpotlightSurface>
 
       <main>
         {/* ACT 0 — the dark stage */}

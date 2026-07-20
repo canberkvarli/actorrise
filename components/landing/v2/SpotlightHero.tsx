@@ -1,45 +1,14 @@
-"use client";
-
-import { useCallback, useRef } from "react";
 import { HeroCta } from "@/components/landing/HeroCta";
 import { LandingLiveCount } from "@/components/landing/LandingLiveCount";
+import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
 
 /**
  * Ghost Light hero: a dark stage, one spotlight that follows the cursor,
  * and the headline rising line by line like a curtain going up.
  */
 export function SpotlightHero() {
-  const spotRef = useRef<HTMLDivElement>(null);
-  const frame = useRef<number | null>(null);
-
-  const handlePointerMove = useCallback((e: React.PointerEvent<HTMLElement>) => {
-    if (e.pointerType !== "mouse") return;
-    const target = e.currentTarget;
-    const { clientX, clientY } = e;
-    if (frame.current) cancelAnimationFrame(frame.current);
-    frame.current = requestAnimationFrame(() => {
-      const rect = target.getBoundingClientRect();
-      const x = ((clientX - rect.left) / rect.width) * 100;
-      const y = ((clientY - rect.top) / rect.height) * 100;
-      spotRef.current?.style.setProperty("--spot-x", `${x}%`);
-      spotRef.current?.style.setProperty("--spot-y", `${y}%`);
-    });
-  }, []);
-
   return (
-    <section
-      onPointerMove={handlePointerMove}
-      className="relative isolate overflow-hidden stage-grain"
-      aria-label="ActorRise introduction"
-    >
-      {/* Lighting layers */}
-      <div aria-hidden className="absolute inset-0 -z-10 stage-wash" />
-      <div
-        aria-hidden
-        ref={spotRef}
-        className="absolute inset-0 -z-10 stage-spotlight animate-ghost-flicker transition-opacity duration-500"
-      />
-
+    <SpotlightSurface as="section" flicker className="stage-grain" aria-label="ActorRise introduction">
       <div className="container mx-auto px-4 sm:px-6 pt-20 pb-16 sm:pt-28 sm:pb-20 md:pt-36 md:pb-24 text-center">
         {/* Stage direction eyebrow */}
         <p
@@ -90,6 +59,6 @@ export function SpotlightHero() {
           <LandingLiveCount variant="inline" />
         </div>
       </div>
-    </section>
+    </SpotlightSurface>
   );
 }
