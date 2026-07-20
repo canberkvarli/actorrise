@@ -145,6 +145,30 @@ def decode_search_cache(cached):
         return cached.get("rows") or [], cached.get("best_cosine")
     return cached, None
 
+
+# At most this many pieces from one play in the visible ranking, so an actor
+# browsing gets variety rather than five King Lear speeches for "senior man".
+MAX_PER_PLAY = 2
+
+
+def diversify_by_play(results_with_scores: list, max_per_play: int = MAX_PER_PLAY) -> list:
+    """Stable re-order: keep at most ``max_per_play`` pieces per play in the
+    lead, sinking the overflow below (in relevance order). Nothing is dropped,
+    and a query that only matches one play is returned unchanged."""
+    kept: list = []
+    overflow: list = []
+    seen: dict = {}
+    for m, score in results_with_scores:
+        play = getattr(m, "play", None)
+        title = getattr(play, "title", None) if play else None
+        if title and seen.get(title, 0) >= max_per_play:
+            overflow.append((m, score))
+        else:
+            if title:
+                seen[title] = seen.get(title, 0) + 1
+            kept.append((m, score))
+    return kept + overflow
+
 # Bar on the RAW pgvector cosine similarity of the best match. The primary search
 # path scores results by rank (0.6–1.0), which can't tell a strong match from the
 # nearest of an irrelevant set — so the weak-match banner above never fired there.
@@ -1264,8 +1288,11 @@ class SemanticSearch:
             for mono, score in results_with_scores
         ]
 
-        # Sort by similarity (descending) and limit
+        # Sort by similarity (descending), then cap pieces-per-play across the
+        # FULL candidate pool before limiting — so lower-ranked pieces from other
+        # plays rise into the visible page instead of five speeches from one play.
         results_with_scores.sort(key=lambda x: x[1], reverse=True)
+        results_with_scores = diversify_by_play(results_with_scores)
         top_semantic = [(mono, score) for mono, score in results_with_scores[:limit]]
 
         # Match types for frontend badges (exact quote, title match, character match, play match)

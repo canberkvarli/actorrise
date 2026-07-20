@@ -34,7 +34,9 @@ logger = logging.getLogger(__name__)
 # weak-match banner — their results are filter-validated, not cosine-ranked.
 # v11: search-result cache payload is now {rows, best_cosine} so a cache-hit
 # search restores real weak-match quality + logs best_cosine (was NULL).
-CACHE_VERSION = "11"
+# v12: per-play diversity cap in ranking — one play can't crowd the page
+# (was King Lear x5 / The Intruder x4 for "senior man").
+CACHE_VERSION = "12"
 
 
 class CacheManager:
