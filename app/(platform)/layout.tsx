@@ -248,7 +248,7 @@ export default function PlatformLayout({
         wash={false}
         overflowHidden={false}
         className="dark bg-[color-mix(in_oklab,var(--background)_92%,transparent)] backdrop-blur-md border-b border-border text-foreground z-[9998]"
-        style={{ position: 'relative' }}
+        style={{ position: 'relative', ['--primary']: 'oklch(0.76 0.15 52)' } as React.CSSProperties}
       >
         <div className="container mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-20 gap-3">
@@ -668,6 +668,7 @@ export default function PlatformLayout({
       {!isImmersive && (
       <nav
         className="dark md:hidden fixed bottom-0 left-0 right-0 z-[9998] bg-[color-mix(in_oklab,var(--background)_92%,transparent)] backdrop-blur-md border-t border-border text-foreground safe-area-bottom"
+        style={{ ['--primary']: 'oklch(0.76 0.15 52)' } as React.CSSProperties}
       >
         <div className="flex items-stretch justify-around min-h-[48px]">
           <Link

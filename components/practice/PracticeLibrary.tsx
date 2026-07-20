@@ -135,10 +135,10 @@ function EmptyState({ demoScriptId }: { demoScriptId: number | null }) {
 
   return (
     <section className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-12 text-center">
-      <p className="stage-direction text-xs sm:text-sm text-muted-foreground/70">
+      <p className="stage-direction text-sm sm:text-base text-muted-foreground/70">
         (an empty stage. for now.)
       </p>
-      <h1 className="mt-4 max-w-xl font-sans text-3xl sm:text-4xl font-medium tracking-[-0.02em] text-balance">
+      <h1 className="mt-4 max-w-2xl font-brand text-4xl sm:text-5xl md:text-6xl font-medium tracking-[-0.02em] leading-[1.05] text-balance">
         Your first <em className="italic text-primary">scene</em> starts here.
       </h1>
       <p className="mt-4 max-w-md text-base text-muted-foreground leading-relaxed">

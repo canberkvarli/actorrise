@@ -129,7 +129,7 @@ export function LandingPricing() {
       <div className="w-full max-w-[min(1400px,100%)] mx-auto">
         {/* Header */}
         <div className="max-w-2xl">
-          <h2 className="text-2xl sm:text-3xl md:text-4xl tracking-[-0.03em]">
+          <h2 className="font-brand font-semibold text-2xl sm:text-3xl md:text-4xl tracking-[-0.02em]">
             Your craft, your plan.
           </h2>
           <p className="mt-3 text-sm sm:text-base text-muted-foreground">

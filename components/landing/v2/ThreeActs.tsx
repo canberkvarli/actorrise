@@ -57,7 +57,7 @@ export function ThreeActs() {
               {act.numeral}
             </span>
             <p className="stage-direction text-xs text-primary">{act.direction}</p>
-            <h3 className="mt-3 font-serif text-2xl sm:text-[1.7rem] font-medium tracking-[-0.02em] text-[var(--stage-fg)]">
+            <h3 className="mt-3 font-brand text-2xl sm:text-[1.7rem] font-semibold tracking-[-0.01em] text-[var(--stage-fg)]">
               {act.title}
             </h3>
             <p className="mt-3 text-sm sm:text-[0.95rem] leading-relaxed text-[var(--stage-muted)]">

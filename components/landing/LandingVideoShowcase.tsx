@@ -86,7 +86,7 @@ export function LandingVideoShowcase() {
                   opacity: titleOpacity,
                   filter: useTransform(titleBlur, (v) => `blur(${v}px)`),
                 }}
-                className="text-4xl sm:text-5xl md:text-6xl tracking-[-0.03em] font-medium"
+                className="font-brand font-medium text-4xl sm:text-5xl md:text-6xl tracking-[-0.02em]"
               >
                 Watch how it works.
               </motion.h2>

@@ -83,7 +83,7 @@ export function LandingSearchShowcase() {
                 opacity: headingOpacity,
                 filter: useTransform(headingBlur, (v) => `blur(${v}px)`),
               }}
-              className="text-3xl sm:text-4xl lg:text-5xl tracking-[-0.03em] font-medium leading-[1.1]"
+              className="font-brand font-medium text-3xl sm:text-4xl lg:text-5xl tracking-[-0.02em] leading-[1.1]"
             >
               Find your piece in seconds.
             </motion.h2>
