@@ -69,7 +69,7 @@ export default function AdminLayout({
     <div className="min-h-screen bg-background">
       <div className="border-b border-border/40 bg-card/30">
         <div className="container mx-auto px-4 py-3 sm:py-4">
-          <h1 className="text-lg sm:text-xl font-semibold text-foreground mb-3 sm:mb-4">Admin</h1>
+          <h1 className="font-brand text-2xl sm:text-3xl font-semibold tracking-[-0.02em] text-foreground mb-3 sm:mb-4">Admin</h1>
           <div className="-mx-4 px-4 overflow-x-auto scrollbar-hide">
             <div className="flex gap-2 w-max sm:w-auto">
               {tabs.map((tab) => {

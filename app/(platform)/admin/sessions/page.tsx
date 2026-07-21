@@ -451,7 +451,7 @@ export default function AdminSessionsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
         <div>
-          <h1 className="text-lg sm:text-xl font-semibold">ScenePartner Sessions</h1>
+          <h1 className="font-brand text-2xl sm:text-3xl font-semibold tracking-[-0.02em]">ScenePartner Sessions</h1>
           <p className="text-xs text-muted-foreground">Last 30 days</p>
         </div>
         <Button
