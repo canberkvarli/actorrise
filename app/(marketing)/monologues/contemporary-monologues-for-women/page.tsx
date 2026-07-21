@@ -7,7 +7,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
 export const metadata: Metadata = {
   title: "Contemporary Monologues for Women",
-  description: "Contemporary monologues for women from modern plays and screen. Search 7,500+ pieces by tone and length, skip the overdone ones, and walk in ready.",
+  description: "Contemporary monologues for women from modern plays and screen. Search 12,000+ pieces by tone and length, skip the overdone ones, and walk in ready.",
   openGraph: {
     title: "Contemporary Monologues for Women | ActorRise",
     description: "Contemporary monologues for women from modern plays and screen. Searchable by tone and length, with an Overdone filter.",

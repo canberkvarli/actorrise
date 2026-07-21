@@ -7,7 +7,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
 export const metadata: Metadata = {
   title: "Two Minute Monologues",
-  description: "Two minute monologues for auditions. Search 7,500+ real pieces and filter by tone and type to find a strong two minute monologue that fits the call.",
+  description: "Two minute monologues for auditions. Search 12,000+ real pieces and filter by tone and type to find a strong two minute monologue that fits the call.",
   openGraph: {
     title: "Two Minute Monologues | ActorRise",
     description: "Two minute monologues for auditions, searchable by tone and type. Real published pieces with an Overdone filter.",

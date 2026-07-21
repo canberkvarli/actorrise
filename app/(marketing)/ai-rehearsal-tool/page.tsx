@@ -8,18 +8,18 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "AI Rehearsal Tool for Actors: Practice Scenes & Monologues",
   description:
-    "AI rehearsal tool that reads the other lines so you can practice scenes and monologues before auditions. 7,500+ monologues from plays, films, and TV. Free to try.",
+    "AI rehearsal tool that reads the other lines so you can practice scenes and monologues before auditions. 12,000+ monologues from plays, films, and TV. Free to try.",
   openGraph: {
     title: "AI Rehearsal Tool for Actors | ActorRise",
     description:
-      "Practice scenes and monologues with AI that reads the other lines. 7,500+ monologues from plays, films, and TV. Free to try.",
+      "Practice scenes and monologues with AI that reads the other lines. 12,000+ monologues from plays, films, and TV. Free to try.",
     url: `${siteUrl}/ai-rehearsal-tool`,
   },
   twitter: {
     card: "summary_large_image",
     title: "AI Rehearsal Tool for Actors | ActorRise",
     description:
-      "Practice scenes and monologues with AI that reads the other lines. 7,500+ monologues from plays, films, and TV. Free to try.",
+      "Practice scenes and monologues with AI that reads the other lines. 12,000+ monologues from plays, films, and TV. Free to try.",
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/ai-rehearsal-tool` },
@@ -43,7 +43,7 @@ export default function Page() {
         <li className="flex gap-2">
           <span className="text-primary">&middot;</span>
           <span>
-            <strong className="text-foreground">Find material</strong>: search 7,500+ monologues and
+            <strong className="text-foreground">Find material</strong>: search 12,000+ monologues and
             films, and TV by meaning, not keywords.
           </span>
         </li>
@@ -127,7 +127,7 @@ export default function Page() {
               What kind of material can I rehearse?
             </h3>
             <p className="text-muted-foreground">
-              Anything. Monologues and scenes from the 7,500+ piece database, your own sides or
+              Anything. Monologues and scenes from the 12,000+ piece database, your own sides or
               scripts that you paste in, or film and TV monologues from our
               library.
             </p>

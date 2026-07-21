@@ -7,7 +7,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
 export const metadata: Metadata = {
   title: "Dramatic Monologues for Men",
-  description: "Dramatic monologues for men for auditions. Search 7,500+ real pieces by intensity and length, avoid overdone choices, and find a piece that fits your type.",
+  description: "Dramatic monologues for men for auditions. Search 12,000+ real pieces by intensity and length, avoid overdone choices, and find a piece that fits your type.",
   openGraph: {
     title: "Dramatic Monologues for Men | ActorRise",
     description: "Dramatic monologues for men, searchable by intensity, length, and type. Real published pieces with an Overdone filter.",

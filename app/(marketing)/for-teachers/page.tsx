@@ -8,18 +8,18 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "Monologues for Drama Teachers & Acting Coaches",
   description:
-    "Your students find the right audition monologue in seconds. 7,500+ monologues, AI search, Overdone filter. Free resource for drama teachers and acting coaches.",
+    "Your students find the right audition monologue in seconds. 12,000+ monologues, AI search, Overdone filter. Free resource for drama teachers and acting coaches.",
   openGraph: {
     title: "Monologues for Drama Teachers & Acting Coaches | ActorRise",
     description:
-      "Find the right audition monologue in seconds. 7,500+ pieces, AI fit to type and casting, Overdone filter. We're starting with teachers and coaches; students spread it.",
+      "Find the right audition monologue in seconds. 12,000+ pieces, AI fit to type and casting, Overdone filter. We're starting with teachers and coaches; students spread it.",
     url: `${siteUrl}/for-teachers`,
   },
   twitter: {
     card: "summary_large_image",
     title: "Monologues for Drama Teachers & Acting Coaches | ActorRise",
     description:
-      "Find the right audition monologue in seconds. 7,500+ pieces, AI fit to type and casting, Overdone filter. We're starting with teachers and coaches; students spread it.",
+      "Find the right audition monologue in seconds. 12,000+ pieces, AI fit to type and casting, Overdone filter. We're starting with teachers and coaches; students spread it.",
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/for-teachers` },
@@ -40,13 +40,13 @@ export default function ForTeachersPage() {
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
       <p className="text-lg text-muted-foreground mb-8">
-        ActorRise gives them 7,500+ searchable pieces, AI that matches to their type and the
+        ActorRise gives them 12,000+ searchable pieces, AI that matches to their type and the
         casting scenario, and an Overdone filter so they bring something different.
       </p>
       <ul className="space-y-3 text-muted-foreground mb-10">
         <li className="flex gap-2">
           <span className="text-primary">·</span>
-          <span>One of the largest searchable monologue databases (7,500+ pieces)</span>
+          <span>One of the largest searchable monologue databases (12,000+ pieces)</span>
         </li>
         <li className="flex gap-2">
           <span className="text-primary">·</span>

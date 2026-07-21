@@ -7,7 +7,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
 export const metadata: Metadata = {
   title: "Monologues for Teens",
-  description: "Monologues for teen actors and students. Search 7,500+ real pieces by age range, tone, and length to find audition and class material that fits.",
+  description: "Monologues for teen actors and students. Search 12,000+ real pieces by age range, tone, and length to find audition and class material that fits.",
   openGraph: {
     title: "Monologues for Teens | ActorRise",
     description: "Monologues for teen actors, searchable by age range, tone, and length. Real published pieces, free to start.",
