@@ -5,11 +5,11 @@ import Link from "next/link";
 const FAQ_ITEMS = [
   {
     q: "Is the search really AI?",
-    a: "Yes. ActorRise uses semantic (AI) search over 7,500+ real monologues from plays, films, and TV. You describe what you need in plain English; we don't generate or invent text. We find the right published pieces.",
+    a: "Yes, the search is AI. ActorRise runs semantic (AI) search over 12,000+ real monologues from plays, films, and TV, so you can describe what you need in plain English. The AI only finds the piece. The monologue text itself is the original published work, never AI-generated or invented.",
   },
   {
     q: "Where do the monologues come from?",
-    a: "From public domain and licensed sources (e.g. Project Gutenberg and similar). We don't distribute copyrighted play text. Full details: ",
+    a: "Every piece links back to its source and original publication (e.g. Project Gutenberg and similar). We never host full scripts of copyrighted works. Full details: ",
     link: { href: "/sources", label: "Sources & copyright" },
   },
   {
@@ -49,7 +49,7 @@ export function LandingFaq() {
       />
       <div className="container mx-auto px-4 sm:px-6">
         <div className="max-w-2xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-semibold tracking-tight text-foreground">
+          <h2 className="font-brand font-semibold text-2xl sm:text-3xl md:text-4xl tracking-[-0.02em] text-foreground">
             Frequently asked questions
           </h2>
           <ul className="mt-8 space-y-4">
