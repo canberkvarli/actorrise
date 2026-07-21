@@ -18,7 +18,7 @@ export function SpotlightHero() {
           (a bare stage. one light. you.)
         </p>
 
-        <h1 className="mt-6 sm:mt-8 pb-1 font-brand font-medium leading-[1.15] tracking-[-0.02em] text-[2.4rem] sm:text-5xl md:text-6xl lg:text-[4.6rem] mx-auto">
+        <h1 className="mt-6 sm:mt-8 pb-2 font-brand font-medium leading-[1.25] tracking-[-0.02em] text-[2.4rem] sm:text-5xl md:text-6xl lg:text-[4.6rem] mx-auto">
           <span className="block overflow-hidden">
             <span className="block animate-stage-rise" style={{ animationDelay: "0.15s" }}>
               Find your <em className="not-italic sm:italic text-primary">monologue</em> in seconds.

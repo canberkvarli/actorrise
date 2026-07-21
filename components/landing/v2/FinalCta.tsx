@@ -18,7 +18,7 @@ export function FinalCta() {
           (the ghost light stays on. the stage is never empty.)
         </p>
 
-        <h2 className="mt-5 pb-1 font-brand font-medium tracking-[-0.02em] leading-[1.2] text-3xl sm:text-5xl md:text-6xl max-w-3xl text-balance">
+        <h2 className="mt-5 pb-2 font-brand font-medium tracking-[-0.02em] leading-[1.25] text-3xl sm:text-5xl md:text-6xl max-w-3xl text-balance">
           Your <em className="italic text-primary">scene partner</em> is already waiting.
         </h2>
 
