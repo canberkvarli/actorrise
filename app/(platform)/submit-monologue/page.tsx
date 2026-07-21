@@ -140,7 +140,7 @@ export default function SubmitMonologuePage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="text-3xl lg:text-4xl font-bold mb-2 flex items-center gap-2">
+        <h1 className="font-brand font-semibold text-3xl lg:text-4xl tracking-[-0.02em] mb-2 flex items-center gap-2">
           <IconSparkles className="h-8 w-8 text-primary" />
           Submit a Monologue
         </h1>

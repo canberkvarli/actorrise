@@ -65,7 +65,7 @@ export default function SuccessPage() {
         <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
           <IconCheck className="h-8 w-8 text-primary" />
         </div>
-        <h1 className="text-4xl font-bold mb-2">Welcome to {subscription?.tier_display_name}!</h1>
+        <h1 className="font-brand font-semibold text-4xl tracking-[-0.02em] mb-2">Welcome to {subscription?.tier_display_name}!</h1>
         <p className="text-xl text-muted-foreground">
           Your subscription is now active. Let's get started.
         </p>

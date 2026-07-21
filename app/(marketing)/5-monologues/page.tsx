@@ -55,7 +55,7 @@ export default function FiveMonologuesPage() {
   if (status === "success") {
     return (
       <div className="container mx-auto px-6 py-16 md:py-24 max-w-2xl">
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground mb-2">
+        <h1 className="font-brand font-semibold text-3xl md:text-4xl tracking-[-0.02em] text-foreground mb-2">
           Here are your 5 monologues
         </h1>
         <p className="text-muted-foreground mb-8">
