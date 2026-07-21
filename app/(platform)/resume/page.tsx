@@ -247,7 +247,7 @@ export default function ResumePage() {
         <p className="font-typewriter text-xs uppercase tracking-widest text-muted-foreground">
           (your résumé.)
         </p>
-        <h1 className="mt-1 text-3xl font-semibold text-foreground">Résumé</h1>
+        <h1 className="mt-1 font-brand text-3xl sm:text-4xl font-semibold tracking-[-0.02em] text-foreground">Résumé</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Add credits and drag to reorder — or drag between sections. Your name comes from your{" "}
           <Link href="/profile" className="underline underline-offset-4 hover:text-foreground">
