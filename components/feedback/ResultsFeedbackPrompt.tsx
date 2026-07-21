@@ -11,7 +11,7 @@ export interface ResultsFeedbackPromptProps {
   context?: string;
   /** When >= 1, prompt is shown. A new count = a new search = ask again. */
   resultsViewCount?: number;
-  /** Opened when the user votes "not helpful", so they can say why. */
+  /** @deprecated Negative feedback now captures the reason inline; no longer opens the contact form. */
   onOpenContact?: () => void;
 }
 
@@ -29,45 +29,113 @@ function hasStoredVote(context: string, count: number): boolean {
 }
 
 /**
- * One quiet line under the results: "Helpful? 👍 👎". Records a positive/negative
- * vote (fire-and-forget); a "not helpful" tap opens the contact form for detail.
+ * One quiet line under the results: "Helpful? 👍 👎". A thumbs-up records a
+ * positive vote right away. A thumbs-down opens an inline reason box — the
+ * negative is only recorded together with the reason, so we never log an
+ * anonymous down-vote (cancelling saves nothing). Mirrors the backend, which
+ * requires a comment on negative feedback.
  */
 export function ResultsFeedbackPrompt({
   context = "search",
   resultsViewCount = 0,
-  onOpenContact,
 }: ResultsFeedbackPromptProps) {
-  // Track votes made this session per result-set count. Derived (not synced via
-  // an effect) so a new search count naturally re-asks.
-  const [votedCounts, setVotedCounts] = useState<Record<number, boolean>>({});
+  // Handled = a positive vote or a negative-with-reason was submitted, tracked
+  // per result-set count so a new search naturally re-asks.
+  const [handledCounts, setHandledCounts] = useState<Record<number, boolean>>({});
+  // The count currently showing the "leave a reason" box (after a thumbs-down).
+  const [reasonForCount, setReasonForCount] = useState<number | null>(null);
+  const [reason, setReason] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const vote = (positive: boolean) => {
-    api
-      .post("/api/feedback", { context, rating: positive ? "positive" : "negative" })
-      .catch(() => { /* fire-and-forget */ });
+  const markHandled = () => {
     try {
       sessionStorage.setItem(getVoteStorageKey(context, resultsViewCount), "true");
     } catch {
       // ignore
     }
-    setVotedCounts((v) => ({ ...v, [resultsViewCount]: true }));
-    if (!positive) onOpenContact?.();
+    setHandledCounts((v) => ({ ...v, [resultsViewCount]: true }));
+  };
+
+  const submitPositive = () => {
+    api.post("/api/feedback", { context, rating: "positive" }).catch(() => { /* fire-and-forget */ });
+    markHandled();
+  };
+
+  const submitNegative = async () => {
+    const comment = reason.trim();
+    if (!comment || submitting) return;
+    setSubmitting(true);
+    try {
+      await api.post("/api/feedback", { context, rating: "negative", comment });
+    } catch {
+      // Best-effort: still thank them; the reason is the point, not a retry loop.
+    }
+    setSubmitting(false);
+    setReason("");
+    setReasonForCount(null);
+    markHandled();
+  };
+
+  const cancelReason = () => {
+    // A bare down-vote records nothing.
+    setReason("");
+    setReasonForCount(null);
   };
 
   if (resultsViewCount < 1) return null;
 
-  const submitted = votedCounts[resultsViewCount] ?? hasStoredVote(context, resultsViewCount);
-
-  if (submitted) {
+  const handled = handledCounts[resultsViewCount] ?? hasStoredVote(context, resultsViewCount);
+  if (handled) {
     return <p className="py-1 text-center text-xs text-muted-foreground/50">Thanks</p>;
   }
 
+  // After a thumbs-down: ask what they were hoping to find before recording.
+  if (reasonForCount === resultsViewCount) {
+    return (
+      <div className="mx-auto flex max-w-md flex-col gap-2 py-2">
+        <label htmlFor="feedback-reason" className="text-center text-xs text-muted-foreground/80">
+          What were you hoping to find?
+        </label>
+        <textarea
+          id="feedback-reason"
+          autoFocus
+          rows={2}
+          value={reason}
+          onChange={(e) => setReason(e.target.value.slice(0, 500))}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submitNegative();
+          }}
+          placeholder="e.g. a contemporary comedic piece under 2 minutes"
+          className="w-full resize-none rounded-md border border-border bg-background/60 px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/40"
+        />
+        <div className="flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={cancelReason}
+            className="rounded-md px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={submitNegative}
+            disabled={!reason.trim() || submitting}
+            className="rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-40"
+          >
+            {submitting ? "Sending…" : "Send"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Idle: the quiet "Helpful?" line.
   return (
     <div className="flex items-center justify-center gap-2 py-1 text-xs text-muted-foreground/70">
       <span>Helpful?</span>
       <button
         type="button"
-        onClick={() => vote(true)}
+        onClick={submitPositive}
         aria-label="Yes, helpful"
         className="rounded p-1.5 transition-colors hover:bg-muted/50 hover:text-foreground"
       >
@@ -75,7 +143,10 @@ export function ResultsFeedbackPrompt({
       </button>
       <button
         type="button"
-        onClick={() => vote(false)}
+        onClick={() => {
+          setReason("");
+          setReasonForCount(resultsViewCount);
+        }}
         aria-label="No, not helpful"
         className="rounded p-1.5 transition-colors hover:bg-muted/50 hover:text-foreground"
       >
