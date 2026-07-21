@@ -168,11 +168,16 @@ def _send_campaign(args):
                     "tip_body": getattr(args, "tip_body", None),
                 }
 
+            exclude_emails = None
+            if getattr(args, "exclude", None):
+                exclude_emails = {e.strip() for e in args.exclude.split(",") if e.strip()}
+
             result = send_campaign(
                 db=db,
                 campaign_type=campaign_type,
                 target=args.target,
                 dry_run=args.dry_run,
+                exclude_emails=exclude_emails,
                 **kwargs,
             )
     finally:
@@ -211,6 +216,7 @@ def main():
         p = subparsers.add_parser(name, help=help_text)
         p.add_argument("--target", default="all", choices=["all", "free", "paid"], help="Target audience")
         p.add_argument("--dry-run", action="store_true", help="List recipients without sending")
+        p.add_argument("--exclude", help="Comma-separated emails to skip (e.g. VIPs to reach personally)")
 
     # Feature announcement args (add to both test and campaign parsers)
     for p in [test_parser, subparsers.choices["feature-announcement"]]:

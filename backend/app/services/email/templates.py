@@ -232,16 +232,13 @@ class EmailTemplates:
         lines = [
             f"hey {name},",
             "",
-            intro_text,
-        ]
-        if body_text:
-            lines += ["", body_text]
-        lines += [
+            "ActorRise just crossed 300 actors, and you're one of the early ones. That means a lot to me, so I want to do something for the people who showed up first.",
             "",
-            f"Your code: {promo_code}",
-            f"Use it at checkout: {upgrade_url}",
+            "I want to give you 3 months of Plus, free. The AI scene partner reading with you, unlimited rehearsals, the whole thing.",
             "",
-            "Appreciate you being here. If you have any questions, just reply to this email.",
+            "If you want in, just reply CURTAIN and I'll send you a link. You add a card, it charges $0 today, and it rolls into Plus after the 3 months if you love it. Then it's $99 for the year, and you can cancel any time before that with one click.",
+            "",
+            "No pressure though. I'm a working actor too, so I get it if now's not the time. Not for you? Just reply and say so, I'll take you off the list, no hard feelings.",
             "",
             sender_name,
             "Founder, ActorRise",

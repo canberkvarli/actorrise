@@ -16,6 +16,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.billing import PricingTier, UsageMetrics, UserSubscription
+from app.models.email_do_not_contact import EmailDoNotContact
 from app.models.user import User
 from app.services.email.resend_client import ResendEmailClient
 from app.services.email.templates import EmailTemplates
@@ -74,6 +75,7 @@ def _get_marketing_recipients(
     target: str = "all",
     exclude_apple_relay: bool = True,
     require_opt_in: bool = True,
+    exclude_emails: Optional[set[str]] = None,
 ) -> list[User]:
     """
     Query users filtered by tier. Unsubscribed users (marketing_opt_in=False)
@@ -94,6 +96,21 @@ def _get_marketing_recipients(
 
     if exclude_apple_relay:
         query = query.filter(~User.email.ilike(f"%{APPLE_RELAY_DOMAIN}%"))
+
+    # Never send to internal/test addresses.
+    query = query.filter(~User.email.ilike("%@actorrise.com"))
+
+    # Exclude anyone who bounced, complained, or asked out. This lives in a
+    # separate table from marketing_opt_in (it's populated by Resend webhooks),
+    # so it must be filtered explicitly or opted-out addresses still get mailed.
+    dnc = db.query(func.lower(EmailDoNotContact.email))
+    query = query.filter(func.lower(User.email).notin_(dnc))
+
+    # Caller-supplied one-off exclusions (e.g. VIP contacts to reach personally).
+    if exclude_emails:
+        skip = {e.strip().lower() for e in exclude_emails if e and e.strip()}
+        if skip:
+            query = query.filter(func.lower(User.email).notin_(skip))
 
     paid_user_ids = (
         db.query(UserSubscription.user_id)
@@ -131,6 +148,7 @@ def send_campaign(
     campaign_type: str,
     target: str = "all",
     dry_run: bool = False,
+    exclude_emails: Optional[set[str]] = None,
     **template_kwargs,
 ) -> dict:
     """
@@ -149,7 +167,7 @@ def send_campaign(
     if not os.getenv("RESEND_API_KEY"):
         return {"sent": 0, "skipped": 0, "errors": ["RESEND_API_KEY not set"], "recipients": []}
 
-    recipients = _get_marketing_recipients(db, target)
+    recipients = _get_marketing_recipients(db, target, exclude_emails=exclude_emails)
 
     result = {
         "sent": 0,
@@ -167,7 +185,7 @@ def send_campaign(
     subject_map = {
         "upgrade_nudge": "Unlock more with ActorRise Plus",
         "feature_announcement": template_kwargs.get("feature_title", "What's new on ActorRise"),
-        "founder_offer": "A special offer just for you",
+        "founder_offer": "3 months of Plus, on me",
         "actor_page": "Your actor page on ActorRise",
         "cold_outreach": "hey from ActorRise",
         "weekly_engagement": "Your weekly pick from ActorRise",
@@ -175,18 +193,20 @@ def send_campaign(
     }
     subject = subject_map.get(campaign_type, "News from ActorRise")
 
-    render_map = {
-        "upgrade_nudge": templates.render_upgrade_nudge,
-        "feature_announcement": templates.render_feature_announcement,
-        "founder_offer": templates.render_founder_offer,
-        "actor_page": templates.render_actor_page,
-        "cold_outreach": templates.render_cold_outreach,
-        "weekly_engagement": templates.render_weekly_engagement,
-        "scene_partner_launch": templates.render_scene_partner_launch,
+    # Resolve the renderer by name so a campaign whose template method no longer
+    # exists doesn't blow up dict construction for every other campaign.
+    render_method_names = {
+        "upgrade_nudge": "render_upgrade_nudge",
+        "feature_announcement": "render_feature_announcement",
+        "founder_offer": "render_founder_offer",
+        "actor_page": "render_actor_page",
+        "cold_outreach": "render_cold_outreach",
+        "weekly_engagement": "render_weekly_engagement",
+        "scene_partner_launch": "render_scene_partner_launch",
     }
-    render_fn = render_map.get(campaign_type)
+    render_fn = getattr(templates, render_method_names.get(campaign_type, ""), None)
     if not render_fn:
-        return {"sent": 0, "skipped": 0, "errors": [f"Unknown campaign type: {campaign_type}"], "recipients": []}
+        return {"sent": 0, "skipped": 0, "errors": [f"Unsupported campaign type: {campaign_type}"], "recipients": []}
 
     for user in recipients:
         try:
