@@ -227,7 +227,7 @@ function CheckoutContent() {
   return (
     <div className="container mx-auto px-4 py-16 max-w-2xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Complete Your Subscription</h1>
+        <h1 className="font-brand text-3xl sm:text-4xl font-semibold tracking-[-0.02em] mb-2">Complete Your Subscription</h1>
         <p className="text-muted-foreground">Review your order and proceed to payment</p>
       </div>
 
