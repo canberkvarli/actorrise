@@ -36,7 +36,9 @@ logger = logging.getLogger(__name__)
 # search restores real weak-match quality + logs best_cosine (was NULL).
 # v12: per-play diversity cap in ranking — one play can't crowd the page
 # (was King Lear x5 / The Intruder x4 for "senior man").
-CACHE_VERSION = "12"
+# v13: film/TV minimum-word gate — pieces under 75 words are sub-monologue clips
+# and no longer surface in search/discover (TV corpus was 80% under 75).
+CACHE_VERSION = "13"
 
 
 class CacheManager:

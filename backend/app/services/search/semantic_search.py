@@ -104,6 +104,22 @@ WEAK_MATCH_FLOOR = 0.30
 # from search unless the user explicitly asks for very short material.
 TV_CLIP_MIN_SECONDS = 30
 
+# Minimum word count for a film/TV piece to appear in search/discover. The TV
+# corpus is 80% under 75 words (avg 64) — sub-monologue dialogue clips extracted
+# too short. This gate hides them (rows stay in the DB for later re-extraction).
+# Absolute: unlike the duration clip gate there is no "user asked for short"
+# escape — a sub-75-word film/TV fragment is never the monologue an actor wants.
+FILM_TV_MIN_WORDS = 75
+
+
+def film_tv_word_gate_hides(source_type, word_count) -> bool:
+    """True when a film/TV piece is too short to surface (see FILM_TV_MIN_WORDS).
+    Stage plays are governed by other gates, so they are never hidden here.
+    A missing word_count is treated as too-short (hidden, conservatively)."""
+    if source_type not in ("film", "tv"):
+        return False
+    return not word_count or word_count < FILM_TV_MIN_WORDS
+
 
 # Graceful-relaxation order: least-important first. The duration FLOOR is the
 # user's explicit intent ("2 min monologue") and goes LAST — and even then it
@@ -1066,6 +1082,14 @@ class SemanticSearch:
                 )
             )
 
+        # Film/TV under 75 words are sub-monologue clips — never surface them.
+        base_query = base_query.filter(
+            or_(
+                Play.source_type.notin_(("film", "tv")),
+                Monologue.word_count >= FILM_TV_MIN_WORDS,
+            )
+        )
+
         # Get user's bookmarked monologues if user_id provided
         # NOTE: Fetches all bookmarks because boost is applied during scoring
         # Capped at 1000 most recent to avoid pathological cases
@@ -1146,6 +1170,9 @@ class SemanticSearch:
                     wc.append(
                         f"NOT (p.source_type = 'tv' AND m.estimated_duration_seconds < {TV_CLIP_MIN_SECONDS})"
                     )
+                wc.append(
+                    f"NOT (p.source_type IN ('film','tv') AND (m.word_count IS NULL OR m.word_count < {FILM_TV_MIN_WORDS}))"
+                )
                 return " AND ".join(wc)
 
             # Enable pgvector 0.8 iterative index scan. Without it, a HARD-FILTERED
@@ -1657,6 +1684,13 @@ class SemanticSearch:
                 )
             )
 
+        base_query = base_query.filter(
+            or_(
+                Play.source_type.notin_(("film", "tv")),
+                Monologue.word_count >= FILM_TV_MIN_WORDS,
+            )
+        )
+
         # Simple keyword-friendly text search: play title, character, author, monologue title/text.
         # We search both the full query and important keywords so that
         # multi-word queries like "give me the hamlet monologue" still match "Hamlet".
@@ -1871,5 +1905,12 @@ class SemanticSearch:
                     Monologue.estimated_duration_seconds >= TV_CLIP_MIN_SECONDS,
                 )
             )
+
+        query = query.filter(
+            or_(
+                Play.source_type.notin_(("film", "tv")),
+                Monologue.word_count >= FILM_TV_MIN_WORDS,
+            )
+        )
 
         return query.order_by(func.random()).limit(limit).all()
