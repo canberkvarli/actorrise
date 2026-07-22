@@ -9,6 +9,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSubscription } from "@/hooks/useSubscription";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -57,11 +58,20 @@ function CheckoutContent() {
 
   const tierName = searchParams.get("tier");
   const period = searchParams.get("period") || "monthly";
-  // Free trial: first-time Plus members get 90 days free ($0 today). ?trial=1 is
-  // the entry point; ?promo=FOUNDER3 is kept as a legacy alias for old links.
-  const isTrial =
+  const { subscription } = useSubscription();
+  // Free trial: first-time Plus members get 90 days free ($0 today). Explicit
+  // ?trial=1 (or legacy ?promo=FOUNDER3) forces it; otherwise a first-time Plus
+  // monthly checkout defaults to the trial. Returning subscribers (already have a
+  // Stripe customer) pay as normal, and ?trial=0 is an escape hatch to pay now.
+  const explicitTrial =
     searchParams.get("trial") === "1" ||
     (searchParams.get("promo") || "").toUpperCase() === "FOUNDER3";
+  const trialEligible =
+    tier?.name === "plus" &&
+    period === "monthly" &&
+    !subscription?.has_stripe_customer;
+  const isTrial =
+    searchParams.get("trial") === "0" ? false : explicitTrial || trialEligible;
 
   useEffect(() => {
     if (!tierName) {
