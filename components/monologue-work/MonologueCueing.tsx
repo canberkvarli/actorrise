@@ -16,6 +16,7 @@ import { wordMatchScore, toDeliverableLines, spokenPrefixCount } from "@/lib/lin
 import api from "@/lib/api";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { MicWaveform } from "@/components/scenepartner/MicWaveform";
+import { GhostLight } from "@/components/brand/GhostLight";
 
 /** Fraction of the line's words we need to hear before advancing. */
 const MATCH_THRESHOLD = 0.7;
@@ -210,14 +211,16 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   }
 
   return (
-    <div className="relative flex h-full w-full flex-col overflow-hidden bg-[#1a1512] text-[#f4eee2]">
-      {/* Ambient stage: warm wash from above, soft shadow pooling at the foot */}
+    <div className="stage-grain relative flex h-full w-full flex-col overflow-hidden bg-[var(--stage)] text-[var(--stage-fg)]">
+      {/* Ambient stage — the landing's own vocabulary: warm overhead wash, then a
+          soft shadow pooling at the foot so the stage never reads as flat black. */}
+      <div aria-hidden className="stage-wash pointer-events-none absolute inset-0" />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(135% 95% at 50% -8%, rgba(255,140,64,0.18), transparent 58%), linear-gradient(180deg, rgba(38,28,22,0.55) 0%, transparent 30%, transparent 68%, rgba(0,0,0,0.5) 100%)",
+            "linear-gradient(180deg, color-mix(in oklab, var(--stage-deep) 55%, transparent) 0%, transparent 30%, transparent 68%, color-mix(in oklab, black 45%, transparent) 100%)",
         }}
       />
 
@@ -264,6 +267,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-6 text-center"
           >
             <div className="flex flex-col items-center gap-4">
+              <GhostLight size="md" className="mb-1" />
               <span className="text-xs uppercase tracking-[0.3em] text-[#CB4B00]">Off book</span>
               <p className="max-w-md text-2xl font-medium leading-snug text-white">
                 {tapToAdvance
