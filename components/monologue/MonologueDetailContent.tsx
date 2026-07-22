@@ -10,7 +10,7 @@ import { isBibliographicText, stageDirectionPercentage } from "@/lib/monologueTe
 
 export interface MonologueDetailContentProps {
   monologue: Monologue;
-  /** Optional actions to render in the header row (e.g. "Work on this" / favorite) */
+  /** Optional actions to render in the header row (e.g. "Rehearse" / favorite) */
   headerActions?: React.ReactNode;
   /** When provided (e.g. for moderators), show an Edit link in the footer */
   onEdit?: (monologueId: number) => void;
