@@ -10,6 +10,8 @@ import {
 } from "@tabler/icons-react";
 import type { Monologue } from "@/types/actor";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { useToggleFavorite } from "@/hooks/useBookmarks";
+import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 import { wordMatchScore, toDeliverableLines, spokenPrefixCount } from "@/lib/lineMatching";
 import api from "@/lib/api";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
@@ -63,8 +65,27 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   const [revealCurrent, setRevealCurrent] = useState(false);
   const [offBook, setOffBook] = useState(false);
   const [notes, setNotes] = useState<DeliveryFeedback | null>(null);
-  const [notesStatus, setNotesStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [notesStatus, setNotesStatus] = useState<"idle" | "loading" | "done" | "error" | "skipped">("idle");
   const [paywallOpen, setPaywallOpen] = useState(false);
+
+  // Save/bookmark from inside the rehearsal. Optimistic local state gives instant
+  // feedback; the hook handles the API call, undo toast, and cache updates.
+  const toggleFav = useToggleFavorite();
+  const [favorited, setFavorited] = useState(!!monologue.is_favorited);
+  const onToggleFav = useCallback(() => {
+    const current = favorited;
+    setFavorited(!current);
+    toggleFav.mutate(
+      { monologueId: monologue.id, isFavorited: current },
+      {
+        onError: (err) => {
+          // Rapid-toggle guard throws "__skip__" — not a real failure, don't revert.
+          if (err instanceof Error && err.message === "__skip__") return;
+          setFavorited(current);
+        },
+      },
+    );
+  }, [favorited, monologue.id, toggleFav]);
 
   const completed = started && activeIndex >= lines.length;
 
@@ -94,7 +115,14 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
       setActiveIndex(next);
       if (next >= lines.length && !fetchedRef.current) {
         fetchedRef.current = true;
-        void runAnalysis();
+        // Only ask the coach for notes if we actually heard the actor. On phones
+        // (no speech API) or a dead mic there's no transcript, so skip the call
+        // and show a clean curtain instead of the "I didn't catch anything" message.
+        if (heardRef.current.length > 0) {
+          void runAnalysis();
+        } else {
+          setNotesStatus("skipped");
+        }
       }
     },
     [lines.length, runAnalysis],
@@ -115,6 +143,11 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
 
   const { transcript, isListening, isSupported, startListening, stopListening, resetTranscript } =
     useSpeechRecognition({ continuous: true, interimResults: true, onResult: handleHeard });
+
+  // No Web Speech API (iOS Safari, most phones) → run as a tap-to-advance
+  // teleprompter instead of silently failing. Voice-follow is a bonus, not a
+  // requirement, so the whole feature works on every device.
+  const tapToAdvance = !isSupported;
 
   // Reset the live transcript when we move to a new line so highlighting is fresh.
   const goToLineAndReset = useCallback(
@@ -203,11 +236,21 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
           </h1>
           <p className="truncate text-sm text-white/55">{monologue.title}</p>
         </div>
-        {started && !completed && (
-          <span className="ml-auto text-[0.7rem] uppercase tracking-[0.22em] text-white/45">
-            {Math.min(activeIndex + 1, lines.length)} / {lines.length}
-          </span>
-        )}
+        <div className="ml-auto flex items-center gap-4">
+          {started && !completed && (
+            <span className="text-[0.7rem] uppercase tracking-[0.22em] text-white/45">
+              {Math.min(activeIndex + 1, lines.length)} / {lines.length}
+            </span>
+          )}
+          <button
+            onClick={onToggleFav}
+            aria-label={favorited ? "Remove from saved" : "Save this monologue"}
+            aria-pressed={favorited}
+            className={`transition-colors ${favorited ? "text-[#CB4B00]" : "text-white/40 hover:text-white/80"}`}
+          >
+            <BookmarkIcon filled={favorited} size="md" />
+          </button>
+        </div>
       </header>
 
       <AnimatePresence mode="wait">
@@ -223,11 +266,13 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             <div className="flex flex-col items-center gap-4">
               <span className="text-xs uppercase tracking-[0.3em] text-[#CB4B00]">Off book</span>
               <p className="max-w-md text-2xl font-medium leading-snug text-white">
-                Say it out loud. I&apos;ll follow along.
+                {tapToAdvance
+                  ? "Run it at your own pace. Tap to move through it."
+                  : "Say it out loud. I’ll follow along."}
               </p>
               <p className="text-sm text-white/45">
                 {lines.length} line{lines.length === 1 ? "" : "s"}
-                {!isSupported && " · needs Chrome or Edge for voice"}
+                {tapToAdvance && " · tap anywhere to advance"}
               </p>
             </div>
 
@@ -274,6 +319,12 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
               <button onClick={runAnalysis} className="text-sm text-[#CB4B00] hover:underline">
                 Notes didn&apos;t load — try again
               </button>
+            )}
+            {notesStatus === "skipped" && (
+              <p className="max-w-xs text-sm leading-relaxed text-white/45">
+                That&apos;s a full run. When you rehearse out loud on a voice-enabled browser, I&apos;ll
+                give you director&apos;s notes on your delivery too.
+              </p>
             )}
             {notesStatus === "done" && notes && (
               <motion.div
@@ -333,8 +384,25 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="relative z-10 flex min-h-0 flex-1 flex-col items-center justify-center gap-2 overflow-hidden px-6"
+            className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-8"
           >
+            <div
+              role={tapToAdvance ? "button" : undefined}
+              tabIndex={tapToAdvance ? 0 : undefined}
+              aria-label={tapToAdvance ? "Tap to advance to the next line" : undefined}
+              onClick={tapToAdvance ? () => goToLineAndReset(activeIndex + 1) : undefined}
+              onKeyDown={
+                tapToAdvance
+                  ? (e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        goToLineAndReset(activeIndex + 1);
+                      }
+                    }
+                  : undefined
+              }
+              className={`flex min-h-0 flex-1 flex-col items-center justify-center gap-2${tapToAdvance ? " cursor-pointer select-none" : ""}`}
+            >
               {/* delivered line, receding */}
               <div className="flex min-h-[2rem] items-end justify-center">
                 {activeIndex > 0 && (
@@ -399,22 +467,27 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                   </p>
                 )}
               </div>
+            </div>
 
             {/* control dock — just under the line */}
             <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-              <MicPulse active={isListening} supported={isSupported} />
-              <button
-                onClick={() => setRevealCurrent(true)}
-                className="flex min-h-[40px] items-center gap-1.5 px-2 text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
-              >
-                <IconEye className="h-4 w-4" /> Line
-              </button>
-              <button
-                onClick={() => goToLineAndReset(activeIndex + 1)}
-                className="min-h-[40px] px-2 text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
-              >
-                Skip
-              </button>
+              <MicPulse active={isListening} supported={isSupported} tap={tapToAdvance} />
+              {offBook && (
+                <button
+                  onClick={() => setRevealCurrent(true)}
+                  className="flex min-h-[40px] items-center gap-1.5 px-2 text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
+                >
+                  <IconEye className="h-4 w-4" /> Line
+                </button>
+              )}
+              {!tapToAdvance && (
+                <button
+                  onClick={() => goToLineAndReset(activeIndex + 1)}
+                  className="min-h-[40px] px-2 text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
+                >
+                  Skip
+                </button>
+              )}
               <button
                 onClick={restart}
                 className="min-h-[40px] px-2 text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
@@ -429,7 +502,12 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   );
 }
 
-function MicPulse({ active, supported }: { active: boolean; supported: boolean }) {
+function MicPulse({ active, supported, tap }: { active: boolean; supported: boolean; tap?: boolean }) {
+  if (tap) {
+    return (
+      <span className="text-xs uppercase tracking-[0.16em] text-white/40">Tap the text to advance</span>
+    );
+  }
   if (!supported) {
     return <span className="text-xs uppercase tracking-[0.16em] text-white/30">no mic</span>;
   }
