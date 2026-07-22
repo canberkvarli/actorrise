@@ -299,7 +299,8 @@ function CheckoutContent() {
               </div>
             )}
 
-            {/* Promo code */}
+            {/* Promo / discount codes — hidden on the free trial (no code needed). */}
+            {!isTrial && (
             <div className="flex flex-col gap-2 pt-2 border-t">
               {promoApplied ? (
                 <div className="flex items-center justify-between rounded-lg bg-accent/10 border border-accent/20 px-3 py-2">
@@ -386,6 +387,7 @@ function CheckoutContent() {
                 </>
               )}
             </div>
+            )}
           </div>
 
           {error && (
