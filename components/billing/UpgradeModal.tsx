@@ -51,7 +51,7 @@ export function UpgradeModal({
   const price = isPlus ? "$24" : "$12";
   const yearlyNote = isPlus ? "or $199/year (save 31%)" : "or $99/year (save 31%)";
   const benefits = isPlus ? PRO_BENEFITS : PLUS_BENEFITS;
-  // Free users can start a 90-day Plus trial ($0 today). Pro upsell stays paid.
+  // Free users can start a 14-day Plus trial ($0 today). Pro upsell stays paid.
   const canTrial = !isPlus;
 
   return (
@@ -70,7 +70,7 @@ export function UpgradeModal({
         <div className="space-y-3 py-2">
           {canTrial ? (
             <div>
-              <span className="text-2xl font-bold">3 months free</span>
+              <span className="text-2xl font-bold">2 weeks free</span>
               <p className="text-xs text-muted-foreground mt-1">
                 $0 today. Then $12/month, cancel anytime before it renews.
               </p>
@@ -113,7 +113,7 @@ export function UpgradeModal({
                   : `/checkout?tier=${targetTier}&period=monthly`
               }
             >
-              {canTrial ? "Start 3 months free" : "Upgrade Now"}
+              {canTrial ? "Start 2 weeks free" : "Upgrade Now"}
             </Link>
           </Button>
         </DialogFooter>

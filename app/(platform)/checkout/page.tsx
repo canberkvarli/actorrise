@@ -59,7 +59,7 @@ function CheckoutContent() {
   const tierName = searchParams.get("tier");
   const period = searchParams.get("period") || "monthly";
   const { subscription } = useSubscription();
-  // Free trial: first-time Plus members get 90 days free ($0 today). Explicit
+  // Free trial: first-time Plus members get 14 days free ($0 today). Explicit
   // ?trial=1 (or legacy ?promo=FOUNDER3) forces it; otherwise a first-time Plus
   // monthly checkout defaults to the trial. Returning subscribers (already have a
   // Stripe customer) pay as normal, and ?trial=0 is an escape hatch to pay now.
@@ -302,9 +302,9 @@ function CheckoutContent() {
 
             {isTrial && (
               <div className="rounded-lg bg-primary/5 border border-primary/20 p-4">
-                <p className="text-sm font-medium text-foreground mb-1">3 months free</p>
+                <p className="text-sm font-medium text-foreground mb-1">2 weeks free</p>
                 <p className="text-xs text-muted-foreground">
-                  $0 today. Card on file, nothing charged for 90 days, then $12/month. Cancel anytime before it renews.
+                  $0 today. Card on file, nothing charged for 14 days, then $12/month. Cancel anytime before it renews.
                 </p>
               </div>
             )}
@@ -348,10 +348,10 @@ function CheckoutContent() {
                   {!isTrial && tier?.name === "plus" && (
                     <div className="rounded-xl border-2 border-[#CB4B00]/30 bg-[#CB4B00]/5 p-4">
                       <p className="text-base font-semibold text-foreground mb-1">
-                        First time on Plus? Get 3 months free.
+                        First time on Plus? Get 2 weeks free.
                       </p>
                       <p className="text-sm text-muted-foreground mb-3">
-                        Card required, nothing charged for 90 days, then $12/month. Cancel anytime.
+                        Card required, nothing charged for 14 days, then $12/month. Cancel anytime.
                       </p>
                       <Button
                         asChild
@@ -360,7 +360,7 @@ function CheckoutContent() {
                       >
                         <Link href="/checkout?tier=plus&period=monthly&trial=1">
                           <IconGift className="h-4 w-4" />
-                          Start 3 months free
+                          Start 2 weeks free
                         </Link>
                       </Button>
                     </div>

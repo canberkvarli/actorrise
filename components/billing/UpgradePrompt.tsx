@@ -74,7 +74,7 @@ export function UpgradePrompt({
   };
 
   const planDetails = getPlanDetails();
-  // Free users get the 90-day Plus trial ($0 today). Higher-tier upsells stay paid.
+  // Free users get the 14-day Plus trial ($0 today). Higher-tier upsells stay paid.
   const canTrial = planDetails.name === "Plus" && currentPlan === "free";
 
   return (
@@ -97,7 +97,7 @@ export function UpgradePrompt({
         <div>
           {canTrial ? (
             <div className="mb-1">
-              <span className="text-2xl font-bold">3 months free</span>
+              <span className="text-2xl font-bold">2 weeks free</span>
               <p className="text-xs text-muted-foreground mt-1">
                 $0 today. Then $12/month, cancel anytime before it renews.
               </p>
@@ -141,7 +141,7 @@ export function UpgradePrompt({
                 : `/pricing?recommended=${recommendedPlan}`
             }
           >
-            {canTrial ? "Start 3 months free" : `Upgrade to ${planDetails.name}`}
+            {canTrial ? "Start 2 weeks free" : `Upgrade to ${planDetails.name}`}
           </Link>
         </Button>
       </CardFooter>

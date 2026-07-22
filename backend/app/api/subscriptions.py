@@ -78,7 +78,7 @@ class CreateCheckoutSessionRequest(BaseModel):
     success_url: str
     cancel_url: str
     promo_code: str | None = None  # student/teacher/startup Stripe coupons
-    trial: bool = False  # start a 90-day Plus trial (first-time Plus members)
+    trial: bool = False  # start a 14-day Plus trial (first-time Plus members)
 
 
 class CreateCheckoutSessionResponse(BaseModel):
@@ -260,7 +260,7 @@ async def create_checkout_session(
             detail=f"Stripe price ID not configured for {tier.display_name} {request.billing_period} plan",
         )
 
-    # First-time Plus members can start a 90-day free trial: card on file, $0
+    # First-time Plus members can start a 14-day free trial: card on file, $0
     # today, rolls into Plus monthly after. No code needed — this replaces the
     # retired FOUNDER3 coupon.
     discounts = []
@@ -276,8 +276,8 @@ async def create_checkout_session(
                 status_code=400,
                 detail="The free trial is only for first-time Plus members.",
             )
-        # 3 months free, then auto-converts to Plus monthly ($12/mo).
-        trial_period_days = 90
+        # 2 weeks free, then auto-converts to Plus monthly ($12/mo).
+        trial_period_days = 14
         # Force monthly rollover regardless of the billing toggle they picked.
         price_id = tier.stripe_monthly_price_id
         if not price_id:

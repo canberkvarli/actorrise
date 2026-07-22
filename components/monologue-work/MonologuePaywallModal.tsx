@@ -26,8 +26,8 @@ const PLUS_BENEFITS = [
 
 /**
  * Shown when a free user hits their monthly monologue-work cap. Leads with the
- * founder offer (FOUNDER3 = 3 months of Plus free, card on file) rather than a
- * plain upsell. Deep-links to checkout with the promo pre-applied.
+ * free trial (2 weeks of Plus, card on file) rather than a plain upsell.
+ * Deep-links to the trial checkout.
  */
 export function MonologuePaywallModal({ open, onOpenChange }: MonologuePaywallModalProps) {
   return (
@@ -36,7 +36,7 @@ export function MonologuePaywallModal({ open, onOpenChange }: MonologuePaywallMo
         <DialogHeader>
           <DialogTitle>You&apos;ve used your free runs this month</DialogTitle>
           <DialogDescription>
-            Keep working your monologues with 3 months of Plus, free. No charge now,
+            Keep working your monologues with 2 weeks of Plus, free. No charge now,
             card on file, cancel anytime.
           </DialogDescription>
         </DialogHeader>
@@ -57,8 +57,8 @@ export function MonologuePaywallModal({ open, onOpenChange }: MonologuePaywallMo
             Maybe later
           </Button>
           <Button asChild className="flex-1">
-            <Link href="/checkout?tier=plus&period=monthly&promo=FOUNDER3">
-              Get 3 months free
+            <Link href="/checkout?tier=plus&period=monthly&trial=1">
+              Start 2 weeks free
             </Link>
           </Button>
         </DialogFooter>
