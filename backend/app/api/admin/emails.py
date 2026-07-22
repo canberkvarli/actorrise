@@ -139,7 +139,7 @@ TEMPLATES = [
     {
         "id": "founder_offer",
         "name": "Founder Offer",
-        "description": "3 months of Plus free for early users",
+        "description": "2 weeks of Plus free trial",
         "subject": "A personal note from me",
         "variables": [
             {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},

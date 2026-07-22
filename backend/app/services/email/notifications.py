@@ -53,7 +53,7 @@ def send_founder_offer_email(user_email: str, user_name: Optional[str] = None) -
     try:
         client = ResendEmailClient()
         templates = EmailTemplates()
-        subject = "Your founding actor spot"
+        subject = "your 2 weeks of Plus, free"
         html = templates.render_founder_offer(
             user_name=user_name or "there",
             intro_text=(

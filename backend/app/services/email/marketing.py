@@ -185,7 +185,7 @@ def send_campaign(
     subject_map = {
         "upgrade_nudge": "Unlock more with ActorRise Plus",
         "feature_announcement": template_kwargs.get("feature_title", "What's new on ActorRise"),
-        "founder_offer": "3 months of Plus, on me",
+        "founder_offer": "your 2 weeks of Plus, free",
         "actor_page": "Your actor page on ActorRise",
         "cold_outreach": "hey from ActorRise",
         "weekly_engagement": "Your weekly pick from ActorRise",

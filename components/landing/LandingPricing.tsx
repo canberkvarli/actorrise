@@ -142,8 +142,8 @@ export function LandingPricing() {
           <div className="inline-flex items-center gap-3 px-4 py-2.5 border border-primary/20 bg-primary/[0.03]">
             <span className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />
             <p className="text-sm">
-              <span className="font-medium">Early access?</span>{" "}
-              <span className="text-muted-foreground">Reach out for 3 months free on Plus. <a href="mailto:canberk@actorrise.com" className="underline hover:text-foreground">canberk@actorrise.com</a></span>
+              <span className="font-medium">New here?</span>{" "}
+              <span className="text-muted-foreground">Plus starts with a 2-week free trial. $0 today, cancel anytime.</span>
             </p>
           </div>
           <div className="inline-flex items-center gap-3 px-4 py-2.5 border border-border/40 bg-card/40">
