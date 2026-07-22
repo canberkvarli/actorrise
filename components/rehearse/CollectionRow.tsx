@@ -186,7 +186,7 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
           href={`/monologue/${monologue.id}/work`}
           className="shrink-0 text-sm font-semibold text-primary underline-offset-4 hover:underline"
         >
-          Work on this
+          Rehearse
         </Link>
 
         <Link

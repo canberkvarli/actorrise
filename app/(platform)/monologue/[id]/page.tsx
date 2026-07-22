@@ -126,25 +126,27 @@ export default function MonologueDetailPage() {
               onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
               headerActions={
                 <div className="flex items-center gap-2">
+                  {/* One primary action — Rehearse -> the /work stage. Memorize and
+                      Self-tape are quieter secondary paths, not competing buttons. */}
                   <Button
                     onClick={() => router.push(`/monologue/${monologue.id}/work`)}
-                    className="flex-shrink-0"
-                  >
-                    Work on this
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => router.push(`/audition?monologue=${monologue.id}`)}
                     className="flex-shrink-0"
                   >
                     Rehearse
                   </Button>
                   <Button
-                    variant="outline"
+                    variant="ghost"
                     onClick={() => router.push(`/monologue/${monologue.id}/memorize`)}
-                    className="flex-shrink-0"
+                    className="flex-shrink-0 text-muted-foreground hover:text-foreground"
                   >
                     Memorize
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => router.push(`/audition?monologue=${monologue.id}`)}
+                    className="flex-shrink-0 text-muted-foreground hover:text-foreground"
+                  >
+                    Self-tape
                   </Button>
                   {user?.is_moderator && (
                     <Button

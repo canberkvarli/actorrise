@@ -211,23 +211,16 @@ export function MonologueResultCard({
             </span>
           </div>
 
-          {/* Bridge from a found monologue straight into rehearsing it, instead
-              of dead-ending on bookmark. This is the search→rehearse path. */}
-          <div className="mt-3 flex items-center gap-2">
-            <Link
-              href={`/monologue/${mono.id}/memorize`}
-              onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1.5 rounded-md bg-[#CB4B00] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[#B03000]"
-            >
-              Practice this
-              <IconArrowRight className="h-3.5 w-3.5" />
-            </Link>
+          {/* One clear action: rehearse the piece. Memorize/self-tape live on the
+              detail view + Collection, so the card stays a single obvious step. */}
+          <div className="mt-3">
             <Link
               href={`/monologue/${mono.id}/work`}
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1.5 rounded-md border border-[#CB4B00] px-3 py-1.5 text-sm font-semibold text-[#CB4B00] transition-colors hover:bg-[#CB4B00]/10"
+              className="inline-flex items-center gap-1.5 rounded-md bg-[#CB4B00] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[#B03000]"
             >
-              Work on this
+              Rehearse
+              <IconArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
         </CardContent>
