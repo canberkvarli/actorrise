@@ -846,10 +846,10 @@ export default function AdminEmailsPage() {
           <div className="flex items-start gap-2.5">
             <IconCrown className="h-4 w-4 text-primary mt-0.5 shrink-0" />
             <div>
-              <p className="text-sm font-medium">Founder offer on signup</p>
+              <p className="text-sm font-medium">Free-trial offer on signup</p>
               <p className="text-xs text-muted-foreground mt-0.5">
                 {founderOfferOn
-                  ? "New signups get a personal FOUNDER3 email (3 months of Plus free)."
+                  ? "New signups get a personal email with a 2-week Plus free-trial button."
                   : "Off. New signups get the plain welcome email only."}
               </p>
             </div>

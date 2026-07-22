@@ -40,7 +40,7 @@ def send_welcome_email(user_email: str, user_name: Optional[str] = None) -> dict
 
 def send_founder_offer_email(user_email: str, user_name: Optional[str] = None) -> dict:
     """
-    Send the founding-actor offer (FOUNDER3, 3 months of Plus free) to a new
+    Send the self-serve Plus free-trial offer (2 weeks, $0 today) to a new
     signup. Personal, plain-text style. Fire-and-forget; raises on failure so
     the caller can swallow it the same way as the welcome email.
 
@@ -54,21 +54,9 @@ def send_founder_offer_email(user_email: str, user_name: Optional[str] = None) -
         client = ResendEmailClient()
         templates = EmailTemplates()
         subject = "your 2 weeks of Plus, free"
+        # Copy lives in the founder_offer template (self-serve 2-week trial CTA).
         html = templates.render_founder_offer(
             user_name=user_name or "there",
-            intro_text=(
-                "Thanks for signing up. It's just me here, an actor building this "
-                "for other actors, so it genuinely means a lot that you're trying it."
-            ),
-            body_text=(
-                "I want you on Plus as a founding actor, free. Go to Billing, pick "
-                "Plus, and the code below gives you 3 months on me. It's $0 today, it "
-                "asks for a card to hold your spot after the trial, and you cancel in "
-                "one click anytime. Then put it on a real audition and tell me what "
-                "works and what doesn't."
-            ),
-            promo_code="FOUNDER3",
-            upgrade_url="https://actorrise.com/pricing",
             sender_name="Canberk",
             sender_title="Founder, ActorRise",
         )
