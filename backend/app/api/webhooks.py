@@ -95,9 +95,50 @@ def handle_checkout_completed(session: dict, db: Session):
     Creates or updates UserSubscription with subscription details.
     Also adds paid users to do-not-contact list automatically.
     """
-    user_id = int(session["metadata"]["user_id"])
-    tier_id = int(session["metadata"]["tier_id"])
-    billing_period = session["metadata"]["billing_period"]
+    meta = session.get("metadata") or {}
+    if meta.get("user_id"):
+        # App checkout flow — metadata carries the user/tier mapping.
+        user_id = int(meta["user_id"])
+        tier_id = int(meta["tier_id"])
+        billing_period = meta.get("billing_period") or "monthly"
+    else:
+        # Stripe Payment Link checkout (e.g. the FOUNDER3 trial link): Stripe
+        # sets no app metadata, so match the user by the email they entered and
+        # default to the Plus tier (the only tier sold via payment link).
+        from app.models.user import User
+        from sqlalchemy import func as _func
+
+        email = (
+            (session.get("customer_details") or {}).get("email")
+            or session.get("customer_email")
+            or ""
+        ).strip().lower()
+        user = (
+            db.query(User).filter(_func.lower(User.email) == email).first()
+            if email
+            else None
+        )
+        if not user:
+            print(
+                f"⚠️ checkout.session.completed without user_id metadata and no "
+                f"user match for email={email!r}; skipping"
+            )
+            return
+        plus_tier = db.query(PricingTier).filter(PricingTier.name == "plus").first()
+        if not plus_tier:
+            print("⚠️ Plus tier not found; cannot map payment-link checkout")
+            return
+        user_id = user.id
+        tier_id = plus_tier.id
+        # Infer monthly vs annual from the subscription's price interval.
+        billing_period = "annual"
+        try:
+            sub = stripe.Subscription.retrieve(session["subscription"])
+            interval = sub["items"]["data"][0]["price"]["recurring"]["interval"]
+            billing_period = "annual" if interval == "year" else "monthly"
+        except Exception:
+            pass
+        print(f"✅ Payment-link checkout matched to user {user_id} ({email}) → Plus")
 
     # Get or create subscription
     subscription = db.query(UserSubscription).filter(UserSubscription.user_id == user_id).first()
