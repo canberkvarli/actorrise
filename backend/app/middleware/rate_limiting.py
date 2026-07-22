@@ -106,12 +106,16 @@ class FeatureGate:
             )
 
         elif self.feature == "monologue_work":
+            # Free tier gets a LIFETIME allowance (e.g. 3 total rehearsals), not a
+            # monthly reset — the taste that earns the upgrade. Paid tiers are -1
+            # (unlimited) and short-circuit before any counting.
             return await self._check_usage_limit(
                 current_user.id,
                 "monologue_sessions",
                 features.get("monologue_sessions", 0),
                 db,
                 feature_name="Monologue work sessions",
+                lifetime=True,
             )
 
         elif self.feature == "craft_coach":
@@ -220,6 +224,7 @@ class FeatureGate:
         limit: int,
         db: Session,
         feature_name: str,
+        lifetime: bool = False,
     ) -> bool:
         """
         Check if user is within usage limits for a feature.
@@ -254,16 +259,22 @@ class FeatureGate:
                 self._increment_usage(user_id, usage_field, db)
             return True
 
-        # Get current month's usage
-        usage = self._get_monthly_usage(user_id, usage_field, db)
+        # Get usage — lifetime total (survives month boundaries) for free caps
+        # like the monologue rehearsals, or the current calendar month otherwise.
+        usage = (
+            self._get_lifetime_usage(user_id, usage_field, db)
+            if lifetime
+            else self._get_monthly_usage(user_id, usage_field, db)
+        )
 
         # Check if limit exceeded
         if usage >= limit:
+            period = "total" if lifetime else "this month"
             raise HTTPException(
                 status_code=403,
                 detail={
                     "error": f"{usage_field}_limit_exceeded",
-                    "message": f"You've reached your limit of {limit} {feature_name} this month. Upgrade your plan for more.",
+                    "message": f"You've reached your limit of {limit} {feature_name} {period}. Upgrade your plan for more.",
                     "limit": limit,
                     "used": usage,
                     "upgrade_url": "/pricing",
@@ -288,6 +299,16 @@ class FeatureGate:
             .scalar()
         )
 
+        return int(result)
+
+    def _get_lifetime_usage(self, user_id: int, field: str, db: Session) -> int:
+        """Get user's all-time usage for a feature (no month boundary). Used for
+        lifetime free caps like the 3 free monologue rehearsals."""
+        result = (
+            db.query(func.coalesce(func.sum(getattr(UsageMetrics, field)), 0))
+            .filter(UsageMetrics.user_id == user_id)
+            .scalar()
+        )
         return int(result)
 
     def _increment_usage(self, user_id: int, field: str, db: Session):

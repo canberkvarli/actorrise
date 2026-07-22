@@ -60,11 +60,29 @@ Deferred (option B): MediaRecorder + server Whisper. Gives iOS real line-trackin
 ### 5. Director's notes — leave as-is for now
 `gpt-4o-mini`, temp 0.4, JSON mode (`backend/app/services/ai/langchain/monologue_coach.py`). Cost ≈ **$0.0005/rehearsal** (negligible; 1,000 rehearsals ≈ $0.50). Scaffolding is good (compares transcript vs reference + timing). Ceiling: text-only, can't hear prosody, so tone/pacing notes partly guessed. Acceptable now; revisit with option B audio later.
 
-### 6. Arm the meter — LAST, after the experience is solid
-- The paywall is already wired: `/start` returns 403 -> paywall modal at the cap. The cap is just set to `-1`.
-- Change Free `monologue_sessions` `-1` -> **`3`** (in prod `pricing_tiers` + `backend/.../seed.py`). Plus/Pro stay unlimited.
-- Reason to meter is MONETIZATION, not cost. Do NOT arm until mobile + flow are good — never gate a broken experience.
-- Consider a reverse-trial later (auto full access ~7-14 days, no card) to maximize activation before the wall. Not in this pass.
+### 6. Arm the meter — LAST, after deploy (decisions locked 2026-07-23)
+- **Free = 3 rehearsals TOTAL (lifetime), then Plus.** Not per month. Solo/Plus/Pro stay unlimited (`-1`).
+- **Students/educators:** no automation. They email Canberk and he grants access manually (same as the CURTAIN flow). No `.edu` verification to build.
+- Reason to meter is MONETIZATION, not cost (API is ~$0.0005/rehearsal).
+
+**Code (done on this branch, does NOT arm prod):**
+- `backend/app/middleware/rate_limiting.py`: added a `lifetime` mode to `_check_usage_limit` + `_get_lifetime_usage` (all-time SUM of `monologue_sessions`, no month filter). `monologue_work` gate now passes `lifetime=True`. Paid tiers (`-1`) still short-circuit to unlimited.
+- `backend/app/core/seed.py`: Free `monologue_sessions` `-1` -> `3` (fresh/new envs only).
+
+**The gate reads the cap from the DB**, so the code above changes NOTHING on prod until the prod row is updated. Arming is a single reversible SQL, run at deploy:
+```sql
+-- ARM: free users get 3 lifetime rehearsals
+UPDATE pricing_tiers SET features = jsonb_set(features, '{monologue_sessions}', '3') WHERE name = 'free';
+-- REVERT if needed:
+-- UPDATE pricing_tiers SET features = jsonb_set(features, '{monologue_sessions}', '-1') WHERE name = 'free';
+```
+
+**Verify on the preview/staging deploy (not local — local `environment` bypasses all gates):** sign up a fresh free user, run 4 rehearsals; the 4th must return the paywall (403 `monologue_sessions_limit_exceeded`). Plus user: unlimited.
+
+**Heads-up — existing free users:** the cap counts ALL historical `monologue_sessions`, so the ~22 who already rehearsed will have prior runs count against the 3 (a few may be instantly over). The reverse trial (below) mitigates by giving everyone a fresh full-access window on rollout. If Canberk wants a cleaner slate instead, count only sessions after a launch-date cutoff.
+
+### 7. Reverse trial — APPROVED as the follow-up (not in this branch)
+Auto-grant every new signup full (Plus-level) monologue access for ~7-14 days, no card. When it lapses, drop to the metered free tier (3 lifetime). Maximizes activation before the wall AND gives existing users a fresh window when the meter arms. Separate branch; needs: a trial state on signup (no Stripe), the gate checking "within trial -> unlimited, else metered", and light UI ("X days of full access left").
 
 ## Implementation order
 

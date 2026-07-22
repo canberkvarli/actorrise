@@ -39,7 +39,7 @@ def canonical_tiers() -> list[PricingTier]:
                 "priority_support": False,
                 "scene_partner_scripts": 0,
                 "scene_partner_sessions": 2,
-                "monologue_sessions": -1,  # launch: unlimited for all tiers (2026-07-15), revisit once /work usage is understood
+                "monologue_sessions": 3,  # free = 3 lifetime rehearsals (the taste), then Plus. Enforced as a lifetime cap in rate_limiting.py. Paid tiers stay -1.
                 "scene_partner_trial_only": True,
             },
             is_active=True,
