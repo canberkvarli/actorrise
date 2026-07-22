@@ -51,6 +51,8 @@ export function UpgradeModal({
   const price = isPlus ? "$24" : "$12";
   const yearlyNote = isPlus ? "or $199/year (save 31%)" : "or $99/year (save 31%)";
   const benefits = isPlus ? PRO_BENEFITS : PLUS_BENEFITS;
+  // Free users can start a 90-day Plus trial ($0 today). Pro upsell stays paid.
+  const canTrial = !isPlus;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -66,13 +68,22 @@ export function UpgradeModal({
         </DialogHeader>
 
         <div className="space-y-3 py-2">
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold">{price}</span>
-            <span className="text-sm text-muted-foreground">/month</span>
-            <span className="text-xs text-muted-foreground ml-1">
-              {yearlyNote}
-            </span>
-          </div>
+          {canTrial ? (
+            <div>
+              <span className="text-2xl font-bold">3 months free</span>
+              <p className="text-xs text-muted-foreground mt-1">
+                $0 today. Then $12/month, cancel anytime before it renews.
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold">{price}</span>
+              <span className="text-sm text-muted-foreground">/month</span>
+              <span className="text-xs text-muted-foreground ml-1">
+                {yearlyNote}
+              </span>
+            </div>
+          )}
           <ul className="space-y-1.5">
             {benefits.map((benefit) => (
               <li
@@ -95,7 +106,15 @@ export function UpgradeModal({
             Maybe Later
           </Button>
           <Button asChild className="flex-1">
-            <Link href={`/checkout?tier=${targetTier}&period=monthly`}>Upgrade Now</Link>
+            <Link
+              href={
+                canTrial
+                  ? `/checkout?tier=plus&period=monthly&trial=1`
+                  : `/checkout?tier=${targetTier}&period=monthly`
+              }
+            >
+              {canTrial ? "Start 3 months free" : "Upgrade Now"}
+            </Link>
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -57,6 +57,11 @@ function CheckoutContent() {
 
   const tierName = searchParams.get("tier");
   const period = searchParams.get("period") || "monthly";
+  // Free trial: first-time Plus members get 90 days free ($0 today). ?trial=1 is
+  // the entry point; ?promo=FOUNDER3 is kept as a legacy alias for old links.
+  const isTrial =
+    searchParams.get("trial") === "1" ||
+    (searchParams.get("promo") || "").toUpperCase() === "FOUNDER3";
 
   useEffect(() => {
     if (!tierName) {
@@ -81,7 +86,8 @@ function CheckoutContent() {
   // sends ?promo=FOUNDER3) — auto-apply it once the tier has loaded.
   useEffect(() => {
     const p = searchParams.get("promo");
-    if (p && tier && !promoApplied) {
+    // FOUNDER3 is retired → handled as the free trial (isTrial), not a coupon.
+    if (p && p.toUpperCase() !== "FOUNDER3" && tier && !promoApplied) {
       applyPromo(p);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -97,17 +103,9 @@ function CheckoutContent() {
       setTimeout(() => setPromoShake(false), 500);
     };
 
-    // Founder coupon is now FOUNDER3 only (3 months of Plus free). The older
-    // FOUNDER / FOUNDER6 / FOUNDER12 codes are retired.
-    if (code === "FOUNDER3") {
-      if (tier?.name !== "plus") {
-        triggerShake("The founder coupon is only valid for the Plus plan.");
-        return;
-      }
-      setPromoApplied(code);
-      setPromoError(null);
-    } else if (["FOUNDER", "FOUNDER6", "FOUNDER12"].includes(code)) {
-      triggerShake("That founder code has expired. Use FOUNDER3 for 3 months of Plus free.");
+    // Founder coupons are retired — the free trial replaces them (no code).
+    if (["FOUNDER", "FOUNDER3", "FOUNDER6", "FOUNDER12"].includes(code)) {
+      triggerShake("That code has retired. Just start the 3-month free trial instead.");
     } else if (code === "STARTUPS" || code === "STARTUPS24") {
       setPromoApplied("STARTUPS");
       setPromoError(null);
@@ -148,7 +146,12 @@ function CheckoutContent() {
           billing_period: period,
           success_url: `${window.location.origin}/billing/success`,
           cancel_url: `${window.location.origin}/pricing`,
-          promo_code: promoApplied === "STUDENT50" ? "STXQ5NU4" : promoApplied || undefined,
+          trial: isTrial,
+          promo_code: isTrial
+            ? undefined
+            : promoApplied === "STUDENT50"
+              ? "STXQ5NU4"
+              : promoApplied || undefined,
         }
       );
 
@@ -167,7 +170,8 @@ function CheckoutContent() {
 
   const getPrice = () => {
     if (!tier) return 0;
-    if (promoApplied?.startsWith("FOUNDER") || promoApplied === "BUSINESS" || promoApplied === "STUDENT") return 0;
+    if (isTrial) return 0;
+    if (promoApplied === "BUSINESS" || promoApplied === "STUDENT") return 0;
     const base =
       period === "annual" && tier.annual_price_cents
         ? tier.annual_price_cents
@@ -180,6 +184,7 @@ function CheckoutContent() {
 
   const calculateMonthlyPrice = () => {
     if (!tier) return "$0";
+    if (isTrial) return `$${(tier.monthly_price_cents / 100).toFixed(2)}/month after trial`;
     const price = getPrice();
     if (period === "annual" && tier.annual_price_cents) {
       return `$${(price / 12 / 100).toFixed(2)}/month`;
@@ -263,7 +268,7 @@ function CheckoutContent() {
                   <span className="text-muted-foreground">Billed today</span>
                   <span className="text-2xl font-bold">{formatPrice(getPrice())}</span>
                 </div>
-                {(!promoApplied?.startsWith("FOUNDER") && promoApplied !== "BUSINESS" && promoApplied !== "STUDENT") && (
+                {(promoApplied !== "BUSINESS" && promoApplied !== "STUDENT") && (
                   <div className="bg-accent/10 border border-accent/20 rounded-lg p-4">
                     <p className="text-sm font-medium text-accent mb-1">Annual Savings</p>
                     <p className="text-xs text-muted-foreground">
@@ -285,15 +290,22 @@ function CheckoutContent() {
               </div>
             )}
 
+            {isTrial && (
+              <div className="rounded-lg bg-primary/5 border border-primary/20 p-4">
+                <p className="text-sm font-medium text-foreground mb-1">3 months free</p>
+                <p className="text-xs text-muted-foreground">
+                  $0 today. Card on file, nothing charged for 90 days, then $12/month. Cancel anytime before it renews.
+                </p>
+              </div>
+            )}
+
             {/* Promo code */}
             <div className="flex flex-col gap-2 pt-2 border-t">
               {promoApplied ? (
                 <div className="flex items-center justify-between rounded-lg bg-accent/10 border border-accent/20 px-3 py-2">
                   <span className="text-sm font-medium text-foreground flex items-center gap-2">
                     <IconTag className="h-4 w-4 shrink-0 text-accent" />
-                    {promoApplied?.startsWith("FOUNDER")
-                      ? `${promoApplied} applied. Free for ${promoApplied === "FOUNDER3" ? "3 months" : promoApplied === "FOUNDER6" ? "6 months" : "1 year"}.`
-                      : promoApplied === "BUSINESS"
+                    {promoApplied === "BUSINESS"
                         ? "BUSINESS applied. 100% off for 3 months."
                         : promoApplied === "STUDENT"
                           ? "STUDENT applied. 100% off for 6 months."
@@ -322,22 +334,23 @@ function CheckoutContent() {
                   {promoError && (
                     <p className="text-sm text-destructive font-medium">{promoError}</p>
                   )}
-                  {tier?.name === "plus" && (
+                  {!isTrial && tier?.name === "plus" && (
                     <div className="rounded-xl border-2 border-[#CB4B00]/30 bg-[#CB4B00]/5 p-4">
                       <p className="text-base font-semibold text-foreground mb-1">
-                        Founding actor? Get 3 months of Plus, free.
+                        First time on Plus? Get 3 months free.
                       </p>
                       <p className="text-sm text-muted-foreground mb-3">
-                        No waiting. I&apos;ll apply your founder coupon right now. Card required, nothing charged for 90 days, cancel anytime.
+                        Card required, nothing charged for 90 days, then $12/month. Cancel anytime.
                       </p>
                       <Button
-                        type="button"
+                        asChild
                         size="sm"
                         className="gap-2 bg-[#CB4B00] text-white hover:bg-[#B03000]"
-                        onClick={() => applyPromo("FOUNDER3")}
                       >
-                        <IconGift className="h-4 w-4" />
-                        Get my founder coupon
+                        <Link href="/checkout?tier=plus&period=monthly&trial=1">
+                          <IconGift className="h-4 w-4" />
+                          Start 3 months free
+                        </Link>
                       </Button>
                     </div>
                   )}

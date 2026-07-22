@@ -77,7 +77,8 @@ class CreateCheckoutSessionRequest(BaseModel):
     billing_period: str  # "monthly" or "annual"
     success_url: str
     cancel_url: str
-    promo_code: str | None = None  # e.g. "FOUNDER" for founding user discount
+    promo_code: str | None = None  # student/teacher/startup Stripe coupons
+    trial: bool = False  # start a 90-day Plus trial (first-time Plus members)
 
 
 class CreateCheckoutSessionResponse(BaseModel):
@@ -259,34 +260,36 @@ async def create_checkout_session(
             detail=f"Stripe price ID not configured for {tier.display_name} {request.billing_period} plan",
         )
 
-    # Resolve promo code. Founding actor codes grant a free trial (card on file,
-    # $0 today, then rolls into Plus monthly). Other codes apply a Stripe coupon.
+    # First-time Plus members can start a 90-day free trial: card on file, $0
+    # today, rolls into Plus monthly after. No code needed — this replaces the
+    # retired FOUNDER3 coupon.
     discounts = []
     trial_period_days: int | None = None
-    if request.promo_code:
-        promo = request.promo_code.strip().upper()
-        if promo == "FOUNDER3":
-            if tier.name != "plus":
-                raise HTTPException(
-                    status_code=400,
-                    detail="The founding actor offer is only valid for the Plus plan.",
-                )
-            # 3 months free, then auto-converts to Plus monthly ($12/mo).
-            trial_period_days = 90
-            # Force monthly rollover regardless of the billing toggle they picked.
-            price_id = tier.stripe_monthly_price_id
-            if not price_id:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Stripe price ID not configured for the Plus monthly plan.",
-                )
-        elif promo in ("FOUNDER", "FOUNDER6", "FOUNDER12"):
-            # Retired founder codes — only FOUNDER3 (3 months) is live now.
+    if request.trial:
+        if tier.name != "plus":
             raise HTTPException(
                 status_code=400,
-                detail="That founder code has expired. Use FOUNDER3 for 3 months of Plus free.",
+                detail="The free trial is only available on the Plus plan.",
             )
-        elif promo in ("STARTUPS", "STARTUPS24"):
+        if subscription and subscription.stripe_subscription_id:
+            raise HTTPException(
+                status_code=400,
+                detail="The free trial is only for first-time Plus members.",
+            )
+        # 3 months free, then auto-converts to Plus monthly ($12/mo).
+        trial_period_days = 90
+        # Force monthly rollover regardless of the billing toggle they picked.
+        price_id = tier.stripe_monthly_price_id
+        if not price_id:
+            raise HTTPException(
+                status_code=400,
+                detail="Stripe price ID not configured for the Plus monthly plan.",
+            )
+
+    # Promo codes apply a Stripe coupon (student / teacher / startup discounts).
+    if request.promo_code:
+        promo = request.promo_code.strip().upper()
+        if promo in ("STARTUPS", "STARTUPS24"):
             startups_coupon_id = os.getenv("STRIPE_STARTUPS_COUPON_ID")
             if startups_coupon_id:
                 discounts = [{"coupon": startups_coupon_id}]
@@ -346,7 +349,8 @@ async def create_checkout_session(
         "metadata": {
             "user_id": current_user.id,
             "tier_id": tier.id,
-            "billing_period": request.billing_period,
+            # Trial forces monthly rollover, so record that, not what they picked.
+            "billing_period": "monthly" if trial_period_days else request.billing_period,
         },
     }
     if discounts:

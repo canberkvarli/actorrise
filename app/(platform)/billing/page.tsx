@@ -174,10 +174,10 @@ export default function BillingPage() {
                       Upgrade Plan
                     </Link>
                   </Button>
-                  {/* Self-serve founder coupon: deep-links checkout with the
-                      coupon pre-applied (3 months of Plus, free). */}
+                  {/* Self-serve free trial: deep-links checkout with the 90-day
+                      Plus trial pre-selected (3 months free, card on file). */}
                   <Button asChild size="sm" variant="outline" className="gap-2 w-fit border-[#CB4B00]/40 text-[#CB4B00] hover:bg-[#CB4B00]/5 hover:text-[#CB4B00]">
-                    <Link href="/checkout?tier=plus&period=monthly&promo=FOUNDER3">
+                    <Link href="/checkout?tier=plus&period=monthly&trial=1">
                       <IconGift className="h-4 w-4" />
                       Get 3 months of Plus, free
                     </Link>

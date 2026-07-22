@@ -74,6 +74,8 @@ export function UpgradePrompt({
   };
 
   const planDetails = getPlanDetails();
+  // Free users get the 90-day Plus trial ($0 today). Higher-tier upsells stay paid.
+  const canTrial = planDetails.name === "Plus" && currentPlan === "free";
 
   return (
     <Card className="border-accent">
@@ -93,12 +95,21 @@ export function UpgradePrompt({
       </CardHeader>
       <CardContent className="space-y-4">
         <div>
-          <div className="flex items-baseline gap-2 mb-1">
-            <span className="text-2xl font-bold">{planDetails.price}</span>
-            <span className="text-sm text-muted-foreground">
-              or {planDetails.annualPrice} ({planDetails.saveBadge})
-            </span>
-          </div>
+          {canTrial ? (
+            <div className="mb-1">
+              <span className="text-2xl font-bold">3 months free</span>
+              <p className="text-xs text-muted-foreground mt-1">
+                $0 today. Then $12/month, cancel anytime before it renews.
+              </p>
+            </div>
+          ) : (
+            <div className="flex items-baseline gap-2 mb-1">
+              <span className="text-2xl font-bold">{planDetails.price}</span>
+              <span className="text-sm text-muted-foreground">
+                or {planDetails.annualPrice} ({planDetails.saveBadge})
+              </span>
+            </div>
+          )}
           <Badge variant="secondary" className="text-xs">
             Upgrade from {currentPlan}
           </Badge>
@@ -123,8 +134,14 @@ export function UpgradePrompt({
           </Button>
         )}
         <Button asChild className="flex-1">
-          <Link href={`/pricing?recommended=${recommendedPlan}`}>
-            Upgrade to {planDetails.name}
+          <Link
+            href={
+              canTrial
+                ? `/checkout?tier=plus&period=monthly&trial=1`
+                : `/pricing?recommended=${recommendedPlan}`
+            }
+          >
+            {canTrial ? "Start 3 months free" : `Upgrade to ${planDetails.name}`}
           </Link>
         </Button>
       </CardFooter>
