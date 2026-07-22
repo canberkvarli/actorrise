@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 from app.core.database import get_db
 from app.core.security import verify_supabase_token
 from app.models.actor import ActorProfile
@@ -97,12 +99,15 @@ def get_current_user(
             db.refresh(existing_user)
             return existing_user
 
-        # Create new user (all users receive marketing emails; they can unsubscribe)
+        # Create new user (all users receive marketing emails; they can unsubscribe).
+        # Reverse trial: full unlimited monologue rehearsals for the first 14 days,
+        # no card, so they feel the value before the free lifetime cap applies.
         user = User(
             email=email,
             supabase_id=supabase_id,
             name=name,
             marketing_opt_in=True,
+            monologue_trial_ends_at=datetime.now(timezone.utc) + timedelta(days=14),
         )
         db.add(user)
         try:
@@ -208,6 +213,11 @@ def get_me(
         "has_completed_profile_onboarding": current_user.has_completed_profile_onboarding,
         "has_seen_first_rehearsal": current_user.has_seen_first_rehearsal,
         "has_ever_rehearsed": has_ever_rehearsed,
+        "monologue_trial_ends_at": (
+            current_user.monologue_trial_ends_at.isoformat()
+            if current_user.monologue_trial_ends_at
+            else None
+        ),
         "referral_source": current_user.referral_source,
         "last_seen_feature_id": current_user.last_seen_feature_id,
         "is_moderator": current_user.is_moderator,

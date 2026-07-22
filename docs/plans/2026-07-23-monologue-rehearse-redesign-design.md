@@ -81,8 +81,22 @@ UPDATE pricing_tiers SET features = jsonb_set(features, '{monologue_sessions}', 
 
 **Heads-up — existing free users:** the cap counts ALL historical `monologue_sessions`, so the ~22 who already rehearsed will have prior runs count against the 3 (a few may be instantly over). The reverse trial (below) mitigates by giving everyone a fresh full-access window on rollout. If Canberk wants a cleaner slate instead, count only sessions after a launch-date cutoff.
 
-### 7. Reverse trial — APPROVED as the follow-up (not in this branch)
-Auto-grant every new signup full (Plus-level) monologue access for ~7-14 days, no card. When it lapses, drop to the metered free tier (3 lifetime). Maximizes activation before the wall AND gives existing users a fresh window when the meter arms. Separate branch; needs: a trial state on signup (no Stripe), the gate checking "within trial -> unlimited, else metered", and light UI ("X days of full access left").
+### 7. Reverse trial — BUILT on this branch (2026-07-23)
+New signups get 14 days of unlimited monologue rehearsals, no card. When it lapses they drop to the free lifetime cap (3). Scoped to the monologue loop only (NOT ScenePartner, which has real TTS cost).
+
+- `users.monologue_trial_ends_at` (nullable timestamptz). Model: `app/models/user.py`.
+- Signup sets it to now + 14 days: `app/api/auth.py`.
+- Gate (`rate_limiting.py`): free user within trial -> unlimited (still records usage for analytics). After trial -> the 3-lifetime cap, but counted only for sessions AFTER the trial end (`since=trial_end`), so trial usage doesn't eat the post-trial free floor.
+- Exposed on `/me` as `monologue_trial_ends_at`; `/work` start screen shows "N days of full access left" (`MonologueCueing.tsx`, `lib/auth.tsx`).
+
+**Deploy steps (in order):**
+1. Deploy the branch.
+2. `python backend/scripts/add_monologue_trial.py` — adds the column (safe anytime).
+3. When ready to monetize, do these together so nobody is instantly walled:
+   - `python backend/scripts/add_monologue_trial.py --backfill` — grants every existing user a fresh 14-day window from now.
+   - Arm the meter SQL (section 6) — free `monologue_sessions` -> 3.
+
+**Verify on preview (local bypasses gates):** new user sees "14 days of full access left" + unlimited rehearsals; after trial (or set `monologue_trial_ends_at` to the past), 4th rehearsal -> paywall.
 
 ## Implementation order
 

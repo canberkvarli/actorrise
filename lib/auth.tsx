@@ -20,6 +20,8 @@ interface User {
   has_completed_profile_onboarding?: boolean;
   has_seen_first_rehearsal?: boolean;
   has_ever_rehearsed?: boolean;
+  /** Reverse trial: ISO timestamp when unlimited rehearsals lapse (null = none). */
+  monologue_trial_ends_at?: string | null;
   referral_source?: string | null;
   last_seen_feature_id?: string | null;
   is_moderator?: boolean;

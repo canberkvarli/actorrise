@@ -50,6 +50,12 @@ class User(Base):
     # Script upload tracking (monotonic counter — never decremented on delete)
     total_scripts_uploaded = Column(Integer, default=0, nullable=False, server_default=text('0'))
 
+    # Reverse trial: new signups get full (unlimited) monologue rehearsals until
+    # this timestamp, no card. After it lapses they drop to the free lifetime cap
+    # (3 rehearsals). Null = never granted a trial (treated as lapsed). Set at
+    # signup; backfilled for existing users when the meter is armed.
+    monologue_trial_ends_at = Column(DateTime(timezone=True), nullable=True)
+
     # Relationships
     actor_profile = relationship("ActorProfile", back_populates="user", uselist=False)
     subscription = relationship("UserSubscription", back_populates="user", uselist=False)

@@ -14,7 +14,7 @@ Usage:
         # Proceed with search logic
 """
 
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Callable
 
 from app.api.auth import get_current_user
@@ -106,16 +106,28 @@ class FeatureGate:
             )
 
         elif self.feature == "monologue_work":
-            # Free tier gets a LIFETIME allowance (e.g. 3 total rehearsals), not a
-            # monthly reset — the taste that earns the upgrade. Paid tiers are -1
-            # (unlimited) and short-circuit before any counting.
+            limit = features.get("monologue_sessions", 0)
+            trial_end = getattr(current_user, "monologue_trial_ends_at", None)
+            in_trial = trial_end is not None and trial_end > datetime.now(timezone.utc)
+            # Reverse trial: during the first 14 days, rehearsals are unlimited (no
+            # card). We still record usage for analytics, but it does NOT count
+            # toward the post-trial cap (see `since` below).
+            if limit != -1 and in_trial:
+                if self.increment:
+                    self._increment_usage(current_user.id, "monologue_sessions", db)
+                return True
+            # After the trial (or if none), free tier gets a LIFETIME allowance
+            # (e.g. 3 rehearsals) counted only from when the trial ended, so the
+            # free floor isn't eaten by trial usage. Paid tiers are -1 (unlimited).
+            since = trial_end.date() if trial_end is not None else None
             return await self._check_usage_limit(
                 current_user.id,
                 "monologue_sessions",
-                features.get("monologue_sessions", 0),
+                limit,
                 db,
                 feature_name="Monologue work sessions",
                 lifetime=True,
+                since=since,
             )
 
         elif self.feature == "craft_coach":
@@ -225,6 +237,7 @@ class FeatureGate:
         db: Session,
         feature_name: str,
         lifetime: bool = False,
+        since: date | None = None,
     ) -> bool:
         """
         Check if user is within usage limits for a feature.
@@ -262,7 +275,7 @@ class FeatureGate:
         # Get usage — lifetime total (survives month boundaries) for free caps
         # like the monologue rehearsals, or the current calendar month otherwise.
         usage = (
-            self._get_lifetime_usage(user_id, usage_field, db)
+            self._get_lifetime_usage(user_id, usage_field, db, since=since)
             if lifetime
             else self._get_monthly_usage(user_id, usage_field, db)
         )
@@ -301,15 +314,19 @@ class FeatureGate:
 
         return int(result)
 
-    def _get_lifetime_usage(self, user_id: int, field: str, db: Session) -> int:
+    def _get_lifetime_usage(
+        self, user_id: int, field: str, db: Session, since: date | None = None
+    ) -> int:
         """Get user's all-time usage for a feature (no month boundary). Used for
-        lifetime free caps like the 3 free monologue rehearsals."""
-        result = (
-            db.query(func.coalesce(func.sum(getattr(UsageMetrics, field)), 0))
-            .filter(UsageMetrics.user_id == user_id)
-            .scalar()
+        lifetime free caps like the 3 free monologue rehearsals. When `since` is
+        given (the reverse-trial end date), only usage strictly after that date
+        counts, so trial rehearsals don't eat the post-trial free floor."""
+        q = db.query(func.coalesce(func.sum(getattr(UsageMetrics, field)), 0)).filter(
+            UsageMetrics.user_id == user_id
         )
-        return int(result)
+        if since is not None:
+            q = q.filter(UsageMetrics.date > since)
+        return int(q.scalar())
 
     def _increment_usage(self, user_id: int, field: str, db: Session):
         """Increment usage counter for today."""

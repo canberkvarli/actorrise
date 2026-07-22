@@ -12,6 +12,7 @@ import type { Monologue } from "@/types/actor";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useToggleFavorite } from "@/hooks/useBookmarks";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
+import { useAuth } from "@/lib/auth";
 import { wordMatchScore, toDeliverableLines, spokenPrefixCount } from "@/lib/lineMatching";
 import api from "@/lib/api";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
@@ -87,6 +88,15 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
       },
     );
   }, [favorited, monologue.id, toggleFav]);
+
+  // Reverse trial: show how many days of unlimited access are left, so the
+  // window feels real and worth using before it lapses to the free cap.
+  const { user } = useAuth();
+  const trialEnd = user?.monologue_trial_ends_at ? new Date(user.monologue_trial_ends_at) : null;
+  const trialDaysLeft = trialEnd
+    ? Math.ceil((trialEnd.getTime() - Date.now()) / 86_400_000)
+    : 0;
+  const inTrial = trialDaysLeft > 0;
 
   const completed = started && activeIndex >= lines.length;
 
@@ -278,6 +288,11 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                 {lines.length} line{lines.length === 1 ? "" : "s"}
                 {tapToAdvance && " · tap anywhere to advance"}
               </p>
+              {inTrial && (
+                <p className="text-xs uppercase tracking-[0.2em] text-[#CB4B00]/85">
+                  {trialDaysLeft} {trialDaysLeft === 1 ? "day" : "days"} of full access left
+                </p>
+              )}
             </div>
 
             <button
