@@ -647,11 +647,25 @@ export default function RehearsalPage() {
       const score = wordMatchScore(expected, text);
       const willAdvance = !expected || score >= 0.5;
 
-      // Build per-word match result from expected line words (fuzzy so homophones highlight correctly)
+      // Build per-word match result from expected line words. Match SEQUENTIALLY
+      // (left-to-right with an advancing cursor), mirroring the live SR path — so a
+      // word that repeats later in the line, or a common word, isn't highlighted
+      // until the reader actually reaches it. Set-based matching used to light up
+      // every occurrence at once, highlighting words further down the line before
+      // you got there.
       const transcriptWordArr = normWords(text).split(/\s+/).filter(Boolean);
-      const words = expected
-        ? normWords(expected).split(/\s+/).filter(Boolean).map(w => ({ word: w, matched: transcriptWordArr.some(tw => wordsMatch(w, tw)) }))
-        : [];
+      const expectedWordArr = expected ? normWords(expected).split(/\s+/).filter(Boolean) : [];
+      const words: { word: string; matched: boolean }[] = [];
+      let matchCursor = 0;
+      for (const w of expectedWordArr) {
+        const found = fuzzyIndexOf(transcriptWordArr, w, matchCursor);
+        if (found !== -1) {
+          words.push({ word: w, matched: true });
+          matchCursor = found + 1;
+        } else {
+          words.push({ word: w, matched: false });
+        }
+      }
 
       setWordMatchResult({ words, willAdvance });
 
