@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconArrowLeft, IconCheck } from "@tabler/icons-react";
+import { IconArrowLeft, IconCheck, IconPlayerPlayFilled } from "@tabler/icons-react";
 import api from "@/lib/api";
 import type { Monologue } from "@/types/actor";
 import { Button } from "@/components/ui/button";
@@ -129,10 +129,19 @@ export default function MonologueMemorizePage() {
     <div className={CONTAINER}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <BackLink onClick={() => router.back()} />
-        <MarkMemorizedButton
-          monologueId={Number(id)}
-          memorized={!!monologue.memorized}
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            className="mb-6"
+            onClick={() => router.push(`/monologue/${id}/work`)}
+          >
+            <IconPlayerPlayFilled className="h-4 w-4" />
+            Rehearse
+          </Button>
+          <MarkMemorizedButton
+            monologueId={Number(id)}
+            memorized={!!monologue.memorized}
+          />
+        </div>
       </div>
       <MemorizeView
         title={monologue.title}
