@@ -54,6 +54,14 @@ const faqs = [
 function getFeaturesList(tier: PricingTier): string[] {
   const features: string[] = [];
 
+  // Monologue rehearsals — the core value
+  const rehearsals = tier.features.monologue_sessions;
+  if (rehearsals === -1) {
+    features.push("Unlimited monologue rehearsals");
+  } else if (rehearsals && rehearsals > 0) {
+    features.push(`${rehearsals} free rehearsals, then 2 weeks of Plus free`);
+  }
+
   // AI searches
   if (tier.features.ai_searches_per_month === -1) {
     features.push("Unlimited AI searches");
@@ -79,13 +87,6 @@ function getFeaturesList(tier: PricingTier): string[] {
     features.push("Unlimited script uploads");
   } else if (scripts && scripts > 0) {
     features.push(`${scripts} script upload${scripts > 1 ? "s" : ""}`);
-  }
-
-  // Bookmarks
-  if (tier.features.bookmarks_limit === -1) {
-    features.push("Unlimited bookmarks");
-  } else {
-    features.push(`${tier.features.bookmarks_limit} bookmarks`);
   }
 
   // Overdone filter

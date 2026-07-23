@@ -12,6 +12,7 @@ export interface PricingTier {
   annual_price_cents: number | null;
   features: {
     ai_searches_per_month: number;
+    monologue_sessions?: number;
     bookmarks_limit: number;
     recommendations: boolean;
     scene_partner_scripts?: number;
@@ -38,7 +39,8 @@ export const DEFAULT_PRICING_TIERS: PricingTier[] = [
     monthly_price_cents: 0,
     annual_price_cents: 0,
     features: {
-      ai_searches_per_month: 5,
+      ai_searches_per_month: 10,
+      monologue_sessions: 2,
       bookmarks_limit: 3,
       recommendations: true,
       download_formats: ["pdf", "docx"],
@@ -58,6 +60,7 @@ export const DEFAULT_PRICING_TIERS: PricingTier[] = [
     annual_price_cents: 5900,
     features: {
       ai_searches_per_month: 25,
+      monologue_sessions: -1,
       bookmarks_limit: 15,
       recommendations: true,
       download_formats: ["pdf", "docx"],
@@ -76,6 +79,7 @@ export const DEFAULT_PRICING_TIERS: PricingTier[] = [
     annual_price_cents: 9900,
     features: {
       ai_searches_per_month: -1,
+      monologue_sessions: -1,
       bookmarks_limit: -1,
       recommendations: true,
       download_formats: ["pdf", "docx"],
@@ -94,6 +98,7 @@ export const DEFAULT_PRICING_TIERS: PricingTier[] = [
     annual_price_cents: 19900,
     features: {
       ai_searches_per_month: -1,
+      monologue_sessions: -1,
       bookmarks_limit: -1,
       recommendations: true,
       download_formats: ["pdf", "docx"],
