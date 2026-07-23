@@ -17,9 +17,10 @@ import api from "@/lib/api";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { GhostLight } from "@/components/brand/GhostLight";
 
-/** Fraction of the line's words we need to hear before advancing — high so it
- *  only moves on once you've basically finished the line, not mid-sentence. */
-const MATCH_THRESHOLD = 0.9;
+/** How far through the line (in order) you must read before it advances — high
+ *  enough that it won't jump mid-sentence, low enough that a dropped word or two
+ *  on a long line doesn't strand you. */
+const MATCH_THRESHOLD = 0.85;
 /** Silence (ms) on the current line before we cue it (reveal the text). */
 const STALL_MS = 3000;
 
@@ -175,12 +176,18 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
     return () => clearTimeout(t);
   }, [transcript, activeIndex, started, completed, isListening]);
 
-  // Advance when enough of the current line has been spoken — measured against
-  // the cumulative transcript, so pausing mid-line never loses progress.
+  // Advance once you've read most of the current line, measured against the
+  // cumulative transcript (so a mid-line pause never loses progress). Two paths
+  // so a missed word doesn't strand you: the in-order highlight reached ~the end
+  // (tolerant of dropped words via lookahead), OR nearly every word was heard.
   useEffect(() => {
     if (!started || completed || tapToAdvance) return;
     const current = lines[activeIndex];
-    if (current && wordMatchScore(current, transcript) >= MATCH_THRESHOLD) {
+    if (!current) return;
+    const wordCount = current.split(/\s+/).filter(Boolean).length;
+    if (wordCount === 0) return;
+    const inOrder = spokenPrefixCount(current, transcript, 4);
+    if (inOrder >= wordCount * MATCH_THRESHOLD || wordMatchScore(current, transcript) >= 0.9) {
       goToLineAndReset(activeIndex + 1);
     }
   }, [transcript, activeIndex, started, completed, tapToAdvance, lines, goToLineAndReset]);
