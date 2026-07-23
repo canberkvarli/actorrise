@@ -1755,8 +1755,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             <CardContent className="pt-4 pb-4 flex flex-col items-center text-center gap-3">
               <p className="text-sm text-destructive font-medium">{searchError}</p>
               {searchUpgradeUrl && (
-                <Link href={searchUpgradeUrl}>
-                  <Button variant="default" size="sm">View plans & upgrade</Button>
+                <Link href="/checkout?tier=plus&period=monthly&trial=1">
+                  <Button variant="default" size="sm">Start 2 weeks free</Button>
                 </Link>
               )}
               <Button variant="outline" size="sm" onClick={() => { setSearchError(null); setSearchUpgradeUrl(null); searchMode === "film_tv" ? handleSearch() : performSearch(playsQuery, filters); }}>
