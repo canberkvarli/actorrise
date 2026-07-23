@@ -2036,7 +2036,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 </div>
               </div>
             </motion.div>
-          ) : hasSearched && results.length === 0 ? (
+          ) : hasSearched && results.length === 0 && !searchError ? (
             <motion.div
               key="no-results"
               initial={{ opacity: 0, y: 16 }}
