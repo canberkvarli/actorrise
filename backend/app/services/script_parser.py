@@ -81,6 +81,44 @@ _INLINE_STAGE_DIR = re.compile(
 # Lines that are just act/scene references embedded in dialogue (e.g. "171 A Midsummer Night's Dream ACT 5. SC. 1")
 _PAGE_HEADER = re.compile(r'^\d+\s+.*(ACT|Act|SCENE|Scene)\s+\d', re.IGNORECASE)
 
+# A line that is only a page number, optionally with trailing dots (screenplay
+# page breaks leave things like "22.." or "33." on their own line).
+_PAGE_NUM_ONLY = re.compile(r'^\d{1,4}[.\s]*$')
+
+# A screenplay speaker cue carrying a continuation/more marker: "RACHEL (CONT'D)",
+# "RYAN (CONT’D)", "JANE (MORE)". Captures the bare character name.
+_CHAR_CONTD = re.compile(r"^([A-Z][A-Z\s'\-]{0,30})\s*\(\s*(?:CONT'?[D’]?D?|CONT[’']D|MORE)\s*\)\s*$", re.IGNORECASE)
+
+# A lone (MORE)/(CONT'D) marker on its own line, sometimes doubled/garbled by PDF
+# extraction ("((MMOORREE))"). Treated as noise.
+_MORE_MARKER = re.compile(r"^\(+\s*[MORE’'CONTD\s]+\s*\)+$", re.IGNORECASE)
+
+
+def _is_screenplay_action(text: str, character_names: List[str]) -> bool:
+    """Detect a screenplay action/description line (not spoken dialogue).
+
+    Action lines narrate characters in the third person: "Rachel takes the camera
+    out of her bag.", "Ryan and Rachel are sitting...", "They stare into each
+    other's eyes." The tell is a known character name (or a group pronoun) followed
+    immediately by a lowercase verb. Dialogue that merely addresses a character
+    ("Rachel...", "Rachel, come here.") does NOT match, because a name used as a
+    vocative isn't followed by whitespace + a lowercase verb.
+
+    Only used when the caller supplies the scene's character names (screenplay
+    uploads); play/verse parsing passes none and is unaffected.
+    """
+    if not character_names:
+        return False
+    s = text.strip()
+    if not s:
+        return False
+    leads = [n.strip() for n in character_names if n.strip()]
+    leads += ["They", "He", "She", "It"]
+    for name in leads:
+        if re.match(rf"^{re.escape(name)}\b\s+[a-z]", s, re.IGNORECASE):
+            return True
+    return False
+
 
 def _is_stage_direction_line(text: str) -> bool:
     """Check if a line looks like a stage direction rather than dialogue."""
@@ -294,10 +332,14 @@ def _strip_embedded_stage_directions(text: str) -> str:
 # Dialogue parser (deterministic, lossless)
 # ---------------------------------------------------------------------------
 
-def parse_dialogue(text: str) -> List[Dict]:
+def parse_dialogue(text: str, character_names=None) -> List[Dict]:
     text = _preprocess_text(text)
     """
     Parse script text into dialogue sections using regex.
+
+    When character_names is supplied (screenplay uploads), scene headings, action
+    lines that narrate those characters, and page-break markers are stripped so the
+    result is spoken dialogue only. Play/verse parsing passes none (unchanged).
 
     Returns list of sections, each with:
       - characters: set of character names
@@ -310,6 +352,31 @@ def parse_dialogue(text: str) -> List[Dict]:
     for line in text.split('\n'):
         stripped = line.strip()
         if not stripped:
+            continue
+
+        # Sluglines / scene headings / stage transitions (INT./EXT./ACT/ENTER/FADE…)
+        # are not dialogue. Skip them and drop the speaker context so the action
+        # that follows a heading doesn't get attached to the previous speaker.
+        if _is_excluded(stripped):
+            current_character = None
+            continue
+
+        # Page-break debris: a bare page number ("22..") or a lone (MORE)/(CONT'D).
+        if _PAGE_NUM_ONLY.match(stripped) or _MORE_MARKER.match(stripped):
+            continue
+
+        # A continuation cue ("RACHEL (CONT'D)") resumes the same character —
+        # normalize it to a plain speaker cue so it isn't misread as dialogue.
+        mc = _CHAR_CONTD.match(stripped)
+        if mc:
+            character = mc.group(1).strip()
+            if not _is_excluded(character):
+                if character not in current_section["characters"] and current_section["lines"]:
+                    if len(current_section["characters"]) >= 2:
+                        sections.append(current_section)
+                        current_section = {"characters": set(), "lines": []}
+                current_section["characters"].add(character)
+                current_character = character
             continue
 
         # Try: CHARACTER: dialogue (on same line)
@@ -360,6 +427,14 @@ def parse_dialogue(text: str) -> List[Dict]:
         if current_character:
             # Skip stage direction lines embedded in dialogue
             if _is_stage_direction_line(stripped):
+                continue
+            # Skip screenplay action that narrates the characters (e.g.
+            # "Rachel takes the camera out of her bag.") — not spoken dialogue.
+            # Drop the speaker context too: multi-line action ("...Presses record
+            # and / points it at Ryan.") then gets ignored until the next cue, and
+            # well-formed dialogue always resumes with a cue (incl. CONT'D).
+            if _is_screenplay_action(stripped, character_names):
+                current_character = None
                 continue
             # Skip page headers (e.g. "171 A Midsummer Night's Dream ACT 5. SC. 1")
             if _PAGE_HEADER.match(stripped):
@@ -439,6 +514,58 @@ def filter_two_person_scenes(
             continue
 
         scenes.append(section)
+
+    return scenes
+
+
+def _recover_dropped_dialogue(scenes: List[Dict], raw_text: str) -> List[Dict]:
+    """Lossless guard against LLM line-dropping.
+
+    LLM extraction (mode="full") can silently drop short interjections and merge
+    same-speaker beats, so an actor's side comes back missing lines (prod bug,
+    Ayush 2026-07-23). The deterministic `parse_dialogue` never drops dialogue —
+    so for each extracted scene, re-parse the source for that scene's two
+    characters and, when it clearly recovers more lines, swap them in. The AI's
+    metadata (title, tone, description…) is kept; only the line list is repaired.
+
+    Conservative on purpose: only overrides when the deterministic parse yields a
+    meaningfully larger line set, so already-good scenes are left untouched.
+    """
+    if not raw_text or not scenes:
+        return scenes
+
+    for scene in scenes:
+        c1 = (scene.get("character_1") or "").strip()
+        c2 = (scene.get("character_2") or "").strip()
+        ai_lines = scene.get("lines") or []
+        if not c1 or not c2:
+            continue
+
+        want = {c1.casefold(), c2.casefold()}
+        det_lines = [
+            ln
+            for sec in parse_dialogue(raw_text, character_names=[c1, c2])
+            for ln in sec["lines"]
+            if ln["character"].casefold() in want
+        ]
+
+        # Only repair when the deterministic parse recovered materially more
+        # dialogue than the LLM produced (avoids churn on already-clean scenes).
+        if len(det_lines) >= len(ai_lines) + 2:
+            canon = {c1.casefold(): c1, c2.casefold(): c2}
+            scene["lines"] = [
+                {
+                    "character": canon.get(ln["character"].casefold(), ln["character"]),
+                    "text": ln["text"],
+                    "stage_direction": ln.get("stage_direction"),
+                }
+                for ln in det_lines
+            ]
+            print(
+                f"Lossless guard: recovered {len(det_lines) - len(ai_lines)} dropped "
+                f"line(s) for scene '{scene.get('title')}' "
+                f"({len(ai_lines)} -> {len(det_lines)})"
+            )
 
     return scenes
 
@@ -1421,6 +1548,11 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
                         raw_text, characters, script_title, script_author,
                         on_progress=on_progress, cancel_event=cancel_event
                     )
+
+        # Lossless guard: repair any dialogue the LLM dropped/merged, using the
+        # deterministic parser as the source of truth (before the length filter, so
+        # recovered lines count toward the 4-line minimum).
+        scenes = _recover_dropped_dialogue(scenes, raw_text)
 
         # Filter out scenes with fewer than 4 lines — too short for rehearsal
         before = len(scenes)
