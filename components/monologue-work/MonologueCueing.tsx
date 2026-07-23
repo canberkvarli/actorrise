@@ -36,15 +36,6 @@ function lineFontSize(len: number): string {
   return "clamp(1.55rem, 4.2vw, 2.7rem)";
 }
 
-interface DeliveryFeedback {
-  rating: number;
-  overall_notes: string;
-  line_accuracy?: string | null;
-  pacing?: string | null;
-  emotional_tone?: string | null;
-  tips?: string[] | null;
-}
-
 interface MonologueCueingProps {
   monologue: Monologue;
   onExit?: () => void;
@@ -66,8 +57,6 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [revealCurrent, setRevealCurrent] = useState(false);
   const [offBook, setOffBook] = useState(false);
-  const [notes, setNotes] = useState<DeliveryFeedback | null>(null);
-  const [notesStatus, setNotesStatus] = useState<"idle" | "loading" | "done" | "error" | "skipped">("idle");
   const [paywallOpen, setPaywallOpen] = useState(false);
 
   // Save/bookmark from inside the rehearsal. Optimistic local state gives instant
@@ -100,60 +89,16 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
 
   const completed = started && activeIndex >= lines.length;
 
-  const heardRef = useRef<string[]>([]);
-  const startTimeRef = useRef<number | null>(null);
-  const fetchedRef = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLParagraphElement>(null);
 
-  const runAnalysis = useCallback(async () => {
-    setNotesStatus("loading");
-    try {
-      const duration = startTimeRef.current ? (Date.now() - startTimeRef.current) / 1000 : undefined;
-      const res = await api.post<DeliveryFeedback>("/api/monologue-work/analyze", {
-        monologue_id: monologue.id,
-        transcript: heardRef.current.join(" "),
-        duration_seconds: duration,
-      });
-      setNotes(res.data);
-      setNotesStatus("done");
-    } catch {
-      setNotesStatus("error");
-    }
-  }, [monologue.id]);
-
-  const goToLine = useCallback(
-    (next: number) => {
-      setRevealCurrent(false);
-      setActiveIndex(next);
-      if (next >= lines.length && !fetchedRef.current) {
-        fetchedRef.current = true;
-        // Only ask the coach for notes if we actually heard the actor. On phones
-        // (no speech API) or a dead mic there's no transcript, so skip the call
-        // and show a clean curtain instead of the "I didn't catch anything" message.
-        if (heardRef.current.length > 0) {
-          void runAnalysis();
-        } else {
-          setNotesStatus("skipped");
-        }
-      }
-    },
-    [lines.length, runAnalysis],
-  );
-
-  // Accumulate what the actor said for the coach's end-of-run notes. Advancing
-  // to the next line is driven by the cumulative transcript in an effect below,
-  // not per-segment here, so a mid-line pause never loses progress.
-  const handleHeard = useCallback(
-    (heard: string) => {
-      if (!started || completed) return;
-      heardRef.current.push(heard);
-    },
-    [started, completed],
-  );
+  const goToLine = useCallback((next: number) => {
+    setRevealCurrent(false);
+    setActiveIndex(next);
+  }, []);
 
   const { transcript, isListening, isSupported, startListening, stopListening, resetTranscript } =
-    useSpeechRecognition({ continuous: true, interimResults: true, onResult: handleHeard });
+    useSpeechRecognition({ continuous: true, interimResults: true });
 
   // No Web Speech API (iOS Safari, most phones) → run as a tap-to-advance
   // teleprompter instead of silently failing. Voice-follow is a bonus, not a
@@ -203,12 +148,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   }, [completed, isListening, stopListening]);
 
   const resetRun = useCallback(() => {
-    heardRef.current = [];
-    startTimeRef.current = Date.now();
-    fetchedRef.current = false;
     resetTranscript();
-    setNotes(null);
-    setNotesStatus("idle");
     setRevealCurrent(false);
     setActiveIndex(0);
   }, [resetTranscript]);
@@ -349,64 +289,9 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             <h2 className="text-3xl text-white/90" style={{ fontFamily: SERIF }}>
               You made it through.
             </h2>
-
-            {notesStatus === "loading" && (
-              <div className="flex items-center gap-2 text-sm text-white/50">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#CB4B00]" />
-                Reading your performance…
-              </div>
-            )}
-            {notesStatus === "error" && (
-              <button onClick={runAnalysis} className="text-sm text-[#CB4B00] hover:underline">
-                Notes didn&apos;t load — try again
-              </button>
-            )}
-            {notesStatus === "skipped" && (
-              <p className="max-w-xs text-sm leading-relaxed text-white/45">
-                That&apos;s a full run. When you rehearse out loud on a voice-enabled browser, I&apos;ll
-                give you director&apos;s notes on your delivery too.
-              </p>
-            )}
-            {notesStatus === "done" && notes && (
-              <motion.div
-                initial="hidden"
-                animate="show"
-                variants={{ show: { transition: { staggerChildren: 0.08 } } }}
-                className="flex w-full max-w-md flex-col gap-4 text-left"
-              >
-                <Reveal>
-                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                    <span className="text-[0.68rem] uppercase tracking-[0.22em] text-white/40">
-                      Director&apos;s notes
-                    </span>
-                    {notes.rating > 0 && <Stars rating={notes.rating} />}
-                  </div>
-                </Reveal>
-                <Reveal>
-                  <p className="text-base leading-relaxed text-white/85" style={{ fontFamily: SERIF }}>
-                    {notes.overall_notes}
-                  </p>
-                </Reveal>
-                {notes.line_accuracy && <NoteRow label="Line accuracy" value={notes.line_accuracy} />}
-                {notes.pacing && <NoteRow label="Pacing" value={notes.pacing} />}
-                {notes.emotional_tone && <NoteRow label="Emotional tone" value={notes.emotional_tone} />}
-                {notes.tips && notes.tips.length > 0 && (
-                  <Reveal>
-                    <div className="pt-1">
-                      <p className="mb-2 text-[0.68rem] uppercase tracking-[0.22em] text-white/40">Try next</p>
-                      <ul className="flex flex-col gap-2">
-                        {notes.tips.map((tip, i) => (
-                          <li key={i} className="flex gap-2.5 text-sm text-white/70">
-                            <span className="text-[#CB4B00]">—</span>
-                            <span>{tip}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </Reveal>
-                )}
-              </motion.div>
-            )}
+            <p className="max-w-xs text-sm leading-relaxed text-white/45">
+              Run it again, or take it into the room.
+            </p>
 
             <button
               onClick={restart}
@@ -546,33 +431,3 @@ function DockButton({ onClick, children }: { onClick: () => void; children: Reac
   );
 }
 
-function Reveal({ children }: { children: React.ReactNode }) {
-  return (
-    <motion.div variants={{ hidden: { opacity: 0, y: 8 }, show: { opacity: 1, y: 0 } }}>
-      {children}
-    </motion.div>
-  );
-}
-
-function NoteRow({ label, value }: { label: string; value: string }) {
-  return (
-    <Reveal>
-      <div>
-        <p className="mb-1 text-[0.68rem] uppercase tracking-[0.22em] text-white/40">{label}</p>
-        <p className="text-sm leading-relaxed text-white/70">{value}</p>
-      </div>
-    </Reveal>
-  );
-}
-
-function Stars({ rating }: { rating: number }) {
-  return (
-    <span className="flex gap-0.5">
-      {[1, 2, 3, 4, 5].map((n) => (
-        <span key={n} className={n <= rating ? "text-[#CB4B00]" : "text-white/15"}>
-          ★
-        </span>
-      ))}
-    </span>
-  );
-}
