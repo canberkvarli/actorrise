@@ -32,8 +32,8 @@ def canonical_tiers() -> list[PricingTier]:
             stripe_monthly_price_id=None,
             stripe_annual_price_id=None,
             features={
-                "ai_searches_per_month": 5,
-                "bookmarks_limit": 3,
+                "ai_searches_per_month": 25,
+                "bookmarks_limit": 10,
                 "recommendations": True,
                 "download_formats": ["pdf", "docx"],
                 "priority_support": False,
