@@ -1,5 +1,3 @@
-from datetime import datetime, timedelta, timezone
-
 from app.core.database import get_db
 from app.core.security import verify_supabase_token
 from app.models.actor import ActorProfile
@@ -100,14 +98,11 @@ def get_current_user(
             return existing_user
 
         # Create new user (all users receive marketing emails; they can unsubscribe).
-        # Reverse trial: full unlimited monologue rehearsals for the first 14 days,
-        # no card, so they feel the value before the free lifetime cap applies.
         user = User(
             email=email,
             supabase_id=supabase_id,
             name=name,
             marketing_opt_in=True,
-            monologue_trial_ends_at=datetime.now(timezone.utc) + timedelta(days=14),
         )
         db.add(user)
         try:
