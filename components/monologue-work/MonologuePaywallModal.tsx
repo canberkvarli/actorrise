@@ -15,30 +15,34 @@ import Link from "next/link";
 interface MonologuePaywallModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Override the copy so the same modal fits any wall (rehearsals, search, ...). */
+  title?: string;
+  description?: string;
 }
 
 const PLUS_BENEFITS = [
-  "30 monologue-work sessions/month",
-  "30 ScenePartner sessions/month",
+  "Unlimited monologue rehearsals",
   "Unlimited AI searches",
-  "AI Voice with expressive delivery",
+  "30 ScenePartner scenes/month",
+  "AI voice with expressive delivery",
 ];
+
+const DEFAULT_TITLE = "You've used your free runs";
+const DEFAULT_DESCRIPTION =
+  "Keep going with 2 weeks of Plus, free. No charge now, card on file, cancel anytime.";
 
 /**
  * Shown when a free user hits their monthly monologue-work cap. Leads with the
  * free trial (2 weeks of Plus, card on file) rather than a plain upsell.
  * Deep-links to the trial checkout.
  */
-export function MonologuePaywallModal({ open, onOpenChange }: MonologuePaywallModalProps) {
+export function MonologuePaywallModal({ open, onOpenChange, title, description }: MonologuePaywallModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-sm">
         <DialogHeader>
-          <DialogTitle>You&apos;ve used your free runs this month</DialogTitle>
-          <DialogDescription>
-            Keep working your monologues with 2 weeks of Plus, free. No charge now,
-            card on file, cancel anytime.
-          </DialogDescription>
+          <DialogTitle>{title ?? DEFAULT_TITLE}</DialogTitle>
+          <DialogDescription>{description ?? DEFAULT_DESCRIPTION}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3 py-2">

@@ -3,6 +3,7 @@
 import { Suspense, useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { SearchTour } from "@/components/onboarding/SearchTour";
+import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
@@ -1750,21 +1751,24 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       <div className="space-y-6">
 
         {/* Error banner with retry */}
-        {searchError && (
+        {/* A real error (network/timeout) shows the retry card. A quota wall
+            (searchUpgradeUrl set) shows the polished Plus paywall modal instead. */}
+        {searchError && !searchUpgradeUrl && (
           <Card className="border-destructive/50 bg-destructive/5 max-w-md mx-auto">
             <CardContent className="pt-4 pb-4 flex flex-col items-center text-center gap-3">
               <p className="text-sm text-destructive font-medium">{searchError}</p>
-              {searchUpgradeUrl && (
-                <Link href="/checkout?tier=plus&period=monthly&trial=1">
-                  <Button variant="default" size="sm">Start 2 weeks free</Button>
-                </Link>
-              )}
               <Button variant="outline" size="sm" onClick={() => { setSearchError(null); setSearchUpgradeUrl(null); searchMode === "film_tv" ? handleSearch() : performSearch(playsQuery, filters); }}>
                 Try again
               </Button>
             </CardContent>
           </Card>
         )}
+        <MonologuePaywallModal
+          open={!!searchUpgradeUrl}
+          onOpenChange={(o) => { if (!o) { setSearchUpgradeUrl(null); setSearchError(null); } }}
+          title="You&apos;ve used your free searches this month"
+          description="Keep exploring with 2 weeks of Plus, free. Unlimited searches, nothing charged now, card on file, cancel anytime."
+        />
 
         {/* Results */}
         <AnimatePresence mode="wait">

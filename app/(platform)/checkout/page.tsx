@@ -420,7 +420,7 @@ function CheckoutContent() {
             </Link>
           </Button>
           <Button onClick={handleCheckout} disabled={isCheckingOut} className="flex-1">
-            {isCheckingOut ? "Redirecting..." : "Continue to Payment"}
+            {isCheckingOut ? "Redirecting..." : isTrial ? "Start 2 weeks free" : "Continue to Payment"}
           </Button>
         </CardFooter>
       </Card>
