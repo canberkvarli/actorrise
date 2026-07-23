@@ -4,7 +4,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   IconPlayerPlayFilled,
-  IconEye,
   IconRefresh,
   IconArrowLeft,
 } from "@tabler/icons-react";
@@ -16,7 +15,6 @@ import { useAuth } from "@/lib/auth";
 import { wordMatchScore, toDeliverableLines, spokenPrefixCount } from "@/lib/lineMatching";
 import api from "@/lib/api";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
-import { MicWaveform } from "@/components/scenepartner/MicWaveform";
 import { GhostLight } from "@/components/brand/GhostLight";
 
 /** Fraction of the line's words we need to hear before advancing. */
@@ -103,6 +101,8 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   const heardRef = useRef<string[]>([]);
   const startTimeRef = useRef<number | null>(null);
   const fetchedRef = useRef(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const activeRef = useRef<HTMLParagraphElement>(null);
 
   const runAnalysis = useCallback(async () => {
     setNotesStatus("loading");
@@ -139,17 +139,15 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
     [lines.length, runAnalysis],
   );
 
+  // Accumulate what the actor said for the coach's end-of-run notes. Advancing
+  // to the next line is driven by the cumulative transcript in an effect below,
+  // not per-segment here, so a mid-line pause never loses progress.
   const handleHeard = useCallback(
     (heard: string) => {
       if (!started || completed) return;
       heardRef.current.push(heard);
-      const current = lines[activeIndex];
-      if (!current) return;
-      if (wordMatchScore(current, heard) >= MATCH_THRESHOLD) {
-        goToLine(activeIndex + 1);
-      }
     },
-    [started, completed, lines, activeIndex, goToLine],
+    [started, completed],
   );
 
   const { transcript, isListening, isSupported, startListening, stopListening, resetTranscript } =
@@ -175,6 +173,22 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
     const t = setTimeout(() => setRevealCurrent(true), STALL_MS);
     return () => clearTimeout(t);
   }, [transcript, activeIndex, started, completed, isListening]);
+
+  // Advance when enough of the current line has been spoken — measured against
+  // the cumulative transcript, so pausing mid-line never loses progress.
+  useEffect(() => {
+    if (!started || completed || tapToAdvance) return;
+    const current = lines[activeIndex];
+    if (current && wordMatchScore(current, transcript) >= MATCH_THRESHOLD) {
+      goToLineAndReset(activeIndex + 1);
+    }
+  }, [transcript, activeIndex, started, completed, tapToAdvance, lines, goToLineAndReset]);
+
+  // Keep the active line centered as the spotlight moves down the piece.
+  useEffect(() => {
+    if (!started || completed) return;
+    activeRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [activeIndex, started, completed]);
 
   useEffect(() => {
     if (completed && isListening) stopListening();
@@ -396,19 +410,23 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
           </motion.div>
         )}
 
-        {/* ---------- Running (the stage) ---------- */}
+        {/* ---------- Running (the continuous stage) ---------- */}
         {started && !completed && (
           <motion.div
             key="stage"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-8"
+            className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-5"
           >
+            {/* The whole piece flows here. A spotlight rides the active line, the
+                lines behind recede, the ones ahead wait quietly. It auto-scrolls
+                so you never wait for a line to "come in". */}
             <div
+              ref={scrollRef}
               role={tapToAdvance ? "button" : undefined}
               tabIndex={tapToAdvance ? 0 : undefined}
-              aria-label={tapToAdvance ? "Tap to advance to the next line" : undefined}
+              aria-label={tapToAdvance ? "Tap to advance" : undefined}
               onClick={tapToAdvance ? () => goToLineAndReset(activeIndex + 1) : undefined}
               onKeyDown={
                 tapToAdvance
@@ -420,99 +438,70 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                     }
                   : undefined
               }
-              className={`flex min-h-0 flex-1 flex-col items-center justify-center gap-2${tapToAdvance ? " cursor-pointer select-none" : ""}`}
+              className={`flex min-h-0 flex-1 flex-col items-center gap-5 overflow-y-auto py-[42vh] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden${tapToAdvance ? " cursor-pointer select-none" : ""}`}
             >
-              {/* delivered line, receding */}
-              <div className="flex min-h-[2rem] items-end justify-center">
-                {activeIndex > 0 && (
+              {lines.map((line, i) => {
+                if (i === activeIndex) {
+                  return (
+                    <p
+                      key={i}
+                      ref={activeRef}
+                      className="w-full max-w-3xl text-center leading-[1.4]"
+                      style={{ fontFamily: SCRIPT, fontSize: lineFontSize(line.length) }}
+                    >
+                      {currentWords.map((word, wi) => {
+                        const spoken = wi < spokenCount;
+                        const masked = offBook && !revealCurrent && !spoken;
+                        return (
+                          <span
+                            key={wi}
+                            className="transition-all duration-300"
+                            style={{
+                              color: spoken ? "#FF9147" : masked ? "transparent" : "rgba(246,240,229,0.96)",
+                              textShadow: spoken ? "0 0 26px rgba(255,130,50,0.5)" : "none",
+                            }}
+                          >
+                            {masked ? (
+                              <span className="text-white/15">{"•".repeat(Math.max(2, word.replace(/[^\p{L}\p{N}]/gu, "").length))}</span>
+                            ) : (
+                              word
+                            )}{" "}
+                          </span>
+                        );
+                      })}
+                    </p>
+                  );
+                }
+                const done = i < activeIndex;
+                return (
                   <p
-                    className="max-w-2xl text-center text-sm leading-relaxed text-white/30"
-                    style={{ fontFamily: SCRIPT }}
+                    key={i}
+                    className={`w-full max-w-2xl text-center leading-relaxed transition-all duration-500 ${
+                      done ? "text-white/25" : offBook ? "text-white/20 blur-[5px]" : "text-white/40"
+                    }`}
+                    style={{ fontFamily: SCRIPT, fontSize: "clamp(0.95rem, 2vw, 1.2rem)" }}
                   >
-                    {lines[activeIndex - 1]}
+                    {line}
                   </p>
-                )}
-              </div>
-
-              {/* current line — spotlit, word-by-word, font auto-scaled to length */}
-              <div className="relative flex max-w-3xl items-center justify-center py-2">
-                <div
-                  aria-hidden
-                  className="pointer-events-none absolute inset-0 -z-10 blur-3xl"
-                  style={{ background: "radial-gradient(60% 55% at 50% 50%, rgba(203,75,0,0.18), transparent 70%)" }}
-                />
-                <AnimatePresence mode="wait">
-                  <motion.p
-                    key={activeIndex}
-                    initial={{ opacity: 0, y: 18 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -18 }}
-                    transition={{ type: "spring", stiffness: 220, damping: 26 }}
-                    className="text-center leading-[1.4]"
-                    style={{ fontFamily: SCRIPT, fontSize: lineFontSize(currentLine.length) }}
-                  >
-                    {currentWords.map((word, i) => {
-                      const spoken = i < spokenCount;
-                      const masked = offBook && !revealCurrent && !spoken;
-                      return (
-                        <span
-                          key={i}
-                          className="transition-all duration-300"
-                          style={{
-                            color: spoken ? "#FF9147" : masked ? "transparent" : "rgba(246,240,229,0.94)",
-                            textShadow: spoken ? "0 0 26px rgba(255,130,50,0.5)" : "none",
-                          }}
-                        >
-                          {masked ? (
-                            <span className="text-white/15">{"•".repeat(Math.max(2, word.replace(/[^\p{L}\p{N}]/gu, "").length))}</span>
-                          ) : (
-                            word
-                          )}{" "}
-                        </span>
-                      );
-                    })}
-                  </motion.p>
-                </AnimatePresence>
-              </div>
-
-              {/* upcoming line, veiled */}
-              <div className="flex min-h-[2rem] items-start justify-center">
-                {activeIndex + 1 < lines.length && (
-                  <p
-                    className="max-w-2xl text-center text-sm leading-relaxed text-white/20"
-                    style={{ fontFamily: SCRIPT }}
-                  >
-                    {offBook ? "" : lines[activeIndex + 1]}
-                  </p>
-                )}
-              </div>
+                );
+              })}
             </div>
 
-            {/* control dock — just under the line */}
-            <div className="mt-6 flex flex-wrap items-center justify-center gap-x-5 gap-y-2">
-              <MicPulse active={isListening} supported={isSupported} tap={tapToAdvance} />
-              {offBook && (
-                <button
-                  onClick={() => setRevealCurrent(true)}
-                  className="flex min-h-[40px] items-center gap-1.5 px-2 text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
-                >
-                  <IconEye className="h-4 w-4" /> Line
-                </button>
-              )}
-              {!tapToAdvance && (
-                <button
-                  onClick={() => goToLineAndReset(activeIndex + 1)}
-                  className="min-h-[40px] px-2 text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
-                >
-                  Skip
-                </button>
-              )}
-              <button
-                onClick={restart}
-                className="min-h-[40px] px-2 text-xs uppercase tracking-[0.16em] text-white/45 transition-colors hover:text-white/80"
-              >
-                Restart
-              </button>
+            {/* Control dock — status is a quiet, non-tappable indicator; the real
+                actions are bordered buttons, so they never read as the same thing. */}
+            <div className="mt-4 flex items-center justify-center gap-4">
+              <span className="pointer-events-none flex select-none items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-white/40">
+                <StatusDot state={tapToAdvance ? "tap" : isListening ? "listening" : "paused"} />
+                {tapToAdvance ? "Tap to advance" : isListening ? "Listening" : "Paused"}
+              </span>
+              <span aria-hidden className="h-4 w-px bg-white/10" />
+              <div className="flex items-center gap-2">
+                {offBook && <DockButton onClick={() => setRevealCurrent(true)}>Reveal</DockButton>}
+                {!tapToAdvance && (
+                  <DockButton onClick={() => goToLineAndReset(activeIndex + 1)}>Skip</DockButton>
+                )}
+                <DockButton onClick={restart}>Restart</DockButton>
+              </div>
             </div>
           </motion.div>
         )}
@@ -521,20 +510,31 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   );
 }
 
-function MicPulse({ active, supported, tap }: { active: boolean; supported: boolean; tap?: boolean }) {
-  if (tap) {
-    return (
-      <span className="text-xs uppercase tracking-[0.16em] text-white/40">Tap the text to advance</span>
-    );
-  }
-  if (!supported) {
-    return <span className="text-xs uppercase tracking-[0.16em] text-white/30">no mic</span>;
-  }
+/** A small pulsing dot — a status glyph, never a control. */
+function StatusDot({ state }: { state: "listening" | "paused" | "tap" }) {
   return (
-    <span className="flex items-center gap-2.5 text-xs uppercase tracking-[0.16em] text-white/50">
-      <MicWaveform active={active} className="w-16" />
-      {active ? "Listening" : "Paused"}
+    <span className="relative flex h-1.5 w-1.5">
+      {state === "listening" && (
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#CB4B00]/60" />
+      )}
+      <span
+        className={`relative inline-flex h-1.5 w-1.5 rounded-full ${
+          state === "paused" ? "bg-white/30" : "bg-[#CB4B00]"
+        }`}
+      />
     </span>
+  );
+}
+
+/** A clearly-tappable dock action — bordered pill, distinct from the status. */
+function DockButton({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={onClick}
+      className="rounded-full border border-white/15 px-3.5 py-1.5 text-[0.7rem] uppercase tracking-[0.14em] text-white/60 transition-colors hover:border-[#CB4B00]/60 hover:text-white"
+    >
+      {children}
+    </button>
   );
 }
 

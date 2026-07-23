@@ -43,6 +43,10 @@ export function useSpeechRecognition(
   const [isListening, setIsListening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
+  // Accumulated finalized speech since the last reset. The Web Speech API
+  // finalizes an utterance on a pause and starts a fresh segment, so tracking
+  // only the current segment made the transcript reset mid-line.
+  const finalRef = useRef('');
 
   // Store callbacks in refs so the recognition instance doesn't need to be
   // recreated when inline arrow functions change identity across renders.
@@ -77,23 +81,28 @@ export function useSpeechRecognition(
     };
 
     recognition.onresult = (event: any) => {
-      let finalTranscript = '';
+      let finalPiece = '';
       let interimTranscript = '';
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcriptPiece = event.results[i][0].transcript;
         if (event.results[i].isFinal) {
-          finalTranscript += transcriptPiece + ' ';
+          finalPiece += transcriptPiece + ' ';
         } else {
           interimTranscript += transcriptPiece;
         }
       }
 
-      const currentTranscript = finalTranscript || interimTranscript;
-      setTranscript(currentTranscript.trim());
+      // Append newly-finalized speech to the running total so a pause doesn't
+      // collapse the transcript back to just the latest words.
+      if (finalPiece) {
+        finalRef.current = (finalRef.current + ' ' + finalPiece).trim();
+      }
+      const full = (finalRef.current + (interimTranscript ? ' ' + interimTranscript : '')).trim();
+      setTranscript(full);
 
-      if (finalTranscript && onResultRef.current) {
-        onResultRef.current(finalTranscript.trim());
+      if (finalPiece && onResultRef.current) {
+        onResultRef.current(finalPiece.trim());
       }
     };
 
@@ -131,6 +140,7 @@ export function useSpeechRecognition(
 
     if (recognitionRef.current && !isListening) {
       try {
+        finalRef.current = '';
         setTranscript('');
         setError(null);
         recognitionRef.current.start();
@@ -150,6 +160,7 @@ export function useSpeechRecognition(
   }, [isListening]);
 
   const resetTranscript = useCallback(() => {
+    finalRef.current = '';
     setTranscript('');
   }, []);
 
