@@ -17,8 +17,9 @@ import api from "@/lib/api";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { GhostLight } from "@/components/brand/GhostLight";
 
-/** Fraction of the line's words we need to hear before advancing. */
-const MATCH_THRESHOLD = 0.7;
+/** Fraction of the line's words we need to hear before advancing — high so it
+ *  only moves on once you've basically finished the line, not mid-sentence. */
+const MATCH_THRESHOLD = 0.9;
 /** Silence (ms) on the current line before we cue it (reveal the text). */
 const STALL_MS = 3000;
 
