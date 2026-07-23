@@ -1785,7 +1785,7 @@ export default function RehearsalPage() {
       );
     }
     return (
-      <div className="fixed inset-0 bg-neutral-950 flex items-center justify-center">
+      <div className="fixed inset-0 bg-[#191410] flex items-center justify-center">
         <div className="text-center space-y-4">
           {error ? (
             <>
@@ -1822,7 +1822,7 @@ export default function RehearsalPage() {
     const showPlayTitle = playTitle && playTitle.toLowerCase() !== sceneTitle.toLowerCase();
 
     return (
-      <div className="fixed inset-0 bg-neutral-950 text-neutral-100 flex flex-col z-[10050]">
+      <div className="fixed inset-0 bg-[#191410] text-neutral-100 flex flex-col z-[10050]">
         <div className="flex-1 overflow-auto flex justify-center px-4 pt-10 pb-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -1990,19 +1990,19 @@ export default function RehearsalPage() {
   /* ── Render: main rehearsal view ───────────────────────────────── */
 
   return (
-    <div className={cn('dark fixed inset-0 bg-neutral-950 text-neutral-100 flex flex-col z-[10050] transition-opacity duration-150', exiting && 'opacity-0')}>
+    <div className={cn('dark fixed inset-0 bg-[#191410] text-neutral-100 flex flex-col z-[10050] transition-opacity duration-150', exiting && 'opacity-0')}>
       {/* Fade-to-review overlay */}
       {fadeToReview && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, ease: 'easeInOut' }}
-          className="absolute inset-0 z-40 bg-neutral-950"
+          className="absolute inset-0 z-40 bg-[#191410]"
         />
       )}
       {/* Loading cover */}
       {(!focusInitialized || (countdown !== null && countdown > 0)) && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-neutral-950">
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#191410]">
           {!focusInitialized && (
             <div className="h-8 w-8 rounded-full border-2 border-neutral-700 border-t-primary animate-spin" />
           )}
@@ -2016,7 +2016,7 @@ export default function RehearsalPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.25 } }}
-            className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 bg-neutral-950 px-6 text-center"
+            className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 bg-[#191410] px-6 text-center"
           >
             {sceneWithLines && (
               <div className="max-w-md">
@@ -2050,7 +2050,7 @@ export default function RehearsalPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.25 } }}
-            className="fixed inset-0 flex items-center justify-center bg-neutral-950 z-30"
+            className="fixed inset-0 flex items-center justify-center bg-[#191410] z-30"
           >
             <motion.span
               key={countdown}
@@ -2093,7 +2093,7 @@ export default function RehearsalPage() {
       {/* Script parchment */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 sm:p-6">
         <div
-          className="max-w-4xl mx-auto bg-white text-neutral-900 rounded-lg shadow-2xl border border-neutral-200 px-4 sm:px-6 py-5 sm:py-7"
+          className="max-w-4xl mx-auto bg-[#faf7f1] text-neutral-900 rounded-xl border border-black/5 px-4 sm:px-8 py-5 sm:py-7 shadow-[0_24px_70px_-24px_rgba(203,75,0,0.28),0_10px_34px_-14px_rgba(0,0,0,0.55)]"
           style={{ fontFamily: '"Courier New", Courier, monospace' }}
         >
           {sceneWithLines ? (
