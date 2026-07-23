@@ -16,6 +16,7 @@ import { wordMatchScore, toDeliverableLines, spokenPrefixCount } from "@/lib/lin
 import api from "@/lib/api";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { GhostLight } from "@/components/brand/GhostLight";
+import { MicWaveform } from "@/components/scenepartner/MicWaveform";
 
 /** How far through the line (in order) you must read before it advances — high
  *  enough that it won't jump mid-sentence, low enough that a dropped word or two
@@ -312,6 +313,22 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             exit={{ opacity: 0 }}
             className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-5"
           >
+            {/* Listening indicator, top-center — the live waveform reacts to your
+                voice so you can see you're being heard while you run the piece. */}
+            <div className="flex items-center justify-center gap-2 pt-1 pb-2">
+              {tapToAdvance ? (
+                <span className="pointer-events-none flex select-none items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-white/45">
+                  <StatusDot state="tap" />
+                  Tap to advance
+                </span>
+              ) : (
+                <span className="pointer-events-none flex select-none items-center gap-2.5 text-[0.7rem] uppercase tracking-[0.18em] text-white/55">
+                  <MicWaveform active={isListening} className="w-24" />
+                  {isListening ? "Listening" : "Paused"}
+                </span>
+              )}
+            </div>
+
             {/* The whole piece flows here. A spotlight rides the active line, the
                 lines behind recede, the ones ahead wait quietly. It auto-scrolls
                 so you never wait for a line to "come in". */}
@@ -380,21 +397,14 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
               })}
             </div>
 
-            {/* Control dock — status is a quiet, non-tappable indicator; the real
-                actions are bordered buttons, so they never read as the same thing. */}
-            <div className="mt-4 flex items-center justify-center gap-4">
-              <span className="pointer-events-none flex select-none items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-white/40">
-                <StatusDot state={tapToAdvance ? "tap" : isListening ? "listening" : "paused"} />
-                {tapToAdvance ? "Tap to advance" : isListening ? "Listening" : "Paused"}
-              </span>
-              <span aria-hidden className="h-4 w-px bg-white/10" />
-              <div className="flex items-center gap-2">
-                {offBook && <DockButton onClick={() => setRevealCurrent(true)}>Reveal</DockButton>}
-                {!tapToAdvance && (
-                  <DockButton onClick={() => goToLineAndReset(activeIndex + 1)}>Skip</DockButton>
-                )}
-                <DockButton onClick={restart}>Restart</DockButton>
-              </div>
+            {/* Control dock — just the actions now; the listening status lives up
+                top so you always know you're being heard. */}
+            <div className="mt-4 flex items-center justify-center gap-2">
+              {offBook && <DockButton onClick={() => setRevealCurrent(true)}>Reveal</DockButton>}
+              {!tapToAdvance && (
+                <DockButton onClick={() => goToLineAndReset(activeIndex + 1)}>Skip</DockButton>
+              )}
+              <DockButton onClick={restart}>Restart</DockButton>
             </div>
           </motion.div>
         )}
