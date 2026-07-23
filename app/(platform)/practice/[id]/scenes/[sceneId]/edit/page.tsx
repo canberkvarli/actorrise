@@ -1656,7 +1656,7 @@ export default function SceneEditPage() {
   const leftPanelContent = (
     <div className="space-y-5">
       {/* Header — title + attribution */}
-      <div className="rounded-xl bg-gradient-to-br from-neutral-900 to-neutral-900/60 border border-neutral-800 p-4 space-y-3 overflow-hidden">
+      <div className="rounded-xl bg-gradient-to-br from-card to-card/60 border border-border p-4 space-y-3 overflow-hidden">
         <div className="text-sm text-neutral-300 tracking-wide break-words">
           {editingSceneField === "play_title" && editingLocation === "left" ? (
             <Input
@@ -1786,21 +1786,21 @@ export default function SceneEditPage() {
 
       {/* Stats row — horizontal pills */}
       <div className="flex flex-wrap items-center justify-center gap-2">
-        <div className="flex items-center gap-1.5 bg-neutral-900/70 border border-neutral-800 px-3.5 py-2">
+        <div className="flex items-center gap-1.5 bg-card/60 border border-border px-3.5 py-2">
           <FileText className="w-3.5 h-3.5 text-primary/70" />
           <span className="text-sm font-medium text-neutral-100 tabular-nums">{scene.line_count}</span>
           <span className="text-xs text-neutral-400">line{scene.line_count !== 1 ? "s" : ""}</span>
         </div>
         <Tooltip>
           <TooltipTrigger asChild>
-            <div className="flex items-center gap-1.5 bg-neutral-900/70 border border-neutral-800 px-3.5 py-2 cursor-default">
+            <div className="flex items-center gap-1.5 bg-card/60 border border-border px-3.5 py-2 cursor-default">
               <Clock className="w-3.5 h-3.5 text-primary/70" />
               <span className="text-sm font-medium text-neutral-100 tabular-nums">{formatDuration(computedDuration)}</span>
             </div>
           </TooltipTrigger>
           <TooltipContent><p>Estimated at ~150 words per minute</p></TooltipContent>
         </Tooltip>
-        <div className="flex items-center gap-1.5 bg-neutral-900/70 border border-neutral-800 px-3.5 py-2">
+        <div className="flex items-center gap-1.5 bg-card/60 border border-border px-3.5 py-2">
           <Users className="w-3.5 h-3.5 text-primary/70" />
           <span className="text-sm font-medium text-neutral-100 tabular-nums">{scene.rehearsal_count}</span>
           <span className="text-xs text-neutral-400">rehearsal{scene.rehearsal_count !== 1 ? "s" : ""}</span>
@@ -1808,7 +1808,7 @@ export default function SceneEditPage() {
       </div>
 
       {/* Characters */}
-      <div className="rounded-xl bg-neutral-900/40 border border-neutral-800 p-4 space-y-3">
+      <div className="rounded-xl bg-card/40 border border-border p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Theater className="w-4 h-4 text-primary" />
           <h3 className="text-xl font-semibold text-neutral-100">Characters</h3>
@@ -1923,10 +1923,10 @@ export default function SceneEditPage() {
       </div>
 
       {/* Highlight toggle */}
-      <div className="rounded-lg bg-neutral-900/50 border border-neutral-800 overflow-hidden">
+      <div className="rounded-lg bg-card/50 border border-border overflow-hidden">
         <div className="flex items-center justify-between px-3 py-2.5">
           <div className="flex items-center gap-2">
-            <Highlighter className="w-3.5 h-3.5 text-yellow-400" />
+            <Highlighter className="w-3.5 h-3.5 text-amber-500" />
             <span className="text-sm text-neutral-200">Highlight my lines</span>
           </div>
           <Switch
@@ -1943,7 +1943,7 @@ export default function SceneEditPage() {
               transition={{ duration: 0.2, ease: 'easeInOut' }}
               className="overflow-hidden"
             >
-              <p className="text-xs text-yellow-500/80 text-center pb-2.5">
+              <p className="text-xs text-amber-500/80 text-center pb-2.5">
                 {scene.lines.filter(l => l.character_name === selectedCharacter).length} lines as {selectedCharacter}
               </p>
             </motion.div>
@@ -1952,7 +1952,7 @@ export default function SceneEditPage() {
       </div>
 
       {/* Rehearsal Settings — collapsible (global prefs, collapsed by default) */}
-      <div className="rounded-xl bg-neutral-900/40 border border-neutral-800 overflow-hidden">
+      <div className="rounded-xl bg-card/40 border border-border overflow-hidden">
         <button
           type="button"
           onClick={() => setSettingsExpanded((v) => !v)}
@@ -1974,7 +1974,7 @@ export default function SceneEditPage() {
               transition={{ duration: 0.2 }}
               className="overflow-hidden"
             >
-              <div className="px-4 pb-4 pt-4 space-y-4 border-t border-neutral-800">
+              <div className="px-4 pb-4 pt-4 space-y-4 border-t border-border">
                 {/* Countdown */}
                 <div className="flex items-center justify-between gap-3">
                   <Label className="text-sm font-normal text-neutral-300">Pre-scene countdown</Label>
@@ -2045,7 +2045,7 @@ export default function SceneEditPage() {
 
       {/* Scene Info — tone, emotions, relationship, setting grouped */}
       {(scene.tone || (scene.primary_emotions && scene.primary_emotions.length > 0) || scene.setting) && (
-        <div className="rounded-xl bg-neutral-900/40 border border-neutral-800 p-4 space-y-4">
+        <div className="rounded-xl bg-card/40 border border-border p-4 space-y-4">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
             <h3 className="text-lg font-semibold text-neutral-100">Scene Info</h3>
@@ -2086,7 +2086,7 @@ export default function SceneEditPage() {
 
       {/* Context (collapsible) */}
       {(scene.context_before || scene.context_after) && (
-        <div className="rounded-xl bg-neutral-900/40 border border-neutral-800 overflow-hidden">
+        <div className="rounded-xl bg-card/40 border border-border overflow-hidden">
           <button
             type="button"
             onClick={() => setContextExpanded(!contextExpanded)}
@@ -2108,7 +2108,7 @@ export default function SceneEditPage() {
                 transition={{ duration: 0.2 }}
                 className="overflow-hidden"
               >
-                <div className="px-4 pb-4 space-y-3 border-t border-neutral-800">
+                <div className="px-4 pb-4 space-y-3 border-t border-border">
                   {renderEditableField("context_before", "Before this scene", true)}
                   {renderEditableField("context_after", "After this scene", true)}
                 </div>
@@ -2925,7 +2925,7 @@ export default function SceneEditPage() {
                         transition={{ duration: 0.3 }}
                       >
                         <span className={cn(
-                          highlightMyLines && isMine && "bg-yellow-200/70 rounded px-1 py-0.5 box-decoration-clone"
+                          highlightMyLines && isMine && "bg-amber-200/45 rounded px-1 py-0.5 box-decoration-clone"
                         )}>
                           {renderTextWithStageDirections(line.text)}
                         </span>
@@ -3028,6 +3028,7 @@ export default function SceneEditPage() {
               const isPreviewing = (isSpeakingAI || isLoadingAI) && previewingVoice === charName;
               return (
                 <div key={charName} className="relative flex items-center gap-1" data-voice-dropdown>
+                  <span className="text-[11px] font-medium text-muted-foreground shrink-0">{charName}</span>
                   <button
                     type="button"
                     onClick={() => setVoiceDropdownOpen(voiceDropdownOpen === dropKey ? null : dropKey)}
