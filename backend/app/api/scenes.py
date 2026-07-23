@@ -164,6 +164,53 @@ class SessionFeedbackResponse(BaseModel):
 # Helpers
 # ============================================================================
 
+def _norm_name(name: object) -> str:
+    """Normalize a character name for tolerant matching (trim + case-fold)."""
+    return str(name or "").strip().casefold()
+
+
+def resolve_rehearsal_characters(
+    user_character: str,
+    line_character_names: list,
+    declared_character_names: tuple,
+):
+    """Resolve the actor's chosen character to the exact names used in the scene lines.
+
+    Screenplay parsing can store a scene's designated character_1/2_name in a
+    different case than the line cues (e.g. declared "Ryan" but the lines say
+    "RYAN" — see scene 868). The "You're playing" picker is built from the line-cue
+    names, so validating the choice with an EXACT match against the declared names
+    wrongly rejected a valid pick with "Invalid character choice".
+
+    Match case/whitespace-insensitively and return BOTH names in the exact casing the
+    LINES use, because rehearsal playback and first-line lookup compare against
+    line.character_name — the session must store that casing or the actor gets zero
+    lines.
+
+    Returns (user_character, ai_character), or None if the choice matches neither.
+    """
+    choice_norm = _norm_name(user_character)
+
+    # Prefer the exact string used in the lines.
+    user = next((c for c in line_character_names if _norm_name(c) == choice_norm), None)
+    # Fall back to the declared names if the lines are empty/odd.
+    if user is None:
+        for c in declared_character_names:
+            if _norm_name(c) == choice_norm:
+                user = c
+                break
+    if user is None:
+        return None
+
+    d1, d2 = declared_character_names
+    # AI character = the other main speaker in the lines (fall back to the declared pair).
+    ai = next(
+        (c for c in line_character_names if _norm_name(c) != _norm_name(user)),
+        d2 if _norm_name(user) == _norm_name(d1) else d1,
+    )
+    return user, ai
+
+
 def _get_ai_voice_id(scene, ai_character_name: str) -> str:
     """Resolve OpenAI TTS voice for the AI character based on gender + tone."""
     from app.services.tts_service import get_voice_for_character
@@ -517,19 +564,24 @@ async def start_rehearsal(
                 }
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=detail)
 
-    # Validate character choice
-    if request.user_character not in [scene.character_1_name, scene.character_2_name]:
+    # Validate + resolve the chosen character.
+    # Screenplay parsing can store character_1/2_name in a different case than the
+    # line cues (e.g. declared "Ryan" but the lines say "RYAN"), and the character
+    # picker offers the line-cue names — so an exact match here wrongly rejected a
+    # valid choice with "Invalid character choice". Match case/whitespace-insensitively,
+    # then resolve BOTH characters to the exact names used in the scene lines so all
+    # downstream line matching (user's lines, AI's lines) stays consistent.
+    resolved = resolve_rehearsal_characters(
+        request.user_character,
+        list({l.character_name for l in scene.lines}),
+        (scene.character_1_name, scene.character_2_name),
+    )
+    if resolved is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid character choice"
         )
-
-    # Determine AI character
-    ai_character = (
-        scene.character_2_name
-        if request.user_character == scene.character_1_name
-        else scene.character_1_name
-    )
+    user_character, ai_character = resolved
 
     # Create session
     start_index = request.start_from_line_index if request.start_from_line_index is not None else 0
@@ -537,7 +589,7 @@ async def start_rehearsal(
     session = RehearsalSession(
         user_id=current_user.id,
         scene_id=request.scene_id,
-        user_character=request.user_character,
+        user_character=user_character,
         ai_character=ai_character,
         status="in_progress",
         current_line_index=start_index,
@@ -554,7 +606,7 @@ async def start_rehearsal(
     ordered_lines = sorted(scene.lines, key=lambda l: l.line_order)
     first_line_for_user = None
     for line in ordered_lines:
-        if line.character_name == request.user_character:
+        if _norm_name(line.character_name) == _norm_name(user_character):
             first_line_for_user = line.text
             break
 
