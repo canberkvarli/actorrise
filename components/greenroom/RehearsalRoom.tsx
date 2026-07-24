@@ -8,10 +8,15 @@ import {
   IconLink,
   IconChevronLeft,
   IconChevronRight,
+  IconMicrophone,
+  IconMicrophoneOff,
+  IconPhoneOff,
+  IconLoader2,
 } from "@tabler/icons-react";
 import { useAuth } from "@/lib/auth";
 import { useCommunityScript } from "@/hooks/useCommunityScript";
 import { useRoomChannel } from "@/hooks/useRoomChannel";
+import { useRoomVoice } from "@/hooks/useRoomVoice";
 
 export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: number }) {
   const { user } = useAuth();
@@ -27,6 +32,7 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
     claimRole,
     connected,
   } = useRoomChannel(roomId, myName);
+  const voice = useRoomVoice(roomId, myName);
 
   // Gate first paint so server and first client render agree (React Query cache
   // can be warm on the client, empty on the server) — avoids a hydration flash.
@@ -67,6 +73,7 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
         </Link>
         <div className="flex items-center gap-3">
           <Presence participants={participants} connected={connected} />
+          <VoiceControl voice={voice} />
           <button
             type="button"
             onClick={copyInvite}
@@ -165,11 +172,67 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
         </div>
       </div>
 
-      {/* voice note (audio is the next increment) */}
+      {/* voice status */}
       <p className="mt-6 text-center text-xs text-muted-foreground/60">
-        You&apos;re synced on the same scene. Live voice is coming — for now, hop on a
-        call and run it together, in step.
+        {voice.error ? (
+          <span className="text-red-500">{voice.error}</span>
+        ) : voice.joined ? (
+          voice.peers.length > 0
+            ? "You're on voice together — say your lines and step through in sync."
+            : "You're on voice. Waiting for your partner to join the call…"
+        ) : (
+          "You're synced on the same scene. Tap Voice to rehearse out loud together."
+        )}
       </p>
+    </div>
+  );
+}
+
+function VoiceControl({ voice }: { voice: ReturnType<typeof useRoomVoice> }) {
+  const { joined, joining, muted, peers, error, join, leave, toggleMute } = voice;
+
+  if (!joined) {
+    return (
+      <button
+        type="button"
+        onClick={join}
+        disabled={joining}
+        title={error ?? "Rehearse out loud together"}
+        className="inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1.5 text-sm text-foreground transition-colors hover:border-primary/40 disabled:opacity-60"
+      >
+        {joining ? (
+          <IconLoader2 className="h-4 w-4 animate-spin" />
+        ) : (
+          <IconMicrophone className="h-4 w-4" />
+        )}
+        {joining ? "Joining" : "Voice"}
+      </button>
+    );
+  }
+
+  return (
+    <div className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1">
+      <button
+        type="button"
+        onClick={toggleMute}
+        title={muted ? "Unmute" : "Mute"}
+        className={`flex h-7 w-7 items-center justify-center rounded-full ${
+          muted ? "text-red-500" : "text-emerald-600 dark:text-emerald-400"
+        }`}
+      >
+        {muted ? <IconMicrophoneOff className="h-4 w-4" /> : <IconMicrophone className="h-4 w-4" />}
+      </button>
+      <span className="px-1 text-xs text-muted-foreground">
+        {peers.length > 0 ? "on" : "…"}
+      </span>
+      <button
+        type="button"
+        onClick={leave}
+        title="Leave voice"
+        className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-red-500"
+      >
+        <IconPhoneOff className="h-4 w-4" />
+      </button>
     </div>
   );
 }
