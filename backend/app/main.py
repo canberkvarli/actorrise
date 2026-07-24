@@ -12,6 +12,7 @@ from app.api.admin.searches import router as admin_searches_router
 from app.api.admin.sessions import router as admin_sessions_router
 from app.api.admin.users import router as admin_users_router
 from app.api.audition import router as audition_router
+from app.api.community import router as community_router
 from app.api.monologue_work import router as monologue_work_router
 from app.api.auth import router as auth_router
 from app.api.tapes import router as tapes_router
@@ -161,6 +162,7 @@ app.include_router(speech_router)
 app.include_router(scripts_router)
 app.include_router(audition_router)
 app.include_router(monologue_work_router)
+app.include_router(community_router)
 app.include_router(tapes_router)
 app.include_router(public_router)
 app.include_router(pricing_router)

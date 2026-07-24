@@ -23,6 +23,13 @@ class User(Base):
     # Marketing: explicit opt-in only (GDPR/CAN-SPAM compliant)
     marketing_opt_in = Column(Boolean, default=False, nullable=False)
 
+    # Community "Green Room" feed opt-out. Default TRUE (activity is public
+    # semi-anonymously: first name + city + headshot). Filtered at feed READ
+    # time, so flipping this off hides the user's whole history retroactively.
+    share_activity = Column(
+        Boolean, default=True, nullable=False, server_default=text("true")
+    )
+
     # Onboarding state
     has_seen_welcome = Column(Boolean, default=False, nullable=False)
     has_seen_search_tour = Column(Boolean, default=False, nullable=False)

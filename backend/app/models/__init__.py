@@ -16,6 +16,7 @@ from app.models.audition_usage import AuditionFeedbackUsage
 from app.models.search_log import MonologueView, SearchLog
 from app.models.content_request import ContentRequest
 from app.models.app_setting import AppSetting
+from app.models.community import CommunityEvent
 
 
 

@@ -544,6 +544,14 @@ async def search_monologues(
             except Exception:
                 db.rollback()
 
+        # Green Room: post the *intent* of a fresh search (never the raw text).
+        # build_search_payload returns None for pagination-only / junk queries.
+        if page == 1:
+            from app.services.community import build_search_payload, record_event
+            _feed_payload = build_search_payload(filters)
+            if _feed_payload:
+                record_event(int(current_user.id), "searched", **_feed_payload)
+
         return SearchResponse(
             results=monologue_responses,
             total=total,
@@ -870,6 +878,9 @@ async def favorite_monologue(
             existing.removed_at = None  # type: ignore[assignment]
             monologue.favorite_count = int(monologue.favorite_count or 0) + 1  # type: ignore[assignment]
             db.commit()
+            from app.services.community import record_event
+            record_event(int(current_user.id), "bookmarked",
+                         title=monologue.title, monologue_id=monologue_id)
             return {"message": "Restored", "id": existing.id}
         return {"message": "Already favorited", "id": existing.id}
 
@@ -884,6 +895,11 @@ async def favorite_monologue(
     monologue.favorite_count = int(monologue.favorite_count) + 1  # type: ignore[assignment]
 
     db.commit()
+
+    # Green Room: "Maya saved '<title>' to her list". Fire-and-forget, safe.
+    from app.services.community import record_event
+    record_event(int(current_user.id), "bookmarked",
+                 title=monologue.title, monologue_id=monologue_id)
 
     return {"message": "Favorited successfully", "id": favorite.id}
 

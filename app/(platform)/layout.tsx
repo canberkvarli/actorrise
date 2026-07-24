@@ -9,7 +9,7 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar, IconHelpCircle } from "@tabler/icons-react";
+import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar, IconHelpCircle, IconSparkles } from "@tabler/icons-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef, Suspense } from "react";
@@ -192,6 +192,7 @@ export default function PlatformLayout({
 
   const navItems = [
     { href: "/monologues", label: "Monologues", icon: IconSearch },
+    { href: "/community", label: "Green Room", icon: IconSparkles },
     { href: "/rehearse", label: "Collection", icon: IconBookmark },
     { href: "/practice", label: "My Scripts", icon: IconMicrophone },
   ];
@@ -697,6 +698,15 @@ export default function PlatformLayout({
           >
             <IconSearch className="h-5 w-5 shrink-0" />
             <span className="text-[10px] font-medium">Monologues</span>
+          </Link>
+          <Link
+            href="/community"
+            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
+              pathname === "/community" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <IconSparkles className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] font-medium">Green Room</span>
           </Link>
           <Link
             href="/profile"

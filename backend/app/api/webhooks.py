@@ -156,6 +156,10 @@ def handle_checkout_completed(session: dict, db: Session):
 
     db.commit()
 
+    # Green Room: "Maya went Plus" — social proof for the paywall. Safe/no-throw.
+    from app.services.community import record_event
+    record_event(user_id, "went_plus")
+
     print(f"✅ Checkout completed for user {user_id} - {billing_period} subscription")
 
     # Auto-add paid users to do-not-contact list

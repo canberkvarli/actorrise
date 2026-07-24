@@ -10,6 +10,7 @@ from app.services.email.notifications import (
     send_welcome_email,
 )
 from app.services import app_settings
+from app.services.community import record_event
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -136,6 +137,8 @@ def get_current_user(
             # Fire-and-forget; never block auth. Log so a misconfig (e.g. missing
             # app_settings table) isn't completely silent.
             print(f"Error sending founder offer on signup to {user.email}: {e}")
+        # Green Room: "Someone from <city> just joined". Fire-and-forget, safe.
+        record_event(user.id, "joined")
     else:
         # Update name if it's in the token and different from stored value
         if name and user.name != name:
