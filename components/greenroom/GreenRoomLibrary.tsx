@@ -33,7 +33,7 @@ export function GreenRoomLibrary() {
       />
       <header className="relative mb-8">
         <p className="font-typewriter text-xs italic tracking-wide text-muted-foreground/70">
-          (the green room.)
+          (places, please.)
         </p>
         <h1 className="mt-1 font-brand text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
           The Green Room

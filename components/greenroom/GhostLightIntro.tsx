@@ -18,7 +18,9 @@ export function GhostLightIntro() {
   useEffect(() => {
     if (reduce) return;
     setShow(true);
-    const t = setTimeout(() => setDone(true), 1650);
+    // Snappy: a quick flicker-to-light, then out. Long enough to feel like the
+    // lights coming up, short enough to never read as a wait.
+    const t = setTimeout(() => setDone(true), 850);
     return () => clearTimeout(t);
   }, [reduce]);
 
@@ -37,38 +39,27 @@ export function GhostLightIntro() {
           <motion.div
             className="pointer-events-none absolute inset-0"
             initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 0.15, 0.05, 0.25, 0.4, 0.7] }}
-            transition={{ duration: 1.2, times: [0, 0.15, 0.3, 0.5, 0.7, 1] }}
+            animate={{ opacity: [0, 0.2, 0.08, 0.4, 0.7] }}
+            transition={{ duration: 0.65, times: [0, 0.2, 0.4, 0.7, 1] }}
             style={{
               background:
                 "radial-gradient(60% 50% at 50% 45%, rgba(203,75,0,0.35), transparent 70%)",
             }}
           />
 
-          {/* the bulb */}
+          {/* the bulb flickering to life */}
           <motion.div
-            className="relative flex flex-col items-center"
+            className="h-4 w-4 rounded-full bg-[#ffdca8]"
             initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 0.7, 0.12, 0.9, 0.35, 1, 0.7, 1] }}
-            transition={{ duration: 1.15, times: [0, 0.08, 0.16, 0.3, 0.45, 0.62, 0.8, 1] }}
-          >
-            <motion.div
-              className="h-4 w-4 rounded-full bg-[#ffdca8]"
-              animate={{ boxShadow: [
+            animate={{
+              opacity: [0, 0.8, 0.15, 1, 0.4, 1],
+              boxShadow: [
                 "0 0 6px 2px rgba(255,200,120,0.4)",
-                "0 0 40px 14px rgba(255,190,110,0.85)",
-              ] }}
-              transition={{ duration: 1.15, ease: "easeIn" }}
-            />
-            <motion.p
-              className="mt-8 font-brand text-2xl tracking-wide text-[#f3e7d2]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: [0, 0, 0.4, 0.9] }}
-              transition={{ duration: 1.3, times: [0, 0.5, 0.75, 1] }}
-            >
-              The Green Room
-            </motion.p>
-          </motion.div>
+                "0 0 44px 16px rgba(255,190,110,0.9)",
+              ],
+            }}
+            transition={{ duration: 0.6, times: [0, 0.12, 0.24, 0.45, 0.6, 1], ease: "easeIn" }}
+          />
         </motion.div>
       )}
     </AnimatePresence>
