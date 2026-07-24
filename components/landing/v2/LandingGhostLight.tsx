@@ -15,6 +15,7 @@ import { LandingTestimonials } from "@/components/landing/LandingTestimonials";
 import { LandingVideoShowcase } from "@/components/landing/LandingVideoShowcase";
 import { RevealSection } from "@/components/landing/RevealSection";
 import { FinalCta } from "@/components/landing/v2/FinalCta";
+import { LandingCallboardTeaser } from "@/components/landing/v2/LandingCallboardTeaser";
 import { SpotlightHero } from "@/components/landing/v2/SpotlightHero";
 import { ThreeActs } from "@/components/landing/v2/ThreeActs";
 import { TitleMarquee } from "@/components/landing/v2/TitleMarquee";
@@ -100,6 +101,11 @@ export function LandingGhostLight() {
         <RevealSection id="testimonials">
           <SceneMark>(the notices.)</SceneMark>
           <LandingTestimonials />
+        </RevealSection>
+
+        <RevealSection as="div">
+          <SceneMark>(the room, right now.)</SceneMark>
+          <LandingCallboardTeaser />
         </RevealSection>
 
         <RevealSection as="div">

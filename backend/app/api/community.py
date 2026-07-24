@@ -63,9 +63,17 @@ class FeedResponse(BaseModel):
     window: str  # "today" | "week"
 
 
+def _mask_name(name: str) -> str:
+    """First initial only, for the logged-out landing teaser — real names are
+    never shipped to unauthenticated visitors (the blur is a real tease)."""
+    first = (name or "?").strip()[:1] or "?"
+    return f"{first}•••"
+
+
 @router.get("/feed", response_model=FeedResponse)
 def get_feed(
     limit: int = Query(60, ge=1, le=100),
+    anonymize: bool = Query(False, description="Mask names to a first initial (logged-out teaser)"),
     db: Session = Depends(get_db),
 ):
     cutoff = datetime.now(timezone.utc) - timedelta(hours=FEED_WINDOW_HOURS)
@@ -94,13 +102,15 @@ def get_feed(
         display_name = (profile.name if profile else None) or (
             user.name if user else None
         )
+        first = _first_name(display_name)
         events.append(
             FeedEvent(
                 id=event.id,
                 event_type=event.event_type,
-                name=_first_name(display_name),
+                name=_mask_name(first) if anonymize else first,
                 city=_city(profile.location if profile else None),
-                headshot_url=profile.headshot_url if profile else None,
+                # Never ship real faces to the logged-out teaser.
+                headshot_url=None if anonymize else (profile.headshot_url if profile else None),
                 payload=event.payload or {},
                 created_at=event.created_at,
             )
