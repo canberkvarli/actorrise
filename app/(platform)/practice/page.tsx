@@ -10,7 +10,7 @@ import UnderConstructionScripts from "@/components/UnderConstructionScripts";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { PracticeLibrary } from "@/components/practice/PracticeLibrary";
-import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
+import { UploadDropzone } from "@/components/practice/UploadDropzone";
 import { CallboardMarquee } from "@/components/community/CallboardMarquee";
 
 /**
@@ -77,14 +77,28 @@ export default function PracticePage() {
           className="space-y-8 sm:space-y-10"
         >
           {hasAnyScript && (
-            <div className="flex justify-end">
-              <UploadScriptButton variant="compact" />
-            </div>
-          )}
+            <>
+              {/* Screen identity — this is the rehearsal room, not just a list. */}
+              <header>
+                <p className="font-typewriter text-xs italic tracking-wide text-muted-foreground/70">
+                  (from the top.)
+                </p>
+                <h1 className="mt-1 font-brand text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+                  My Scripts
+                </h1>
+                <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                  Bring in your sides and rehearse every other role with a partner
+                  that holds your lines and never misses a cue.
+                </p>
+              </header>
 
-          {/* Ambient activity as a lit marquee across the top — see the buzz
-              without it competing with the scripts library below. */}
-          <CallboardMarquee />
+              {/* Ambient activity, below the header and above the key CTA. */}
+              <CallboardMarquee />
+
+              {/* The key CTA: start a rehearsal by bringing in a script. */}
+              <UploadDropzone />
+            </>
+          )}
 
           <Suspense fallback={null}>
             <PracticeLibrary
