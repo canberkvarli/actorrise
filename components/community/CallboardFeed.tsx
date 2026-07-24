@@ -1,46 +1,139 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   useCommunityFeed,
   useShareActivity,
   type FeedEvent,
 } from "@/hooks/useCommunityFeed";
+import { useTrending } from "@/hooks/useTrending";
 import { Avatar, EventLine, chipFor, relativeTime } from "./eventRender";
 
-/* The full Callboard view (its own page, reached via "see everything" — NOT a
-   nav tab). The ambient version is CallboardPanel on the landing surface. */
+/**
+ * The Callboard — not a flat list but the house before curtain: a stat line,
+ * what's trending, who just walked in, what everyone's hunting for, then the
+ * live feed. All derived client-side from the feed + trending endpoints.
+ */
+export function CallboardFeed() {
+  const { data } = useCommunityFeed(100);
+  const { data: trending } = useTrending(6);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
-function EventCard({ e }: { e: FeedEvent }) {
-  const chip = chipFor(e);
+  const events = useMemo(() => data?.events ?? [], [data]);
+  const joined = useMemo(() => events.filter((e) => e.event_type === "joined"), [events]);
+  const searched = useMemo(() => events.filter((e) => e.event_type === "searched"), [events]);
+  const rehearsed = useMemo(() => events.filter((e) => e.event_type === "rehearsed"), [events]);
+
+  const searchTags = useMemo(() => {
+    const counts = new Map<string, number>();
+    const bump = (v?: string) => v && counts.set(v, (counts.get(v) ?? 0) + 1);
+    for (const e of searched) {
+      const p = e.payload;
+      bump(p.tone);
+      bump(p.gender === "female" ? "women" : p.gender === "male" ? "men" : p.gender);
+      bump(p.age_range);
+      bump(p.emotion);
+      (p.themes ?? []).forEach((t) => bump(t));
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 14);
+  }, [searched]);
+
+  const windowLabel = data?.window === "today" ? "today" : "this week";
+
+  if (!mounted || !data) return <BoardSkeleton />;
+
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -8 }}
-      transition={{ duration: 0.45, ease: [0.25, 0.1, 0.25, 1] }}
-      className="group flex items-center gap-4 border-b border-border/40 py-4"
-    >
-      <Avatar e={e} />
-      <div className="min-w-0 flex-1">
-        <p className="text-[15px] leading-snug text-muted-foreground">
-          <span className="font-semibold text-foreground">{e.name}</span>{" "}
-          <EventLine e={e} />
+    <div className="mx-auto w-full max-w-3xl px-4 pb-24 pt-8 sm:pt-12">
+      <header className="mb-8">
+        <p className="font-typewriter text-xs italic tracking-wide text-muted-foreground/70">
+          (the house, before curtain.)
         </p>
-        <p className="mt-0.5 text-xs text-muted-foreground/60">{relativeTime(e.created_at)}</p>
+        <h1 className="mt-1 font-brand text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+          The Callboard
+        </h1>
+      </header>
+
+      {/* stat line */}
+      <div className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <Stat n={data.actor_count} label={`actors ${windowLabel}`} />
+        <Stat n={searched.length} label="searches" />
+        <Stat n={rehearsed.length} label="rehearsals" />
+        <Stat n={joined.length} label="new faces" />
       </div>
-      {chip && (
-        <Link
-          href={chip.href}
-          className="shrink-0 rounded-full border border-primary/40 px-3.5 py-1.5 text-xs font-medium text-primary opacity-0 shadow-[0_0_14px_-4px_var(--primary)] transition-all hover:bg-primary/10 group-hover:opacity-100 max-md:opacity-100"
-        >
-          {chip.label}
-        </Link>
+
+      {/* trending */}
+      {trending && trending.length > 0 && (
+        <Section title="Trending this week">
+          <div className="flex flex-wrap gap-2">
+            {trending.map((m) => (
+              <Link
+                key={m.id}
+                href={`/monologue/${m.id}`}
+                className="group inline-flex items-baseline gap-1.5 rounded-full border border-border/50 bg-card/40 px-3 py-1.5 transition-colors hover:border-primary/40 hover:bg-primary/[0.05]"
+              >
+                <span className="font-typewriter text-sm text-foreground group-hover:text-primary">
+                  {m.character_name}
+                </span>
+                <span className="font-typewriter text-xs text-muted-foreground/70">
+                  {m.play_title}
+                </span>
+              </Link>
+            ))}
+          </div>
+        </Section>
       )}
-    </motion.div>
+
+      {/* who just joined */}
+      {joined.length > 0 && (
+        <Section title="New faces">
+          <div className="flex flex-wrap gap-4">
+            {joined.slice(0, 10).map((e) => (
+              <div key={e.id} className="flex flex-col items-center gap-1.5 text-center">
+                <Avatar e={e} size={44} />
+                <span className="max-w-[64px] truncate text-xs text-muted-foreground">
+                  {e.name}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* what everyone's hunting for */}
+      {searchTags.length > 0 && (
+        <Section title="In the search">
+          <div className="flex flex-wrap items-center gap-2">
+            {searchTags.map(([tag, count], i) => (
+              <span
+                key={tag}
+                className="bg-card/40 px-2.5 py-1 text-sm capitalize text-muted-foreground"
+                style={{ opacity: Math.max(0.55, 1 - i * 0.03), fontSize: count > 2 ? "0.95rem" : undefined }}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </Section>
+      )}
+
+      {/* the live feed */}
+      <Section title="As it happens">
+        <motion.div
+          initial="show"
+          animate="show"
+          variants={{ show: { transition: { staggerChildren: 0.03 } } }}
+        >
+          {events.slice(0, 40).map((e) => (
+            <FeedRow key={e.id} e={e} />
+          ))}
+        </motion.div>
+      </Section>
+
+      <VisibilityToggle />
+    </div>
   );
 }
 
@@ -51,7 +144,7 @@ function VisibilityToggle() {
     <button
       type="button"
       onClick={() => setShareActivity(!shareActivity)}
-      className="text-xs text-muted-foreground/70 underline-offset-2 transition-colors hover:text-foreground hover:underline"
+      className="text-xs text-muted-foreground/60 underline-offset-2 transition-colors hover:text-foreground hover:underline"
     >
       {shareActivity
         ? "You're visible in here · Hide my activity"
@@ -60,114 +153,64 @@ function VisibilityToggle() {
   );
 }
 
-function CounterPill({ count, window }: { count: number; window: "today" | "week" }) {
+function Stat({ n, label }: { n: number; label: string }) {
   return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/60 px-3.5 py-1.5">
-      <span className="relative flex h-2 w-2">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-      </span>
-      <span className="text-sm text-foreground">
-        <span className="font-semibold">{count}</span>{" "}
-        {count === 1 ? "actor" : "actors"} in the building{" "}
-        {window === "today" ? "today" : "this week"}
-      </span>
+    <div className="border border-border/50 bg-card/30 px-4 py-3">
+      <div className="text-2xl font-semibold tabular-nums text-foreground">{n}</div>
+      <div className="mt-0.5 text-xs text-muted-foreground">{label}</div>
     </div>
   );
 }
 
-export function CallboardFeed() {
-  const { data, isLoading } = useCommunityFeed();
-  const events = data?.events ?? [];
-
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  const topId = events[0]?.id;
-  const prevTop = useRef<number | undefined>(undefined);
-  const [flash, setFlash] = useState(false);
-  useEffect(() => {
-    if (topId !== undefined && prevTop.current !== undefined && topId > prevTop.current) {
-      setFlash(true);
-      const t = setTimeout(() => setFlash(false), 900);
-      return () => clearTimeout(t);
-    }
-    prevTop.current = topId;
-  }, [topId]);
-
-  const container = useMemo(
-    () => ({ show: { transition: { staggerChildren: 0.06 } } }),
-    []
-  );
-
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="mx-auto w-full max-w-2xl px-4 pb-24 pt-8 sm:pt-12">
-      <header className="mb-6 flex flex-col gap-3 sm:mb-8">
-        <h1 className="font-brand text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-          The Callboard
-        </h1>
-        {mounted && data && <CounterPill count={data.actor_count} window={data.window} />}
-        {mounted && <VisibilityToggle />}
-      </header>
+    <section className="mb-10">
+      <h2 className="mb-4 font-typewriter text-xs uppercase tracking-[0.18em] text-muted-foreground">
+        {title}
+      </h2>
+      {children}
+    </section>
+  );
+}
 
-      <div className="relative">
-        <AnimatePresence>
-          {flash && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-              className="pointer-events-none absolute -top-3 left-0 right-0 h-8 bg-gradient-to-b from-primary/25 to-transparent blur-md"
-            />
-          )}
-        </AnimatePresence>
+function FeedRow({ e }: { e: FeedEvent }) {
+  const chip = chipFor(e);
+  return (
+    <motion.div
+      variants={{ show: { opacity: 1, y: 0 }, hidden: { opacity: 0, y: 8 } }}
+      className="group flex items-center gap-3 border-b border-border/30 py-3"
+    >
+      <Avatar e={e} size={34} />
+      <p className="min-w-0 flex-1 text-sm text-muted-foreground">
+        <span className="font-medium text-foreground">{e.name}</span> <EventLine e={e} />
+      </p>
+      <span className="shrink-0 text-[11px] text-muted-foreground/50">{relativeTime(e.created_at)}</span>
+      {chip && (
+        <Link
+          href={chip.href}
+          className="hidden shrink-0 rounded-full border border-primary/40 px-3 py-1 text-[11px] font-medium text-primary transition-colors hover:bg-primary/10 group-hover:inline-block"
+        >
+          {chip.label}
+        </Link>
+      )}
+    </motion.div>
+  );
+}
 
-        {!mounted || isLoading ? (
-          <FeedSkeleton />
-        ) : events.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <motion.div variants={container} initial="show" animate="show" layout>
-            <AnimatePresence initial={false}>
-              {events.map((e) => (
-                <EventCard key={e.id} e={e} />
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        )}
+function BoardSkeleton() {
+  return (
+    <div className="mx-auto w-full max-w-3xl px-4 pb-24 pt-8 sm:pt-12">
+      <div className="mb-8 h-12 w-64 animate-pulse rounded bg-muted" />
+      <div className="mb-10 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-16 animate-pulse border border-border/40 bg-muted/40" />
+        ))}
       </div>
-    </div>
-  );
-}
-
-function FeedSkeleton() {
-  return (
-    <div className="space-y-4">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-4 py-4">
-          <div className="h-11 w-11 shrink-0 animate-pulse rounded-full bg-muted" />
-          <div className="flex-1 space-y-2">
-            <div className="h-3.5 w-3/4 animate-pulse rounded bg-muted" />
-            <div className="h-2.5 w-16 animate-pulse rounded bg-muted/70" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="py-20 text-center">
-      <p className="text-lg text-foreground">The house is quiet right now.</p>
-      <p className="mt-1 text-sm text-muted-foreground">Be the first to make some noise.</p>
-      <Link
-        href="/monologues"
-        className="mt-6 inline-flex rounded-full bg-primary px-5 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#B03000]"
-      >
-        Find a monologue
-      </Link>
+      <div className="space-y-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="h-10 animate-pulse rounded bg-muted/40" />
+        ))}
+      </div>
     </div>
   );
 }
