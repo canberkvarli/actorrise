@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { PracticeLibrary } from "@/components/practice/PracticeLibrary";
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
+import { CallboardPanel } from "@/components/community/CallboardPanel";
 
 /**
  * /practice — the page that opens after login.
@@ -80,6 +81,9 @@ export default function PracticePage() {
               <UploadScriptButton variant="compact" />
             </div>
           )}
+
+          {/* Ambient activity — see the buzz without leaving the landing page. */}
+          <CallboardPanel />
 
           <Suspense fallback={null}>
             <PracticeLibrary
