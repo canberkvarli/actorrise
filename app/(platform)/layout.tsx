@@ -192,7 +192,6 @@ export default function PlatformLayout({
 
   const navItems = [
     { href: "/monologues", label: "Monologues", icon: IconSearch },
-    { href: "/rehearse", label: "Collection", icon: IconBookmark },
     { href: "/practice", label: "My Scripts", icon: IconMicrophone },
   ];
   const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/practice\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$|^\/first-scene$|^\/monologue\/[^/]+\/work$/.test(pathname || "");
@@ -407,6 +406,14 @@ export default function PlatformLayout({
                       >
                         <IconFileText className="h-4 w-4 text-muted-foreground" />
                         <span>Résumé</span>
+                      </Link>
+                      <Link
+                        href="/rehearse"
+                        onClick={() => setProfileDropdownOpen(false)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm rounded-lg hover:bg-muted/60 transition-colors"
+                      >
+                        <IconBookmark className="h-4 w-4 text-muted-foreground" />
+                        <span>Collection</span>
                       </Link>
                       {user?.is_founding_actor && (
                         <Link
