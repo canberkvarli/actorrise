@@ -56,6 +56,7 @@ class UserScriptResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime]
     is_sample: bool = False
+    shared_with_community: bool = False
     first_scene_title: Optional[str] = None
     first_scene_description: Optional[str] = None
     scene_titles: List[str] = []
@@ -1234,6 +1235,43 @@ async def update_script_metadata(
     db.commit()
     db.refresh(script)
 
+    return UserScriptResponse.model_validate(script)
+
+
+class ShareScriptRequest(BaseModel):
+    shared: bool
+
+
+@router.patch("/{script_id}/share", response_model=UserScriptResponse)
+async def set_script_shared(
+    script_id: int,
+    body: ShareScriptRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Share/unshare an uploaded script with the Green Room community library.
+
+    Sharing requires at least one scene — a room needs something to rehearse.
+    Unshare is retroactive: it drops out of the community library immediately.
+    """
+    script = db.query(UserScript).filter(
+        UserScript.id == script_id,
+        UserScript.user_id == current_user.id,
+    ).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="Script not found")
+
+    if body.shared:
+        scene_count = db.query(Scene).filter(Scene.user_script_id == script_id).count()
+        if scene_count == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="This script has no scenes yet, so there's nothing to rehearse. Add a scene first.",
+            )
+
+    script.shared_with_community = bool(body.shared)
+    db.commit()
+    db.refresh(script)
     return UserScriptResponse.model_validate(script)
 
 

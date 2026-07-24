@@ -21,9 +21,13 @@ from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
 from app.core.database import get_db
-from app.models.actor import ActorProfile
+from app.models.actor import ActorProfile, UserScript
 from app.models.community import CommunityEvent
 from app.models.user import User
+
+# Community library needs at least this many shared scripts before it stops
+# showing the "still gathering" cold-start state.
+COMMUNITY_LIBRARY_MIN = 3
 
 router = APIRouter(prefix="/api/community", tags=["community"])
 
@@ -141,6 +145,72 @@ def _actor_count(db: Session) -> tuple[int, str]:
         return today, "today"
     week = distinct_since(now - timedelta(days=7))
     return week, "week"
+
+
+class CommunityScript(BaseModel):
+    id: int
+    title: str
+    author: str
+    genre: Optional[str] = None
+    owner_name: str
+    scene_count: int
+    character_count: int
+    scene_titles: List[str] = []
+    shared_at: datetime
+
+
+class CommunityLibraryResponse(BaseModel):
+    scripts: List[CommunityScript]
+    total: int
+    ready: bool  # False → show the "still gathering scripts" cold-start state
+
+
+@router.get("/scripts", response_model=CommunityLibraryResponse)
+def get_community_scripts(
+    limit: int = Query(60, ge=1, le=100),
+    db: Session = Depends(get_db),
+):
+    """Scripts actors have shared with the Green Room community library. Public
+    (semi-anon owner first name); the scenes are what rooms rehearse."""
+    rows = (
+        db.query(UserScript, User, ActorProfile)
+        .outerjoin(User, UserScript.user_id == User.id)
+        .outerjoin(ActorProfile, ActorProfile.user_id == User.id)
+        .filter(UserScript.shared_with_community.is_(True))
+        .order_by(func.coalesce(UserScript.updated_at, UserScript.created_at).desc())
+        .limit(limit)
+        .all()
+    )
+
+    scripts: List[CommunityScript] = []
+    for script, user, profile in rows:
+        owner = (profile.name if profile else None) or (user.name if user else None)
+        titles = [s.title for s in (script.scenes or [])][:4]
+        scripts.append(
+            CommunityScript(
+                id=script.id,
+                title=script.title,
+                author=script.author,
+                genre=script.genre,
+                owner_name=_first_name(owner),
+                scene_count=script.num_scenes_extracted or len(script.scenes or []),
+                character_count=script.num_characters or 0,
+                scene_titles=titles,
+                shared_at=script.updated_at or script.created_at,
+            )
+        )
+
+    total = (
+        db.query(func.count(UserScript.id))
+        .filter(UserScript.shared_with_community.is_(True))
+        .scalar()
+    ) or 0
+
+    return CommunityLibraryResponse(
+        scripts=scripts,
+        total=total,
+        ready=total >= COMMUNITY_LIBRARY_MIN,
+    )
 
 
 class ShareSettingRequest(BaseModel):

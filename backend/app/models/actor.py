@@ -404,6 +404,11 @@ class UserScript(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # NULL for sample scripts
     is_sample = Column(Boolean, default=False, nullable=False)  # True for system sample scripts
+    # Green Room: owner opted to share this script with the community library so
+    # other actors can rehearse its scenes. Explicit opt-in; unshareable retroactively.
+    shared_with_community = Column(
+        Boolean, default=False, nullable=False, server_default=sql_text("false"), index=True
+    )
 
     # Script Info
     title = Column(String, nullable=False)  # Script title
