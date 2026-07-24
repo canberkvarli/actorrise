@@ -41,6 +41,24 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
+  // Async fallback: an AI reads any role no human has claimed, so a room is
+  // never a dead end. It auto-stops the moment a partner claims that role.
+  const [aiReads, setAiReads] = useState(true);
+  useEffect(() => {
+    if (!aiReads || !myRole) return;
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    const sc = script?.scenes?.[Math.min(sceneIndex, (script?.scenes?.length ?? 1) - 1)];
+    const ln = sc?.lines?.[Math.min(currentLine, (sc?.lines?.length ?? 1) - 1)];
+    if (!ln) return;
+    const humanHasRole = participants.some(
+      (p) => p.role && p.role.toUpperCase() === ln.character_name.toUpperCase()
+    );
+    if (humanHasRole) return; // a person is reading this role
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(ln.text));
+    return () => window.speechSynthesis.cancel();
+  }, [aiReads, myRole, currentLine, sceneIndex, script, participants]);
+
   // Once a partner joins, post ONE "rehearsing together" beat to the Callboard.
   // Only the lowest-id participant posts, so a room yields a single event.
   const postedRef = useRef(false);
@@ -157,6 +175,33 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
             </button>
           );
         })}
+      </div>
+
+      {/* who's here + AI reader toggle */}
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          {participants.map((p) => (
+            <span
+              key={p.id}
+              title={`${p.name}${p.role ? ` · ${p.role}` : ""}`}
+              className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-[#B03000] text-xs font-semibold text-white ring-1 ring-primary/30"
+            >
+              {(p.name?.[0] || "?").toUpperCase()}
+            </span>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => setAiReads((v) => !v)}
+          title="An AI reads any role no one has claimed"
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors ${
+            aiReads
+              ? "border-primary/40 bg-primary/[0.06] text-primary"
+              : "border-border/60 text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {aiReads ? "AI reads the open role" : "AI reader off"}
+        </button>
       </div>
 
       {/* the script */}
