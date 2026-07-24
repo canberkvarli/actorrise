@@ -137,6 +137,12 @@ class ShareSettingRequest(BaseModel):
     share_activity: bool
 
 
+@router.get("/settings")
+def get_settings(current_user: User = Depends(get_current_user)):
+    """The caller's own Green Room visibility (drives the opt-out toggle)."""
+    return {"share_activity": bool(current_user.share_activity)}
+
+
 @router.patch("/settings")
 def update_settings(
     body: ShareSettingRequest,

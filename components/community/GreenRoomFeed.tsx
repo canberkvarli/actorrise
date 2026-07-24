@@ -4,7 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
-import { useCommunityFeed, type FeedEvent } from "@/hooks/useCommunityFeed";
+import {
+  useCommunityFeed,
+  useShareActivity,
+  type FeedEvent,
+} from "@/hooks/useCommunityFeed";
 
 /* ----------------------------- copy helpers ------------------------------ */
 
@@ -170,6 +174,22 @@ function EventCard({ e }: { e: FeedEvent }) {
 
 /* ------------------------------- header ---------------------------------- */
 
+function VisibilityToggle() {
+  const { shareActivity, isLoading, setShareActivity } = useShareActivity();
+  if (isLoading || shareActivity === undefined) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => setShareActivity(!shareActivity)}
+      className="text-xs text-muted-foreground/70 underline-offset-2 transition-colors hover:text-foreground hover:underline"
+    >
+      {shareActivity
+        ? "You're visible in here · Hide my activity"
+        : "You're hidden · Show my activity"}
+    </button>
+  );
+}
+
 function CounterPill({ count, window }: { count: number; window: "today" | "week" }) {
   return (
     <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-card/60 px-3.5 py-1.5">
@@ -224,6 +244,7 @@ export function GreenRoomFeed() {
           The Green Room
         </h1>
         {mounted && data && <CounterPill count={data.actor_count} window={data.window} />}
+        {mounted && <VisibilityToggle />}
       </header>
 
       {/* live-arrival light */}
