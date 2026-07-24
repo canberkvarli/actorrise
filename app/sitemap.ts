@@ -12,6 +12,7 @@
       { url: baseUrl, lastModified: lastMod, changeFrequency: "weekly", priority: 1 },
       { url: `${baseUrl}/monologue-finder`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.9 },
       { url: `${baseUrl}/how-to-find-a-monologue`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.9 },
+      { url: `${baseUrl}/monologue-database`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.9 },
       { url: `${baseUrl}/audition-monologues`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.9 },
       { url: `${baseUrl}/audition-ai`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.9 },
       { url: `${baseUrl}/pricing`, lastModified: lastMod, changeFrequency: "weekly", priority: 0.9 },

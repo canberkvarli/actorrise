@@ -11,9 +11,9 @@ export type BlogPost = {
 export const BLOG_POSTS: BlogPost[] = [
   {
     slug: "most-overdone-audition-monologues",
-    title: "The most overdone audition monologues (and what to do instead)",
+    title: "Overdone Audition Monologues (and What to Bring Instead)",
     excerpt:
-      "The pieces casting hears in every waiting room, how to tell if yours is one of them, and how to find something that fits you better.",
+      "The monologues casting hears in every waiting room, including the overdone Shakespeare pieces, how to tell if yours is one of them, and how to find something fresher that still fits you.",
     date: "2026-06-11",
     readingMinutes: 6,
   },
