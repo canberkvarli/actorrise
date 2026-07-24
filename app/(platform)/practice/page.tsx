@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { PracticeLibrary } from "@/components/practice/PracticeLibrary";
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
-import { CallboardPanel } from "@/components/community/CallboardPanel";
+import { CallboardMarquee } from "@/components/community/CallboardMarquee";
 
 /**
  * /practice — the page that opens after login.
@@ -82,22 +82,17 @@ export default function PracticePage() {
             </div>
           )}
 
-          {/* Scripts take the main column; the Callboard rides along as an
-              ambient right-rail on desktop, stacking below on mobile. */}
-          <div className="grid gap-8 xl:grid-cols-[1fr_340px]">
-            <div className="min-w-0">
-              <Suspense fallback={null}>
-                <PracticeLibrary
-                  scripts={safeScripts}
-                  featuredScriptId={featuredScriptId}
-                  demoScriptId={demoScript?.id ?? null}
-                />
-              </Suspense>
-            </div>
-            <aside className="xl:sticky xl:top-24 xl:self-start">
-              <CallboardPanel rows={7} />
-            </aside>
-          </div>
+          {/* Ambient activity as a lit marquee across the top — see the buzz
+              without it competing with the scripts library below. */}
+          <CallboardMarquee />
+
+          <Suspense fallback={null}>
+            <PracticeLibrary
+              scripts={safeScripts}
+              featuredScriptId={featuredScriptId}
+              demoScriptId={demoScript?.id ?? null}
+            />
+          </Suspense>
         </motion.div>
       )}
     </div>
