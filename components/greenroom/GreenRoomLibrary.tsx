@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
+import { useAuth } from "@/lib/auth";
 import { useCommunityLibrary, type CommunityScript } from "@/hooks/useCommunityLibrary";
+import { useLobbyPresence } from "@/hooks/useLobbyPresence";
 import { useScripts, useShareScript } from "@/hooks/useScripts";
 
 /**
@@ -40,9 +42,10 @@ export function GreenRoomLibrary() {
           The Green Room
         </h1>
         <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
-          Rehearse a scene with another actor. Rehearsing together over voice is on the
-          way — for now, this is where the community shares scripts to rehearse.
+          Rehearse a scene with another actor, live over voice. Pick a script below,
+          claim a role, and share the room link with your partner.
         </p>
+        <LobbyPresence />
       </header>
 
       <section className="mb-12">
@@ -114,6 +117,31 @@ function CommunityScriptCard({ s }: { s: CommunityScript }) {
         <RehearseTogetherButton scriptId={s.id} />
       </div>
     </motion.div>
+  );
+}
+
+function LobbyPresence() {
+  const { user } = useAuth();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const myName = user?.name?.trim().split(/\s+/)[0] || "Actor";
+  // Pass "" until mounted so the hook doesn't subscribe on the server (no SSR
+  // presence → no hydration mismatch).
+  const { count } = useLobbyPresence("greenroom-lobby", mounted ? myName : "");
+
+  if (!mounted || count === 0) return null;
+  return (
+    <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5">
+      <span className="relative flex h-2 w-2">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+      </span>
+      <span className="text-sm text-foreground">
+        {count === 1
+          ? "You're the only one here right now"
+          : `${count} actors in the Green Room now`}
+      </span>
+    </div>
   );
 }
 
