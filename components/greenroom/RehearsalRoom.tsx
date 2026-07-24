@@ -13,6 +13,7 @@ import {
   IconPhoneOff,
   IconLoader2,
 } from "@tabler/icons-react";
+import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { useCommunityScript } from "@/hooks/useCommunityScript";
 import { useRoomChannel } from "@/hooks/useRoomChannel";
@@ -23,6 +24,7 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
   const myName = (user?.name?.trim().split(/\s+/)[0]) || "Actor";
   const { data: script, isLoading } = useCommunityScript(scriptId);
   const {
+    myId,
     participants,
     sceneIndex,
     setScene,
@@ -38,6 +40,19 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
   // can be warm on the client, empty on the server) — avoids a hydration flash.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+
+  // Once a partner joins, post ONE "rehearsing together" beat to the Callboard.
+  // Only the lowest-id participant posts, so a room yields a single event.
+  const postedRef = useRef(false);
+  useEffect(() => {
+    if (postedRef.current || participants.length < 2) return;
+    const ids = participants.map((p) => p.id).sort();
+    if (ids[0] !== myId) return;
+    const title = script?.scenes?.[Math.min(sceneIndex, (script.scenes.length || 1) - 1)]?.title;
+    if (!title) return;
+    postedRef.current = true;
+    api.post("/api/community/room-activity", { title }).catch(() => {});
+  }, [participants, myId, script, sceneIndex]);
 
   if (!mounted || isLoading || !script) return <RoomSkeleton />;
   const scenes = script.scenes;

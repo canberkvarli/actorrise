@@ -33,6 +33,8 @@ VALID_EVENT_TYPES = {
     "bookmarked",
     "worked",
     "rehearsed",
+    "rehearsing",  # live: rehearsing a scene with a partner in the Green Room
+    "shared",  # shared a script with the community library
     "milestone",
     "went_plus",
     "trending",

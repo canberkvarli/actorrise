@@ -10,6 +10,8 @@ export type CommunityEventType =
   | "bookmarked"
   | "worked"
   | "rehearsed"
+  | "rehearsing"
+  | "shared"
   | "milestone"
   | "went_plus"
   | "trending";

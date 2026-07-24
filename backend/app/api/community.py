@@ -299,6 +299,23 @@ def get_community_script(script_id: int, db: Session = Depends(get_db)):
     )
 
 
+class RoomActivityRequest(BaseModel):
+    title: str
+
+
+@router.post("/room-activity")
+def post_room_activity(
+    body: RoomActivityRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Fired once by a room when a partner joins → a live 'rehearsing together'
+    beat on the Callboard. Fire-and-forget; the caller's own identity."""
+    from app.services.community import record_event
+
+    record_event(int(current_user.id), "rehearsing", title=(body.title or "")[:120])
+    return {"ok": True}
+
+
 class ShareSettingRequest(BaseModel):
     share_activity: bool
 

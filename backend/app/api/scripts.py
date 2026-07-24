@@ -1272,6 +1272,12 @@ async def set_script_shared(
     script.shared_with_community = bool(body.shared)
     db.commit()
     db.refresh(script)
+
+    # Green Room → Callboard: "Maya shared a script with the community."
+    if body.shared:
+        from app.services.community import record_event
+        record_event(int(current_user.id), "shared", title=script.title)
+
     return UserScriptResponse.model_validate(script)
 
 

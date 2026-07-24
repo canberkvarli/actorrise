@@ -63,6 +63,18 @@ export function EventLine({ e }: { e: FeedEvent }) {
       return <>ran a monologue out loud</>;
     case "rehearsed":
       return <>rehearsed a scene{p.line_count ? <> · {p.line_count} lines</> : null}</>;
+    case "rehearsing":
+      return p.title ? (
+        <>is rehearsing <Title>{p.title}</Title> with a partner</>
+      ) : (
+        <>is rehearsing a scene with a partner</>
+      );
+    case "shared":
+      return p.title ? (
+        <>shared <Title>{p.title}</Title> with the community</>
+      ) : (
+        <>shared a script with the community</>
+      );
     case "milestone":
       return <>hit {p.milestone_n} rehearsals</>;
     case "went_plus":
