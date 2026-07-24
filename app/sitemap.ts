@@ -1,13 +1,14 @@
   import type { MetadataRoute } from "next";
   import { BLOG_POSTS } from "@/lib/blog/posts";
+  import { getIndexableMonologues, monologueSlug } from "@/lib/monologueSeo";
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
   /** Stable date for sitemap entries so crawlers get consistent signals (update when doing larger content refreshes). */
   const lastMod = new Date("2026-06-10");
 
-  export default function sitemap(): MetadataRoute.Sitemap {
-    return [
+  export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+    const staticEntries: MetadataRoute.Sitemap = [
       /* ── Core pages ─────────────────────────────────────────── */
       { url: baseUrl, lastModified: lastMod, changeFrequency: "weekly", priority: 1 },
       { url: `${baseUrl}/monologue-finder`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.9 },
@@ -61,4 +62,22 @@
       { url: `${baseUrl}/privacy`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.5 },
       { url: `${baseUrl}/terms`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.5 },
     ];
+
+    // Every indexable monologue gets its own page (public-domain full text,
+    // copyrighted metadata-only). Best-effort: if the DB is unreachable when the
+    // sitemap is generated, the static entries above still ship.
+    let monologueEntries: MetadataRoute.Sitemap = [];
+    try {
+      const monos = await getIndexableMonologues();
+      monologueEntries = monos.map((m) => ({
+        url: `${baseUrl}/monologues/${monologueSlug(m)}`,
+        lastModified: lastMod,
+        changeFrequency: "monthly" as const,
+        priority: 0.6,
+      }));
+    } catch {
+      // ignore — the static sitemap is still valid on its own
+    }
+
+    return [...staticEntries, ...monologueEntries];
   }

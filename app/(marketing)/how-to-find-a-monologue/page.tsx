@@ -6,7 +6,7 @@ import { StageHero } from "@/components/marketing/StageHero";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
 export const metadata: Metadata = {
-  title: "How to Find a Monologue for an Audition (Fast) | ActorRise",
+  title: "How to Find a Monologue for an Audition (Fast)",
   description:
     "A simple guide to finding the right audition monologue: pick the length, tone, and type the room wants, avoid overdone pieces, and search 12,000+ real monologues in seconds. Free to start.",
   openGraph: {
