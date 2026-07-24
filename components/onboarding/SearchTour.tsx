@@ -137,6 +137,8 @@ export function SearchTour({ onDismiss }: SearchTourProps) {
     if (!rect) return { display: "none" };
     if (typeof window === "undefined") return { display: "none" };
     const tooltipWidth = typeof window !== "undefined" ? Math.min(TOOLTIP_WIDTH, window.innerWidth - 32) : TOOLTIP_WIDTH;
+    // Reserve room for the mobile bottom tab bar (~64px) so actions never tuck under it.
+    const bottomSafe = window.innerWidth < 768 ? 88 : 24;
     const style: React.CSSProperties = { position: "fixed", width: tooltipWidth, maxWidth: "calc(100vw - 32px)", zIndex: 10002 };
     if (isFallback) {
       style.left = Math.max(16, (window.innerWidth - tooltipWidth) / 2);
@@ -148,9 +150,9 @@ export function SearchTour({ onDismiss }: SearchTourProps) {
     const clampedX = Math.max(16, Math.min(centerX, window.innerWidth - tooltipWidth - 16));
     style.left = clampedX;
     if (placement === "bottom") {
-      style.top = rect.bottom + TOOLTIP_OFFSET;
+      style.top = Math.max(24, Math.min(rect.bottom + TOOLTIP_OFFSET, window.innerHeight - 220 - bottomSafe));
     } else {
-      style.bottom = window.innerHeight - rect.top + TOOLTIP_OFFSET;
+      style.bottom = Math.max(bottomSafe, window.innerHeight - rect.top + TOOLTIP_OFFSET);
     }
     return style;
   })();

@@ -141,6 +141,9 @@ export function ProfileTour({ onDismiss }: ProfileTourProps) {
     if (!rect) return { display: "none" };
     if (typeof window === "undefined") return { display: "none" };
     const tooltipWidth = Math.min(TOOLTIP_WIDTH, window.innerWidth - 32);
+    // On mobile a fixed bottom tab bar (~64px) sits over the viewport bottom;
+    // reserve room for it so the tooltip's actions never tuck under the nav.
+    const bottomSafe = window.innerWidth < 768 ? 88 : VIEWPORT_PADDING;
     const style: React.CSSProperties = { position: "fixed", width: tooltipWidth, maxWidth: "calc(100vw - 32px)", zIndex: 10002 };
     if (isFallback) {
       style.left = Math.max(16, (window.innerWidth - tooltipWidth) / 2);
@@ -160,10 +163,10 @@ export function ProfileTour({ onDismiss }: ProfileTourProps) {
 
     if (useBottom) {
       const top = rect.bottom + TOOLTIP_OFFSET;
-      style.top = Math.max(VIEWPORT_PADDING, Math.min(top, window.innerHeight - TOOLTIP_APPROX_HEIGHT - VIEWPORT_PADDING));
+      style.top = Math.max(VIEWPORT_PADDING, Math.min(top, window.innerHeight - TOOLTIP_APPROX_HEIGHT - bottomSafe));
     } else {
       const bottom = window.innerHeight - rect.top + TOOLTIP_OFFSET;
-      style.bottom = Math.max(VIEWPORT_PADDING, Math.min(bottom, window.innerHeight - TOOLTIP_APPROX_HEIGHT - VIEWPORT_PADDING));
+      style.bottom = Math.max(bottomSafe, Math.min(bottom, window.innerHeight - TOOLTIP_APPROX_HEIGHT - VIEWPORT_PADDING));
     }
     return style;
   })();

@@ -80,6 +80,13 @@ export function ActorProfileForm() {
   const [showPhotoViewer, setShowPhotoViewer] = useState(false);
   const [activeTab, setActiveTab] = useState("basic");
   const [hasInitialized, setHasInitialized] = useState(false);
+  // Gate first paint so the server render and the first client render match:
+  // React Query's cache can be warm on the client but empty on the server, which
+  // would otherwise flip the skeleton/loaded branch and trip a hydration mismatch.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   /** Actor types - multi-select; when non-empty we save type as array */
   const [actorTypes, setActorTypes] = useState<string[]>([]);
   const hasPopulatedRef = useRef(false);
@@ -628,7 +635,7 @@ export function ActorProfileForm() {
     }
   };
 
-  if (isFetching) {
+  if (!mounted || isFetching) {
     return (
       <div className="space-y-6">
         <Card>
