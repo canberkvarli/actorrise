@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -110,9 +111,29 @@ function CommunityScriptCard({ s }: { s: CommunityScript }) {
       )}
       <div className="mt-auto flex items-center justify-between pt-4">
         <span className="text-xs text-muted-foreground/60">shared by {s.owner_name}</span>
-        <span className="text-[10px] uppercase tracking-wider text-primary/70">rooms soon</span>
+        <RehearseTogetherButton scriptId={s.id} />
       </div>
     </motion.div>
+  );
+}
+
+function RehearseTogetherButton({ scriptId }: { scriptId: number }) {
+  const router = useRouter();
+  const start = () => {
+    const roomId =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID().slice(0, 8)
+        : Math.random().toString(36).slice(2, 10);
+    router.push(`/greenroom/room/${roomId}?script=${scriptId}`);
+  };
+  return (
+    <button
+      type="button"
+      onClick={start}
+      className="text-xs font-medium text-primary transition-colors hover:text-[#B03000]"
+    >
+      Rehearse together →
+    </button>
   );
 }
 

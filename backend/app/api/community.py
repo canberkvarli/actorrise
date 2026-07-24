@@ -14,7 +14,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
@@ -223,6 +223,79 @@ def get_community_scripts(
         scripts=scripts,
         total=total,
         ready=total >= COMMUNITY_LIBRARY_MIN,
+    )
+
+
+class RoomLine(BaseModel):
+    line_order: int
+    character_name: str
+    text: str
+
+
+class RoomScene(BaseModel):
+    id: int
+    title: str
+    character_1_name: str
+    character_2_name: str
+    line_count: int
+    lines: List[RoomLine]
+
+
+class CommunityScriptDetail(BaseModel):
+    id: int
+    title: str
+    author: str
+    owner_name: str
+    is_demo: bool
+    scenes: List[RoomScene]
+
+
+@router.get("/scripts/{script_id}", response_model=CommunityScriptDetail)
+def get_community_script(script_id: int, db: Session = Depends(get_db)):
+    """A shared (or demo) script with its scenes + lines, for rehearsal rooms.
+    Public read, but ONLY for scripts the owner shared (or system demos)."""
+    script = (
+        db.query(UserScript)
+        .filter(
+            UserScript.id == script_id,
+            or_(
+                UserScript.shared_with_community.is_(True),
+                UserScript.is_sample.is_(True),
+            ),
+        )
+        .first()
+    )
+    if not script:
+        raise HTTPException(status_code=404, detail="Script not found or not shared")
+
+    owner = None
+    if script.user_id and not script.is_sample:
+        prof = db.query(ActorProfile).filter(ActorProfile.user_id == script.user_id).first()
+        usr = db.query(User).filter(User.id == script.user_id).first()
+        owner = (prof.name if prof else None) or (usr.name if usr else None)
+
+    scenes = [
+        RoomScene(
+            id=sc.id,
+            title=sc.title,
+            character_1_name=sc.character_1_name,
+            character_2_name=sc.character_2_name,
+            line_count=sc.line_count,
+            lines=[
+                RoomLine(line_order=ln.line_order, character_name=ln.character_name, text=ln.text)
+                for ln in sorted(sc.lines, key=lambda l: l.line_order)
+            ],
+        )
+        for sc in (script.scenes or [])
+    ]
+
+    return CommunityScriptDetail(
+        id=script.id,
+        title=script.title,
+        author=script.author,
+        owner_name="ActorRise" if script.is_sample else _first_name(owner),
+        is_demo=bool(script.is_sample),
+        scenes=scenes,
     )
 
 
