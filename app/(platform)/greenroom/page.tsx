@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { GreenRoomLibrary } from "@/components/greenroom/GreenRoomLibrary";
+import { GhostLightIntro } from "@/components/greenroom/GhostLightIntro";
 
 export const metadata: Metadata = {
   title: "The Green Room · ActorRise",
@@ -7,5 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default function GreenRoomPage() {
-  return <GreenRoomLibrary />;
+  return (
+    <>
+      <GhostLightIntro />
+      <GreenRoomLibrary />
+    </>
+  );
 }

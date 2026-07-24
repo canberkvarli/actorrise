@@ -13,6 +13,7 @@ export interface CommunityScript {
   character_count: number;
   scene_titles: string[];
   shared_at: string;
+  is_demo: boolean;
 }
 
 export interface CommunityLibraryResponse {

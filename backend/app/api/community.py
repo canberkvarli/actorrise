@@ -157,6 +157,7 @@ class CommunityScript(BaseModel):
     character_count: int
     scene_titles: List[str] = []
     shared_at: datetime
+    is_demo: bool = False
 
 
 class CommunityLibraryResponse(BaseModel):
@@ -170,14 +171,23 @@ def get_community_scripts(
     limit: int = Query(60, ge=1, le=100),
     db: Session = Depends(get_db),
 ):
-    """Scripts actors have shared with the Green Room community library. Public
-    (semi-anon owner first name); the scenes are what rooms rehearse."""
+    """Scripts in the Green Room community library — actor-shared plus the system
+    demo scripts (labeled), so the shelf is never empty. Public, semi-anon owner."""
     rows = (
         db.query(UserScript, User, ActorProfile)
         .outerjoin(User, UserScript.user_id == User.id)
         .outerjoin(ActorProfile, ActorProfile.user_id == User.id)
-        .filter(UserScript.shared_with_community.is_(True))
-        .order_by(func.coalesce(UserScript.updated_at, UserScript.created_at).desc())
+        .filter(
+            or_(
+                UserScript.shared_with_community.is_(True),
+                UserScript.is_sample.is_(True),
+            )
+        )
+        # Real shares first, then demos; newest within each.
+        .order_by(
+            UserScript.is_sample.asc(),
+            func.coalesce(UserScript.updated_at, UserScript.created_at).desc(),
+        )
         .limit(limit)
         .all()
     )
@@ -192,14 +202,17 @@ def get_community_scripts(
                 title=script.title,
                 author=script.author,
                 genre=script.genre,
-                owner_name=_first_name(owner),
+                owner_name="ActorRise" if script.is_sample else _first_name(owner),
                 scene_count=script.num_scenes_extracted or len(script.scenes or []),
                 character_count=script.num_characters or 0,
                 scene_titles=titles,
                 shared_at=script.updated_at or script.created_at,
+                is_demo=bool(script.is_sample),
             )
         )
 
+    # "ready" reflects real community shares only — demos seed the shelf but the
+    # "still gathering" nudge stays until actors have shared >= MIN of their own.
     total = (
         db.query(func.count(UserScript.id))
         .filter(UserScript.shared_with_community.is_(True))

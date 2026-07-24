@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
@@ -14,9 +15,23 @@ import { useScripts, useShareScript } from "@/hooks/useScripts";
 export function GreenRoomLibrary() {
   const { data, isLoading } = useCommunityLibrary();
 
+  // Gate first paint so server and first client render agree (React Query's
+  // cache can be warm on the client but empty on the server) — avoids a
+  // skeleton/grid hydration mismatch.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   return (
-    <div className="mx-auto max-w-5xl px-4 pb-24 pt-8 sm:pt-12">
-      <header className="mb-8">
+    <div className="relative mx-auto max-w-5xl px-4 pb-24 pt-8 sm:pt-12">
+      {/* ambient stage wash — the room lit from above */}
+      <div
+        className="pointer-events-none absolute inset-x-0 -top-10 h-64"
+        style={{
+          background:
+            "radial-gradient(50% 100% at 50% 0%, rgba(203,75,0,0.10), transparent 70%)",
+        }}
+      />
+      <header className="relative mb-8">
         <p className="font-typewriter text-xs italic tracking-wide text-muted-foreground/70">
           (the green room.)
         </p>
@@ -33,21 +48,24 @@ export function GreenRoomLibrary() {
         <h2 className="mb-4 font-typewriter text-sm uppercase tracking-[0.18em] text-muted-foreground">
           The community library
         </h2>
-        {isLoading ? (
+        {!mounted || isLoading ? (
           <LibrarySkeleton />
-        ) : !data || !data.ready ? (
+        ) : !data || data.scripts.length === 0 ? (
           <ColdStart total={data?.total ?? 0} />
         ) : (
-          <motion.div
-            initial="hidden"
-            animate="show"
-            variants={{ show: { transition: { staggerChildren: 0.05 } } }}
-            className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-          >
-            {data.scripts.map((s) => (
-              <CommunityScriptCard key={s.id} s={s} />
-            ))}
-          </motion.div>
+          <>
+            {!data.ready && <SeedBanner total={data.total} />}
+            <motion.div
+              initial="hidden"
+              animate="show"
+              variants={{ show: { transition: { staggerChildren: 0.05 } } }}
+              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+            >
+              {data.scripts.map((s) => (
+                <CommunityScriptCard key={s.id} s={s} />
+              ))}
+            </motion.div>
+          </>
         )}
       </section>
 
@@ -63,9 +81,16 @@ function CommunityScriptCard({ s }: { s: CommunityScript }) {
       transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
       className="flex h-full flex-col border border-border/50 bg-card/40 p-5"
     >
-      <h3 className="font-typewriter text-lg font-semibold leading-snug text-foreground line-clamp-1">
-        {s.title}
-      </h3>
+      <div className="flex items-start justify-between gap-2">
+        <h3 className="font-typewriter text-lg font-semibold leading-snug text-foreground line-clamp-1">
+          {s.title}
+        </h3>
+        {s.is_demo && (
+          <span className="shrink-0 bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
+            Demo
+          </span>
+        )}
+      </div>
       <p className="font-typewriter text-xs text-muted-foreground line-clamp-1">
         {s.author}
       </p>
@@ -88,6 +113,20 @@ function CommunityScriptCard({ s }: { s: CommunityScript }) {
         <span className="text-[10px] uppercase tracking-wider text-primary/70">rooms soon</span>
       </div>
     </motion.div>
+  );
+}
+
+function SeedBanner({ total }: { total: number }) {
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 border-l-2 border-primary/50 bg-card/30 px-4 py-2.5 text-sm text-muted-foreground">
+      <span className="text-foreground">The Green Room is just opening.</span>
+      <span>
+        These demo scenes get you started — share yours below to fill the board.
+      </span>
+      <span className="font-typewriter text-xs uppercase tracking-wider text-muted-foreground/60">
+        {total} of 3 shared
+      </span>
+    </div>
   );
 }
 
