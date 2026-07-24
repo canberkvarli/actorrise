@@ -63,8 +63,7 @@ const FILM_TV_LOADING_STEPS = [
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
-import { CallboardStage } from "@/components/community/CallboardStage";
-import { CallboardTicker } from "@/components/community/CallboardTicker";
+import { TrendingPreSearch } from "@/components/monologue/TrendingPreSearch";
 import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
@@ -1772,10 +1771,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           description="Keep exploring with 2 weeks of Plus, free. Unlimited searches, nothing charged now, card on file, cancel anytime."
         />
 
-        {/* The lit marquee — keeps the buzz alive once results take the stage. */}
-        {((hasSearched && results.length > 0) ||
-          (filmTvHasSearched && filmTvResults.length > 0)) && <CallboardTicker />}
-
         {/* Results */}
         <AnimatePresence mode="wait">
           {searchMode === "film_tv" ? (
@@ -2226,16 +2221,17 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               )}
             </div>
           ) : (
-            // Pre-search: the house is open — show who's in the room. On search
-            // this exits (mode="wait") and results take the stage.
+            // Pre-search: fill the space with something that helps them start —
+            // the pieces actors are working on right now. On search this exits
+            // (mode="wait") and results take the stage.
             <motion.div
-              key="callboard-presearch"
+              key="trending-presearch"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
             >
-              <CallboardStage />
+              <TrendingPreSearch />
             </motion.div>
           )}
         </AnimatePresence>

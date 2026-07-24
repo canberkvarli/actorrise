@@ -46,7 +46,7 @@ export default function PracticePage() {
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 max-w-6xl">
+    <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 max-w-7xl">
       {isLoading ? (
         <div className="space-y-8 sm:space-y-10">
           <Skeleton className="h-12 w-3/4 max-w-md" />
@@ -82,16 +82,22 @@ export default function PracticePage() {
             </div>
           )}
 
-          {/* Ambient activity — see the buzz without leaving the landing page. */}
-          <CallboardPanel />
-
-          <Suspense fallback={null}>
-            <PracticeLibrary
-              scripts={safeScripts}
-              featuredScriptId={featuredScriptId}
-              demoScriptId={demoScript?.id ?? null}
-            />
-          </Suspense>
+          {/* Scripts take the main column; the Callboard rides along as an
+              ambient right-rail on desktop, stacking below on mobile. */}
+          <div className="grid gap-8 xl:grid-cols-[1fr_340px]">
+            <div className="min-w-0">
+              <Suspense fallback={null}>
+                <PracticeLibrary
+                  scripts={safeScripts}
+                  featuredScriptId={featuredScriptId}
+                  demoScriptId={demoScript?.id ?? null}
+                />
+              </Suspense>
+            </div>
+            <aside className="xl:sticky xl:top-24 xl:self-start">
+              <CallboardPanel rows={7} />
+            </aside>
+          </div>
         </motion.div>
       )}
     </div>
