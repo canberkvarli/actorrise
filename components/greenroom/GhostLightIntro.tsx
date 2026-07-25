@@ -1,45 +1,53 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { GhostLight } from "@/components/brand/GhostLight";
 
 /**
- * Ghost-light entrance for the Green Room. An opaque cover holds from mount so
- * the page loads UNSEEN behind it; once the page is `ready`, the brand GhostLight
- * (warm --glow, landing's flicker) fades in and out IN PLACE, then the cover
- * lifts to reveal the settled room. Skipped for reduced motion.
+ * Ghost-light entrance for the Green Room. Rendered in a PORTAL to document.body
+ * so its fixed overlay is truly viewport-fixed (a `fixed` element inside the page
+ * transition's transformed container would otherwise gain a second scrollbar and
+ * mis-position). An opaque cover holds while the page loads unseen; once `ready`
+ * (or a fallback timeout) the brand GhostLight fades in/out in place, then lifts.
  */
 export function GhostLightIntro({ ready }: { ready: boolean }) {
   const reduce = useReducedMotion();
-  const [show, setShow] = useState(false); // opaque cover, client-only
-  const [lit, setLit] = useState(false); // light sequence started
+  const [mounted, setMounted] = useState(false);
+  const [lit, setLit] = useState(false);
   const [done, setDone] = useState(false);
 
-  useEffect(() => {
-    if (!reduce) setShow(true);
-  }, [reduce]);
+  useEffect(() => setMounted(true), []);
 
-  // Only start the light once the page behind is ready, so it never plays over a
-  // still-loading (shifting) layout.
+  // Light the bulb when the page is ready — or after a fallback so a slow load
+  // can never leave the cover stuck up.
   useEffect(() => {
-    if (show && ready && !lit) {
+    if (reduce || lit) return;
+    if (ready) {
       setLit(true);
-      const t = setTimeout(() => setDone(true), 1400);
-      return () => clearTimeout(t);
+      return;
     }
-  }, [show, ready, lit]);
+    const t = setTimeout(() => setLit(true), 1200);
+    return () => clearTimeout(t);
+  }, [ready, lit, reduce]);
 
-  if (reduce || !show || done) return null;
+  useEffect(() => {
+    if (!lit) return;
+    const t = setTimeout(() => setDone(true), 1400);
+    return () => clearTimeout(t);
+  }, [lit]);
 
-  return (
+  if (reduce || !mounted) return null;
+
+  return createPortal(
     <AnimatePresence>
       {!done && (
         <motion.div
-          className="fixed inset-0 z-[60] flex items-center justify-center bg-[#0b0806]"
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-[#0b0806]"
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.55, ease: "easeInOut" }}
+          transition={{ duration: 0.5, ease: "easeInOut" }}
         >
           {lit && (
             <motion.div
@@ -52,6 +60,7 @@ export function GhostLightIntro({ ready }: { ready: boolean }) {
           )}
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 }
