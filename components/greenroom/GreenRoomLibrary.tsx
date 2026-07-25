@@ -83,14 +83,14 @@ function CommunityScriptCard({ s }: { s: CommunityScript }) {
     <motion.div
       variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
       transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-      className="flex h-full flex-col border border-border/50 bg-card/40 p-5"
+      className="flex h-full flex-col rounded-xl border border-border bg-card p-5 shadow-sm transition-colors hover:border-primary/40"
     >
       <div className="flex items-start justify-between gap-2">
         <h3 className="font-typewriter text-lg font-semibold leading-snug text-foreground line-clamp-1">
           {s.title}
         </h3>
         {s.is_demo && (
-          <span className="shrink-0 bg-primary/15 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary">
+          <span className="shrink-0 rounded bg-[#CB4B00] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">
             Demo
           </span>
         )}
@@ -158,7 +158,7 @@ function RehearseTogetherButton({ scriptId }: { scriptId: number }) {
     <button
       type="button"
       onClick={start}
-      className="text-xs font-medium text-primary transition-colors hover:text-[#B03000]"
+      className="rounded-full bg-[#CB4B00] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#B03000]"
     >
       Rehearse together →
     </button>
