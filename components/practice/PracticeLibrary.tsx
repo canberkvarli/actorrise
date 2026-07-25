@@ -103,8 +103,11 @@ export function PracticeLibrary({
 
   return (
     <>
-      <div className="grid gap-6 lg:grid-cols-[300px_1fr] lg:gap-10">
-        <aside className="lg:border-r lg:border-border/60 lg:pr-6">
+      <div className="space-y-8">
+        <div>
+          <h2 className="mb-3 font-typewriter text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            Your shelf
+          </h2>
           <PracticeLibraryRail
             scripts={ordered}
             selectedId={effectiveId}
@@ -112,7 +115,7 @@ export function PracticeLibrary({
             onRequestDelete={setDeleteTarget}
             onReport={handleReport}
           />
-        </aside>
+        </div>
 
         {selectedScript && <PracticeScenePanel key={selectedScript.id} script={selectedScript} />}
       </div>
