@@ -78,6 +78,9 @@ export default function PracticePage() {
         >
           {hasAnyScript && (
             <>
+              {/* Ambient activity stays at the very top. */}
+              <CallboardMarquee />
+
               {/* Screen identity — this is the rehearsal room, not just a list. */}
               <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
@@ -94,9 +97,6 @@ export default function PracticePage() {
                 </div>
                 <UploadScriptButton variant="primary">Upload a script</UploadScriptButton>
               </header>
-
-              {/* Ambient activity below the header. */}
-              <CallboardMarquee />
             </>
           )}
 
