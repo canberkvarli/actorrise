@@ -11,6 +11,9 @@ PATCH /api/community/settings flips the caller's own opt-out.
 
 from __future__ import annotations
 
+import html
+import re
+import time
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, List, Optional
 
@@ -323,27 +326,53 @@ class RoomInviteRequest(BaseModel):
     scene_title: Optional[str] = None
 
 
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+_ROOM_ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+# Per-user rate limit so this can't be used as a spam cannon (in-process; resets
+# on restart — fine as a basic abuse guard on a single instance).
+_INVITE_HITS: Dict[int, List[float]] = {}
+_INVITE_LIMIT = 15
+_INVITE_WINDOW = 3600.0
+
+
+def _invite_rate_ok(user_id: int) -> bool:
+    now = time.time()
+    hits = [t for t in _INVITE_HITS.get(user_id, []) if now - t < _INVITE_WINDOW]
+    if len(hits) >= _INVITE_LIMIT:
+        _INVITE_HITS[user_id] = hits
+        return False
+    hits.append(now)
+    _INVITE_HITS[user_id] = hits
+    return True
+
+
 @router.post("/room-invite")
 def send_room_invite(
     body: RoomInviteRequest,
     current_user: User = Depends(get_current_user),
 ):
     """Email a friend a link to a rehearsal room (Canva-style invite). The room
-    URL is built server-side so this can't be used to send arbitrary links."""
+    URL is built server-side, all interpolated values are HTML-escaped, and sends
+    are rate-limited per user so this isn't a spam vector."""
     email = (body.email or "").strip()
-    if "@" not in email or "." not in email.split("@")[-1]:
+    if not _EMAIL_RE.match(email):
         raise HTTPException(status_code=400, detail="That doesn't look like an email address.")
+    if not _ROOM_ID_RE.match(body.room_id or ""):
+        raise HTTPException(status_code=400, detail="Invalid room.")
+    if not _invite_rate_ok(int(current_user.id)):
+        raise HTTPException(status_code=429, detail="You've sent a lot of invites — try again later.")
 
     import os
 
     if not os.getenv("RESEND_API_KEY"):
         return {"sent": False, "reason": "email_not_configured"}
 
-    inviter = _first_name(current_user.name)
-    url = f"https://actorrise.com/greenroom/room/{body.room_id}?script={body.script_id}"
-    scene = (body.scene_title or "").strip()
+    # Escape everything user-controlled before it enters the email HTML.
+    inviter = html.escape(_first_name(current_user.name))
+    scene = html.escape((body.scene_title or "").strip()[:120])
+    url = f"https://actorrise.com/greenroom/room/{body.room_id}?script={int(body.script_id)}"
 
-    html = f"""
+    body_html = f"""
     <div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:28px;color:#1a1a1a">
       <p style="font-size:16px;line-height:1.5">{inviter} wants to rehearse a scene with you on ActorRise.</p>
       {f'<p style="font-size:15px;color:#555;margin:0 0 8px">Scene: <strong>{scene}</strong></p>' if scene else ''}
@@ -360,7 +389,7 @@ def send_room_invite(
         ResendEmailClient().send_email(
             to=email,
             subject=f"{inviter} invited you to rehearse a scene on ActorRise",
-            html=html,
+            html=body_html,
         )
         return {"sent": True}
     except Exception:
