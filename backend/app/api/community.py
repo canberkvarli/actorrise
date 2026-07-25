@@ -316,6 +316,57 @@ def post_room_activity(
     return {"ok": True}
 
 
+class RoomInviteRequest(BaseModel):
+    email: str
+    room_id: str
+    script_id: int
+    scene_title: Optional[str] = None
+
+
+@router.post("/room-invite")
+def send_room_invite(
+    body: RoomInviteRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Email a friend a link to a rehearsal room (Canva-style invite). The room
+    URL is built server-side so this can't be used to send arbitrary links."""
+    email = (body.email or "").strip()
+    if "@" not in email or "." not in email.split("@")[-1]:
+        raise HTTPException(status_code=400, detail="That doesn't look like an email address.")
+
+    import os
+
+    if not os.getenv("RESEND_API_KEY"):
+        return {"sent": False, "reason": "email_not_configured"}
+
+    inviter = _first_name(current_user.name)
+    url = f"https://actorrise.com/greenroom/room/{body.room_id}?script={body.script_id}"
+    scene = (body.scene_title or "").strip()
+
+    html = f"""
+    <div style="font-family:system-ui,-apple-system,sans-serif;max-width:480px;margin:0 auto;padding:28px;color:#1a1a1a">
+      <p style="font-size:16px;line-height:1.5">{inviter} wants to rehearse a scene with you on ActorRise.</p>
+      {f'<p style="font-size:15px;color:#555;margin:0 0 8px">Scene: <strong>{scene}</strong></p>' if scene else ''}
+      <p style="margin:24px 0">
+        <a href="{url}" style="display:inline-block;background:#CB4B00;color:#fff;padding:13px 22px;border-radius:9999px;text-decoration:none;font-weight:600">Join the rehearsal room</a>
+      </p>
+      <p style="font-size:13px;color:#888">Or open this link: <a href="{url}" style="color:#CB4B00">{url}</a></p>
+    </div>
+    """
+
+    try:
+        from app.services.email.resend_client import ResendEmailClient
+
+        ResendEmailClient().send_email(
+            to=email,
+            subject=f"{inviter} invited you to rehearse a scene on ActorRise",
+            html=html,
+        )
+        return {"sent": True}
+    except Exception:
+        return {"sent": False, "reason": "send_failed"}
+
+
 class ShareSettingRequest(BaseModel):
     share_activity: bool
 

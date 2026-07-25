@@ -35,30 +35,13 @@ export function GhostLightIntro() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
         >
-          {/* warm wash that grows as the bulb powers up */}
+          {/* the ghost light — simply fades in, holds, and fades out, in place */}
           <motion.div
-            className="pointer-events-none absolute inset-0"
+            className="h-5 w-5 rounded-full bg-[#ffdca8]"
+            style={{ boxShadow: "0 0 46px 16px rgba(255,190,110,0.85)" }}
             initial={{ opacity: 0 }}
-            animate={{ opacity: [0, 0.2, 0.08, 0.4, 0.7] }}
-            transition={{ duration: 0.65, times: [0, 0.2, 0.4, 0.7, 1] }}
-            style={{
-              background:
-                "radial-gradient(60% 50% at 50% 45%, rgba(203,75,0,0.35), transparent 70%)",
-            }}
-          />
-
-          {/* the bulb flickering to life */}
-          <motion.div
-            className="h-4 w-4 rounded-full bg-[#ffdca8]"
-            initial={{ opacity: 0 }}
-            animate={{
-              opacity: [0, 0.8, 0.15, 1, 0.4, 1],
-              boxShadow: [
-                "0 0 6px 2px rgba(255,200,120,0.4)",
-                "0 0 44px 16px rgba(255,190,110,0.9)",
-              ],
-            }}
-            transition={{ duration: 0.6, times: [0, 0.12, 0.24, 0.45, 0.6, 1], ease: "easeIn" }}
+            animate={{ opacity: [0, 1, 1, 0] }}
+            transition={{ duration: 0.85, times: [0, 0.35, 0.7, 1], ease: "easeInOut" }}
           />
         </motion.div>
       )}

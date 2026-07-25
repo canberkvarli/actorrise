@@ -41,23 +41,6 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // Async fallback: an AI reads any role no human has claimed, so a room is
-  // never a dead end. It auto-stops the moment a partner claims that role.
-  const [aiReads, setAiReads] = useState(true);
-  useEffect(() => {
-    if (!aiReads || !myRole) return;
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const sc = script?.scenes?.[Math.min(sceneIndex, (script?.scenes?.length ?? 1) - 1)];
-    const ln = sc?.lines?.[Math.min(currentLine, (sc?.lines?.length ?? 1) - 1)];
-    if (!ln) return;
-    const humanHasRole = participants.some(
-      (p) => p.role && p.role.toUpperCase() === ln.character_name.toUpperCase()
-    );
-    if (humanHasRole) return; // a person is reading this role
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(new SpeechSynthesisUtterance(ln.text));
-    return () => window.speechSynthesis.cancel();
-  }, [aiReads, myRole, currentLine, sceneIndex, script, participants]);
 
   // Once a partner joins, post ONE "rehearsing together" beat to the Callboard.
   // Only the lowest-id participant posts, so a room yields a single event.
@@ -85,15 +68,6 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
 
   const takenBy = (role: string) => participants.find((p) => p.role === role);
 
-  const copyInvite = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      toast.success("Invite link copied — send it to your partner.");
-    } catch {
-      toast.error("Couldn't copy — copy the URL from the address bar.");
-    }
-  };
-
   return (
     <div className="mx-auto max-w-3xl px-4 pb-28 pt-6">
       {/* top bar */}
@@ -107,13 +81,7 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
         <div className="flex items-center gap-3">
           <Presence participants={participants} connected={connected} />
           <VoiceControl voice={voice} />
-          <button
-            type="button"
-            onClick={copyInvite}
-            className="inline-flex items-center gap-1.5 rounded-full bg-[#CB4B00] px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#B03000]"
-          >
-            <IconLink className="h-4 w-4" /> Invite
-          </button>
+          <InviteButton roomId={roomId} scriptId={scriptId} sceneTitle={scene.title} />
         </div>
       </div>
 
@@ -177,9 +145,9 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
         })}
       </div>
 
-      {/* who's here + AI reader toggle */}
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
+      {/* who's here */}
+      {participants.length > 0 && (
+        <div className="mb-4 flex items-center gap-2">
           {participants.map((p) => (
             <span
               key={p.id}
@@ -189,20 +157,13 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
               {(p.name?.[0] || "?").toUpperCase()}
             </span>
           ))}
+          {participants.length === 1 && (
+            <span className="ml-1 text-xs text-muted-foreground">
+              waiting for your partner — hit Invite
+            </span>
+          )}
         </div>
-        <button
-          type="button"
-          onClick={() => setAiReads((v) => !v)}
-          title="An AI reads any role no one has claimed"
-          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-colors ${
-            aiReads
-              ? "border-primary/40 bg-primary/[0.06] text-primary"
-              : "border-border/60 text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {aiReads ? "AI reads the open role" : "AI reader off"}
-        </button>
-      </div>
+      )}
 
       {/* the script */}
       <ScriptView scene={scene} at={at} myRole={myRole} />
@@ -244,6 +205,97 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
           "You're synced on the same scene. Tap Voice to rehearse out loud together."
         )}
       </p>
+    </div>
+  );
+}
+
+function InviteButton({
+  roomId,
+  scriptId,
+  sceneTitle,
+}: {
+  roomId: string;
+  scriptId: number;
+  sceneTitle: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [email, setEmail] = useState("");
+  const [sending, setSending] = useState(false);
+
+  const copyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      toast.success("Room link copied — send it to your partner.");
+    } catch {
+      toast.error("Couldn't copy — grab the URL from the address bar.");
+    }
+  };
+
+  const sendInvite = async () => {
+    const to = email.trim();
+    if (!to) return;
+    setSending(true);
+    try {
+      const res = await api.post<{ sent: boolean; reason?: string }>(
+        "/api/community/room-invite",
+        { email: to, room_id: roomId, script_id: scriptId, scene_title: sceneTitle }
+      );
+      if (res.data?.sent) {
+        toast.success(`Invite sent to ${to}`);
+        setEmail("");
+        setOpen(false);
+      } else {
+        toast.error("Couldn't email that. Copy the link and send it yourself.");
+      }
+    } catch {
+      toast.error("Couldn't email that. Copy the link and send it yourself.");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="inline-flex items-center gap-1.5 rounded-full bg-[#CB4B00] px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#B03000]"
+      >
+        <IconLink className="h-4 w-4" /> Invite
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-xl border border-border/60 bg-background p-4 shadow-xl">
+          <p className="text-sm font-medium text-foreground">Invite your partner</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Email them a link to this room, or copy it.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && sendInvite()}
+              placeholder="friend@email.com"
+              className="min-w-0 flex-1 rounded-md border border-border/60 bg-transparent px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-primary/50"
+            />
+            <button
+              type="button"
+              onClick={sendInvite}
+              disabled={sending || !email.trim()}
+              className="shrink-0 rounded-md bg-[#CB4B00] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#B03000] disabled:opacity-50"
+            >
+              {sending ? "…" : "Send"}
+            </button>
+          </div>
+          <button
+            type="button"
+            onClick={copyLink}
+            className="mt-3 w-full text-center text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            or copy the room link
+          </button>
+        </div>
+      )}
     </div>
   );
 }
