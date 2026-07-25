@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { useCommunityLibrary, type CommunityScript } from "@/hooks/useCommunityLibrary";
 import { useLobbyPresence } from "@/hooks/useLobbyPresence";
 import { useScripts, useShareScript } from "@/hooks/useScripts";
+import { GhostLightIntro } from "./GhostLightIntro";
 
 /**
  * The Green Room (Phase A) — the community script library. Actors share their
@@ -25,7 +26,9 @@ export function GreenRoomLibrary() {
   useEffect(() => setMounted(true), []);
 
   return (
-    <div className="relative mx-auto max-w-5xl px-4 pb-24 pt-8 sm:pt-12">
+    <>
+      <GhostLightIntro ready={mounted && !!data} />
+      <div className="relative mx-auto max-w-5xl px-4 pb-24 pt-8 sm:pt-12">
       {/* ambient stage wash — the room lit from above */}
       <div
         className="pointer-events-none absolute inset-x-0 -top-10 h-64"
@@ -74,7 +77,8 @@ export function GreenRoomLibrary() {
       </section>
 
       <ShareYourScripts />
-    </div>
+      </div>
+    </>
   );
 }
 
