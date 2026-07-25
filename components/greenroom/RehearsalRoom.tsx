@@ -103,9 +103,9 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
                 key={s.id}
                 type="button"
                 onClick={() => setScene(i)}
-                className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                   i === sceneIndex
-                    ? "border-primary/50 bg-primary/10 text-primary"
+                    ? "border-transparent bg-[#CB4B00] text-white"
                     : "border-border/50 text-muted-foreground hover:text-foreground"
                 }`}
               >
@@ -146,8 +146,15 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
       </div>
 
       {/* who's here */}
-      {participants.length > 0 && (
-        <div className="mb-4 flex items-center gap-2">
+      {participants.length <= 1 ? (
+        <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-dashed border-border/60 bg-card/20 px-4 py-3">
+          <p className="text-sm text-muted-foreground">
+            <span className="text-foreground">Just you so far.</span> Invite your partner to run
+            the scene together.
+          </p>
+        </div>
+      ) : (
+        <div className="mb-5 flex items-center gap-2">
           {participants.map((p) => (
             <span
               key={p.id}
@@ -157,11 +164,7 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
               {(p.name?.[0] || "?").toUpperCase()}
             </span>
           ))}
-          {participants.length === 1 && (
-            <span className="ml-1 text-xs text-muted-foreground">
-              waiting for your partner — hit Invite
-            </span>
-          )}
+          <span className="ml-1 text-xs text-muted-foreground">in the room</span>
         </div>
       )}
 

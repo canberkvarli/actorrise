@@ -10,7 +10,7 @@ import UnderConstructionScripts from "@/components/UnderConstructionScripts";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { PracticeLibrary } from "@/components/practice/PracticeLibrary";
-import { UploadDropzone } from "@/components/practice/UploadDropzone";
+import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
 import { CallboardMarquee } from "@/components/community/CallboardMarquee";
 
 /**
@@ -79,24 +79,24 @@ export default function PracticePage() {
           {hasAnyScript && (
             <>
               {/* Screen identity — this is the rehearsal room, not just a list. */}
-              <header>
-                <p className="font-typewriter text-xs italic tracking-wide text-muted-foreground/70">
-                  (from the top.)
-                </p>
-                <h1 className="mt-1 font-brand text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-                  My Scripts
-                </h1>
-                <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                  Bring in your sides and rehearse every other role with a partner
-                  that holds your lines and never misses a cue.
-                </p>
+              <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="font-typewriter text-xs italic tracking-wide text-muted-foreground/70">
+                    (from the top.)
+                  </p>
+                  <h1 className="mt-1 font-brand text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
+                    My Scripts
+                  </h1>
+                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
+                    Bring in your sides and rehearse every other role with a partner
+                    that holds your lines and never misses a cue.
+                  </p>
+                </div>
+                <UploadScriptButton variant="primary">Upload a script</UploadScriptButton>
               </header>
 
-              {/* Ambient activity, below the header and above the key CTA. */}
+              {/* Ambient activity below the header. */}
               <CallboardMarquee />
-
-              {/* The key CTA: start a rehearsal by bringing in a script. */}
-              <UploadDropzone />
             </>
           )}
 

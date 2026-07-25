@@ -18,9 +18,10 @@ export function GhostLightIntro() {
   useEffect(() => {
     if (reduce) return;
     setShow(true);
-    // Snappy: a quick flicker-to-light, then out. Long enough to feel like the
-    // lights coming up, short enough to never read as a wait.
-    const t = setTimeout(() => setDone(true), 850);
+    // Cinematic: the light fades up, holds, fades out, then the room is revealed.
+    // Long enough for the page behind the (opaque) cover to finish loading, so it
+    // never reads as content popping in top-down.
+    const t = setTimeout(() => setDone(true), 1300);
     return () => clearTimeout(t);
   }, [reduce]);
 
@@ -35,13 +36,14 @@ export function GhostLightIntro() {
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
         >
-          {/* the ghost light — simply fades in, holds, and fades out, in place */}
+          {/* the ghost light — a warm-white glow that fades in, holds, and fades
+              out, in place (no movement) */}
           <motion.div
-            className="h-5 w-5 rounded-full bg-[#ffdca8]"
-            style={{ boxShadow: "0 0 46px 16px rgba(255,190,110,0.85)" }}
+            className="h-5 w-5 rounded-full bg-[#fff2e6]"
+            style={{ boxShadow: "0 0 48px 18px rgba(255,178,128,0.8)" }}
             initial={{ opacity: 0 }}
             animate={{ opacity: [0, 1, 1, 0] }}
-            transition={{ duration: 0.85, times: [0, 0.35, 0.7, 1], ease: "easeInOut" }}
+            transition={{ duration: 1.25, times: [0, 0.28, 0.72, 1], ease: "easeInOut" }}
           />
         </motion.div>
       )}

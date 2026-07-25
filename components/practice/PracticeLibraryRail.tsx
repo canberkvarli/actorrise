@@ -100,11 +100,7 @@ function ScriptCard({
             )
           )}
         </div>
-        <h3
-          className={`font-typewriter text-base font-semibold leading-snug line-clamp-2 ${
-            selected ? "text-primary" : "text-foreground"
-          }`}
-        >
+        <h3 className="font-typewriter text-base font-semibold leading-snug line-clamp-2 text-foreground">
           {script.title}
         </h3>
         <p className="mt-0.5 truncate font-typewriter text-xs text-muted-foreground">
