@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/lib/supabase";
+import type { RoomLine } from "./useCommunityScript";
 
 export interface RoomParticipant {
   id: string;
@@ -28,8 +29,11 @@ export function useRoomChannel(roomId: string, myName: string) {
   const [currentLine, setCurrentLine] = useState(0);
   const [myRole, setMyRole] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
+  // Session-only line edits per scene (never touch the source script), synced live.
+  const [sceneEdits, setSceneEdits] = useState<Record<number, RoomLine[]>>({});
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const myRoleRef = useRef<string | null>(null);
+  const sceneEditsRef = useRef<Record<number, RoomLine[]>>({});
 
   useEffect(() => {
     if (!roomId || !myName) return;
@@ -43,14 +47,27 @@ export function useRoomChannel(roomId: string, myName: string) {
       setRawParticipants(
         Object.entries(state).map(([id, metas]) => ({ id, name: metas[0]?.name ?? "Someone" }))
       );
-      // Re-announce my role so anyone who just joined sees it immediately.
+      // Re-announce my role + any live edits so anyone who just joined syncs up.
       if (myRoleRef.current) {
         channel.send({ type: "broadcast", event: "role", payload: { id: myId, role: myRoleRef.current } });
+      }
+      for (const [scene, lines] of Object.entries(sceneEditsRef.current)) {
+        channel.send({ type: "broadcast", event: "edits", payload: { scene: Number(scene), lines } });
       }
     });
 
     channel.on("broadcast", { event: "role" }, ({ payload }) => {
       if (payload?.id) setRoleMap((m) => ({ ...m, [payload.id]: payload.role ?? null }));
+    });
+
+    channel.on("broadcast", { event: "edits" }, ({ payload }) => {
+      if (typeof payload?.scene === "number" && Array.isArray(payload?.lines)) {
+        setSceneEdits((m) => {
+          const next = { ...m, [payload.scene]: payload.lines as RoomLine[] };
+          sceneEditsRef.current = next;
+          return next;
+        });
+      }
     });
 
     channel.on("broadcast", { event: "line" }, ({ payload }) => {
@@ -104,6 +121,15 @@ export function useRoomChannel(roomId: string, myName: string) {
     [myId]
   );
 
+  const setSceneLines = useCallback((scene: number, lines: RoomLine[]) => {
+    setSceneEdits((m) => {
+      const next = { ...m, [scene]: lines };
+      sceneEditsRef.current = next;
+      return next;
+    });
+    channelRef.current?.send({ type: "broadcast", event: "edits", payload: { scene, lines } });
+  }, []);
+
   return {
     myId,
     participants,
@@ -114,5 +140,7 @@ export function useRoomChannel(roomId: string, myName: string) {
     myRole,
     claimRole,
     connected,
+    sceneEdits,
+    setSceneLines,
   };
 }

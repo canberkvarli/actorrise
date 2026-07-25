@@ -15,7 +15,7 @@ import {
 } from "@tabler/icons-react";
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { useCommunityScript } from "@/hooks/useCommunityScript";
+import { useCommunityScript, type RoomLine } from "@/hooks/useCommunityScript";
 import { useRoomChannel } from "@/hooks/useRoomChannel";
 import { useRoomVoice } from "@/hooks/useRoomVoice";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
@@ -64,14 +64,18 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
     myRole,
     claimRole,
     connected,
+    sceneEdits,
+    setSceneLines,
   } = useRoomChannel(roomId, myName);
   const voice = useRoomVoice(roomId, myName);
   const sr = useSpeechRecognition({ continuous: true, interimResults: true });
+  const [editMode, setEditMode] = useState(false);
 
   // Which line is live, and is it mine? (computed from raw state so it's
   // available before the loading early-return, keeping hook order stable.)
   const curScene = script?.scenes?.[Math.min(sceneIndex, (script?.scenes?.length ?? 1) - 1)];
-  const curLine = curScene?.lines?.[Math.min(currentLine, (curScene?.lines?.length ?? 1) - 1)];
+  const curLines = sceneEdits[sceneIndex] ?? curScene?.lines;
+  const curLine = curLines?.[Math.min(currentLine, (curLines?.length ?? 1) - 1)];
   const isMyLine =
     !!myRole && !!curLine && curLine.character_name.toUpperCase() === myRole.toUpperCase();
 
@@ -113,8 +117,11 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
 
   const scene = scenes[Math.min(sceneIndex, scenes.length - 1)] ?? scenes[0];
   const roles = [scene.character_1_name, scene.character_2_name];
-  const lineCount = scene.lines.length;
+  // Effective (possibly edited) lines — session-only, synced, never saved.
+  const lines = sceneEdits[sceneIndex] ?? scene.lines;
+  const lineCount = Math.max(1, lines.length);
   const at = Math.min(currentLine, lineCount - 1);
+  const updateLines = (next: RoomLine[]) => setSceneLines(sceneIndex, next);
 
   const takenBy = (role: string) => participants.find((p) => p.role === role);
 
@@ -218,13 +225,29 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
         </div>
       )}
 
-      {/* the script */}
+      {/* edit toggle + script */}
+      <div className="mb-2 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setEditMode((v) => !v)}
+          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+            editMode
+              ? "border-transparent bg-[#CB4B00] text-white"
+              : "border-border/60 text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          {editMode ? "Done editing" : "Edit lines"}
+        </button>
+      </div>
       <ScriptView
-        scene={scene}
+        lines={lines}
         at={at}
         myRole={myRole}
         transcript={sr.transcript}
         listening={isMyLine && sr.isListening}
+        editMode={editMode}
+        roles={roles}
+        onChange={updateLines}
       />
 
       {/* line controls */}
@@ -409,33 +432,43 @@ function VoiceControl({ voice }: { voice: ReturnType<typeof useRoomVoice> }) {
 }
 
 function ScriptView({
-  scene,
+  lines,
   at,
   myRole,
   transcript,
   listening,
+  editMode,
+  roles,
+  onChange,
 }: {
-  scene: { lines: { line_order: number; character_name: string; text: string }[] };
+  lines: RoomLine[];
   at: number;
   myRole: string | null;
   transcript: string;
   listening: boolean;
+  editMode: boolean;
+  roles: string[];
+  onChange: (next: RoomLine[]) => void;
 }) {
   const activeRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
-    activeRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-  }, [at]);
+    if (!editMode) activeRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [at, editMode]);
 
-  // Warm reading canvas, always — dark ink + orange highlights read best on cream,
+  if (editMode) {
+    return <EditableScript lines={lines} roles={roles} onChange={onChange} />;
+  }
+
+  // Warm reading canvas — dark ink + orange highlights read best on cream,
   // matching the solo rehearsal design.
   return (
     <div className="overflow-hidden rounded-2xl border border-[#e6ddc9] bg-[#faf7f1] p-5 shadow-sm sm:p-7">
       <div className="space-y-5">
-        {scene.lines.map((ln, i) => {
+        {lines.map((ln, i) => {
           const active = i === at;
           const mine = !!myRole && ln.character_name.toUpperCase() === myRole.toUpperCase();
           return (
-            <div key={ln.line_order} ref={active ? activeRef : undefined}>
+            <div key={i} ref={active ? activeRef : undefined}>
               <p
                 className={`font-typewriter text-[11px] font-semibold uppercase tracking-wider ${
                   mine ? "text-[#CB4B00]" : "text-neutral-400"
@@ -464,6 +497,79 @@ function ScriptView({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/** Session-only line editing, synced live to your partner (fix wording, reassign
+ *  a line to the other role, add/remove). Never saved to the source script. */
+function EditableScript({
+  lines,
+  roles,
+  onChange,
+}: {
+  lines: RoomLine[];
+  roles: string[];
+  onChange: (next: RoomLine[]) => void;
+}) {
+  const patch = (i: number, p: Partial<RoomLine>) =>
+    onChange(lines.map((l, idx) => (idx === i ? { ...l, ...p } : l)));
+  const remove = (i: number) => onChange(lines.filter((_, idx) => idx !== i));
+  const add = () =>
+    onChange([
+      ...lines,
+      { line_order: (lines[lines.length - 1]?.line_order ?? -1) + 1, character_name: roles[0], text: "" },
+    ]);
+
+  return (
+    <div className="rounded-2xl border border-[#e6ddc9] bg-[#faf7f1] p-4 shadow-sm sm:p-5">
+      <p className="mb-3 text-xs text-neutral-500">
+        Edits are just for this rehearsal, synced to your partner. The original script isn&apos;t changed.
+      </p>
+      <div className="space-y-2.5">
+        {lines.map((ln, i) => (
+          <div key={i} className="flex items-start gap-2">
+            <div className="flex shrink-0 overflow-hidden rounded-md border border-neutral-300">
+              {roles.map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => patch(i, { character_name: r })}
+                  title={r}
+                  className={`whitespace-nowrap px-2 py-1 font-typewriter text-[10px] font-semibold uppercase ${
+                    ln.character_name.toUpperCase() === r.toUpperCase()
+                      ? "bg-[#CB4B00] text-white"
+                      : "bg-white text-neutral-500 hover:text-neutral-800"
+                  }`}
+                >
+                  {r}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={ln.text}
+              onChange={(e) => patch(i, { text: e.target.value })}
+              rows={1}
+              className="min-w-0 flex-1 resize-none rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 font-typewriter text-sm text-neutral-900 outline-none focus:border-[#CB4B00]"
+            />
+            <button
+              type="button"
+              onClick={() => remove(i)}
+              aria-label="Delete line"
+              className="shrink-0 rounded-md px-2 py-1.5 text-neutral-400 hover:bg-neutral-200 hover:text-red-600"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+      </div>
+      <button
+        type="button"
+        onClick={add}
+        className="mt-3 rounded-full border border-neutral-300 px-3 py-1 font-typewriter text-xs text-neutral-600 hover:border-[#CB4B00] hover:text-[#CB4B00]"
+      >
+        + add line
+      </button>
     </div>
   );
 }
