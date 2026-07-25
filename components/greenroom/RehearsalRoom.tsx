@@ -18,6 +18,37 @@ import { useAuth } from "@/lib/auth";
 import { useCommunityScript } from "@/hooks/useCommunityScript";
 import { useRoomChannel } from "@/hooks/useRoomChannel";
 import { useRoomVoice } from "@/hooks/useRoomVoice";
+import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
+import { MicWaveform } from "@/components/scenepartner/MicWaveform";
+
+const normWord = (w: string) => w.toLowerCase().replace(/[^a-z0-9']/g, "");
+
+/** How many leading words of a line the spoken transcript has covered (sequential,
+ *  lightly fuzzy) — drives the live word-highlight as you say your line. */
+function matchedWordCount(lineWords: string[], transcript: string): number {
+  const spoken = transcript.split(/\s+/).map(normWord).filter(Boolean);
+  let cursor = 0;
+  let matched = 0;
+  for (const lw of lineWords) {
+    const n = normWord(lw);
+    if (!n) {
+      matched++;
+      continue;
+    }
+    let found = -1;
+    for (let i = cursor; i < spoken.length; i++) {
+      const s = spoken[i];
+      if (s === n || (n.length >= 4 && s.length >= 4 && s.slice(0, 4) === n.slice(0, 4))) {
+        found = i;
+        break;
+      }
+    }
+    if (found === -1) break;
+    cursor = found + 1;
+    matched++;
+  }
+  return matched;
+}
 
 export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: number }) {
   const { user } = useAuth();
@@ -35,6 +66,25 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
     connected,
   } = useRoomChannel(roomId, myName);
   const voice = useRoomVoice(roomId, myName);
+  const sr = useSpeechRecognition({ continuous: true, interimResults: true });
+
+  // Which line is live, and is it mine? (computed from raw state so it's
+  // available before the loading early-return, keeping hook order stable.)
+  const curScene = script?.scenes?.[Math.min(sceneIndex, (script?.scenes?.length ?? 1) - 1)];
+  const curLine = curScene?.lines?.[Math.min(currentLine, (curScene?.lines?.length ?? 1) - 1)];
+  const isMyLine =
+    !!myRole && !!curLine && curLine.character_name.toUpperCase() === myRole.toUpperCase();
+
+  // Listen while it's my line so the words light up as I say them.
+  useEffect(() => {
+    if (isMyLine && sr.isSupported) {
+      sr.resetTranscript();
+      sr.startListening();
+    } else {
+      sr.stopListening();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isMyLine, currentLine, sceneIndex]);
 
   // Gate first paint so server and first client render agree (React Query cache
   // can be warm on the client, empty on the server) — avoids a hydration flash.
@@ -169,7 +219,13 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
       )}
 
       {/* the script */}
-      <ScriptView scene={scene} at={at} myRole={myRole} />
+      <ScriptView
+        scene={scene}
+        at={at}
+        myRole={myRole}
+        transcript={sr.transcript}
+        listening={isMyLine && sr.isListening}
+      />
 
       {/* line controls */}
       <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border/50 bg-background/90 backdrop-blur-md">
@@ -356,50 +412,80 @@ function ScriptView({
   scene,
   at,
   myRole,
+  transcript,
+  listening,
 }: {
   scene: { lines: { line_order: number; character_name: string; text: string }[] };
   at: number;
   myRole: string | null;
+  transcript: string;
+  listening: boolean;
 }) {
   const activeRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     activeRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [at]);
 
+  // Warm reading canvas, always — dark ink + orange highlights read best on cream,
+  // matching the solo rehearsal design.
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/50 bg-[#faf7f1] p-5 shadow-sm dark:bg-card/40">
-      <div className="space-y-4">
+    <div className="overflow-hidden rounded-2xl border border-[#e6ddc9] bg-[#faf7f1] p-5 shadow-sm sm:p-7">
+      <div className="space-y-5">
         {scene.lines.map((ln, i) => {
           const active = i === at;
-          const mine = myRole && ln.character_name.toUpperCase() === myRole.toUpperCase();
+          const mine = !!myRole && ln.character_name.toUpperCase() === myRole.toUpperCase();
           return (
-            <div
-              key={ln.line_order}
-              ref={active ? activeRef : undefined}
-              className={`rounded-lg px-3 py-2 transition-colors ${
-                active ? "bg-primary/10" : ""
-              }`}
-            >
+            <div key={ln.line_order} ref={active ? activeRef : undefined}>
               <p
-                className={`font-typewriter text-[11px] uppercase tracking-wider ${
-                  mine ? "text-primary" : "text-neutral-500"
+                className={`font-typewriter text-[11px] font-semibold uppercase tracking-wider ${
+                  mine ? "text-[#CB4B00]" : "text-neutral-400"
                 }`}
               >
                 {ln.character_name}
                 {mine ? " · you" : ""}
               </p>
               <p
-                className={`font-typewriter text-[15px] leading-relaxed ${
-                  active ? "text-neutral-900 dark:text-foreground" : "text-neutral-600 dark:text-muted-foreground"
+                className={`mt-1 font-typewriter text-[16px] leading-relaxed ${
+                  active ? "text-neutral-900" : "text-neutral-400"
                 }`}
               >
-                {ln.text}
+                {active && mine && listening ? (
+                  <LiveLine text={ln.text} transcript={transcript} />
+                ) : (
+                  ln.text
+                )}
               </p>
+              {active && mine && listening && (
+                <div className="mt-2">
+                  <MicWaveform active className="h-6 w-32" />
+                </div>
+              )}
             </div>
           );
         })}
       </div>
     </div>
+  );
+}
+
+/** The active line, with each word lighting up (orange) as it's spoken. */
+function LiveLine({ text, transcript }: { text: string; transcript: string }) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const matched = matchedWordCount(words, transcript);
+  const tokens = text.split(/(\s+)/); // keep whitespace tokens
+  let wi = 0;
+  return (
+    <>
+      {tokens.map((tok, i) => {
+        if (/^\s+$/.test(tok)) return <span key={i}>{tok}</span>;
+        const idx = wi++;
+        return (
+          <span key={i} className={idx < matched ? "text-[#CB4B00]" : "text-neutral-400"}>
+            {tok}
+          </span>
+        );
+      })}
+    </>
   );
 }
 
