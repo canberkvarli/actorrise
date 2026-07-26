@@ -12,6 +12,7 @@ import {
   ArrowLeft,
   Pause,
   Play,
+  Square,
   Volume2,
   X,
   Mic,
@@ -60,10 +61,32 @@ function ttsInstructions(
   const inlineDirs = [...line.text.matchAll(/\(([^)]+)\)/g)].map(m => m[1].trim());
   const allDirs = [...new Set([fieldDir, ...inlineDirs].filter(Boolean))];
   const base = sceneContext || 'You are a skilled actor performing a scene.';
+  // Shared delivery notes so the read feels like a living person mid-conversation,
+  // not a flat narrator: real breath, shifting pace, and tonal movement.
+  const alive =
+    'Sound like a real person in the middle of a conversation, not a narrator. ' +
+    'Take a natural breath before you speak. Vary your pace: let some phrases rush out, let others land slowly with a beat of silence. ' +
+    'Let your pitch and tone shift with the meaning of each phrase. Never flat, monotone, or robotic. React as if you just heard your partner speak.';
   if (!allDirs.length) {
-    return `${base} Deliver this line with emotional truth, natural pacing, and full commitment to the moment.`;
+    return `${base} Deliver this line with emotional truth and full commitment. ${alive}`;
   }
-  return `${base} Stage direction: ${allDirs.join('; ')}. Fully embody this — if it says "sighing", actually sigh; "whispering", drop your voice; "angrily", let real frustration through. Commit completely.`;
+  return `${base} Stage direction: ${allDirs.join('; ')}. Fully embody this — if it says "sighing", actually sigh; "whispering", drop your voice; "angrily", let real frustration through. ${alive}`;
+}
+
+/** Tiny silent WAV as a data URL — played on a gesture to unlock iOS audio so
+ *  the continuous-replay elements can play programmatically afterward. */
+let _silentWavUrl: string | null = null;
+function silentWavUrl(): string {
+  if (_silentWavUrl) return _silentWavUrl;
+  const bytes = new Uint8Array(44);
+  const dv = new DataView(bytes.buffer);
+  const w = (o: number, s: string) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); dv.setUint32(4, 36, true); w(8, 'WAVE'); w(12, 'fmt ');
+  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, 8000, true); dv.setUint32(28, 8000, true); dv.setUint16(32, 1, true);
+  dv.setUint16(34, 8, true); w(36, 'data'); dv.setUint32(40, 0, true);
+  _silentWavUrl = URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' }));
+  return _silentWavUrl;
 }
 
 const LOADING_TEXTS = [
@@ -288,13 +311,23 @@ function LineWaveformPlayer({
   isPlaying,
   audioRef,
   onToggle,
+  onBounds,
 }: {
   blob: Blob;
   isPlaying: boolean;
   audioRef: React.RefObject<HTMLAudioElement | null>;
   onToggle: (speechStartRatio: number, speechEndRatio: number) => void;
+  /** Reports decoded speech bounds once, so continuous replay can trim silence. */
+  onBounds?: (speechStartRatio: number, speechEndRatio: number) => void;
 }) {
   const waveData = useWaveformData(blob);
+  const reportedRef = useRef(false);
+  useEffect(() => {
+    if (waveData && !reportedRef.current) {
+      reportedRef.current = true;
+      onBounds?.(waveData.speechStartRatio, waveData.speechEndRatio);
+    }
+  }, [waveData, onBounds]);
   if (!waveData) return null;
   return (
     <ReviewWaveform
@@ -510,9 +543,25 @@ export default function RehearsalPage() {
 
   const lineAudioBlobsRef = useRef<Map<number, Blob>>(new Map());
   const lineTranscriptsRef = useRef<Map<number, string>>(new Map());
+  // How many times the user has attempted each line — powers a lenient
+  // second-chance advance so accented/quiet deliveries aren't trapped looping.
+  const lineAttemptsRef = useRef<Map<number, number>>(new Map());
   const sessionStartTimeRef = useRef<number>(Date.now());
   const [sessionDuration, setSessionDuration] = useState(0);
   const [playingLineIdx, setPlayingLineIdx] = useState<number | null>(null);
+
+  /* ── Continuous scene replay (session review) ──────────────────── */
+  // Plays the whole finished scene as one uninterrupted take: user-recorded
+  // lines back-to-back with the AI partner's lines regenerated in order.
+  const [sceneReplayIdx, setSceneReplayIdx] = useState<number | null>(null);
+  const replayActiveRef = useRef(false);
+  const replayIndexRef = useRef<number | null>(null);
+  const replayUserAudioRef = useRef<HTMLAudioElement | null>(null); // persistent element for user blobs (iOS reuse)
+  const replayUserUrlRef = useRef<string | null>(null);
+  const replayTrimTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const replayBoundsRef = useRef<Map<number, { startRatio: number; endRatio: number }>>(new Map());
+  const advanceReplayRef = useRef<() => void>(() => {});
+  const stopSceneReplayRef = useRef<() => void>(() => {});
   const reviewAudioRef = useRef<HTMLAudioElement | null>(null);
   const reviewAudioUrlRef = useRef<string | null>(null);
 
@@ -645,7 +694,14 @@ export default function RehearsalPage() {
       setSpeechError(null);
       const expected = currentUserLineText ? stripStageDirections(currentUserLineText) : '';
       const score = wordMatchScore(expected, text);
-      const willAdvance = !expected || score >= 0.5;
+      const curIdx = activeLineIndexRef.current ?? 0;
+      const priorAttempts = lineAttemptsRef.current.get(curIdx) ?? 0;
+      // First pass wants a solid match. But once the user has already run the
+      // line and it bounced, accept a looser read so an accent, a mumble, or a
+      // dropped filler doesn't trap them repeating the same line forever.
+      const strongMatch = !expected || score >= 0.5;
+      const lenientMatch = priorAttempts >= 1 && score >= 0.3;
+      const willAdvance = strongMatch || lenientMatch;
 
       // Build per-word match result from expected line words. Match SEQUENTIALLY
       // (left-to-right with an advancing cursor), mirroring the live SR path — so a
@@ -678,6 +734,8 @@ export default function RehearsalPage() {
           resetTranscript();
         }, 700);
       } else {
+        // Remember this attempt so the next run of the same line is judged leniently.
+        lineAttemptsRef.current.set(curIdx, priorAttempts + 1);
         // Jitter animation to signal failed match
         setShouldShake(true);
         setTimeout(() => setShouldShake(false), 600);
@@ -767,6 +825,19 @@ export default function RehearsalPage() {
         speakBrowser(fallbackLine);
       }
     },
+  });
+
+  /* ── OpenAI TTS (dedicated instance for continuous scene replay) ──
+   * Separate from the rehearsal instance so its onEnd chains to the next
+   * replay segment instead of advancing the live script. Shares the module
+   * audio cache, so AI lines just rehearsed replay instantly. */
+  const {
+    speak: speakReplayAI,
+    cancel: cancelReplayAI,
+    unlock: unlockReplayAI,
+  } = useOpenAITTS({
+    onEnd: () => advanceReplayRef.current(),
+    onError: () => advanceReplayRef.current(),
   });
 
   const anySpeaking = isSpeakingBrowser || isSpeakingAI || isLoadingAI;
@@ -988,6 +1059,8 @@ export default function RehearsalPage() {
     autoStartedRef.current = false;
     lineAudioBlobsRef.current.clear();
     lineTranscriptsRef.current.clear();
+    lineAttemptsRef.current.clear();
+    replayBoundsRef.current.clear();
     setSessionDuration(0);
     try {
       const sceneCacheKey = `actorrise_scene_${sceneId}`;
@@ -1563,6 +1636,7 @@ export default function RehearsalPage() {
   const handleRestart = useCallback(() => {
     if (!session || isRestarting) return;
     setIsRestarting(true);
+    stopSceneReplayRef.current();
     stopAllAudio();
 
     // ── Instantly reset all UI — user sees countdown immediately ──
@@ -1571,6 +1645,8 @@ export default function RehearsalPage() {
     setFadeToReview(false);
     lineAudioBlobsRef.current.clear();
     lineTranscriptsRef.current.clear();
+    lineAttemptsRef.current.clear();
+    replayBoundsRef.current.clear();
     setPlayingLineIdx(null);
     if (reviewAudioRef.current) {
       reviewAudioRef.current.pause();
@@ -1735,6 +1811,9 @@ export default function RehearsalPage() {
     const blob = lineAudioBlobsRef.current.get(lineIdx);
     if (!blob) return;
 
+    // Tapping a single line stops a continuous replay if one is running.
+    if (replayActiveRef.current) stopSceneReplayRef.current();
+
     // Stop any currently playing audio
     if (reviewAudioRef.current) {
       reviewAudioRef.current.pause();
@@ -1782,6 +1861,125 @@ export default function RehearsalPage() {
         reviewAudioRef.current.pause();
         if (reviewAudioUrlRef.current) URL.revokeObjectURL(reviewAudioUrlRef.current);
       }
+    };
+  }, []);
+
+  /* ── Continuous scene replay: play the whole scene as one take ──── */
+
+  const stopSceneReplay = useCallback(() => {
+    replayActiveRef.current = false;
+    replayIndexRef.current = null;
+    setSceneReplayIdx(null);
+    if (replayTrimTimerRef.current) { clearTimeout(replayTrimTimerRef.current); replayTrimTimerRef.current = null; }
+    cancelReplayAI();
+    const a = replayUserAudioRef.current;
+    if (a) { a.onended = null; a.onerror = null; a.onloadedmetadata = null; try { a.pause(); } catch { /* noop */ } }
+    if (replayUserUrlRef.current) { URL.revokeObjectURL(replayUserUrlRef.current); replayUserUrlRef.current = null; }
+  }, [cancelReplayAI]);
+  stopSceneReplayRef.current = stopSceneReplay;
+
+  // Play one user-recorded line, then chain to the next segment. Trims leading
+  // and trailing silence using decoded bounds so the take stays tight.
+  const playReplayUserBlob = useCallback((idx: number, blob: Blob) => {
+    const a = replayUserAudioRef.current;
+    if (!a) { advanceReplayRef.current(); return; }
+    if (replayUserUrlRef.current) URL.revokeObjectURL(replayUserUrlRef.current);
+    const url = URL.createObjectURL(blob);
+    replayUserUrlRef.current = url;
+    a.src = url;
+    a.onerror = () => advanceReplayRef.current();
+    const bounds = replayBoundsRef.current.get(idx);
+    if (bounds) {
+      a.onended = null;
+      a.onloadedmetadata = () => {
+        const dur = isFinite(a.duration) && a.duration > 0 ? a.duration : 0;
+        if (dur > 0) a.currentTime = bounds.startRatio * dur;
+        a.play().catch(() => advanceReplayRef.current());
+        const playMs = dur > 0 ? Math.max(150, (bounds.endRatio - bounds.startRatio) * dur * 1000) : 1500;
+        if (replayTrimTimerRef.current) clearTimeout(replayTrimTimerRef.current);
+        // +140ms is a small natural beat between lines before the next one starts.
+        replayTrimTimerRef.current = setTimeout(() => { replayTrimTimerRef.current = null; advanceReplayRef.current(); }, playMs + 140);
+      };
+      a.load();
+    } else {
+      a.onended = () => advanceReplayRef.current();
+      a.play().catch(() => advanceReplayRef.current());
+    }
+  }, []);
+
+  const advanceReplay = useCallback(() => {
+    if (!replayActiveRef.current) return;
+    // Clear the previous segment's handlers/audio so nothing double-fires or overlaps.
+    if (replayTrimTimerRef.current) { clearTimeout(replayTrimTimerRef.current); replayTrimTimerRef.current = null; }
+    cancelReplayAI();
+    const ua = replayUserAudioRef.current;
+    if (ua) { ua.onended = null; ua.onerror = null; ua.onloadedmetadata = null; try { ua.pause(); } catch { /* noop */ } }
+    if (replayUserUrlRef.current) { URL.revokeObjectURL(replayUserUrlRef.current); replayUserUrlRef.current = null; }
+
+    const lines = orderedLinesRef.current;
+    const sess = sessionRef.current;
+    let idx = (replayIndexRef.current ?? -1) + 1;
+    // Skip user lines that were never delivered — there's no recording to play.
+    while (idx < lines.length) {
+      const line = lines[idx];
+      const isUser = !!sess && line.character_name === sess.user_character;
+      if (isUser && !lineAudioBlobsRef.current.get(idx)) { idx++; continue; }
+      break;
+    }
+    if (idx >= lines.length) { stopSceneReplay(); return; }
+    replayIndexRef.current = idx;
+    setSceneReplayIdx(idx);
+    const line = lines[idx];
+    const isUser = !!sess && line.character_name === sess.user_character;
+    if (isUser) {
+      playReplayUserBlob(idx, lineAudioBlobsRef.current.get(idx)!);
+    } else {
+      const voiceId = characterVoiceMapRef.current.get(line.character_name) ?? lastKnownVoiceIdRef.current;
+      speakReplayAI(ttsText(line), voiceId, ttsInstructions(line, sceneVoiceContextRef.current));
+    }
+  }, [playReplayUserBlob, speakReplayAI, cancelReplayAI, stopSceneReplay]);
+  advanceReplayRef.current = advanceReplay;
+
+  const startSceneReplay = useCallback(() => {
+    if (!replayUserAudioRef.current) {
+      const a = new Audio();
+      a.preload = 'auto';
+      replayUserAudioRef.current = a;
+    }
+    // Unlock audio for iOS within this tap gesture: a muted silent blip on the
+    // user-line element, plus unlocking the AI-line element.
+    const a = replayUserAudioRef.current;
+    try {
+      a.muted = true;
+      a.src = silentWavUrl();
+      const p = a.play();
+      if (p && typeof (p as Promise<void>).then === 'function') {
+        (p as Promise<void>).then(() => { try { a.pause(); a.currentTime = 0; } catch { /* noop */ } a.muted = false; }).catch(() => { a.muted = false; });
+      } else { a.muted = false; }
+    } catch { a.muted = false; }
+    unlockReplayAI();
+    // Stop any single-line playback first.
+    if (reviewAudioRef.current) { try { reviewAudioRef.current.pause(); } catch { /* noop */ } }
+    setPlayingLineIdx(null);
+    replayActiveRef.current = true;
+    replayIndexRef.current = -1;
+    advanceReplay();
+  }, [advanceReplay, unlockReplayAI]);
+
+  // Keep the currently-playing line in view during replay.
+  useEffect(() => {
+    if (sceneReplayIdx == null) return;
+    document.getElementById(`review-line-${sceneReplayIdx}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [sceneReplayIdx]);
+
+  // Tear down replay on unmount.
+  useEffect(() => {
+    return () => {
+      replayActiveRef.current = false;
+      if (replayTrimTimerRef.current) clearTimeout(replayTrimTimerRef.current);
+      const a = replayUserAudioRef.current;
+      if (a) { try { a.pause(); } catch { /* noop */ } a.src = ''; }
+      if (replayUserUrlRef.current) URL.revokeObjectURL(replayUserUrlRef.current);
     };
   }, []);
 
@@ -1886,6 +2084,19 @@ export default function RehearsalPage() {
               )}
             </div>
 
+            {/* Play the whole scene back as one continuous take */}
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={sceneReplayIdx !== null ? stopSceneReplay : startSceneReplay}
+                className="inline-flex items-center gap-2 rounded-full border border-[#CB4B00]/40 bg-[#CB4B00]/10 px-5 py-2.5 text-sm font-medium text-[#ff8a4c] hover:bg-[#CB4B00]/20 transition-colors"
+              >
+                {sceneReplayIdx !== null
+                  ? (<><Square className="w-3.5 h-3.5 fill-current" /> Stop replay</>)
+                  : (<><Play className="w-4 h-4 fill-current" /> Play the whole scene</>)}
+              </button>
+            </div>
+
             {/* Divider */}
             <div className="border-t border-neutral-800/60" />
 
@@ -1905,7 +2116,14 @@ export default function RehearsalPage() {
                     // AI lines: compact, muted
                     const meta = characterVoiceMeta.get(line.character_name);
                     return (
-                      <div key={line.id} className="space-y-0.5">
+                      <div
+                        key={line.id}
+                        id={`review-line-${idx}`}
+                        className={cn(
+                          "space-y-0.5 pl-2 -ml-2 border-l-2 transition-colors",
+                          sceneReplayIdx === idx ? "border-[#CB4B00] bg-[#CB4B00]/5" : "border-transparent"
+                        )}
+                      >
                         <div className="flex items-center gap-1.5">
                           <div className={cn("w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-[8px] font-bold text-white", meta?.color ?? 'bg-neutral-500')}>
                             {(meta?.label ?? line.character_name).charAt(0).toUpperCase()}
@@ -1925,7 +2143,14 @@ export default function RehearsalPage() {
                   const pct = score !== null ? Math.round(score * 100) : null;
 
                   return (
-                    <div key={line.id} className="pl-3 border-l border-neutral-800 space-y-1">
+                    <div
+                      key={line.id}
+                      id={`review-line-${idx}`}
+                      className={cn(
+                        "pl-3 border-l space-y-1 transition-colors",
+                        sceneReplayIdx === idx ? "border-[#CB4B00] bg-[#CB4B00]/5" : "border-neutral-800"
+                      )}
+                    >
                       {/* Character name + accuracy inline */}
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
@@ -1957,6 +2182,7 @@ export default function RehearsalPage() {
                               isPlaying={playingLineIdx === idx}
                               audioRef={reviewAudioRef}
                               onToggle={(speechStartRatio, speechEndRatio) => playLineAudio(idx, speechStartRatio, speechEndRatio)}
+                              onBounds={(speechStartRatio, speechEndRatio) => replayBoundsRef.current.set(idx, { startRatio: speechStartRatio, endRatio: speechEndRatio })}
                             />
                           )}
                           <p className="text-xs text-neutral-600 italic leading-snug">{userTranscript}</p>
