@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     template: "%s | ActorRise",
   },
   description:
-    "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 12,000+ monologues from plays, films, and TV. Free to start, no credit card required.",
+    "Find your audition monologue in seconds with AI search. 12,000+ real pieces from plays, films, and TV, sorted by tone, length, and type. Free to start.",
   keywords: [
     "monologue search",
     "audition monologues",

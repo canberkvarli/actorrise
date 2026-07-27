@@ -8,7 +8,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "Shakespeare Monologues for Auditions",
   description:
-    "Find Shakespeare monologues for auditions from Hamlet, Macbeth, A Midsummer Night's Dream, and more. 12,000+ searchable pieces with AI. Filter by play, length, and character type.",
+    "Shakespeare monologues for auditions from Hamlet, Macbeth, Midsummer, and more. Filter 12,000+ real pieces by play, length, and character type.",
   openGraph: {
     title: "Shakespeare Monologues for Auditions | ActorRise",
     description:

@@ -8,7 +8,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "The Monologue Database for Actors | 12,000+ Real Pieces",
   description:
-    "Search one of the largest monologue databases online: 12,000+ real monologues from plays, film, and TV, sorted by tone, length, gender, and type. Skip the overdone ones. Free to start.",
+    "One of the largest monologue databases online: 12,000+ real pieces from plays, film, and TV, searchable by tone, length, gender, and type. Free to start.",
   openGraph: {
     title: "The Monologue Database for Actors | ActorRise",
     description:
