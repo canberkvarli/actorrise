@@ -12,14 +12,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Audition Monologues | ActorRise",
     description:
-      "Audition monologues for every casting need. Classical, contemporary, comedic. 7,500+ pieces, AI search, Overdone filter.",
+      "Audition monologues for every casting need. Classical, contemporary, comedic. 12,000+ pieces, AI search, Overdone filter.",
     url: `${siteUrl}/audition-monologues`,
   },
   twitter: {
     card: "summary_large_image",
     title: "Audition Monologues | ActorRise",
     description:
-      "Audition monologues for every casting need. Classical, contemporary, comedic. 7,500+ pieces, AI search, Overdone filter.",
+      "Audition monologues for every casting need. Classical, contemporary, comedic. 12,000+ pieces, AI search, Overdone filter.",
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/audition-monologues` },
@@ -40,7 +40,7 @@ const FAQ_ITEMS: { q: string; a: string; link?: { href: string; label: string } 
   },
   {
     q: "Where do the monologues come from?",
-    a: "From public domain and licensed sources. ActorRise organizes real published text and doesn’t distribute copyrighted play scripts. Full details: ",
+    a: "ActorRise organizes real published text, and every piece links back to its source and original publication. We never host full scripts of copyrighted works. Full details: ",
     link: { href: "/sources", label: "Sources & copyright" },
   },
 ];
@@ -79,7 +79,7 @@ export default function AuditionMonologuesPage() {
         lede={
           <>
             Whether you need classical, contemporary, or comedic audition monologues, ActorRise lets you
-            search 7,500+ real pieces by style, length, gender, and tone. The AI finds what fits, so you
+            search 12,000+ real pieces by style, length, gender, and tone. The AI finds what fits, so you
             spend less time digging and more time rehearsing.
           </>
         }

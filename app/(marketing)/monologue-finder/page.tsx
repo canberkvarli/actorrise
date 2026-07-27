@@ -8,18 +8,18 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "Monologue Finder for Actors | Find Audition Pieces Fast",
   description:
-    "Use ActorRise's monologue finder to search 7,500+ real monologues by tone, length, and character type. No keyword guessing. Free to start.",
+    "Use ActorRise's monologue finder to search 12,000+ real monologues by tone, length, and character type. No keyword guessing. Free to start.",
   openGraph: {
     title: "Monologue Finder for Actors | ActorRise",
     description:
-      "Find your next audition piece in seconds. 7,500+ monologues, AI search, no keyword hunting. Free tier available.",
+      "Find your next audition piece in seconds. 12,000+ monologues, AI search, no keyword hunting. Free tier available.",
     url: `${siteUrl}/monologue-finder`,
   },
   twitter: {
     card: "summary_large_image",
     title: "Monologue Finder for Actors | ActorRise",
     description:
-      "Find your next audition piece in seconds. 7,500+ monologues, AI search, no keyword hunting. Free tier available.",
+      "Find your next audition piece in seconds. 12,000+ monologues, AI search, no keyword hunting. Free tier available.",
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/monologue-finder` },
@@ -41,7 +41,7 @@ const FAQ_ITEMS: { q: string; a: string; link?: { href: string; label: string } 
   },
   {
     q: "Where do the monologues come from?",
-    a: "From public domain and licensed sources. ActorRise organizes real published text and doesn’t distribute copyrighted play scripts. Full details: ",
+    a: "ActorRise organizes real published text, and every piece links back to its source and original publication. We never host full scripts of copyrighted works. Full details: ",
     link: { href: "/sources", label: "Sources & copyright" },
   },
 ];
