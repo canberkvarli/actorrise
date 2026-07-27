@@ -8,7 +8,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "Monologues for Drama Teachers & Acting Coaches",
   description:
-    "Your students find the right audition monologue in seconds. 12,000+ monologues, AI search, Overdone filter. Free resource for drama teachers and acting coaches.",
+    "Your students find the right audition monologue in seconds. 12,000+ pieces, AI search, Overdone filter. A free resource for drama teachers.",
   openGraph: {
     title: "Monologues for Drama Teachers & Acting Coaches | ActorRise",
     description:

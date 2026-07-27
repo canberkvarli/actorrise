@@ -8,7 +8,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "AI Rehearsal Tool for Actors: Practice Scenes & Monologues",
   description:
-    "AI rehearsal tool that reads the other lines so you can practice scenes and monologues before auditions. 12,000+ monologues from plays, films, and TV. Free to try.",
+    "An AI rehearsal tool that reads the other lines so you can practice scenes and monologues before auditions. 12,000+ pieces. Free to try.",
   openGraph: {
     title: "AI Rehearsal Tool for Actors | ActorRise",
     description:

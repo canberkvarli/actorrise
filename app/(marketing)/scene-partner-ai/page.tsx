@@ -8,7 +8,7 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "Scene Partner AI: Rehearse Scenes with an AI Reader",
   description:
-    "Rehearse scenes with AI that reads the other lines out loud. Run sides, film & TV scenes, and monologues before your audition. No scheduling, no favors. Free to try.",
+    "Rehearse scenes with AI that reads the other lines out loud. Run sides, film and TV scenes, and monologues before your audition. Free to try.",
   openGraph: {
     title: "Scene Partner AI | ActorRise",
     description:
