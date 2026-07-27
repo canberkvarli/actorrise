@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     template: "%s | ActorRise",
   },
   description:
-    "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 12,000+ monologues from plays, films, and TV. Free while in early access, no credit card required.",
+    "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 12,000+ monologues from plays, films, and TV. Free to start, no credit card required.",
   keywords: [
     "monologue search",
     "audition monologues",
@@ -78,7 +78,7 @@ export const metadata: Metadata = {
     siteName: "ActorRise",
     title: "Find Your Audition Monologue in Seconds | ActorRise",
     description:
-      "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 12,000+ monologues from plays, films, and TV. Free while in early access.",
+      "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 12,000+ monologues from plays, films, and TV. Free to start, no credit card required.",
     images: [
       {
         url: "/opengraph-image",
@@ -92,7 +92,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Find Your Audition Monologue in Seconds | ActorRise",
     description:
-      "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 12,000+ monologues from plays, films, and TV. Free while in early access.",
+      "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 12,000+ monologues from plays, films, and TV. Free to start, no credit card required.",
     images: ["/opengraph-image"],
   },
   robots: {
@@ -125,7 +125,7 @@ const jsonLd = {
       name: "ActorRise",
       url: siteUrl,
       description:
-        "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. Free while in early access, no credit card required.",
+        "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. Free to start, no credit card required.",
       logo: { "@type": "ImageObject", url: `${siteUrl}/icon-512.png` },
     },
     {
