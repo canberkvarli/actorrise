@@ -7,18 +7,18 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "Sources & Copyright",
   description:
-    "ActorRise monologues come from public domain and licensed sources including Project Gutenberg. We do not distribute copyrighted play text.",
+    "Every piece on ActorRise links back to its source and original publication. We never host full scripts of copyrighted works.",
   openGraph: {
     title: "Sources & Copyright | ActorRise",
     description:
-      "Our content is from public domain and licensed sources. We don't distribute copyrighted play text.",
+      "Every piece links back to its source and original publication. We never host full scripts of copyrighted works.",
     url: `${siteUrl}/sources`,
   },
   twitter: {
     card: "summary_large_image",
     title: "Sources & Copyright | ActorRise",
     description:
-      "Our content is from public domain and licensed sources. We don't distribute copyrighted play text.",
+      "Every piece links back to its source and original publication. We never host full scripts of copyrighted works.",
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/sources` },
@@ -36,8 +36,9 @@ export default function SourcesPage() {
         }
         lede={
           <>
-            ActorRise is a search and discovery tool for monologues. We do not sell or distribute
-            copyrighted play text. All full text we host comes from legal, traceable sources.
+            ActorRise is a search and discovery tool for monologues. Every piece links back to its
+            source and original publication, and we never host the full script of a copyrighted
+            work.
           </>
         }
       />
@@ -73,11 +74,25 @@ export default function SourcesPage() {
         </li>
       </ul>
 
-      <h2 className="text-xl font-semibold text-foreground mt-8 mb-3">What we don’t do</h2>
+      <h2 className="text-xl font-semibold text-foreground mt-8 mb-3">Full scripts</h2>
       <p className="text-muted-foreground mb-6">
-        We do not host or distribute the full text of copyrighted plays. For material still under
-        copyright, we would only provide discovery (e.g. title, author, where to buy) and point
-        you to publishers or licensed sources to obtain the script.
+        We never host or distribute the full script of any copyrighted play, film, or show. For
+        works still under copyright, we point you to the publisher or a licensed source to obtain
+        the complete script, and every piece we surface carries attribution and a link back to
+        where it comes from.
+      </p>
+
+      <h2 className="text-xl font-semibold text-foreground mt-8 mb-3">Content removal</h2>
+      <p className="text-muted-foreground mb-6">
+        If you are a rights holder (or represent one) and would like something removed or
+        corrected, email{" "}
+        <a
+          href="mailto:canberk@actorrise.com"
+          className="text-foreground underline hover:no-underline"
+        >
+          canberk@actorrise.com
+        </a>{" "}
+        with a link to the piece. Requests are honored promptly, usually within a day.
       </p>
 
       <p className="text-sm text-muted-foreground/90">

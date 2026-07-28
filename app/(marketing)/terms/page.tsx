@@ -91,7 +91,7 @@ export default function TermsPage() {
             <strong className="text-foreground">Our content and IP:</strong> The Service (including design, text, graphics, code, and other materials we provide) and our name and branding are owned by us or our licensors and are protected by copyright and other laws. You may not copy, modify, distribute, or create derivative works from our content or IP except as we expressly allow.
           </p>
           <p className="mb-3">
-            <strong className="text-foreground">Monologues and scripts:</strong> Monologue and script content we make available is from public domain or licensed sources. Your use of that content is subject to applicable copyright and our display terms. We do not grant you rights to use third-party copyrighted works beyond what the source license allows; see our{" "}
+            <strong className="text-foreground">Monologues and scripts:</strong> Monologue and script content we make available is provided for discovery with attribution and links back to its source and original publication. Your use of that content is subject to applicable copyright and our display terms. We do not grant you rights to use third-party copyrighted works beyond what the applicable license allows; see our{" "}
             <Link href="/sources" className="text-foreground underline hover:no-underline">Sources &amp; copyright</Link>
             {" "}page for more information.
           </p>

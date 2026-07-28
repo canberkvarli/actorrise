@@ -46,11 +46,19 @@ export function MarketingFooter() {
       <footer className="border-t border-border/60 bg-background py-8 overflow-x-hidden">
         <div className="container mx-auto px-4 sm:px-6 max-w-full">
           <p className="text-xs text-muted-foreground/90 mb-2 max-w-xl">
-            All text from public domain and licensed sources (e.g.{" "}
+            Every piece links back to its source (see{" "}
             <Link href="/sources" className="underline hover:no-underline text-foreground/80">
-              Project Gutenberg
+              Sources
             </Link>
-            ); we don&apos;t distribute copyrighted play text.
+            ); we never host full scripts of copyrighted works. Rights holders can request
+            removal anytime via{" "}
+            <a
+              href="mailto:canberk@actorrise.com"
+              className="underline hover:no-underline text-foreground/80"
+            >
+              canberk@actorrise.com
+            </a>
+            .
           </p>
           <p className="text-xs text-muted-foreground/90 mb-4 max-w-xl">
             We don&apos;t sell your data. Your searches are private.
