@@ -112,6 +112,13 @@ TV_CLIP_MIN_SECONDS = 30
 FILM_TV_MIN_WORDS = 75
 
 
+def review_hides_from_search(review_status) -> bool:
+    """True when a piece is awaiting review and must not be served. The repair /
+    quality passes set review_status='pending' to pull a broken piece out of
+    circulation; only that explicit state hides it (None / anything else shows)."""
+    return review_status == "pending"
+
+
 def film_tv_word_gate_hides(source_type, word_count) -> bool:
     """True when a film/TV piece is too short to surface (see FILM_TV_MIN_WORDS).
     Stage plays are governed by other gates, so they are never hidden here.
