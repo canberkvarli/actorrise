@@ -91,11 +91,17 @@ Standard line, place near the sign-off:
 
 If a user replies CURTAIN (or otherwise asks to stop), add their email to `email_do_not_contact` in Supabase right away. Keep the unsubscribe link too, this is in addition to it, not a replacement.
 
-## FOUNDER3 reply CTA (dramatic one-word ask)
+## Trial-link CTA (dramatic one-word ask)
 
-When offering the FOUNDER3 code (3 months of Plus, card on file, rolls into paid after) to actors, studios, or community theaters, close with a short, theatrical, one-word reply CTA instead of a generic "happy to answer questions" line. Example (based on the 5/28/2026 email to Khwezi that converted well): "If you want in, reply CURTAIN and I'll set you up myself, card on file for when the 3 months end, no forms." This has a strong reply rate historically, keep using it.
+No coupon codes. FOUNDER3 is retired as of 2026-07-22. Actors just use the Stripe trial: Plus membership, 2 weeks free, card on file, then the yearly charge (cancel anytime before it hits). Do NOT offer or reference FOUNDER3 or any coupon in new drafts.
 
-Note: CURTAIN is intentionally reused as BOTH the FOUNDER3 opt-in word AND the marketing opt-out word above. Canberk confirmed this on 2026-07-13 and wants to rely on context to tell them apart (a reply to a cold FOUNDER3 pitch = sign-up; a reply to a re-engagement/marketing email he already sent to an existing user = opt-out). If a CURTAIN reply's intent is genuinely ambiguous, flag it for Canberk rather than assuming either way.
+When offering the trial to actors, studios, or community theaters, close with a short, theatrical, one-word reply CTA instead of a generic "happy to answer questions" line: "If you want in, reply CURTAIN and I'll send you the link." One-word replies convert fastest with Canberk's audience, so keep the CTA to a single word.
+
+Trial link (base): https://buy.stripe.com/00w6oJgG8gjAaVSgsl6g801
+
+PREFILLED-EMAIL RULE (critical, do not skip): when someone replies CURTAIN, send them the link with their email appended as `?prefilled_email=<their address>`, using the exact address they replied from (that is their ActorRise account email). Example: https://buy.stripe.com/00w6oJgG8gjAaVSgsl6g801?prefilled_email=giosboss4@gmail.com . The webhook grants Plus by matching the checkout email to their ActorRise account, so a prefilled link makes the match automatic. Never send the bare base link to a specific person, and do not embed the link in cold outreach (only send after a CURTAIN reply).
+
+Note: CURTAIN is intentionally reused as BOTH the trial opt-in word AND the marketing opt-out word above. Canberk relies on context to tell them apart (a reply to a cold trial pitch = sign-up; a reply to a re-engagement/marketing email he already sent to an existing user = opt-out). If a CURTAIN reply's intent is genuinely ambiguous, flag it for Canberk rather than assuming either way.
 
 ## Brand
 
