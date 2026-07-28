@@ -414,10 +414,30 @@ async def resend_webhook(request: Request, db: Session = Depends(get_db)):
             send.clicked_at = now
     elif event_type == "email.bounced":
         send.status = "bounced"
+        _suppress(db, send.to_email, "bounced")
     elif event_type == "email.complained":
         send.status = "bounced"
+        _suppress(db, send.to_email, "complained")
     else:
         return {"status": "ok", "message": f"unhandled event: {event_type}"}
 
     db.commit()
     return {"status": "ok"}
+
+
+def _suppress(db: Session, email: str | None, reason: str) -> None:
+    """Add a hard-bounced/complained address to the do-not-contact list so it's
+    never mailed again. Idempotent: skips if already present. Non-fatal."""
+    from app.models.email_do_not_contact import EmailDoNotContact
+
+    addr = (email or "").strip().lower()
+    if not addr:
+        return
+    try:
+        existing = db.query(EmailDoNotContact).filter(
+            EmailDoNotContact.email == addr
+        ).first()
+        if not existing:
+            db.add(EmailDoNotContact(email=addr, reason=reason))
+    except Exception as e:  # never let suppression break webhook ack
+        logger.warning("Failed to suppress %s (%s): %s", addr, reason, e)
