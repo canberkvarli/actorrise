@@ -23,6 +23,9 @@ const ICE_SERVERS: RTCConfiguration = {
   ],
 };
 
+/** How long to let ICE try to recover from "disconnected" before giving up. */
+const DISCONNECT_GRACE_MS = 8000;
+
 export interface VoicePeer {
   id: string;
   name: string;
@@ -53,11 +56,21 @@ export function useRoomVoice(roomId: string, myName: string) {
   const pcs = useRef<Map<string, RTCPeerConnection>>(new Map());
   const audioEls = useRef<Map<string, HTMLAudioElement>>(new Map());
   const names = useRef<Map<string, string>>(new Map());
+  const graceTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const send = (payload: Record<string, unknown>) =>
     channelRef.current?.send({ type: "broadcast", event: "webrtc", payload: { from: myId, ...payload } });
 
+  const clearGrace = useCallback((peerId: string) => {
+    const t = graceTimers.current.get(peerId);
+    if (t) {
+      clearTimeout(t);
+      graceTimers.current.delete(peerId);
+    }
+  }, []);
+
   const teardownPeer = useCallback((peerId: string) => {
+    clearGrace(peerId);
     pcs.current.get(peerId)?.close();
     pcs.current.delete(peerId);
     const el = audioEls.current.get(peerId);
@@ -68,7 +81,7 @@ export function useRoomVoice(roomId: string, myName: string) {
     }
     names.current.delete(peerId);
     setPeers((p) => p.filter((x) => x.id !== peerId));
-  }, []);
+  }, [clearGrace]);
 
   const createPeer = useCallback(
     (peerId: string, initiator: boolean) => {
@@ -97,7 +110,46 @@ export function useRoomVoice(roomId: string, myName: string) {
         );
       };
       pc.onconnectionstatechange = () => {
-        if (["failed", "closed", "disconnected"].includes(pc.connectionState)) teardownPeer(peerId);
+        const state = pc.connectionState;
+
+        if (state === "connected") {
+          clearGrace(peerId);
+          setError(null);
+          return;
+        }
+
+        // "disconnected" is usually a transient blip that ICE recovers from on
+        // its own. Give it a moment before declaring the call dead, otherwise a
+        // one-second network hiccup permanently ends the rehearsal.
+        if (state === "disconnected") {
+          if (!graceTimers.current.has(peerId)) {
+            graceTimers.current.set(
+              peerId,
+              setTimeout(() => {
+                graceTimers.current.delete(peerId);
+                if (pcs.current.get(peerId)?.connectionState !== "connected") {
+                  setError("Lost the connection to your partner.");
+                  teardownPeer(peerId);
+                }
+              }, DISCONNECT_GRACE_MS)
+            );
+          }
+          return;
+        }
+
+        // Terminal. Say so — a silent teardown leaves the UI insisting it's
+        // still "waiting for your partner" when nothing is coming.
+        if (state === "failed") {
+          setError(
+            TURN_URL
+              ? "Couldn't reach your partner's device. Check your connection and try Voice again."
+              : "Couldn't reach your partner's device. One of you is likely on a network that blocks direct calls."
+          );
+          teardownPeer(peerId);
+          return;
+        }
+
+        if (state === "closed") teardownPeer(peerId);
       };
 
       if (initiator) {
@@ -108,7 +160,7 @@ export function useRoomVoice(roomId: string, myName: string) {
       }
       return pc;
     },
-    [teardownPeer]
+    [teardownPeer, clearGrace]
   );
 
   const join = useCallback(async () => {
@@ -172,6 +224,8 @@ export function useRoomVoice(roomId: string, myName: string) {
   }, [joined, joining, roomId, myId, myName, createPeer, teardownPeer]);
 
   const leave = useCallback(() => {
+    graceTimers.current.forEach((t) => clearTimeout(t));
+    graceTimers.current.clear();
     pcs.current.forEach((pc) => pc.close());
     pcs.current.clear();
     audioEls.current.forEach((el) => {
