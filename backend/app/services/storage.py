@@ -145,12 +145,13 @@ def upload_founding_actor_headshot(base64_image: str, user_id: int, index: int) 
             rgb_image.paste(image)
         image = rgb_image
 
-    # Resize if larger than 400x400
-    if image.width > 400 or image.height > 400:
-        image.thumbnail((400, 400), Image.LANCZOS)
+    # These are displayed large on the public roster: the card serves up to
+    # 100vw on mobile, so a 400px cap gets upscaled and looks pixelated.
+    if image.width > 1600 or image.height > 1600:
+        image.thumbnail((1600, 1600), Image.LANCZOS)
 
     output = io.BytesIO()
-    image.save(output, format="JPEG", quality=80, optimize=True)
+    image.save(output, format="JPEG", quality=88, optimize=True)
     image_bytes = output.getvalue()
 
     file_path = f"founding-actors/{user_id}/headshot-{index}.jpg"
