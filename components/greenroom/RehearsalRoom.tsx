@@ -71,6 +71,12 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
   const sr = useSpeechRecognition({ continuous: true, interimResults: true });
   const [editMode, setEditMode] = useState(false);
 
+  // The stage door. Browsers only hand over a mic on a user gesture, so a tap
+  // is unavoidable — this makes the one tap BE entering the room, instead of a
+  // separate "Voice" toggle in the corner that a partner never notices.
+  const [entered, setEntered] = useState(false);
+  const [entering, setEntering] = useState(false);
+
   // Which line is live, and is it mine? (computed from raw state so it's
   // available before the loading early-return, keeping hook order stable.)
   const curScene = script?.scenes?.[Math.min(sceneIndex, (script?.scenes?.length ?? 1) - 1)];
@@ -124,6 +130,30 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
   const updateLines = (next: RoomLine[]) => setSceneLines(sceneIndex, next);
 
   const takenBy = (role: string) => participants.find((p) => p.role === role);
+
+  if (!entered) {
+    return (
+      <StageDoor
+        scriptTitle={script.title}
+        sceneTitle={scene.title}
+        others={participants.filter((p) => p.id !== myId)}
+        entering={entering}
+        error={voice.error}
+        onEnter={async (withVoice) => {
+          if (!withVoice) {
+            setEntered(true);
+            return;
+          }
+          setEntering(true);
+          // Mic refused? Still go in — being in the room without voice beats
+          // being stuck at the door.
+          await voice.join();
+          setEntering(false);
+          setEntered(true);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="dark min-h-screen bg-[#191410] text-neutral-100">
@@ -280,6 +310,87 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
             )}
           </p>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The moment before you walk on. One tap takes the mic, joins voice, and puts
+ * you in the room already connected — both actors pass through the same door,
+ * so neither can miss the step that makes them audible.
+ */
+function StageDoor({
+  scriptTitle,
+  sceneTitle,
+  others,
+  entering,
+  error,
+  onEnter,
+}: {
+  scriptTitle: string;
+  sceneTitle: string;
+  others: { id: string; name: string }[];
+  entering: boolean;
+  error: string | null;
+  onEnter: (withVoice: boolean) => void;
+}) {
+  return (
+    <div className="dark flex min-h-screen items-center justify-center bg-[#191410] px-4 text-neutral-100">
+      <div className="w-full max-w-md text-center">
+        <p className="font-typewriter text-xs italic tracking-wide text-neutral-500">
+          (places, please.)
+        </p>
+
+        <h1 className="mt-4 text-2xl font-bold uppercase leading-tight tracking-wider text-neutral-50 sm:text-3xl">
+          {sceneTitle}
+        </h1>
+        <p className="mt-2 font-typewriter text-xs text-neutral-500">{scriptTitle}</p>
+
+        <div className="mt-8 flex min-h-[1.5rem] items-center justify-center gap-2">
+          {others.length > 0 ? (
+            <>
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
+              </span>
+              <span className="font-typewriter text-sm text-neutral-300">
+                {others.length === 1
+                  ? `${others[0].name} is already here`
+                  : `${others.length} actors are already here`}
+              </span>
+            </>
+          ) : (
+            <span className="font-typewriter text-sm text-neutral-500">
+              Nobody else yet. Send them the link.
+            </span>
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onEnter(true)}
+          disabled={entering}
+          className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#CB4B00] px-6 py-3.5 text-base font-medium text-white transition-colors hover:bg-[#B03000] disabled:opacity-60"
+        >
+          {entering ? (
+            <IconLoader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <IconMicrophone className="h-5 w-5" />
+          )}
+          {entering ? "Going in" : "Go in"}
+        </button>
+        <p className="mt-2.5 font-typewriter text-xs text-neutral-500">uses your mic</p>
+
+        {error && <p className="mt-4 font-typewriter text-xs text-red-400">{error}</p>}
+
+        <button
+          type="button"
+          onClick={() => onEnter(false)}
+          className="mt-6 font-typewriter text-xs text-neutral-500 underline underline-offset-4 transition-colors hover:text-neutral-200"
+        >
+          or go in without voice
+        </button>
       </div>
     </div>
   );
