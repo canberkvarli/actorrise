@@ -6,8 +6,10 @@ import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/lib/auth";
+import { UpgradeModal } from "@/components/billing/UpgradeModal";
 import { useCommunityLibrary, type CommunityScript } from "@/hooks/useCommunityLibrary";
 import { useLobbyPresence } from "@/hooks/useLobbyPresence";
+import { useSubscription } from "@/hooks/useSubscription";
 import { useScripts, useShareScript } from "@/hooks/useScripts";
 import { GhostLightIntro } from "./GhostLightIntro";
 
@@ -28,6 +30,13 @@ const PAGE_GLOW_HOVER =
 export function GreenRoomLibrary() {
   const { data, isLoading } = useCommunityLibrary();
 
+  // Starting a room is a Plus feature; joining one you were invited to is not.
+  // Guests arrive straight at /greenroom/room/<id> and never pass through here,
+  // so gating the library's "Rehearse" action leaves the invite flow open.
+  const { subscription, isLoading: tierLoading } = useSubscription();
+  const canHost = (subscription?.tier_name ?? "free") !== "free";
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
+
   // Gate first paint so server and first client render agree (React Query's
   // cache can be warm on the client but empty on the server) — avoids a
   // skeleton/grid hydration mismatch.
@@ -37,6 +46,12 @@ export function GreenRoomLibrary() {
   return (
     <>
       <GhostLightIntro ready={mounted && !!data} />
+      <UpgradeModal
+        open={upgradeOpen}
+        onOpenChange={setUpgradeOpen}
+        feature="The Green Room"
+        message="Starting a rehearsal room is part of Plus. Your scene partner joins free, from any link you send them."
+      />
       <div className="dark min-h-screen bg-[#191410] text-neutral-100">
         <div className="relative mx-auto max-w-5xl px-4 pb-28 pt-10 sm:pt-16">
           {/* ambient stage wash — the room lit from above */}
@@ -77,7 +92,13 @@ export function GreenRoomLibrary() {
                   className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
                 >
                   {data.scripts.map((s) => (
-                    <CommunityScriptCard key={s.id} s={s} />
+                    <CommunityScriptCard
+                      key={s.id}
+                      s={s}
+                      // Don't flash the paywall while the tier is still loading.
+                      canHost={canHost || tierLoading}
+                      onBlocked={() => setUpgradeOpen(true)}
+                    />
                   ))}
                 </motion.div>
                 {!data.ready && (
@@ -97,10 +118,22 @@ export function GreenRoomLibrary() {
 }
 
 /** A script as a page under the light: warm stock, dark ink, orange spill. */
-function CommunityScriptCard({ s }: { s: CommunityScript }) {
+function CommunityScriptCard({
+  s,
+  canHost,
+  onBlocked,
+}: {
+  s: CommunityScript;
+  canHost: boolean;
+  onBlocked: () => void;
+}) {
   const router = useRouter();
 
   const start = () => {
+    if (!canHost) {
+      onBlocked();
+      return;
+    }
     const roomId =
       typeof crypto !== "undefined" && crypto.randomUUID
         ? crypto.randomUUID().slice(0, 8)
