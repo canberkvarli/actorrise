@@ -316,7 +316,11 @@ class RehearsalSession(Base):
     scene_id = Column(Integer, ForeignKey("scenes.id"), nullable=False, index=True)
 
     # Session Config
-    user_character = Column(String, nullable=False)  # Which character the user is playing
+    user_character = Column(String, nullable=False)  # Primary character the user is playing
+    # Every character the user speaks for. NULL on sessions created before
+    # multi-role existed — read it through session_user_characters(), which falls
+    # back to [user_character].
+    user_characters = Column(ARRAY(String), nullable=True)
     ai_character = Column(String, nullable=False)  # Which character the AI is playing
 
     # Session Status

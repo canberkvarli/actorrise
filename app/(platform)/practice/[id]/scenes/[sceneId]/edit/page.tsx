@@ -40,6 +40,7 @@ import {
   Settings,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import { suggestRoleMerges } from "@/lib/character-roles";
 import { motion, AnimatePresence, Reorder, useDragControls } from "framer-motion";
 import { cn } from "@/lib/utils";
 import api, { API_URL } from "@/lib/api";
@@ -365,8 +366,31 @@ export default function SceneEditPage() {
     Record<number, { character_name: string; text: string; stage_direction: string }>
   >({});
 
-  // Character & rehearsal
-  const [selectedCharacter, setSelectedCharacter] = useState<string>("");
+  // Character & rehearsal.
+  // An actor can cover several parts in one run. The first entry is the primary
+  // role — it drives the single-character UI (highlighting, the rehearse card) and
+  // is what older clients/sessions call `user_character`.
+  const [myRoles, setMyRoles] = useState<string[]>([]);
+  /** "keep|drop" pairs the actor said were genuinely different characters. */
+  const [dismissedMerges, setDismissedMerges] = useState<string[]>([]);
+  const selectedCharacter = myRoles[0] ?? "";
+  /** Replace the whole selection with one role (used where picking is single-choice). */
+  const setSelectedCharacter = useCallback(
+    (name: string) => setMyRoles(name ? [name] : []),
+    [],
+  );
+  /** Add or remove a role without disturbing the others. */
+  const toggleRole = useCallback((name: string) => {
+    setMyRoles((prev) =>
+      prev.includes(name)
+        ? prev.filter((r) => r !== name)   // never leaves an empty selection un-handled: see the picker
+        : [...prev, name],
+    );
+  }, []);
+  const isMyRole = useCallback(
+    (name: string) => myRoles.some((r) => r.trim().toLowerCase() === name.trim().toLowerCase()),
+    [myRoles],
+  );
   const [startingRehearsal, setStartingRehearsal] = useState(false);
   // Cold-read: a timed read-through before a single-take performance.
   // Read mode by default — the script reads clean; editing power is one tap away.
@@ -717,11 +741,19 @@ export default function SceneEditPage() {
     setLoading(false);
     // Store original snapshot for reset (deep clone)
     originalSceneRef.current = JSON.parse(JSON.stringify(swrScene));
-    // Default character selection to character_1
-    setSelectedCharacter(swrScene.character_1_name);
     // Load saved voices; assign cycling defaults for any character without one
     const saved = getCharacterVoices(sceneId);
     const uniqueChars = [...new Set(swrScene.lines.map(l => l.character_name))];
+    // Default to character_1 — but only if a cue actually uses that name. A scene's
+    // declared name can be a fuller display name than the cues ("Steve Komphela"
+    // vs "STEVE"), and selecting it would highlight no lines and start a rehearsal
+    // with nothing to say.
+    const declared = swrScene.character_1_name;
+    const defaultRole =
+      uniqueChars.find(c => c.trim().toLowerCase() === (declared ?? "").trim().toLowerCase())
+      ?? uniqueChars[0]
+      ?? declared;
+    setSelectedCharacter(defaultRole);
     const updated = { ...saved };
     let voiceIdx = 0;
     for (const charName of uniqueChars) {
@@ -810,8 +842,8 @@ export default function SceneEditPage() {
       return next;
     });
 
-    // Update selectedCharacter
-    if (selectedCharacter === oldName) setSelectedCharacter(newName);
+    // Follow the rename through every selected role
+    setMyRoles((prev) => prev.map((r) => (r === oldName ? newName : r)));
 
     // Persist to backend: scene field + ALL affected line records
     setSaving(`scene-rename`);
@@ -849,7 +881,7 @@ export default function SceneEditPage() {
         }
         return next;
       });
-      if (selectedCharacter === newName) setSelectedCharacter(oldName);
+      setMyRoles((prev) => prev.map((r) => (r === newName ? oldName : r)));
       pageToast.error("Failed to rename character");
     } finally {
       setSaving(null);
@@ -975,7 +1007,8 @@ export default function SceneEditPage() {
     try {
       const { data } = await api.post<{ id: number } & Record<string, unknown>>("/api/scenes/rehearse/start", {
         scene_id: scene.id,
-        user_character: selectedCharacter,
+        user_character: selectedCharacter,   // primary role — older servers read this
+        user_characters: myRoles,
         ...(rehearsalStartLineIndex !== null && { start_from_line_index: rehearsalStartLineIndex }),
       });
       setRehearsalStartLineIndex(null);
@@ -990,7 +1023,7 @@ export default function SceneEditPage() {
       }
       try { sessionStorage.setItem(`actorrise_voice_map_${data.id}`, JSON.stringify(voiceMapWithMeta)); } catch { /* quota */ }
       // Determine AI character's voice to pass to rehearsal
-      const primaryAiChar = allSceneCharacters.find(c => c !== selectedCharacter);
+      const primaryAiChar = allSceneCharacters.find(c => !isMyRole(c));
       const aiCharVoice = primaryAiChar ? (charVoices[primaryAiChar] ?? "coral") : "coral";
       const voiceParam = aiCharVoice ? `&voice=${aiCharVoice}` : '';
       // Navigate immediately — no animation delay
@@ -1477,6 +1510,23 @@ export default function SceneEditPage() {
       .map(([name]) => name);
   }, [scene]);
 
+  const sceneLineCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const l of scene?.lines ?? []) {
+      counts[l.character_name] = (counts[l.character_name] ?? 0) + 1;
+    }
+    return counts;
+  }, [scene]);
+
+  // Scripts shorten names as they go ("DANIEL" early, "DAN" later) and the parser
+  // records both, so one part looks like two characters. Offer the merge rather
+  // than applying it — some scenes really do have a Dan and a Daniel.
+  const roleMergeSuggestions = useMemo(
+    () => suggestRoleMerges(allSceneCharacters, sceneLineCounts)
+      .filter(([keep, drop]) => !dismissedMerges.includes(`${keep}|${drop}`)),
+    [allSceneCharacters, sceneLineCounts, dismissedMerges],
+  );
+
   // Recalculate duration client-side from actual lines (~150 wpm)
   const computedDuration = useMemo(() => {
     if (!scene) return 0;
@@ -1813,10 +1863,10 @@ export default function SceneEditPage() {
           <Theater className="w-4 h-4 text-primary" />
           <h3 className="text-xl font-semibold text-neutral-100">Characters</h3>
         </div>
-        <p className="text-[11px] text-neutral-400 -mt-1">Select who you&apos;ll play</p>
+        <p className="text-[11px] text-neutral-400 -mt-1">Select who you&apos;ll play. Tap more than one to cover several parts.</p>
         <div className="space-y-2">
           {allSceneCharacters.map((charName) => {
-            const isMe = selectedCharacter === charName;
+            const isMe = isMyRole(charName);
             const voiceId = charVoices[charName] ?? null;
             const voiceData = AI_VOICES.find(v => v.id === voiceId);
             const dropKey = `voice-${charName}`;
@@ -1824,10 +1874,14 @@ export default function SceneEditPage() {
             return (
               <div
                 key={charName}
-                onClick={() => setSelectedCharacter(charName)}
+                onClick={() => { if (!(isMe && myRoles.length === 1)) toggleRole(charName); }}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setSelectedCharacter(charName); }}
+                aria-pressed={isMe}
+                onKeyDown={(e) => {
+                  if (e.key !== "Enter" && e.key !== " ") return;
+                  if (!(isMe && myRoles.length === 1)) toggleRole(charName);
+                }}
                 className={cn(
                   "rounded-lg border p-3 transition-all cursor-pointer",
                   isMe
@@ -1944,7 +1998,7 @@ export default function SceneEditPage() {
               className="overflow-hidden"
             >
               <p className="text-xs text-amber-500/80 text-center pb-2.5">
-                {scene.lines.filter(l => l.character_name === selectedCharacter).length} lines as {selectedCharacter}
+                {scene.lines.filter(l => isMyRole(l.character_name)).length} lines as {myRoles.join(" + ")}
               </p>
             </motion.div>
           )}
@@ -2147,7 +2201,7 @@ export default function SceneEditPage() {
   // Right panel content (parchment script)
   // ---------------------------------------------------------------------------
 
-  const isMyLine = (charName: string) => charName.trim().toLowerCase() === selectedCharacter.trim().toLowerCase();
+  const isMyLine = (charName: string) => isMyRole(charName);
 
   const rightPanelContent = (
     <div
@@ -2993,18 +3047,32 @@ export default function SceneEditPage() {
 
   const readModeSetup = (
     <div className="mx-auto w-full max-w-[720px] mb-5 rounded-xl border border-border bg-card/50 backdrop-blur-sm px-3 sm:px-4 py-3">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+      <div className="flex flex-col lg:flex-row lg:items-start gap-3">
         {/* You're playing */}
-        <div className="flex items-center gap-2 min-w-0">
-          <span className="text-[11px] uppercase tracking-wider text-muted-foreground shrink-0">You&apos;re playing</span>
-          <div className="flex items-center gap-1 rounded-lg bg-muted/50 p-0.5">
+        <div className="flex items-start gap-2 min-w-0">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground shrink-0 pt-2">You&apos;re playing</span>
+          {/* Wraps instead of overflowing: with min-w-0 above, a non-wrapping row
+              spilled out of its shrunken box and painted over the Reader column. */}
+          <div className="flex flex-wrap items-center gap-1 rounded-lg bg-muted/50 p-0.5 min-w-0">
             {allSceneCharacters.map((charName) => {
-              const isMe = selectedCharacter === charName;
+              const isMe = isMyRole(charName);
               return (
                 <button
                   key={charName}
                   type="button"
-                  onClick={() => setSelectedCharacter(charName)}
+                  // Tap to add a part, tap again to drop it — an actor can read for
+                  // several roles. Deselecting the last one would leave nothing to
+                  // rehearse, so that tap is ignored.
+                  onClick={() => {
+                    if (isMe && myRoles.length === 1) return;
+                    toggleRole(charName);
+                  }}
+                  aria-pressed={isMe}
+                  title={
+                    isMe
+                      ? (myRoles.length === 1 ? `You're playing ${charName}` : `Stop playing ${charName}`)
+                      : `Also play ${charName}`
+                  }
                   className={cn(
                     "px-3 py-1.5 rounded-md text-sm font-medium transition-colors truncate max-w-[140px]",
                     isMe ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
@@ -3015,13 +3083,18 @@ export default function SceneEditPage() {
               );
             })}
           </div>
+          {myRoles.length > 1 && (
+            <span className="text-[11px] text-muted-foreground shrink-0 pt-2 hidden sm:inline">
+              {myRoles.length} parts
+            </span>
+          )}
         </div>
 
         {/* Reader voice(s) — for the character(s) you're not playing */}
-        <div className="flex items-center gap-2 sm:ml-auto min-w-0">
-          <span className="text-[11px] uppercase tracking-wider text-muted-foreground shrink-0">Reader</span>
-          <div className="flex flex-wrap items-center gap-1.5">
-            {allSceneCharacters.filter((c) => c !== selectedCharacter).map((charName) => {
+        <div className="flex items-start gap-2 lg:ml-auto min-w-0">
+          <span className="text-[11px] uppercase tracking-wider text-muted-foreground shrink-0 pt-1.5">Reader</span>
+          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
+            {allSceneCharacters.filter((c) => !isMyRole(c)).map((charName) => {
               const voiceId = charVoices[charName] ?? null;
               const voiceData = AI_VOICES.find((v) => v.id === voiceId);
               const dropKey = `setup-voice-${charName}`;
@@ -3062,6 +3135,8 @@ export default function SceneEditPage() {
                       ))}
                     </div>
                   )}
+                  {/* Plays a sample. It is not a mute/enable switch — the speaker
+                      icon read as one, so this says what it does. */}
                   <button
                     type="button"
                     onClick={() => previewVoice(charName)}
@@ -3069,9 +3144,10 @@ export default function SceneEditPage() {
                       "p-1 rounded-full border transition-colors",
                       isPreviewing ? "bg-primary/20 border-primary/40 text-primary" : "border-border text-muted-foreground hover:text-foreground"
                     )}
-                    title="Preview voice"
+                    title={isPreviewing ? `Stop ${charName}'s sample` : `Hear ${charName}'s voice`}
+                    aria-label={isPreviewing ? `Stop ${charName}'s sample` : `Hear ${charName}'s voice`}
                   >
-                    {isPreviewing ? <Square className="w-3 h-3" /> : <Volume2 className="w-3 h-3" />}
+                    {isPreviewing ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
                   </button>
                 </div>
               );
@@ -3079,6 +3155,35 @@ export default function SceneEditPage() {
           </div>
         </div>
       </div>
+
+      {roleMergeSuggestions.map(([keep, drop]) => (
+        <div
+          key={`${keep}|${drop}`}
+          className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border pt-3 text-xs text-muted-foreground"
+        >
+          <span>
+            <span className="font-medium text-foreground">{drop}</span>
+            {" ("}{sceneLineCounts[drop] ?? 0} line{(sceneLineCounts[drop] ?? 0) === 1 ? "" : "s"}{") and "}
+            <span className="font-medium text-foreground">{keep}</span>
+            {" ("}{sceneLineCounts[keep] ?? 0} line{(sceneLineCounts[keep] ?? 0) === 1 ? "" : "s"}{") look like the same character."}
+          </span>
+          <button
+            type="button"
+            onClick={() => renameCharacter(drop, keep)}
+            className="text-primary hover:underline font-medium"
+          >
+            Merge into {keep}
+          </button>
+          <span aria-hidden>·</span>
+          <button
+            type="button"
+            onClick={() => setDismissedMerges((prev) => [...prev, `${keep}|${drop}`])}
+            className="hover:text-foreground"
+          >
+            They&apos;re different
+          </button>
+        </div>
+      ))}
     </div>
   );
 
@@ -3335,7 +3440,7 @@ export default function SceneEditPage() {
                       <span className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
                         {selectedCharacter?.[0]?.toUpperCase()}
                       </span>
-                      <span className="text-sm font-medium text-foreground truncate flex-1">{selectedCharacter}</span>
+                      <span className="text-sm font-medium text-foreground truncate flex-1">{myRoles.join(" + ")}</span>
                       <span className="text-[10px] text-orange-500 font-medium shrink-0">(You)</span>
                     </div>
                     <div className="flex items-center gap-2.5">
@@ -3478,7 +3583,7 @@ export default function SceneEditPage() {
               {scene && (
                 <div className="flex gap-1.5">
                   {[scene.character_1_name, scene.character_2_name].map((charName) => {
-                    const isUser = charName === selectedCharacter;
+                    const isUser = isMyRole(charName);
                     const isSelected = newLineCharacter === charName;
                     const vid = charVoices[charName] ?? null;
                     const voice = AI_VOICES.find(v => v.id === vid);
@@ -3518,7 +3623,7 @@ export default function SceneEditPage() {
               )}
             </div>
             {/* Voice selector for scene partner lines — custom dropdown */}
-            {scene && newLineCharacter && newLineCharacter !== selectedCharacter && (() => {
+            {scene && newLineCharacter && !isMyRole(newLineCharacter) && (() => {
               const currentVoice = charVoices[newLineCharacter] ?? null;
               const selectedVoice = AI_VOICES.find(v => v.id === currentVoice);
               return (

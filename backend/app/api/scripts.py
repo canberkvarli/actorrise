@@ -27,6 +27,7 @@ from app.models.actor import (
     UserScript,
 )
 from app.models.user import User
+from app.services.character_names import canonicalize_scene_characters
 from app.services.script_parser import ScriptParser
 
 router = APIRouter(prefix="/api/scripts", tags=["scripts"])
@@ -378,6 +379,9 @@ async def upload_script(
         # Create Scene records for extracted scenes
         scenes_created = []
         for scene_data in result["scenes"]:
+            # One person can be cued two ways in a script, and the declared name may
+            # never appear as a cue at all. Reconcile before the scene is stored.
+            scene_data = canonicalize_scene_characters(scene_data)
             # Calculate metadata
             from app.utils.duration import estimate_duration_seconds
             lines_count = len(scene_data.get("lines", []))
@@ -719,6 +723,9 @@ async def upload_script_stream(
 
             scenes_created = []
             for scene_data in result["scenes"]:
+                # One person can be cued two ways in a script, and the declared name may
+                # never appear as a cue at all. Reconcile before the scene is stored.
+                scene_data = canonicalize_scene_characters(scene_data)
                 from app.utils.duration import estimate_duration_seconds
                 lines_count = len(scene_data.get("lines", []))
                 all_line_text = "\n".join(line.get("text", "") for line in scene_data.get("lines", []))
@@ -918,6 +925,9 @@ async def create_script_from_text(
 
         scenes_created = []
         for scene_data in result["scenes"]:
+            # One person can be cued two ways in a script, and the declared name may
+            # never appear as a cue at all. Reconcile before the scene is stored.
+            scene_data = canonicalize_scene_characters(scene_data)
             from app.utils.duration import estimate_duration_seconds
             lines_count = len(scene_data.get("lines", []))
             all_line_text = "\n".join(line.get("text", "") for line in scene_data.get("lines", []))
@@ -1077,6 +1087,8 @@ async def ensure_example_script(
     db.refresh(play)
 
     scene_data = metadata["scenes"][0]
+    # See the loop sites above — same reconciliation for the single-scene path.
+    scene_data = canonicalize_scene_characters(scene_data)
     lines_list = scene_data.get("lines", [])
     from app.utils.duration import estimate_duration_seconds
     line_count = len(lines_list)

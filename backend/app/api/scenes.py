@@ -16,6 +16,9 @@ from app.models.user import User
 from app.services.ai.langchain.scene_partner import (ScenePartnerGraph,
                                                      ScenePartnerState)
 from app.services.benefits import get_effective_benefits
+from app.services.character_names import (canonical_character_map,
+                                          line_belongs_to,
+                                          resolve_rehearsal_roles)
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -107,7 +110,10 @@ class SceneDetailResponse(SceneResponse):
 class StartRehearsalRequest(BaseModel):
     """Request to start a rehearsal session"""
     scene_id: int
-    user_character: str  # Which character the user wants to play
+    user_character: str  # Primary character the user wants to play
+    # Every character the user wants to speak for. Older clients send only
+    # user_character; when both are present this list wins.
+    user_characters: Optional[List[str]] = None
     start_from_line_index: Optional[int] = None  # Start rehearsal from a specific line
 
 
@@ -116,6 +122,7 @@ class RehearsalSessionResponse(BaseModel):
     id: int
     scene_id: int
     user_character: str
+    user_characters: List[str] = []
     ai_character: str
     status: str
     current_line_index: int
@@ -136,6 +143,10 @@ class DeliverLineRequest(BaseModel):
     user_input: str
     request_feedback: bool = False  # User wants feedback on this line
     request_retry: bool = False  # User wants to retry this line
+    # Which scene line was just spoken. The client knows exactly what was on screen;
+    # without it the server has to guess from a cursor, which is how 48% of prod
+    # deliveries ended up filed against the wrong line. Optional for older clients.
+    scene_line_id: Optional[int] = None
 
 
 class DeliverLineResponse(BaseModel):
@@ -193,8 +204,28 @@ def resolve_rehearsal_characters(
 
     # Prefer the exact string used in the lines.
     user = next((c for c in line_character_names if _norm_name(c) == choice_norm), None)
-    # Fall back to the declared names if the lines are empty/odd.
-    if user is None:
+
+    # A declared name may be a fuller version of the cue name — scene 871 declared
+    # "Steve Komphela" while every cue says "Steve". Resolve it to the cue name;
+    # accepting it verbatim starts a session on a character that owns zero lines.
+    if user is None and line_character_names:
+        counts = {c: 1 for c in line_character_names}
+        mapping = canonical_character_map(
+            list(line_character_names) + [c for c in declared_character_names if c],
+            line_counts=counts,
+        )
+        for original, canonical in mapping.items():
+            if _norm_name(original) == choice_norm and any(
+                _norm_name(canonical) == _norm_name(c) for c in line_character_names
+            ):
+                user = next(
+                    c for c in line_character_names
+                    if _norm_name(c) == _norm_name(canonical)
+                )
+                break
+
+    # Fall back to the declared names only when there are no lines to match against.
+    if user is None and not line_character_names:
         for c in declared_character_names:
             if _norm_name(c) == choice_norm:
                 user = c
@@ -209,6 +240,71 @@ def resolve_rehearsal_characters(
         d2 if _norm_name(user) == _norm_name(d1) else d1,
     )
     return user, ai
+
+
+def session_user_characters(session) -> list:
+    """Every character a session's actor speaks for.
+
+    `user_characters` is NULL on sessions that predate multi-role, so fall back to
+    the single `user_character` those sessions were created with.
+    """
+    stored = getattr(session, "user_characters", None)
+    if stored:
+        return [c for c in stored if str(c or "").strip()]
+    primary = str(session.user_character) if session.user_character is not None else ""
+    return [primary] if primary else []
+
+
+def _as_role_list(user_character) -> list:
+    """Accept a single character name or a list of them."""
+    if user_character is None:
+        return []
+    if isinstance(user_character, str):
+        return [user_character] if user_character.strip() else []
+    return [c for c in user_character if str(c or "").strip()]
+
+
+def resolve_delivered_line_index(
+    line_character_names: list,
+    line_ids: list,
+    user_character,
+    current_index: int,
+    requested_line_id=None,
+):
+    """Index (into the scene's ordered lines) of the line the actor just delivered.
+
+    `current_line_index` cannot be treated as a plain cursor into every line: the
+    client only POSTs a delivery for the actor's OWN lines, so a counter bumped once
+    per delivery drifts away from the interleaved user/AI script immediately. That
+    drift filed 48% of prod deliveries against lines the actor never spoke.
+
+    The client knows exactly which line is on screen, so prefer the id it sends.
+    Older clients don't send one — for those, scan forward for the next line that
+    actually belongs to the actor.
+
+    Returns None when there's no remaining line for this character.
+    """
+    if requested_line_id is not None:
+        for i, line_id in enumerate(line_ids):
+            if line_id == requested_line_id:
+                return i
+
+    roles = _as_role_list(user_character)
+    for i in range(max(0, current_index), len(line_character_names)):
+        if line_belongs_to(line_character_names[i], roles, line_character_names):
+            return i
+    return None
+
+
+def count_user_lines_delivered(delivered_line_ids, user_line_ids) -> int:
+    """How many of the actor's own lines have been covered at least once.
+
+    Counts DISTINCT lines so retrying a line isn't mistaken for progress, and
+    ignores ids outside the actor's own lines so the misattributed deliveries
+    left behind by the old cursor bug can't inflate completion.
+    """
+    owned = set(user_line_ids)
+    return len({line_id for line_id in delivered_line_ids if line_id in owned})
 
 
 def _get_ai_voice_id(scene, ai_character_name: str) -> str:
@@ -571,9 +667,13 @@ async def start_rehearsal(
     # valid choice with "Invalid character choice". Match case/whitespace-insensitively,
     # then resolve BOTH characters to the exact names used in the scene lines so all
     # downstream line matching (user's lines, AI's lines) stays consistent.
-    resolved = resolve_rehearsal_characters(
-        request.user_character,
-        list({l.character_name for l in scene.lines}),
+    # An actor may cover several parts (Ayush, 2026-07-29). It also rescues scenes
+    # where the script cues one person two ways — pick both and you get the whole
+    # part instead of a fragment of it.
+    requested_roles = request.user_characters or [request.user_character]
+    resolved = resolve_rehearsal_roles(
+        requested_roles,
+        [l.character_name for l in scene.lines],
         (scene.character_1_name, scene.character_2_name),
     )
     if resolved is None:
@@ -581,7 +681,8 @@ async def start_rehearsal(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid character choice"
         )
-    user_character, ai_character = resolved
+    user_roles, ai_character = resolved
+    user_character = user_roles[0]
 
     # Create session
     start_index = request.start_from_line_index if request.start_from_line_index is not None else 0
@@ -590,6 +691,7 @@ async def start_rehearsal(
         user_id=current_user.id,
         scene_id=request.scene_id,
         user_character=user_character,
+        user_characters=user_roles,
         ai_character=ai_character,
         status="in_progress",
         current_line_index=start_index,
@@ -602,11 +704,12 @@ async def start_rehearsal(
     db.commit()
     db.refresh(session)
 
-    # First line for user: when the first line in the scene is the user's character
+    # First line for user: the first line in the scene belonging to any of their roles
     ordered_lines = sorted(scene.lines, key=lambda l: l.line_order)
+    all_cue_names = [l.character_name for l in ordered_lines]
     first_line_for_user = None
     for line in ordered_lines:
-        if _norm_name(line.character_name) == _norm_name(user_character):
+        if line_belongs_to(line.character_name, user_roles, all_cue_names):
             first_line_for_user = line.text
             break
 
@@ -689,11 +792,28 @@ async def deliver_line(
     all_lines = scene.lines
 
     current_index = int(session.current_line_index) if session.current_line_index is not None else 0  # type: ignore
-    if current_index >= len(all_lines):
-        # Scene complete
+    user_char = str(session.user_character) if session.user_character is not None else ""
+    user_roles = session_user_characters(session)
+    line_characters = [l.character_name for l in all_lines]
+    line_ids = [l.id for l in all_lines]
+
+    # Which line did the actor actually just speak? Never assume all_lines[current_index]
+    # — that cursor only advances on the actor's own turns, so it drifts out of step with
+    # the interleaved script (see resolve_delivered_line_index).
+    delivered_index = resolve_delivered_line_index(
+        line_characters,
+        line_ids,
+        user_roles,
+        current_index,
+        request.scene_line_id,
+    )
+
+    if delivered_index is None:
+        # No line left for this character — the scene is done.
         session.status = "completed"  # type: ignore
         session.completion_percentage = 100.0  # type: ignore
-        session.completed_at = datetime.utcnow()  # type: ignore
+        session.completed_at = datetime.now(timezone.utc)  # type: ignore
+        session.duration_seconds = _duration_seconds(session.started_at, session.completed_at)  # type: ignore
         db.commit()
 
         return DeliverLineResponse(
@@ -704,7 +824,7 @@ async def deliver_line(
             completion_percentage=100.0
         )
 
-    current_line = all_lines[current_index]
+    current_line = all_lines[delivered_index]
 
     # Record the delivery
     total_delivered = int(session.total_lines_delivered) if session.total_lines_delivered is not None else 0  # type: ignore
@@ -785,20 +905,30 @@ async def deliver_line(
     if request.request_retry:
         current_retried = int(session.lines_retried) if session.lines_retried is not None else 0  # type: ignore
         session.lines_retried = current_retried + 1  # type: ignore
+        new_index = delivered_index
     else:
-        session.current_line_index = current_index + 1  # type: ignore
+        # The cursor is a real position in the scene: park it just past the line
+        # that was actually delivered, so the next lookup resumes in the right place.
+        new_index = delivered_index + 1
+        session.current_line_index = new_index  # type: ignore
 
     # Completion is measured against the user's OWN lines (see _compute_completion):
-    # delivering every line of your character means the scene is finished. Dividing
-    # by len(all_lines) (user + AI lines) used to cap completion near 50% and made
-    # "completed" unreachable. new_index counts non-retry deliveries (= user turns).
-    new_index = current_index + 1 if not request.request_retry else current_index
-    user_char = str(session.user_character) if session.user_character is not None else ""
-    user_line_count = sum(
-        1 for line in all_lines
-        if (str(line.character_name) if line.character_name is not None else "") == user_char
-    )
-    completion_pct, is_complete = _compute_completion(new_index, user_line_count)
+    # delivering every line of your character means the scene is finished.
+    #
+    # Count DISTINCT lines covered rather than raw delivery count. The old code used
+    # the delivery counter, which conflated "how many times did you speak" with "how
+    # far through your part are you" — retries inflated it, and on a scene where the
+    # extractor split one character in two it declared a 43-line scene finished after
+    # 4 lines (scene 870, "Daniel"/"Dan").
+    user_line_ids = [
+        line.id for line in all_lines
+        if line_belongs_to(line.character_name, user_roles, line_characters)
+    ]
+    delivered_ids = [d.scene_line_id for d in session.line_deliveries]
+    delivered_ids.append(scene_line_id_val)
+    covered = count_user_lines_delivered(delivered_ids, user_line_ids)
+
+    completion_pct, is_complete = _compute_completion(covered, len(user_line_ids))
     session.completion_percentage = completion_pct  # type: ignore
     if is_complete and str(session.status) == "in_progress":
         completed_at = datetime.now(timezone.utc)
@@ -809,8 +939,7 @@ async def deliver_line(
     # Get next line preview (user's next line)
     next_user_line = None
     for i in range(new_index, len(all_lines)):
-        line_char = str(all_lines[i].character_name) if all_lines[i].character_name is not None else ""
-        if line_char == user_char:
+        if line_belongs_to(all_lines[i].character_name, user_roles, line_characters):
             next_user_line = str(all_lines[i].text) if all_lines[i].text is not None else None
             break
 
@@ -883,9 +1012,13 @@ async def get_session_feedback(
     transcript_lines = []
     user_char = str(session.user_character) if session.user_character is not None else ""
     ai_char = str(session.ai_character) if session.ai_character is not None else ""
+    # Label each delivery with the character who actually speaks that line — an
+    # actor covering several roles isn't one voice in the transcript.
+    cue_by_line_id = {l.id: l.character_name for l in session.scene.lines}
     for delivery in deliveries:
+        speaking_as = cue_by_line_id.get(delivery.scene_line_id) or user_char
         user_input_val = str(delivery.user_input) if delivery.user_input is not None else ""
-        transcript_lines.append(f"{user_char}: {user_input_val}")
+        transcript_lines.append(f"{speaking_as}: {user_input_val}")
         ai_response_val = str(delivery.ai_response) if delivery.ai_response is not None else None
         if ai_response_val:
             transcript_lines.append(f"{ai_char}: {ai_response_val}")

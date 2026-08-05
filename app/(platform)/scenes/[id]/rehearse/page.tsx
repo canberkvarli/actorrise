@@ -41,6 +41,7 @@ import { AudioWaveform } from '@/components/scenepartner/AudioWaveform';
 import { parseUpgradeError } from '@/lib/upgradeError';
 import { UpgradeModal } from '@/components/billing/UpgradeModal';
 import { cn } from '@/lib/utils';
+import { ownsLine, sessionRoles } from '@/lib/character-roles';
 
 /** Pure dialogue for TTS — strips both [bracket] and (paren) stage directions. */
 function ttsText(line: { text: string; stage_direction?: string | null }): string {
@@ -450,10 +451,29 @@ function renderLineWithWordHighlights(text: string, result: WordMatchResult) {
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
 
+/**
+ * Is this line the actor's to speak?
+ *
+ * An actor can cover several parts in one run, and a script can cue two
+ * characters at once ("MOEKETSI AND DAN:") — that line belongs to whoever is
+ * playing either of them. `cueNames` is every speaker label in the scene, which
+ * is what lets a joint cue be told apart from a character actually named that.
+ */
+function isMyLine(
+  session: { user_character?: string | null; user_characters?: string[] | null } | null | undefined,
+  lineCharacter: string | null | undefined,
+  cueNames: readonly string[],
+): boolean {
+  if (!session) return false;
+  return ownsLine(lineCharacter, sessionRoles(session), cueNames);
+}
+
 interface RehearsalSession {
   id: number;
   scene_id: number;
   user_character: string;
+  /** Every character the actor speaks for. Absent on pre-multi-role sessions. */
+  user_characters?: string[];
   ai_character: string;
   status: string;
   current_line_index: number;
@@ -610,6 +630,15 @@ export default function RehearsalPage() {
   );
   const orderedLinesRef = useRef(orderedLines);
 
+  // Every speaker label in the scene. Line ownership needs it to tell a joint cue
+  // ("MOEKETSI AND DAN") apart from a character genuinely named that.
+  const cueNames = useMemo(
+    () => Array.from(new Set(orderedLines.map(l => l.character_name))),
+    [orderedLines],
+  );
+  const cueNamesRef = useRef(cueNames);
+  cueNamesRef.current = cueNames;
+
   // Build rich voice context from scene metadata — reused in every TTS call
   const sceneVoiceContext = useMemo(() => {
     const s = sceneWithLines;
@@ -630,7 +659,7 @@ export default function RehearsalPage() {
   const currentUserLineText = useMemo(() => {
     if (activeLineIndex == null || !session) return null;
     const line = orderedLines[activeLineIndex];
-    if (!line || line.character_name !== session.user_character) return null;
+    if (!line || !isMyLine(session, line.character_name, cueNamesRef.current)) return null;
     return line.text;
   }, [activeLineIndex, orderedLines, session]);
 
@@ -684,7 +713,10 @@ export default function RehearsalPage() {
     audioCtxRef: whisperAudioCtxRef,
   } = useWhisperSTT({
     silenceThreshold: 10,
-    silenceTimeoutMs: 2000,
+    // Actors take beats mid-line, and cold readers pause to scan ahead. 2s cut
+    // people off mid-thought; the detector also now needs sustained speech before
+    // this timer can run at all.
+    silenceTimeoutMs: 3500,
     speechGateRef: whisperGateRef,
     deviceId: selectedMicId,
     prompt: currentUserLineText ? stripStageDirections(currentUserLineText) : undefined,
@@ -779,7 +811,7 @@ export default function RehearsalPage() {
     // Pause before advancing: short gap for consecutive AI lines, user setting otherwise
     const lines = orderedLinesRef.current;
     const sess = sessionRef.current;
-    const nextIsAlsoAI = sess && nextIdx < lines.length && lines[nextIdx].character_name !== sess.user_character;
+    const nextIsAlsoAI = sess && nextIdx < lines.length && !isMyLine(sess, lines[nextIdx].character_name, cueNamesRef.current);
     // AI→AI: brief 200ms gap. AI→User: minimal 150ms beat (just enough to feel natural),
     // or user's configured pause if they set it higher than the minimum.
     const pauseMs = nextIsAlsoAI ? 200 : Math.max(150, rehearsalSettings.pauseBetweenLinesSeconds * 1000);
@@ -908,7 +940,7 @@ export default function RehearsalPage() {
     // (orderedLines/session change identity often during a session).
     const sess = sessionRef.current;
     const line = orderedLinesRef.current[activeLineIndex];
-    if (!sess || !line || line.character_name === sess.user_character) return; // AI lines only
+    if (!sess || !line || isMyLine(sess, line.character_name, cueNamesRef.current)) return; // AI lines only
     if (isSpeakingAI || isSpeakingBrowser) return; // audio is actually playing — fine
     const autoT = setTimeout(() => { handleTTSEndRef.current(); }, 14000); // self-heal
     return () => clearTimeout(autoT);
@@ -939,7 +971,7 @@ export default function RehearsalPage() {
     setActiveLineIndex(idx);
     const line = lines[idx];
 
-    if (line.character_name !== sess.user_character) {
+    if (!isMyLine(sess, line.character_name, cueNamesRef.current)) {
       // AI's turn — tiny delay so scroll settles before voice starts
       setLastAiLine(line.text);
       setAutoListenLineKey(null);
@@ -998,6 +1030,10 @@ export default function RehearsalPage() {
         user_input: toSend,
         request_feedback: false,
         request_retry: false,
+        // Tell the server exactly which line this was. It used to infer the
+        // position from a cursor that only moved on the actor's turns, so
+        // deliveries were filed against the wrong lines.
+        scene_line_id: orderedLinesRef.current[currentIdx]?.id ?? null,
       });
 
       const data = response.data;
@@ -1110,8 +1146,10 @@ export default function RehearsalPage() {
           return null;
         })();
 
-        const aiChars = [...new Set(sceneData.lines.map(l => l.character_name))]
-          .filter(c => c !== data.user_character);
+        // Derived from sceneData, not the cueNames memo: setSceneWithLines above
+        // hasn't re-rendered yet, so the memo is still the previous scene's list.
+        const sceneCueNames = [...new Set(sceneData.lines.map(l => l.character_name))];
+        const aiChars = sceneCueNames.filter(c => !isMyLine(data, c, sceneCueNames));
         const newVoiceMap = new Map<string, string>();
         const newMeta = new Map<string, { label: string; color: string }>();
 
@@ -1143,7 +1181,7 @@ export default function RehearsalPage() {
         characterVoiceMapRef.current = newVoiceMap;
 
         sceneData.lines
-          .filter(l => l.character_name !== data.user_character)
+          .filter(l => !isMyLine(data, l.character_name, sceneCueNames))
           .slice(0, 5)
           .forEach(l => preloadTTSRef.current(ttsText(l), newVoiceMap.get(l.character_name) ?? voiceId, ttsInstructions(l, sceneVoiceContextRef.current)));
       } catch {
@@ -1282,7 +1320,7 @@ export default function RehearsalPage() {
     setActiveLineIndex(startIdx);
     const firstLine = orderedLines[startIdx];
 
-    if (firstLine.character_name !== session.user_character) {
+    if (!isMyLine(session, firstLine.character_name, cueNamesRef.current)) {
       setLastAiLine(firstLine.text);
       speakLineRef.current(ttsText(firstLine), ttsInstructions(firstLine, sceneVoiceContextRef.current), firstLine.character_name);
     } else {
@@ -1390,11 +1428,18 @@ export default function RehearsalPage() {
         const gateThreshold = Math.min(3, expectedWords.length);
         if (matched.size >= gateThreshold) whisperGateRef.current = true;
 
-        // Instant advance: SR final result — advance if score ≥70% OR last word of line matched
+        // Instant advance: SR final result — advance if score ≥70%, or the line's
+        // last word landed after a substantially complete read.
+        //
+        // "last word matched" alone used to be enough, but it matches the word
+        // ANYWHERE in the transcript. Lines ending on a common word ("you", "me",
+        // "it") advanced the moment the actor said that word, sometimes one word
+        // into a thirty-word speech. Pairing it with a half-line score keeps the
+        // "SR dropped some words but they clearly finished" case working.
         if (hasFinal && !srAdvancedRef.current) {
           const score = expectedWords.length > 0 ? matched.size / expectedWords.length : 1;
           const lastWordMatched = expectedWords.length > 0 && matched.has(expectedWords.length - 1);
-          if (score >= 0.70 || lastWordMatched) {
+          if (score >= 0.70 || (lastWordMatched && score >= 0.5)) {
             srAdvancedRef.current = true;
             try { recognition.stop(); liveRecognitionRef.current = null; } catch {}
             cancelTranscriptionRef.current();
@@ -1469,7 +1514,7 @@ export default function RehearsalPage() {
     if (bulkPreloadedRef.current || !session || !orderedLines.length) return;
     bulkPreloadedRef.current = true;
     const aiLines = orderedLines
-      .filter(l => l.character_name !== session.user_character)
+      .filter(l => !isMyLine(session, l.character_name, cueNamesRef.current))
       .slice(0, 8); // preload first 8 AI lines
     aiLines.forEach(l => preloadTTS(ttsText(l), characterVoiceMapRef.current.get(l.character_name) ?? lastKnownVoiceIdRef.current, ttsInstructions(l, sceneVoiceContextRef.current)));
   }, [session?.ai_character, orderedLines, preloadTTS]);
@@ -1478,13 +1523,13 @@ export default function RehearsalPage() {
   useEffect(() => {
     if (!session || activeLineIndex == null || !orderedLines.length) return;
     const currentLine = orderedLines[activeLineIndex];
-    if (!currentLine || currentLine.character_name !== session.user_character) return;
+    if (!currentLine || !isMyLine(session, currentLine.character_name, cueNamesRef.current)) return;
 
     // Preload next 2 AI lines ahead
     let found = 0;
     for (let i = activeLineIndex + 1; i < orderedLines.length && found < 3; i++) {
       const l = orderedLines[i];
-      if (l.character_name !== session.user_character) {
+      if (!isMyLine(session, l.character_name, cueNamesRef.current)) {
         preloadTTS(ttsText(l), characterVoiceMapRef.current.get(l.character_name) ?? lastKnownVoiceIdRef.current, ttsInstructions(l, sceneVoiceContextRef.current));
         found++;
       }
@@ -1626,7 +1671,7 @@ export default function RehearsalPage() {
     const sess = sessionRef.current;
     if (idx != null && sess) {
       const line = lines[idx];
-      if (line && line.character_name !== sess.user_character) {
+      if (line && !isMyLine(sess, line.character_name, cueNamesRef.current)) {
         setLastAiLine(line.text);
         speakLineRef.current(ttsText(line), ttsInstructions(line, sceneVoiceContextRef.current), line.character_name);
       }
@@ -1792,7 +1837,7 @@ export default function RehearsalPage() {
 
   const overallAccuracy = useMemo(() => {
     if (!showFeedback || !orderedLines.length || !session) return null;
-    const userLines = orderedLines.filter(l => l.character_name === session.user_character);
+    const userLines = orderedLines.filter(l => isMyLine(session, l.character_name, cueNamesRef.current));
     let totalScore = 0;
     let delivered = 0;
     userLines.forEach(line => {
@@ -1922,7 +1967,7 @@ export default function RehearsalPage() {
     // Skip user lines that were never delivered — there's no recording to play.
     while (idx < lines.length) {
       const line = lines[idx];
-      const isUser = !!sess && line.character_name === sess.user_character;
+      const isUser = !!sess && isMyLine(sess, line.character_name, cueNamesRef.current);
       if (isUser && !lineAudioBlobsRef.current.get(idx)) { idx++; continue; }
       break;
     }
@@ -1930,7 +1975,7 @@ export default function RehearsalPage() {
     replayIndexRef.current = idx;
     setSceneReplayIdx(idx);
     const line = lines[idx];
-    const isUser = !!sess && line.character_name === sess.user_character;
+    const isUser = !!sess && isMyLine(sess, line.character_name, cueNamesRef.current);
     if (isUser) {
       playReplayUserBlob(idx, lineAudioBlobsRef.current.get(idx)!);
     } else {
@@ -2106,7 +2151,7 @@ export default function RehearsalPage() {
 
               <div className="space-y-3">
                 {orderedLines.map((line, idx) => {
-                  const isUserLine = line.character_name === session.user_character;
+                  const isUserLine = isMyLine(session, line.character_name, cueNamesRef.current);
                   const userTranscript = lineTranscriptsRef.current.get(idx);
                   const audioBlob = lineAudioBlobsRef.current.get(idx);
                   const wasDelivered = isUserLine && userTranscript;
@@ -2264,7 +2309,7 @@ export default function RehearsalPage() {
                 <h2 className="mt-2 text-2xl font-semibold text-neutral-100">{sceneWithLines.title}</h2>
                 {session && (
                   <p className="mt-1 text-sm text-neutral-400">
-                    You&apos;re playing <span className="font-medium text-neutral-200">{session.user_character}</span>
+                    You&apos;re playing <span className="font-medium text-neutral-200">{sessionRoles(session).join(' + ')}</span>
                   </p>
                 )}
               </div>
@@ -2358,7 +2403,7 @@ export default function RehearsalPage() {
               <div className="space-y-2">
                 {orderedLines.map((line, lineIdx) => {
                   const isCurrent = lineIdx === activeLineIndex;
-                  const isUser = line.character_name === session.user_character;
+                  const isUser = isMyLine(session, line.character_name, cueNamesRef.current);
                   const isCurrentUserLine = isCurrent && isUser;
                   const isCurrentAiLine = isCurrent && !isUser;
 

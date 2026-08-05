@@ -68,5 +68,40 @@ class RehearsalCharacterResolutionTests(unittest.TestCase):
         )
 
 
+class DeclaredNameWithNoLinesTests(unittest.TestCase):
+    """Scene 871: declared "Steve Komphela", but every cue says "Steve".
+
+    The old fallback accepted the declared name as-is whenever it didn't match a
+    line name. That started session 320 against a character owning zero lines —
+    the actor got a scene with nothing to say and abandoned it after 14 seconds.
+    A declared name must resolve to the cue name it stands for, or be rejected.
+    """
+
+    LINES = ["Steve", "Moeketsi", "Dan"]
+    DECLARED = ("Steve Komphela", "Moeketsi")
+
+    def test_declared_full_name_resolves_to_the_cue_name(self):
+        self.assertEqual(
+            resolve_rehearsal_characters("Steve Komphela", self.LINES, self.DECLARED),
+            ("Steve", "Moeketsi"),
+        )
+
+    def test_resolved_user_character_always_owns_lines(self):
+        user, _ = resolve_rehearsal_characters(
+            "Steve Komphela", self.LINES, self.DECLARED
+        )
+        self.assertIn(user, self.LINES)
+
+    def test_declared_name_matching_no_line_at_all_is_rejected(self):
+        # A declared name with no cue behind it is not a playable part.
+        self.assertIsNone(
+            resolve_rehearsal_characters("Narrator", self.LINES, ("Narrator", "Steve"))
+        )
+
+    def test_ai_character_is_a_real_cue_name(self):
+        _, ai = resolve_rehearsal_characters("Steve", self.LINES, self.DECLARED)
+        self.assertIn(ai, self.LINES)
+
+
 if __name__ == "__main__":
     unittest.main()

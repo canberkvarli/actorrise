@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { API_URL } from '@/lib/api';
 import { supabase } from '@/lib/supabase';
+import { SilenceDetector } from '@/lib/silence-detector';
 
 interface UseWhisperSTTOptions {
   /** Called with final transcript when recording stops and Whisper responds */
@@ -19,7 +20,8 @@ interface UseWhisperSTTOptions {
   silenceThreshold?: number;
   /**
    * How long continuous silence must last before recording auto-stops.
-   * Default: 2500ms
+   * Only counted once the speaker has actually started (see SilenceDetector).
+   * Default: 3500ms
    */
   silenceTimeoutMs?: number;
   /**
@@ -43,7 +45,7 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     onEnd,
     onError,
     silenceThreshold = 10,
-    silenceTimeoutMs = 1500,
+    silenceTimeoutMs = 3500,
     prompt,
     deviceId,
   } = options;
@@ -57,12 +59,10 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafRef = useRef<number>(0);
-  const silenceStartRef = useRef<number | null>(null);
+  const detectorRef = useRef<SilenceDetector | null>(null);
   const stoppedRef = useRef(false); // prevent double-stop
   const mimeTypeRef = useRef<string>('audio/webm');
   const recordingStartRef = useRef<number>(0); // for minimum recording time guard
-  const speechDetectedRef = useRef(false); // only start silence timer after speech is detected
-  const speechFallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null); // arms silence detection for Bluetooth mics
   const skipNextTranscriptionRef = useRef(false); // set by cancelTranscription to skip the next blob
   const transcribeAbortRef = useRef<AbortController | null>(null); // abort in-flight Whisper request
 
@@ -79,10 +79,7 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
 
   const cleanup = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
-    if (speechFallbackTimerRef.current) {
-      clearTimeout(speechFallbackTimerRef.current);
-      speechFallbackTimerRef.current = null;
-    }
+    detectorRef.current = null;
     // Keep AudioContext alive for reuse — closing and recreating it costs ~100ms.
     // It gets closed on unmount or when the stream is released.
     analyserRef.current = null;
@@ -229,35 +226,31 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     source.connect(analyser);
     analyserRef.current = analyser;
     const freqData = new Uint8Array(analyser.frequencyBinCount);
-    silenceStartRef.current = null;
-    // Start as false — silence detection only arms AFTER the user speaks.
-    // This prevents auto-stop firing before the user has said anything.
-    speechDetectedRef.current = false;
-    // Fallback for Bluetooth/AirPods: their mic audio doesn't always register
-    // in the Web Audio analyser. After 10s with no detected speech, arm the
-    // silence detector anyway so Whisper eventually fires.
-    speechFallbackTimerRef.current = setTimeout(() => {
-      speechFallbackTimerRef.current = null;
-      speechDetectedRef.current = true;
-    }, 10000);
+
+    // Arming needs a sustained run of voiced frames, and a take needs a minimum
+    // of real speech before silence may end it. Without both, the AI partner's
+    // audio tail or a breath armed the timer and the take was cut ~2s later with
+    // nothing in it — see lib/silence-detector.ts.
+    const detector = new SilenceDetector({
+      threshold: silenceThreshold,
+      silenceTimeoutMs,
+    });
+    detectorRef.current = detector;
+    detector.start(Date.now());
 
     const checkSilence = () => {
       if (stoppedRef.current) return;
       analyser.getByteFrequencyData(freqData);
 
-      const peak = Math.max(...Array.from(freqData));
-      if (peak >= silenceThreshold) {
-        speechDetectedRef.current = true;
-        silenceStartRef.current = null;
-      } else if (speechDetectedRef.current) {
-        if (silenceStartRef.current === null) silenceStartRef.current = Date.now();
-        else if (
-          Date.now() - silenceStartRef.current >= silenceTimeoutMs &&
-          Date.now() - recordingStartRef.current >= 400
-        ) {
-          stopRecording();
-          return;
-        }
+      let peak = 0;
+      for (let i = 0; i < freqData.length; i++) {
+        if (freqData[i] > peak) peak = freqData[i];
+      }
+
+      // The minimum-recording guard stays: a take shorter than this is a misfire.
+      if (detector.frame(Date.now(), peak) === 'stop' && Date.now() - recordingStartRef.current >= 400) {
+        stopRecording();
+        return;
       }
       rafRef.current = requestAnimationFrame(checkSilence);
     };
