@@ -11,10 +11,19 @@ import { useLobbyPresence } from "@/hooks/useLobbyPresence";
 import { useScripts, useShareScript } from "@/hooks/useScripts";
 import { GhostLightIntro } from "./GhostLightIntro";
 
+/** The lit-page shadow the rehearsal canvas uses — a warm page under a stage light. */
+const PAGE_GLOW =
+  "shadow-[0_18px_60px_-18px_rgba(203,75,0,0.55),0_6px_24px_-8px_rgba(0,0,0,0.7)]";
+const PAGE_GLOW_HOVER =
+  "hover:shadow-[0_26px_80px_-16px_rgba(203,75,0,0.8),0_10px_32px_-8px_rgba(0,0,0,0.75)]";
+
 /**
- * The Green Room (Phase A) — the community script library. Actors share their
- * uploaded scripts so others can rehearse the scenes; live rooms come in Phase B.
- * See docs/plans/2026-07-24-green-room-design.md.
+ * The Green Room — the community script library. Actors share their uploaded
+ * scripts so others can rehearse the scenes together, live over voice.
+ *
+ * Styled as lit pages on a dark stage, matching the rehearsal screen: the room
+ * is always dark (like the nav above it), and each script is a warm page
+ * catching the light. See docs/plans/2026-07-24-green-room-design.md.
  */
 export function GreenRoomLibrary() {
   const { data, isLoading } = useCommunityLibrary();
@@ -28,97 +37,116 @@ export function GreenRoomLibrary() {
   return (
     <>
       <GhostLightIntro ready={mounted && !!data} />
-      <div className="relative mx-auto max-w-5xl px-4 pb-24 pt-8 sm:pt-12">
-      {/* ambient stage wash — the room lit from above */}
-      <div
-        className="pointer-events-none absolute inset-x-0 -top-10 h-64"
-        style={{
-          background:
-            "radial-gradient(50% 100% at 50% 0%, rgba(203,75,0,0.10), transparent 70%)",
-        }}
-      />
-      <header className="relative mb-8">
-        <p className="font-typewriter text-xs italic tracking-wide text-muted-foreground/70">
-          (places, please.)
-        </p>
-        <h1 className="mt-1 font-brand text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-          The Green Room
-        </h1>
-        <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground">
-          Rehearse a scene with another actor, live over voice. Pick a script below,
-          claim a role, and share the room link with your partner.
-        </p>
-        <LobbyPresence />
-      </header>
+      <div className="dark min-h-screen bg-[#191410] text-neutral-100">
+        <div className="relative mx-auto max-w-5xl px-4 pb-28 pt-10 sm:pt-16">
+          {/* ambient stage wash — the room lit from above */}
+          <div
+            className="pointer-events-none absolute inset-x-0 -top-16 h-80"
+            style={{
+              background:
+                "radial-gradient(55% 100% at 50% 0%, rgba(203,75,0,0.16), transparent 72%)",
+            }}
+          />
 
-      <section className="mb-12">
-        <h2 className="mb-4 font-typewriter text-sm uppercase tracking-[0.18em] text-muted-foreground">
-          The community library
-        </h2>
-        {!mounted || isLoading ? (
-          <LibrarySkeleton />
-        ) : !data || data.scripts.length === 0 ? (
-          <ColdStart total={data?.total ?? 0} />
-        ) : (
-          <>
-            {!data.ready && <SeedBanner total={data.total} />}
-            <motion.div
-              initial="hidden"
-              animate="show"
-              variants={{ show: { transition: { staggerChildren: 0.05 } } }}
-              className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-            >
-              {data.scripts.map((s) => (
-                <CommunityScriptCard key={s.id} s={s} />
-              ))}
-            </motion.div>
-          </>
-        )}
-      </section>
+          <header className="relative mb-12 sm:mb-16">
+            <p className="font-typewriter text-xs italic tracking-wide text-neutral-400">
+              (places, please.)
+            </p>
+            <h1 className="mt-2 font-brand text-6xl font-semibold leading-[0.95] tracking-tight text-neutral-50 sm:text-8xl">
+              The Green
+              <br />
+              Room
+            </h1>
+            <p className="mt-5 font-typewriter text-sm text-neutral-400">
+              Rehearse with another actor, live.
+            </p>
+            <LobbyPresence />
+          </header>
 
-      <ShareYourScripts />
+          <section className="mb-16">
+            {!mounted || isLoading ? (
+              <LibrarySkeleton />
+            ) : !data || data.scripts.length === 0 ? (
+              <ColdStart total={data?.total ?? 0} />
+            ) : (
+              <>
+                <motion.div
+                  initial="hidden"
+                  animate="show"
+                  variants={{ show: { transition: { staggerChildren: 0.06 } } }}
+                  className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+                >
+                  {data.scripts.map((s) => (
+                    <CommunityScriptCard key={s.id} s={s} />
+                  ))}
+                </motion.div>
+                {!data.ready && (
+                  <p className="mt-6 font-typewriter text-xs uppercase tracking-[0.18em] text-neutral-500">
+                    {data.total} of 3 shared
+                  </p>
+                )}
+              </>
+            )}
+          </section>
+
+          <ShareYourScripts />
+        </div>
       </div>
     </>
   );
 }
 
+/** A script as a page under the light: warm stock, dark ink, orange spill. */
 function CommunityScriptCard({ s }: { s: CommunityScript }) {
+  const router = useRouter();
+
+  const start = () => {
+    const roomId =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID().slice(0, 8)
+        : Math.random().toString(36).slice(2, 10);
+    router.push(`/greenroom/room/${roomId}?script=${s.id}`);
+  };
+
   return (
     <motion.div
-      variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
-      transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-      className="flex h-full flex-col rounded-xl border border-border bg-card p-5 shadow-sm transition-colors hover:border-primary/40"
+      variants={{ hidden: { opacity: 0, y: 16 }, show: { opacity: 1, y: 0 } }}
+      transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+      role="link"
+      tabIndex={0}
+      onClick={start}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          start();
+        }
+      }}
+      className={`group flex h-full cursor-pointer flex-col rounded-xl border border-black/5 bg-[#faf7f1] p-6 text-neutral-900 transition-shadow duration-300 ${PAGE_GLOW} ${PAGE_GLOW_HOVER}`}
     >
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="font-typewriter text-lg font-semibold leading-snug text-foreground line-clamp-1">
+      {/* reserve two lines so the metadata sits on the same baseline across the row */}
+      <div className="flex min-h-[2.75rem] items-start justify-between gap-3">
+        <h3 className="font-typewriter text-base font-bold uppercase leading-snug tracking-wider text-neutral-900 line-clamp-2">
           {s.title}
         </h3>
         {s.is_demo && (
-          <span className="shrink-0 rounded bg-[#CB4B00] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">
+          <span className="shrink-0 bg-[#CB4B00] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">
             Demo
           </span>
         )}
       </div>
-      <p className="font-typewriter text-xs text-muted-foreground line-clamp-1">
-        {s.author}
+
+      <p className="mt-1.5 font-typewriter text-xs text-neutral-500 line-clamp-1">{s.author}</p>
+
+      <p className="mt-4 font-typewriter text-xs uppercase tracking-[0.14em] text-neutral-400">
+        {s.character_count} {s.character_count === 1 ? "role" : "roles"} · {s.scene_count}{" "}
+        {s.scene_count === 1 ? "scene" : "scenes"}
       </p>
-      <p className="mt-3 text-xs text-muted-foreground/80">
-        {s.scene_count} {s.scene_count === 1 ? "scene" : "scenes"} · {s.character_count}{" "}
-        {s.character_count === 1 ? "role" : "roles"}
-        {s.genre ? <> · <span className="capitalize">{s.genre}</span></> : null}
-      </p>
-      {s.scene_titles.length > 0 && (
-        <ul className="mt-3 space-y-0.5">
-          {s.scene_titles.slice(0, 3).map((t, i) => (
-            <li key={i} className="font-typewriter text-xs text-muted-foreground/70 line-clamp-1">
-              · {t}
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="mt-auto flex items-center justify-between pt-4">
-        <span className="text-xs text-muted-foreground/60">shared by {s.owner_name}</span>
-        <RehearseTogetherButton scriptId={s.id} />
+
+      <div className="mt-auto flex items-end justify-between gap-3 pt-5">
+        <span className="text-[11px] text-neutral-400">shared by {s.owner_name}</span>
+        <span className="rounded-full bg-[#CB4B00] px-3.5 py-1.5 text-xs font-medium text-white transition-colors group-hover:bg-[#B03000]">
+          Rehearse →
+        </span>
       </div>
     </motion.div>
   );
@@ -135,49 +163,13 @@ function LobbyPresence() {
 
   if (!mounted || count === 0) return null;
   return (
-    <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5">
+    <div className="mt-6 inline-flex items-center gap-2.5">
       <span className="relative flex h-2 w-2">
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
-        <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-60" />
+        <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-400" />
       </span>
-      <span className="text-sm text-foreground">
-        {count === 1
-          ? "You're the only one here right now"
-          : `${count} actors in the Green Room now`}
-      </span>
-    </div>
-  );
-}
-
-function RehearseTogetherButton({ scriptId }: { scriptId: number }) {
-  const router = useRouter();
-  const start = () => {
-    const roomId =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID().slice(0, 8)
-        : Math.random().toString(36).slice(2, 10);
-    router.push(`/greenroom/room/${roomId}?script=${scriptId}`);
-  };
-  return (
-    <button
-      type="button"
-      onClick={start}
-      className="rounded-full bg-[#CB4B00] px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-[#B03000]"
-    >
-      Rehearse together →
-    </button>
-  );
-}
-
-function SeedBanner({ total }: { total: number }) {
-  return (
-    <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1 border-l-2 border-primary/50 bg-card/30 px-4 py-2.5 text-sm text-muted-foreground">
-      <span className="text-foreground">The Green Room is just opening.</span>
-      <span>
-        These demo scenes get you started — share yours below to fill the board.
-      </span>
-      <span className="font-typewriter text-xs uppercase tracking-wider text-muted-foreground/60">
-        {total} of 3 shared
+      <span className="font-typewriter text-sm text-neutral-300">
+        {count === 1 ? "just you here" : `${count} actors here now`}
       </span>
     </div>
   );
@@ -185,13 +177,9 @@ function SeedBanner({ total }: { total: number }) {
 
 function ColdStart({ total }: { total: number }) {
   return (
-    <div className="border border-dashed border-border/60 bg-card/20 px-6 py-12 text-center">
-      <p className="text-lg text-foreground">The doors are about to open.</p>
-      <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-        The Green Room is brand new and the community library is still filling up. Share one
-        of your scripts below to help kick it off.
-      </p>
-      <p className="mt-4 font-typewriter text-xs uppercase tracking-[0.18em] text-muted-foreground/70">
+    <div className="border border-dashed border-neutral-700 px-6 py-16 text-center">
+      <p className="font-brand text-2xl text-neutral-100">The doors are about to open.</p>
+      <p className="mt-4 font-typewriter text-xs uppercase tracking-[0.18em] text-neutral-500">
         {total} of 3 scripts shared
       </p>
     </div>
@@ -223,23 +211,20 @@ function ShareYourScripts() {
 
   return (
     <section>
-      <h2 className="mb-1 font-typewriter text-sm uppercase tracking-[0.18em] text-muted-foreground">
+      <h2 className="mb-4 font-typewriter text-sm uppercase tracking-[0.18em] text-neutral-500">
         Share your scripts
       </h2>
-      <p className="mb-4 text-xs text-muted-foreground/70">
-        Let other actors rehearse your scenes. You can turn this off anytime.
-      </p>
-      <ul className="divide-y divide-border/40 border border-border/50 bg-card/30">
+      <ul className="divide-y divide-neutral-800 border border-neutral-800">
         {own.map((s) => {
           const scenes = s.num_scenes_extracted ?? 0;
           const disabled = scenes === 0;
           return (
-            <li key={s.id} className="flex items-center gap-4 px-4 py-3">
+            <li key={s.id} className="flex items-center gap-4 px-4 py-3.5">
               <div className="min-w-0 flex-1">
-                <p className="font-typewriter text-sm font-medium text-foreground line-clamp-1">
+                <p className="font-typewriter text-sm font-medium text-neutral-100 line-clamp-1">
                   {s.title}
                 </p>
-                <p className="text-xs text-muted-foreground/70">
+                <p className="text-xs text-neutral-500">
                   {scenes} {scenes === 1 ? "scene" : "scenes"}
                   {disabled ? " · add a scene to share" : ""}
                 </p>
@@ -260,9 +245,9 @@ function ShareYourScripts() {
 
 function LibrarySkeleton() {
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="h-40 animate-pulse border border-border/40 bg-muted/40" />
+        <div key={i} className="h-52 animate-pulse rounded-xl bg-neutral-800/60" />
       ))}
     </div>
   );

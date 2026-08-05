@@ -126,167 +126,161 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
   const takenBy = (role: string) => participants.find((p) => p.role === role);
 
   return (
-    <div className="mx-auto max-w-3xl px-4 pb-28 pt-6">
-      {/* top bar */}
-      <div className="mb-6 flex items-center justify-between gap-3">
-        <Link
-          href="/greenroom"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <IconArrowLeft className="h-4 w-4" /> Green Room
-        </Link>
-        <div className="flex items-center gap-3">
-          <Presence participants={participants} connected={connected} />
-          <VoiceControl voice={voice} />
-          <InviteButton roomId={roomId} scriptId={scriptId} sceneTitle={scene.title} />
+    <div className="dark min-h-screen bg-[#191410] text-neutral-100">
+      <div className="mx-auto max-w-3xl px-4 pb-32 pt-6">
+        {/* top bar */}
+        <div className="mb-8 flex items-center justify-between gap-3">
+          <Link
+            href="/greenroom"
+            className="inline-flex items-center gap-1.5 text-sm text-neutral-400 transition-colors hover:text-neutral-100"
+          >
+            <IconArrowLeft className="h-4 w-4" /> Green Room
+          </Link>
+          <div className="flex items-center gap-3">
+            <Presence participants={participants} connected={connected} />
+            <VoiceControl voice={voice} />
+            <InviteButton roomId={roomId} scriptId={scriptId} sceneTitle={scene.title} />
+          </div>
         </div>
-      </div>
 
-      {/* scene header */}
-      <header className="mb-5">
-        <p className="font-typewriter text-xs italic tracking-wide text-muted-foreground/70">
-          (in the room.)
-        </p>
-        <h1 className="mt-1 font-brand text-3xl font-semibold text-foreground sm:text-4xl">
-          {scene.title}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {script.title} · shared by {script.owner_name}
-        </p>
-        {scenes.length > 1 && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            {scenes.map((s, i) => (
+        {/* scene header */}
+        <header className="mb-8">
+          <p className="font-typewriter text-xs italic tracking-wide text-neutral-500">
+            (in the room.)
+          </p>
+          <h1 className="mt-1.5 text-2xl font-bold uppercase tracking-wider text-neutral-50 sm:text-3xl">
+            {scene.title}
+          </h1>
+          <p className="mt-2 font-typewriter text-xs text-neutral-500">
+            {script.title} · shared by {script.owner_name}
+          </p>
+          {scenes.length > 1 && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {scenes.map((s, i) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => setScene(i)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                    i === sceneIndex
+                      ? "border-transparent bg-[#CB4B00] text-white"
+                      : "border-neutral-700 text-neutral-400 hover:text-neutral-100"
+                  }`}
+                >
+                  {s.title}
+                </button>
+              ))}
+            </div>
+          )}
+        </header>
+
+        {/* role claim */}
+        <div className="mb-6 grid grid-cols-2 gap-3">
+          {roles.map((role) => {
+            const holder = takenBy(role);
+            const mine = myRole === role;
+            const takenByOther = holder && !mine;
+            return (
               <button
-                key={s.id}
+                key={role}
                 type="button"
-                onClick={() => setScene(i)}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                  i === sceneIndex
-                    ? "border-transparent bg-[#CB4B00] text-white"
-                    : "border-border/50 text-muted-foreground hover:text-foreground"
+                onClick={() => claimRole(mine ? null : role)}
+                disabled={!!takenByOther}
+                className={`flex flex-col items-start border p-3.5 text-left transition-colors ${
+                  mine
+                    ? "border-[#CB4B00] bg-[#CB4B00]/10"
+                    : takenByOther
+                      ? "cursor-not-allowed border-neutral-800 opacity-60"
+                      : "border-neutral-700 hover:border-[#CB4B00]/50"
                 }`}
               >
-                {s.title}
+                <span className="font-typewriter text-sm font-semibold uppercase tracking-wider text-neutral-100">
+                  {role}
+                </span>
+                <span className="mt-0.5 text-xs text-neutral-500">
+                  {mine ? "You" : holder ? holder.name : "Claim"}
+                </span>
               </button>
+            );
+          })}
+        </div>
+
+        {/* who's here */}
+        {participants.length > 1 && (
+          <div className="mb-5 flex items-center gap-2">
+            {participants.map((p) => (
+              <span
+                key={p.id}
+                title={`${p.name}${p.role ? ` · ${p.role}` : ""}`}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#CB4B00] to-[#B03000] text-xs font-semibold text-white ring-1 ring-[#CB4B00]/30"
+              >
+                {(p.name?.[0] || "?").toUpperCase()}
+              </span>
             ))}
+            <span className="ml-1 text-xs text-neutral-500">in the room</span>
           </div>
         )}
-      </header>
 
-      {/* role claim */}
-      <div className="mb-6 grid grid-cols-2 gap-3">
-        {roles.map((role) => {
-          const holder = takenBy(role);
-          const mine = myRole === role;
-          const takenByOther = holder && !mine;
-          return (
-            <button
-              key={role}
-              type="button"
-              onClick={() => claimRole(mine ? null : role)}
-              disabled={!!takenByOther}
-              className={`flex flex-col items-start border p-3 text-left transition-colors ${
-                mine
-                  ? "border-primary bg-primary/[0.06]"
-                  : takenByOther
-                    ? "cursor-not-allowed border-border/40 opacity-70"
-                    : "border-border/60 hover:border-primary/40"
-              }`}
-            >
-              <span className="font-typewriter text-sm font-semibold text-foreground">{role}</span>
-              <span className="mt-0.5 text-xs text-muted-foreground">
-                {mine ? "You" : holder ? holder.name : "Claim this role"}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* who's here */}
-      {participants.length <= 1 ? (
-        <div className="mb-5 flex items-center justify-between gap-3 rounded-xl border border-dashed border-border/60 bg-card/20 px-4 py-3">
-          <p className="text-sm text-muted-foreground">
-            <span className="text-foreground">Just you so far.</span> Invite your partner to run
-            the scene together.
-          </p>
+        {/* edit toggle + script */}
+        <div className="mb-2.5 flex justify-end">
+          <button
+            type="button"
+            onClick={() => setEditMode((v) => !v)}
+            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+              editMode
+                ? "border-transparent bg-[#CB4B00] text-white"
+                : "border-neutral-700 text-neutral-400 hover:text-neutral-100"
+            }`}
+          >
+            {editMode ? "Done editing" : "Edit lines"}
+          </button>
         </div>
-      ) : (
-        <div className="mb-5 flex items-center gap-2">
-          {participants.map((p) => (
-            <span
-              key={p.id}
-              title={`${p.name}${p.role ? ` · ${p.role}` : ""}`}
-              className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-[#B03000] text-xs font-semibold text-white ring-1 ring-primary/30"
-            >
-              {(p.name?.[0] || "?").toUpperCase()}
-            </span>
-          ))}
-          <span className="ml-1 text-xs text-muted-foreground">in the room</span>
-        </div>
-      )}
+        <ScriptView
+          lines={lines}
+          at={at}
+          myRole={myRole}
+          transcript={sr.transcript}
+          listening={isMyLine && sr.isListening}
+          editMode={editMode}
+          roles={roles}
+          onChange={updateLines}
+        />
 
-      {/* edit toggle + script */}
-      <div className="mb-2 flex justify-end">
-        <button
-          type="button"
-          onClick={() => setEditMode((v) => !v)}
-          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-            editMode
-              ? "border-transparent bg-[#CB4B00] text-white"
-              : "border-border/60 text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          {editMode ? "Done editing" : "Edit lines"}
-        </button>
-      </div>
-      <ScriptView
-        lines={lines}
-        at={at}
-        myRole={myRole}
-        transcript={sr.transcript}
-        listening={isMyLine && sr.isListening}
-        editMode={editMode}
-        roles={roles}
-        onChange={updateLines}
-      />
-
-      {/* line controls */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border/50 bg-background/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
+        {/* line controls — the floating pill from the rehearsal screen */}
+        <div className="fixed bottom-5 left-1/2 z-40 flex -translate-x-1/2 items-center gap-3 rounded-full border border-orange-500/40 bg-neutral-900/95 px-3 py-2 shadow-lg backdrop-blur-sm">
           <button
             type="button"
             onClick={() => setLine(Math.max(0, at - 1))}
             disabled={at <= 0}
-            className="inline-flex items-center gap-1 rounded-full border border-border/60 px-4 py-2 text-sm text-foreground transition-colors hover:bg-muted/60 disabled:opacity-40"
+            aria-label="Previous line"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-neutral-300 transition-colors hover:bg-neutral-800 disabled:opacity-30"
           >
-            <IconChevronLeft className="h-4 w-4" /> Back
+            <IconChevronLeft className="h-4 w-4" />
           </button>
-          <span className="font-typewriter text-xs text-muted-foreground">
-            line {at + 1} of {lineCount}
+          <span className="font-typewriter text-xs tabular-nums text-neutral-400">
+            {at + 1} / {lineCount}
           </span>
           <button
             type="button"
             onClick={() => setLine(Math.min(lineCount - 1, at + 1))}
             disabled={at >= lineCount - 1}
-            className="inline-flex items-center gap-1 rounded-full bg-[#CB4B00] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#B03000] disabled:opacity-40"
+            className="inline-flex items-center gap-1 rounded-full bg-[#CB4B00] px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#B03000] disabled:opacity-40"
           >
             Next <IconChevronRight className="h-4 w-4" />
           </button>
         </div>
-      </div>
 
-      {/* voice status */}
-      <p className="mt-6 text-center text-xs text-muted-foreground/60">
-        {voice.error ? (
-          <span className="text-red-500">{voice.error}</span>
-        ) : voice.joined ? (
-          voice.peers.length > 0
-            ? "You're on voice together — say your lines and step through in sync."
-            : "You're on voice. Waiting for your partner to join the call…"
-        ) : (
-          "You're synced on the same scene. Tap Voice to rehearse out loud together."
+        {/* voice status — only when there's something worth saying */}
+        {(voice.error || (voice.joined && voice.peers.length === 0)) && (
+          <p className="mt-6 text-center font-typewriter text-xs text-neutral-500">
+            {voice.error ? (
+              <span className="text-red-400">{voice.error}</span>
+            ) : (
+              "Waiting for your partner to join the call…"
+            )}
+          </p>
         )}
-      </p>
+      </div>
     </div>
   );
 }
@@ -346,11 +340,8 @@ function InviteButton({
         <IconLink className="h-4 w-4" /> Invite
       </button>
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-xl border border-border/60 bg-background p-4 shadow-xl">
-          <p className="text-sm font-medium text-foreground">Invite your partner</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            Email them a link to this room, or copy it.
-          </p>
+        <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-xl border border-neutral-700 bg-neutral-900 p-4 shadow-xl">
+          <p className="text-sm font-medium text-neutral-100">Invite your partner</p>
           <div className="mt-3 flex gap-2">
             <input
               type="email"
@@ -358,7 +349,7 @@ function InviteButton({
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendInvite()}
               placeholder="friend@email.com"
-              className="min-w-0 flex-1 rounded-md border border-border/60 bg-transparent px-2.5 py-1.5 text-sm text-foreground outline-none focus:border-primary/50"
+              className="min-w-0 flex-1 rounded-md border border-neutral-700 bg-transparent px-2.5 py-1.5 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-[#CB4B00]/60"
             />
             <button
               type="button"
@@ -372,7 +363,7 @@ function InviteButton({
           <button
             type="button"
             onClick={copyLink}
-            className="mt-3 w-full text-center text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="mt-3 w-full text-center text-xs text-neutral-500 transition-colors hover:text-neutral-100"
           >
             or copy the room link
           </button>
@@ -392,7 +383,7 @@ function VoiceControl({ voice }: { voice: ReturnType<typeof useRoomVoice> }) {
         onClick={join}
         disabled={joining}
         title={error ?? "Rehearse out loud together"}
-        className="inline-flex items-center gap-1.5 rounded-full border border-border/60 px-3 py-1.5 text-sm text-foreground transition-colors hover:border-primary/40 disabled:opacity-60"
+        className="inline-flex items-center gap-1.5 rounded-full border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 transition-colors hover:border-[#CB4B00]/50 disabled:opacity-60"
       >
         {joining ? (
           <IconLoader2 className="h-4 w-4 animate-spin" />
@@ -405,25 +396,23 @@ function VoiceControl({ voice }: { voice: ReturnType<typeof useRoomVoice> }) {
   }
 
   return (
-    <div className="inline-flex items-center gap-1 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-1.5 py-1">
+    <div className="inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-1">
       <button
         type="button"
         onClick={toggleMute}
         title={muted ? "Unmute" : "Mute"}
         className={`flex h-7 w-7 items-center justify-center rounded-full ${
-          muted ? "text-red-500" : "text-emerald-600 dark:text-emerald-400"
+          muted ? "text-red-400" : "text-amber-400"
         }`}
       >
         {muted ? <IconMicrophoneOff className="h-4 w-4" /> : <IconMicrophone className="h-4 w-4" />}
       </button>
-      <span className="px-1 text-xs text-muted-foreground">
-        {peers.length > 0 ? "on" : "…"}
-      </span>
+      <span className="px-1 text-xs text-neutral-400">{peers.length > 0 ? "on" : "…"}</span>
       <button
         type="button"
         onClick={leave}
         title="Leave voice"
-        className="flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-red-500"
+        className="flex h-7 w-7 items-center justify-center rounded-full text-neutral-400 transition-colors hover:text-red-400"
       >
         <IconPhoneOff className="h-4 w-4" />
       </button>
@@ -460,9 +449,9 @@ function ScriptView({
   }
 
   // Warm reading canvas — dark ink + orange highlights read best on cream,
-  // matching the solo rehearsal design.
+  // matching the solo rehearsal design. The glow is the page catching the light.
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#e6ddc9] bg-[#faf7f1] p-5 shadow-sm sm:p-7">
+    <div className="overflow-hidden rounded-2xl border border-black/5 bg-[#faf7f1] p-5 shadow-[0_18px_60px_-18px_rgba(203,75,0,0.55),0_6px_24px_-8px_rgba(0,0,0,0.7)] sm:p-7">
       <div className="space-y-5">
         {lines.map((ln, i) => {
           const active = i === at;
@@ -522,9 +511,9 @@ function EditableScript({
     ]);
 
   return (
-    <div className="rounded-2xl border border-[#e6ddc9] bg-[#faf7f1] p-4 shadow-sm sm:p-5">
+    <div className="rounded-2xl border border-black/5 bg-[#faf7f1] p-4 shadow-[0_18px_60px_-18px_rgba(203,75,0,0.55),0_6px_24px_-8px_rgba(0,0,0,0.7)] sm:p-5">
       <p className="mb-3 text-xs text-neutral-500">
-        Edits are just for this rehearsal, synced to your partner. The original script isn&apos;t changed.
+        Just for this rehearsal, synced to your partner. The original isn&apos;t changed.
       </p>
       <div className="space-y-2.5">
         {lines.map((ln, i) => (
@@ -607,12 +596,14 @@ function Presence({
     <div className="flex items-center gap-2" title={participants.map((p) => p.name).join(", ")}>
       <span className="relative flex h-2 w-2">
         {connected && (
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-400 opacity-60" />
         )}
-        <span className={`relative inline-flex h-2 w-2 rounded-full ${connected ? "bg-emerald-500" : "bg-muted-foreground/40"}`} />
+        <span
+          className={`relative inline-flex h-2 w-2 rounded-full ${connected ? "bg-amber-400" : "bg-neutral-600"}`}
+        />
       </span>
-      <span className="text-sm text-muted-foreground">
-        {n <= 1 ? "just you" : `${n} in the room`}
+      <span className="hidden text-sm text-neutral-400 sm:inline">
+        {n <= 1 ? "just you" : `${n} here`}
       </span>
     </div>
   );
@@ -620,21 +611,25 @@ function Presence({
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (
-    <div className="mx-auto max-w-3xl px-4 py-24 text-center text-sm text-muted-foreground">
-      {children}
+    <div className="dark min-h-screen bg-[#191410]">
+      <div className="mx-auto max-w-3xl px-4 py-24 text-center text-sm text-neutral-400">
+        {children}
+      </div>
     </div>
   );
 }
 
 function RoomSkeleton() {
   return (
-    <div className="mx-auto max-w-3xl px-4 pt-8">
-      <div className="mb-6 h-10 w-48 animate-pulse rounded bg-muted" />
-      <div className="mb-6 grid grid-cols-2 gap-3">
-        <div className="h-16 animate-pulse border border-border/40 bg-muted/40" />
-        <div className="h-16 animate-pulse border border-border/40 bg-muted/40" />
+    <div className="dark min-h-screen bg-[#191410]">
+      <div className="mx-auto max-w-3xl px-4 pt-8">
+        <div className="mb-8 h-9 w-56 animate-pulse rounded bg-neutral-800" />
+        <div className="mb-6 grid grid-cols-2 gap-3">
+          <div className="h-16 animate-pulse border border-neutral-800 bg-neutral-800/50" />
+          <div className="h-16 animate-pulse border border-neutral-800 bg-neutral-800/50" />
+        </div>
+        <div className="h-96 animate-pulse rounded-2xl bg-neutral-800/50" />
       </div>
-      <div className="h-96 animate-pulse rounded-2xl bg-muted/40" />
     </div>
   );
 }
