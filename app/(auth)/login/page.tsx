@@ -1,4 +1,5 @@
 import { AuthProgressiveDisclosure } from "@/components/auth/AuthProgressiveDisclosure";
+import { AuthSwitchLink } from "@/components/auth/AuthSwitchLink";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
@@ -39,9 +40,7 @@ export default function LoginPage() {
           {/* Sign up link */}
           <div className="text-center text-sm text-muted-foreground pt-2">
             <span>Don&apos;t have an account? </span>
-            <Link href="/signup" className="font-medium text-primary hover:underline underline-offset-4">
-              Sign up
-            </Link>
+            <AuthSwitchLink href="/signup">Sign up</AuthSwitchLink>
           </div>
         </div>
 

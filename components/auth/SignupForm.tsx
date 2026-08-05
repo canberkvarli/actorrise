@@ -18,7 +18,13 @@ const signupSchema = z.object({
 
 type SignupFormData = z.infer<typeof signupSchema>;
 
-export function SignupForm() {
+interface SignupFormProps {
+  /** Where to land after signing up. An invited partner needs to come back to
+   *  the room they clicked, not the default landing spot. */
+  redirectTo?: string;
+}
+
+export function SignupForm({ redirectTo }: SignupFormProps = {}) {
   const { signup } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +42,7 @@ export function SignupForm() {
     setError(null);
     setIsLoading(true);
     try {
-      await signup(data.email, data.password);
+      await signup(data.email, data.password, undefined, redirectTo);
       // Track successful signup — infer source from current page path
       const source = typeof window !== "undefined" ? window.location.pathname : "unknown";
       trackSignupCompleted({ source });

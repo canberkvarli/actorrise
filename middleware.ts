@@ -59,8 +59,11 @@ export default async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/profile', request.url))
   }
 
-  // Protect platform (require auth): dashboard, profile, search, checkout, billing, admin
-  const protectedPaths = ['/dashboard', '/profile', '/search', '/checkout', '/billing', '/admin']
+  // Protect platform (require auth): dashboard, profile, search, checkout, billing, admin.
+  // /greenroom is here so an invited partner arriving at a room link logged out
+  // gets sent to /login with the room URL preserved, and lands back in the room
+  // after signing in. Without it the room just hangs on its skeleton forever.
+  const protectedPaths = ['/dashboard', '/profile', '/search', '/checkout', '/billing', '/admin', '/greenroom']
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p))
   if (isProtected) {
     if (!user) {

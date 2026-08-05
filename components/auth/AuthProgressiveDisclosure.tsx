@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { LoginForm } from "@/components/auth/LoginForm";
 import { SignupForm } from "@/components/auth/SignupForm";
@@ -20,11 +21,28 @@ const emailFormVariants = {
   exit: { opacity: 0, y: -6 },
 };
 
-export function AuthProgressiveDisclosure({
+/** Reading ?redirect= needs a Suspense boundary above it, so own that here
+ *  instead of trusting every caller to remember. */
+export function AuthProgressiveDisclosure(props: AuthProgressiveDisclosureProps) {
+  return (
+    <Suspense fallback={<div className="h-32 animate-pulse rounded-lg bg-muted" />}>
+      <AuthProgressiveDisclosureInner {...props} />
+    </Suspense>
+  );
+}
+
+function AuthProgressiveDisclosureInner({
   mode,
-  redirectTo = "/practice",
+  redirectTo: redirectToProp = "/practice",
 }: AuthProgressiveDisclosureProps) {
   const [showEmailForm, setShowEmailForm] = useState(false);
+
+  // ?redirect= wins over the caller's default. Middleware sets it when it
+  // bounces you off a page that needed auth (a Green Room invite, checkout),
+  // and that destination is the whole point of the round trip — the pages
+  // pass a static "/practice", which would otherwise silently discard it.
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || redirectToProp;
 
   const emailButtonLabel =
     mode === "login" ? "Sign in with email" : "Continue with email";
@@ -57,7 +75,7 @@ export function AuthProgressiveDisclosure({
                 <LoginForm redirectTo={redirectTo} />
               </Suspense>
             ) : (
-              <SignupForm />
+              <SignupForm redirectTo={redirectTo} />
             )}
           </motion.div>
         )}

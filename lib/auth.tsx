@@ -37,7 +37,7 @@ interface AuthContextType {
   isLoggingOut: boolean;
   isDemoUser: boolean;
   login: (email: string, password: string, redirectTo?: string) => Promise<void>;
-  signup: (email: string, password: string, name?: string) => Promise<void>;
+  signup: (email: string, password: string, name?: string, redirectTo?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
@@ -200,7 +200,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const signup = useCallback(async (email: string, password: string, name?: string) => {
+  const signup = useCallback(async (email: string, password: string, name?: string, redirectTo?: string) => {
     try {
       // Sign out any existing session first so a previously-cached user
       // (e.g. from Google OAuth) doesn't bleed into the new account.
@@ -241,7 +241,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearUserSpecificQueryCache(); // only wipe profile/stats — keep discover cache for instant load
         // Full page redirect so session cookies are sent on the next request and modal state is cleared
         // Using router.push() leaves the auth modal open because React state persists
-        window.location.href = "/practice";
+        window.location.href = redirectTo || "/practice";
       } else {
         // Email confirmation required - show success message
         // User will need to confirm email before logging in
