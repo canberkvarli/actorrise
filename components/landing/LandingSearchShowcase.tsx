@@ -118,13 +118,20 @@ export function LandingSearchShowcase() {
               }}
             >
               <div className="rounded-2xl border border-border/60 overflow-hidden shadow-lg bg-black" style={{ aspectRatio: "16/9" }}>
+                {/* Served from /public, not Blob. The Blob copy was the 1080p
+                    original at 15 MB, and autoplaying it here burned the whole
+                    10 GB Blob transfer allowance in roughly 650 views. This is
+                    the same clip at 720p/CRF 26, 0.86 MB, which bills against
+                    Fast Data Transfer instead. preload="none" plus a poster
+                    means nothing downloads until it scrolls into view. */}
                 <video
                   ref={videoRef}
-                  src="https://fplmwdr338fbphw9.public.blob.vercel-storage.com/videos/MonologueSearch.mp4"
+                  src="/videos/monologue-search.mp4"
+                  poster="/videos/monologue-search-poster.jpg"
                   muted
                   loop
                   playsInline
-                  preload="metadata"
+                  preload="none"
                   className="w-full h-full object-cover"
                 />
               </div>
