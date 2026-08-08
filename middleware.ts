@@ -90,17 +90,31 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
+  /*
+   * Only the paths this middleware actually acts on. It used to match nearly
+   * every request, which meant all ~12k crawlable /monologues/* pages paid for
+   * a Supabase client + getSession() (JWT decode) they never used. Middleware
+   * runs before the ISR cache, so `revalidate` on those pages did not save it.
+   * That was burning the Fluid Active CPU allowance.
+   *
+   * Keep this list in sync with `protectedPaths` above, plus the three special
+   * cases: `/` for the OAuth ?code= fallback, `/login` + `/signup` for
+   * redirecting signed-in users away, and `/onboarding` for the legacy
+   * redirect. `:path*` matches zero or more segments, so it covers the bare
+   * path too (`/admin` as well as `/admin/users/1`).
+   */
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - robots.txt, sitemap.xml (crawler assets, skip auth)
-     * - public folder
-     * - api routes (handled separately)
-     */
-    '/((?!_next/static|_next/image|favicon.ico|robots\\.txt|sitemap\\.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$|api).*)',
+    '/',
+    '/login',
+    '/signup',
+    '/onboarding',
+    '/dashboard/:path*',
+    '/profile/:path*',
+    '/search/:path*',
+    '/checkout/:path*',
+    '/billing/:path*',
+    '/admin/:path*',
+    '/greenroom/:path*',
   ],
 }
 
