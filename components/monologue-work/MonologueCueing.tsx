@@ -13,6 +13,12 @@ import { useToggleFavorite } from "@/hooks/useBookmarks";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 import { useAuth } from "@/lib/auth";
 import { wordMatchScore, toDeliverableLines, spokenPrefixCount } from "@/lib/lineMatching";
+import {
+  trackRehearsalStarted,
+  trackRehearsalLineDelivered,
+  trackRehearsalCompleted,
+  trackRehearsalAbandoned,
+} from "@/lib/analytics";
 import api from "@/lib/api";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { GhostLight } from "@/components/brand/GhostLight";
@@ -92,6 +98,61 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLParagraphElement>(null);
+
+  /* ── Analytics ─────────────────────────────────────────────────── */
+  // Same four events as the scene run screen, so scene / monologue / greenroom
+  // are comparable in one report rather than three incompatible funnels.
+  const startedAtRef = useRef<number | null>(null);
+  const completedRef = useRef(false);
+  const firstLineRef = useRef(false);
+
+  useEffect(() => {
+    if (!started || startedAtRef.current !== null) return;
+    startedAtRef.current = Date.now();
+    trackRehearsalStarted({ mode: "monologue", scene_id: monologue.id });
+  }, [started, monologue.id]);
+
+  useEffect(() => {
+    if (!completed || completedRef.current) return;
+    completedRef.current = true;
+    trackRehearsalCompleted({
+      mode: "monologue",
+      duration_seconds: Math.floor((Date.now() - (startedAtRef.current ?? Date.now())) / 1000),
+      lines_total: lines.length,
+    });
+  }, [completed, lines.length]);
+
+  // Advancing past line 0 means they actually spoke it (or tapped through it).
+  useEffect(() => {
+    if (!started || firstLineRef.current || activeIndex < 1) return;
+    firstLineRef.current = true;
+    trackRehearsalLineDelivered({
+      mode: "monologue",
+      seconds_to_first_line: Math.floor(
+        (Date.now() - (startedAtRef.current ?? Date.now())) / 1000,
+      ),
+    });
+  }, [started, activeIndex]);
+
+  // Left mid-piece. Reads refs only, since this runs on unmount when no further
+  // render will ever happen.
+  const activeIndexRef = useRef(activeIndex);
+  activeIndexRef.current = activeIndex;
+  const linesLengthRef = useRef(lines.length);
+  linesLengthRef.current = lines.length;
+
+  useEffect(() => {
+    return () => {
+      if (startedAtRef.current === null || completedRef.current) return;
+      const total = linesLengthRef.current;
+      trackRehearsalAbandoned({
+        mode: "monologue",
+        progress_pct: total > 0 ? Math.round((activeIndexRef.current / total) * 100) : 0,
+        last_line_index: activeIndexRef.current,
+        duration_seconds: Math.floor((Date.now() - startedAtRef.current) / 1000),
+      });
+    };
+  }, []);
 
   const goToLine = useCallback((next: number) => {
     setRevealCurrent(false);

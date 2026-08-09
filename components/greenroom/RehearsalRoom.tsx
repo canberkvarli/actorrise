@@ -14,6 +14,12 @@ import {
   IconLoader2,
 } from "@tabler/icons-react";
 import api from "@/lib/api";
+import {
+  trackRehearsalStarted,
+  trackRehearsalLineDelivered,
+  trackRehearsalCompleted,
+  trackRehearsalAbandoned,
+} from "@/lib/analytics";
 import { useAuth } from "@/lib/auth";
 import { useCommunityScript, type RoomLine } from "@/hooks/useCommunityScript";
 import { useRoomChannel } from "@/hooks/useRoomChannel";
@@ -84,6 +90,62 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
   const curLine = curLines?.[Math.min(currentLine, (curLines?.length ?? 1) - 1)];
   const isMyLine =
     !!myRole && !!curLine && curLine.character_name.toUpperCase() === myRole.toUpperCase();
+
+  /* ── Analytics ─────────────────────────────────────────────────── */
+  // Declared up here with the other pre-early-return state so hook order stays
+  // stable. Same four events as the scene and monologue screens.
+  //
+  // "Started" is entering through the stage door, not loading the page: the room
+  // renders for anyone with the link, but until they tap they have no mic and
+  // are not rehearsing. A room has no natural end (line navigation is clamped to
+  // the last line), so completion means reaching the last line of the last scene.
+  const gr = useRef({ startedAt: null as number | null, completed: false, firstLine: false });
+  const grProgress = useRef({ line: 0, total: 0 });
+  const roomScenes = script?.scenes;
+  const grLineCount = curLines?.length ?? 0;
+  grProgress.current = { line: currentLine, total: grLineCount };
+
+  useEffect(() => {
+    if (!entered || gr.current.startedAt !== null) return;
+    gr.current.startedAt = Date.now();
+    trackRehearsalStarted({ mode: "greenroom", script_id: scriptId });
+  }, [entered, scriptId]);
+
+  useEffect(() => {
+    if (!entered || gr.current.firstLine || currentLine < 1) return;
+    gr.current.firstLine = true;
+    trackRehearsalLineDelivered({
+      mode: "greenroom",
+      seconds_to_first_line: Math.floor(
+        (Date.now() - (gr.current.startedAt ?? Date.now())) / 1000,
+      ),
+    });
+  }, [entered, currentLine]);
+
+  useEffect(() => {
+    if (!entered || gr.current.completed || !roomScenes?.length || grLineCount === 0) return;
+    const onLastScene = sceneIndex >= roomScenes.length - 1;
+    if (!onLastScene || currentLine < grLineCount - 1) return;
+    gr.current.completed = true;
+    trackRehearsalCompleted({
+      mode: "greenroom",
+      duration_seconds: Math.floor((Date.now() - (gr.current.startedAt ?? Date.now())) / 1000),
+      lines_total: grLineCount,
+    });
+  }, [entered, sceneIndex, currentLine, grLineCount, roomScenes?.length]);
+
+  useEffect(() => {
+    return () => {
+      if (gr.current.startedAt === null || gr.current.completed) return;
+      const { line, total } = grProgress.current;
+      trackRehearsalAbandoned({
+        mode: "greenroom",
+        progress_pct: total > 0 ? Math.round((line / total) * 100) : 0,
+        last_line_index: line,
+        duration_seconds: Math.floor((Date.now() - gr.current.startedAt) / 1000),
+      });
+    };
+  }, []);
 
   // Listen while it's my line so the words light up as I say them.
   useEffect(() => {
