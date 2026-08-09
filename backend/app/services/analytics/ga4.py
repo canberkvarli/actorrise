@@ -9,11 +9,18 @@ means the event follows the money, not the browser.
 
 Requires two env vars:
 
-    NEXT_PUBLIC_GA_MEASUREMENT_ID   the G-XXXXXXXX stream id (same one the
-                                    frontend uses; named for the frontend
-                                    because that is where it was set first)
-    GA4_API_SECRET                  GA4 Admin -> Data Streams -> your stream ->
-                                    Measurement Protocol API secrets -> Create
+    GA4_MEASUREMENT_ID   the DATA STREAM's measurement id, from GA4 Admin ->
+                         Data Streams -> your stream -> Measurement Id.
+    GA4_API_SECRET       GA4 Admin -> Data Streams -> your stream ->
+                         Measurement Protocol API secrets -> Create
+
+Do NOT reuse NEXT_PUBLIC_GA_MEASUREMENT_ID here, even though both are G-XXXX
+strings. That one is the Google *tag* id the browser loads, and a tag can fan
+out to several destinations, so it is not necessarily any stream's measurement
+id. On this property it is not: the site's tag is G-97R2ZNPVVN while the streams
+are G-GDYL4EZJ81 and G-G98GLEXP6V. The Measurement Protocol matches on the
+stream id, so passing the tag id sends events into a void, with a 2xx response
+and no error to notice. Hence a separate, explicitly-set variable.
 
 With either missing, every function here becomes a no-op. That is deliberate:
 analytics must never be able to fail a webhook, and local/staging should not be
@@ -46,7 +53,10 @@ _TIMEOUT_SECONDS = 5
 
 
 def _credentials() -> tuple[str, str] | None:
-    measurement_id = (os.getenv("NEXT_PUBLIC_GA_MEASUREMENT_ID") or "").strip()
+    # Deliberately no fallback to NEXT_PUBLIC_GA_MEASUREMENT_ID: that is a tag
+    # id, not a stream id, and using it would produce a silent 2xx no-op rather
+    # than an error anyone would notice. Better to send nothing.
+    measurement_id = (os.getenv("GA4_MEASUREMENT_ID") or "").strip()
     api_secret = (os.getenv("GA4_API_SECRET") or "").strip()
     if not measurement_id or not api_secret:
         return None
