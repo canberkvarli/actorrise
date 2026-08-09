@@ -6,6 +6,12 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { SCRIPTS_FEATURE_ENABLED } from '@/lib/featureFlags';
 import UnderConstructionScripts from '@/components/UnderConstructionScripts';
 import api, { API_URL, getCachedAuthToken } from '@/lib/api';
+import {
+  trackRehearsalStarted,
+  trackRehearsalLineDelivered,
+  trackRehearsalCompleted,
+  trackRehearsalAbandoned,
+} from '@/lib/analytics';
 import { Button } from '@/components/ui/button';
 import { ColdReadPrep } from '@/components/rehearse/ColdReadPrep';
 import {
@@ -570,6 +576,13 @@ export default function RehearsalPage() {
   const [sessionDuration, setSessionDuration] = useState(0);
   const [playingLineIdx, setPlayingLineIdx] = useState<number | null>(null);
 
+  /* ── Analytics bookkeeping ─────────────────────────────────────── */
+  // Plain refs, not state: these are read from unmount/pagehide handlers where a
+  // re-render will never come, and they must never themselves cause one.
+  const rehearsalCompletedRef = useRef(false);
+  const rehearsalTrackedRef = useRef<string | null>(null);
+  const firstLineTrackedRef = useRef(false);
+
   /* ── Continuous scene replay (session review) ──────────────────── */
   // Plays the whole finished scene as one uninterrupted take: user-recorded
   // lines back-to-back with the AI partner's lines regenerated in order.
@@ -960,7 +973,17 @@ export default function RehearsalPage() {
       setLastAiLine(null);
       stopAllAudioRef.current(); // kill mic + TTS before entering review
       loadFeedback();
-      setSessionDuration(Math.floor((Date.now() - sessionStartTimeRef.current) / 1000));
+      const elapsed = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000);
+      setSessionDuration(elapsed);
+      // Mark completed before the abandon handler can see it. The unmount path
+      // reads showFeedbackRef, which only flips 900ms later, so without this a
+      // finished scene would also report itself abandoned on the way out.
+      rehearsalCompletedRef.current = true;
+      trackRehearsalCompleted({
+        mode: 'scene',
+        duration_seconds: elapsed,
+        lines_total: lines.length,
+      });
       // Brief pause so last line highlights are visible, then fade to black
       setTimeout(() => setFadeToReview(true), 400);
       // After fade completes, switch to review
@@ -1007,6 +1030,19 @@ export default function RehearsalPage() {
     const blob = getRecordedBlob();
     if (blob) lineAudioBlobsRef.current.set(currentIdx, blob);
     lineTranscriptsRef.current.set(currentIdx, toSend);
+
+    // The real activation moment: not loading the page, but opening your mouth.
+    // seconds_to_first_line covers mic permission, the audio check and the
+    // countdown, so a bad number here points at setup friction, not the scene.
+    if (!firstLineTrackedRef.current) {
+      firstLineTrackedRef.current = true;
+      trackRehearsalLineDelivered({
+        mode: 'scene',
+        seconds_to_first_line: Math.floor(
+          (Date.now() - sessionStartTimeRef.current) / 1000
+        ),
+      });
+    }
 
     if (isListening) stopListening();
     resetTranscript();
@@ -1098,6 +1134,10 @@ export default function RehearsalPage() {
     lineAttemptsRef.current.clear();
     replayBoundsRef.current.clear();
     setSessionDuration(0);
+    // "Run it again" comes back through here, so a fresh run must be able to
+    // report its own completion and its own first line.
+    rehearsalCompletedRef.current = false;
+    firstLineTrackedRef.current = false;
     try {
       const sceneCacheKey = `actorrise_scene_${sceneId}`;
       const sessionCacheKey = `actorrise_session_${sessionId}`;
@@ -1119,6 +1159,19 @@ export default function RehearsalPage() {
       setSession(data);
       if (data.max_lines != null) {
         setLinesRemaining(Math.max(0, data.max_lines - (data.total_lines_delivered ?? 0)));
+      }
+
+      // Keyed on session id, not a plain boolean: loadSession can re-run for the
+      // same session (the effect depends on prepDone as well as sessionId), but
+      // "Run it again" mints a fresh session id and that IS a new rehearsal.
+      if (rehearsalTrackedRef.current !== sessionId) {
+        rehearsalTrackedRef.current = sessionId;
+        trackRehearsalStarted({
+          mode: 'scene',
+          scene_id: sceneId,
+          script_id: scriptId ?? undefined,
+          cold_read: coldRead,
+        });
       }
 
       try {
@@ -1261,7 +1314,21 @@ export default function RehearsalPage() {
     const stop = () => { cancelAI(); window.speechSynthesis?.cancel(); };
     const abandonSession = () => {
       // Only abandon if session is still in progress (not completed)
-      if (!sessionId || showFeedbackRef.current) return;
+      if (!sessionId || showFeedbackRef.current || rehearsalCompletedRef.current) return;
+
+      // Where the run actually died. This is the number the activation work needs:
+      // "3% reach /rehearse" was never the useful fact, "they quit 12% in, 40
+      // seconds after loading" is. Sent before the fetch so it still goes out on
+      // the pagehide path, where the tab may not survive long enough for much else.
+      const lineIdx = activeLineIndexRef.current ?? 0;
+      const lineCount = orderedLinesRef.current.length;
+      trackRehearsalAbandoned({
+        mode: 'scene',
+        progress_pct: lineCount > 0 ? Math.round((lineIdx / lineCount) * 100) : 0,
+        last_line_index: lineIdx,
+        duration_seconds: Math.floor((Date.now() - sessionStartTimeRef.current) / 1000),
+      });
+
       const token = getCachedAuthToken();
       if (!token) return;
       fetch(`${API_URL}/api/scenes/rehearse/${sessionId}/abandon`, {

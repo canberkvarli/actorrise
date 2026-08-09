@@ -11,7 +11,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { IconRocket, IconSparkles } from "@tabler/icons-react";
 import Link from "next/link";
+import { useEffect } from "react";
 import { useSubscription } from "@/hooks/useSubscription";
+import { trackUpgradeModalViewed } from "@/lib/analytics";
 
 interface UpgradeModalProps {
   open: boolean;
@@ -43,6 +45,14 @@ export function UpgradeModal({
 }: UpgradeModalProps) {
   const { subscription } = useSubscription();
   const currentTier = subscription?.tier_name ?? "free";
+
+  // Fires once per open, keyed on the gate that triggered it. `feature` is the
+  // whole point: it answers which wall actually makes an actor reach for a card,
+  // which is what decides where the next gate goes.
+  useEffect(() => {
+    if (!open) return;
+    trackUpgradeModalViewed({ feature, tier_current: currentTier });
+  }, [open, feature, currentTier]);
 
   // If already on Plus, suggest Pro. Otherwise suggest Plus.
   const isPlus = currentTier === "plus";

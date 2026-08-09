@@ -37,6 +37,54 @@ type MonologueSavedParams = {
   title: string;
 };
 
+/** Which surface a rehearsal ran on. Keeps scene/monologue/greenroom comparable. */
+type RehearsalMode = "scene" | "monologue" | "greenroom";
+
+type RehearsalStartedParams = {
+  mode: RehearsalMode;
+  scene_id?: number | string;
+  script_id?: number | string;
+  /** True the first time this browser ever starts a rehearsal. The activation moment. */
+  is_first_ever: boolean;
+  cold_read?: boolean;
+};
+
+type RehearsalLineDeliveredParams = {
+  mode: RehearsalMode;
+  /** Seconds from the run screen loading to the actor's first spoken line. */
+  seconds_to_first_line: number;
+};
+
+type RehearsalCompletedParams = {
+  mode: RehearsalMode;
+  duration_seconds: number;
+  lines_total: number;
+};
+
+type RehearsalAbandonedParams = {
+  mode: RehearsalMode;
+  /** 0-100. Where the run died, which is the number the activation work needs. */
+  progress_pct: number;
+  last_line_index: number;
+  duration_seconds: number;
+};
+
+type UpgradeModalViewedParams = {
+  /** The gate that blocked them. Tells us which wall makes actors reach for a card. */
+  feature: string;
+  tier_current: string;
+};
+
+type BeginCheckoutParams = {
+  tier: string;
+  billing_period: string;
+  trial: boolean;
+  /** Where the upgrade started: an upsell modal, /pricing, /billing, an email. */
+  entry_point: string;
+  value?: number;
+  currency?: string;
+};
+
 // ─── Low-level gtag wrapper ──────────────────────────────────────────
 
 function sendEvent(name: string, params?: Record<string, unknown>) {
@@ -102,4 +150,80 @@ export function trackSignupCompleted(params: SignupCompletedParams) {
 
 export function trackMonologueSaved(params: MonologueSavedParams) {
   sendEvent("monologue_saved", params);
+}
+
+// ─── Rehearsal ───────────────────────────────────────────────────────
+//
+// Until these existed the only signal that anyone rehearsed was a pageview on
+// /rehearse, which cannot tell you whether they pressed play or quit at line
+// three. progress_pct on abandon is the one that locates the cliff.
+
+const FIRST_REHEARSAL_KEY = "actorrise_has_rehearsed";
+
+/** True once per browser, the first time a rehearsal ever starts. */
+function claimFirstRehearsal(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (localStorage.getItem(FIRST_REHEARSAL_KEY)) return false;
+    localStorage.setItem(FIRST_REHEARSAL_KEY, "1");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function trackRehearsalStarted(params: Omit<RehearsalStartedParams, "is_first_ever">) {
+  sendEvent("rehearsal_started", {
+    ...params,
+    is_first_ever: claimFirstRehearsal(),
+  } satisfies RehearsalStartedParams);
+}
+
+export function trackRehearsalLineDelivered(params: RehearsalLineDeliveredParams) {
+  sendEvent("rehearsal_line_delivered", params);
+}
+
+export function trackRehearsalCompleted(params: RehearsalCompletedParams) {
+  sendEvent("rehearsal_completed", params);
+}
+
+export function trackRehearsalAbandoned(params: RehearsalAbandonedParams) {
+  sendEvent("rehearsal_abandoned", params);
+}
+
+// ─── Money path ──────────────────────────────────────────────────────
+//
+// trial_started and trial_converted deliberately do NOT live here. Client-side
+// purchase events get eaten by ad blockers and lost across the Stripe redirect,
+// so those fire server-side from the webhook via the Measurement Protocol
+// (backend/app/services/analytics/ga4.py).
+
+export function trackUpgradeModalViewed(params: UpgradeModalViewedParams) {
+  sendEvent("upgrade_modal_viewed", params);
+}
+
+export function trackBeginCheckout(params: BeginCheckoutParams) {
+  sendEvent("begin_checkout", {
+    currency: "USD",
+    ...params,
+  });
+}
+
+/**
+ * The GA4 client id, pulled out of the `_ga` cookie.
+ *
+ * The cookie looks like `GA1.1.1234567890.1700000000` and GA4 wants only the
+ * last two parts. Sent along with checkout so the Stripe webhook can fire
+ * trial_started against the same GA4 user who searched and signed up. Without
+ * it every trial looks like a brand new visitor with no history, and the funnel
+ * breaks exactly where it matters most.
+ *
+ * Returns null when GA has not set a cookie yet, or an ad blocker removed it.
+ */
+export function getGaClientId(): string | null {
+  if (typeof document === "undefined") return null;
+  const match = document.cookie.match(/(?:^|;\s*)_ga=([^;]+)/);
+  if (!match) return null;
+  const parts = match[1].split(".");
+  return parts.length >= 4 ? parts.slice(-2).join(".") : null;
 }

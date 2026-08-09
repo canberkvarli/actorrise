@@ -158,8 +158,12 @@ export default function RootLayout({
               src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
               strategy="beforeInteractive"
             />
+            {/* send_page_view:false is load-bearing. A bare config auto-sends a
+                page_view, and <GoogleAnalytics /> in <body> sends one too, so
+                without this the tag double-fires and every event count, pageview
+                and first_visit in GA4 comes out ~2x. */}
             <Script id="google-analytics" strategy="beforeInteractive">
-              {`window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', '${gaId}');`}
+              {`window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', '${gaId}', { send_page_view: false });`}
             </Script>
           </>
         )}

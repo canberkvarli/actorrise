@@ -19,6 +19,7 @@ import { IconRocket, IconCrown, IconArrowLeft, IconTag, IconX, IconGift } from "
 import api, { API_URL } from "@/lib/api";
 import Link from "next/link";
 import { RequestPromoCodeModal } from "@/components/contact/RequestPromoCodeModal";
+import { trackBeginCheckout, getGaClientId } from "@/lib/analytics";
 
 interface PricingTier {
   id: number;
@@ -148,6 +149,20 @@ function CheckoutContent() {
     setIsCheckingOut(true);
     setError(null);
 
+    // Fired before the redirect, not after. Once we hand off to Stripe this page
+    // is gone, so anything sent later never lands.
+    trackBeginCheckout({
+      tier: tier.name,
+      billing_period: period,
+      trial: isTrial,
+      entry_point: searchParams.get("from") || document.referrer || "direct",
+      value:
+        (period === "annual" && tier.annual_price_cents != null
+          ? tier.annual_price_cents
+          : tier.monthly_price_cents) / 100,
+      currency: "USD",
+    });
+
     try {
       const response = await api.post<{ checkout_url: string }>(
         "/api/subscriptions/create-checkout-session",
@@ -162,6 +177,9 @@ function CheckoutContent() {
             : promoApplied === "STUDENT50"
               ? "STXQ5NU4"
               : promoApplied || undefined,
+          // Rides through Stripe metadata so the webhook can fire trial_started
+          // against this same GA4 user rather than an anonymous new one.
+          ga_client_id: getGaClientId() ?? undefined,
         }
       );
 

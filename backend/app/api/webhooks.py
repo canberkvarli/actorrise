@@ -162,6 +162,39 @@ def handle_checkout_completed(session: dict, db: Session):
 
     print(f"✅ Checkout completed for user {user_id} - {billing_period} subscription")
 
+    # GA4: the money path. Fired here rather than in the browser because the
+    # success page is one closed tab away from never loading, and ad blockers
+    # eat client-side purchase events. Never allowed to raise: a failure here
+    # would 500 the webhook, Stripe would retry, and the plan would be granted
+    # twice.
+    try:
+        from app.services.analytics import track_trial_started
+
+        trial_days = int(meta.get("trial_days") or 0)
+        if trial_days == 0:
+            # Payment-link checkouts (the reply-CURTAIN flow) carry no app
+            # metadata at all, but they do run a real trial. Recover its length
+            # from the subscription so those conversions are not invisible.
+            try:
+                _sub = stripe.Subscription.retrieve(session["subscription"])
+                start, end = _sub.get("trial_start"), _sub.get("trial_end")
+                if start and end:
+                    trial_days = round((end - start) / 86400)
+            except Exception:
+                pass
+
+        if trial_days > 0:
+            tier_row = db.query(PricingTier).filter(PricingTier.id == tier_id).first()
+            track_trial_started(
+                user_id=user_id,
+                tier=tier_row.name if tier_row else "plus",
+                trial_days=trial_days,
+                value=(tier_row.monthly_price_cents / 100) if tier_row else 0.0,
+                ga_client_id=meta.get("ga_client_id"),
+            )
+    except Exception as e:
+        print(f"Warning: GA4 trial_started not sent: {e}")
+
     # Auto-add paid users to do-not-contact list
     try:
         from app.models.email_do_not_contact import EmailDoNotContact
@@ -230,6 +263,18 @@ def handle_invoice_paid(invoice: dict, db: Session):
         db.query(BillingHistory).filter(BillingHistory.stripe_invoice_id == invoice["id"]).first()
     )
 
+    # Whether any real money has landed for this user before now. Computed
+    # before the insert below, because afterwards the answer is always "yes".
+    had_prior_payment = (
+        db.query(BillingHistory)
+        .filter(
+            BillingHistory.user_id == subscription.user_id,
+            BillingHistory.amount_cents > 0,
+        )
+        .first()
+        is not None
+    )
+
     if not existing:
         # Create billing history record
         billing_record = BillingHistory(
@@ -247,6 +292,31 @@ def handle_invoice_paid(invoice: dict, db: Session):
     db.commit()
 
     print(f"✅ Invoice paid for user {subscription.user_id} - ${invoice['amount_paid']/100:.2f}")
+
+    # GA4: a trial that survived to a real charge. Guarded on "first money ever"
+    # so renewals in month three do not keep re-reporting the same conversion,
+    # and on the subscription having actually had a trial, so someone who paid
+    # up front is not miscounted as a converted trialist.
+    try:
+        if invoice.get("amount_paid", 0) > 0 and not had_prior_payment:
+            stripe_sub = stripe.Subscription.retrieve(invoice["subscription"])
+            if stripe_sub.get("trial_end"):
+                from app.services.analytics import track_trial_converted
+
+                tier_row = (
+                    db.query(PricingTier)
+                    .filter(PricingTier.id == subscription.tier_id)
+                    .first()
+                )
+                track_trial_converted(
+                    user_id=subscription.user_id,
+                    tier=tier_row.name if tier_row else "plus",
+                    value=invoice["amount_paid"] / 100,
+                    currency=(invoice.get("currency") or "usd").upper(),
+                    ga_client_id=(stripe_sub.get("metadata") or {}).get("ga_client_id"),
+                )
+    except Exception as e:
+        print(f"Warning: GA4 trial_converted not sent: {e}")
 
 
 def handle_payment_failed(invoice: dict, db: Session):
@@ -336,6 +406,37 @@ def handle_subscription_deleted(stripe_subscription: dict, db: Session):
     if not subscription:
         print(f"⚠️  No subscription found for Stripe subscription {stripe_subscription['id']}")
         return
+
+    # GA4: churn that happened before a single charge. Read the tier now, while
+    # it still says plus/pro — the block below overwrites it with free.
+    try:
+        trial_end = stripe_subscription.get("trial_end")
+        ended_at = stripe_subscription.get("ended_at") or stripe_subscription.get(
+            "canceled_at"
+        )
+        # A day of slack: subscriptions killed by "no payment method at trial
+        # end" land fractionally after trial_end but never took any money.
+        if trial_end and ended_at and ended_at <= trial_end + 86400:
+            from app.services.analytics import track_trial_cancelled
+
+            tier_row = (
+                db.query(PricingTier)
+                .filter(PricingTier.id == subscription.tier_id)
+                .first()
+            )
+            trial_start = stripe_subscription.get("trial_start")
+            track_trial_cancelled(
+                user_id=subscription.user_id,
+                tier=tier_row.name if tier_row else "plus",
+                days_into_trial=(
+                    round((ended_at - trial_start) / 86400) if trial_start else None
+                ),
+                ga_client_id=(stripe_subscription.get("metadata") or {}).get(
+                    "ga_client_id"
+                ),
+            )
+    except Exception as e:
+        print(f"Warning: GA4 trial_cancelled not sent: {e}")
 
     # Move user to free tier
     free_tier = db.query(PricingTier).filter(PricingTier.name == "free").first()

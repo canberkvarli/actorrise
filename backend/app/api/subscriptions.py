@@ -79,6 +79,10 @@ class CreateCheckoutSessionRequest(BaseModel):
     cancel_url: str
     promo_code: str | None = None  # student/teacher/startup Stripe coupons
     trial: bool = False  # start a 14-day Plus trial (first-time Plus members)
+    # GA4 client id lifted from the browser's `_ga` cookie. Rides along in Stripe
+    # metadata so the webhook can attribute the trial to the same GA4 user who
+    # searched and signed up, instead of stranding it as a brand new visitor.
+    ga_client_id: str | None = None
 
 
 class CreateCheckoutSessionResponse(BaseModel):
@@ -351,18 +355,34 @@ async def create_checkout_session(
             "tier_id": tier.id,
             # Trial forces monthly rollover, so record that, not what they picked.
             "billing_period": "monthly" if trial_period_days else request.billing_period,
+            # Stripe metadata values must be strings, and it rejects None.
+            "ga_client_id": (request.ga_client_id or "")[:100],
+            "trial_days": str(trial_period_days or 0),
         },
     }
     if discounts:
         create_params["discounts"] = discounts
+
+    # Copy the GA4 client id onto the subscription as well as the checkout
+    # session. Checkout-session metadata does not propagate, and the later
+    # events (trial_converted, trial_cancelled) arrive as invoice/subscription
+    # webhooks that can only see the subscription's own metadata.
+    subscription_metadata = {
+        "user_id": str(current_user.id),
+        "ga_client_id": (request.ga_client_id or "")[:100],
+    }
+
     if trial_period_days:
         # Collect the card now, charge nothing until the trial ends, then
         # cancel cleanly if no payment method is on file.
         create_params["subscription_data"] = {
             "trial_period_days": trial_period_days,
             "trial_settings": {"end_behavior": {"missing_payment_method": "cancel"}},
+            "metadata": subscription_metadata,
         }
         create_params["payment_method_collection"] = "always"
+    else:
+        create_params["subscription_data"] = {"metadata": subscription_metadata}
 
     try:
         checkout_session = stripe.checkout.Session.create(**create_params)
