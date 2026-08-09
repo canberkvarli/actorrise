@@ -12,6 +12,11 @@ import {
   trackRehearsalCompleted,
   trackRehearsalAbandoned,
 } from '@/lib/analytics';
+import {
+  useTrialOffer,
+  TrialOfferCard,
+  TrialOfferBanner,
+} from '@/components/billing/TrialOffer';
 import { Button } from '@/components/ui/button';
 import { ColdReadPrep } from '@/components/rehearse/ColdReadPrep';
 import {
@@ -1306,6 +1311,16 @@ export default function RehearsalPage() {
     return () => navigator.mediaDevices?.removeEventListener('devicechange', handler);
   }, [selectedMicId, setSelectedMicId]);
 
+  /* ── Trial offers, on the way up ─────────────────────────────────── */
+  // Asked when the product just worked, never when it refused. Both must sit
+  // above the showFeedback early return so the hook order stays stable across
+  // the switch into review.
+  const linesDelivered = session?.total_lines_delivered ?? 0;
+  const completionOffer = useTrialOffer('scene_completed', showFeedback);
+  // Six lines is past the 3.1-line average, so this only reaches actors who are
+  // genuinely in the scene rather than poking at it.
+  const midSceneOffer = useTrialOffer('lines_delivered', !showFeedback && linesDelivered >= 6);
+
   // Kill audio & abandon session when user navigates away (back button, bfcache, client-side route)
   const showFeedbackRef = useRef(showFeedback);
   useEffect(() => { showFeedbackRef.current = showFeedback; }, [showFeedback]);
@@ -2162,23 +2177,35 @@ export default function RehearsalPage() {
               )}
             </div>
 
-            {/* First-run: celebrate the aha, then one clear next step. */}
-            {firstRun && (
-              <div className="rounded-lg border border-[#CB4B00]/30 bg-[#CB4B00]/10 p-5 text-center space-y-3">
-                <p className="text-base font-semibold text-neutral-100">
-                  That was your first scene.
-                </p>
-                <p className="text-sm text-neutral-400">
-                  Now find one that&apos;s actually yours, a monologue or scene for your
-                  type, and run it the same way.
-                </p>
-                <Button
-                  onClick={() => router.push('/monologues')}
-                  className="bg-[#CB4B00] text-white hover:bg-[#B03000]"
-                >
-                  Find a scene that&apos;s yours
-                </Button>
-              </div>
+            {/* One next step, never two. The trial offer wins when it is live,
+                because the step it asks for (run your OWN sides) is the same
+                step, and it is the one an actor has just earned the taste of. */}
+            {completionOffer.visible ? (
+              <TrialOfferCard
+                headline={firstRun ? 'That was your first scene.' : 'Nice run.'}
+                body="That was my script though, not yours. Upload your own sides and run them the same way, with the same partner."
+                href={completionOffer.href}
+                onAccept={completionOffer.accept}
+                onDismiss={completionOffer.dismiss}
+              />
+            ) : (
+              firstRun && (
+                <div className="rounded-lg border border-[#CB4B00]/30 bg-[#CB4B00]/10 p-5 text-center space-y-3">
+                  <p className="text-base font-semibold text-neutral-100">
+                    That was your first scene.
+                  </p>
+                  <p className="text-sm text-neutral-400">
+                    Now bring in something that&apos;s actually yours and run it the
+                    same way.
+                  </p>
+                  <Button
+                    onClick={() => router.push('/practice')}
+                    className="bg-[#CB4B00] text-white hover:bg-[#B03000]"
+                  >
+                    Bring in your own sides
+                  </Button>
+                </div>
+              )
             )}
 
             {/* Stats bar */}
@@ -2440,6 +2467,17 @@ export default function RehearsalPage() {
             Enable mic
           </Button>
         </div>
+      )}
+
+      {/* Mid-scene offer. Suppressed while the mic is blocked: that is a moment
+          the product is failing, and it owns the bottom of the screen anyway. */}
+      {midSceneOffer.visible && !isMicBlocked && (
+        <TrialOfferBanner
+          body="Want to run your own sides like this?"
+          href={midSceneOffer.href}
+          onAccept={midSceneOffer.accept}
+          onDismiss={midSceneOffer.dismiss}
+        />
       )}
 
       {/* Script parchment */}

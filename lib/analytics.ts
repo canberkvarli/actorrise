@@ -75,6 +75,24 @@ type UpgradeModalViewedParams = {
   tier_current: string;
 };
 
+/**
+ * Where a success-triggered trial offer was shown. Distinct from
+ * upgrade_modal_viewed, which is always a denial: an actor hit a wall and the
+ * product said no. These fire when the product just worked, which is the only
+ * moment anyone has ever put a card down.
+ */
+export type TrialOfferTrigger =
+  | "scene_completed"
+  | "lines_delivered"
+  | "script_uploaded";
+
+type TrialOfferShownParams = {
+  trigger: TrialOfferTrigger;
+  tier_current: string;
+};
+
+type TrialOfferDismissedParams = TrialOfferShownParams;
+
 type BeginCheckoutParams = {
   tier: string;
   billing_period: string;
@@ -200,6 +218,14 @@ export function trackRehearsalAbandoned(params: RehearsalAbandonedParams) {
 
 export function trackUpgradeModalViewed(params: UpgradeModalViewedParams) {
   sendEvent("upgrade_modal_viewed", params);
+}
+
+export function trackTrialOfferShown(params: TrialOfferShownParams) {
+  sendEvent("trial_offer_shown", params);
+}
+
+export function trackTrialOfferDismissed(params: TrialOfferDismissedParams) {
+  sendEvent("trial_offer_dismissed", params);
 }
 
 export function trackBeginCheckout(params: BeginCheckoutParams) {
