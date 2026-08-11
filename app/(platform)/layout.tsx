@@ -56,6 +56,13 @@ const FirstRehearsalGate = dynamic(
   () => import("@/components/onboarding/FirstRehearsalGate").then((m) => ({ default: m.FirstRehearsalGate })),
   { ssr: false },
 );
+// Fires signup_completed once per new account, for OAuth and password alike.
+// Lives here because the OAuth callback is a server route and cannot call gtag.
+// Renders null.
+const SignupTracker = dynamic(
+  () => import("@/components/analytics/SignupTracker").then((m) => ({ default: m.SignupTracker })),
+  { ssr: false },
+);
 // Registers the PWA service worker in production (no-op in dev). Renders null.
 const PWARegister = dynamic(
   () => import("@/components/system/PWARegister"),
@@ -750,6 +757,7 @@ export default function PlatformLayout({
       <OnboardingWizard />
       <ProfileBackfillCard />
       <PWARegister />
+      <SignupTracker />
       <FirstRehearsalGate />
       <AnimatePresence>
         {showWelcome && (

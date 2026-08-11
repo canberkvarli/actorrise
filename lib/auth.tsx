@@ -13,6 +13,8 @@ interface User {
   email: string;
   name?: string;
   headshot_url?: string | null;
+  /** ISO timestamp. Bounds signup_completed to genuinely new accounts. */
+  created_at?: string;
   has_seen_welcome?: boolean;
   has_seen_search_tour?: boolean;
   has_seen_profile_tour?: boolean;

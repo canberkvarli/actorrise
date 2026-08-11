@@ -222,6 +222,13 @@ def get_me(
         "can_approve_submissions": current_user.can_approve_submissions,
         "is_founding_actor": is_founding_actor,
         "headshot_url": headshot_url,
+        # Lets the client fire signup_completed exactly once for genuinely new
+        # accounts. has_seen_welcome alone is not enough: 16 old users have never
+        # completed the welcome flow and would each look like a fresh signup on
+        # their next visit.
+        "created_at": (
+            current_user.created_at.isoformat() if current_user.created_at else None
+        ),
     }
 
 

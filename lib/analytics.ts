@@ -30,6 +30,14 @@ type ScenePartnerOpenedParams = {
 
 type SignupCompletedParams = {
   source: string;
+  /**
+   * How they actually signed up. This existed only on the email+password form,
+   * which in the 14 days to 2026-08-11 was used by 0 of 101 new accounts — so
+   * GA4 recorded 1 signup against the database's 28 and every rate built on it
+   * was wrong.
+   */
+  method?: "oauth" | "password";
+  provider?: string;
 };
 
 type MonologueSavedParams = {
@@ -167,6 +175,27 @@ export function trackResultClicked(params: ResultClickedParams) {
 
 export function trackScenePartnerOpened(params: ScenePartnerOpenedParams) {
   sendEvent("scenepartner_opened", params);
+}
+
+const SIGNUP_TRACKED_PREFIX = "actorrise_signup_tracked:";
+
+/**
+ * True at most once per account per browser.
+ *
+ * Keyed on user id rather than a single flag so a shared machine cannot swallow
+ * the second person's signup.
+ */
+export function claimSignupTracked(userId: number | string): boolean {
+  if (typeof window === "undefined") return false;
+  const key = `${SIGNUP_TRACKED_PREFIX}${userId}`;
+  try {
+    if (localStorage.getItem(key)) return false;
+    localStorage.setItem(key, "1");
+    return true;
+  } catch {
+    // Private mode: better to miss the event than to fire it on every page load.
+    return false;
+  }
 }
 
 export function trackSignupCompleted(params: SignupCompletedParams) {

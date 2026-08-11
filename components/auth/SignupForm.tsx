@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { IconLoader2, IconEye, IconEyeOff } from "@tabler/icons-react";
-import { trackSignupCompleted } from "@/lib/analytics";
 
 const signupSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -43,9 +42,10 @@ export function SignupForm({ redirectTo }: SignupFormProps = {}) {
     setIsLoading(true);
     try {
       await signup(data.email, data.password, undefined, redirectTo);
-      // Track successful signup — infer source from current page path
-      const source = typeof window !== "undefined" ? window.location.pathname : "unknown";
-      trackSignupCompleted({ source });
+      // signup_completed is NOT fired here any more. It fires from
+      // <SignupTracker /> inside the authenticated shell, which is the only
+      // place that also catches OAuth — the path 101 of the last 101 accounts
+      // actually used. Two firing sites would double-count this one.
     } catch (err: unknown) {
       let errorMessage = "Failed to sign up";
       if (err instanceof Error) {
