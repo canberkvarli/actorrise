@@ -644,7 +644,13 @@ async def start_rehearsal(
         sample_allowed = script is not None and (
             script.is_sample or script.title.startswith("Example:")
         )
-        if not (library_allowed or sample_allowed):
+        # Free now includes one script of their own (scene_partner_scripts: 1), and
+        # a script you can upload but never rehearse is worse than no upload at all.
+        # The meter is still scene_partner_sessions, which require_scene_partner
+        # charges above, so this widens what a free actor can point those sessions
+        # at without widening how many they get. The full library stays gated.
+        own_script_allowed = script is not None and script.user_id == current_user.id
+        if not (library_allowed or sample_allowed or own_script_allowed):
             if scene.is_library:
                 # A library scene that's outside the free starter set.
                 detail = {

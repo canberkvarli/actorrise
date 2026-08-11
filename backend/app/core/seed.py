@@ -37,7 +37,12 @@ def canonical_tiers() -> list[PricingTier]:
                 "recommendations": True,
                 "download_formats": ["pdf", "docx"],
                 "priority_support": False,
-                "scene_partner_scripts": 0,
+                # 1 script, lifetime (rate_limiting counts total_scripts_uploaded for
+                # free, so deleting and re-uploading does not reset it). Was 0, which
+                # meant a free actor could only ever rehearse the two demo scenes and
+                # never their own sides — the one thing the product is actually for.
+                # Sessions stay the meter: upload is the taste, volume is the ask.
+                "scene_partner_scripts": 1,
                 "scene_partner_sessions": 2,
                 "monologue_sessions": 2,  # free = 2 rehearsals (no-card taste), then paywall -> card-on-file Plus trial. Paid tiers stay -1.
                 "scene_partner_trial_only": True,
