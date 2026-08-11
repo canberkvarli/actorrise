@@ -9,7 +9,7 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar, IconHelpCircle, IconUsers } from "@tabler/icons-react";
+import { IconSearch, IconUser, IconLogout, IconLoader2, IconMenu, IconBookmark, IconChevronDown, IconCreditCard, IconMicrophone, IconFileText, IconMail, IconSettings, IconShieldCheck, IconRocket, IconStar, IconHelpCircle } from "@tabler/icons-react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { PlanBadge } from "@/components/billing/PlanBadge";
 import { useState, useEffect, useRef, Suspense } from "react";
@@ -190,10 +190,13 @@ export default function PlatformLayout({
   }, [loading, user, showWelcome]);
 
 
+  // Green Room is deliberately not here. community_events records 2 "rehearsing"
+  // events from 2 users, ever, last on 2026-08-05, and it has no tables or API of
+  // its own. It was holding a third of the primary nav. The routes and components
+  // are untouched, so restoring it is this line.
   const navItems = [
     { href: "/monologues", label: "Monologues", icon: IconSearch },
     { href: "/practice", label: "My Scripts", icon: IconMicrophone },
-    { href: "/greenroom", label: "Green Room", icon: IconUsers },
   ];
   const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/practice\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$|^\/first-scene$|^\/monologue\/[^/]+\/work$/.test(pathname || "");
 
@@ -706,14 +709,16 @@ export default function PlatformLayout({
             <IconSearch className="h-5 w-5 shrink-0" />
             <span className="text-[10px] font-medium">Monologues</span>
           </Link>
+          {/* Was Green Room. Script rehearsal is the product and it was not on the
+              mobile nav at all, while a surface 2 people have ever used had a slot. */}
           <Link
-            href="/greenroom"
+            href="/practice"
             className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
-              pathname === "/greenroom" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              pathname.startsWith("/practice") ? "text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            <IconUsers className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] font-medium">Green Room</span>
+            <IconMicrophone className="h-5 w-5 shrink-0" />
+            <span className="text-[10px] font-medium">My Scripts</span>
           </Link>
           <Link
             href="/profile"

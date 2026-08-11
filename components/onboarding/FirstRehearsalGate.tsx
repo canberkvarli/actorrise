@@ -20,8 +20,12 @@ import { useAuth } from "@/lib/auth";
 // Routes we must never yank someone out of: an in-progress rehearsal/edit, the
 // interstitial itself, or auth/checkout flows.
 const SKIP_PREFIXES = ["/first-scene", "/checkout", "/billing", "/auth"];
+// has_ever_rehearsed only counts scene_partner sessions, so someone who just
+// chose a monologue still reads as eligible. Without /monologue here the gate
+// fired on arrival and yanked them straight back out of the thing they picked,
+// at the exact moment a brand new actor had shown the most intent.
 const IMMERSIVE_RE =
-  /^\/scenes\/[^/]+\/rehearse|^\/practice\/[^/]+\/scenes\/[^/]+\/edit/;
+  /^\/scenes\/[^/]+\/rehearse|^\/practice\/[^/]+\/scenes\/[^/]+\/edit|^\/monologue\/[^/]+\/(work|memorize)/;
 
 // Durable one-shot guard. The backend flag is the source of truth across
 // sessions, but it propagates through a throttled /me refresh — so within a

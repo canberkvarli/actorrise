@@ -47,6 +47,13 @@ type RehearsalStartedParams = {
   /** True the first time this browser ever starts a rehearsal. The activation moment. */
   is_first_ever: boolean;
   cold_read?: boolean;
+  /**
+   * Mic permission as the scene actually opens. 39% of all sessions ever run
+   * delivered zero lines, and this is the difference between "the mic was never
+   * granted" and "they had a working mic and still said nothing", which are
+   * completely different products to fix.
+   */
+  mic_status?: "granted" | "prompt" | "denied" | "unavailable" | "unknown";
 };
 
 type RehearsalLineDeliveredParams = {

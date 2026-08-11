@@ -1117,7 +1117,18 @@ export default function RehearsalPage() {
   // Begin. That tap (a) is a clear start cue, and (b) is the user gesture iOS
   // Safari requires before the opening AI line's audio can play.
   const [armed, setArmed] = useState(false);
-  const { isBlocked: isMicBlocked, requestMic } = useMicPermission({ recheckOnVisible: true });
+  const {
+    isBlocked: isMicBlocked,
+    isGranted: isMicGranted,
+    status: micStatus,
+    requestMic,
+  } = useMicPermission({ recheckOnVisible: true });
+  const [checkingMic, setCheckingMic] = useState(false);
+  // loadSession fires rehearsal_started from a closure that would otherwise
+  // capture whatever the permission state was on first render, which is usually
+  // null while the Permissions API is still resolving.
+  const micStatusRef = useRef<typeof micStatus>(micStatus);
+  useEffect(() => { micStatusRef.current = micStatus; }, [micStatus]);
 
   /* ── Load session ──────────────────────────────────────────────── */
 
@@ -1176,6 +1187,7 @@ export default function RehearsalPage() {
           scene_id: sceneId,
           script_id: scriptId ?? undefined,
           cold_read: coldRead,
+          mic_status: micStatusRef.current ?? 'unknown',
         });
       }
 
@@ -1255,9 +1267,11 @@ export default function RehearsalPage() {
   };
 
   /** User tapped "Begin": unlock audio within the gesture, then arm the start. */
-  const handleBegin = () => {
+  const handleBegin = async () => {
     // Best-effort iOS audio unlock: a programmatic play() later is blocked unless
     // preceded by a user gesture. Play/pause the TTS element now while we have one.
+    // This MUST stay first and synchronous — awaiting the mic before it spends
+    // the gesture, and then the AI's voice never plays on iOS.
     try {
       const a = aiAudioRef.current;
       if (a) {
@@ -1268,6 +1282,23 @@ export default function RehearsalPage() {
         }
       }
     } catch { /* ignore — the 14s self-heal auto-advance is the backstop */ }
+
+    // Then settle the mic, before any line is spoken. 18 of the 35 actors who
+    // ever entered a room never delivered a line, and none of them paid: a scene
+    // that starts talking at someone whose mic was never granted is
+    // indistinguishable from a product that does not work. Prewarming quietly on
+    // load left the prompt easy to miss or ignore; asking on the tap does not.
+    // A denial is not fatal — tap-to-advance still runs the scene — so this
+    // never blocks the way in.
+    if (!isMicGranted && !isMicBlocked) {
+      setCheckingMic(true);
+      try {
+        await requestMic();
+      } finally {
+        setCheckingMic(false);
+      }
+    }
+
     // Start immediately. The Begin tap is the "get ready" moment, so an extra
     // countdown just delays the opening line and feels laggy. The first AI line
     // was preloaded during the load screen, so it plays right away.
@@ -2410,14 +2441,40 @@ export default function RehearsalPage() {
             )}
             <Button
               onClick={handleBegin}
+              disabled={checkingMic}
               className="min-h-[52px] px-8 text-base"
               style={{ backgroundColor: '#CB4B00' }}
             >
-              <Play className="mr-2 h-5 w-5" /> Begin scene
+              <Play className="mr-2 h-5 w-5" />
+              {checkingMic ? 'Checking your mic…' : 'Begin scene'}
             </Button>
-            <p className="max-w-xs text-xs text-neutral-500">
-              Your scene partner reads their lines aloud. When it&apos;s your turn, just speak.
-            </p>
+            {/* Say which scene we are in. Promising "just speak" to someone whose
+                mic is blocked is how a silent room reads as a broken product. */}
+            {isMicBlocked ? (
+              <div className="max-w-xs space-y-2">
+                <p className="text-xs text-orange-400">
+                  Your mic is blocked, so I won&apos;t hear you.
+                </p>
+                <p className="text-xs text-neutral-500">
+                  Allow the mic in your browser&apos;s address bar, or start anyway and tap
+                  to move through the scene.
+                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={requestMic}
+                  className="h-8 rounded-full px-3 text-xs"
+                >
+                  Try the mic again
+                </Button>
+              </div>
+            ) : (
+              <p className="max-w-xs text-xs text-neutral-500">
+                {micStatus === 'granted'
+                  ? 'Your scene partner reads their lines aloud. When it’s your turn, just speak.'
+                  : 'Your scene partner reads their lines aloud. I’ll ask for your mic so I can hear your lines.'}
+              </p>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

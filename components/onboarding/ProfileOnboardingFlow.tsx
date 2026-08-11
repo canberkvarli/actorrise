@@ -284,7 +284,13 @@ export default function ProfileOnboardingFlow({
                 exit={{ opacity: 0, x: -24 }}
                 transition={stepTransition}
               >
-                <OnboardingPayoff answers={answers} onRehearse={rehearse} onClose={endFlow} onBrowse={() => { endFlow(); router.push("/monologues"); }} />
+                <OnboardingPayoff
+                  answers={answers}
+                  onRehearse={rehearse}
+                  onClose={endFlow}
+                  onBrowse={() => { endFlow(); router.push("/monologues"); }}
+                  onOwnSides={() => { endFlow(); router.push("/practice"); }}
+                />
               </motion.div>
             )}
           </AnimatePresence>
@@ -299,11 +305,13 @@ function OnboardingPayoff({
   onRehearse,
   onBrowse,
   onClose,
+  onOwnSides,
 }: {
   answers: OnboardingAnswers;
   onRehearse: (id: number) => void;
   onBrowse: () => void;
   onClose: () => void;
+  onOwnSides: () => void;
 }) {
   const [phase, setPhase] = useState<"loading" | "ready" | "empty">("loading");
   const [items, setItems] = useState<Monologue[]>([]);
@@ -353,9 +361,16 @@ function OnboardingPayoff({
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           Search will lean toward your type from here on. Let&apos;s find something to rehearse.
         </p>
-        <Button onClick={onBrowse} className="mt-6 w-full rounded-full" size="lg">
-          Browse the library
+        <Button onClick={onOwnSides} className="mt-6 w-full rounded-full" size="lg">
+          Bring in your own sides
         </Button>
+        <button
+          type="button"
+          onClick={onBrowse}
+          className="mt-3 w-full text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+        >
+          Browse the library
+        </button>
       </div>
     );
   }
@@ -386,6 +401,16 @@ function OnboardingPayoff({
           );
         })}
       </ul>
+
+      {/* The other job entirely, and the one the product is actually for: they
+          have sides for a real audition. Until now nothing in the new-user path
+          pointed here, which is most of why 10 people have ever uploaded. */}
+      <div className="mt-6 border-t border-border pt-5">
+        <p className="text-sm text-foreground">Or bring sides you&apos;re already working on.</p>
+        <Button onClick={onOwnSides} variant="outline" size="sm" className="mt-3 rounded-full">
+          Upload a script
+        </Button>
+      </div>
 
       <div className="mt-5 flex items-center justify-between">
         <button type="button" onClick={onBrowse} className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
