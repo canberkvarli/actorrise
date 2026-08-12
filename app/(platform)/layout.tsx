@@ -203,7 +203,11 @@ export default function PlatformLayout({
   // are untouched, so restoring it is this line.
   const navItems = [
     { href: "/monologues", label: "Monologues", icon: IconSearch },
-    { href: "/practice", label: "My Scripts", icon: IconMicrophone },
+    // ScenePartner, not "My Scripts": the pricing page meters "ScenePartner
+    // sessions" and /scene-partner-ai is the SEO surface, so the app was the one
+    // place the product had no name. It also names the value (someone reads the
+    // other lines) rather than the container (you have some PDFs).
+    { href: "/practice", label: "ScenePartner", icon: IconMicrophone },
   ];
   const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/practice\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$|^\/first-scene$|^\/monologue\/[^/]+\/work$/.test(pathname || "");
 
@@ -701,11 +705,11 @@ export default function PlatformLayout({
           <Link
             href="/practice"
             className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
-              pathname === "/practice" ? "text-primary" : "text-muted-foreground hover:text-foreground"
+              pathname.startsWith("/practice") ? "text-primary" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             <IconMicrophone className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] font-medium">My Scripts</span>
+            <span className="text-[10px] font-medium">ScenePartner</span>
           </Link>
           <Link
             href="/monologues"
@@ -716,17 +720,9 @@ export default function PlatformLayout({
             <IconSearch className="h-5 w-5 shrink-0" />
             <span className="text-[10px] font-medium">Monologues</span>
           </Link>
-          {/* Was Green Room. Script rehearsal is the product and it was not on the
-              mobile nav at all, while a surface 2 people have ever used had a slot. */}
-          <Link
-            href="/practice"
-            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
-              pathname.startsWith("/practice") ? "text-primary" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <IconMicrophone className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] font-medium">My Scripts</span>
-          </Link>
+          {/* Green Room's old slot is deliberately left empty rather than refilled.
+              ScenePartner already sits second in this bar, so putting it here too
+              just gave the same destination two thumbs' worth of the same nav. */}
           <Link
             href="/profile"
             className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${

@@ -165,6 +165,13 @@ function EmptyState({ demoScriptId }: { demoScriptId: number | null }) {
         )}
       </div>
 
+      {/* Free carried 0 script uploads until 2026-08-11, so "upload a script"
+          read as an invitation to hit a paywall. It now includes one, and saying
+          so is the difference between trying and assuming. */}
+      <p className="mt-4 text-xs text-muted-foreground">
+        Your first script is free.
+      </p>
+
       {FIRST_SCENE_VIDEO.youtubeId && (
         <>
           <button

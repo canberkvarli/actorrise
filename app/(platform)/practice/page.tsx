@@ -88,7 +88,7 @@ export default function PracticePage() {
                     (from the top.)
                   </p>
                   <h1 className="mt-1 font-brand text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-                    My Scripts
+                    ScenePartner
                   </h1>
                   <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
                     Bring in your sides and rehearse every other role with a partner
