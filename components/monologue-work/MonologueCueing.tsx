@@ -21,6 +21,7 @@ import {
 } from "@/lib/analytics";
 import api from "@/lib/api";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
+import { useTrialOffer, TrialOfferCard } from "@/components/billing/TrialOffer";
 import { GhostLight } from "@/components/brand/GhostLight";
 import { MicWaveform } from "@/components/scenepartner/MicWaveform";
 
@@ -136,6 +137,12 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
 
   // Left mid-piece. Reads refs only, since this runs on unmount when no further
   // render will ever happen.
+  // The ask, on the surface people actually use. In the 14 days to 2026-08-13,
+  // 12 of 52 searchers rehearsed a monologue against 4 who entered a scene, and
+  // the 2-run monologue cap is the most-hit wall in the product. The offer had
+  // been built only onto the scene page, which is the smaller audience.
+  const monologueOffer = useTrialOffer("monologue_completed", completed);
+
   const activeIndexRef = useRef(activeIndex);
   activeIndexRef.current = activeIndex;
   const linesLengthRef = useRef(lines.length);
@@ -362,6 +369,18 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
               <IconRefresh className="h-4 w-4" />
               Run it again
             </button>
+
+            {monologueOffer.visible && (
+              <div className="w-full max-w-sm">
+                <TrialOfferCard
+                  headline="Keep the stage."
+                  body="Free covers two runs. Plus takes the cap off and lets you bring your own sides in to rehearse the same way."
+                  href={monologueOffer.href}
+                  onAccept={monologueOffer.accept}
+                  onDismiss={monologueOffer.dismiss}
+                />
+              </div>
+            )}
           </motion.div>
         )}
 

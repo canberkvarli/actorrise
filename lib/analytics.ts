@@ -98,6 +98,7 @@ type UpgradeModalViewedParams = {
  */
 export type TrialOfferTrigger =
   | "scene_completed"
+  | "monologue_completed"
   | "lines_delivered"
   | "script_uploaded";
 
