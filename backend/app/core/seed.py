@@ -43,8 +43,13 @@ def canonical_tiers() -> list[PricingTier]:
                 # never their own sides — the one thing the product is actually for.
                 # Sessions stay the meter: upload is the taste, volume is the ask.
                 "scene_partner_scripts": 1,
-                "scene_partner_sessions": 2,
-                "monologue_sessions": 2,  # free = 2 rehearsals (no-card taste), then paywall -> card-on-file Plus trial. Paid tiers stay -1.
+                # 3, not 2. The average run delivers 3.1 lines and only 35% of
+                # sessions complete, so two attempts often did not buy one finished
+                # scene: a mic hiccup or a restart ate half the allowance before
+                # anything landed. The trial offer fires on COMPLETION as well as at
+                # the cap, so a third run feeds the ask rather than weakening it.
+                "scene_partner_sessions": 3,
+                "monologue_sessions": 3,  # kept level with scene sessions; paid tiers stay -1.
                 "scene_partner_trial_only": True,
             },
             is_active=True,

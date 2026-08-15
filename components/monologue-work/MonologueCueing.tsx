@@ -374,7 +374,9 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
               <div className="w-full max-w-sm">
                 <TrialOfferCard
                   headline="Keep the stage."
-                  body="Free covers two runs. Plus takes the cap off and lets you bring your own sides in to rehearse the same way."
+                  // Deliberately no number: the free cap has moved twice in a week
+                  // and copy that names it goes stale silently.
+                  body="Free runs are capped. Plus takes the cap off and lets you bring your own sides in to rehearse the same way."
                   href={monologueOffer.href}
                   onAccept={monologueOffer.accept}
                   onDismiss={monologueOffer.dismiss}
