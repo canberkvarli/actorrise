@@ -239,7 +239,9 @@ export default function ResumePage() {
     );
   }
 
-  const inputCls = "w-full rounded-md border border-border bg-background px-3 py-2 text-sm";
+  // These are raw <input>/<select>, not the ui/input primitives, so they do not
+  // inherit its 44px touch height. min-h-[44px] md:min-h-0 matches it by hand.
+  const inputCls = "w-full min-h-[44px] rounded-md border border-border bg-background px-3 py-2 text-sm md:min-h-0";
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -325,7 +327,7 @@ export default function ResumePage() {
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, category: c.id }))}
                     aria-pressed={active}
-                    className={`rounded-full border px-3 py-1 text-xs transition-colors ${
+                    className={`inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border px-3 py-1 text-xs transition-colors md:min-h-0 md:min-w-0 ${
                       active
                         ? "border-primary bg-primary/10 text-primary"
                         : "border-border bg-background text-muted-foreground hover:text-foreground"

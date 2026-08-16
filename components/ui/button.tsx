@@ -19,11 +19,17 @@ const buttonVariants = cva(
         ghost: "border-transparent hover:bg-accent hover:text-accent-foreground hover:border-accent",
         link: "text-primary border-transparent underline-offset-4 hover:underline",
       },
+      // Touch targets. default and icon were 40px and sm was 32px, all under the
+      // 44px iOS minimum, across ~390 call sites. min-h/min-w lifts them on touch
+      // and md:min-h-0 hands desktop back its exact previous density, so nothing
+      // above md changes by a single pixel. lg is already 48px.
+      // sm gets it too: the only dense horizontal toolbars using sm are the admin
+      // pages, which are desktop-only, and those keep 32px via the md reset.
       size: {
-        default: "h-10 px-6 py-2",
-        sm: "h-8 px-4 text-xs",
+        default: "h-10 px-6 py-2 min-h-[44px] md:min-h-0",
+        sm: "h-8 px-4 text-xs min-h-[44px] md:min-h-0",
         lg: "h-12 px-10 text-base",
-        icon: "h-10 w-10",
+        icon: "h-10 w-10 min-h-[44px] min-w-[44px] md:min-h-0 md:min-w-0",
       },
     },
     defaultVariants: {
