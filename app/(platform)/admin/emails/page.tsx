@@ -178,7 +178,11 @@ export default function AdminEmailsPage() {
   const [bulkInput, setBulkInput] = useState("");
   const [target, setTarget] = useState("all");
   const [dryRun, setDryRun] = useState(true);
-  const [sendVia, setSendVia] = useState<"smtp" | "resend">("smtp");
+  // Resend by default. A Workspace SMTP blast lands in Promotions and reports
+  // zero opens, because the pixel is never fetched and resend_email_id stays
+  // NULL so webhooks cannot match either. See _get_email_client in
+  // backend/app/api/admin/emails.py.
+  const [sendVia, setSendVia] = useState<"smtp" | "resend">("resend");
 
   // Bulk extras
   const [campaignKey, setCampaignKey] = useState("");
