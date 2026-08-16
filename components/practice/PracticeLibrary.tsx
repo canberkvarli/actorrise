@@ -177,7 +177,10 @@ function EmptyState({ demoScriptId }: { demoScriptId: number | null }) {
           <button
             type="button"
             onClick={() => setVideoOpen(true)}
-            className="mt-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+            /* Bare text button, so its box was only as tall as the line (20px).
+               px-3 keeps the label visually where it was while giving the tap
+               a real 44px box on the page new actors actually land on. */
+            className="mt-6 inline-flex min-h-[44px] items-center gap-1.5 px-3 text-sm text-muted-foreground transition-colors hover:text-foreground md:min-h-0 md:px-0"
           >
             <IconPlayerPlayFilled className="h-3.5 w-3.5" />
             Watch how it works ({FIRST_SCENE_VIDEO.durationLabel})

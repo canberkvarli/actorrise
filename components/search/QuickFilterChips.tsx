@@ -37,7 +37,10 @@ export function QuickFilterChips({ filters, onToggle, hideCategory }: QuickFilte
                 key={`${group.key}-${opt.value}`}
                 type="button"
                 onClick={() => onToggle(group.key, isActive ? "" : opt.value)}
-                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
+                // min-h-[44px] on touch only: these were 30px tall, under the
+                // 44px iOS minimum, on the page that carries most of the mobile
+                // traffic. Desktop keeps the compact chip via md:min-h-0.
+                className={`shrink-0 inline-flex items-center justify-center rounded-full border px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer touch-manipulation min-h-[44px] md:min-h-0 ${
                   isActive
                     ? "border-primary bg-primary/10 text-primary"
                     : "border-border/60 text-muted-foreground hover:border-foreground/30 hover:text-foreground"

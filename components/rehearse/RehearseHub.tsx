@@ -119,7 +119,10 @@ export function RehearseHub() {
               Save a monologue and it&apos;ll show up here, ready to study.
             </p>
           </div>
-          <Button onClick={() => router.push("/monologues")}>
+          {/* Button's default size is h-10 (40px), 4px under the iOS touch
+              minimum. This is the only CTA on the empty Collection, and mobile
+              is the majority of its traffic, so it gets the touch height. */}
+          <Button className="min-h-[44px] md:min-h-0" onClick={() => router.push("/monologues")}>
             Find monologues
           </Button>
         </div>

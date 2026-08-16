@@ -201,14 +201,24 @@ export default function PlatformLayout({
   // events from 2 users, ever, last on 2026-08-05, and it has no tables or API of
   // its own. It was holding a third of the primary nav. The routes and components
   // are untouched, so restoring it is this line.
+  // One nav config drives all three surfaces: the desktop bar, the mobile
+  // bottom bar, and (for active state) nothing else. They used to be three
+  // hand-written trees, which is how Collection ended up a phone-only tab and
+  // Monologues ended up rendered three times on a phone.
   const navItems = [
-    { href: "/monologues", label: "Monologues", icon: IconSearch },
+    { href: "/monologues", label: "Monologues", icon: IconSearch, match: "exact" as const },
     // ScenePartner, not "My Scripts": the pricing page meters "ScenePartner
     // sessions" and /scene-partner-ai is the SEO surface, so the app was the one
     // place the product had no name. It also names the value (someone reads the
     // other lines) rather than the container (you have some PDFs).
-    { href: "/practice", label: "ScenePartner", icon: IconMicrophone },
+    { href: "/practice", label: "ScenePartner", icon: IconMicrophone, match: "prefix" as const },
+    // Collection was a bottom-bar-only tab. Mobile reached /rehearse at ~1.9x the
+    // desktop rate over the 28 days to 2026-08-15 (20/113 vs 8/86 users), so the
+    // fix was to give desktop the tab, not to take the tab off the phone.
+    { href: "/rehearse", label: "Collection", icon: IconBookmark, match: "exact" as const },
   ];
+  const isNavActive = (item: (typeof navItems)[number]) =>
+    item.match === "prefix" ? (pathname || "").startsWith(item.href) : pathname === item.href;
   const isImmersive = /^\/scenes\/[^/]+\/rehearse$|^\/practice\/[^/]+\/scenes\/[^/]+\/edit$|^\/audition$|^\/first-scene$|^\/monologue\/[^/]+\/work$/.test(pathname || "");
 
   return (
@@ -262,10 +272,19 @@ export default function PlatformLayout({
         wash={false}
         overflowHidden={false}
         className="dark bg-[color-mix(in_oklab,var(--background)_92%,transparent)] backdrop-blur-md border-b border-border text-foreground z-[9998]"
-        style={{ position: 'relative', ['--primary']: 'oklch(0.76 0.15 52)' } as React.CSSProperties}
+        /* sticky, not relative: on a phone the hamburger, theme toggle and
+           account menu all live up here, and a relative header scrolls them off
+           screen entirely. The marketing header has always been sticky top-0.
+           Set inline because SpotlightSurface hardcodes `relative` in its own
+           className and class order in the attribute does not decide the winner.
+           Its backdrop-blur makes this element the containing block for the
+           fixed mobile menu below, so pinning it also pins that menu. */
+        style={{ position: 'sticky', top: 0, ['--primary']: 'oklch(0.76 0.15 52)' } as React.CSSProperties}
       >
         <div className="container mx-auto px-4 sm:px-6">
-          <div className="flex items-center justify-between h-20 gap-3">
+          {/* 64px on a phone, 80px from md up. A sticky 80px header plus the 64px
+              bottom bar was eating ~20% of a 700px phone viewport permanently. */}
+          <div className="flex items-center justify-between h-16 md:h-20 gap-3">
             {/* Logo: left on all breakpoints */}
             <Link
               href="/practice"
@@ -279,7 +298,7 @@ export default function PlatformLayout({
             <div className="hidden md:flex items-center justify-center gap-1 lg:gap-2 flex-1">
               {navItems.map((item, index) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href;
+                const isActive = isNavActive(item);
                 const isPrimary = index === 0;
                 return (
                   <Button
@@ -500,20 +519,10 @@ export default function PlatformLayout({
               </div>
             </div>
 
-            {/* Mobile: center primary action(s) so header doesn’t feel empty; menu on the right */}
-            <div className="md:hidden flex flex-1 items-center justify-center min-w-0">
-              <Button
-                asChild
-                variant={pathname === "/monologues" ? "outline" : "ghost"}
-                size="sm"
-                className="gap-2 rounded-full px-4"
-              >
-                <Link href="/monologues">
-                  <IconSearch className="h-4 w-4" />
-                  <span className="text-sm">Monologues</span>
-                </Link>
-              </Button>
-            </div>
+            {/* No mobile center action: Monologues is already a bottom-bar tab,
+                and duplicating it here put the same destination on screen twice
+                (three times, counting the hamburger). The header reads as empty
+                on purpose now, the thumb-reachable bar is the primary nav. */}
 
             {/* Mobile menu: theme toggle + hamburger on far right */}
             <div className="md:hidden flex items-center gap-0.5 shrink-0">
@@ -531,26 +540,13 @@ export default function PlatformLayout({
 
               {/* Mobile Navigation - fixed below header so position is correct */}
               {mobileMenuOpen && (
-            <div className="fixed left-0 right-0 top-[5rem] z-[9997] border-b border-border bg-background shadow-[0_8px_24px_rgba(0,0,0,0.25)] rounded-b-xl overflow-y-auto max-h-[calc(100dvh-5rem)] animate-in slide-in-from-top-2 duration-200 md:hidden">
+            /* top/max-h track the mobile header height (h-16). This is md:hidden,
+               so only the phone value matters. */
+            <div className="fixed left-0 right-0 top-16 z-[9997] border-b border-border bg-background shadow-[0_8px_24px_rgba(0,0,0,0.25)] rounded-b-xl overflow-y-auto max-h-[calc(100dvh-4rem)] animate-in slide-in-from-top-2 duration-200 md:hidden">
               <div className="py-3 px-3 space-y-1">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = pathname === item.href;
-                  return (
-                    <Button
-                      key={item.href}
-                      asChild
-                      variant={isActive ? "default" : "ghost"}
-                      size="sm"
-                      className="w-full justify-start gap-2"
-                    >
-                      <Link href={item.href} onClick={() => setMobileMenuOpen(false)}>
-                        <Icon className="h-4 w-4" />
-                        {item.label}
-                      </Link>
-                    </Button>
-                  );
-                })}
+                {/* navItems deliberately absent: every one of them is a tab in the
+                    bottom bar, one thumb away. This menu is secondary items only,
+                    which is what the comment below always claimed it was. */}
                 {user?.is_moderator && (
                   <Button
                     asChild
@@ -693,36 +689,24 @@ export default function PlatformLayout({
         style={{ ['--primary']: 'oklch(0.76 0.15 52)' } as React.CSSProperties}
       >
         <div className="flex items-stretch justify-around min-h-[48px]">
-          <Link
-            href="/rehearse"
-            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
-              pathname === "/rehearse" ? "text-primary" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <IconBookmark className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] font-medium">Collection</span>
-          </Link>
-          <Link
-            href="/practice"
-            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
-              pathname.startsWith("/practice") ? "text-primary" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <IconMicrophone className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] font-medium">ScenePartner</span>
-          </Link>
-          <Link
-            href="/monologues"
-            className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
-              pathname === "/monologues" ? "text-primary" : "text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            <IconSearch className="h-5 w-5 shrink-0" />
-            <span className="text-[10px] font-medium">Monologues</span>
-          </Link>
-          {/* Green Room's old slot is deliberately left empty rather than refilled.
-              ScenePartner already sits second in this bar, so putting it here too
-              just gave the same destination two thumbs' worth of the same nav. */}
+          {/* Same navItems, same order as the desktop bar, so the two navs can no
+              longer drift apart. Account is appended here only, it lives in the
+              avatar dropdown on desktop. */}
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
+                  isNavActive(item) ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                <span className="text-[10px] font-medium">{item.label}</span>
+              </Link>
+            );
+          })}
           <Link
             href="/profile"
             className={`flex flex-1 flex-col items-center justify-center gap-0.5 py-2 min-h-[48px] transition-colors ${
