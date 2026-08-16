@@ -178,11 +178,11 @@ export default function AdminEmailsPage() {
   const [bulkInput, setBulkInput] = useState("");
   const [target, setTarget] = useState("all");
   const [dryRun, setDryRun] = useState(true);
-  // Resend by default. A Workspace SMTP blast lands in Promotions and reports
-  // zero opens, because the pixel is never fetched and resend_email_id stays
-  // NULL so webhooks cannot match either. See _get_email_client in
-  // backend/app/api/admin/emails.py.
-  const [sendVia, setSendVia] = useState<"smtp" | "resend">("resend");
+  // SMTP by default because Resend caps bulk volume and a few-hundred-recipient
+  // campaign does not fit. Cost of that: SMTP returns no provider id, so the
+  // Resend webhook can never attribute opens and only the pixel reports. Read
+  // open counts on SMTP batches as a floor, not a rate.
+  const [sendVia, setSendVia] = useState<"smtp" | "resend">("smtp");
 
   // Bulk extras
   const [campaignKey, setCampaignKey] = useState("");

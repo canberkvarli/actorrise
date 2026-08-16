@@ -37,17 +37,18 @@ from app.services.email.templates import EmailTemplates
 from app.services.email.tracking import add_tracking
 
 
-def _get_email_client(send_via: str = "resend"):
+def _get_email_client(send_via: str = "smtp"):
     """Get the appropriate email client based on send_via preference.
 
-    Defaults to Resend, not SMTP. Batch 19 (371 recipients, 2026-08-15) went out
-    over Google Workspace SMTP and recorded zero opens and zero clicks. Workspace
-    is person-to-person mail; 371 near-identical messages to non-contacts is the
-    shape of a spam run, so it lands in Promotions or worse and the open pixel is
-    never fetched. It also leaves resend_email_id NULL on every row, which means
-    the Resend webhook can never match a send back to a recipient, so BOTH
-    tracking paths die at once and the send looks like it simply failed to
-    interest anyone.
+    SMTP stays the default ON PURPOSE: Resend caps bulk volume and a 371-recipient
+    campaign does not fit, which is why Google Workspace is used for blasts.
+
+    Known cost of that trade, so nobody rediscovers it the hard way: SMTP returns
+    no provider id, so email_sends.resend_email_id stays NULL and the Resend
+    webhook (which matches on exactly that column) can never attribute an open.
+    Open tracking on SMTP sends therefore rests entirely on the pixel in
+    services/email/tracking.py, which Gmail's Promotions tab and image proxying
+    make unreliable. Treat open counts on SMTP batches as a floor, never a rate.
     """
     if send_via == "smtp":
         try:
@@ -209,7 +210,7 @@ class SendRequest(BaseModel):
     to: str
     subject: Optional[str] = None
     variables: dict[str, Any] = {}
-    send_via: str = "resend"  # "resend" (default, tracked) or "smtp" (Google Workspace)
+    send_via: str = "smtp"  # "smtp" (Google Workspace, no bulk cap) or "resend" (tracked, but Resend caps bulk)
 
 
 class BulkRecipient(BaseModel):
@@ -224,7 +225,7 @@ class BulkSendRequest(BaseModel):
     variables: dict[str, Any] = {}
     campaign_key: Optional[str] = None
     scheduled_at: Optional[str] = None  # ISO datetime string
-    send_via: str = "resend"  # "resend" (default, tracked) or "smtp" (Google Workspace)
+    send_via: str = "smtp"  # "smtp" (Google Workspace, no bulk cap) or "resend" (tracked, but Resend caps bulk)
     skip_apple_relay: bool = True  # auto-skip @privaterelay.appleid.com addresses
 
 
@@ -245,7 +246,7 @@ class CampaignRequest(BaseModel):
     variables: dict[str, Any] = {}
     subject: Optional[str] = None
     scheduled_at: Optional[str] = None  # ISO datetime string, passed to email provider
-    send_via: str = "resend"  # "resend" (default, tracked) or "smtp" (Google Workspace)
+    send_via: str = "smtp"  # "smtp" (Google Workspace, no bulk cap) or "resend" (tracked, but Resend caps bulk)
     skip_apple_relay: bool = True  # auto-skip @privaterelay.appleid.com addresses
 
 
@@ -626,7 +627,7 @@ def get_batch_status(
 
 
 class ResumeBatchRequest(BaseModel):
-    send_via: str = "resend"  # "resend" (default, tracked) or "smtp"
+    send_via: str = "smtp"  # "smtp" (Google Workspace, no bulk cap) or "resend"
 
 
 @router.post("/batch/{batch_id}/resume")
