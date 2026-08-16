@@ -1767,6 +1767,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         <MonologuePaywallModal
           open={!!searchUpgradeUrl}
           onOpenChange={(o) => { if (!o) { setSearchUpgradeUrl(null); setSearchError(null); } }}
+          feature="monologue_search"
           title="You&apos;ve used your free searches this month"
           description="Keep exploring with 2 weeks of Plus, free. Unlimited searches, nothing charged now, card on file, cancel anytime."
         />

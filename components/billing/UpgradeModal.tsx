@@ -118,9 +118,12 @@ export function UpgradeModal({
           <Button asChild className="flex-1">
             <Link
               href={
+                // ?from= carries the gate through to begin_checkout. Without it
+                // entry_point falls back to document.referrer and every wall in
+                // the app reports as the same undifferentiated "direct".
                 canTrial
-                  ? `/checkout?tier=plus&period=monthly&trial=1`
-                  : `/checkout?tier=${targetTier}&period=monthly`
+                  ? `/checkout?tier=plus&period=monthly&trial=1&from=${encodeURIComponent(feature)}`
+                  : `/checkout?tier=${targetTier}&period=monthly&from=${encodeURIComponent(feature)}`
               }
             >
               {canTrial ? "Start 2 weeks free" : "Upgrade Now"}
