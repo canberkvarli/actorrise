@@ -459,12 +459,18 @@ async def search_monologues(
         # don't have. AI-extracted intent first; curated title dictionary as
         # fallback (audit: "Bridgerton"-style lookups are 15% of searches and
         # the AI extraction alone fired 0 times in 60 days).
+        # db + the applied source_type are passed so this can tell "we do not have
+        # it" apart from "your tab filtered it out". Searching "fleabag" on the
+        # Plays tab used to report a content gap and offer to request the show,
+        # while 6 Fleabag monologues sat in the library under source_type "tv".
         content_gap = compute_content_gap(
             q or "",
             getattr(search_service, '_intended_play', None),
             getattr(search_service, '_intended_author', None),
             [(m.play.title or "") if m.play else "" for m, _ in all_results_with_scores],
             [(m.play.author or "") if m.play else "" for m, _ in all_results_with_scores],
+            db=db,
+            applied_source_type=filters.get('source_type'),
         )
 
         # Soft-fail: results exist but they're closer to "padding" than real

@@ -228,7 +228,7 @@ function SearchContent() {
   const [page, setPage] = useState(1);
   const [correctedQuery, setCorrectedQuery] = useState<string | null>(null);
   const [queryMayHaveTypos, setQueryMayHaveTypos] = useState(false);
-  const [contentGap, setContentGap] = useState<{ play: string | null; author: string | null } | null>(null);
+  const [contentGap, setContentGap] = useState<{ play: string | null; author: string | null; available_in?: string[] | null } | null>(null);
   const [sceneGap, setSceneGap] = useState(false);
   const [queryInvalidReason, setQueryInvalidReason] = useState<string | null>(null);
   const PAGE_SIZE = 20;
@@ -715,7 +715,12 @@ function SearchContent() {
     page_size: number;
     corrected_query?: string | null;
     query_may_have_typos?: boolean;
-    content_gap?: { play: string | null; author: string | null } | null;
+    content_gap?: {
+      play: string | null;
+      author: string | null;
+      /** Set when we DO carry the title, just not under the current tab. */
+      available_in?: string[] | null;
+    } | null;
     scene_gap?: boolean;
     query_invalid_reason?: string | null;
     debug_timing?: DebugTiming | null;
@@ -2052,7 +2057,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               <div className="pt-12 pb-12 text-center max-w-md mx-auto">
                 <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
                 {contentGap ? (
-                  <ContentGapBanner play={contentGap.play} author={contentGap.author} />
+                  <ContentGapBanner
+                  play={contentGap.play}
+                  author={contentGap.author}
+                  availableIn={contentGap.available_in}
+                  onSwitchSource={(st) => setSearchMode(st === "play" ? "plays" : "film_tv")}
+                />
                 ) : queryInvalidReason === "gibberish" ? (
                   <>
                     <h3 className="text-2xl font-semibold mb-2">We couldn&apos;t understand that search</h3>
@@ -2107,7 +2117,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 </p>
               )}
               {contentGap && (
-                <ContentGapBanner play={contentGap.play} author={contentGap.author} />
+                <ContentGapBanner
+                  play={contentGap.play}
+                  author={contentGap.author}
+                  availableIn={contentGap.available_in}
+                  onSwitchSource={(st) => setSearchMode(st === "play" ? "plays" : "film_tv")}
+                />
               )}
               {sceneGap && <SceneGapBanner />}
               {/* Results header: 3-col grid on desktop so feedback is always truly centered */}

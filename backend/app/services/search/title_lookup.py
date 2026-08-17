@@ -182,30 +182,98 @@ def promote_title_matches(title: str, results_with_scores: list) -> list:
     return hits + rest if hits else results_with_scores
 
 
+def _normalise_title(value: str) -> str:
+    """Lowercase, strip punctuation, drop a leading article.
+
+    Stored titles do not match how people type them ("The Queens Gambit" vs
+    "Queen's gambit", "Fantastic Mr. Fox" vs "fantastic mr fox").
+    """
+    v = re.sub(r"[^\w\s]", "", (value or "").lower())
+    v = re.sub(r"\s+", " ", v).strip()
+    return re.sub(r"^(the|a|an)\s+", "", v).strip()
+
+
+def find_catalogue_source_types(db, title: str) -> list[str]:
+    """source_types under which `title` actually exists, normalised both sides.
+
+    Empty list means we genuinely do not carry it.
+    """
+    if db is None or not title:
+        return []
+    norm = _normalise_title(title)
+    if len(norm) < 3:
+        return []
+    from sqlalchemy import text as sa_text
+
+    # Normalise in SQL rather than pulling all 1,608 play titles per lookup.
+    expr = "regexp_replace(lower(title), '[^\\w\\s]', '', 'g')"
+    expr = f"regexp_replace({expr}, '^(the|a|an)\\s+', '')"
+    rows = db.execute(
+        sa_text(
+            f"SELECT DISTINCT COALESCE(source_type, 'play') st FROM plays "
+            f"WHERE {expr} = :n OR (length({expr}) >= 4 AND :n LIKE '%' || {expr} || '%')"
+        ),
+        {"n": norm},
+    ).fetchall()
+    return sorted(r[0] for r in rows)
+
+
 def compute_content_gap(
     query: str,
     intended_play: Optional[str],
     intended_author: Optional[str],
     result_play_titles: Iterable[str],
     result_authors: Iterable[str] = (),
+    db=None,
+    applied_source_type=None,
 ) -> Optional[dict]:
     """Resolve the content_gap for a search response.
 
     Prefers the AI-extracted intended play/author; falls back to the curated
     title dictionary. Returns None whenever the results already contain the
     requested play or author (no gap to report).
+
+    CRITICAL: absence from the RESULTS is not absence from the LIBRARY. Searching
+    "fleabag" on the Plays tab filtered out all 6 Fleabag monologues (they are
+    source_type "tv"), and this function then told the actor "We don't have
+    Fleabag in our library yet" and offered to request it. It was there the whole
+    time. So when a title does exist under some other source_type we report
+    `available_in` instead of a gap, and the UI offers to switch tabs rather than
+    denying the thing exists.
     """
     titles_lower = [(t or "").lower() for t in result_play_titles]
     authors_lower = [(a or "").lower() for a in result_authors]
+
+    def _resolve(title: Optional[str], author: Optional[str]) -> Optional[dict]:
+        if not title:
+            return {"play": title, "author": author}
+        available = find_catalogue_source_types(db, title)
+        if not available:
+            return {"play": title, "author": author}
+        # We have it. If a source_type filter is what hid it, say so.
+        applied = applied_source_type
+        applied_list = (
+            [applied] if isinstance(applied, str) else list(applied or [])
+        )
+        elsewhere = [st for st in available if st not in applied_list]
+        if applied_list and elsewhere:
+            return {
+                "play": title,
+                "author": author,
+                "available_in": elsewhere,
+            }
+        # We carry it and no filter explains the miss: not a content gap, and
+        # claiming otherwise would be a plain falsehood.
+        return None
 
     if intended_play or intended_author:
         if intended_play and any(intended_play.lower() in t for t in titles_lower):
             return None
         if intended_author and any(intended_author.lower() in a for a in authors_lower):
             return None
-        return {"play": intended_play, "author": intended_author}
+        return _resolve(intended_play, intended_author)
 
     hit = detect_title_lookup(query)
     if hit and not any(hit["title"].lower() in t for t in titles_lower):
-        return {"play": hit["title"], "author": None}
+        return _resolve(hit["title"], None)
     return None
