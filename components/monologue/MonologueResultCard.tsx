@@ -9,7 +9,7 @@ import { IconBookmark, IconEdit, IconArrowRight } from "@tabler/icons-react";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 import { motion } from "framer-motion";
 import { Monologue } from "@/types/actor";
-import { isMeaningfulMonologueTitle } from "@/lib/utils";
+import { isMeaningfulMonologueTitle, displayableAuthor } from "@/lib/utils";
 import { MatchIndicatorTag, accentTeal } from "@/components/search/MatchIndicatorTag";
 import type { QueryHighlights } from "@/lib/queryMatchHighlight";
 import type { MatchReason } from "@/lib/matchReasons";
@@ -111,12 +111,12 @@ export function MonologueResultCard({
                     </span>
                   )}
                 </div>
-                {isMeaningfulMonologueTitle(mono.title, mono.character_name) && (
+                {isMeaningfulMonologueTitle(mono.title, mono.character_name, mono.play_title) && (
                   <p className="text-sm font-medium text-foreground/90 line-clamp-1">{mono.title}</p>
                 )}
                 <p className="font-typewriter text-sm text-muted-foreground line-clamp-1">
                   {mono.play_title}
-                  {mono.author ? ` · ${mono.author}` : ""}
+                  {displayableAuthor(mono.author) ? ` · ${displayableAuthor(mono.author)}` : ""}
                 </p>
               </div>
               <div className="flex items-center gap-1">

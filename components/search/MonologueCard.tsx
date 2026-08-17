@@ -2,7 +2,7 @@
 
 import { Monologue } from "@/types/actor";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { isMeaningfulMonologueTitle } from "@/lib/utils";
+import { isMeaningfulMonologueTitle, displayableAuthor } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { IconExternalLink, IconSparkles, IconPlus, IconCheck, IconArrowRight } from "@tabler/icons-react";
@@ -46,14 +46,16 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
             <div className="flex items-start justify-between">
               <div className="flex-1">
                 <CardTitle className="text-base sm:text-lg lg:text-xl mb-2 line-clamp-2 break-words">
-                {isMeaningfulMonologueTitle(monologue.title, monologue.character_name)
+                {isMeaningfulMonologueTitle(monologue.title, monologue.character_name, monologue.play_title)
                   ? monologue.title
                   : monologue.character_name}
               </CardTitle>
-                <CardDescription className="text-base">
-                  by {monologue.author}
-                  {monologue.translator ? `, translated by ${monologue.translator}` : ""}
-                </CardDescription>
+                {displayableAuthor(monologue.author) && (
+                  <CardDescription className="text-base">
+                    by {displayableAuthor(monologue.author)}
+                    {monologue.translator ? `, translated by ${monologue.translator}` : ""}
+                  </CardDescription>
+                )}
               </div>
               {isInCollection ? (
                 <button

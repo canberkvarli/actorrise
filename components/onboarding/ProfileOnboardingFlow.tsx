@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { IconArrowLeft, IconCheck, IconPlayerPlayFilled } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
+import { displayableAuthor } from "@/lib/utils";
 import api from "@/lib/api";
 import type { Monologue } from "@/types/actor";
 import {
@@ -391,7 +392,9 @@ function OnboardingPayoff({
           return (
             <li key={m.id} className="border border-border bg-background p-4">
               <p className="font-sans text-lg font-semibold leading-tight text-foreground">{m.title}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">{m.author}</p>
+              {displayableAuthor(m.author) && (
+                <p className="mt-0.5 text-xs text-muted-foreground">{displayableAuthor(m.author)}</p>
+              )}
               <p className="mt-2 text-xs text-muted-foreground">{meta}</p>
               <Button onClick={() => onRehearse(m.id)} size="sm" className="mt-3 rounded-full">
                 <IconPlayerPlayFilled className="size-3.5" />

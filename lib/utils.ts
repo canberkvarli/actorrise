@@ -55,14 +55,56 @@ export function getFilmTvScriptUrl(ref: { imsdb_url?: string | null; title: stri
 /**
  * Whether to show the monologue title in the UI. Hides generic noise like "Dr's Monologue" or "Someone's Monologue".
  */
+/**
+ * True when a monologue title says something the card is not already showing.
+ *
+ * Most titles are machine-generated from the fields printed directly above and
+ * below them, so rendering them repeats the same words three times: the Fleabag
+ * card read "Fleabag / Fleabag / Fleabag, Fleabag / Fleabag". Measured on the
+ * live catalogue: 100% of TV titles are exactly "{character}, {show}" (2,176 of
+ * 2,176) and 87.8% of play titles are "{character}'s speech from {play}" (7,661
+ * of 8,724). Film is the counter-example and the standard to aim at, with real
+ * titles like "Brick Top's Pig Speech", 0% redundant.
+ *
+ * Pass playTitle wherever it is available, or the two dominant patterns cannot
+ * be detected at all.
+ */
 export function isMeaningfulMonologueTitle(
   title: string | null | undefined,
-  characterName?: string
+  characterName?: string,
+  playTitle?: string | null
 ): boolean {
   const t = title?.trim()
   if (!t) return false
+
+  const norm = (v: string) => v.trim().toLowerCase().replace(/\s+/g, " ")
+  const lower = norm(t)
+  const char = characterName ? norm(characterName) : ""
+  const play = playTitle ? norm(playTitle) : ""
+
   if (/^monologue$/i.test(t)) return false
   if (/'s\s+monologue$/i.test(t)) return false
-  if (characterName && t.toLowerCase() === `${characterName.trim().toLowerCase()}'s monologue`) return false
+  if (char && lower === `${char}'s monologue`) return false
+  // The title IS the character, or the character and the play glued together.
+  if (char && lower === char) return false
+  if (char && play && lower === `${char}, ${play}`) return false
+  // "Waspe's speech from Bartholomew Fair" — both halves already on the card.
+  if (char && play && lower === `${char}'s speech from ${play}`) return false
+  if (char && play && lower === `${char}s speech from ${play}`) return false
+  // Same shape with any possessive form, e.g. "Jere's speech from X".
+  if (char && play && new RegExp(`^${escapeRe(char)}['’]?s? speech from ${escapeRe(play)}$`).test(lower)) return false
+  if (play && lower === play) return false
   return true
+}
+
+function escapeRe(v: string) {
+  return v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+/** An author string worth printing. "Unknown" on the card is worse than silence. */
+export function displayableAuthor(author: string | null | undefined): string | null {
+  const a = author?.trim()
+  if (!a) return null
+  if (/^(unknown|n\/?a|various|anonymous|uncredited)$/i.test(a)) return null
+  return a
 }

@@ -3,7 +3,7 @@
 import { IconExternalLink, IconEdit } from "@tabler/icons-react";
 import Image from "next/image";
 import { Monologue } from "@/types/actor";
-import { isMeaningfulMonologueTitle } from "@/lib/utils";
+import { isMeaningfulMonologueTitle, displayableAuthor } from "@/lib/utils";
 import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueTextRenderer } from "@/components/monologue/MonologueTextRenderer";
 import { isBibliographicText, stageDirectionPercentage } from "@/lib/monologueText";
@@ -73,12 +73,12 @@ export function MonologueDetailContent({
           >
             {monologue.character_name}
           </h1>
-          {isMeaningfulMonologueTitle(monologue.title, monologue.character_name) && (
+          {isMeaningfulMonologueTitle(monologue.title, monologue.character_name, monologue.play_title) && (
             <p className="mt-1 text-base text-foreground/70">{monologue.title}</p>
           )}
           <p className="mt-1 text-sm text-muted-foreground">
             {monologue.play_title}
-            {monologue.author ? ` · ${monologue.author}` : ""}
+            {displayableAuthor(monologue.author) ? ` · ${displayableAuthor(monologue.author)}` : ""}
           </p>
         </div>
         {headerActions}

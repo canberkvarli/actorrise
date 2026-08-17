@@ -13,7 +13,7 @@ export default function MiniMonologueCard({ monologue }: MiniMonologueCardProps)
         <div className="font-medium truncate">
           {monologue.character_name}
         </div>
-        {isMeaningfulMonologueTitle(monologue.title, monologue.character_name) && (
+        {isMeaningfulMonologueTitle(monologue.title, monologue.character_name, monologue.play_title) && (
           <div className="text-foreground/80 truncate text-[10px]">
             {monologue.title}
           </div>

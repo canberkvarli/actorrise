@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { getPublicMonologue, idFromSlug, monologueSlug, type PublicMonologue } from "@/lib/monologueSeo";
+import { displayableAuthor } from "@/lib/utils";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -32,7 +33,9 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const title = displayTitle(m);
   const canonical = `${siteUrl}/monologues/${monologueSlug(m)}`;
   const src = m.playTitle ? ` from ${m.playTitle}` : "";
-  const by = m.author ? ` by ${m.author}` : "";
+  // "by Unknown" in a meta description on 12k indexed pages is worse than no
+  // byline at all. 99.6% of TV rows carry the literal string "Unknown".
+  const by = displayableAuthor(m.author) ? ` by ${displayableAuthor(m.author)}` : "";
   const len = readableLength(m.durationSeconds);
   const description = m.isPublicDomain
     ? `Read ${m.character}'s monologue${src}${by} in full, then rehearse it out loud on ActorRise${len ? `. ${len}` : ""}. Free to start.`
@@ -91,7 +94,7 @@ export default async function PublicMonologuePage({ params }: Params) {
         ) : (
           "Monologue"
         )}
-        {m.author ? ` by ${m.author}` : null}
+        {displayableAuthor(m.author) ? ` by ${displayableAuthor(m.author)}` : null}
       </p>
       {meta.length > 0 && (
         <p className="text-sm text-muted-foreground capitalize mb-8">{meta.join("  ·  ")}</p>
