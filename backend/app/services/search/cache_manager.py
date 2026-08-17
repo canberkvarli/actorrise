@@ -38,7 +38,13 @@ logger = logging.getLogger(__name__)
 # (was King Lear x5 / The Intruder x4 for "senior man").
 # v13: film/TV minimum-word gate — pieces under 75 words are sub-monologue clips
 # and no longer surface in search/discover (TV corpus was 80% under 75).
-CACHE_VERSION = "13"
+# v14: v13's gate now yields to a NAMED-TITLE lookup. Hiding short clips from
+# browsing is right, but it also made 162 of 355 TV titles unfindable by their own
+# name — Fleabag, Queen's Gambit and Lucifer are in the catalogue and every one of
+# their pieces is under 75 words. Searching a show by title is the least ambiguous
+# intent in the product and a length heuristic should not overrule it. Browsing
+# and vibe queries are unaffected.
+CACHE_VERSION = "14"
 
 
 class CacheManager:
