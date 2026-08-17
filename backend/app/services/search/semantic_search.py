@@ -1557,6 +1557,45 @@ class SemanticSearch:
 
         return (list(top_results), quote_match_type_by_id)
 
+    def _named_play_ids(self, query: str) -> List[int]:
+        """Play ids whose title the query is plainly naming.
+
+        Comparison is normalised on both sides, because the stored titles do not
+        match how people type them: the row is "The Queens Gambit" and the actor
+        types "Queen's gambit", so a raw ILIKE finds nothing. Strips punctuation,
+        case, and a leading article.
+
+        Returns [] for anything that is not a title lookup, which is most queries
+        ("sarcastic", "doctor"), so the caller's gates stay in force for them.
+        """
+        q = _strip_punctuation(query)
+        q = re.sub(r"^(the|a|an)\s+", "", q).strip()
+        # Too short to be a title and far too likely to match half the catalogue.
+        if len(q) < 3:
+            return []
+        norm = "regexp_replace(lower(plays.title), '[^\\w\\s]', '', 'g')"
+        norm = f"regexp_replace({norm}, '^(the|a|an)\\s+', '')"
+        # Match on equality, or on the title being contained IN the query
+        # ("fantastic mr fox monologue", "the humans brigee"). Deliberately NOT
+        # the other direction: "doctor" is inside "Doctor Faustus", "Doctor
+        # Zhivago" and "The Good Doctor", so query-inside-title would treat a
+        # plain role query as three title lookups and open the gate wrongly.
+        # The length floor stops two-letter titles matching arbitrary prose.
+        rows = (
+            self.db.query(Play.id)
+            .filter(
+                or_(
+                    text(f"{norm} = :q").bindparams(q=q),
+                    text(
+                        f"(length({norm}) >= 4 AND :q LIKE '%' || {norm} || '%')"
+                    ).bindparams(q=q),
+                )
+            )
+            .limit(25)
+            .all()
+        )
+        return [r[0] for r in rows]
+
     def _fallback_text_search(
         self,
         query: str,
@@ -1683,19 +1722,35 @@ class SemanticSearch:
                 else:
                     base_query = base_query.filter(Play.source_type == st)
 
+        # Quality gates below keep 20-word clips out of generic browsing, which is
+        # right. But they were unconditional, and 80% of TV monologues sit under
+        # FILM_TV_MIN_WORDS: 1,738 of 2,176 rows, and 162 of 355 TV titles have no
+        # qualifying monologue at all. So Fleabag, The Queens Gambit and Lucifer
+        # were in the database and structurally unreachable, including by exact
+        # title. Actors search for shows BY NAME constantly (the search log is full
+        # of it), hit nothing, and leave.
+        #
+        # Naming a title is the least ambiguous intent in the product. A length
+        # heuristic must not overrule it. The user's own source_type filter still
+        # applies; only the quality gates yield.
+        named_ids = self._named_play_ids(query)
+        named_escape = Play.id.in_(named_ids) if named_ids else None
+
         if tv_clip_gate_active(filters):
+            clip_ok = or_(
+                Play.source_type != "tv",
+                Monologue.estimated_duration_seconds >= TV_CLIP_MIN_SECONDS,
+            )
             base_query = base_query.filter(
-                or_(
-                    Play.source_type != "tv",
-                    Monologue.estimated_duration_seconds >= TV_CLIP_MIN_SECONDS,
-                )
+                or_(named_escape, clip_ok) if named_escape is not None else clip_ok
             )
 
+        words_ok = or_(
+            Play.source_type.notin_(("film", "tv")),
+            Monologue.word_count >= FILM_TV_MIN_WORDS,
+        )
         base_query = base_query.filter(
-            or_(
-                Play.source_type.notin_(("film", "tv")),
-                Monologue.word_count >= FILM_TV_MIN_WORDS,
-            )
+            or_(named_escape, words_ok) if named_escape is not None else words_ok
         )
 
         # Simple keyword-friendly text search: play title, character, author, monologue title/text.
