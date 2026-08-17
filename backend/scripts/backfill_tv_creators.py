@@ -68,15 +68,39 @@ CREATOR_ROLE = re.compile(r"\((created by|creator|developed by)\)", re.I)
 PARENTHETICAL = re.compile(r"\s*\([^)]*\)")
 MAX_CREATORS = 3
 
+# Our titles lost their punctuation at ingest. A hyphen can be recovered by rule
+# (see _normalise) but an apostrophe or an ampersand cannot: OMDb indexes the
+# literal string, so neither t= nor s= will ever find "Greys Anatomy". These are
+# hand-checked, one line each, and still go through the same lookup and the same
+# title verification as everything else, just against the alias.
+TITLE_ALIASES = {
+    "greys anatomy": "Grey's Anatomy",
+    "handmaids tale": "The Handmaid's Tale",
+    "queens gambit": "The Queen's Gambit",
+    "its always sunny in philadelphia": "It's Always Sunny in Philadelphia",
+    "tom clancys jack ryan": "Tom Clancy's Jack Ryan",
+    "law and order": "Law & Order",
+    "law and order special victims unit": "Law & Order: Special Victims Unit",
+    "im dying up here": "I'm Dying Up Here",
+}
+
 
 def _is_placeholder(author: str | None) -> bool:
     return (author or "").strip().lower() in PLACEHOLDER_AUTHORS
 
 
 def _normalise(title: str) -> str:
-    """Loose title match: case, punctuation, and a leading article are noise."""
-    t = re.sub(r"[^\w\s]", "", (title or "").lower())
-    t = re.sub(r"^(the|a|an)\s+", "", t)
+    """Loose title match: case, punctuation, and a leading article are noise.
+
+    Apostrophes close up ("Handmaid's" -> "handmaids") because our titles had
+    theirs deleted, but every other separator becomes a space: hyphens were
+    deleted from ours too, so "The X Files" has to reach "The X-Files" and
+    dropping the hyphen outright gives "xfiles" instead. That one character
+    accounted for 25 of the 45 unresolved titles, 16 of them X-Files rows.
+    """
+    t = re.sub(r"['’`]", "", (title or "").lower())
+    t = re.sub(r"[^\w\s]", " ", t)
+    t = re.sub(r"^(the|a|an)\s+", "", t.strip())
     return re.sub(r"\s+", " ", t).strip()
 
 
@@ -129,19 +153,21 @@ def lookup(play: Play, imdb_id: str | None, api_key: str) -> dict:
         "reason": "",
     }
 
+    search_title = play.title
     if imdb_id:
         data = _omdb({"i": imdb_id}, api_key)
         row["matched_via"] = "imdb_id"
     else:
         # No stored id, so the title has to earn the match on its own.
-        data = _omdb({"t": play.title, "type": "series"}, api_key)
+        search_title = TITLE_ALIASES.get(_normalise(play.title), play.title)
+        row["searched_as"] = search_title if search_title != play.title else None
+        data = _omdb({"t": search_title, "type": "series"}, api_key)
         if not data or data.get("Response") == "False":
-            # Exact-title lookup is punctuation-sensitive and our titles have had
-            # theirs stripped ("The Handmaids Tale"), so fall back to search and
-            # keep the first hit that agrees once both sides are normalised.
-            found = _omdb({"s": play.title, "type": "series"}, api_key).get("Search") or []
+            # Exact-title lookup is punctuation-sensitive, so fall back to search
+            # and keep the first hit that agrees once both sides are normalised.
+            found = _omdb({"s": search_title, "type": "series"}, api_key).get("Search") or []
             hit = next(
-                (h for h in found if _normalise(h.get("Title", "")) == _normalise(play.title)),
+                (h for h in found if _normalise(h.get("Title", "")) == _normalise(search_title)),
                 None,
             )
             data = _omdb({"i": hit["imdbID"]}, api_key) if hit else data
@@ -159,7 +185,7 @@ def lookup(play: Play, imdb_id: str | None, api_key: str) -> dict:
         if data.get("Type") != "series":
             row["reason"] = f"OMDb returned a {data.get('Type')}, not a series"
             return row
-        if _normalise(data.get("Title", "")) != _normalise(play.title):
+        if _normalise(data.get("Title", "")) != _normalise(search_title):
             row["reason"] = f"title mismatch: OMDb said {data.get('Title')!r}"
             return row
         row["imdb_id"] = data.get("imdbID")
@@ -171,6 +197,37 @@ def lookup(play: Play, imdb_id: str | None, api_key: str) -> dict:
 
     row["creator"] = creator
     return row
+
+
+def _write(db, proposals: list[dict], stamp: str) -> int:
+    """Write creators, backing up the prior value of every row we touch."""
+    BACKUP_DIR.mkdir(exist_ok=True)
+    written, backup = 0, []
+    for row in proposals:
+        play = db.query(Play).filter(Play.id == row["play_id"]).first()
+        # Re-check: never overwrite an author that appeared since the report.
+        if play and _is_placeholder(play.author):
+            backup.append({"play_id": play.id, "original_author": play.author})
+            play.author = row["creator"]
+            written += 1
+    db.commit()
+    backup_path = BACKUP_DIR / f"tv_creators_backup_{stamp}.json"
+    backup_path.write_text(json.dumps(backup, indent=2), encoding="utf-8")
+    print(f"\nApplied {written} creators. Backup: {backup_path}")
+    print(f"Undo: uv run python scripts/backfill_tv_creators.py --restore {backup_path}")
+    return written
+
+
+def apply_report(report_path: Path) -> None:
+    """Apply a report exactly as reviewed, rather than re-deriving it."""
+    proposals = json.loads(report_path.read_text(encoding="utf-8")).get("proposals", [])
+    db = SessionLocal()
+    try:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+        print(f"applying {len(proposals)} creators from {report_path}")
+        _write(db, proposals, stamp)
+    finally:
+        db.close()
 
 
 def restore(backup_path: Path) -> None:
@@ -191,11 +248,21 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--apply", action="store_true", help="write changes (default: dry run)")
     ap.add_argument("--limit", type=int, default=None, help="only process the first N titles")
+    ap.add_argument("--retry-report", type=str, default=None,
+                    help="only re-run the needs_human rows of a previous report "
+                         "(OMDb's free tier is 1000 lookups a day)")
+    ap.add_argument("--apply-report", type=str, default=None,
+                    help="write the proposals of a report you have already read, "
+                         "without re-querying OMDb")
     ap.add_argument("--restore", type=str, default=None)
     args = ap.parse_args()
 
     if args.restore:
         restore(Path(args.restore))
+        return
+
+    if args.apply_report:
+        apply_report(Path(args.apply_report))
         return
 
     api_key = os.getenv("OMDB_API_KEY")
@@ -206,6 +273,11 @@ def main() -> None:
     try:
         plays = db.query(Play).filter(Play.source_type == "tv").order_by(Play.id).all()
         targets = [p for p in plays if _is_placeholder(p.author)]
+        if args.retry_report:
+            prior = json.loads(Path(args.retry_report).read_text(encoding="utf-8"))
+            retry_ids = {r["play_id"] for r in prior.get("needs_human", [])}
+            targets = [p for p in targets if p.id in retry_ids]
+            print(f"retrying {len(targets)} unresolved titles from {args.retry_report}")
         if args.limit:
             targets = targets[: args.limit]
 
@@ -251,20 +323,7 @@ def main() -> None:
             print("\nDRY RUN. Nothing written. Review the report, then re-run with --apply.")
             return
 
-        BACKUP_DIR.mkdir(exist_ok=True)
-        backup_path = BACKUP_DIR / f"tv_creators_backup_{stamp}.json"
-        backup_path.write_text(json.dumps(proposals, indent=2), encoding="utf-8")
-
-        written = 0
-        for row in proposals:
-            play = db.query(Play).filter(Play.id == row["play_id"]).first()
-            # Re-check: never overwrite an author that appeared since the report.
-            if play and _is_placeholder(play.author):
-                play.author = row["creator"]
-                written += 1
-        db.commit()
-        print(f"\nApplied {written} creators. Backup: {backup_path}")
-        print(f"Undo: uv run python scripts/backfill_tv_creators.py --restore {backup_path}")
+        _write(db, proposals, stamp)
     finally:
         db.close()
 
