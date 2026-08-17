@@ -62,19 +62,19 @@ export function FilmTvReferenceCard({
           onClick={onSelect}
         >
           <div className="flex items-start gap-2 sm:gap-3 mb-4">
-            <div className="shrink-0 w-12 h-18 sm:w-16 sm:h-24 rounded overflow-hidden bg-muted flex items-center justify-center">
+            <div className="shrink-0 w-18 h-27 sm:w-24 sm:h-36 rounded overflow-hidden bg-muted flex items-center justify-center">
               {ref_item.poster_url && !posterError ? (
                 <Image
                   src={ref_item.poster_url}
                   alt={ref_item.title}
-                  width={64}
-                  height={96}
+                  width={96}
+                  height={144}
                   className="object-cover w-full h-full"
                   unoptimized
                   onError={() => setPosterError(true)}
                 />
               ) : (
-                <IconPhoto className="h-6 w-6 text-muted-foreground/50" />
+                <IconPhoto className="h-7 w-7 text-muted-foreground/50" />
               )}
             </div>
             <div className="flex-1 min-w-0 flex flex-col gap-0.5">
@@ -145,19 +145,19 @@ export function FilmTvReferenceCard({
         <CardContent className="pt-6 flex-1 flex flex-col">
           <div className="space-y-3 flex-1">
             <div className="flex items-start gap-2 sm:gap-3 min-w-0">
-              <div className="shrink-0 rounded overflow-hidden bg-muted flex items-center justify-center w-14 h-20 sm:w-20 sm:h-28">
+              <div className="shrink-0 rounded overflow-hidden bg-muted flex items-center justify-center w-20 h-30 sm:w-28 sm:h-42">
                 {ref_item.poster_url && !posterError ? (
                   <Image
                     src={ref_item.poster_url}
                     alt={ref_item.title}
-                    width={80}
-                    height={112}
+                    width={112}
+                    height={168}
                     className="object-cover w-full h-full"
                     unoptimized
                     onError={() => setPosterError(true)}
                   />
                 ) : (
-                  <IconPhoto className="h-6 w-6 text-muted-foreground/50" />
+                  <IconPhoto className="h-7 w-7 text-muted-foreground/50" />
                 )}
               </div>
               <div className="flex-1 min-w-0 flex flex-col gap-0.5">

@@ -55,12 +55,12 @@ export function MonologueDetailContent({
       {/* Header: character, title, source — and the primary action */}
       <div className="flex items-start justify-between gap-4">
         {monologue.poster_url && (
-          <div className="h-24 w-16 shrink-0 overflow-hidden rounded-md border border-border bg-muted">
+          <div className="h-36 w-24 shrink-0 overflow-hidden rounded-md border border-border bg-muted sm:h-48 sm:w-32">
             <Image
               src={monologue.poster_url}
               alt={monologue.play_title || "Poster"}
-              width={64}
-              height={96}
+              width={128}
+              height={192}
               className="h-full w-full object-cover"
               unoptimized
             />

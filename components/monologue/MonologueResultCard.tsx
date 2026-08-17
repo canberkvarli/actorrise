@@ -89,12 +89,12 @@ export function MonologueResultCard({
           <div className="space-y-4 flex-1">
             <div className="flex items-start justify-between gap-2">
               {mono.poster_url && (
-                <div className="shrink-0 w-14 h-20 rounded overflow-hidden bg-muted">
+                <div className="shrink-0 w-20 h-30 sm:w-24 sm:h-36 rounded overflow-hidden bg-muted">
                   <Image
                     src={mono.poster_url}
                     alt={mono.play_title || "Poster"}
-                    width={56}
-                    height={80}
+                    width={96}
+                    height={144}
                     className="w-full h-full object-cover"
                     unoptimized
                   />
