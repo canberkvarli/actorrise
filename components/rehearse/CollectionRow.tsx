@@ -30,6 +30,26 @@ function titleCase(value?: string | null): string | null {
   return v.charAt(0).toUpperCase() + v.slice(1);
 }
 
+// "Play" vs "Film & TV" — the source of the piece, for the row's chips.
+function sourceLabel(sourceType?: string | null): string | null {
+  if (sourceType === "film" || sourceType === "tv") return "Film & TV";
+  if (sourceType === "play") return "Play";
+  return null;
+}
+
+// "Worked today" / "Worked 3 days ago" from an ISO timestamp.
+function lastWorkedLabel(iso?: string | null): string | null {
+  if (!iso) return null;
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return null;
+  const days = Math.floor((Date.now() - then) / 86_400_000);
+  if (days <= 0) return "Worked today";
+  if (days === 1) return "Worked yesterday";
+  if (days < 30) return `Worked ${days} days ago`;
+  const months = Math.floor(days / 30);
+  return months === 1 ? "Worked a month ago" : `Worked ${months} months ago`;
+}
+
 interface CollectionRowProps {
   monologue: Monologue;
   index?: number;
@@ -102,6 +122,7 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
   // A few sharp-cornered chips for whatever's present (capped, empties skipped).
   const chips = [
     formatDuration(monologue.estimated_duration_seconds),
+    sourceLabel(monologue.source_type),
     titleCase(monologue.tone),
     titleCase(monologue.primary_emotion),
     titleCase(monologue.category),
@@ -109,6 +130,8 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
   ]
     .filter((c): c is string => Boolean(c))
     .slice(0, 4);
+
+  const lastWorked = lastWorkedLabel(monologue.last_studied_at);
 
   return (
     <motion.article
@@ -149,6 +172,7 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
         {meta && (
           <p className="mt-1.5 truncate text-sm text-muted-foreground">
             {meta}
+            {lastWorked ? <span className="text-muted-foreground/60"> · {lastWorked}</span> : null}
           </p>
         )}
 

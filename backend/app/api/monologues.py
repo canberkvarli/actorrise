@@ -864,13 +864,24 @@ async def get_monologue(
     except Exception:
         db.rollback()
 
-    # Check if favorited
-    is_favorited = db.query(MonologueFavorite).filter(
+    # Carry the current user's collection meta (memorized / notes / cut / last
+    # studied) so the detail page can pre-populate the notes box and the cut
+    # editor instead of starting blank on a piece the user already owns.
+    fav = db.query(MonologueFavorite).filter(
         MonologueFavorite.user_id == current_user.id,
-        MonologueFavorite.monologue_id == monologue_id
-    ).first() is not None
+        MonologueFavorite.monologue_id == monologue_id,
+        MonologueFavorite.removed_at.is_(None),
+    ).first()
 
-    return _monologue_to_response(monologue, is_favorited=is_favorited)
+    return _monologue_to_response(
+        monologue,
+        is_favorited=fav is not None,
+        memorized=bool(fav.memorized) if fav else False,
+        notes=fav.notes if fav else None,
+        last_studied_at=fav.last_studied_at.isoformat() if fav and fav.last_studied_at else None,
+        cut_start_line=fav.cut_start_line if fav else None,
+        cut_end_line=fav.cut_end_line if fav else None,
+    )
 
 
 @router.post("/{monologue_id:int}/favorite")

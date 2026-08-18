@@ -5,12 +5,15 @@ import { useParams, useRouter, notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IconBookmark, IconArrowLeft, IconEdit } from "@tabler/icons-react";
+import { IconBookmark, IconArrowLeft, IconEdit, IconBulb, IconBulbFilled } from "@tabler/icons-react";
 import { Monologue } from "@/types/actor";
 import api from "@/lib/api";
 import { motion } from "framer-motion";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
+import { CutEditor } from "@/components/monologue/CutEditor";
+import { ExportSheet } from "@/components/monologue/ExportSheet";
 import { useSaveNotes } from "@/hooks/useCollectionMeta";
+import { useToggleMemorized } from "@/hooks/useMemorized";
 import { useAuth } from "@/lib/auth";
 import { EditMonologueModal } from "@/components/admin/EditMonologueModal";
 import type { EditMonologueBody } from "@/components/admin/EditMonologueModal";
@@ -24,9 +27,11 @@ export default function MonologueDetailPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
   const [notes, setNotes] = useState("");
+  const [memorized, setMemorized] = useState(false);
   const [editMonologueId, setEditMonologueId] = useState<number | null>(null);
   const [editMonologueSaving, setEditMonologueSaving] = useState(false);
   const saveNotes = useSaveNotes();
+  const toggleMemorized = useToggleMemorized();
 
   useEffect(() => {
     if (params.id) {
@@ -40,6 +45,7 @@ export default function MonologueDetailPage() {
       setMonologue(response.data);
       setIsFavorited(response.data.is_favorited);
       setNotes(response.data.notes ?? "");
+      setMemorized(Boolean(response.data.memorized));
     } catch (error) {
       const status = (error as Error & { response?: { status?: number } })?.response?.status;
       if (status === 404) {
@@ -66,6 +72,16 @@ export default function MonologueDetailPage() {
     } catch (error) {
       console.error("Error toggling favorite:", error);
     }
+  };
+
+  const handleToggleMemorized = () => {
+    if (!monologue) return;
+    const next = !memorized;
+    setMemorized(next);
+    setMonologue((prev) => (prev ? { ...prev, memorized: next } : prev));
+    toggleMemorized.mutate({ monologueId: monologue.id, memorized: next });
+    // Marking off-book counts as studying it (spaced-review clock).
+    if (next) api.post(`/api/monologues/${monologue.id}/studied`, {}).catch(() => {});
   };
 
   if (isLoading) {
@@ -159,15 +175,30 @@ export default function MonologueDetailPage() {
                       <IconEdit className="h-5 w-5" />
                     </Button>
                   )}
+                  <button
+                    type="button"
+                    onClick={handleToggleMemorized}
+                    aria-pressed={memorized}
+                    aria-label={memorized ? "Memorized — tap to unmark" : "Mark as memorized"}
+                    title={memorized ? "Memorized — tap to unmark" : "Mark as memorized"}
+                    className="flex-shrink-0 rounded-full p-1.5"
+                  >
+                    {memorized ? (
+                      <IconBulbFilled className="h-5 w-5 text-amber-400 drop-shadow-[0_0_7px_rgba(251,191,36,0.6)]" />
+                    ) : (
+                      <IconBulb className="h-5 w-5 text-muted-foreground/50 hover:text-muted-foreground" />
+                    )}
+                  </button>
+                  {/* Owning the piece is the point of this surface, so the
+                      collection control is a labeled button, not a bare icon. */}
                   <Button
                     variant={isFavorited ? "default" : "outline"}
-                    size="icon"
                     onClick={toggleFavorite}
-                    aria-label={isFavorited ? "In collection" : "Add to collection"}
-                    title={isFavorited ? "In collection" : "Add to collection"}
-                    className={`flex-shrink-0 ${isFavorited ? "bg-accent text-accent-foreground hover:bg-accent/90" : "hover:text-accent"}`}
+                    aria-label={isFavorited ? "In your collection" : "Add to collection"}
+                    className={`flex-shrink-0 gap-2 ${isFavorited ? "bg-accent text-accent-foreground hover:bg-accent/90" : "hover:text-accent"}`}
                   >
                     <IconBookmark className={`h-5 w-5 ${isFavorited ? "fill-current" : ""}`} />
+                    {isFavorited ? "In collection" : "Add to collection"}
                   </Button>
                 </div>
               }
@@ -196,6 +227,25 @@ export default function MonologueDetailPage() {
               rows={4}
               className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
             />
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-lg">
+          <CardContent className="pt-6">
+            <CutEditor
+              monologue={monologue}
+              onSaved={(start, end) =>
+                setMonologue((prev) =>
+                  prev ? { ...prev, cut_start_line: start ?? undefined, cut_end_line: end ?? undefined } : prev,
+                )
+              }
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-lg">
+          <CardContent className="pt-6">
+            <ExportSheet monologue={monologue} />
           </CardContent>
         </Card>
 
