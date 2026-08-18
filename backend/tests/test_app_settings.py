@@ -65,5 +65,40 @@ class FounderOfferSettingTests(unittest.TestCase):
         self.assertEqual(rows[0].value, "false")
 
 
+class FloatSettingTests(unittest.TestCase):
+    def setUp(self):
+        self.engine = create_engine("sqlite:///:memory:")
+
+        @event.listens_for(self.engine, "connect")
+        def _register_now(dbapi_conn, _record):
+            dbapi_conn.create_function("now", 0, lambda: "2026-01-01 00:00:00")
+
+        AppSetting.__table__.create(bind=self.engine)
+        self.db = sessionmaker(bind=self.engine)()
+
+    def tearDown(self):
+        self.db.close()
+
+    def test_get_float_returns_default_when_missing(self):
+        self.assertEqual(
+            app_settings.get_float(self.db, "search_relevance_floor", default=0.30),
+            0.30,
+        )
+
+    def test_get_float_roundtrips(self):
+        app_settings.set_float(self.db, "search_relevance_floor", 0.34)
+        self.assertAlmostEqual(
+            app_settings.get_float(self.db, "search_relevance_floor", default=0.30),
+            0.34,
+        )
+
+    def test_get_float_falls_back_on_garbage(self):
+        app_settings.set_value(self.db, "search_relevance_floor", "not-a-number")
+        self.assertEqual(
+            app_settings.get_float(self.db, "search_relevance_floor", default=0.30),
+            0.30,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

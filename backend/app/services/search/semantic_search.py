@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session, joinedload, defer
 from app.models.actor import Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
 from app.services.search.cache_manager import cache_manager
+from app.services import app_settings
 from app.services.search.query_optimizer import QueryOptimizer, is_filter_only_query
 
 # Module-level in-memory caches (Level 0 hot cache shared across SemanticSearch instances).
@@ -216,6 +217,7 @@ def _scores_from_distances(distances: List[float]) -> List[float]:
 def classify_relevance(
     top_results: list,
     limit: int,
+    floor: float = WEAK_MATCH_FLOOR,
 ):
     """Split scored results into relevance bands.
 
@@ -239,9 +241,9 @@ def classify_relevance(
     if not top_results:
         return [], False
     best = max(s for _, s in top_results)
-    if best < WEAK_MATCH_FLOOR:
+    if best < floor:
         return [], False
-    above_floor = [(m, s) for m, s in top_results if s >= WEAK_MATCH_FLOOR]
+    above_floor = [(m, s) for m, s in top_results if s >= floor]
     if best < MIN_RELEVANCE_TO_SHOW:
         weak = sorted(above_floor, key=lambda ms: ms[1], reverse=True)
         return weak[:limit], True
@@ -1465,13 +1467,19 @@ class SemanticSearch:
                 len(top_results),
             )
         else:
+            # Floor is tunable from the admin console (no deploy needed) but
+            # defaults to the calibrated WEAK_MATCH_FLOOR. Resolved once per
+            # request; a bad stored value falls back to the default, never raises.
+            relevance_floor = app_settings.get_float(
+                self.db, app_settings.SEARCH_RELEVANCE_FLOOR, default=WEAK_MATCH_FLOOR
+            )
             best_score = max(s for _, s in top_results)
-            banded, is_weak = classify_relevance(top_results, limit)
+            banded, is_weak = classify_relevance(top_results, limit, floor=relevance_floor)
             if is_weak:
                 logger.debug(
                     "Best relevance %.3f in weak band [%.2f, %.2f); surfacing %d closest match(es)",
                     best_score,
-                    WEAK_MATCH_FLOOR,
+                    relevance_floor,
                     MIN_RELEVANCE_TO_SHOW,
                     len(banded),
                 )
@@ -1483,7 +1491,7 @@ class SemanticSearch:
                 logger.debug(
                     "Best relevance %.3f below floor %.2f; returning no results",
                     best_score,
-                    WEAK_MATCH_FLOOR,
+                    relevance_floor,
                 )
                 return ([], {})
             top_results = banded
