@@ -84,6 +84,18 @@ type RehearsalAbandonedParams = {
   duration_seconds: number;
 };
 
+type RehearsalErrorParams = {
+  mode: RehearsalMode;
+  /**
+   * Where in the run it broke. A "load" failure is a different product problem
+   * than an actor giving up: 51 abandoned at ~2.1 lines had no way to tell the
+   * two apart, so a load error looked identical to disinterest.
+   */
+  stage: "load" | "ai_line" | "audio" | "other";
+  /** Short error class/message, no PII. */
+  message?: string;
+};
+
 type UpgradeModalViewedParams = {
   /** The gate that blocked them. Tells us which wall makes actors reach for a card. */
   feature: string;
@@ -244,6 +256,10 @@ export function trackRehearsalCompleted(params: RehearsalCompletedParams) {
 
 export function trackRehearsalAbandoned(params: RehearsalAbandonedParams) {
   sendEvent("rehearsal_abandoned", params);
+}
+
+export function trackRehearsalError(params: RehearsalErrorParams) {
+  sendEvent("rehearsal_error", params);
 }
 
 // ─── Money path ──────────────────────────────────────────────────────

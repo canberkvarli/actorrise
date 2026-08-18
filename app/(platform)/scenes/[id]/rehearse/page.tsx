@@ -11,6 +11,7 @@ import {
   trackRehearsalLineDelivered,
   trackRehearsalCompleted,
   trackRehearsalAbandoned,
+  trackRehearsalError,
 } from '@/lib/analytics';
 import {
   useTrialOffer,
@@ -1261,7 +1262,14 @@ export default function RehearsalPage() {
       // so the opening AI line plays from a user gesture (iOS autoplay) and the
       // user gets a clear start cue instead of a silent auto-start.
       setFocusInitialized(true);
-    } catch {
+    } catch (err) {
+      // A load failure is a client error, not disinterest — record it so the
+      // "51 abandoned at 2.1 lines" cohort can be split by cause.
+      trackRehearsalError({
+        mode: 'scene',
+        stage: 'load',
+        message: err instanceof Error ? err.message.slice(0, 120) : 'unknown',
+      });
       setError('Session not found. Start a new rehearsal from the library or one of your scripts.');
     }
   };

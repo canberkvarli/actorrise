@@ -589,9 +589,32 @@ export default function SceneEditPage() {
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [rehearsalStartLineIndex, setRehearsalStartLineIndex] = useState<number | null>(null);
+  // A recent unfinished session for this scene, so we can offer to resume from
+  // where the actor left off instead of always restarting (Task 15).
+  const [resumable, setResumable] = useState<{ id: number; current_line_index: number } | null>(null);
   const [editingCharName, setEditingCharName] = useState<1 | 2 | null>(null);
   const [charNameEditValue, setCharNameEditValue] = useState("");
   const [voiceDropdownOpen, setVoiceDropdownOpen] = useState<string | number | null>(null);
+
+  // When the Rehearse modal opens, look for a resumable session for this scene.
+  useEffect(() => {
+    if (!showRehearsalModal || !Number.isFinite(sceneId)) return;
+    let cancelled = false;
+    api
+      .get<{ session: { id: number; current_line_index: number } | null }>(
+        `/api/scenes/${sceneId}/resumable-session`,
+      )
+      .then((res) => {
+        const s = res.data.session;
+        if (!cancelled) setResumable(s && s.current_line_index > 0 ? s : null);
+      })
+      .catch(() => {
+        if (!cancelled) setResumable(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [showRehearsalModal, sceneId]);
 
   // Close voice dropdown when clicking outside
   // Use "click" (not "mousedown") so that input onBlur fires first and saves pending edits
@@ -3451,8 +3474,32 @@ export default function SceneEditPage() {
                       {voice && <span className="text-[10px] text-muted-foreground shrink-0">{voice.label} voice</span>}
                     </div>
                   </div>
+                  {resumable && rehearsalStartLineIndex === null && (
+                    <button
+                      type="button"
+                      onClick={() => setRehearsalStartLineIndex(resumable.current_line_index)}
+                      className="w-full border border-border bg-muted/30 px-3 py-2 text-left text-xs text-foreground transition-colors hover:bg-muted/50"
+                    >
+                      <span className="font-medium">Resume where you left off</span>
+                      <span className="text-muted-foreground"> · line {resumable.current_line_index + 1} of {scene.lines.length}</span>
+                    </button>
+                  )}
                   {rehearsalStartLineIndex !== null && (
-                    <p className="text-xs text-muted-foreground text-center">Starting from line {rehearsalStartLineIndex + 1} of {scene.lines.length}</p>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Starting from line {rehearsalStartLineIndex + 1} of {scene.lines.length}
+                      {resumable && rehearsalStartLineIndex === resumable.current_line_index && (
+                        <>
+                          {" · "}
+                          <button
+                            type="button"
+                            onClick={() => setRehearsalStartLineIndex(null)}
+                            className="underline underline-offset-2 hover:text-foreground"
+                          >
+                            start over
+                          </button>
+                        </>
+                      )}
+                    </p>
                   )}
                 </div>
                 <div className="flex gap-2 px-5 pb-4">

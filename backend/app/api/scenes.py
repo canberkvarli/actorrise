@@ -590,6 +590,50 @@ async def list_my_favorite_scenes(
 # Rehearsal Session Management
 # ============================================================================
 
+@router.get("/{scene_id}/resumable-session")
+async def get_resumable_session(
+    scene_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """The user's most recent still-resumable session for this scene, or null.
+
+    Resumable = in_progress and not yet stale (a stale one has been swept to
+    'abandoned', see rehearsal_cleanup). Lets the entry screen offer "Resume from
+    line N" instead of always starting over and losing the actor's place.
+    """
+    from datetime import datetime, timezone
+
+    from app.services.rehearsal_cleanup import is_session_stale
+
+    session = (
+        db.query(RehearsalSession)
+        .filter(
+            RehearsalSession.user_id == current_user.id,
+            RehearsalSession.scene_id == scene_id,
+            RehearsalSession.status == "in_progress",
+        )
+        .order_by(RehearsalSession.id.desc())
+        .first()
+    )
+    if session is None:
+        return {"session": None}
+
+    last_activity = session.updated_at or session.started_at
+    if is_session_stale("in_progress", last_activity, datetime.now(timezone.utc)):
+        return {"session": None}
+
+    return {
+        "session": {
+            "id": session.id,
+            "current_line_index": session.current_line_index or 0,
+            "user_characters": session_user_characters(session),
+            "ai_character": session.ai_character,
+            "updated_at": last_activity.isoformat() if last_activity else None,
+        }
+    }
+
+
 @router.post("/rehearse/start", response_model=RehearsalSessionResponse)
 async def start_rehearsal(
     request: StartRehearsalRequest,
