@@ -202,6 +202,17 @@ def diversify_by_play(results_with_scores: list, max_per_play: int = MAX_PER_PLA
 STRONG_COSINE_SIM = 0.38
 
 
+def _scores_from_distances(distances: List[float]) -> List[float]:
+    """Convert pgvector cosine DISTANCES to similarity scores in [0, 1].
+
+    Ranking is already handled by the ORDER BY in the pgvector query, so these
+    scores exist purely to gauge match QUALITY for the relevance bands. Deriving
+    them from rank position (the pre-2026-08 behaviour) made the best hit score
+    1.0 regardless of quality, which silently disabled WEAK_MATCH_FLOOR entirely.
+    """
+    return [max(0.0, min(1.0, 1.0 - float(d))) for d in distances]
+
+
 def classify_relevance(
     top_results: list,
     limit: int,

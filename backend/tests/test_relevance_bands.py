@@ -83,5 +83,39 @@ class ClassifyRelevanceTests(unittest.TestCase):
         self.assertEqual(len(results), 1)
 
 
+class ScoresFromDistancesTests(unittest.TestCase):
+    def test_pgvector_scores_are_cosine_not_rank(self):
+        """The pgvector path must hand classify_relevance real cosine similarity.
+
+        Regression: scores used to come from rank position alone
+        (1.0 - rank/total*0.4), so the best result always scored 1.0 and the
+        0.30 floor could never fire. A search for "Mexican" (best cosine 0.176)
+        returned 20 results as if they fit.
+        """
+        from app.services.search.semantic_search import _scores_from_distances
+
+        # pgvector returns cosine DISTANCE; similarity = 1 - distance.
+        distances = [0.824, 0.850, 0.910]  # -> 0.176, 0.150, 0.090, all sub-floor
+        scores = _scores_from_distances(distances)
+
+        self.assertAlmostEqual(scores[0], 0.176, places=3)
+        self.assertLess(
+            max(scores),
+            WEAK_MATCH_FLOOR,
+            "a 0.176-cosine best hit must not score above the floor",
+        )
+
+    def test_below_floor_query_returns_nothing(self):
+        """End of the chain: bad cosine in, empty result set out.
+
+        classify_relevance is already correct; this pins the contract that a
+        sub-floor best match yields neither results nor a weak-band fallback.
+        """
+        weak = _scored(0.176, 0.150, 0.090)
+        results, is_weak = classify_relevance(weak, limit=20)
+        self.assertEqual(results, [])
+        self.assertFalse(is_weak)
+
+
 if __name__ == "__main__":
     unittest.main()
