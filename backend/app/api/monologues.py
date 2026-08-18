@@ -597,9 +597,14 @@ async def search_monologues(
 
 
 class ContentRequestBody(BaseModel):
-    play_title: str
+    # A request can name a specific title/author (from the content-gap banner) OR
+    # carry the raw search string when nothing specific was found ("sarcastic two
+    # hander"). Either satisfies the request; raw queries are stored as the title
+    # so the admin queue reads them as a content roadmap.
+    play_title: Optional[str] = None
     author: Optional[str] = None
     character_name: Optional[str] = None
+    query: Optional[str] = None
 
 
 @router.post("/content-request")
@@ -608,27 +613,20 @@ async def request_content(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    """Request a play/author that we don't have yet."""
-    from datetime import datetime
+    """Request content we don't have yet — a named play/author, or a raw query."""
+    from app.models.content_request import upsert_content_request
 
-    from app.models.content_request import ContentRequest
-    from sqlalchemy import func
+    # A raw query with no specific title is stored as the title, so a vibe search
+    # ("sarcastic two hander") lands in the same roadmap as a named request.
+    title = (body.play_title or body.query or "").strip()
+    if not title:
+        raise HTTPException(
+            status_code=400, detail="A play title or search query is required."
+        )
 
-    existing = db.query(ContentRequest).filter(
-        func.lower(ContentRequest.play_title) == body.play_title.strip().lower(),
-        func.lower(func.coalesce(ContentRequest.author, "")) == (body.author or "").strip().lower(),
-    ).first()
-
-    if existing:
-        existing.request_count += 1
-        existing.last_requested_at = datetime.utcnow()
-    else:
-        db.add(ContentRequest(
-            play_title=body.play_title.strip(),
-            author=body.author.strip() if body.author else None,
-            character_name=body.character_name.strip() if body.character_name else None,
-        ))
-    db.commit()
+    upsert_content_request(
+        db, title, author=body.author, character_name=body.character_name
+    )
     return {"status": "ok"}
 
 
