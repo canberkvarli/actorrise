@@ -769,45 +769,11 @@ export function SearchInterface() {
                 </p>
               )}
             </motion.div>
-            {(() => {
-              const looser = results.filter((m) => m.band === "looser");
-              const strong = results.filter((m) => m.band !== "looser");
-              // In weak mode every result is looser and the banner already says
-              // so — one grid, no divider. Only split when a strong query has a
-              // looser tail worth separating.
-              if (weakMatch || strong.length === 0 || looser.length === 0) {
-                return (
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {results.map((monologue, index) => (
-                      <MonologueCard key={monologue.id} monologue={monologue} index={index} />
-                    ))}
-                  </div>
-                );
-              }
-              return (
-                <>
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {strong.map((monologue, index) => (
-                      <MonologueCard key={monologue.id} monologue={monologue} index={index} />
-                    ))}
-                  </div>
-                  <div className="mt-8 mb-4 border-t border-border pt-3">
-                    <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                      Looser matches
-                    </span>
-                  </div>
-                  <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {looser.map((monologue, index) => (
-                      <MonologueCard
-                        key={monologue.id}
-                        monologue={monologue}
-                        index={strong.length + index}
-                      />
-                    ))}
-                  </div>
-                </>
-              );
-            })()}
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {results.map((monologue, index) => (
+                <MonologueCard key={monologue.id} monologue={monologue} index={index} />
+              ))}
+            </div>
           </motion.div>
         ) : null}
       </AnimatePresence>

@@ -82,6 +82,7 @@ import { ActiveFilterChips } from "@/components/search/ActiveFilterChips";
 import { computeMatchReasons } from "@/lib/matchReasons";
 import { QuickFilterChips } from "@/components/search/QuickFilterChips";
 import { ContentGapBanner } from "@/components/search/ContentGapBanner";
+import { RequestQueryButton } from "@/components/search/RequestQueryButton";
 import { SceneGapBanner } from "@/components/search/SceneGapBanner";
 import { useProfileStats, useProfileFormData } from "@/hooks/useDashboardData";
 import { computeProfileMatch, type ProfileMatch } from "@/lib/profileMatch";
@@ -231,6 +232,10 @@ function SearchContent() {
   const [contentGap, setContentGap] = useState<{ play: string | null; author: string | null; available_in?: string[] | null } | null>(null);
   const [sceneGap, setSceneGap] = useState(false);
   const [queryInvalidReason, setQueryInvalidReason] = useState<string | null>(null);
+  // True when results exist but none clear the strong-match bar; drives the
+  // "no strong match, request it" affordance.
+  const [weakMatch, setWeakMatch] = useState(false);
+  const [broadened, setBroadened] = useState<{ relaxed: string[] } | null>(null);
   const PAGE_SIZE = 20;
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -723,6 +728,8 @@ function SearchContent() {
     } | null;
     scene_gap?: boolean;
     query_invalid_reason?: string | null;
+    weak_match?: boolean;
+    broadened?: { relaxed: string[] } | null;
     debug_timing?: DebugTiming | null;
     search_log_id?: number | null;
   };
@@ -752,6 +759,8 @@ function SearchContent() {
       setSearchUpgradeUrl(null);
       setCorrectedQuery(null);
       setQueryMayHaveTypos(false);
+      setWeakMatch(false);
+      setBroadened(null);
     } else {
       setIsLoadingMore(true);
     }
@@ -787,6 +796,8 @@ function SearchContent() {
         setContentGap(data.content_gap ?? null);
         setSceneGap(data.scene_gap ?? false);
         setQueryInvalidReason(data.query_invalid_reason ?? null);
+        setWeakMatch(Boolean(data.weak_match));
+        setBroadened(data.broadened ?? null);
       }
       setTotal(data.total);
       setPage(data.page);
@@ -1275,6 +1286,29 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       toast.error("Couldn't update bookmark. Please try again.");
       console.error("Error toggling favorite:", error);
     }
+  };
+
+  // Human-readable list of the constraints graceful relaxation loosened
+  // ("age and duration"), deduped so max/min duration read as one word.
+  const formatRelaxed = (keys: string[]): string => {
+    const labels: Record<string, string> = {
+      age_range: "age",
+      category: "category",
+      era: "era",
+      max_duration: "duration",
+      min_duration: "duration",
+    };
+    const seen = new Set<string>();
+    const words: string[] = [];
+    for (const k of keys) {
+      const label = labels[k] ?? k.replace(/_/g, " ");
+      if (!seen.has(label)) {
+        seen.add(label);
+        words.push(label);
+      }
+    }
+    if (words.length <= 1) return words[0] ?? "";
+    return words.slice(0, -1).join(", ") + " and " + words[words.length - 1];
   };
 
   const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
@@ -2080,9 +2114,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 ) : (
                   <>
                     <h3 className="text-2xl font-semibold mb-2">Nothing matched your search</h3>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-sm text-muted-foreground mb-4">
                       Try different words or remove some filters to see more results
                     </p>
+                    {queryUsedForResults.trim() && (
+                      <RequestQueryButton query={queryUsedForResults} className="flex items-center justify-center" />
+                    )}
                   </>
                 )}
               </div>
@@ -2125,6 +2162,26 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 />
               )}
               {sceneGap && <SceneGapBanner />}
+              {/* Never relax silently: say which constraint was loosened to fill results. */}
+              {broadened && broadened.relaxed.length > 0 && (
+                <div className="border border-border border-l-2 border-l-[#CB4B00] bg-muted/40 px-4 py-3">
+                  <p className="text-sm text-foreground">
+                    Only a few exact matches, so I broadened the{" "}
+                    <span className="font-medium">{formatRelaxed(broadened.relaxed)}</span>.
+                  </p>
+                </div>
+              )}
+              {/* Weak result set with no named-title gap: offer to request the query. */}
+              {weakMatch && !contentGap && (
+                <div className="border border-border bg-card p-4 space-y-2">
+                  <p className="text-sm text-foreground">
+                    No strong match for{" "}
+                    <span className="font-semibold">{queryUsedForResults}</span>. Here are the
+                    closest ones.
+                  </p>
+                  <RequestQueryButton query={queryUsedForResults} className="flex items-center" />
+                </div>
+              )}
               {/* Results header: 3-col grid on desktop so feedback is always truly centered */}
               <div className="flex flex-col gap-3 mb-8 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4">
                 {/* Left: count + mobile bookmark */}
@@ -2177,6 +2234,37 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 // Show match badges for all semantic results (score > 0.1 check is in the card itself).
                 // showConfidence only gates the "Best Matches" section header, not individual badges.
                 const showBadges = !showBookmarkedOnly;
+                const baseOffset = !showBookmarkedOnly ? bestMatches.length : 0;
+                // Relevance band is a separate axis from Best/Related: a strong
+                // query still trails off into looser matches (band "looser" =
+                // below the show bar). Split the related tail so those sit under
+                // a divider rather than masquerading as equally-good results.
+                // Never split in the bookmarked-only view — band is irrelevant there.
+                const looserRelated = showBookmarkedOnly
+                  ? []
+                  : relatedOrBookmarked.filter((m) => m.band === "looser");
+                const strongRelated = showBookmarkedOnly
+                  ? relatedOrBookmarked
+                  : relatedOrBookmarked.filter((m) => m.band !== "looser");
+                const showDivider =
+                  !showBookmarkedOnly &&
+                  looserRelated.length > 0 &&
+                  bestMatches.length + strongRelated.length > 0;
+                const renderCard = (mono: Monologue, idx: number, variant: "bestMatch" | "default") => (
+                  <MonologueResultCard
+                    key={mono.id}
+                    mono={mono}
+                    onSelect={() => openMonologue(mono, idx, "monologue")}
+                    onToggleFavorite={toggleFavorite}
+                    variant={variant}
+                    index={idx}
+                    showMatchBadge={showBadges}
+                    isModerator={!!user?.is_moderator}
+                    onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
+                    highlightFields={queryHighlights}
+                    matchReasons={computeMatchReasons(mono, queryHighlights, filters, profileMatchMap.get(mono.id))}
+                  />
+                );
                 return (
                   <>
                     {!showBookmarkedOnly && showConfidence && bestMatches.length > 0 && (
@@ -2186,37 +2274,23 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       </p>
                     )}
                     <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {!showBookmarkedOnly && bestMatches.map((mono, idx) => (
-                        <MonologueResultCard
-                          key={mono.id}
-                          mono={mono}
-                          onSelect={() => openMonologue(mono, idx, "monologue")}
-                          onToggleFavorite={toggleFavorite}
-                          variant="bestMatch"
-                          index={idx}
-                          showMatchBadge={showBadges}
-                          isModerator={!!user?.is_moderator}
-                          onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
-                          highlightFields={queryHighlights}
-                          matchReasons={computeMatchReasons(mono, queryHighlights, filters, profileMatchMap.get(mono.id))}
-                        />
-                      ))}
-                      {relatedOrBookmarked.map((mono, idx) => (
-                        <MonologueResultCard
-                          key={mono.id}
-                          mono={mono}
-                          onSelect={() => openMonologue(mono, (!showBookmarkedOnly ? bestMatches.length : 0) + idx, "monologue")}
-                          onToggleFavorite={toggleFavorite}
-                          variant="default"
-                          index={(!showBookmarkedOnly ? bestMatches.length : 0) + idx}
-                          showMatchBadge={showBadges}
-                          isModerator={!!user?.is_moderator}
-                          onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
-                          highlightFields={queryHighlights}
-                          matchReasons={computeMatchReasons(mono, queryHighlights, filters, profileMatchMap.get(mono.id))}
-                        />
-                      ))}
+                      {!showBookmarkedOnly && bestMatches.map((mono, idx) => renderCard(mono, idx, "bestMatch"))}
+                      {strongRelated.map((mono, idx) => renderCard(mono, baseOffset + idx, "default"))}
                     </div>
+                    {showDivider && (
+                      <>
+                        <div className="mt-8 mb-4 border-t border-border pt-3">
+                          <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                            Looser matches
+                          </span>
+                        </div>
+                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {looserRelated.map((mono, idx) =>
+                            renderCard(mono, baseOffset + strongRelated.length + idx, "default"),
+                          )}
+                        </div>
+                      </>
+                    )}
                   </>
                 );
               })()}
