@@ -101,6 +101,7 @@ class SearchResponse(BaseModel):
     query_invalid_reason: Optional[str] = None
     weak_match: bool = False  # True when results exist but none clear the strong-match bar
     broadened: Optional[dict] = None  # {"relaxed": ["length","age",...]} when filters were loosened to fill results
+    parsed_constraints: Optional[dict] = None  # constraints understood from the free-text query, e.g. {"category":"contemporary","gender":"female"} — shown as removable chips
     debug_timing: Optional[dict] = None  # Timing data for dev/admin debug overlay
     search_log_id: Optional[int] = None  # search_logs row id; pass as ?slid= when opening a result (funnel analytics)
 
@@ -312,6 +313,7 @@ async def search_monologues(
     exclude_overdone: bool = Query(False, description="If true, only return monologues with low overdone_score (fresh pieces)"),
     max_overdone_score: Optional[float] = Query(None, ge=0.0, le=1.0, description="Max overdone_score to include (0=freshest only, 1=all). Overrides exclude_overdone when set."),
     source_type: Optional[str] = Query(None, description="Filter by source: 'play', 'film', 'tv'. Comma-separated for multiple."),
+    ignore: Optional[str] = Query(None, description="Comma-separated parsed-constraint keys to drop (from dismissing a constraint chip), e.g. 'category,gender'."),
     limit: int = Query(20, le=100),
     page: int = Query(1, ge=1),
     db: Session = Depends(get_db),
@@ -411,6 +413,9 @@ async def search_monologues(
                 filters=filters,
                 user_id=cast(int, current_user.id),
                 actor_profile=actor_profile_for_search,
+                ignore_constraints=(
+                    [k.strip() for k in ignore.split(",") if k.strip()] if ignore else None
+                ),
             )
             has_scores = True
             # If the query names a show we carry ("mean girls jr"), its pieces
@@ -579,6 +584,7 @@ async def search_monologues(
             scene_gap=scene_gap,
             weak_match=weak_match,
             broadened=broadened,
+            parsed_constraints=(getattr(search_service, "_parsed_constraints", None) or None),
             debug_timing=debug_timing,
             search_log_id=search_log_id,
         )

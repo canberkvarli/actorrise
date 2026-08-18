@@ -83,6 +83,7 @@ import { computeMatchReasons } from "@/lib/matchReasons";
 import { QuickFilterChips } from "@/components/search/QuickFilterChips";
 import { ContentGapBanner } from "@/components/search/ContentGapBanner";
 import { RequestQueryButton } from "@/components/search/RequestQueryButton";
+import { ParsedConstraintChips } from "@/components/search/ParsedConstraintChips";
 import { SceneGapBanner } from "@/components/search/SceneGapBanner";
 import { useProfileStats, useProfileFormData } from "@/hooks/useDashboardData";
 import { computeProfileMatch, type ProfileMatch } from "@/lib/profileMatch";
@@ -236,6 +237,13 @@ function SearchContent() {
   // "no strong match, request it" affordance.
   const [weakMatch, setWeakMatch] = useState(false);
   const [broadened, setBroadened] = useState<{ relaxed: string[] } | null>(null);
+  // Constraints the backend parsed out of the free-text query, shown as
+  // removable chips. Dismissing one adds its key to ignoredConstraintsRef and
+  // re-runs; the ref (not state) so performSearch always reads the latest, and
+  // it resets whenever the query text itself changes (see performSearch).
+  const [parsedConstraints, setParsedConstraints] = useState<Record<string, unknown> | null>(null);
+  const ignoredConstraintsRef = useRef<string[]>([]);
+  const lastParsedQueryRef = useRef<string>("");
   const PAGE_SIZE = 20;
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -730,6 +738,7 @@ function SearchContent() {
     query_invalid_reason?: string | null;
     weak_match?: boolean;
     broadened?: { relaxed: string[] } | null;
+    parsed_constraints?: Record<string, unknown> | null;
     debug_timing?: DebugTiming | null;
     search_log_id?: number | null;
   };
@@ -761,6 +770,12 @@ function SearchContent() {
       setQueryMayHaveTypos(false);
       setWeakMatch(false);
       setBroadened(null);
+      // A genuinely new query forgets any constraint chips the user dismissed;
+      // a chip-removal re-run keeps the same query text, so its ignores persist.
+      if (searchQuery !== lastParsedQueryRef.current) {
+        ignoredConstraintsRef.current = [];
+      }
+      lastParsedQueryRef.current = searchQuery;
     } else {
       setIsLoadingMore(true);
     }
@@ -773,6 +788,7 @@ function SearchContent() {
         if (value) params.append(key, value);
       });
       if (effectiveMaxOverdone < 1) params.set("max_overdone_score", String(effectiveMaxOverdone));
+      if (ignoredConstraintsRef.current.length) params.set("ignore", ignoredConstraintsRef.current.join(","));
 
       const _searchStart = Date.now();
       setFrontendSearchStart(_searchStart);
@@ -798,6 +814,7 @@ function SearchContent() {
         setQueryInvalidReason(data.query_invalid_reason ?? null);
         setWeakMatch(Boolean(data.weak_match));
         setBroadened(data.broadened ?? null);
+        setParsedConstraints(data.parsed_constraints ?? null);
       }
       setTotal(data.total);
       setPage(data.page);
@@ -1309,6 +1326,22 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     }
     if (words.length <= 1) return words[0] ?? "";
     return words.slice(0, -1).join(", ") + " and " + words[words.length - 1];
+  };
+
+  // Dismiss a parsed-constraint chip: remember to ignore it and re-run the same
+  // query so the search stops applying it. Optimistically drop it from the shown
+  // chips too, so the UI responds before the request returns.
+  const handleRemoveConstraint = (key: string) => {
+    if (!ignoredConstraintsRef.current.includes(key)) {
+      ignoredConstraintsRef.current = [...ignoredConstraintsRef.current, key];
+    }
+    setParsedConstraints((prev) => {
+      if (!prev) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+    performSearch(queryUsedForResults, filters);
   };
 
   const activeFilters = Object.entries(filters).filter(([, value]) => value !== "");
@@ -2132,6 +2165,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 onRemove={(key) => setFilters((f) => ({ ...f, [key]: "" }))}
                 onClearAll={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" })}
               />
+              <ParsedConstraintChips constraints={parsedConstraints} onRemove={handleRemoveConstraint} />
               {searchParams.get("ai") === "true" && (
                 <div className="flex items-center gap-2 p-4 bg-secondary/10 border border-secondary/30 rounded-lg">
                   <IconSparkles className="h-5 w-5 text-foreground flex-shrink-0" />
