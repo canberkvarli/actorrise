@@ -152,6 +152,31 @@ def tv_clip_gate_active(filters: Optional[Dict]) -> bool:
     return not (md and md <= 45)
 
 
+# The era divide. plays.category is only ever 'contemporary' or 'classical', so
+# it already reads as the era filter — but the labels are dirty: 181 plays tagged
+# 'contemporary' were actually written pre-1980 (a bare "contemporary" search
+# returned 20 plays all written in 1920). year_written corrects that.
+ERA_CUTOFF_YEAR = 1980
+
+
+def era_year_clause(category, year_col: str = "p.year_written") -> Optional[str]:
+    """SQL fragment enforcing era via year_written, to correct the category label.
+
+    Returns None for any non-era category. Unknown year (NULL) is KEPT: the
+    category label is the only era signal we have for those rows, and 387 of the
+    contemporary plays have no year — excluding them would gut the catalogue.
+    So this only removes the KNOWN-wrong: a 'contemporary' play we can prove is
+    pre-1980, or a 'classical' one we can prove is modern.
+    """
+    if not isinstance(category, str):
+        return None
+    if category == "contemporary":
+        return f"({year_col} >= {ERA_CUTOFF_YEAR} OR {year_col} IS NULL)"
+    if category == "classical":
+        return f"({year_col} < {ERA_CUTOFF_YEAR} OR {year_col} IS NULL)"
+    return None
+
+
 def encode_search_cache(rows: list, best_cosine):
     """Wrap cached result rows with the best raw cosine so a cache-hit search
     can restore weak-match quality (per-result scores are rank-based and can't
@@ -594,6 +619,7 @@ class SemanticSearch:
         filters: Optional[Dict] = None,
         user_id: Optional[int] = None,
         actor_profile: Optional[Dict] = None,
+        ignore_constraints: Optional[List[str]] = None,
     ) -> Tuple[List[tuple[Monologue, float]], Dict[int, str]]:
         """
         Semantic search for monologues.
@@ -806,7 +832,23 @@ class SemanticSearch:
             **(optimized_filters or {}),
             **(explicit_filters or {}),
         }
+        # A user can dismiss a parsed constraint chip ("Contemporary ×"); drop it
+        # here so the re-run ignores it. Explicit UI filters are never dropped
+        # this way — those have their own chip control.
+        if ignore_constraints:
+            for _k in ignore_constraints:
+                if _k not in (explicit_filters or {}):
+                    merged_filters.pop(_k, None)
         logger.debug("Merged filters (final): %s", merged_filters)
+        # Constraints the parser understood from the free-text query (not the
+        # explicit UI filters, which have their own chips). Surfaced so the UI can
+        # echo "I understood: Contemporary, Female, 20s" with removable chips.
+        _CHIP_HIDDEN_KEYS = {"intended_play", "intended_author", "max_overdone_score"}
+        self._parsed_constraints = {
+            k: v
+            for k, v in merged_filters.items()
+            if k not in (explicit_filters or {}) and k not in _CHIP_HIDDEN_KEYS
+        }
         self._debug_timing["filters_merged"] = dict(merged_filters)
         self._debug_timing["filters_ms"] = round((time.time() - overall_start) * 1000)
 
@@ -1169,6 +1211,14 @@ class SemanticSearch:
                     cats = cat if isinstance(cat, list) else [cat]
                     cat_sql = " OR ".join(f"p.category ILIKE '%{c.replace(chr(39), '')}%'" for c in cats)
                     wc.append(f"({cat_sql})")
+                    # Era is category here, but the labels are dirty — correct
+                    # them with year_written so "contemporary" excludes the plays
+                    # we can prove are pre-1980 (single category only; a list is
+                    # ambiguous so it stays label-only).
+                    if not isinstance(cat, list):
+                        era_sql = era_year_clause(cat)
+                        if era_sql:
+                            wc.append(era_sql)
                 if hf.get("age_range"):
                     ages = ",".join(
                         "'" + a.replace("'", "") + "'" for a in _age_hard_values(hf["age_range"])
