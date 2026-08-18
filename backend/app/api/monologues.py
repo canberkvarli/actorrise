@@ -73,6 +73,7 @@ class MonologueResponse(BaseModel):
     act: Optional[int] = None  # Act number (for classical plays)
     scene: Optional[int] = None  # Scene number (for classical plays)
     relevance_score: Optional[float] = None  # Similarity score from search (0.0-1.0)
+    band: Optional[str] = None  # "strong" | "looser" for the search results divider (None outside search)
     match_type: Optional[str] = None  # "exact_quote" | "fuzzy_quote" when this monologue is the actual quote match
     source_url: Optional[str] = None  # Link to original source (e.g. Project Gutenberg) for attribution
     # Film/TV metadata (populated when play.source_type is "film" or "tv")
@@ -188,6 +189,14 @@ def _monologue_to_response(
 ) -> MonologueResponse:
     """Build MonologueResponse from ORM instance with correct types for the type checker."""
     play = m.play
+    # Band label for the results divider: at/above the show bar is a strong
+    # match, below it (but still shown) is "looser". Only meaningful for search
+    # results, so it stays None when no score was passed.
+    band = (
+        ("strong" if relevance_score >= MIN_RELEVANCE_TO_SHOW else "looser")
+        if relevance_score is not None
+        else None
+    )
     return MonologueResponse(
         id=cast(int, m.id),
         title=cast(str, m.title),
@@ -222,6 +231,7 @@ def _monologue_to_response(
         act=cast(Optional[int], m.act),
         scene=cast(Optional[int], m.scene),
         relevance_score=relevance_score,
+        band=band,
         match_type=match_type,
         source_url=cast(Optional[str], play.source_url),
         # Film/TV metadata

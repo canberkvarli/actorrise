@@ -67,6 +67,8 @@ export interface Monologue {
   full_text_url?: string;
   source_url?: string;
   relevance_score?: number;
+  /** "strong" | "looser" — which side of the results divider this match sits on (set only for search results) */
+  band?: string;
   /** "exact_quote" | "fuzzy_quote" when this monologue is the actual quote match (e.g. Hamlet for "to be or not to be") */
   match_type?: string;
   difficulty?: string;
