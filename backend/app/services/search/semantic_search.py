@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, joinedload, defer
 from app.models.actor import Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
 from app.services.search.cache_manager import cache_manager
-from app.services.search.query_optimizer import QueryOptimizer
+from app.services.search.query_optimizer import QueryOptimizer, is_filter_only_query
 
 # Module-level in-memory caches (Level 0 hot cache shared across SemanticSearch instances).
 # Uses OrderedDict for LRU eviction - popular queries stay cached longer.
@@ -222,9 +222,16 @@ def classify_relevance(
     ``top_results`` is a list of ``(monologue, score)`` tuples. Returns
     ``(results, is_weak)``:
 
-      * best >= MIN_RELEVANCE_TO_SHOW       -> (matches at/above the bar, False)
+      * best >= MIN_RELEVANCE_TO_SHOW       -> (matches >= floor, False)  # strong
       * floor <= best < MIN_RELEVANCE_TO_SHOW -> (closest matches >= floor, True)
       * best < WEAK_MATCH_FLOOR             -> ([], False)   # gibberish / unrelated
+
+    In BOTH shown bands the tail is kept down to WEAK_MATCH_FLOOR, not the show
+    bar: once real cosine reaches this path (2026-08) genuine queries cluster
+    their top hit ~0.50 but their 3rd-10th results at 0.40-0.47, so pruning the
+    strong band at MIN_RELEVANCE_TO_SHOW gutted result counts for good queries.
+    The show bar now only decides the strong-vs-weak BANNER; the 0.30-0.47 tail
+    of a strong query is shown as the "looser matches" group in the UI.
 
     The empty-input case returns ``([], False)``; the caller distinguishes
     "no semantic candidates at all" (text fallback) from "below floor" itself.
@@ -234,14 +241,11 @@ def classify_relevance(
     best = max(s for _, s in top_results)
     if best < WEAK_MATCH_FLOOR:
         return [], False
+    above_floor = [(m, s) for m, s in top_results if s >= WEAK_MATCH_FLOOR]
     if best < MIN_RELEVANCE_TO_SHOW:
-        weak = sorted(
-            (ms for ms in top_results if ms[1] >= WEAK_MATCH_FLOOR),
-            key=lambda ms: ms[1],
-            reverse=True,
-        )
+        weak = sorted(above_floor, key=lambda ms: ms[1], reverse=True)
         return weak[:limit], True
-    return [(m, s) for m, s in top_results if s >= MIN_RELEVANCE_TO_SHOW], False
+    return above_floor, False
 
 
 def _canonicalize_query_for_cache(raw_query: str) -> str:
@@ -1210,8 +1214,16 @@ class SemanticSearch:
             except Exception:
                 pass
 
+            # Per-candidate cosine distance, keyed by monologue id. The relevance
+            # bands score off these (see _scores_from_distances); ranking itself
+            # still comes from the SQL ORDER BY. Keyed by id so it survives the
+            # relaxation appends and the re-order below.
+            dist_by_id: Dict[int, float] = {}
+
             def fetch_ids(hf: Dict, exclude: list, n: int) -> list:
-                """Vector-ordered candidate IDs for a filter set, excluding seen IDs."""
+                """Vector-ordered candidate IDs for a filter set, excluding seen IDs.
+
+                Side effect: records each row's cosine distance in ``dist_by_id``."""
                 if n <= 0:
                     return []
                 excl = (
@@ -1219,33 +1231,25 @@ class SemanticSearch:
                     if exclude else ""
                 )
                 q = text(
-                    f"SELECT m.id FROM monologues m JOIN plays p ON p.id = m.play_id "
+                    f"SELECT m.id, m.embedding_vector <=> '{vec_str}'::vector AS dist "
+                    f"FROM monologues m JOIN plays p ON p.id = m.play_id "
                     f"WHERE {build_where(hf)}{excl} "
                     f"ORDER BY m.embedding_vector <=> '{vec_str}'::vector LIMIT :limit"
                 )
-                return [row[0] for row in self.db.execute(q, {"limit": n}).fetchall()]
+                rows = self.db.execute(q, {"limit": n}).fetchall()
+                for row in rows:
+                    if row[1] is not None:
+                        dist_by_id[row[0]] = float(row[1])
+                return [row[0] for row in rows]
 
             candidate_ids = fetch_ids(hard_filters, [], VECTOR_CANDIDATES)
 
-            # Best RAW cosine similarity of the nearest candidate. The per-result
-            # scores below are rank-based (0.6–1.0), so they can't distinguish a
-            # great match from "nearest of a bad bunch" — the real cosine can, and
-            # it drives the honest "closest matches" banner. candidate_ids[0] is the
-            # global nearest under the hard filters (relaxed rows are appended after).
+            # Best RAW cosine similarity across candidates drives the honest
+            # "closest matches" banner (monologues.py, against STRONG_COSINE_SIM).
+            # Set below from the real per-row distances once scores are computed,
+            # so it and the per-result scores agree instead of coming from
+            # separate places (rank vs. a one-off nearest-neighbour query).
             self._best_cosine_sim = None
-            if candidate_ids:
-                try:
-                    _d = self.db.execute(
-                        text(
-                            f"SELECT m.embedding_vector <=> '{vec_str}'::vector "
-                            f"FROM monologues m WHERE m.id = :id"
-                        ),
-                        {"id": int(candidate_ids[0])},
-                    ).scalar()
-                    if _d is not None:
-                        self._best_cosine_sim = 1.0 - float(_d)
-                except Exception:
-                    self._best_cosine_sim = None
 
             # Graceful relaxation: if too few rows pass ALL hard filters, relax
             # the least-important ones (age → era → cap → duration floor, the
@@ -1295,15 +1299,20 @@ class SemanticSearch:
             else:
                 semantic_candidates = []
 
-            # pgvector already returned candidates sorted best-first by cosine distance.
-            # Recomputing cosine similarity in Python is redundant; derive a score
-            # from rank position instead (rank 0 = best match → 1.0, decreasing).
-            total = len(semantic_candidates)
-            for rank, mono in enumerate(semantic_candidates):
-                similarity = max(0.0, 1.0 - (rank / max(total, 1)) * 0.4)
+            # Real cosine per row. Ranking already comes from the SQL ORDER BY;
+            # these scores exist to let the relevance bands judge QUALITY. Deriving
+            # them from rank position used to peg the best hit at 1.0, silently
+            # disabling WEAK_MATCH_FLOOR (a 0.176-cosine "Mexican" returned 20 rows).
+            candidate_distances = [dist_by_id.get(mono.id, 1.0) for mono in semantic_candidates]
+            similarities = _scores_from_distances(candidate_distances)
+            for mono, similarity in zip(semantic_candidates, similarities):
                 results_with_scores.append((mono, similarity))
+            if similarities:
+                self._best_cosine_sim = max(similarities)
 
-            logger.debug("pgvector returned %s candidates (rank-based scoring)", total)
+            logger.debug(
+                "pgvector returned %s candidates (cosine-based scoring)", len(similarities)
+            )
 
         except Exception as e:
             # If pgvector is unavailable or misconfigured, fall back to legacy
@@ -1440,7 +1449,22 @@ class SemanticSearch:
         # weak band [WEAK_MATCH_FLOOR, MIN_RELEVANCE_TO_SHOW) are surfaced as the
         # closest results (flagged weak by score); below the floor we return empty.
         no_semantic_match = False
-        if top_results:
+        if not top_results:
+            no_semantic_match = True
+        elif is_filter_only_query(query):
+            # Filter-only queries ("dramatic monologue" + source:tv, "30 second")
+            # carry their intent in the hard SQL filters, not in content words, so
+            # every candidate is already filter-validated. Cosine quality is
+            # meaningless when there is nothing to be "about", so the relevance
+            # floor must NOT prune them — doing so hid real TV monologues behind a
+            # generic browse query. (Mirrors the weak-banner suppression: these
+            # results are filter-validated, not cosine-ranked.)
+            logger.debug(
+                "Filter-only query %r: %d filter-validated results, floor bypassed",
+                query,
+                len(top_results),
+            )
+        else:
             best_score = max(s for _, s in top_results)
             banded, is_weak = classify_relevance(top_results, limit)
             if is_weak:
@@ -1463,8 +1487,6 @@ class SemanticSearch:
                 )
                 return ([], {})
             top_results = banded
-        else:
-            no_semantic_match = True
 
         # FALLBACK: Only supplement with text search if semantic returned zero results.
         # The hybrid merge at line 766 already handles title/author/character matches.

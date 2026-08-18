@@ -32,12 +32,17 @@ class ClassifyRelevanceTests(unittest.TestCase):
         self.assertEqual(results, [])
         self.assertFalse(is_weak)
 
-    def test_strong_match_keeps_only_at_or_above_bar(self):
+    def test_strong_match_keeps_everything_above_floor(self):
+        # Best is strong (>= show bar), so results are shown down to the FLOOR,
+        # not the show bar: the show bar only picks the strong-vs-weak banner,
+        # and the 0.30-0.47 tail becomes the "looser matches" group in the UI.
+        # (Pre-2026-08 this pruned at the show bar, which gutted good queries
+        # once real cosine — with its tight 0.40-0.47 clustering — reached here.)
         results, is_weak = classify_relevance(
             _scored(0.90, 0.55, 0.40, 0.20), limit=20
         )
         self.assertFalse(is_weak)
-        self.assertEqual([s for _, s in results], [0.90, 0.55])
+        self.assertEqual([s for _, s in results], [0.90, 0.55, 0.40])
 
     def test_weak_band_surfaces_closest_above_floor(self):
         # best is between the floor and the show bar -> weak band

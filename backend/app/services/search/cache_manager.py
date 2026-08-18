@@ -44,7 +44,10 @@ logger = logging.getLogger(__name__)
 # their pieces is under 75 words. Searching a show by title is the least ambiguous
 # intent in the product and a length heuristic should not overrule it. Browsing
 # and vibe queries are unaffected.
-CACHE_VERSION = "14"
+# v15: per-result scores on the pgvector path now carry real cosine similarity
+# instead of rank position, so the 0.30 relevance floor finally bites. Cached
+# rank-based scores would mask the fix, so the cache is invalidated.
+CACHE_VERSION = "15"
 
 
 class CacheManager:
