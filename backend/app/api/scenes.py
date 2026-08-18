@@ -690,6 +690,16 @@ async def start_rehearsal(
     user_roles, ai_character = resolved
     user_character = user_roles[0]
 
+    # Close this user's own stale in_progress sessions before opening a new one,
+    # so `in_progress` stays meaningful instead of accumulating (38 were stuck in
+    # prod). Only the truly inactive are swept — a recently paused one stays
+    # resumable. Best-effort: a cleanup failure must not block the new session.
+    try:
+        from app.services.rehearsal_cleanup import abandon_stale_sessions
+        abandon_stale_sessions(db, user_id=int(current_user.id))
+    except Exception:
+        db.rollback()
+
     # Create session
     start_index = request.start_from_line_index if request.start_from_line_index is not None else 0
     lines_per_session = benefits.get("scene_partner_lines_per_session")
