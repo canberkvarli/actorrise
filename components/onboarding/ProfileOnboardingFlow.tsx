@@ -32,12 +32,21 @@ const stepTransition = {
 
 type Variant = "new" | "backfill";
 
-// Referral goes first on purpose. Every other answer can be recovered later
-// (the backfill card exists for exactly that), but how someone found me decays
-// from memory within days, and it is the one question I could not answer about
-// the August signups at all.
-const QUESTIONS = [
-  { key: "referral", prompt: "How did you find me?", hint: "One tap. It's the only way I know what's working." },
+// Referral goes first, and only for new signups. Every other answer can be
+// recovered later (the backfill card exists for exactly that), but how someone
+// found me decays from memory within days — it is the one question I could not
+// answer about the August signups at all.
+//
+// Asked of new accounts only: putting "How did you find me?" in front of
+// someone who has been using the app for months reads like the app forgot
+// them, and their recall that far out is not worth much anyway.
+const REFERRAL_QUESTION = {
+  key: "referral",
+  prompt: "How did you find me?",
+  hint: "One tap. It's the only way I know what's working.",
+} as const;
+
+const PROFILE_QUESTIONS = [
   { key: "casting", prompt: "How are you usually cast?", hint: "So the roles I show you are ones you could actually book." },
   { key: "ageRange", prompt: "What's your playing age?", hint: null },
   { key: "workOn", prompt: "What do you want to work on?", hint: "Pick as many as you like." },
@@ -45,7 +54,10 @@ const QUESTIONS = [
   { key: "stage", prompt: "Where are you in it?", hint: null },
 ] as const;
 
-const TOTAL_STEPS = QUESTIONS.length; // 5 taps; payoff is a separate view
+type QuestionKey = typeof REFERRAL_QUESTION.key | typeof PROFILE_QUESTIONS[number]["key"];
+
+// Two-column tiles for the short-label questions; the rest read better stacked.
+const TWO_COLUMN_KEYS = new Set<QuestionKey>(["referral", "ageRange", "mediums"]);
 
 function Tile({
   selected,
@@ -96,6 +108,12 @@ export default function ProfileOnboardingFlow({
   const { refreshUser } = useAuth();
   const router = useRouter();
 
+  const questions = useMemo(
+    () => (variant === "new" ? [REFERRAL_QUESTION, ...PROFILE_QUESTIONS] : [...PROFILE_QUESTIONS]),
+    [variant]
+  );
+  const totalSteps = questions.length;
+
   const [step, setStep] = useState(0);
   const [direction, setDirection] = useState(1);
   const [showPayoff, setShowPayoff] = useState(false);
@@ -125,22 +143,25 @@ export default function ProfileOnboardingFlow({
   const toggle = (arr: string[], id: string) =>
     arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id];
 
+  // Keyed off the question, not its index: the index shifts with `variant`,
+  // and shifting positions by hand is how the wrong question ends up gating
+  // the wrong answer.
   const stepValid = useMemo(() => {
-    switch (step) {
-      case 0: return !!referral;
-      case 1: return !!casting;
-      case 2: return !!ageRange;
-      case 3: return workOn.length > 0;
-      case 4: return mediums.length > 0;
-      case 5: return !!stage;
+    switch (questions[step]?.key) {
+      case "referral": return !!referral;
+      case "casting": return !!casting;
+      case "ageRange": return !!ageRange;
+      case "workOn": return workOn.length > 0;
+      case "mediums": return mediums.length > 0;
+      case "stage": return !!stage;
       default: return false;
     }
-  }, [step, referral, casting, ageRange, workOn, mediums, stage]);
+  }, [questions, step, referral, casting, ageRange, workOn, mediums, stage]);
 
   const goTo = useCallback((delta: number) => {
     setDirection(delta > 0 ? 1 : -1);
-    setStep((s) => Math.min(TOTAL_STEPS - 1, Math.max(0, s + delta)));
-  }, []);
+    setStep((s) => Math.min(totalSteps - 1, Math.max(0, s + delta)));
+  }, [totalSteps]);
 
   const persist = useCallback(async () => {
     // Write the real search levers, then flip the flags. Do the profile write
@@ -202,7 +223,7 @@ export default function ProfileOnboardingFlow({
     [endFlow, router]
   );
 
-  const dots = useMemo(() => Array.from({ length: TOTAL_STEPS }), []);
+  const dots = useMemo(() => Array.from({ length: totalSteps }), [totalSteps]);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-start justify-center overflow-y-auto bg-black/60 p-4 backdrop-blur-sm sm:items-center">
@@ -245,36 +266,36 @@ export default function ProfileOnboardingFlow({
                 transition={stepTransition}
               >
                 <h2 className="font-sans text-2xl font-semibold text-foreground">
-                  {QUESTIONS[step].prompt}
+                  {questions[step].prompt}
                 </h2>
-                {QUESTIONS[step].hint ? (
+                {questions[step].hint ? (
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    {QUESTIONS[step].hint}
+                    {questions[step].hint}
                   </p>
                 ) : null}
 
-                <div className={`mt-6 ${step === 0 || step === 2 || step === 4 ? "grid grid-cols-2 gap-2.5" : "space-y-2.5"}`}>
-                  {step === 0 &&
+                <div className={`mt-6 ${TWO_COLUMN_KEYS.has(questions[step].key) ? "grid grid-cols-2 gap-2.5" : "space-y-2.5"}`}>
+                  {questions[step].key === "referral" &&
                     REFERRAL_SOURCES.map((r) => (
                       <Tile key={r.id} label={r.label} selected={referral === r.id} onClick={() => chooseReferral(r.id)} />
                     ))}
-                  {step === 1 &&
+                  {questions[step].key === "casting" &&
                     CASTING.map((c) => (
                       <Tile key={c.id} label={c.label} selected={casting === c.id} onClick={() => setCasting(c.id)} />
                     ))}
-                  {step === 2 &&
+                  {questions[step].key === "ageRange" &&
                     AGE_RANGES.map((a) => (
                       <Tile key={a} label={a.replace("-", "–")} selected={ageRange === a} onClick={() => setAgeRange(a)} />
                     ))}
-                  {step === 3 &&
+                  {questions[step].key === "workOn" &&
                     WORK_ON.map((w) => (
                       <Tile key={w.id} label={w.label} selected={workOn.includes(w.id)} onClick={() => setWorkOn((cur) => toggle(cur, w.id))} />
                     ))}
-                  {step === 4 &&
+                  {questions[step].key === "mediums" &&
                     MEDIUMS.map((m) => (
                       <Tile key={m.id} label={m.label} selected={mediums.includes(m.id)} onClick={() => setMediums((cur) => toggle(cur, m.id))} />
                     ))}
-                  {step === 5 &&
+                  {questions[step].key === "stage" &&
                     CAREER_STAGES.map((s) => (
                       <Tile key={s.id} label={s.label} selected={stage === s.id} onClick={() => setStage(s.id)} />
                     ))}
@@ -287,7 +308,7 @@ export default function ProfileOnboardingFlow({
                       Back
                     </Button>
                   )}
-                  {step < TOTAL_STEPS - 1 ? (
+                  {step < totalSteps - 1 ? (
                     <Button onClick={() => goTo(1)} disabled={!stepValid} className="flex-1 rounded-full" size="lg">
                       Continue
                     </Button>
