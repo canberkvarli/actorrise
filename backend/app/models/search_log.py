@@ -23,11 +23,16 @@ class SearchLog(Base):
     page = Column(Integer, nullable=True)  # 1 = new search; >1 = pagination fetch
     weak_match = Column(Boolean, nullable=True)  # soft-fail banner shown
     best_cosine = Column(Float, nullable=True)  # best raw cosine of the result set
+    # What KIND of thing was asked for: title | named_lookup | occupation |
+    # attribute | multi | other. Classified on the logging path only — nothing
+    # reads it back into ranking. See app/services/search/query_type.py.
+    query_type = Column(String(20), nullable=True)
     created_at = Column(DateTime, server_default=sql_text("now()"), nullable=False)
 
     __table_args__ = (
         Index("ix_search_logs_created_at", "created_at"),
         Index("ix_search_logs_user_id", "user_id"),
+        Index("ix_search_logs_query_type", "query_type", "created_at"),
     )
 
 

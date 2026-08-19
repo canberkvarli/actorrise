@@ -356,6 +356,7 @@ async def search_film_tv_references(
 
         # Log film/TV search
         try:
+            from app.services.search.query_type import classify_query
             filters_used = {k: v for k, v in {"type": type, "genre": genre, "director": director, "year_min": year_min, "year_max": year_max}.items() if v}
             result_ids = [r.id for r in results[:20]]
             db.add(SearchLog(
@@ -365,6 +366,7 @@ async def search_film_tv_references(
                 result_ids=result_ids,
                 user_id=int(current_user.id),
                 source="film_tv",
+                query_type=classify_query(q_clean),
             ))
             db.commit()
         except Exception:

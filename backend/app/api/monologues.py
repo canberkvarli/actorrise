@@ -546,6 +546,7 @@ async def search_monologues(
         if q and q.strip():
             try:
                 from app.models.search_log import SearchLog
+                from app.services.search.query_type import classify_query
                 all_result_ids = [int(m.id) for m, _ in all_results_with_scores]
                 log_row = SearchLog(
                     query=q.strip(),
@@ -558,6 +559,12 @@ async def search_monologues(
                     page=page,
                     weak_match=bool(weak_match) if has_scores else None,
                     best_cosine=best_cosine,
+                    query_type=classify_query(
+                        q,
+                        parsed_constraints=getattr(search_service, "_parsed_constraints", None),
+                        intended_play=getattr(search_service, "_intended_play", None),
+                        intended_author=getattr(search_service, "_intended_author", None),
+                    ),
                 )
                 db.add(log_row)
                 db.commit()
@@ -714,6 +721,7 @@ async def search_demo(
     # Log demo search for analytics
     try:
         from app.models.search_log import SearchLog
+        from app.services.search.query_type import classify_query
         all_result_ids = [int(m.id) for m, _ in all_results_with_scores[:5]]
         db.add(SearchLog(
             query=q.strip(),
@@ -722,6 +730,7 @@ async def search_demo(
             result_ids=all_result_ids,
             user_id=int(current_user.id) if current_user else None,
             source="demo",
+            query_type=classify_query(q),
         ))
         db.commit()
     except Exception:
