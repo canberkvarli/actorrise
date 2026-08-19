@@ -99,6 +99,32 @@ def _warmup_search_cache_background():
     thread.start()
 
 
+def _warmup_title_catalogue_background():
+    """Preload the play-title catalogue used for named-title detection.
+
+    Loading it costs ~250 ms. Left to fault in lazily, that lands on whichever
+    actor happens to search first after a deploy or a cache expiry, so it is
+    paid here instead, off the request path.
+    """
+    import threading
+
+    def warmup():
+        try:
+            from app.core.database import SessionLocal
+            from app.services.search.title_lookup import _load_catalogue
+
+            db = SessionLocal()
+            try:
+                count = len(_load_catalogue(db))
+                logger.info("Title catalogue warmed (%d titles)", count)
+            finally:
+                db.close()
+        except Exception as e:
+            logger.warning("Title catalogue warmup failed (non-fatal): %s", e)
+
+    threading.Thread(target=warmup, daemon=True).start()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _init_db()
@@ -108,6 +134,7 @@ async def lifespan(app: FastAPI):
         logger.warning("Could not ensure pricing tiers (non-fatal): %s", e)
     # Warmup search cache in background (non-blocking)
     _warmup_search_cache_background()
+    _warmup_title_catalogue_background()
     yield
 
 

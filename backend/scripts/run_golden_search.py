@@ -130,9 +130,11 @@ def _observe_full(query: str, filters: dict | None) -> dict:
         results_with_scores, _ = svc.search(query, limit=20, filters=dict(filters or {}))
 
         # Mirror the endpoint: named-title matches lead the results.
-        from app.services.search.title_lookup import detect_title_lookup, promote_title_matches
+        from app.services.search.title_lookup import (detect_catalogue_title,
+                                                      detect_title_lookup,
+                                                      promote_title_matches)
 
-        hit = detect_title_lookup(query)
+        hit = detect_title_lookup(query) or detect_catalogue_title(db, query)
         if hit:
             results_with_scores = promote_title_matches(hit["title"], results_with_scores)
         best_cosine = getattr(svc, "_best_cosine_sim", None)
@@ -155,6 +157,15 @@ def _observe_full(query: str, filters: dict | None) -> dict:
             getattr(svc, "_intended_author", None),
             [(m.play.title or "") if m.play else "" for m, _ in results_with_scores],
             [(m.play.author or "") if m.play else "" for m, _ in results_with_scores],
+            # NOTE: the endpoint passes db here and this does not, so the
+            # harness cannot see the "we already carry this" branch. Passing it
+            # flips named-beetlejuice and named-heathers to no-gap, because
+            # find_catalogue_source_types() counts a play row even when it has
+            # zero monologues (Beetlejuice: film, n=0). That is a real
+            # production bug, not a harness one — but the baseline was captured
+            # without db, so fixing fidelity here would silently rewrite two
+            # golden expectations. Left as-is deliberately; see the note in
+            # docs/plans/NEXT-SESSION.md.
         )
 
         return {

@@ -20,6 +20,7 @@ from app.services.search.query_optimizer import (correct_query_typos,
                                                  is_filter_only_query,
                                                  validate_query)
 from app.services.search.title_lookup import (compute_content_gap,
+                                              detect_catalogue_title,
                                               detect_title_lookup,
                                               promote_title_matches)
 from app.services.search.scene_intent import detect_two_person_scene_intent
@@ -421,7 +422,11 @@ async def search_monologues(
             # If the query names a show we carry ("mean girls jr"), its pieces
             # must lead the results — semantic ranking can bury literal title
             # matches under thematically-similar pieces. No-op otherwise.
-            title_hit = detect_title_lookup(search_q)
+            # The curated dictionary is checked first, then real plays.title
+            # values: the dictionary is small and missed titles the library
+            # genuinely holds ("queen's gambit" ranked Hamlet above the five
+            # Queen's Gambit pieces it had all along).
+            title_hit = detect_title_lookup(search_q) or detect_catalogue_title(db, search_q)
             if title_hit:
                 all_results_with_scores = promote_title_matches(
                     title_hit["title"], all_results_with_scores

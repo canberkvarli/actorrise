@@ -18,6 +18,7 @@ resolution, shared by the search endpoint and scripts/run_golden_search.py.
 from __future__ import annotations
 
 import re
+import time
 from typing import Dict, Iterable, Optional
 
 # Canonical title -> medium. Membership in the library is NOT considered here;
@@ -218,6 +219,112 @@ def find_catalogue_source_types(db, title: str) -> list[str]:
     return sorted(r[0] for r in rows)
 
 
+# Words that surround a title without being part of one. Stripped so "the
+# office monologue" still matches the stored title "The Office".
+_TITLE_FILLER = {
+    "monologue", "monologues", "audition", "auditioning", "auditions", "scene",
+    "scenes", "from", "in", "for", "the", "a", "an", "piece", "speech",
+    "play", "show", "film", "movie", "series", "tv", "musical", "my", "me",
+}
+
+# A title may only be matched as a phrase *inside* a longer query when it is
+# multi-word and this long. Single-word titles are matched only when they are
+# essentially the whole query. Without this, the library's one-word titles
+# ("Big", "Audition", "The", "It", "Up") hijack ordinary attribute searches —
+# "funny audition monologue" would promote the film *Audition*.
+_MIN_PHRASE_TITLE_CHARS = 8
+_MIN_TITLE_CHARS = 3
+
+
+# The catalogue is ~1,200 titles and changes only when an ingest job runs, but
+# matching it in SQL costs a seq scan plus a Supabase round trip — measured at
+# ~340 ms, which is not something to add to every single search. So it is
+# loaded once per process and refreshed on a timer.
+# Six hours: the title list only changes when an ingest job runs, and a short
+# TTL just means more actors paying the reload.
+_CATALOGUE_TTL_SECONDS = 6 * 3600
+_catalogue_cache: Optional[Dict[str, tuple]] = None
+_catalogue_loaded_at: float = 0.0
+
+
+def _load_catalogue(db) -> Dict[str, tuple]:
+    """normalised title -> (title, source_type), for plays that have monologues.
+
+    Restricted to plays that HAVE monologues on purpose: 252 of 1,608 play rows
+    are empty (duplicate "Hamlet" shells, ingest debris like "test"), and
+    promoting one of those would reorder results around nothing.
+    """
+    global _catalogue_cache, _catalogue_loaded_at
+    now = time.time()
+    if _catalogue_cache is not None and now - _catalogue_loaded_at < _CATALOGUE_TTL_SECONDS:
+        return _catalogue_cache
+    from sqlalchemy import text as sa_text
+
+    rows = db.execute(
+        sa_text(
+            "SELECT DISTINCT p.title, COALESCE(p.source_type, 'play') "
+            "FROM plays p WHERE EXISTS "
+            "(SELECT 1 FROM monologues m WHERE m.play_id = p.id)"
+        )
+    ).fetchall()
+    catalogue: Dict[str, tuple] = {}
+    for title, source_type in rows:
+        n = _normalise_title(title)
+        if len(n) >= _MIN_TITLE_CHARS and n not in catalogue:
+            catalogue[n] = (title, source_type)
+    _catalogue_cache = catalogue
+    _catalogue_loaded_at = now
+    return catalogue
+
+
+def reset_catalogue_cache() -> None:
+    """Drop the cached title list (tests, and after an ingest run)."""
+    global _catalogue_cache, _catalogue_loaded_at
+    _catalogue_cache = None
+    _catalogue_loaded_at = 0.0
+
+
+def detect_catalogue_title(db, query: str) -> Optional[Dict[str, str]]:
+    """Return {"title", "medium"} when the query names a title we actually carry.
+
+    detect_title_lookup() only knows the curated dictionary, so titles the
+    library really holds went undetected: "queen's gambit" scored 0.307 against
+    Hamlet and never promoted the five Queen's Gambit pieces sitting in the DB.
+    This matches the query against real `plays.title` values instead.
+
+    Never raises: a failed catalogue load must degrade to "no title detected",
+    not break the search.
+    """
+    if db is None or not query:
+        return None
+    nq = _normalise_title(query)
+    if len(nq) < _MIN_TITLE_CHARS:
+        return None
+    try:
+        catalogue = _load_catalogue(db)
+    except Exception:
+        return None
+
+    stripped = " ".join(w for w in nq.split() if w not in _TITLE_FILLER).strip()
+    for candidate in (nq, stripped):
+        if candidate and candidate in catalogue:
+            title, medium = catalogue[candidate]
+            return {"title": title, "medium": medium}
+
+    # Phrase match: only multi-word titles of real length, longest wins.
+    padded = f" {nq} "
+    best_norm: Optional[str] = None
+    for n in catalogue:
+        if len(n) < _MIN_PHRASE_TITLE_CHARS or " " not in n:
+            continue
+        if f" {n} " in padded and (best_norm is None or len(n) > len(best_norm)):
+            best_norm = n
+    if best_norm:
+        title, medium = catalogue[best_norm]
+        return {"title": title, "medium": medium}
+    return None
+
+
 def compute_content_gap(
     query: str,
     intended_play: Optional[str],
@@ -273,7 +380,12 @@ def compute_content_gap(
             return None
         return _resolve(intended_play, intended_author)
 
-    hit = detect_title_lookup(query)
+    # Curated dictionary first (it covers titles we do NOT carry, which is the
+    # only way a real gap gets reported), then the catalogue. The catalogue arm
+    # lets a carried title that a tab filter hid report `available_in` — e.g.
+    # "queen's gambit" on the Plays tab now offers Film & TV instead of 20
+    # unrelated plays.
+    hit = detect_title_lookup(query) or detect_catalogue_title(db, query)
     if hit and not any(hit["title"].lower() in t for t in titles_lower):
         return _resolve(hit["title"], None)
     return None
