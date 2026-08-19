@@ -171,20 +171,30 @@ def ingest_episode(db, analyzer, slug, refs, dry_run) -> int:
         return len(clean)
 
     ref = refs.get(meta["show"].lower())
-    play = get_or_create_play(db, meta, slug, ref)
-    writer = play.author
+    writer = (ref.director if ref and ref.director else "Unknown")
     epname = f" (S{meta['season']}E{meta['ep']}{', ' + meta['episode'] if meta['episode'] else ''})"
+
+    # The Play is created lazily, on the first monologue actually ready to be
+    # inserted. Creating it up front looked safe because `clean` is non-empty,
+    # but every candidate below can still be skipped (dedup, missing embedding,
+    # exception) — and then the flushed Play was committed by the next
+    # episode's commit, childless. 252 of 1,608 play rows are such shells, and
+    # they made find_catalogue_source_types() answer "we carry this" for titles
+    # holding nothing: searching Beetlejuice suppressed its own content-gap
+    # banner and request CTA.
+    play = db.query(Play).filter(Play.source_url == SCRIPT_URL.format(slug=slug)).first()
     inserted = 0
     for c in clean:
         char, text, dialogue, wc = c["character"], c["text"], c["dialogue"], c["word_count"]
         title = f"{char}, {meta['show']}"
         # content-based dedup (idempotent resume) so a character can have more than
         # one monologue per episode without the second being dropped
-        existing = [t for (t,) in db.query(Monologue.text)
-                    .filter(Monologue.play_id == play.id,
-                            Monologue.character_name == char).all()]
-        if any(et[:80] == text[:80] for et in existing):
-            continue
+        if play is not None:
+            existing = [t for (t,) in db.query(Monologue.text)
+                        .filter(Monologue.play_id == play.id,
+                                Monologue.character_name == char).all()]
+            if any(et[:80] == text[:80] for et in existing):
+                continue
         try:
             # analyse / embed the SPOKEN dialogue (cleaner signal); store the
             # display text with stage directions preserved as (italic) parentheticals.
@@ -198,6 +208,10 @@ def ingest_episode(db, analyzer, slug, refs, dry_run) -> int:
             tags = analyzer.generate_search_tags(analysis, dialogue, char)
             tags.extend(["tv series", "television"])
             directions = " ".join(re.findall(r"\([^)]*\)", text))
+
+            if play is None:  # first keeper — only now is a Play warranted
+                play = get_or_create_play(db, meta, slug, ref)
+
             mono = Monologue(
                 play_id=int(play.id),
                 title=title,
@@ -225,6 +239,11 @@ def ingest_episode(db, analyzer, slug, refs, dry_run) -> int:
             inserted += 1
         except Exception as e:  # noqa: BLE001
             db.rollback()
+            # The rollback may have discarded a Play created in this same
+            # transaction, leaving a stale object behind; re-read it so the
+            # next candidate does not insert against a dead id.
+            play = db.query(Play).filter(
+                Play.source_url == SCRIPT_URL.format(slug=slug)).first()
             print(f"      error on {char}: {e}")
     return inserted
 

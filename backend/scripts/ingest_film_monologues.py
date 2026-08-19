@@ -67,6 +67,7 @@ from app.core.config import settings
 from app.models.actor import FilmTvReference, Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
 from app.services.extraction.screenplay_pdf_parser import extract_with_status
+from scripts.extract_film_tv_monologues import select_best_monologues
 # pylint: enable=wrong-import-position
 
 UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -74,7 +75,8 @@ UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
 SITEMAP = "https://www.scriptslug.com/sitemap-scripts.xml"
 PDF_TPL = "https://assets.scriptslug.com/live/pdf/scripts/{slug}.pdf"
 SCRIPT_URL = "https://www.scriptslug.com/script/{slug}"
-MAX_PER_FILM = 8          # cap so one script cannot flood the library
+MAX_PER_FILM = 4          # cap so one script cannot flood the library
+SELECTION_POOL = 20       # candidates offered to the selector, longest first
 DEFAULT_MIN_WORDS = 90    # ~45s; see the yield table above
 REQUEST_DELAY_SECONDS = 1.0
 
@@ -181,7 +183,7 @@ def fetch_pdf(slug: str):
     return r.content, None
 
 
-def ingest_film(db, analyzer, slug, refs, apply, min_words) -> tuple[int, str]:
+def ingest_film(db, analyzer, selector, slug, refs, apply, min_words) -> tuple[int, str]:
     meta = parse_film_slug(slug)
     if not meta:
         return 0, "unparsable_slug"
@@ -205,14 +207,28 @@ def ingest_film(db, analyzer, slug, refs, apply, min_words) -> tuple[int, str]:
         fh.flush()
         cands, status = extract_with_status(fh.name, min_words=min_words, max_words=400)
 
-    clean = sorted(cands, key=lambda c: c["word_count"], reverse=True)[:MAX_PER_FILM]
+    pool = sorted(cands, key=lambda c: c["word_count"], reverse=True)[:SELECTION_POOL]
+    ref = refs.get(meta["title"].lower())
+    writer = (ref.director if ref and ref.director else "Unknown")
+
+    # Mechanically clean is not the same as worth auditioning with. Longest-N
+    # was only ever a placeholder; the selector is an acting-coach prompt that
+    # judges whether a speech actually stands alone.
+    if apply and selector is not None and pool:
+        try:
+            clean = select_best_monologues(selector, pool, meta["title"],
+                                           meta.get("year"), writer,
+                                           max_picks=MAX_PER_FILM)
+        except Exception as e:  # noqa: BLE001 — never lose a film to a bad call
+            print(f"      selection failed ({e}); falling back to longest")
+            clean = pool[:MAX_PER_FILM]
+    else:
+        clean = pool[:MAX_PER_FILM]
+
     print(f"    {meta['title'][:34]:34s} {status:22s} cands={len(cands):3d} "
           f"keep={len(clean):2d}" + ("" if apply else "  [dry]"))
     if not apply or not clean:
         return len(clean), status
-
-    ref = refs.get(meta["title"].lower())
-    writer = (ref.director if ref and ref.director else "Unknown")
 
     # The Play is deliberately NOT created yet. Every candidate below can still
     # be skipped, and a Play with no monologues is worse than no Play at all —
@@ -283,6 +299,8 @@ def main() -> None:
     ap.add_argument("--min-words", type=int, default=DEFAULT_MIN_WORDS)
     ap.add_argument("--apply", action="store_true",
                     help="write to the DB (default is a dry run)")
+    ap.add_argument("--no-select", action="store_true",
+                    help="skip audition-worthiness selection, keep the longest")
     args = ap.parse_args()
 
     slugs = film_slugs()
@@ -293,13 +311,17 @@ def main() -> None:
 
     db = SessionLocal()
     analyzer = ContentAnalyzer() if args.apply else None
+    selector = None
+    if args.apply and not args.no_select:
+        from openai import OpenAI
+        selector = OpenAI(api_key=settings.openai_api_key)
     statuses: collections.Counter = collections.Counter()
     total = 0
     try:
         refs = load_refs(db)  # 12k rows, loaded once
         for slug in slugs:
             try:
-                n, status = ingest_film(db, analyzer, slug, refs,
+                n, status = ingest_film(db, analyzer, selector, slug, refs,
                                         args.apply, args.min_words)
             except Exception as e:  # noqa: BLE001
                 db.rollback()
