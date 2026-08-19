@@ -3,14 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
     <title>{% block title %}{% endblock %}</title>
+    <style>
+        a { color:#CB4B00; }
+        /* Keep it a letter, not a newsletter: no images, no columns, no hero.
+           Plain structure is what keeps these in Gmail's Primary tab. */
+        @media (prefers-color-scheme: dark) {
+            .ar-bg   { background:#121212 !important; }
+            .ar-text { color:#ededed !important; }
+            .ar-muted{ color:#8f8f8f !important; }
+            .ar-rule { border-top-color:#2c2c2c !important; }
+            /* #CB4B00 is unreadable on dark, same brightened orange as the app nav */
+            a        { color:#FF7A33 !important; }
+            .ar-btn  { background:#FF7A33 !important; color:#1a1a1a !important; }
+        }
+        @media (max-width:600px) {
+            .ar-wrap { padding:24px 18px !important; }
+        }
+    </style>
 </head>
-<body style="margin:0; padding:0; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:15px; line-height:1.7; color:#1a1a1a;">
-    <div style="max-width:540px; margin:0 auto; padding:32px 20px;">
+<body class="ar-bg ar-text" style="margin:0; padding:0; background:#ffffff; font-family:-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size:15px; line-height:1.7; color:#1a1a1a;">
+    {% if preheader %}
+    {# Controls the grey preview line next to the subject in the inbox.
+       The filler stops Gmail from dragging body copy in after it. #}
+    <div style="display:none; max-height:0; max-width:0; overflow:hidden; opacity:0; mso-hide:all;">
+        {{ preheader }}
+        &#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
+    </div>
+    {% endif %}
+    <div class="ar-wrap" style="max-width:540px; margin:0 auto; padding:32px 20px;">
         {% block content %}{% endblock %}
         {% if unsubscribe_url %}
-        <div style="margin-top:36px; padding-top:16px; border-top:1px solid #eee; color:#999; font-size:13px; line-height:1.5;">
-            i only send these to actors who actually want them. if that's not you anymore, <a href="{{ unsubscribe_url }}" style="color:#999; text-decoration:underline;">just say no</a> and i'll stop bothering you. no hard feelings, promise.
+        <div class="ar-muted ar-rule" style="margin-top:36px; padding-top:16px; border-top:1px solid #eee; color:#999; font-size:13px; line-height:1.5;">
+            didn't mean to sign up for these? <a href="{{ unsubscribe_url }}" style="color:#999; text-decoration:underline;">undo it here</a> and i'll stop, no hard feelings. i only send these to actors who actually want them.
         </div>
         {% endif %}
     </div>

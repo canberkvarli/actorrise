@@ -393,6 +393,8 @@ class EmailTemplates:
             subject=kwargs.get("subject", ""),
             cta_url=kwargs.get("cta_url", ""),
             cta_label=kwargs.get("cta_label", ""),
+            preheader=kwargs.get("preheader", ""),
+            postscript=kwargs.get("postscript", ""),
         )
 
     def render_custom_plain(
@@ -419,12 +421,16 @@ class EmailTemplates:
         # Only add signature if sender_title is provided
         if sender_title:
             lines += ["", sender_name, sender_title]
+        postscript = kwargs.get("postscript")
+        if postscript:
+            lines += ["", postscript]
         unsubscribe_url = kwargs.get("unsubscribe_url")
         if unsubscribe_url:
             lines += [
                 "",
                 "---",
-                "i only send these to actors who actually want them. if that's not you anymore, just say no and i'll stop bothering you (no hard feelings): "
-                + unsubscribe_url,
+                "didn't mean to sign up for these? undo it here and i'll stop, "
+                "no hard feelings:",
+                unsubscribe_url,
             ]
         return "\n".join(lines)
