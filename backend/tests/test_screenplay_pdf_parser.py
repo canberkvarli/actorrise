@@ -92,6 +92,22 @@ class SegmentationTests(unittest.TestCase):
         self.assertEqual(segment_screenplay(lines), [])
 
 
+class CueNameTests(unittest.TestCase):
+    def test_possessive_cue_is_not_mangled(self):
+        from app.services.extraction.screenplay_pdf_parser import _clean_cue_name
+
+        # str.title() capitalises after an apostrophe, and the result is shown
+        # to the actor as the character name.
+        self.assertEqual(_clean_cue_name("HOLLY'S THOUGHTS"), "Holly's Thoughts")
+        self.assertEqual(_clean_cue_name("ELLIOT'S THOUGHTS"), "Elliot's Thoughts")
+
+    def test_ordinary_cue_and_parenthetical(self):
+        from app.services.extraction.screenplay_pdf_parser import _clean_cue_name
+
+        self.assertEqual(_clean_cue_name("JESSEP"), "Jessep")
+        self.assertEqual(_clean_cue_name("DIANA (V.O.)"), "Diana")
+
+
 class UnusableLayoutTests(unittest.TestCase):
     """Not every PDF behind a script URL is a formatted screenplay.
 

@@ -133,8 +133,23 @@ def parse_film_slug(slug: str):
     return {"title": title, "year": year} if title else None
 
 
+def _norm_title(v: str) -> str:
+    """Fold a title to a comparable key.
+
+    Slug-derived titles lose punctuation ("A.I. Artificial Intelligence" ->
+    "A I Artificial Intelligence") and spell out ampersands, so exact matching
+    against the reference table hit only 77%. The other 23% would have been
+    written with author "Unknown" and no poster — which is how the TV corpus
+    ended up 99.6% authorless.
+    """
+    v = (v or "").lower().replace("&", " and ")
+    v = re.sub(r"[^\w\s]", " ", v)
+    v = re.sub(r"\s+", " ", v).strip()
+    return re.sub(r"^(the|a|an)\s+", "", v)
+
+
 def load_refs(db) -> dict:
-    """Title -> reference row, for the 12k films.
+    """Normalised title -> list of reference rows, for the 12k films.
 
     Selects columns explicitly. Loading full ORM objects drags the pgvector
     `embedding` column along for every row, which is enough to hit the server's
@@ -144,7 +159,24 @@ def load_refs(db) -> dict:
                      FilmTvReference.year, FilmTvReference.genre,
                      FilmTvReference.director)
               .filter(FilmTvReference.type == "movie").all())
-    return {(r.title or "").strip().lower(): r for r in rows}
+    index: dict = {}
+    for r in rows:
+        index.setdefault(_norm_title(r.title), []).append(r)
+    return index
+
+
+def match_ref(refs: dict, title: str, year: int | None):
+    """Best reference for a slug-derived title, or None.
+
+    Several films share a title across remakes, so when the key is ambiguous
+    the release year decides.
+    """
+    hits = refs.get(_norm_title(title))
+    if not hits:
+        return None
+    if len(hits) == 1 or year is None:
+        return hits[0]
+    return min(hits, key=lambda r: abs((r.year or 0) - year))
 
 
 def build_play(meta, slug, ref) -> Play:
@@ -196,7 +228,7 @@ def ingest_film(db, analyzer, selector, slug, refs, apply, min_words) -> tuple[i
         if done:
             return 0, "already_ingested"
 
-    time.sleep(REQUEST_DELAY_SECONDS)  # be a polite guest; also reduces 403s
+    time.sleep(delay)  # be a polite guest; also reduces 403s
     content, err = fetch_pdf(slug)
     if err:
         print(f"    {meta['title'][:34]:34s} {err}")
@@ -208,8 +240,14 @@ def ingest_film(db, analyzer, selector, slug, refs, apply, min_words) -> tuple[i
         cands, status = extract_with_status(fh.name, min_words=min_words, max_words=400)
 
     pool = sorted(cands, key=lambda c: c["word_count"], reverse=True)[:SELECTION_POOL]
-    ref = refs.get(meta["title"].lower())
-    writer = (ref.director if ref and ref.director else "Unknown")
+    ref = match_ref(refs, meta["title"], meta.get("year"))
+    # No reference means no director, no year, no genre and no poster. Writing
+    # the row anyway is what left the TV corpus 99.6% authorless, so skip and
+    # report it instead — the film can be ingested once its metadata exists.
+    if ref is None or not ref.director:
+        print(f"    {meta['title'][:34]:34s} no_metadata")
+        return 0, "no_metadata"
+    writer = ref.director
 
     # Mechanically clean is not the same as worth auditioning with. Longest-N
     # was only ever a placeholder; the selector is an acting-coach prompt that
@@ -301,6 +339,8 @@ def main() -> None:
                     help="write to the DB (default is a dry run)")
     ap.add_argument("--no-select", action="store_true",
                     help="skip audition-worthiness selection, keep the longest")
+    ap.add_argument("--delay", type=float, default=REQUEST_DELAY_SECONDS,
+                    help="seconds between fetches; raise it if 403s climb")
     args = ap.parse_args()
 
     slugs = film_slugs()

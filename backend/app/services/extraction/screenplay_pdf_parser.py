@@ -61,7 +61,11 @@ def looks_like_cue(text: str) -> bool:
 
 
 def _clean_cue_name(text: str) -> str:
-    return _PAREN.sub("", text).strip().title()
+    # str.title() capitalises the letter after an apostrophe, turning the cue
+    # "ELLIOT'S THOUGHTS" into "Elliot'S Thoughts" — which is what the actor
+    # would then see as the character name.
+    t = _PAREN.sub("", text).strip().title()
+    return re.sub(r"'(\w)", lambda m: "'" + m.group(1).lower(), t)
 
 
 def segment_screenplay(lines, min_words: int = 40, max_words: int = 400):
