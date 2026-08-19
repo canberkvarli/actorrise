@@ -571,6 +571,13 @@ function SearchContent() {
           const cachedTotal: number = Array.isArray(cached) ? cached.length : cached.total;
           setResults(parsed);
           setTotal(cachedTotal);
+          // Restore the response-level signals so the chips / relaxation notice /
+          // weak banner survive a cache-restore (older array-shaped caches lack them).
+          if (!Array.isArray(cached)) {
+            setParsedConstraints(cached.parsed_constraints ?? null);
+            setBroadened(cached.broadened ?? null);
+            setWeakMatch(Boolean(cached.weak_match));
+          }
           // Restore typo correction banner from cache
           const correctionKey = `search_correction_${urlQuery}_${JSON.stringify(urlFilters)}_${initialMaxOverdone}`;
           const cachedCorrection = sessionStorage.getItem(correctionKey);
@@ -829,7 +836,16 @@ function SearchContent() {
       if (pageNum === 1) {
         playsActionAtRef.current = Date.now();
         const storageKey = `search_results_${searchQuery}_${JSON.stringify(searchFilters)}_${effectiveMaxOverdone}`;
-        sessionStorage.setItem(storageKey, JSON.stringify({ items: newResults, total: data.total }));
+        // Persist the response-level signals too, or a cache-restore drops the
+        // constraint chips, the relaxation notice, and the weak-match banner.
+        // (band is per-item, so it already survives inside items.)
+        sessionStorage.setItem(storageKey, JSON.stringify({
+          items: newResults,
+          total: data.total,
+          parsed_constraints: data.parsed_constraints ?? null,
+          broadened: data.broadened ?? null,
+          weak_match: Boolean(data.weak_match),
+        }));
         // Persist correction alongside the cached results so it survives URL-driven restores
         const correctionKey = `search_correction_${searchQuery}_${JSON.stringify(searchFilters)}_${effectiveMaxOverdone}`;
         sessionStorage.setItem(correctionKey, data.corrected_query ?? "");
