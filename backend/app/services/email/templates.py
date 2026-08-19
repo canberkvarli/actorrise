@@ -28,6 +28,10 @@ class EmailTemplates:
             loader=FileSystemLoader(str(template_dir)),
             autoescape=select_autoescape(['html', 'xml'])
         )
+        # Default palette so every template that doesn't opt into a theme
+        # (welcome, submission_*, upgrade_notification, ...) still renders.
+        # render() kwargs override globals, which is how custom.html goes dark.
+        self.env.globals["c"] = self._palette("auto")
 
     def render_submission_received(
         self,
@@ -372,6 +376,29 @@ class EmailTemplates:
 
         return text
 
+    @staticmethod
+    def _palette(theme: Optional[str] = None) -> dict:
+        """Colours for one email.
+
+        theme="dark"  -> forced dark for every reader, inlined so it survives
+                         Outlook and Gmail's stripping of <style> blocks.
+        theme="auto"  -> light, but flips via prefers-color-scheme for readers
+                         whose client is in dark mode. This is the default and
+                         the right choice for personal-feeling letters.
+        """
+        dark = (theme or "auto").strip().lower() == "dark"
+        if dark:
+            return {
+                "auto": False, "bg": "#121212", "fg": "#ededed",
+                "muted": "#8f8f8f", "sig": "#b0b0b0", "rule": "#2c2c2c",
+                "link": "#FF7A33", "btn_bg": "#FF7A33", "btn_fg": "#1a1a1a",
+            }
+        return {
+            "auto": True, "bg": "#ffffff", "fg": "#1a1a1a",
+            "muted": "#999999", "sig": "#555555", "rule": "#eeeeee",
+            "link": "#CB4B00", "btn_bg": "#CB4B00", "btn_fg": "#ffffff",
+        }
+
     def render_custom(
         self,
         user_name: str,
@@ -395,6 +422,7 @@ class EmailTemplates:
             cta_label=kwargs.get("cta_label", ""),
             preheader=kwargs.get("preheader", ""),
             postscript=kwargs.get("postscript", ""),
+            c=self._palette(kwargs.get("theme")),
         )
 
     def render_custom_plain(

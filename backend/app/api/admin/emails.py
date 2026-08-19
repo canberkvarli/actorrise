@@ -138,6 +138,7 @@ TEMPLATES = [
             {"name": "sender_name", "label": "Sender name", "type": "text", "default": "Canberk", "required": True},
             {"name": "sender_title", "label": "Sender title", "type": "text", "default": "Founder, ActorRise", "required": True},
             {"name": "postscript", "label": "Postscript (optional, renders below the signature, e.g. the reply-to-opt-out line)", "type": "text", "default": "", "required": False},
+            {"name": "theme", "label": "Theme: 'auto' (light, follows reader's dark mode) or 'dark' (dark for everyone)", "type": "text", "default": "auto", "required": False},
         ],
     },
     {

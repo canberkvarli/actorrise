@@ -9,12 +9,12 @@
 
         {% if cta_url %}
         <div style="margin:28px 0;">
-            <a class="ar-btn" href="{{ cta_url }}" style="display:inline-block; background:#CB4B00; color:#ffffff; text-decoration:none; font-size:15px; font-weight:600; padding:13px 26px; border-radius:8px;">{{ cta_label or 'Open' }}</a>
+            <a class="ar-btn" href="{{ cta_url }}" style="display:inline-block; background:{{ c.btn_bg }}; color:{{ c.btn_fg }}; text-decoration:none; font-size:15px; font-weight:600; padding:13px 26px; border-radius:8px;">{{ cta_label or 'Open' }}</a>
         </div>
         {% endif %}
 
         {% if sender_title %}
-        <div class="ar-muted" style="margin-top:28px; color:#555; font-size:14px; line-height:1.5;">
+        <div class="ar-sig" style="margin-top:28px; color:{{ c.sig }}; font-size:14px; line-height:1.5;">
             {{ sender_name }}<br>
             {{ sender_title }}
         </div>
@@ -24,7 +24,7 @@
            reply-to-opt-out line, a P.S., a caveat. Keeps the body copy from
            having to end on an administrative note. #}
         {% if postscript %}
-        <div class="ar-muted" style="margin-top:24px; color:#777; font-size:14px; line-height:1.6;">
+        <div class="ar-muted" style="margin-top:24px; color:{{ c.muted }}; font-size:14px; line-height:1.6;">
             {{ postscript }}
         </div>
         {% endif %}
