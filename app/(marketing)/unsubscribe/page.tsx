@@ -33,12 +33,30 @@ function UnsubscribeContent() {
   const email = searchParams.get("email");
   const token = searchParams.get("token");
 
-  const [status, setStatus] = useState<"loading" | "success" | "error">(
-    "loading"
-  );
+  const [status, setStatus] = useState<
+    "loading" | "success" | "error" | "resubscribed"
+  >("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [undoing, setUndoing] = useState(false);
+
+  const handleUndo = () => {
+    if (!email || !token) return;
+    setUndoing(true);
+    fetch(
+      `/api/resubscribe?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`
+    )
+      .then((res) => {
+        if (res.ok) {
+          setStatus("resubscribed");
+        } else {
+          setErrorMsg("Couldn't undo that. Email me and I'll fix it.");
+        }
+      })
+      .catch(() => setErrorMsg("Couldn't undo that. Email me and I'll fix it."))
+      .finally(() => setUndoing(false));
+  };
 
   useEffect(() => {
     if (!email || !token) {
@@ -92,8 +110,22 @@ function UnsubscribeContent() {
               </h1>
               <p className="text-muted-foreground text-sm">
                 You won&apos;t receive marketing emails from ActorRise anymore.
-                You can re-subscribe anytime from your account settings.
               </p>
+              {/* Misclicks are the most common reason people land here.
+                  Fix it on the spot instead of sending them to settings. */}
+              <p className="text-muted-foreground text-sm">
+                Didn&apos;t mean to?{" "}
+                <button
+                  onClick={handleUndo}
+                  disabled={undoing}
+                  className="font-medium text-primary hover:underline disabled:opacity-50"
+                >
+                  {undoing ? "Undoing..." : "Undo this"}
+                </button>
+              </p>
+              {errorMsg && (
+                <p className="text-destructive text-sm">{errorMsg}</p>
+              )}
             </div>
 
             {/* Optional feedback */}
@@ -152,6 +184,26 @@ function UnsubscribeContent() {
               </div>
             )}
 
+            <Link
+              href="/"
+              className="inline-block text-sm font-medium text-primary hover:underline"
+            >
+              Back to ActorRise
+            </Link>
+          </div>
+        )}
+
+        {/* Undone */}
+        {status === "resubscribed" && (
+          <div className="space-y-4">
+            <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto" />
+            <h1 className="text-xl font-semibold text-foreground">
+              You&apos;re back on the list
+            </h1>
+            <p className="text-muted-foreground text-sm">
+              Nothing changed. You&apos;ll keep getting the occasional email
+              from me, and you can unsubscribe from any of them.
+            </p>
             <Link
               href="/"
               className="inline-block text-sm font-medium text-primary hover:underline"

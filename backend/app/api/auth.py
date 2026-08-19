@@ -323,9 +323,40 @@ def unsubscribe(
         return JSONResponse({"ok": True, "message": "Unsubscribed successfully."})
 
     return HTMLResponse(content=_unsubscribe_page(
-        "You've been unsubscribed from ActorRise marketing emails. "
-        "You can re-subscribe anytime from your account settings."
+        "You've been unsubscribed from ActorRise marketing emails."
     ))
+
+
+@router.get("/resubscribe")
+def resubscribe(
+    email: str = Query(...),
+    token: str = Query(...),
+    request: Request = None,
+    db: Session = Depends(get_db),
+):
+    """Undo an unsubscribe, straight from the confirmation screen.
+
+    Reuses the same signed token as /unsubscribe. The token is derived from
+    the address alone, so the link that unsubscribed someone is exactly what
+    proves they're allowed to put themselves back. Nobody has to go hunting
+    through account settings to reverse a misclick.
+    """
+    want_json = "application/json" in (request.headers.get("accept", "") if request else "")
+
+    if not verify_unsubscribe_token(email, token):
+        if want_json:
+            return JSONResponse({"ok": False, "message": "Invalid or expired link."}, status_code=400)
+        return HTMLResponse(content=_unsubscribe_page("Invalid or expired link."), status_code=400)
+
+    user = db.query(User).filter(User.email == email).first()
+    if user and not user.marketing_opt_in:
+        user.marketing_opt_in = True
+        db.commit()
+
+    if want_json:
+        return JSONResponse({"ok": True, "message": "You're back on the list."})
+
+    return HTMLResponse(content=_unsubscribe_page("You're back on the list."))
 
 
 def _unsubscribe_page(message: str) -> str:
