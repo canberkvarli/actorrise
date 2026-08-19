@@ -207,12 +207,20 @@ def find_catalogue_source_types(db, title: str) -> list[str]:
     from sqlalchemy import text as sa_text
 
     # Normalise in SQL rather than pulling all 1,608 play titles per lookup.
-    expr = "regexp_replace(lower(title), '[^\\w\\s]', '', 'g')"
+    expr = "regexp_replace(lower(p.title), '[^\\w\\s]', '', 'g')"
     expr = f"regexp_replace({expr}, '^(the|a|an)\\s+', '')"
+    # A play row with no monologues is not something we carry. 252 of 1,608
+    # rows are empty shells (duplicate "Hamlet" rows, ingest debris like
+    # "test"), and counting them made this claim we had a title when we held
+    # nothing of it: searching Beetlejuice suppressed the content-gap banner
+    # and the request CTA, while the library had zero Beetlejuice pieces.
+    # NOTE the parentheses around the OR — without them the EXISTS would bind
+    # to the second branch only.
     rows = db.execute(
         sa_text(
-            f"SELECT DISTINCT COALESCE(source_type, 'play') st FROM plays "
-            f"WHERE {expr} = :n OR (length({expr}) >= 4 AND :n LIKE '%' || {expr} || '%')"
+            f"SELECT DISTINCT COALESCE(p.source_type, 'play') st FROM plays p "
+            f"WHERE ({expr} = :n OR (length({expr}) >= 4 AND :n LIKE '%' || {expr} || '%')) "
+            f"AND EXISTS (SELECT 1 FROM monologues m WHERE m.play_id = p.id)"
         ),
         {"n": norm},
     ).fetchall()

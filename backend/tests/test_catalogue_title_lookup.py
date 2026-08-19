@@ -103,6 +103,32 @@ class TestGuardsAgainstCommonWordTitles:
             assert detect_catalogue_title(db, q) is None, q
 
 
+class TestEmptyShellDoesNotSuppressTheGap:
+    """A play row with no monologues is not a title we carry.
+
+    252 of 1,608 rows are empty shells. Counting them made compute_content_gap
+    stay silent for titles the library held nothing of — searching Beetlejuice
+    (a film row with 0 monologues) showed no gap banner and no request CTA.
+    """
+
+    def _gap(self, monkeypatch, carried):
+        from app.services.search import title_lookup as tl
+
+        monkeypatch.setattr(tl, "find_catalogue_source_types", lambda *_: carried)
+        monkeypatch.setattr(tl, "detect_catalogue_title", lambda *_: None)
+        return tl.compute_content_gap(
+            "beetlejuice", None, None, ["Some Other Play"], [], db=object()
+        )
+
+    def test_empty_shell_reports_a_gap(self, monkeypatch):
+        gap = self._gap(monkeypatch, [])
+        assert gap is not None
+        assert gap["play"] == "Beetlejuice"
+
+    def test_genuinely_carried_title_reports_no_gap(self, monkeypatch):
+        assert self._gap(monkeypatch, ["film"]) is None
+
+
 class TestSafety:
     def test_no_db_returns_none(self):
         assert detect_catalogue_title(None, "hamlet") is None

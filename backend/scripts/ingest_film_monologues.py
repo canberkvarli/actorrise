@@ -1,0 +1,321 @@
+#!/usr/bin/env python
+"""Ingest FILM monologues from ScriptSlug screenplay PDFs into the library.
+
+Sibling of ingest_tv_monologues.py. Films, not episodes, because measurement
+says that is where audition-length material lives:
+
+    per script, monologues >= 120 words (~1 min)
+        TV    0.1
+        FILM  1.2
+
+and the library agrees — existing TV monologues have a median of 56 words
+against 125 for film. TV yields 20-second beats; film yields audition pieces.
+Default min_words is 90 (~45s) rather than the parser's 40 for that reason.
+
+Pipeline:
+  1. enumerate FILM slugs from ScriptSlug's sitemap (episodes excluded)
+  2. download the screenplay PDF
+  3. screenplay-aware parse (x-position) -> single-speaker candidates
+  4. deterministic quality gate -> keep only clean monologues
+  5. ContentAnalyzer (emotion/theme/tone/gender/age) + embedding + tags
+  6. insert Play(source_type='film') + Monologue rows, fair-use excerpt only
+
+Two things this does that the TV ingest does not:
+
+* **Never creates an empty Play.** The TV ingest calls get_or_create_play()
+  before its per-monologue loop, and every candidate in that loop can still be
+  skipped (dedupe / missing embedding / exception). When they all skip, the row
+  persists with zero monologues. 252 of 1,608 play rows are such shells, and
+  they are not harmless: find_catalogue_source_types() counted them as "we
+  carry this", so searching Beetlejuice suppressed its own content-gap banner
+  while the library held nothing of it. Here the Play is created lazily, on the
+  first monologue that is actually ready to insert.
+
+* **Records why a script produced nothing.** extract_with_status() separates
+  "no long speeches" from "scanned PDF", "no cue column", and "broken fonts".
+  About a quarter of a sample of well-known films hit one of the latter, and
+  all of them used to look identical to an empty script.
+
+Idempotent: re-running skips scripts and monologues already inserted.
+
+Usage (from backend/):
+    uv run python scripts/ingest_film_monologues.py --limit 5           # dry run, 5 films
+    uv run python scripts/ingest_film_monologues.py --limit 50 --apply  # write 50
+    uv run python scripts/ingest_film_monologues.py --apply             # full run
+"""
+from __future__ import annotations
+
+import argparse
+import collections
+import re
+import signal
+import sys
+import tempfile
+import time
+from contextlib import contextmanager
+from pathlib import Path
+
+import requests
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
+backend_dir = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(backend_dir))
+
+# pylint: disable=wrong-import-position
+from app.core.config import settings
+from app.models.actor import FilmTvReference, Monologue, Play
+from app.services.ai.content_analyzer import ContentAnalyzer
+from app.services.extraction.screenplay_pdf_parser import extract_with_status
+# pylint: enable=wrong-import-position
+
+UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                    "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36"}
+SITEMAP = "https://www.scriptslug.com/sitemap-scripts.xml"
+PDF_TPL = "https://assets.scriptslug.com/live/pdf/scripts/{slug}.pdf"
+SCRIPT_URL = "https://www.scriptslug.com/script/{slug}"
+MAX_PER_FILM = 8          # cap so one script cannot flood the library
+DEFAULT_MIN_WORDS = 90    # ~45s; see the yield table above
+REQUEST_DELAY_SECONDS = 1.0
+
+_EP_CODE = re.compile(r"-(\d{3,4})-")
+_TRAILING_YEAR = re.compile(r"-(\d{4})$")
+
+_engine = create_engine(settings.database_url, pool_size=5, max_overflow=10,
+                        pool_pre_ping=True, pool_recycle=1800)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False,
+                            expire_on_commit=False, bind=_engine)
+
+
+@contextmanager
+def time_limit(seconds: int):
+    def _handler(signum, frame):  # noqa: ARG001
+        raise TimeoutError(f"timed out after {seconds}s")
+    old = signal.signal(signal.SIGALRM, _handler)
+    signal.alarm(seconds)
+    try:
+        yield
+    finally:
+        signal.alarm(0)
+        signal.signal(signal.SIGALRM, old)
+
+
+def _is_year(code: str) -> bool:
+    return len(code) == 4 and 1900 <= int(code) <= 2099
+
+
+def film_slugs() -> list[str]:
+    """Film slugs from the sitemap: a trailing year, and no episode code.
+
+    Mirrors ingest_tv_monologues' rule from the other side — "succession-403-
+    connors-wedding-2023" is an episode, "good-will-hunting-1997" is a film.
+    """
+    xml = requests.get(SITEMAP, headers=UA, timeout=30).text
+    locs = re.findall(r"<loc>https://www\.scriptslug\.com/script/([^<]+)</loc>", xml)
+    out = []
+    for s in locs:
+        m = _EP_CODE.search(s)
+        if m and not _is_year(m.group(1)):
+            continue  # episode
+        if _TRAILING_YEAR.search(s):
+            out.append(s)
+    return out
+
+
+def parse_film_slug(slug: str):
+    m = _TRAILING_YEAR.search(slug)
+    if not m:
+        return None
+    year = int(m.group(1))
+    title = slug[: m.start()].replace("-", " ").strip().title()
+    return {"title": title, "year": year} if title else None
+
+
+def load_refs(db) -> dict:
+    """Title -> reference row, for the 12k films.
+
+    Selects columns explicitly. Loading full ORM objects drags the pgvector
+    `embedding` column along for every row, which is enough to hit the server's
+    statement timeout before the first film is even fetched.
+    """
+    rows = (db.query(FilmTvReference.id, FilmTvReference.title,
+                     FilmTvReference.year, FilmTvReference.genre,
+                     FilmTvReference.director)
+              .filter(FilmTvReference.type == "movie").all())
+    return {(r.title or "").strip().lower(): r for r in rows}
+
+
+def build_play(meta, slug, ref) -> Play:
+    genres = (ref.genre if ref and ref.genre else []) or []
+    return Play(
+        title=meta["title"],
+        author=(ref.director if ref and ref.director else "Unknown"),
+        year_written=(ref.year if ref else meta.get("year")),
+        genre=(genres[0].lower() if genres else "drama"),
+        category="contemporary",
+        source_type="film",
+        film_tv_reference_id=(int(ref.id) if ref else None),
+        copyright_status="copyrighted",
+        license_type="fair_use",
+        source_url=SCRIPT_URL.format(slug=slug),
+        language="en",
+        themes=list(genres),
+    )
+
+
+def fetch_pdf(slug: str):
+    url = PDF_TPL.format(slug=slug)
+    r = None
+    for attempt in range(4):  # 403/429 are intermittent here
+        try:
+            r = requests.get(url, headers=UA, timeout=90)
+        except Exception as e:  # noqa: BLE001
+            print(f"    fetch error {e}")
+            time.sleep(2 * (attempt + 1))
+            continue
+        if r.status_code in (200, 404):
+            break
+        time.sleep(2 * (attempt + 1))
+    if r is None or r.status_code != 200 or r.content[:5] != b"%PDF-":
+        return None, f"http_{getattr(r, 'status_code', 'ERR')}"
+    return r.content, None
+
+
+def ingest_film(db, analyzer, slug, refs, apply, min_words) -> tuple[int, str]:
+    meta = parse_film_slug(slug)
+    if not meta:
+        return 0, "unparsable_slug"
+
+    source_url = SCRIPT_URL.format(slug=slug)
+    if apply:
+        done = (db.query(Play.id)
+                  .join(Monologue, Monologue.play_id == Play.id)
+                  .filter(Play.source_url == source_url).first())
+        if done:
+            return 0, "already_ingested"
+
+    time.sleep(REQUEST_DELAY_SECONDS)  # be a polite guest; also reduces 403s
+    content, err = fetch_pdf(slug)
+    if err:
+        print(f"    {meta['title'][:34]:34s} {err}")
+        return 0, err
+
+    with tempfile.NamedTemporaryFile(suffix=".pdf") as fh:
+        fh.write(content)
+        fh.flush()
+        cands, status = extract_with_status(fh.name, min_words=min_words, max_words=400)
+
+    clean = sorted(cands, key=lambda c: c["word_count"], reverse=True)[:MAX_PER_FILM]
+    print(f"    {meta['title'][:34]:34s} {status:22s} cands={len(cands):3d} "
+          f"keep={len(clean):2d}" + ("" if apply else "  [dry]"))
+    if not apply or not clean:
+        return len(clean), status
+
+    ref = refs.get(meta["title"].lower())
+    writer = (ref.director if ref and ref.director else "Unknown")
+
+    # The Play is deliberately NOT created yet. Every candidate below can still
+    # be skipped, and a Play with no monologues is worse than no Play at all —
+    # see the module docstring.
+    play = db.query(Play).filter(Play.source_url == source_url).first()
+    inserted = 0
+    for c in clean:
+        char, text, dialogue, wc = c["character"], c["text"], c["dialogue"], c["word_count"]
+        if play is not None:
+            existing = [t for (t,) in db.query(Monologue.text)
+                        .filter(Monologue.play_id == play.id,
+                                Monologue.character_name == char).all()]
+            if any(et[:80] == text[:80] for et in existing):
+                continue
+        try:
+            with time_limit(90):  # guard against a hung OpenAI call
+                analysis = analyzer.analyze_monologue(
+                    text=dialogue, character=char,
+                    play_title=meta["title"], author=writer)
+                embedding = analyzer.generate_embedding(dialogue)
+            if not embedding:  # unsearchable without it
+                print(f"      skip (no embedding): {char}")
+                continue
+            tags = analyzer.generate_search_tags(analysis, dialogue, char)
+            tags.extend(["film", "screenplay"])
+            directions = " ".join(re.findall(r"\([^)]*\)", text))
+
+            if play is None:  # first keeper — only now is a Play warranted
+                play = build_play(meta, slug, ref)
+                db.add(play)
+                db.flush()
+
+            mono = Monologue(
+                play_id=int(play.id),
+                title=f"{char}, {meta['title']}",
+                character_name=char,
+                text=text,
+                stage_directions=directions or None,
+                character_gender=analysis.get("character_gender"),
+                character_age_range=analysis.get("character_age_range"),
+                character_description=f"From {meta['title']} ({meta['year']})",
+                word_count=wc,
+                estimated_duration_seconds=round(wc / 2.5),
+                difficulty_level=analysis.get("difficulty_level"),
+                primary_emotion=analysis.get("primary_emotion"),
+                emotion_scores=analysis.get("emotion_scores"),
+                themes=analysis.get("themes"),
+                tone=analysis.get("tone"),
+                scene_description=analysis.get("scene_description"),
+                search_tags=list(set(tags)),
+                is_verified=False,
+                overdone_score=0.3,
+            )
+            mono.embedding_vector = embedding
+            db.add(mono)
+            db.commit()
+            inserted += 1
+        except Exception as e:  # noqa: BLE001
+            db.rollback()
+            play = db.query(Play).filter(Play.source_url == source_url).first()
+            print(f"      error on {char}: {e}")
+    return inserted, status
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--limit", type=int, default=None, help="max films")
+    ap.add_argument("--min-words", type=int, default=DEFAULT_MIN_WORDS)
+    ap.add_argument("--apply", action="store_true",
+                    help="write to the DB (default is a dry run)")
+    args = ap.parse_args()
+
+    slugs = film_slugs()
+    if args.limit:
+        slugs = slugs[: args.limit]
+    print(f"{len(slugs)} film slugs; min_words={args.min_words}; "
+          f"{'APPLY' if args.apply else 'DRY RUN'}\n")
+
+    db = SessionLocal()
+    analyzer = ContentAnalyzer() if args.apply else None
+    statuses: collections.Counter = collections.Counter()
+    total = 0
+    try:
+        refs = load_refs(db)  # 12k rows, loaded once
+        for slug in slugs:
+            try:
+                n, status = ingest_film(db, analyzer, slug, refs,
+                                        args.apply, args.min_words)
+            except Exception as e:  # noqa: BLE001
+                db.rollback()
+                print(f"    {slug[:34]:34s} ERROR {e}")
+                statuses["error"] += 1
+                continue
+            statuses[status] += 1
+            total += n
+    finally:
+        db.close()
+
+    print(f"\n{'inserted' if args.apply else 'would keep'}: {total}")
+    print("per-script status:")
+    for status, n in statuses.most_common():
+        print(f"   {status:22s} {n}")
+
+
+if __name__ == "__main__":
+    main()
