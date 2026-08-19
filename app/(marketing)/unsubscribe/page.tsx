@@ -38,8 +38,31 @@ function UnsubscribeContent() {
   >("loading");
   const [errorMsg, setErrorMsg] = useState("");
   const [selectedReason, setSelectedReason] = useState<string | null>(null);
+  const [comment, setComment] = useState("");
   const [feedbackSent, setFeedbackSent] = useState(false);
+  const [sendingFeedback, setSendingFeedback] = useState(false);
   const [undoing, setUndoing] = useState(false);
+
+  const handleFeedback = () => {
+    if (!selectedReason || !email || !token) return;
+    setSendingFeedback(true);
+    fetch("/api/unsubscribe-feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        token,
+        reason: selectedReason,
+        comment: comment.trim() || null,
+      }),
+    })
+      // The thank-you shows either way. They did their part; a failed
+      // notification on our side isn't their problem.
+      .finally(() => {
+        setSendingFeedback(false);
+        setFeedbackSent(true);
+      });
+  };
 
   const handleUndo = () => {
     if (!email || !token) return;
@@ -168,12 +191,28 @@ function UnsubscribeContent() {
                   ))}
                 </div>
                 {selectedReason && (
-                  <button
-                    onClick={() => setFeedbackSent(true)}
-                    className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-[#B03000] transition-colors"
-                  >
-                    Submit feedback
-                  </button>
+                  <>
+                    {/* "Other" with no way to say what: the reason people
+                        actually wanted to explain was the one we couldn't hear. */}
+                    <textarea
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                      rows={3}
+                      placeholder={
+                        selectedReason === "Other"
+                          ? "What made you leave?"
+                          : "Anything else? (optional)"
+                      }
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+                    />
+                    <button
+                      onClick={handleFeedback}
+                      disabled={sendingFeedback}
+                      className="w-full rounded-lg bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-[#B03000] transition-colors disabled:opacity-50"
+                    >
+                      {sendingFeedback ? "Sending..." : "Submit feedback"}
+                    </button>
+                  </>
                 )}
               </div>
             ) : (

@@ -359,6 +359,48 @@ def resubscribe(
     return HTMLResponse(content=_unsubscribe_page("You're back on the list."))
 
 
+class UnsubscribeFeedbackRequest(BaseModel):
+    email: str
+    token: str
+    reason: str
+    comment: str | None = None
+
+
+@router.post("/unsubscribe-feedback")
+def unsubscribe_feedback(body: UnsubscribeFeedbackRequest):
+    """Record why someone unsubscribed.
+
+    The form on the unsubscribe page used to collect a reason and throw it
+    away, so we had no idea why anyone ever left. Low volume and highly
+    actionable, so it goes straight to Canberk's inbox rather than into a
+    table nobody reads. Token-gated so it can't be used to spam that inbox.
+    """
+    if not verify_unsubscribe_token(body.email, body.token):
+        return JSONResponse({"ok": False, "message": "Invalid link."}, status_code=400)
+
+    try:
+        from app.services.email.resend_client import ResendEmailClient
+
+        comment = (body.comment or "").strip()
+        html = (
+            '<div style="font-family: sans-serif; max-width: 500px;">'
+            '<h2 style="color: #CB4B00;">Someone unsubscribed</h2>'
+            f"<p><b>Who:</b> {body.email}</p>"
+            f"<p><b>Reason:</b> {body.reason}</p>"
+            f"<p><b>They said:</b> {comment or '(nothing)'}</p>"
+            "</div>"
+        )
+        ResendEmailClient().send_email(
+            to="canberk@actorrise.com",
+            subject=f"Unsubscribe: {body.reason}",
+            html=html,
+        )
+    except Exception as e:  # never fail the request over the notification
+        print(f"Failed to send unsubscribe feedback email: {e}")
+
+    return JSONResponse({"ok": True})
+
+
 def _unsubscribe_page(message: str) -> str:
     """Render a minimal unsubscribe confirmation page."""
     return f"""<!DOCTYPE html>
