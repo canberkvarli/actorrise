@@ -14,6 +14,13 @@ guaranteeing single-speaker continuity by construction.
 
 PDFs with broken/subsetted fonts (text extracts as `(cid:NN)`) are detected and
 skipped — they need OCR, which is out of scope here.
+
+Not every PDF behind a script URL is a formatted screenplay. Scans with no text
+layer, documents with no indentation, and layouts whose cue and dialogue
+columns coincide all used to return an empty list — indistinguishable from a
+script that simply had no long speeches. Roughly a quarter of a sample of
+well-known films hit one of those. Use `extract_with_status()` for bulk work:
+it names the failure instead of returning nothing.
 """
 
 from __future__ import annotations
@@ -28,6 +35,18 @@ from app.services.extraction.monologue_quality import (
 )
 
 _PAREN = re.compile(r"\([^)]*\)")
+
+# A real screenplay PDF has a text layer of this order. Below it we are looking
+# at a scan, not a script — see the note on cid_ratio() for why that is not
+# self-evident from the text alone.
+_MIN_TEXT_LINES = 200
+_MIN_TEXT_WORDS = 500
+
+# Cue columns sit around 3.7" (x0 ~250-330 at these scales). A "cue band" near
+# the left margin means the PDF carries no indentation at all, so the band model
+# cannot work — 12 Angry Men detects a band of 18 and derives a dialogue window
+# of -92..-2, which nothing can satisfy.
+_MIN_PLAUSIBLE_CUE_BAND = 100
 
 
 def looks_like_cue(text: str) -> bool:
@@ -59,7 +78,27 @@ def segment_screenplay(lines, min_words: int = 40, max_words: int = 400):
     if not cue_hist:
         return []
     cue_band = cue_hist.most_common(1)[0][0]
-    dlg_lo, dlg_hi = cue_band - 110, cue_band - 20  # dialogue + wrylies sit here
+    if cue_band < _MIN_PLAUSIBLE_CUE_BAND:
+        # Unindented document: the band model has nothing to work with, and the
+        # fixed offsets below would produce a negative window.
+        return []
+
+    # Derive the dialogue band from where non-cue lines actually sit, rather
+    # than assuming a fixed offset from the cue. Scripts whose cue and dialogue
+    # indents nearly coincide (Good Will Hunting: cue 306, dialogue ~300) fall
+    # outside a hardcoded -110/-20 window and yield almost nothing.
+    dlg_hist = collections.Counter(
+        round(x0 / 6) * 6
+        for x0, t in lines
+        if t and not looks_like_cue(t) and cue_band - 130 <= x0 <= cue_band - 2
+    )
+    if dlg_hist:
+        dlg_mode = dlg_hist.most_common(1)[0][0]
+        dlg_lo, dlg_hi = dlg_mode - 30, dlg_mode + 45  # wrylies sit right of dialogue
+    else:
+        dlg_lo, dlg_hi = cue_band - 110, cue_band - 20
+    if dlg_lo <= 0:
+        return []
 
     monos: list[dict] = []
     cur_char: str | None = None
@@ -128,9 +167,50 @@ def lines_from_pdf(path: str, max_pages: int = 200):
     return out
 
 
-def extract_screenplay_monologues(path: str, min_words: int = 40, max_words: int = 400):
-    """Full path: PDF -> lines -> (skip if cid-garbage) -> single-speaker monologues."""
+def extract_with_status(path: str, min_words: int = 40, max_words: int = 400):
+    """Full path, returning ``(monologues, status)``.
+
+    Status is the point of this function. Every failure mode below used to
+    return a bare ``[]``, which is the same value a well-parsed script with no
+    long speeches returns — so a bulk run could skip a quarter of its input and
+    look like a success. Statuses:
+
+      ok / no_monologues   parsed fine (the latter simply had none in range)
+      no_text_layer        scanned PDF, nothing extractable — needs OCR
+      needs_ocr            broken/subsetted fonts, text comes out as (cid:NN)
+      not_screenplay_layout  no cue column, or one at the left margin
+    """
     lines = lines_from_pdf(path)
+    text_lines = [(x, t) for x, t in lines if t]
+    words = sum(len(t.split()) for _, t in text_lines)
+
+    # Checked BEFORE cid_ratio: with no text at all, cid_ratio is 0/1 = 0.0,
+    # i.e. it reports a perfect score for a pure image and the OCR guard below
+    # never fires. A 5 MB scan of Moonlight looked identical to a clean script.
+    if len(text_lines) < _MIN_TEXT_LINES or words < _MIN_TEXT_WORDS:
+        return [], "no_text_layer"
+
     if cid_ratio(lines) > 0.05:
-        return []
-    return segment_screenplay(lines, min_words, max_words)
+        return [], "needs_ocr"
+
+    monos = segment_screenplay(lines, min_words, max_words)
+    if monos:
+        return monos, "ok"
+    # segment_screenplay() returns [] both for "no cue column found" and for
+    # "found one but nothing in range"; separate them so the first is reported
+    # as a parse failure rather than an empty script.
+    cue_hist = collections.Counter(
+        round(x0 / 6) * 6 for x0, t in lines if t and looks_like_cue(t)
+    )
+    if not cue_hist or cue_hist.most_common(1)[0][0] < _MIN_PLAUSIBLE_CUE_BAND:
+        return [], "not_screenplay_layout"
+    return [], "no_monologues"
+
+
+def extract_screenplay_monologues(path: str, min_words: int = 40, max_words: int = 400):
+    """Full path: PDF -> lines -> (skip if unusable) -> single-speaker monologues.
+
+    Kept for existing callers. Prefer extract_with_status() for anything doing
+    bulk ingest, so failures are counted instead of silently dropped.
+    """
+    return extract_with_status(path, min_words, max_words)[0]

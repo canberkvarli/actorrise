@@ -92,5 +92,71 @@ class SegmentationTests(unittest.TestCase):
         self.assertEqual(segment_screenplay(lines), [])
 
 
+class UnusableLayoutTests(unittest.TestCase):
+    """Not every PDF behind a script URL is a formatted screenplay.
+
+    Each case below used to return a bare [] — the same value a well-parsed
+    script with no long speeches returns. In a sample of well-known films about
+    a quarter hit one of these, so a bulk run would have dropped them silently.
+    """
+
+    def _long_line(self, x0, words=60):
+        return (x0, " ".join(["word"] * words) + " and that is the whole truth of it.")
+
+    def test_unindented_document_yields_nothing(self):
+        # 12 Angry Men: every line at the left margin, so the cue band lands at
+        # ~18 and the derived dialogue window would run negative.
+        lines = []
+        for _ in range(6):
+            lines += [(18, "JUROR EIGHT"), self._long_line(12)]
+        self.assertEqual(segment_screenplay(lines), [])
+
+    def test_dialogue_band_follows_the_text_not_a_fixed_offset(self):
+        # Good Will Hunting: cue and dialogue indents nearly coincide, so a
+        # hardcoded cue-110..cue-20 window misses the dialogue entirely.
+        CUE_X, DLG_X = 306, 288
+        lines = [
+            (CUE_X, "SEAN"),
+            self._long_line(DLG_X),
+            (108, "He leaves."),
+        ]
+        monos = segment_screenplay(lines)
+        self.assertEqual(len(monos), 1)
+        self.assertEqual(monos[0]["character"], "Sean")
+
+
+class StatusTests(unittest.TestCase):
+    """extract_with_status() must name the failure, not just return []."""
+
+    def test_no_cue_column_is_reported_as_layout_failure(self):
+        from app.services.extraction import screenplay_pdf_parser as sp
+
+        # Enough text to clear the text-layer guard, but no cue column.
+        lines = [(12, " ".join(["word"] * 40)) for _ in range(300)]
+        orig = sp.lines_from_pdf
+        sp.lines_from_pdf = lambda *_a, **_k: lines
+        try:
+            monos, status = sp.extract_with_status("ignored.pdf")
+        finally:
+            sp.lines_from_pdf = orig
+        self.assertEqual(monos, [])
+        self.assertEqual(status, "not_screenplay_layout")
+
+    def test_empty_text_layer_is_reported_not_treated_as_clean(self):
+        from app.services.extraction import screenplay_pdf_parser as sp
+
+        # A scan extracts to nothing. cid_ratio() is then 0/1 = 0.0, i.e. a
+        # perfect score, so the OCR guard alone would pass it through.
+        orig = sp.lines_from_pdf
+        sp.lines_from_pdf = lambda *_a, **_k: []
+        try:
+            monos, status = sp.extract_with_status("scan.pdf")
+        finally:
+            sp.lines_from_pdf = orig
+        self.assertEqual(monos, [])
+        self.assertEqual(status, "no_text_layer")
+        self.assertEqual(sp.cid_ratio([]), 0.0)  # the reason the guard misses it
+
+
 if __name__ == "__main__":
     unittest.main()
