@@ -100,6 +100,20 @@ export const CASTING = [
   { id: "Other", label: "Any / other", searchGender: "" },
 ] as const;
 
+// Where the actor came from. Stored verbatim to users.referral_source, so the
+// ids ARE the analytics values — renaming one splits its history in two.
+// Ordered by what the August signup wave was expected to contain, since the
+// first few options take most of the taps.
+export const REFERRAL_SOURCES = [
+  { id: "chatgpt", label: "ChatGPT / AI" },
+  { id: "instagram", label: "Instagram" },
+  { id: "tiktok", label: "TikTok" },
+  { id: "x", label: "X / Twitter" },
+  { id: "friend", label: "A friend or teacher" },
+  { id: "search", label: "Google search" },
+  { id: "other", label: "Somewhere else" },
+] as const;
+
 export const TRAINING_BACKGROUND_OPTIONS = [
   "BFA",
   "MFA",

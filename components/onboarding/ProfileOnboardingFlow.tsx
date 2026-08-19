@@ -15,6 +15,7 @@ import {
   WORK_ON,
   MEDIUMS,
   CAREER_STAGES,
+  REFERRAL_SOURCES,
 } from "@/lib/profileOptions";
 import {
   buildProfileWrite,
@@ -31,7 +32,12 @@ const stepTransition = {
 
 type Variant = "new" | "backfill";
 
+// Referral goes first on purpose. Every other answer can be recovered later
+// (the backfill card exists for exactly that), but how someone found me decays
+// from memory within days, and it is the one question I could not answer about
+// the August signups at all.
 const QUESTIONS = [
+  { key: "referral", prompt: "How did you find me?", hint: "One tap. It's the only way I know what's working." },
   { key: "casting", prompt: "How are you usually cast?", hint: "So the roles I show you are ones you could actually book." },
   { key: "ageRange", prompt: "What's your playing age?", hint: null },
   { key: "workOn", prompt: "What do you want to work on?", hint: "Pick as many as you like." },
@@ -95,11 +101,21 @@ export default function ProfileOnboardingFlow({
   const [showPayoff, setShowPayoff] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  const [referral, setReferral] = useState<string | null>(null);
   const [casting, setCasting] = useState<string | null>(null);
   const [ageRange, setAgeRange] = useState<string | null>(null);
   const [workOn, setWorkOn] = useState<string[]>([]);
   const [mediums, setMediums] = useState<string[]>([]);
   const [stage, setStage] = useState<string | null>(null);
+
+  // Written the moment it's tapped rather than with the rest at the end: most
+  // of the value is in the answers from people who then abandon the wizard,
+  // and those never reach persist(). Fire-and-forget — a failed attribution
+  // write must never block onboarding.
+  const chooseReferral = useCallback((id: string) => {
+    setReferral(id);
+    void api.patch("/api/auth/onboarding", { referral_source: id }).catch(() => {});
+  }, []);
 
   const answers: OnboardingAnswers = useMemo(
     () => ({ casting, ageRange, workOn, mediums, stage }),
@@ -111,14 +127,15 @@ export default function ProfileOnboardingFlow({
 
   const stepValid = useMemo(() => {
     switch (step) {
-      case 0: return !!casting;
-      case 1: return !!ageRange;
-      case 2: return workOn.length > 0;
-      case 3: return mediums.length > 0;
-      case 4: return !!stage;
+      case 0: return !!referral;
+      case 1: return !!casting;
+      case 2: return !!ageRange;
+      case 3: return workOn.length > 0;
+      case 4: return mediums.length > 0;
+      case 5: return !!stage;
       default: return false;
     }
-  }, [step, casting, ageRange, workOn, mediums, stage]);
+  }, [step, referral, casting, ageRange, workOn, mediums, stage]);
 
   const goTo = useCallback((delta: number) => {
     setDirection(delta > 0 ? 1 : -1);
@@ -236,24 +253,28 @@ export default function ProfileOnboardingFlow({
                   </p>
                 ) : null}
 
-                <div className={`mt-6 ${step === 1 || step === 3 ? "grid grid-cols-2 gap-2.5" : "space-y-2.5"}`}>
+                <div className={`mt-6 ${step === 0 || step === 2 || step === 4 ? "grid grid-cols-2 gap-2.5" : "space-y-2.5"}`}>
                   {step === 0 &&
+                    REFERRAL_SOURCES.map((r) => (
+                      <Tile key={r.id} label={r.label} selected={referral === r.id} onClick={() => chooseReferral(r.id)} />
+                    ))}
+                  {step === 1 &&
                     CASTING.map((c) => (
                       <Tile key={c.id} label={c.label} selected={casting === c.id} onClick={() => setCasting(c.id)} />
                     ))}
-                  {step === 1 &&
+                  {step === 2 &&
                     AGE_RANGES.map((a) => (
                       <Tile key={a} label={a.replace("-", "–")} selected={ageRange === a} onClick={() => setAgeRange(a)} />
                     ))}
-                  {step === 2 &&
+                  {step === 3 &&
                     WORK_ON.map((w) => (
                       <Tile key={w.id} label={w.label} selected={workOn.includes(w.id)} onClick={() => setWorkOn((cur) => toggle(cur, w.id))} />
                     ))}
-                  {step === 3 &&
+                  {step === 4 &&
                     MEDIUMS.map((m) => (
                       <Tile key={m.id} label={m.label} selected={mediums.includes(m.id)} onClick={() => setMediums((cur) => toggle(cur, m.id))} />
                     ))}
-                  {step === 4 &&
+                  {step === 5 &&
                     CAREER_STAGES.map((s) => (
                       <Tile key={s.id} label={s.label} selected={stage === s.id} onClick={() => setStage(s.id)} />
                     ))}
