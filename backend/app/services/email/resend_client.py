@@ -55,9 +55,10 @@ class ResendEmailClient:
             html: HTML email body (ignored if plain_text is provided)
             from_email: Sender email
             scheduled_at: ISO datetime string to schedule send (max 72h ahead)
-            unsubscribe_url: Unused, kept for backward compat
-            plain_text: If provided, sends as plain text instead of HTML
-                        (lands in Gmail Primary tab more reliably)
+            unsubscribe_url: Adds List-Unsubscribe headers so Gmail shows its
+                             native one-click Unsubscribe next to the sender
+            plain_text: Plain-text part. Sent ALONGSIDE html as multipart, not
+                        instead of it.
 
         Returns:
             Resend response dict with email ID
@@ -72,12 +73,22 @@ class ResendEmailClient:
                 "subject": subject,
                 "reply_to": "canberk@actorrise.com",
             }
+            # Send BOTH parts, never one or the other. A text/html multipart is
+            # what every mail client expects: the plain part is the Primary-tab
+            # signal and the fallback, the HTML part carries the styling and the
+            # open-tracking pixel. Sending text alone silently drops the pixel,
+            # which is why bulk batches used to report zero opens.
             if plain_text:
                 params["text"] = plain_text
-            else:
+            if html:
                 params["html"] = html
             if scheduled_at:
                 params["scheduled_at"] = scheduled_at
+            if unsubscribe_url:
+                params["headers"] = {
+                    "List-Unsubscribe": f"<{unsubscribe_url}>",
+                    "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+                }
 
             response = resend.Emails.send(params)
 

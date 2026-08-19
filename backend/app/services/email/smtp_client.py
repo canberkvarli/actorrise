@@ -40,6 +40,7 @@ class SmtpEmailClient:
         html: str = "",
         from_email: Optional[str] = None,
         plain_text: Optional[str] = None,
+        unsubscribe_url: Optional[str] = None,
         **kwargs,
     ) -> dict:
         """
@@ -48,25 +49,39 @@ class SmtpEmailClient:
         Args:
             to: Recipient email address
             subject: Email subject
-            html: HTML email body (used if plain_text is not provided)
+            html: HTML email body
             from_email: Sender display (default: Canberk <email>)
-            plain_text: If provided, sends as plain text only
+            plain_text: Plain-text part. Sent ALONGSIDE html as multipart, not
+                        instead of it.
+            unsubscribe_url: Adds List-Unsubscribe headers so Gmail shows its
+                             native one-click Unsubscribe next to the sender
 
         Returns:
             dict with status
         """
         sender = from_email or f"Canberk <{self.email}>"
 
-        if plain_text:
-            msg = MIMEText(plain_text, "plain")
-        else:
+        # Always multipart/alternative with BOTH parts when we have both.
+        # Attach order matters: least-preferred first, so html goes last.
+        # Sending the plain part alone silently drops the open-tracking pixel
+        # (it only exists in the HTML), which is why bulk batches used to
+        # report zero opens.
+        if plain_text and html:
             msg = MIMEMultipart("alternative")
+            msg.attach(MIMEText(plain_text, "plain"))
             msg.attach(MIMEText(html, "html"))
+        elif html:
+            msg = MIMEText(html, "html")
+        else:
+            msg = MIMEText(plain_text or "", "plain")
 
         msg["From"] = sender
         msg["To"] = to
         msg["Subject"] = subject
         msg["Reply-To"] = self.email
+        if unsubscribe_url:
+            msg["List-Unsubscribe"] = f"<{unsubscribe_url}>"
+            msg["List-Unsubscribe-Post"] = "List-Unsubscribe=One-Click"
 
         try:
             with smtplib.SMTP("smtp.gmail.com", 587) as server:

@@ -131,11 +131,13 @@ TEMPLATES = [
         "subject": "hey",
         "variables": [
             {"name": "user_name", "label": "Recipient name", "type": "text", "default": "there", "required": True},
+            {"name": "preheader", "label": "Inbox preview line (optional, shows next to the subject before it's opened)", "type": "text", "default": "", "required": False},
             {"name": "body_markdown", "label": "Message body (Markdown supported: **bold**, *italic*, [links](url))", "type": "text", "default": "", "required": True},
             {"name": "cta_label", "label": "Button label (optional, e.g. 'run the scene')", "type": "text", "default": "", "required": False},
             {"name": "cta_url", "label": "Button link (optional, e.g. https://actorrise.com/practice)", "type": "text", "default": "", "required": False},
             {"name": "sender_name", "label": "Sender name", "type": "text", "default": "Canberk", "required": True},
             {"name": "sender_title", "label": "Sender title", "type": "text", "default": "Founder, ActorRise", "required": True},
+            {"name": "postscript", "label": "Postscript (optional, renders below the signature, e.g. the reply-to-opt-out line)", "type": "text", "default": "", "required": False},
         ],
     },
     {
@@ -536,6 +538,7 @@ def bulk_send_email(
                         html=html,
                         scheduled_at=body.scheduled_at or None,
                         plain_text=plain_text,
+                        unsubscribe_url=build_unsubscribe_url(send_row.to_email),
                     )
 
                     send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
@@ -718,6 +721,7 @@ def resume_batch(
                         subject=subject,
                         html=html,
                         plain_text=plain_text,
+                        unsubscribe_url=build_unsubscribe_url(send_row.to_email),
                     )
 
                     send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
@@ -997,6 +1001,7 @@ def send_campaign_endpoint(
                         html=html,
                         plain_text=plain_text,
                         scheduled_at=body.scheduled_at or None,
+                        unsubscribe_url=build_unsubscribe_url(send_row.to_email),
                     )
 
                     send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
@@ -1489,6 +1494,7 @@ def approve_weekly_digest(
                         subject="This week's pick",
                         html=html,
                         plain_text=plain_text,
+                        unsubscribe_url=build_unsubscribe_url(send_row.to_email),
                     )
 
                     send_row.resend_email_id = response.get("id") if isinstance(response, dict) else None
