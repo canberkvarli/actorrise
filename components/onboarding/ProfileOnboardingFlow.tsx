@@ -223,6 +223,12 @@ export default function ProfileOnboardingFlow({
     [endFlow, router]
   );
 
+  // The one required answer. No Skip on this step: it is a single tap with an
+  // "Somewhere else" escape hatch, and an attribution answer cannot be
+  // reconstructed later the way the profile ones can. Every step after it
+  // stays skippable.
+  const referralRequired = variant === "new" && questions[step]?.key === "referral";
+
   const dots = useMemo(() => Array.from({ length: totalSteps }), [totalSteps]);
 
   return (
@@ -232,7 +238,7 @@ export default function ProfileOnboardingFlow({
           showPayoff ? "max-w-lg" : "max-w-md"
         }`}
       >
-        {!showPayoff && (
+        {!showPayoff && !referralRequired && (
           <button
             type="button"
             onClick={handleSkip}
