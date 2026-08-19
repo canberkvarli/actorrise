@@ -48,23 +48,24 @@ export function ContentGapBanner({
 
   const label = play && author ? `${play} by ${author}` : play || `works by ${author}`;
 
-  // We have it, the tab filtered it out. Point them at it.
+  // We have it, the tab filtered it out. Point them at it. Compact inline row —
+  // it sits above unrelated same-tab results, so it must read as a quiet redirect,
+  // not a full-bleed "nothing here" box that contradicts the results below.
   if (availableIn && availableIn.length > 0) {
     const target = availableIn[0];
     return (
-      <div className="border border-border bg-card p-4 space-y-2">
-        <p className="text-sm">
-          <span className="font-semibold">{label}</span> is in{" "}
-          {sourceLabel(availableIn)}, not here.
-        </p>
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-l-2 border-l-[#CB4B00] bg-muted/30 px-3 py-2.5 text-sm">
+        <span className="text-foreground">
+          <span className="font-semibold">{label}</span> lives in {sourceLabel(availableIn)}.
+        </span>
         {onSwitchSource && (
-          <Button
-            size="sm"
-            className="bg-[#CB4B00] text-white hover:bg-[#B03000]"
+          <button
+            type="button"
             onClick={() => onSwitchSource(target)}
+            className="font-medium text-[#CB4B00] underline-offset-4 hover:underline dark:text-[#e56320]"
           >
-            Show me {sourceLabel(availableIn)}
-          </Button>
+            Take me there →
+          </button>
         )}
       </div>
     );
@@ -86,29 +87,22 @@ export function ContentGapBanner({
   }
 
   return (
-    <div className="border border-border bg-card p-4 space-y-2">
-      <p className="text-sm">
-        I don&apos;t have <span className="font-semibold">{label}</span> yet.
-      </p>
-      <div className="flex items-center gap-3">
-        <Button
-          variant="outline"
-          size="sm"
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-l-2 border-l-[#CB4B00] bg-muted/30 px-3 py-2.5 text-sm">
+      <span className="text-foreground">
+        No <span className="font-semibold">{label}</span> yet
+        {!requested && <span className="text-muted-foreground"> — closest pieces below.</span>}
+      </span>
+      {requested ? (
+        <span className="text-xs text-muted-foreground">Noted, thanks. I&apos;ll look for it.</span>
+      ) : (
+        <button
+          type="button"
           onClick={handleRequest}
-          disabled={requested || loading}
+          disabled={loading}
+          className="font-medium text-[#CB4B00] underline-offset-4 hover:underline disabled:opacity-60 dark:text-[#e56320]"
         >
-          {requested ? "Requested" : loading ? "Requesting..." : "Request this play"}
-        </Button>
-        {requested && (
-          <span className="text-xs text-muted-foreground">
-            Noted, thanks. I&apos;ll look for it.
-          </span>
-        )}
-      </div>
-      {!requested && (
-        <p className="text-xs text-muted-foreground">
-          Here are monologues with a similar feel:
-        </p>
+          {loading ? "Requesting…" : "Request it →"}
+        </button>
       )}
     </div>
   );
