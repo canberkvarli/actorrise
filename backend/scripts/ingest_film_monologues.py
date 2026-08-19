@@ -215,7 +215,8 @@ def fetch_pdf(slug: str):
     return r.content, None
 
 
-def ingest_film(db, analyzer, selector, slug, refs, apply, min_words) -> tuple[int, str]:
+def ingest_film(db, analyzer, selector, slug, refs, apply, min_words,
+                delay: float = REQUEST_DELAY_SECONDS) -> tuple[int, str]:
     meta = parse_film_slug(slug)
     if not meta:
         return 0, "unparsable_slug"
@@ -254,9 +255,23 @@ def ingest_film(db, analyzer, selector, slug, refs, apply, min_words) -> tuple[i
     # judges whether a speech actually stands alone.
     if apply and selector is not None and pool:
         try:
-            clean = select_best_monologues(selector, pool, meta["title"],
+            # Returns SELECTION RECORDS -- {"index", "title",
+            # "scene_description"} -- not candidates. Map each index back to
+            # the pool, and keep the coach's title and scene description: they
+            # are better than a generated "Character, Film" label.
+            picks = select_best_monologues(selector, pool, meta["title"],
                                            meta.get("year"), writer,
                                            max_picks=MAX_PER_FILM)
+            clean, seen_idx = [], set()
+            for s in picks:
+                i = s.get("index")
+                if not isinstance(i, int) or not 0 <= i < len(pool) or i in seen_idx:
+                    continue
+                seen_idx.add(i)
+                c = dict(pool[i])
+                c["sel_title"] = (s.get("title") or "").strip() or None
+                c["sel_scene"] = (s.get("scene_description") or "").strip() or None
+                clean.append(c)
         except Exception as e:  # noqa: BLE001 — never lose a film to a bad call
             print(f"      selection failed ({e}); falling back to longest")
             clean = pool[:MAX_PER_FILM]
@@ -275,6 +290,7 @@ def ingest_film(db, analyzer, selector, slug, refs, apply, min_words) -> tuple[i
     inserted = 0
     for c in clean:
         char, text, dialogue, wc = c["character"], c["text"], c["dialogue"], c["word_count"]
+        sel_title, sel_scene = c.get("sel_title"), c.get("sel_scene")
         if play is not None:
             existing = [t for (t,) in db.query(Monologue.text)
                         .filter(Monologue.play_id == play.id,
@@ -301,7 +317,7 @@ def ingest_film(db, analyzer, selector, slug, refs, apply, min_words) -> tuple[i
 
             mono = Monologue(
                 play_id=int(play.id),
-                title=f"{char}, {meta['title']}",
+                title=(sel_title or f"{char}, {meta['title']}"),
                 character_name=char,
                 text=text,
                 stage_directions=directions or None,
@@ -315,7 +331,7 @@ def ingest_film(db, analyzer, selector, slug, refs, apply, min_words) -> tuple[i
                 emotion_scores=analysis.get("emotion_scores"),
                 themes=analysis.get("themes"),
                 tone=analysis.get("tone"),
-                scene_description=analysis.get("scene_description"),
+                scene_description=(sel_scene or analysis.get("scene_description")),
                 search_tags=list(set(tags)),
                 is_verified=False,
                 overdone_score=0.3,
@@ -341,9 +357,15 @@ def main() -> None:
                     help="skip audition-worthiness selection, keep the longest")
     ap.add_argument("--delay", type=float, default=REQUEST_DELAY_SECONDS,
                     help="seconds between fetches; raise it if 403s climb")
+    ap.add_argument("--slugs", default=None,
+                    help="comma-separated slugs to ingest instead of the full "
+                         "sitemap (targeted re-runs, retrying 403s)")
     args = ap.parse_args()
 
-    slugs = film_slugs()
+    if args.slugs:
+        slugs = [s.strip() for s in args.slugs.split(",") if s.strip()]
+    else:
+        slugs = film_slugs()
     if args.limit:
         slugs = slugs[: args.limit]
     print(f"{len(slugs)} film slugs; min_words={args.min_words}; "
@@ -362,7 +384,7 @@ def main() -> None:
         for slug in slugs:
             try:
                 n, status = ingest_film(db, analyzer, selector, slug, refs,
-                                        args.apply, args.min_words)
+                                        args.apply, args.min_words, args.delay)
             except Exception as e:  # noqa: BLE001
                 db.rollback()
                 print(f"    {slug[:34]:34s} ERROR {e}")
