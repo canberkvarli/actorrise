@@ -207,6 +207,14 @@ def main() -> int:
     ap.add_argument("--apply", action="store_true")
     ap.add_argument("--limit-plays", type=int)
     ap.add_argument("--genre", help="substring genre filter (e.g. 'comed'); default: ALL plays")
+    ap.add_argument(
+        "--only-empty",
+        action="store_true",
+        help="only plays that currently have ZERO monologues. The 2026-08-20 "
+        "audit found 35 such rows holding full_text already — Cymbeline, "
+        "Tartuffe, Ivanov, Rosmersholm, Salome, Doctor Faustus — canonical "
+        "public-domain works whose text we have and never extracted from.",
+    )
     ap.add_argument("--purge", metavar="IDS_JSON")
     args = ap.parse_args()
 
@@ -229,6 +237,12 @@ def main() -> int:
         q = db.query(Play).filter(Play.source_type == "play")
         if args.genre:
             q = q.filter(Play.genre.ilike(f"%{args.genre}%"))
+        if args.only_empty:
+            q = q.filter(
+                ~db.query(Monologue.id)
+                .filter(Monologue.play_id == Play.id)
+                .exists()
+            )
         all_rows = q.order_by(Play.id).all()
         # Dedupe duplicate play rows (e.g. A Midsummer Night's Dream exists
         # 19x): canonical = lowest id that has full_text, else lowest id.

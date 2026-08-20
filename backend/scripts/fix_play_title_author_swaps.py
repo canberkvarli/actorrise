@@ -58,11 +58,32 @@ WITH a AS (
 SELECT p.id, p.title, p.author, COALESCE(p.source_type,'play') st,
        (SELECT count(*) FROM monologues m WHERE m.play_id = p.id) monos
 FROM plays p
-WHERE btrim(lower(p.title)) IN (SELECT v FROM a)
+WHERE (
+        btrim(lower(p.title)) IN (SELECT v FROM a)
+        OR p.id = ANY(:verified)
+      )
   AND btrim(lower(COALESCE(p.title,''))) <> btrim(lower(COALESCE(p.author,'')))
   AND p.author IS NOT NULL AND btrim(p.author) <> ''
 ORDER BY monos DESC, p.id
 """
+
+# Rows swapped in a way the automatic rule provably cannot find, each checked
+# against the author's real bibliography by hand:
+#
+#   #252  title='J.M. Barrie'   author='What Every Woman Knows'  (19 monologues)
+#   #239  title='John Dryden'   author='Marriage à la Mode'      (0)
+#
+# The automatic rule needs the person's name to appear in the `author` column
+# of some OTHER row; Barrie and Dryden each have only their swapped rows, so
+# there is nothing to match against.
+#
+# Do NOT try to replace this with "title looks like a person's name". That was
+# tried and it flags `Henry VIII by William Shakespeare` (136 monologues) and
+# `Richard II` (130) — real plays whose titles are also people. There is no
+# textual signal separating those from a genuine swap, and guessing wrong here
+# would mis-attribute hundreds of monologues. Two hand-checked ids are cheaper
+# and safer than a clever rule.
+VERIFIED_SWAP_IDS = [252, 239]
 
 
 def main() -> None:
@@ -71,7 +92,9 @@ def main() -> None:
     args = ap.parse_args()
 
     with engine.begin() as conn:
-        rows = conn.execute(text(FIND)).mappings().fetchall()
+        rows = conn.execute(
+            text(FIND), {"verified": VERIFIED_SWAP_IDS}
+        ).mappings().fetchall()
         print(f"swapped rows found: {len(rows)}")
 
         planned, skipped = [], []

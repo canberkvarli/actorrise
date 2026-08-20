@@ -164,8 +164,56 @@ were tried and both were wrong. 252 plays have zero monologues, but 31 are
 referenced by `scenes.play_id` and the rest are largely legitimate public-domain
 works awaiting extraction (Cymbeline, Ivanov, Salome, Tartuffe, Doctor Faustus).
 A second pass at "junk-looking titles" flagged Alien, Juno, X-Men, Elvis and 8½.
-Only `test` (#175) and `sadg` (#176) are real debris. Those 123 empty classical
-plays are a content opportunity, not garbage.
+Only `test` (#175) and `sadg` (#176) are real debris.
+
+A second round found 2 more swaps the automatic rule provably cannot reach:
+`title='J.M. Barrie', author='What Every Woman Knows'` (19 monologues) and
+`title='John Dryden', author='Marriage à la Mode'`. The rule needs the person's
+name to appear as an `author` on some other row, and each of these has only its
+own swapped row. They are pinned as hand-checked ids in the script, with a note
+against replacing that with a "title looks like a person" heuristic — that was
+tried and flags `Henry VIII` (136 monologues) and `Richard II` (130), real plays
+whose titles are also people.
+
+## 2026-08-20 — Why the empty public-domain plays are empty: the stored text is the wrong book
+
+Chasing "35 empty plays already have full_text, just extract from them" turned
+up the actual cause. `plays.full_text` on those rows is not the play:
+
+| row | stored text actually is |
+|---|---|
+| #24 Cymbeline | *Hamlet* editorial notes / a Shakespeare volume preface |
+| #32 Ivanov (Chekhov) | *Reminiscences of Anton Chekhov* by Gorky — a memoir |
+| #42 The Lady from the Sea (Ibsen) | *Diaries of Sir Moses and Lady Montefiore*, 927 KB |
+| #51 Salome (Wilde) | the **German** translation, while `language='en'` |
+| #57 Tartuffe | correct — but verse speeches fall under the 75-word floor |
+
+The Gutenberg fetch matched too loosely and stored whatever it got. So the
+content gap is not "extraction never ran", it is "there was never usable text".
+`extract_pd_monologues.py --only-empty` (flag added today) scans 76 rows and
+yields 0 candidates: 41 no-text, 20 non-dramatic, 5 foreign. **The extraction
+guards are working correctly** — they are rejecting garbage, and the run is
+evidence the guards hold, not evidence of a bug.
+
+Recovering these ~35 canonical works means re-fetching from Gutenberg with a
+verification step (does the fetched text actually name this title and these
+characters?), not re-running extraction. Not attempted — a fetch that silently
+stores the wrong book is exactly how this state was reached.
+
+Related smells found in the same sweep, all still open:
+
+- **Oversized full_text = collected volumes, not single plays.** "Every Man in
+  His Humour" carries 3.4 MB, "The Rising of the Moon" 3.7 MB, "Henry IV"
+  974 KB. Monologues extracted from a volume may be attributed to the wrong
+  play inside it. This is the collapsed-collection failure the 2026-08
+  attribution audit hit, and these look like more of it.
+- **Collection rows treated as plays.** `#212 "Complete Works of William
+  Shakespeare" by "Oxford 1911"` holds 36 monologues; `#1638 "Untitled" by
+  "Unknown"` holds 4.
+- **Titles mangled by a bad parse.** `#90 "A Play in VerseBy Hugo Von
+  Hofmannst"`, `#91 "A ComedyBy Arthur SchnitzlerTranslat"`, `#172
+  "(p. 261)EPILOGUE"` — scrape artifacts stored as titles, with the translator
+  in the author field.
 
 ## 2026-08-20 — Content-request affordance on the dashboard search surface
 
