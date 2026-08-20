@@ -101,6 +101,40 @@ the new floor and re-baseline the golden set, or revert the floor to 0.30. Until
 one or the other, the golden harness will keep reporting a regression that is
 really a config difference.
 
+## 2026-08-20 — Duplicate `plays` rows merged (327 deleted)
+
+Ingest creates a play row per run without checking for an existing one, so a
+show scraped five times became five plays. The audit found 231 duplicate groups
+over 358 redundant rows: "The X Files" was 16 rows holding 79 monologues,
+"Hamlet" 14 rows, "The Night Manager" 5 rows / 39 pieces.
+
+`scripts/dedupe_play_rows.py --apply`. Result: 1,023 monologues and 16 scenes
+reparented, 327 rows deleted, plays 2,069 -> 1,742. **Monologue count unchanged
+at 13,244 and zero orphans** — nothing was destroyed, only rows that had already
+been emptied. Reversible: `backups/dedupe_play_rows_20260820T120916Z.json` holds
+every deleted row plus every reparent mapping.
+
+The grouping key is (normalised title, source_type, normalised author), never
+title alone, because two different works share a title more often than you would
+think. **27 groups were skipped for exactly this reason and are correct to
+skip**: Batman (Reeves / Burton), Insomnia (Nolan / Skjoldbjærg), The Girl with
+the Dragon Tattoo (Fincher / Oplev), Dawn of the Dead (Romero / Snyder), Belle
+(Asante / Hosoda). Merging on title would have collapsed distinct films into one
+— the same failure the 2026-08 play-attribution audit had to undo by hand.
+
+Direct effect on the title pre-pass: "the night manager" now resolves to one row
+holding all 39 pieces rather than an arbitrary one of five fragments, and
+`detect_catalogue_title`'s "first matching row wins" is no longer a coin flip.
+
+Two defects this surfaced, both still open:
+
+- **Title/author are swapped on some play rows.** `title="Arthur Wing Pinero",
+  author="Dandy Dick"` and `title="John Dryden", author="All for Love"`. The
+  2026-08 attribution audit fixed 23 of these; more remain.
+- **Author transliteration variants block legitimate merges.** "ANTON TCHEKOV"
+  vs "Anton Tchekoff" is one author and one play, left as two rows. Harmless,
+  but it means the 27 skipped groups are not all genuine distinct works.
+
 ## 2026-08-20 — Content-request affordance on the dashboard search surface
 
 `SearchInterface.tsx` had no request affordance on either a weak match or zero
