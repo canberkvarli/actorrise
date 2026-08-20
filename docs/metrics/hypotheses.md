@@ -37,6 +37,13 @@ searches after Aug 15. avg_cosine fell 0.441 -> 0.401 over the same split.
 
 Disconfirms if: decisions.md shows a retrieval or embedding change landed Aug 14-15.
 
+Checked 2026-08-20 and still standing. There IS an untracked threshold change —
+`search_relevance_floor` 0.30 -> 0.35 in `app_settings` — but its `updated_at`
+is 2026-08-20 02:00 UTC, five days after the step, so it cannot explain it. Note
+for whoever tests this next: `app_settings` is the place threshold changes hide,
+since they leave no git trace. It holds one row and no history, so if the floor
+was moved before and moved back, that is now unrecoverable.
+
 ## H-09 The content-request funnel does not capture failed-search demand
 
 Status: OPEN, partly explained (2026-08-20)
