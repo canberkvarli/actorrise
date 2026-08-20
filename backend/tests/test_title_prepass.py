@@ -9,9 +9,9 @@ carry rather than guessing. A fake DB keeps these runnable without Postgres.
 
 import pytest
 
-from app.api.monologues import _prepass_blocked_by_filters
 from app.models.actor import Monologue
-from app.services.search.title_lookup import find_title_monologues
+from app.services.search.title_lookup import (find_title_monologues,
+                                              prepass_can_honour)
 
 
 def mono(id_, quality_score=None, review_status=None, play_id=1):
@@ -134,13 +134,13 @@ class TestMatching:
 
     def test_source_type_narrows_the_play_set(self):
         db = FakeDB([1], [mono(1)])
-        find_title_monologues(db, "Fleabag", source_type="tv")
+        find_title_monologues(db, "Fleabag", filters={"source_type": "tv"})
         assert db.last_params["st"] == ["tv"]
         assert "source_type" in db.last_sql
 
     def test_source_type_accepts_a_list(self):
         db = FakeDB([1], [mono(1)])
-        find_title_monologues(db, "Fleabag", source_type=["film", "tv"])
+        find_title_monologues(db, "Fleabag", filters={"source_type": ["film", "tv"]})
         assert db.last_params["st"] == ["film", "tv"]
 
 
@@ -160,12 +160,13 @@ class TestDegradesSafely:
 
 class TestFilterGuard:
     def test_no_filters_allows_the_prepass(self):
-        assert _prepass_blocked_by_filters({}) is False
-        assert _prepass_blocked_by_filters(None) is False
+        assert prepass_can_honour({}, "Fleabag") is True
+        assert prepass_can_honour(None, "Fleabag") is True
 
-    def test_source_type_alone_allows_the_prepass(self):
-        # The tab filter narrows plays, which the pre-pass can honour itself.
-        assert _prepass_blocked_by_filters({"source_type": "tv"}) is False
+    def test_source_type_alone_allows_a_single_word_title(self):
+        # The tab filter narrows plays, not monologues, so it does not count as
+        # an attribute filter and does not trigger the hijack rule.
+        assert prepass_can_honour({"source_type": "tv"}, "Fleabag") is True
 
     @pytest.mark.parametrize(
         "key,value",
@@ -173,18 +174,55 @@ class TestFilterGuard:
             ("gender", "female"),
             ("tone", "comedic"),
             ("max_duration", 120),
-            ("category", "classical"),
+            ("min_duration", 60),
             ("max_overdone_score", 0.3),
             ("age_range", "20s"),
+            ("emotion", "sadness"),
+            ("difficulty", "beginner"),
+            ("act", 2),
+            ("scene", 1),
         ],
     )
-    def test_attribute_filters_block_the_prepass(self, key, value):
-        # The hard-filter cascade lives in SemanticSearch.search. Rather than
-        # re-implement it (and drift), the pre-pass stands down and the vector
-        # path — which already promotes title matches — serves the query.
-        assert _prepass_blocked_by_filters({key: value}) is True
+    def test_supported_filters_allow_a_multiword_title(self, key, value):
+        # The regression this fixes: "the night manager" with gender+tone on
+        # had 20 pieces in the library and still came back weak, because the
+        # old guard stood down on any filter at all.
+        assert prepass_can_honour({key: value}, "The Night Manager") is True
 
-    def test_source_type_plus_an_attribute_still_blocks(self):
-        assert _prepass_blocked_by_filters(
-            {"source_type": "tv", "gender": "female"}
-        ) is True
+    @pytest.mark.parametrize(
+        "key,value",
+        [
+            ("category", "classical"),
+            ("theme", "love"),
+            ("themes", ["love"]),
+            ("author", "Chekhov"),
+            ("exclude_author", "Shakespeare"),
+            ("exclude_play", "Hamlet"),
+            ("character_name", "Nora"),
+        ],
+    )
+    def test_unimplemented_filters_stand_the_prepass_down(self, key, value):
+        # These are not plain column predicates (era spans Play.category plus a
+        # year clause; themes are array containment). Rather than approximate
+        # them and quietly return the wrong pieces, decline.
+        assert prepass_can_honour({key: value}, "The Night Manager") is False
+
+    def test_single_word_title_with_an_attribute_filter_is_refused(self):
+        # "Awkward" is a real title with 4 monologues AND an ordinary word an
+        # actor would type to describe a piece. With a filter on, the actor is
+        # describing, not naming — do not hijack the search.
+        assert prepass_can_honour({"gender": "female"}, "Awkward") is False
+        assert prepass_can_honour({"tone": "comedic"}, "Crazy") is False
+
+    def test_leading_article_does_not_make_a_title_multiword(self):
+        # _normalise_title drops "the", so "The Office" is one word after
+        # normalisation and must not slip past the hijack rule.
+        assert prepass_can_honour({"gender": "female"}, "The Office") is False
+
+    def test_declining_returns_no_rows(self):
+        # The guard is enforced inside find_title_monologues, not just advisory.
+        db = FakeDB([1], [mono(1, 0.9)])
+        assert find_title_monologues(db, "Awkward", filters={"gender": "female"}) == []
+        assert find_title_monologues(
+            db, "The Night Manager", filters={"category": "classical"}
+        ) == []

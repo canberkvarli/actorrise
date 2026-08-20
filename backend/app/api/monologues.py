@@ -33,23 +33,6 @@ from sqlalchemy.orm import Session, joinedload
 
 router = APIRouter(prefix="/api/monologues", tags=["monologues"])
 
-# The only filter the title pre-pass can honour, because it narrows the play
-# set rather than the monologue set.
-_PREPASS_SAFE_FILTER_KEYS = {"source_type"}
-
-
-def _prepass_blocked_by_filters(filters: dict) -> bool:
-    """True when a filter is active that the title pre-pass cannot honour.
-
-    The hard-filter cascade (gender, tone, duration, era, overdone, act/scene…)
-    lives inside SemanticSearch.search and runs to ~120 lines. Re-implementing
-    it for the pre-pass would guarantee the two drift apart, and a pre-pass that
-    silently ignored the actor's gender filter is worse than no pre-pass. So
-    when attribute filters are on we fall through to the vector path, which
-    already promotes title matches to the front. The H-07 weak matches are all
-    bare title searches, so this costs nothing the pre-pass was built to fix.
-    """
-    return any(k not in _PREPASS_SAFE_FILTER_KEYS for k in (filters or {}))
 
 
 # Pydantic schemas
@@ -441,13 +424,12 @@ async def search_monologues(
             # genuinely holds ("queen's gambit" ranked Hamlet above the five
             # Queen's Gambit pieces it had all along).
             title_hit = detect_title_lookup(search_q) or detect_catalogue_title(db, search_q)
+            # find_title_monologues decides for itself whether it can honour
+            # the active filters, and returns nothing when it cannot.
             title_rows: list[Monologue] = []
-            if title_hit and not _prepass_blocked_by_filters(filters):
+            if title_hit:
                 title_rows = find_title_monologues(
-                    db,
-                    title_hit["title"],
-                    source_type=filters.get("source_type"),
-                    limit=fetch_limit,
+                    db, title_hit["title"], filters=filters, limit=fetch_limit
                 )
 
             if len(title_rows) >= fetch_limit:

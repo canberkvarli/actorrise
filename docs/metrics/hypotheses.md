@@ -27,6 +27,29 @@ stars" 1. All returned weak. Fixing title lookup alone projects weak match 36.0 
 
 Disconfirms if: title pre-pass ships and weak match does not drop below 28 pct.
 
+**Measured 2026-08-20 by replaying all 41 weak searches through the shipped
+pre-pass: 8 are caught, not 13. Projected weak rate 36.0 -> 28.9 pct, which sits
+just the wrong side of the disconfirming line.** Treat H-07 as on the edge of
+disconfirmed, and do not claim the 24.6 number — it was never achievable.
+
+The original count of 13 was optimistic in two distinct ways:
+
+- **4 of them were tab problems, not retrieval problems.** Three "fleabag"
+  searches and one "newsies" ran with a `source_type` filter that excluded the
+  medium the show is filed under. The pieces exist; the actor's own tab hid
+  them. The content-gap banner already says "available in TV" for this, so the
+  pre-pass correctly stands down. Fixing it means changing the tab UX, not
+  retrieval.
+- **2 were titles we do not carry at all.** "hunger games" / "the hunger games"
+  and "normal people" match the curated dictionary but return zero pieces.
+  Those are content gaps, and they belong to H-09, not here.
+
+What remains is a genuine retrieval gap of 8 searches out of 41. Worth having,
+much smaller than advertised. The honest read: **most weak matches are not a
+title-lookup problem.** 15 of the 41 have no detectable title at all
+("Serious topics", "dramedy", "crazy", "Kenny Omega") and 13 more are attribute
+searches. The next move on weak matches is not more title work.
+
 ## H-08 The Aug 15 weak-match step is a query mix shift, not a threshold change
 
 Status: OPEN, evidence for (2026-08-20)

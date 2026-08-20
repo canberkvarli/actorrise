@@ -227,7 +227,49 @@ def find_catalogue_source_types(db, title: str) -> list[str]:
     return sorted(r[0] for r in rows)
 
 
-def find_title_monologues(db, title: str, source_type=None, limit: int = 20) -> list:
+# Filters find_title_monologues applies itself, predicate-for-predicate against
+# SemanticSearch.search's hard-filter cascade. Anything outside this set means
+# the pre-pass cannot faithfully honour what the actor asked for, so it stands
+# down and the vector path serves the query. Deliberately excluded:
+# category/era (Play.category plus era_year_clause, not a plain predicate),
+# theme/themes (array containment), author/exclude_author/exclude_play and
+# character_name (ilike against a column the title match already pins down).
+_PREPASS_SUPPORTED_FILTERS = {
+    "source_type", "gender", "age_range", "emotion", "tone", "difficulty",
+    "max_duration", "min_duration", "act", "scene", "max_overdone_score",
+}
+
+
+def prepass_can_honour(filters: Optional[dict], title: str) -> bool:
+    """Whether the title pre-pass may answer this search.
+
+    Two independent conditions, for two different failure modes.
+
+    1. Every active filter must be one the pre-pass implements. The original
+       version of this guard stood down whenever ANY filter was set, which was
+       too blunt: "the night manager" with gender+tone on was the single
+       strongest case for the pre-pass — 20 pieces sitting in the library — and
+       it fell through to the vector path and came back weak anyway.
+
+    2. When attribute filters ARE active, the title must be multi-word. The
+       library holds one-word titles that are also ordinary descriptive words:
+       an actor searching "Awkward" with a gender filter wants an awkward
+       *piece*, and the library has a title called "Awkward" with 4 monologues.
+       Answering that as a title lookup would hijack the search. With no
+       filters the query is bare and naming the title is the likeliest intent,
+       so single words are allowed through as before.
+    """
+    filters = filters or {}
+    attribute_keys = [k for k in filters if k != "source_type"]
+    if any(k not in _PREPASS_SUPPORTED_FILTERS for k in filters):
+        return False
+    if attribute_keys and " " not in _normalise_title(title):
+        return False
+    return True
+
+
+def find_title_monologues(db, title: str, filters: Optional[dict] = None,
+                          limit: int = 20) -> list:
     """The monologues of `title`, best-first. Empty list when we carry none.
 
     This is the pre-pass behind ``match_strategy="title_exact"``. The 2026-08-20
@@ -257,17 +299,25 @@ def find_title_monologues(db, title: str, source_type=None, limit: int = 20) -> 
     if len(norm) < _MIN_TITLE_CHARS:
         return []
 
+    filters = filters or {}
+    if not prepass_can_honour(filters, title):
+        return []
+
+    from sqlalchemy import or_ as sa_or
     from sqlalchemy import text as sa_text
     from sqlalchemy.orm import joinedload, undefer
 
     from app.models.actor import Monologue
+    from app.services.search.semantic_search import (_age_hard_values,
+                                                     review_hides_from_search)
 
     expr = "regexp_replace(lower(p.title), '[^\\w\\s]', '', 'g')"
     expr = f"regexp_replace({expr}, '^(the|a|an)\\s+', '')"
     sql = f"SELECT p.id FROM plays p WHERE {expr} = :n"
     params: Dict[str, object] = {"n": norm}
-    # The one filter the pre-pass can honour without re-implementing the
-    # hard-filter cascade: it just narrows which play rows count.
+    # source_type narrows which play rows count, so it is applied here rather
+    # than against the monologues.
+    source_type = filters.get("source_type")
     if source_type:
         st = source_type if isinstance(source_type, list) else [source_type]
         st = [s for s in st if s]
@@ -279,20 +329,61 @@ def find_title_monologues(db, title: str, source_type=None, limit: int = 20) -> 
         play_ids = [r[0] for r in db.execute(sa_text(sql), params).fetchall()]
         if not play_ids:
             return []
-        rows = (
+        q = (
             db.query(Monologue)
             # review_status is a deferred column; undefer it so the gate below
             # costs no extra round trip per row.
             .options(joinedload(Monologue.play), undefer(Monologue.review_status))
             .filter(Monologue.play_id.in_(play_ids))
-            .all()
         )
+
+        # Every predicate below mirrors SemanticSearch.search's hard-filter
+        # cascade exactly. Keep them identical: the guard above guarantees we
+        # only reach here for filters this block implements, so a change there
+        # without a change here silently returns the wrong pieces.
+        if filters.get("gender"):
+            # Gender-neutral pieces count as a match, same as the cascade.
+            q = q.filter(
+                Monologue.character_gender.in_(
+                    [filters["gender"], "any", "either gender"]
+                )
+            )
+        if filters.get("age_range"):
+            q = q.filter(
+                Monologue.character_age_range.in_(_age_hard_values(filters["age_range"]))
+            )
+        if filters.get("emotion"):
+            q = q.filter(Monologue.primary_emotion == filters["emotion"])
+        if filters.get("tone"):
+            q = q.filter(Monologue.tone == filters["tone"])
+        if filters.get("difficulty"):
+            q = q.filter(Monologue.difficulty_level == filters["difficulty"])
+        if filters.get("max_duration"):
+            q = q.filter(
+                Monologue.estimated_duration_seconds <= filters["max_duration"]
+            )
+        if filters.get("min_duration"):
+            q = q.filter(
+                Monologue.estimated_duration_seconds >= filters["min_duration"]
+            )
+        if filters.get("act"):
+            q = q.filter(Monologue.act == filters["act"])
+        if filters.get("scene"):
+            q = q.filter(Monologue.scene == filters["scene"])
+        if filters.get("max_overdone_score") is not None:
+            threshold = float(filters["max_overdone_score"])
+            q = q.filter(
+                sa_or(
+                    Monologue.overdone_score.is_(None),
+                    Monologue.overdone_score <= threshold,
+                )
+            )
+
+        rows = q.all()
     except Exception:
         # A failed pre-pass must degrade to the normal vector path, never to a
         # broken search.
         return []
-
-    from app.services.search.semantic_search import review_hides_from_search
 
     keep = [m for m in rows if not review_hides_from_search(m.review_status)]
     keep.sort(
