@@ -26,13 +26,32 @@ class SearchLog(Base):
     # What KIND of thing was asked for: title | named_lookup | occupation |
     # attribute | multi | other. Classified on the logging path only — nothing
     # reads it back into ranking. See app/services/search/query_type.py.
-    query_type = Column(String(20), nullable=True)
-    created_at = Column(DateTime, server_default=sql_text("now()"), nullable=False)
+    # NOT NULL with a server default rather than a bare NOT NULL: an insert
+    # site that forgets this must degrade to 'other', never fail a search.
+    # Sealed by scripts/backfill_search_query_type.py once no NULLs remain.
+    query_type = Column(
+        String(20), nullable=False, server_default=sql_text("'other'")
+    )
+    # Which retrieval branch answered this search:
+    #   title_exact             the query named a show we carry; its pieces were
+    #                           returned directly, no vector query run
+    #   title_exact_backfilled  same, but the show had fewer pieces than a page,
+    #                           so vector results were appended behind them
+    #   vector                  the normal semantic path
+    # Added 2026-08-20 to measure the split, since H-07 predicts the title
+    # branch should absorb roughly a third of weak matches.
+    match_strategy = Column(String(24), nullable=True)
+    # Parenthesised like ContentRequest's: valid Postgres either way, and the
+    # bare form is a DDL syntax error on SQLite, which the tests build this
+    # table on. Prod columns are created by hand-written migration scripts, so
+    # this affects generated DDL only.
+    created_at = Column(DateTime, server_default=sql_text("(now())"), nullable=False)
 
     __table_args__ = (
         Index("ix_search_logs_created_at", "created_at"),
         Index("ix_search_logs_user_id", "user_id"),
         Index("ix_search_logs_query_type", "query_type", "created_at"),
+        Index("ix_search_logs_match_strategy", "match_strategy", "created_at"),
     )
 
 

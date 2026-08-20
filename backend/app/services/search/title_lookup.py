@@ -227,6 +227,83 @@ def find_catalogue_source_types(db, title: str) -> list[str]:
     return sorted(r[0] for r in rows)
 
 
+def find_title_monologues(db, title: str, source_type=None, limit: int = 20) -> list:
+    """The monologues of `title`, best-first. Empty list when we carry none.
+
+    This is the pre-pass behind ``match_strategy="title_exact"``. The 2026-08-20
+    read found 13 of 41 weak matches in a week were searches for shows the
+    library already holds — "the night manager" (39 pieces), "fleabag" (6),
+    "bottoms" (4), "newsies" (4) all came back weak, because semantic ranking
+    scores a bare title against monologue *text* and a show's name rarely
+    appears in its own dialogue. Naming a show is a lookup, not a similarity
+    question, so it should not be answered with a vector query at all.
+
+    Ordered by quality_score desc (nulls last, then id for a stable page):
+    once the actor has named the show, the only ranking question left is which
+    of its pieces is the best piece.
+
+    Matching is exact on the normalised title, both sides — lowercase, strip
+    punctuation, drop a leading article, collapse whitespace. pg_trgm is not
+    installed on this project, so there is deliberately no fuzzy branch; near
+    misses fall through to the vector path exactly as they do today.
+
+    Named-title searches bypass the film/TV word gate on purpose (2026-08-17:
+    that gate hid 162 of 355 TV titles from lookup by name). Pieces held back
+    for review are still excluded — those are not shippable to anyone.
+    """
+    if db is None or not title:
+        return []
+    norm = _normalise_title(title)
+    if len(norm) < _MIN_TITLE_CHARS:
+        return []
+
+    from sqlalchemy import text as sa_text
+    from sqlalchemy.orm import joinedload, undefer
+
+    from app.models.actor import Monologue
+
+    expr = "regexp_replace(lower(p.title), '[^\\w\\s]', '', 'g')"
+    expr = f"regexp_replace({expr}, '^(the|a|an)\\s+', '')"
+    sql = f"SELECT p.id FROM plays p WHERE {expr} = :n"
+    params: Dict[str, object] = {"n": norm}
+    # The one filter the pre-pass can honour without re-implementing the
+    # hard-filter cascade: it just narrows which play rows count.
+    if source_type:
+        st = source_type if isinstance(source_type, list) else [source_type]
+        st = [s for s in st if s]
+        if st:
+            sql += " AND COALESCE(p.source_type, 'play') = ANY(:st)"
+            params["st"] = st
+
+    try:
+        play_ids = [r[0] for r in db.execute(sa_text(sql), params).fetchall()]
+        if not play_ids:
+            return []
+        rows = (
+            db.query(Monologue)
+            # review_status is a deferred column; undefer it so the gate below
+            # costs no extra round trip per row.
+            .options(joinedload(Monologue.play), undefer(Monologue.review_status))
+            .filter(Monologue.play_id.in_(play_ids))
+            .all()
+        )
+    except Exception:
+        # A failed pre-pass must degrade to the normal vector path, never to a
+        # broken search.
+        return []
+
+    from app.services.search.semantic_search import review_hides_from_search
+
+    keep = [m for m in rows if not review_hides_from_search(m.review_status)]
+    keep.sort(
+        key=lambda m: (
+            -(m.quality_score if m.quality_score is not None else -1.0),
+            m.id,
+        )
+    )
+    return keep[:limit]
+
+
 # Words that surround a title without being part of one. Stripped so "the
 # office monologue" still matches the stored title "The Office".
 _TITLE_FILLER = {

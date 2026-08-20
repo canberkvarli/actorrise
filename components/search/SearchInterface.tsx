@@ -13,6 +13,7 @@ import { IconSearch, IconSparkles, IconLoader2, IconX, IconFilter } from "@table
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { MonologueCard } from "./MonologueCard";
+import { RequestQueryButton } from "./RequestQueryButton";
 import { motion, AnimatePresence } from "framer-motion";
 import { addSearchToHistory } from "@/lib/searchHistory";
 
@@ -62,6 +63,10 @@ export function SearchInterface() {
   // Era toggle: "" = either, "classical" or "contemporary"
   const [era, setEra] = useState<"" | "classical" | "contemporary">("");
   const [results, setResults] = useState<Monologue[]>([]);
+  // The query that actually produced `results`. The box can be edited after a
+  // search, and a content request must file what was searched, not what is
+  // currently typed.
+  const [searchedQuery, setSearchedQuery] = useState("");
   const [weakMatch, setWeakMatch] = useState(false);
   const [broadened, setBroadened] = useState<{ relaxed: string[] } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -96,6 +101,7 @@ export function SearchInterface() {
         setEra(parsed.era);
         setFilters(parsed.filters);
         setResults(parsed.results);
+        setSearchedQuery(parsed.query ?? "");
         setWeakMatch(Boolean(parsed.weakMatch));
         setBroadened(parsed.broadened ?? null);
         setHasSearched(parsed.results.length > 0);
@@ -156,6 +162,7 @@ export function SearchInterface() {
         { timeoutMs: 180000 }
       );
       setResults(response.data.results);
+      setSearchedQuery(query.trim());
       setWeakMatch(Boolean(response.data.weak_match));
       setBroadened(response.data.broadened ?? null);
 
@@ -718,6 +725,14 @@ export function SearchInterface() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Try adjusting your search terms or filters
                 </p>
+                {/* Zero results is the strongest demand signal there is, and it
+                    was the one place that told the actor to go away and rephrase
+                    without ever recording what they wanted. */}
+                {searchedQuery && (
+                  <div className="mb-4 flex justify-center">
+                    <RequestQueryButton query={searchedQuery} />
+                  </div>
+                )}
                 <Button variant="outline" onClick={() => {
                   setQuery("");
                   setFilters({
@@ -753,6 +768,11 @@ export function SearchInterface() {
                   <p className="text-sm text-muted-foreground mt-0.5">
                     Here are the closest ones I found. Try simpler terms or fewer filters to narrow in.
                   </p>
+                  {/* A weak result set is the moment we learn what the library
+                      is missing, and this surface used to drop it on the floor:
+                      2 content_requests rows lifetime against 4 distinct
+                      missing titles searched in one week (H-09). */}
+                  <RequestQueryButton query={searchedQuery} className="mt-3" />
                 </div>
               ) : broadened && broadened.relaxed.length > 0 ? (
                 <div className="border border-border border-l-2 border-l-[#CB4B00] bg-muted/40 px-4 py-3">

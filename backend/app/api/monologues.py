@@ -22,6 +22,7 @@ from app.services.search.query_optimizer import (correct_query_typos,
 from app.services.search.title_lookup import (compute_content_gap,
                                               detect_catalogue_title,
                                               detect_title_lookup,
+                                              find_title_monologues,
                                               promote_title_matches)
 from app.services.search.scene_intent import detect_two_person_scene_intent
 from app.services.search.recommender import Recommender
@@ -31,6 +32,24 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 
 router = APIRouter(prefix="/api/monologues", tags=["monologues"])
+
+# The only filter the title pre-pass can honour, because it narrows the play
+# set rather than the monologue set.
+_PREPASS_SAFE_FILTER_KEYS = {"source_type"}
+
+
+def _prepass_blocked_by_filters(filters: dict) -> bool:
+    """True when a filter is active that the title pre-pass cannot honour.
+
+    The hard-filter cascade (gender, tone, duration, era, overdone, act/scene…)
+    lives inside SemanticSearch.search and runs to ~120 lines. Re-implementing
+    it for the pre-pass would guarantee the two drift apart, and a pre-pass that
+    silently ignored the actor's gender filter is worse than no pre-pass. So
+    when attribute filters are on we fall through to the vector path, which
+    already promotes title matches to the front. The H-07 weak matches are all
+    bare title searches, so this costs nothing the pre-pass was built to fix.
+    """
+    return any(k not in _PREPASS_SAFE_FILTER_KEYS for k in (filters or {}))
 
 
 # Pydantic schemas
@@ -394,7 +413,12 @@ async def search_monologues(
 
         # Track whether we have relevance scores (semantic search vs random/discover)
         has_scores = False
-        all_results_with_scores: list[tuple[Monologue, float]] = []
+        # Score is None for rows served by the title pre-pass — there is no
+        # cosine behind them.
+        all_results_with_scores: list[tuple[Monologue, float | None]] = []
+        # Which retrieval branch answered this search. Logged, never read back.
+        match_strategy = "vector"
+        title_prepass = False
 
         quote_match_types: dict[int, str] = {}
         actor_profile_for_search: dict | None = None
@@ -407,30 +431,64 @@ async def search_monologues(
             }
         if q and q.strip():
             search_q = q.strip()
-            # Semantic search returns (list of (Monologue, score), quote_match_types)
-            all_results_with_scores, quote_match_types = search_service.search(
-                search_q,
-                limit=fetch_limit,
-                filters=filters,
-                user_id=cast(int, current_user.id),
-                actor_profile=actor_profile_for_search,
-                ignore_constraints=(
-                    [k.strip() for k in ignore.split(",") if k.strip()] if ignore else None
-                ),
-            )
-            has_scores = True
-            # If the query names a show we carry ("mean girls jr"), its pieces
-            # must lead the results — semantic ranking can bury literal title
-            # matches under thematically-similar pieces. No-op otherwise.
+            # Title pre-pass, BEFORE the vector query. Naming a show is a lookup,
+            # not a similarity question: a bare title scores badly against
+            # monologue text because a show's name rarely appears in its own
+            # dialogue. 13 of 41 weak matches in the week to 2026-08-20 were
+            # searches for shows the library already held (H-07).
             # The curated dictionary is checked first, then real plays.title
             # values: the dictionary is small and missed titles the library
             # genuinely holds ("queen's gambit" ranked Hamlet above the five
             # Queen's Gambit pieces it had all along).
             title_hit = detect_title_lookup(search_q) or detect_catalogue_title(db, search_q)
-            if title_hit:
-                all_results_with_scores = promote_title_matches(
-                    title_hit["title"], all_results_with_scores
+            title_rows: list[Monologue] = []
+            if title_hit and not _prepass_blocked_by_filters(filters):
+                title_rows = find_title_monologues(
+                    db,
+                    title_hit["title"],
+                    source_type=filters.get("source_type"),
+                    limit=fetch_limit,
                 )
+
+            if len(title_rows) >= fetch_limit:
+                # The named show fills the page on its own, so the vector query
+                # is pure cost. Scores stay None: there is no cosine here and
+                # inventing one would poison the weak_match signal.
+                all_results_with_scores = [(m, None) for m in title_rows]
+                match_strategy = "title_exact"
+            else:
+                # Semantic search returns (list of (Monologue, score), quote_match_types)
+                all_results_with_scores, quote_match_types = search_service.search(
+                    search_q,
+                    limit=fetch_limit,
+                    filters=filters,
+                    user_id=cast(int, current_user.id),
+                    actor_profile=actor_profile_for_search,
+                    ignore_constraints=(
+                        [k.strip() for k in ignore.split(",") if k.strip()] if ignore else None
+                    ),
+                )
+                has_scores = True
+                # If the query names a show we carry ("mean girls jr"), its pieces
+                # must lead the results — semantic ranking can bury literal title
+                # matches under thematically-similar pieces. No-op otherwise.
+                if title_hit:
+                    all_results_with_scores = promote_title_matches(
+                        title_hit["title"], all_results_with_scores
+                    )
+                if title_rows:
+                    # We carry the show but it has fewer pieces than a page
+                    # ("the fault in our stars", 1). Lead with everything we
+                    # have of it, then let the vector results fill the rest
+                    # rather than returning a one-result page.
+                    seen = {m.id for m in title_rows}
+                    tail = [(m, s) for m, s in all_results_with_scores if m.id not in seen]
+                    all_results_with_scores = [(m, None) for m in title_rows] + tail
+                    match_strategy = "title_exact_backfilled"
+
+            # A title hit means the actor got the show they asked for, whatever
+            # the cosine of the backfill behind it says.
+            title_prepass = bool(title_rows)
         else:
             # Random/discover returns just Monologues, wrap with None score
             random_results = search_service.get_random_monologues(limit=fetch_limit, filters=filters)
@@ -498,7 +556,15 @@ async def search_monologues(
         # specific query we can't satisfy (e.g. a play we don't carry) doesn't
         # silently return dozens of loosely-related pieces as if they fit.
         best_cosine = getattr(search_service, "_best_cosine_sim", None)
-        if best_cosine is not None:
+        if title_prepass:
+            # The actor named a show and we returned that show's pieces. There
+            # is no cosine to judge and nothing weak about the answer, so the
+            # "closest matches" banner must not fire. This is the whole point of
+            # the pre-pass: "the night manager" has 39 pieces and used to be
+            # reported as a weak match.
+            weak_match = False
+            best_cosine = None
+        elif best_cosine is not None:
             # Primary (pgvector) path: per-result scores are rank-based and can't
             # gauge match quality, so judge on the REAL cosine of the best hit.
             weak_match = best_cosine < STRONG_COSINE_SIM
@@ -562,8 +628,13 @@ async def search_monologues(
                     source="search",
                     content_gap=content_gap,
                     page=page,
-                    weak_match=bool(weak_match) if has_scores else None,
+                    # A pre-pass answer has no scores but is definitively not
+                    # weak, so it logs False rather than NULL.
+                    weak_match=(
+                        bool(weak_match) if (has_scores or title_prepass) else None
+                    ),
                     best_cosine=best_cosine,
+                    match_strategy=match_strategy,
                     query_type=classify_query(
                         q,
                         parsed_constraints=getattr(search_service, "_parsed_constraints", None),
