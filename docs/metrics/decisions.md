@@ -126,14 +126,46 @@ Direct effect on the title pre-pass: "the night manager" now resolves to one row
 holding all 39 pieces rather than an arbitrary one of five fragments, and
 `detect_catalogue_title`'s "first matching row wins" is no longer a coin flip.
 
-Two defects this surfaced, both still open:
+One defect this surfaced is still open: **author transliteration variants block
+legitimate merges.** "ANTON TCHEKOV" vs "Anton Tchekoff" is one author and one
+play, left as two rows. Harmless, but it means the 27 skipped groups are not all
+genuine distinct works.
 
-- **Title/author are swapped on some play rows.** `title="Arthur Wing Pinero",
-  author="Dandy Dick"` and `title="John Dryden", author="All for Love"`. The
-  2026-08 attribution audit fixed 23 of these; more remain.
-- **Author transliteration variants block legitimate merges.** "ANTON TCHEKOV"
-  vs "Anton Tchekoff" is one author and one play, left as two rows. Harmless,
-  but it means the 27 skipped groups are not all genuine distinct works.
+## 2026-08-20 — 6 play rows had title and author swapped (174 monologues)
+
+Surfaced by the dedupe run. Six rows carried a playwright's name in `title` and
+one of their plays in `author`, so 174 monologues were attributed to a "play"
+named after their own author:
+
+| was | now | monologues |
+|---|---|---|
+| title="William Congreve", author="Love for Love" | Love for Love by William Congreve | 74 |
+| title="John Millington Synge", author="Deirdre of the Sorrows" | Deirdre of the Sorrows by Synge | 73 |
+| title="Arthur Wing Pinero", author="Dandy Dick" | Dandy Dick by Pinero | 19 |
+| title="John Millington Synge", author="Riders to the Sea" | Riders to the Sea by Synge | 8 |
+| title="Arthur Wing Pinero", author="Trelawny of the Wells" | Trelawny of the Wells by Pinero | 0 |
+| title="Richard Brinsley Sheridan", author="St. Patrick's Day" | St. Patrick's Day by Sheridan | 0 |
+
+`scripts/fix_play_title_author_swaps.py --apply`. Reversible from
+`backups/fix_play_swaps_20260820T121800Z.json`.
+
+Detection is evidence-based rather than a name heuristic: a row qualifies only
+when its `title` value appears as an `author` on other rows — the corpus itself
+saying that string is a person. That is why it finds exactly 6 and not a pile of
+false positives. Each swapped form was checked for collisions first; none
+collided.
+
+Effect: searching "Love for Love", "Deirdre of the Sorrows", "Riders to the Sea"
+or "Dandy Dick" returned nothing before and now returns 74/73/8/19 pieces. Same
+class of defect the 2026-08 attribution audit fixed 23 of; this is the tail.
+
+**Do not "clean" empty play rows without checking what they are.** Two heuristics
+were tried and both were wrong. 252 plays have zero monologues, but 31 are
+referenced by `scenes.play_id` and the rest are largely legitimate public-domain
+works awaiting extraction (Cymbeline, Ivanov, Salome, Tartuffe, Doctor Faustus).
+A second pass at "junk-looking titles" flagged Alien, Juno, X-Men, Elvis and 8½.
+Only `test` (#175) and `sadg` (#176) are real debris. Those 123 empty classical
+plays are a content opportunity, not garbage.
 
 ## 2026-08-20 — Content-request affordance on the dashboard search surface
 
