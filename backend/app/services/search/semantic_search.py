@@ -105,12 +105,20 @@ WEAK_MATCH_FLOOR = 0.30
 # from search unless the user explicitly asks for very short material.
 TV_CLIP_MIN_SECONDS = 30
 
-# Minimum word count for a film/TV piece to appear in search/discover. The TV
-# corpus is 80% under 75 words (avg 64) — sub-monologue dialogue clips extracted
-# too short. This gate hides them (rows stay in the DB for later re-extraction).
+# Minimum word count for a film/TV piece to appear in search/discover.
 # Absolute: unlike the duration clip gate there is no "user asked for short"
-# escape — a sub-75-word film/TV fragment is never the monologue an actor wants.
-FILM_TV_MIN_WORDS = 75
+# escape — a fragment below this is never the monologue an actor wants.
+#
+# Lowered 75 -> 50 on 2026-08-20 (Canberk's call). At 75 the gate was hiding
+# 1,155 film/TV pieces, 42% of that corpus, which made most of the film and TV
+# library unreachable except by naming its title. 50 words is ~20 seconds, the
+# point below which a speech stops being a piece you could work on.
+#
+# The sub-50 rows are no longer hidden-but-kept: they were deleted outright in
+# the same change (scripts/purge_sub_50_word_monologues.py), because a 30-word
+# fragment is not a monologue and keeping it only preserved the option of
+# surfacing it by mistake.
+FILM_TV_MIN_WORDS = 50
 
 
 def review_hides_from_search(review_status) -> bool:
