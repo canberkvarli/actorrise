@@ -92,6 +92,10 @@ class MonologueResponse(BaseModel):
     imdb_rating: Optional[float] = None
     imdb_id: Optional[str] = None
     director: Optional[str] = None
+    # Ghost Light iOS: true when the full text was withheld because a free user
+    # has spent their lifetime reads. `text` then carries only the opening lines
+    # (the teaser the paywall shows); the rest never leaves the server.
+    paywalled: bool = False
 
     class Config:
         from_attributes = True
@@ -913,6 +917,13 @@ async def get_trending(
     ]
 
 
+def _teaser(text: str, lines: int = 2) -> str:
+    """The opening lines a walled reader is allowed to see — enough to know it's
+    genuinely their part, no more."""
+    kept = [ln for ln in text.splitlines() if ln.strip()][:lines]
+    return "\n".join(kept)
+
+
 @router.get("/{monologue_id:int}", response_model=MonologueResponse)
 async def get_monologue(
     monologue_id: int,
@@ -920,7 +931,12 @@ async def get_monologue(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
-    """Get detailed monologue information"""
+    """Get detailed monologue information.
+
+    Enforces the Ghost Light wall server-side (spec §4/§7): a free user who has
+    spent their three lifetime reads receives only the opening lines and a
+    `paywalled` flag — the full text never leaves the server, so bypassing the
+    client can't unlock it. Pieces the user has already saved stay readable."""
 
     monologue = (
         db.query(Monologue)
@@ -959,7 +975,7 @@ async def get_monologue(
         MonologueFavorite.removed_at.is_(None),
     ).first()
 
-    return _monologue_to_response(
+    resp = _monologue_to_response(
         monologue,
         is_favorited=fav is not None,
         memorized=bool(fav.memorized) if fav else False,
@@ -968,6 +984,18 @@ async def get_monologue(
         cut_start_line=fav.cut_start_line if fav else None,
         cut_end_line=fav.cut_end_line if fav else None,
     )
+
+    # The wall, enforced here. A saved piece stays open (don't lock their own
+    # shelf); an unsaved one, once the free reads are gone, comes back as teaser
+    # only. The count is spent via POST /read, so merely opening the wall costs
+    # nothing and re-opening it shows the same teaser.
+    if fav is None and not _user_has_unlimited_reads(int(current_user.id), db):
+        if lifetime_monologue_reads(int(current_user.id), db) >= FREE_MONOLOGUE_READ_LIMIT:
+            resp.text = _teaser(resp.text)
+            resp.text_segments = None
+            resp.paywalled = True
+
+    return resp
 
 
 @router.post("/{monologue_id:int}/favorite")
