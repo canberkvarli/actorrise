@@ -104,6 +104,26 @@ def looks_foreign(text: str) -> bool:
         return False
     hits = sum(1 for w in words if w in _EN_STOPWORDS)
     return hits / len(words) < 0.12
+
+
+def body_looks_foreign(text: str) -> bool:
+    """Same test, but sampled from the middle of the work as well as the head.
+
+    A Gutenberg file opens with an English licence header and an English
+    editor's note no matter what language the play is in. Testing only the
+    first 8k characters passed a Swedish Euripides ("Orestes" — "Rätt sade du,
+    min flicka") and a German Salome as English, and both would have been
+    ingested as English monologues. Sampling the body is what catches them.
+    """
+    if not text:
+        return False
+    mid = len(text) // 2
+    samples = [text[:8000], text[mid:mid + 8000], text[-8000:]]
+    verdicts = [looks_foreign(s) for s in samples if len(s.split()) >= 15]
+    # Any sample reading as non-English is enough: the cost of skipping a real
+    # English play is one missed extraction, the cost of ingesting a foreign
+    # one is permanent corpus damage.
+    return any(verdicts)
 _TRAILING_VERSE_NUM_RE = re.compile(r"\s+\d+\s*$")
 _DIRECTION_LINE_RE = re.compile(r"^[\[\(]?\s*(re-?enter|enter|exit|exeunt)\b", re.I)
 _HEADING_RE = re.compile(r"^(ACT|SCENE|PROLOGUE|EPILOGUE)\b", re.I)
@@ -165,9 +185,29 @@ def folger_speeches(text: str) -> list[tuple[str, str]]:
     return [(s, t) for s, t in speeches if t]
 
 
-def _get_play_text(play, scraper) -> str | None:
+def _get_play_text(play, scraper, shared_urls: set[str] | None = None) -> str | None:
+    """The play's own script, or None when we cannot get one safely.
+
+    `shared_urls` are source_urls that more than one play row points at. Those
+    are anthologies and collected volumes, and re-fetching one returns the
+    WHOLE BOOK — not this play's script. Extracting from it gives every play in
+    the volume an identical set of speeches under its own title.
+
+    That is not hypothetical. It is the mechanism behind every collapse the
+    corpus has had: 18 play rows on Gutenberg 37970 (THE BOOR, THE STRONGER,
+    HYACINTH HALVEY...) each holding the same 52 monologues; 51 rows on 36984;
+    the Strindberg Father/Miss Julie/Outlaw collapse fixed in 2026-07; and the
+    Antigone/Oedipus-at-Colonus overlap still in the corpus. A dry run on
+    2026-08-21 offered to re-insert 27 identical speeches into each of those 18
+    plays, hours after they had been cleaned out.
+
+    A row with its OWN full_text is fine — that text was stored per play. It is
+    specifically the re-fetch of a shared URL that must not happen.
+    """
     if play.full_text and len(play.full_text) > 5000:
         return play.full_text
+    if shared_urls and (play.source_url or "") in shared_urls:
+        return None
     book_id = gutenberg_id_from_url(play.source_url) or gutenberg_id_from_url(play.full_text_url)
     if not book_id:
         return None
@@ -222,6 +262,8 @@ def main() -> int:
         purge(Path(args.purge))
         return 0
 
+    from sqlalchemy import func
+
     from app.core.database import SessionLocal
     from app.models.actor import Monologue, Play
     from app.services.data_ingestion.gutenberg_scraper import GutenbergScraper
@@ -266,33 +308,63 @@ def main() -> int:
             for (t,) in db.query(Monologue.text).all()
         }
 
+        # source_urls that more than one play row points at: anthologies and
+        # collected volumes. Re-fetching one of these returns the whole book,
+        # so it must never stand in for a single play's script. See
+        # _get_play_text for what happens when it does.
+        shared_urls = {
+            u for (u,) in db.query(Play.source_url)
+            .filter(Play.source_url.isnot(None), Play.source_url != "")
+            .group_by(Play.source_url)
+            .having(func.count(Play.id) > 1)
+            .all()
+        }
+        if shared_urls:
+            print(f"{len(shared_urls)} source_urls are shared by multiple play "
+                  f"rows (anthologies); those rows will not be re-fetched")
+
         candidates: list[dict] = []
         no_text: list[str] = []
+        skipped_shared: list[str] = []
         skipped_foreign: list[str] = []
         skipped_nondramatic: list[str] = []
         for play in plays:
-            text = _get_play_text(play, scraper)
+            text = _get_play_text(play, scraper, shared_urls)
             if not text:
-                no_text.append(f"{play.title} ({play.author})")
+                if (play.source_url or "") in shared_urls and not play.full_text:
+                    skipped_shared.append(f"{play.title} ({play.author})")
+                else:
+                    no_text.append(f"{play.title} ({play.author})")
                 continue
-            if looks_foreign(text[:8000]):
+            if body_looks_foreign(text):
                 skipped_foreign.append(f"{play.title} ({play.author})")
                 continue
             found = parser.extract_monologues(text, min_words=MIN_WORDS, max_words=MAX_WORDS)
-            if len(found) < 3:
-                # Folger-format fallback (bare CAPS speaker lines, FTLN prefixes)
-                speeches = folger_speeches(text)
-                # Non-dramatic sources (books mislabeled as plays) have almost
-                # no speaker transitions; real drama switches constantly.
-                words_total = len(text.split())
-                if words_total and len(speeches) / (words_total / 1000) < 2:
-                    skipped_nondramatic.append(f"{play.title} ({play.author})")
-                    speeches = []
-                found = [
-                    {"character": ch, "text": sp}
-                    for ch, sp in speeches
-                    if MIN_WORDS <= len(sp.split()) <= MAX_WORDS
-                ]
+
+            # Folger-format alternative (bare CAPS speaker lines, FTLN
+            # prefixes). This used to run only when the plain parser returned
+            # fewer than 3, which quietly cost the two best candidates in the
+            # whole set: Doctor Faustus and The Jew of Malta each scrape
+            # exactly 4 junk matches out of their front matter, clear the
+            # threshold of 3, and so never got the fallback — while Folger
+            # segmentation finds 34 and 43 in-range speeches respectively, of
+            # which 23 and 31 pass the quality gate. "Did the first parser
+            # return anything at all" was never the right question; "which
+            # parser understood this file" is.
+            speeches = folger_speeches(text)
+            words_total = len(text.split())
+            # Non-dramatic sources (books mislabeled as plays) have almost
+            # no speaker transitions; real drama switches constantly.
+            dramatic = bool(words_total) and len(speeches) / (words_total / 1000) >= 2
+            folger_found = [
+                {"character": ch, "text": sp}
+                for ch, sp in speeches
+                if dramatic and MIN_WORDS <= len(sp.split()) <= MAX_WORDS
+            ]
+            if len(folger_found) > len(found):
+                found = folger_found
+            elif not found and not dramatic:
+                skipped_nondramatic.append(f"{play.title} ({play.author})")
             kept = 0
             seen_this_play: set[str] = set()
             for m in found:
@@ -315,6 +387,18 @@ def main() -> int:
                 if (not character or len(character) > 25
                         or character.lower() in {"all", "chorus", "both", "unknown", "omnes"}):
                     continue
+                # A bare courtesy title is a mis-split, not a character: the
+                # segmenter cut "Mrs. Helseth" after "Mrs." and handed back a
+                # speech that starts mid-stage-direction ("HELSETH opens the
+                # door on the right.)").
+                if character.rstrip(".").lower() in {
+                    "mr", "mrs", "ms", "miss", "dr", "sir", "lady", "madame",
+                    "mme", "herr", "frau", "st", "lord",
+                }:
+                    continue
+                # A speech that opens inside a stage direction lost its start.
+                if re.match(r"^[A-Z]{2,}\b[^.]{0,80}\)", speech):
+                    continue
                 seen_this_play.add(key)
                 kept += 1
                 candidates.append(
@@ -330,6 +414,9 @@ def main() -> int:
             if kept:
                 print(f"  {play.title[:45]:45} ({play.author[:20]:20}) +{kept}")
 
+        if skipped_shared:
+            print(f"shared-volume-skipped: {len(skipped_shared)} plays whose only "
+                  f"source is an anthology URL shared with other rows")
         print(f"\nplays scanned: {len(plays)}  no-text: {len(no_text)}  "
               f"foreign-skipped: {len(skipped_foreign)}  non-dramatic-skipped: {len(skipped_nondramatic)}  "
               f"candidates: {len(candidates)}")
