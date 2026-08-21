@@ -380,19 +380,80 @@ So Chekhov's Smirnov and Strindberg's Mrs X are both currently filed under a
 play row titled "A DOLLAR". A search can return the same speech up to 18 times
 under 18 different play names, every one of them misattributed.
 
-**Not fixed, deliberately.** The mechanical part (delete duplicates) is
-unsafe on its own: for any given text at most one of the 18 rows is correct,
-and choosing wrong silently locks in a misattribution. Group 2 is genuinely
-recoverable because character names map onto the real titles that already
-exist in the same anthology (Hyacinth → HYACINTH HALVEY, Smirnov → THE BOOR),
-which is a per-monologue judgement across ~105 pieces, not a query. Group 1
-needs the source volumes re-identified first, since the stored titles are
-parse debris.
+### FIXED later the same day — 1,690 duplicate rows down to 227
 
-This is the same shape as the 252 "empty shell" plays: a mass edit that looks
-mechanical and is not. Wants a session with Canberk reviewing, not an
-autonomous pass. It is now the biggest single quality item on the board —
-larger than the boilerplate by a factor of seventeen.
+`backend/scripts/fix_collapsed_anthologies.py` (dry-run default, full
+reversible backup including text at
+`backups/collapsed_anthologies_20260821T121346Z.json`).
+
+What made it safe was finding that neither group needed a judgement call.
+
+**Group 1 turned out to be pure redundancy.** Their `full_text` is 176–2,359
+characters — front matter only — while ids 123–136 hold the *same plays*
+correctly: real full text, proper titles and authors, and their own
+already-attributed monologues. Id 93's front matter is byte-identical to id
+126 "Monsieur Lamblin"; id 133's to id 134 "The Baby Carriage". Checked before
+writing anything: **all 53 shell texts already exist under 123–136 and 0 are
+shell-only**, so the 13 shells carried nothing unique. Deleted outright, with
+favourites and views repointed onto the surviving twin first.
+
+**Group 2 was decided from the source, not from recall.** Each row's front
+matter ends in a cast list, so a monologue belongs to the play whose cast
+contains its character. Every play already held a copy of every text, so the
+repair was pure deletion: keep the copy under the matching play, drop the
+other 17. 43 of 59 texts attributed; 16 left exactly as they are.
+
+The parsing is where the danger was, and it is worth recording why. The volume
+is inconsistent about the heading — TRADITION says "THE PEOPLE", THE LAST STRAW
+and WHERE BUT IN AMERICA say "CAST". Missing those two did not fail loudly: it
+emptied six plays' casts, which silently converts "this character is not in
+that play" into "this character is in no play". With TRADITION unparsed, Mary
+looked like it belonged unambiguously to WHITE DRESSES. Recognising the extra
+headings **turned 4 confident misattributions into honest ambiguities** — Jim
+and Mary now match two casts each and are left alone. A cast parser that
+half-works is more dangerous than one that does not run.
+
+Also added a whole-name fallback for casts made entirely of titles and
+initials: THE STRONGER lists "Mrs. X. , an actress", and token matching drops
+"mrs" as a courtesy title and "x" as too short, so the single most obvious
+attribution in the anthology matched nothing.
+
+Result: monologues 12,435 → 11,015, plays 1,742 → 1,729, duplicate rows 1,690
+→ 227 (86% gone), distinct duplicated texts 136 → 40. No orphaned monologues.
+The 7 orphaned `monologue_favorites` rows are **pre-existing** (ids 7615–11582,
+Feb–Jun 2026); today's deletions were ids 15653–18323. That table still has no
+FK to `monologues`, which is why orphans accumulate silently.
+
+Still duplicated and deliberately untouched: 16 texts whose character is a bare
+pronoun ("He", "She", "The Voice", "The Figure"), is absent from every parsed
+cast ("Mollie"), or is genuinely in two casts ("Jim", "Mary" ×3). MANIKIN AND
+MINIKIN has no cast block in its front matter at all, so nothing in the source
+can place its pieces.
+
+## 2026-08-21 — word_count had drifted from the text on 876 rows
+
+`word_count` is a stored column, not a derived one, so every pass that edits
+monologue text without touching it leaves the two disagreeing. Found while
+trying to apply the 50-word rule to the boilerplate leftovers and discovering
+the purge could not see them: their text had dropped to ~45 words while the
+stored count still read ~130.
+
+Not cosmetic. Three things read the column rather than the text:
+`film_tv_word_gate_hides()` (so a stale high count keeps a fragment visible and
+a stale low count hides a real speech), the duration filters via
+`estimated_duration_seconds`, and `purge_sub_50_word_monologues.py`.
+
+876 rows had drifted, worst case 378 → 64, total 9,876 words. Resynced by
+`backend/scripts/resync_word_counts.py` using `app.utils.duration.
+estimate_duration_seconds` — the same helper the admin edit path uses, which
+accounts for breath pauses rather than assuming a flat words/150.
+
+20 rows then crossed under the 50-word bar and were purged under the
+2026-08-20 rule (1 spared as favourited). Several were broken extractions with
+the speaker prefix still embedded — "Hale. I wish you'd seen Minnie Foster…".
+
+**Any future pass that edits monologue text must re-run this script**, or the
+gates quietly stop matching what is actually stored.
 
 ## 2026-08-21 — "Pen 15" could not find "Pen15"
 
