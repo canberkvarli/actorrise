@@ -129,17 +129,24 @@ export function ResultsFeedbackPrompt({
     );
   }
 
-  // Idle: the quiet "Helpful?" line.
+  // Idle: the ask.
+  //
+  // This used to be text-xs at 70% opacity with 14px icons, sitting in the
+  // results toolbar between the result count and the collection button. It
+  // rendered and it posted correctly — and it collected 0 rows in 7 days
+  // across 154 searches, because at that weight it reads as decoration rather
+  // than a question. Legible size and full-strength muted foreground, and the
+  // targets are big enough to hit on a phone.
   return (
-    <div className="flex items-center justify-center gap-2 py-1 text-xs text-muted-foreground/70">
-      <span>Helpful?</span>
+    <div className="flex items-center justify-center gap-3 py-1 text-sm text-muted-foreground">
+      <span>Did this find what you needed?</span>
       <button
         type="button"
         onClick={submitPositive}
         aria-label="Yes, helpful"
-        className="rounded p-1.5 transition-colors hover:bg-muted/50 hover:text-foreground"
+        className="rounded-md p-2 transition-colors hover:bg-muted hover:text-foreground"
       >
-        <IconThumbUp className="h-3.5 w-3.5" />
+        <IconThumbUp className="h-4 w-4" />
       </button>
       <button
         type="button"
@@ -148,9 +155,9 @@ export function ResultsFeedbackPrompt({
           setReasonForCount(resultsViewCount);
         }}
         aria-label="No, not helpful"
-        className="rounded p-1.5 transition-colors hover:bg-muted/50 hover:text-foreground"
+        className="rounded-md p-2 transition-colors hover:bg-muted hover:text-foreground"
       >
-        <IconThumbDown className="h-3.5 w-3.5" />
+        <IconThumbDown className="h-4 w-4" />
       </button>
     </div>
   );

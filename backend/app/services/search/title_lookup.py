@@ -188,10 +188,33 @@ def _normalise_title(value: str) -> str:
 
     Stored titles do not match how people type them ("The Queens Gambit" vs
     "Queen's gambit", "Fantastic Mr. Fox" vs "fantastic mr fox").
+
+    Spaces are PRESERVED — the phrase matching in detect_catalogue_title needs
+    word boundaries to tell a title inside a sentence from a coincidental run
+    of letters. Use _squash_title for the space-insensitive comparison.
     """
     v = re.sub(r"[^\w\s]", "", (value or "").lower())
     v = re.sub(r"\s+", " ", v).strip()
     return re.sub(r"^(the|a|an)\s+", "", v).strip()
+
+
+# Below this a squashed key is too collision-prone to trust.
+_MIN_SQUASHED_CHARS = 5
+
+
+def _squash_title(value: str) -> str:
+    """_normalise_title with the spaces removed as well.
+
+    People do not agree with a catalogue about where the space goes in a title
+    that mixes letters and digits. The library stores "Pen15"; an actor types
+    "Pen 15", which normalises to "pen 15", matches nothing, and gets told we
+    have never heard of a show we hold 3 monologues from. Same shape as
+    "Se7en" or "Ocean's 11".
+
+    Only ever used as a FALLBACK after the spaced forms fail, and only at
+    >= _MIN_SQUASHED_CHARS, so it cannot quietly rewrite a normal lookup.
+    """
+    return _normalise_title(value).replace(" ", "")
 
 
 def find_catalogue_source_types(db, title: str) -> list[str]:
@@ -216,13 +239,20 @@ def find_catalogue_source_types(db, title: str) -> list[str]:
     # and the request CTA, while the library had zero Beetlejuice pieces.
     # NOTE the parentheses around the OR — without them the EXISTS would bind
     # to the second branch only.
+    # Space-insensitive form, so "Pen 15" finds the stored "Pen15". Guarded by
+    # length on both sides for the same reason _squash_title is: a short
+    # squashed key collides too easily to be trusted.
+    squashed = norm.replace(" ", "")
+    sq_expr = f"replace({expr}, ' ', '')"
     rows = db.execute(
         sa_text(
             f"SELECT DISTINCT COALESCE(p.source_type, 'play') st FROM plays p "
-            f"WHERE ({expr} = :n OR (length({expr}) >= 4 AND :n LIKE '%' || {expr} || '%')) "
+            f"WHERE ({expr} = :n "
+            f"      OR (length({expr}) >= 4 AND :n LIKE '%' || {expr} || '%') "
+            f"      OR (length(:sq) >= {_MIN_SQUASHED_CHARS} AND {sq_expr} = :sq)) "
             f"AND EXISTS (SELECT 1 FROM monologues m WHERE m.play_id = p.id)"
         ),
-        {"n": norm},
+        {"n": norm, "sq": squashed},
     ).fetchall()
     return sorted(r[0] for r in rows)
 
@@ -420,6 +450,7 @@ _MIN_TITLE_CHARS = 3
 # TTL just means more actors paying the reload.
 _CATALOGUE_TTL_SECONDS = 6 * 3600
 _catalogue_cache: Optional[Dict[str, tuple]] = None
+_catalogue_squashed_cache: Dict[str, tuple] = {}
 _catalogue_loaded_at: float = 0.0
 
 
@@ -430,7 +461,7 @@ def _load_catalogue(db) -> Dict[str, tuple]:
     are empty (duplicate "Hamlet" shells, ingest debris like "test"), and
     promoting one of those would reorder results around nothing.
     """
-    global _catalogue_cache, _catalogue_loaded_at
+    global _catalogue_cache, _catalogue_squashed_cache, _catalogue_loaded_at
     now = time.time()
     if _catalogue_cache is not None and now - _catalogue_loaded_at < _CATALOGUE_TTL_SECONDS:
         return _catalogue_cache
@@ -444,19 +475,33 @@ def _load_catalogue(db) -> Dict[str, tuple]:
         )
     ).fetchall()
     catalogue: Dict[str, tuple] = {}
+    squashed: Dict[str, tuple] = {}
+    collisions: set[str] = set()
     for title, source_type in rows:
         n = _normalise_title(title)
         if len(n) >= _MIN_TITLE_CHARS and n not in catalogue:
             catalogue[n] = (title, source_type)
+        # Secondary, space-insensitive index. A key that two different titles
+        # squash onto is dropped entirely rather than resolved arbitrarily.
+        s = _squash_title(title)
+        if len(s) >= _MIN_SQUASHED_CHARS and s not in collisions:
+            existing = squashed.get(s)
+            if existing is not None and existing[0] != title:
+                collisions.add(s)
+                squashed.pop(s, None)
+            else:
+                squashed[s] = (title, source_type)
     _catalogue_cache = catalogue
+    _catalogue_squashed_cache = squashed
     _catalogue_loaded_at = now
     return catalogue
 
 
 def reset_catalogue_cache() -> None:
     """Drop the cached title list (tests, and after an ingest run)."""
-    global _catalogue_cache, _catalogue_loaded_at
+    global _catalogue_cache, _catalogue_squashed_cache, _catalogue_loaded_at
     _catalogue_cache = None
+    _catalogue_squashed_cache = {}
     _catalogue_loaded_at = 0.0
 
 
@@ -485,6 +530,14 @@ def detect_catalogue_title(db, query: str) -> Optional[Dict[str, str]]:
     for candidate in (nq, stripped):
         if candidate and candidate in catalogue:
             title, medium = catalogue[candidate]
+            return {"title": title, "medium": medium}
+
+    # Space-insensitive fallback, after every spaced form has failed: "Pen 15"
+    # -> "pen15" -> the stored "Pen15".
+    for candidate in (nq, stripped):
+        s = candidate.replace(" ", "")
+        if len(s) >= _MIN_SQUASHED_CHARS and s in _catalogue_squashed_cache:
+            title, medium = _catalogue_squashed_cache[s]
             return {"title": title, "medium": medium}
 
     # Phrase match: only multi-word titles of real length, longest wins.

@@ -274,3 +274,138 @@ results, and `RequestQueryButton` swallowed POST failures silently. Both fixed.
 See H-09.
 
 Should move: `content_requests` up. If it stays flat, the demand is not there.
+
+## 2026-08-21 — The daily brief's "12 of 36 recoverable" was measuring the bug
+
+The 2026-08-21 scheduled brief opened with "a third of your weak-match searches
+are retrieval failures" and proposed building lexical title retrieval. That work
+already shipped on 2026-08-20. The brief's 7-day window simply straddles the
+deploy: the first `match_strategy` row is 2026-08-20 16:54, and every search
+before it logs `(null)`. It was grading pre-fix traffic.
+
+**Read `match_strategy` before trusting any weak-match aggregate that spans
+2026-08-20.** `(null)` means the search predates the title pre-pass.
+
+### What the remaining title failures actually are
+
+Not retrieval. A stale `source_type=play` filter.
+
+`Big Fish` was logged weak at 04:05 and 04:06 today with `filters_used:
+{"source_type": "play"}` — Big Fish is a film. The pre-pass honoured the filter,
+found nothing under plays, and correctly logged `content_gap: {"play": "Big
+Fish", "available_in": ["film"]}`. At 04:06:31 the same user switched to Film &
+TV and got 20 results via `title_exact_backfilled`. Same story for `Pen 15` and
+`the night manager`.
+
+The tab defaults to **Plays**, so any film/TV title typed from a fresh page load
+lands filtered. `ContentGapBanner` already renders "X lives in Film & TV / Take
+me there →" and is wired to `setSearchMode`, so the recovery path exists and
+works end to end. This is the falsifier H-search-title wrote for itself: a UI
+problem, not an embedding one.
+
+### Billing is not broken
+
+`billing_history` holds 64 rows, all `status='succeeded'`. The brief queried
+`status='paid'`, which this schema never writes. No webhook bug. Do not
+re-investigate on a future `paid_invoices = 0`.
+
+## 2026-08-21 — Scraped boilerplate was poisoning search ranking
+
+Found by loading a results page rather than by querying: searching "comedic
+female monologue" on prod returned, at positions 2 and 3 and both badged "Best
+pick", cards whose body text read *"Note: We are not able to display the full
+text for this monologue... Please visit our monologue database..."*.
+
+100 monologues (0.8% of 12,435) stored a disclaimer scraped from the source
+site's page furniture as the monologue body. Two harms:
+
+- It advertised a competitor, on the results page, in the product's own voice.
+- It poisoned ranking. Embeddings are built from `m.text` alone, and the
+  passage says "monologue" three times plus "text", "script", "users". All 100
+  rows therefore sat close to any query phrased as "... monologue" — which is
+  how actors phrase nearly everything. They also all carried a flat
+  `quality_score` of 0.85, so nothing downstream held them back.
+
+**A 0.8% data defect took two of the top three slots on a flagship query.**
+Corpus-wide artifact counts are the wrong instrument for this class of bug; the
+count was never the damage, the ranking was.
+
+Fixed by `backend/scripts/strip_scraped_boilerplate.py` (dry-run default,
+reversible backup at `backups/scraped_boilerplate_20260821T075950Z.json`).
+Stripping text without re-embedding would have fixed the display and left the
+ranking exactly as broken, so `--apply` re-embeds every row it edits; all 100
+done. Verified after: 0 rows contain the header, the competitor ad, or the
+editorial tail, and the same query now returns real monologues.
+
+The rest of the corpus is clean — a sweep for html tags, entities, mojibake,
+cookie banners, all-caps residue and copyright notices found zero of each. The
+earlier cleanup passes did their job.
+
+Left deliberately undone:
+
+- **3 rows keep a visible citation** because removing it would drop them under
+  the 40-word floor the stripper refuses to cross. Conservative by design.
+- **14 rows fall under 50 words once the padding is gone** (Eurydice 34, The
+  Wolves 21, The Humans 42, Amadeus 46...). By the 2026-08-20 rule these are
+  not monologues and `purge_sub_50_word_monologues.py` would delete them — but
+  deleting 14 named-play entries is a content decision, not a side effect of a
+  text cleanup. Canberk's call.
+- **Copyright exposure is untouched and worth a look.** These rows are
+  contemporary in-copyright works (Dear Evan Hansen, Venus in Fur, God of
+  Carnage). The source site published start/end lines only, deliberately. 58 of
+  the 100 carry what looks like a full speech rather than an excerpt.
+
+## 2026-08-21 — OPEN, and the largest content defect: two collapsed anthologies
+
+Found while sweeping for more of the boilerplate class. **1,690 of 12,435 rows
+(13.6%) share just 136 distinct texts.** Not near-duplicates — byte-identical.
+
+The cause is the collapsed-collection failure from the 2026-08 attribution
+audit, but far larger than the six suspects logged then. Two public-domain
+one-act anthologies were ingested so that *every play row in the volume
+received every monologue in the volume*:
+
+- **Play ids 93–104 and 133 — 13 rows, 53 identical monologues each.** Titles
+  are raw parse artifacts (`"A ComedyBy George AnceyTranslated from the
+  French"`, `"A PlayBy Giuseppe GiacosaTranslated"`, `"THE BA"` / author
+  `"CARRIAGE"`), and the `author` column holds the volume's *translator or
+  editor* ("Barrett H. Clark.", "Benjamin F. Glazer.") rather than the
+  playwright. Same family as the mangled titles at #90/#91.
+- **Play ids 105–113+ — 52 identical monologues each.** These rows have
+  *correct* titles and authors (THE TWELVE-POUND LOOK / Barrie, THE BOOR /
+  Chekhov, HYACINTH HALVEY / Lady Gregory, SAM AVERAGE / MacKaye). Only the
+  monologue-to-play mapping is wrong.
+
+So Chekhov's Smirnov and Strindberg's Mrs X are both currently filed under a
+play row titled "A DOLLAR". A search can return the same speech up to 18 times
+under 18 different play names, every one of them misattributed.
+
+**Not fixed, deliberately.** The mechanical part (delete duplicates) is
+unsafe on its own: for any given text at most one of the 18 rows is correct,
+and choosing wrong silently locks in a misattribution. Group 2 is genuinely
+recoverable because character names map onto the real titles that already
+exist in the same anthology (Hyacinth → HYACINTH HALVEY, Smirnov → THE BOOR),
+which is a per-monologue judgement across ~105 pieces, not a query. Group 1
+needs the source volumes re-identified first, since the stored titles are
+parse debris.
+
+This is the same shape as the 252 "empty shell" plays: a mass edit that looks
+mechanical and is not. Wants a session with Canberk reviewing, not an
+autonomous pass. It is now the biggest single quality item on the board —
+larger than the boilerplate by a factor of seventeen.
+
+## 2026-08-21 — "Pen 15" could not find "Pen15"
+
+`_normalise_title` strips punctuation but not spaces, so a query never matched a
+stored title that disagreed about where the space goes. "Pen 15" normalised to
+`pen 15`, the catalogue held `pen15`, and the actor was told we had never heard
+of a show we carry 3 monologues from — then tried "Maya Pen 15" and left. Same
+shape as "Se7en" or "Ocean's 11".
+
+Spaces cannot simply be dropped from `_normalise_title`: the phrase matching in
+`detect_catalogue_title` needs word boundaries to tell a title inside a sentence
+from a coincidental run of letters. Added `_squash_title` as a separate,
+secondary index instead — consulted only after every spaced form has failed,
+floored at 5 characters, and a key that two different titles squash onto is
+dropped rather than resolved arbitrarily. `find_catalogue_source_types` learned
+the same comparison, which is what made `Pen 15` report no content gap at all.

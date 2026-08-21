@@ -179,6 +179,25 @@ signal — of a prompt nobody notices or cares to answer, not a broken POST.
 Disconfirms the "invisible" reading if: the prompt is made more prominent (or
 added to the dashboard surface) and fb_pos stays at 0.
 
+**2026-08-21 — confirmed "invisible" by looking at it.** Loaded a real results
+page on prod and found the control present and correctly wired, exactly as the
+contract test says. It was also `text-xs` at 70% opacity with 14px icons,
+parked in the results toolbar between the result count and the collection
+button — visually a caption, not a question. That is the whole of the 0-rows
+mystery.
+
+The bigger error was timing, not contrast: it asked "Helpful?" **above** the
+results, before the actor had read a single card. The honest answer at that
+moment is "I don't know yet", and the observed answer was silence.
+
+Changed: moved below the result list, `text-sm` at full muted-foreground,
+larger tap targets, and reworded to "Did this find what you needed?". The
+prompt is now rendered once per tab rather than in the toolbar.
+
+This is the prominence test the hypothesis asked for. If fb_pos is still 0 in a
+week, the reading flips: actors do not want to rate searches, and the widget
+should be removed rather than tuned again.
+
 ## H-12 rehearsals_7d has stopped carrying information
 
 Status: STABLE, stop reporting (2026-08-20)

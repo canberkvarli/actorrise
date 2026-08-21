@@ -2256,14 +2256,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     Collection
                   </Button>
                 </div>
-                {/* Center: feedback — flex justify-center fills the 1fr middle column */}
-                <div className="flex justify-center">
-                  <ResultsFeedbackPrompt
-                    context="search"
-                    resultsViewCount={resultsViewCount}
-                    onOpenContact={() => setContactOpen(true)}
-                  />
-                </div>
+                {/* Middle column intentionally empty: the feedback prompt moved
+                    below the results, where the actor has something to judge. */}
+                <div />
                 {/* Right: desktop collection filter button */}
                 <Button
                   variant={showBookmarkedOnly ? "secondary" : "outline"}
@@ -2359,6 +2354,17 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </Button>
                 </div>
               )}
+              {/* Ask AFTER the results, not above them. In the toolbar it was
+                  asking "Helpful?" before the actor had read a single card —
+                  the honest answer at that point is "I don't know yet", and
+                  the observed answer was silence: 0 rows in 7 days. */}
+              <div className="flex justify-center pt-8 pb-2">
+                <ResultsFeedbackPrompt
+                  context="search"
+                  resultsViewCount={resultsViewCount}
+                  onOpenContact={() => setContactOpen(true)}
+                />
+              </div>
             </div>
           ) : (
             // Pre-search: fill the space with something that helps them start —
