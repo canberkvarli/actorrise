@@ -44,6 +44,7 @@ def time_limit(seconds: int):
 
 import requests
 from sqlalchemy import create_engine
+from sqlalchemy.orm import defer
 from sqlalchemy.orm import sessionmaker
 
 backend_dir = Path(__file__).resolve().parent.parent
@@ -102,7 +103,24 @@ def parse_slug(slug: str):
 
 
 def load_refs(db) -> dict:
-    refs = db.query(FilmTvReference).filter(FilmTvReference.type == "tvSeries").all()
+    """Title -> reference row, for the 2,270 tvSeries references.
+
+    `embedding` is deferred. Loading it eagerly pulls 2,270 x 1536 floats
+    (~14 MB) through the transaction pooler in a single statement, which closed
+    the SSL connection before the run reached its first episode:
+
+        OperationalError: SSL connection has been closed unexpectedly
+        [SQL: SELECT film_tv_references.… film_tv_references.embedding …]
+
+    Nothing here matches on the vector — the lookup is by lowercased title — so
+    the column was pure freight.
+    """
+    refs = (
+        db.query(FilmTvReference)
+        .options(defer(FilmTvReference.embedding))
+        .filter(FilmTvReference.type == "tvSeries")
+        .all()
+    )
     return {(r.title or "").strip().lower(): r for r in refs}
 
 
