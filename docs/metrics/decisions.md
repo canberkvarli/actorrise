@@ -430,6 +430,50 @@ cast ("Mollie"), or is genuinely in two casts ("Jim", "Mary" ×3). MANIKIN AND
 MINIKIN has no cast block in its front matter at all, so nothing in the source
 can place its pieces.
 
+## 2026-08-21 — 295 dead "view the original script" links
+
+ActorRise is a monologue library, not a play library: where a piece comes from a
+full script we carry the excerpt and link out. That link is `plays.source_url`,
+and the UI already renders it — "View full play" / "View script" in the detail
+footer, plus a "View source" fallback on the card.
+
+On **295 of 1,729 plays (17%, all film) the link was dead.** The scraper
+collected candidate URLs as a list and the whole Postgres array literal was
+stringified into the varchar column:
+
+    {https://imsdb.com/scripts/The-Italian-Job.html,"https://imsdb.com/scripts/Italian-Job,-The.html",...}
+
+which reaches the browser as `href="{https://imsdb.com/..."` and goes nowhere.
+Nothing errored, because a varchar accepts any string — the column simply
+stopped meaning what it says. **A typed column would have caught this; a
+`String` column silently accepted a serialised array.**
+
+Fixed by `backend/scripts/fix_source_urls.py`: takes the first well-formed
+http(s) URL out of the literal. All 295 were repairable, none ambiguous. The
+alternates are the same script under different title spellings, and the schema
+has no column for alternates. Parsing goes through `csv` rather than
+`split(",")` because the alternates contain commas — splitting produces a URL
+that looks valid and points nowhere, which is worse than the original bug.
+
+Now: 1,709 of 1,709 non-user plays have a working http link, 0 broken, 0
+missing. The remaining 20 without one are all `user_uploaded` — an actor's own
+script, which correctly has no external source.
+
+Two related things checked while in here:
+
+- **`isBibliographicText()` now matches nothing.** That guard replaces the
+  monologue with "Text not available — this entry appears to contain catalog
+  data" and offers the source link. It existed for the scraped-boilerplate
+  rows; after today's cleanup 0 of 10,995 rows trip it. Dead but harmless, and
+  worth keeping as a net.
+- **`plays.full_text` still holds 31 MB across 206 rows** (194 public-domain,
+  12 user-uploaded). Nothing user-facing reads it — search defers it and no API
+  returns it — so on the "monologues only, link to the source" principle it
+  could go. **Not cleared, because `scripts/extract_scenes.py` reads
+  `plays.full_text` as its only input**, and the scene library is in flight.
+  Clearing it is a real trade-off, not a tidy-up: it would end scene extraction
+  from the stored copy and force a re-fetch from `source_url`. Canberk's call.
+
 ## 2026-08-21 — word_count had drifted from the text on 876 rows
 
 `word_count` is a stored column, not a derived one, so every pass that edits
