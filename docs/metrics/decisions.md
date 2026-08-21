@@ -430,6 +430,78 @@ cast ("Mollie"), or is genuinely in two casts ("Jim", "Mary" ×3). MANIKIN AND
 MINIKIN has no cast block in its front matter at all, so nothing in the source
 can place its pieces.
 
+## 2026-08-21 — The volume text answers what the cast lists could not
+
+The morning's anthology repair placed 43 of 59 texts from each play's
+front-matter cast list and left 16 alone, and this file recorded them as
+unresolvable from the source. **That was wrong, and specifically wrong about
+the method.** Cast lists cannot place a speaker called "He", "She" or "The
+Voice". The volume can: Gutenberg 37970 contains all 18 plays in sequence, so a
+speech's byte offset in the book says which play it belongs to. No name
+matching, no guessing. All three volumes were already sitting in
+`backups/gutenberg_cache/`.
+
+`backend/scripts/attribute_from_volume.py`. Results read as obviously correct
+once seen: **MANIKIN AND MINIKIN** takes "He" and "She" — it is a two-doll
+bisque play whose characters *are* He and She; **SAM AVERAGE** takes "The
+Figure" and "The Voice" — Sam Average is an allegorical figure. 15 speeches
+placed, 162 surplus copies deleted.
+
+Two volumes needed hand-verified boundaries, and both would have failed
+*confidently* rather than loudly:
+
+- **pg31 (Sophocles)** — "ANTIGONE" occurs 120 times as a SPEAKER label inside
+  Oedipus at Colonus. Title matching put **Theseus into the Antigone**, a play
+  he does not appear in. The reliable marker is each play's own ARGUMENT block.
+- **pg27458 (Aeschylus)** — the volume prints Prometheus Bound as "PROMETHEUS
+  CHAINED", so the stored title matched nothing and the book yielded 0
+  sections.
+
+Also `dedupe_within_play.py` for 11 groups where the same text sat twice under
+one play (`ATTICUS`/`Atticus`, `MARK`/`Mark`). The survivor is the row with the
+embedding, but it adopts the readable speaker name off the row being dropped.
+
+**Duplicates: 1,690 this morning -> 8.**
+
+## 2026-08-21 — The extractor needed four guards, not one
+
+Getting the remaining extraction safe took four, each catching what the
+previous one could not see. Worth keeping in this order, because each was found
+only after the one before it was in place:
+
+1. **Shared source_url** — 80 rows across 7 Gutenberg volume URLs. Re-fetching
+   mines the whole book once per row. 719 -> 231 candidates.
+2. **The row's own full_text is a volume** — invisible to (1) because no URL is
+   shared. Two signals: byte-identical full_text on two rows (6 pairs — Peer
+   Gynt/Brand, Antigone/Oedipus, The Critic/A Trip to Scarborough,
+   Prometheus/Seven), and size (195 of 201 rows under 250 kB; "The Rising of
+   the Moon", a ONE-ACT play, is stored as 3.6 MB). 231 -> 88.
+3. **The text does not match the play** — and this one matters most, because it
+   revealed that **`source_url` itself is wrong on several rows**. Clearing a
+   bad `full_text` only made those rows re-fetch the same wrong book. "The Well
+   of the Saints" (Synge) points at gutenberg.org/ebooks/36, which *is* The War
+   of the Worlds; "The Way of the World" fetches Poe's Arthur Gordon Pym.
+   Neither (1) nor (2) can see this — no URL is shared, the book is a normal
+   size. 88 -> 55, catching 12 rows including the Complete Works collection.
+   The bar is ONE of title-or-author in the head, not both: translations credit
+   a translator instead of the playwright, and demanding both rejects 10 of 32
+   real plays.
+4. **Foreign body text** — `looks_foreign` sampled only the first 8k
+   characters, which on Gutenberg is an English licence header whatever
+   language follows. A Swedish *Orestes* and a German *Salome* both read as
+   English.
+
+Plus the Folger fallback fix: it only ran when the plain parser returned fewer
+than 3, and Doctor Faustus and The Jew of Malta each scrape exactly 4 junk
+matches from their front matter, clear the bar, and lose 34/43 real speeches.
+
+**Inserted: 51 Marlowe + 55 verified (The Imaginary Invalid +7, A Midsummer
+Night's Dream +4, Hamlet +3, Richard II +3).** Corpus 10,918 monologues across
+1,507 titles. Golden 130/131, no regressions.
+
+**Standing rule: `plays.source_url` is not trustworthy.** Anything that fetches
+from it must verify the result against the play before using it.
+
 ## 2026-08-21 — 295 dead "view the original script" links
 
 ActorRise is a monologue library, not a play library: where a piece comes from a

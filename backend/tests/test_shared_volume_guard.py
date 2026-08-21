@@ -34,6 +34,7 @@ _spec.loader.exec_module(_mod)
 
 _get_play_text = _mod._get_play_text
 body_looks_foreign = _mod.body_looks_foreign
+text_matches_play = _mod.text_matches_play
 
 ANTHOLOGY = "https://www.gutenberg.org/files/37970/37970-h/37970-h.htm"
 OWN_BOOK = "https://www.gutenberg.org/ebooks/779"
@@ -84,6 +85,63 @@ class TestSharedVolumeGuard:
         play = FakePlay(source_url=OWN_BOOK)
         with pytest.raises(AssertionError):
             _get_play_text(play, ExplodingScraper(), None)
+
+
+class TestOwnFullTextVolume:
+    def test_a_row_flagged_as_a_volume_yields_nothing(self):
+        # Covers the case neither other guard sees: no URL is shared and the
+        # book is a normal size, but the row's own full_text is a collection.
+        # "Hecuba" offered 119 monologues that way.
+        play = FakePlay(full_text="x " * 5000, source_url=OWN_BOOK)
+        play.id = 71
+        assert _get_play_text(play, ExplodingScraper(), set(), {71}) is None
+
+    def test_an_unflagged_row_is_unaffected(self):
+        own = "HECUBA. " + ("word " * 2000)
+        play = FakePlay(full_text=own, source_url=OWN_BOOK)
+        play.id = 999
+        assert _get_play_text(play, ExplodingScraper(), set(), {71}) == own
+
+
+class TestTextMatchesPlay:
+    """The guard that caught a wrong source_url, not just a wrong full_text."""
+
+    def test_rejects_a_different_book(self):
+        # gutenberg.org/ebooks/36 is The War of the Worlds. It is what "The
+        # Well of the Saints" by Synge actually points at.
+        wells = ("The War of the Worlds by H. G. Wells. But who shall dwell in "
+                 "these worlds if they be inhabited? " * 40)
+        assert text_matches_play("The Well of the Saints",
+                                 "John Millington Synge", wells) is False
+
+    def test_rejects_poe_under_congreve(self):
+        poe = ("THE NARRATIVE OF ARTHUR GORDON PYM OF NANTUCKET comprising the "
+               "details of a mutiny " * 40)
+        assert text_matches_play("The Way of the World",
+                                 "William Congreve", poe) is False
+
+    def test_accepts_when_the_title_is_present(self):
+        t = "THE TRAGICAL HISTORY OF DOCTOR FAUSTUS. " + ("word " * 500)
+        assert text_matches_play("Doctor Faustus", "Christopher Marlowe", t) is True
+
+    def test_accepts_on_author_alone(self):
+        # Enough on its own, because a translation may print a title we do not
+        # store while still crediting the playwright.
+        t = "By Christopher Marlowe, edited by the Rev. Alexander Dyce. " + ("word " * 500)
+        assert text_matches_play("The Jew of Malta", "Christopher Marlowe", t) is True
+
+    def test_accepts_on_title_alone_when_a_translator_is_credited(self):
+        # Tartuffe's text credits Jeffrey D. Hoeper, not Molière. Requiring
+        # BOTH title and author would reject 10 of 32 genuine plays.
+        t = "Tartuffe or The Impostor. Translated by Jeffrey D. Hoeper. " + ("word " * 500)
+        assert text_matches_play("Tartuffe", "Molière", t) is True
+
+    def test_leading_article_is_ignored(self):
+        t = "WAY OF THE WORLD, a comedy by William Congreve. " + ("word " * 500)
+        assert text_matches_play("The Way of the World", "William Congreve", t) is True
+
+    def test_empty_text_never_matches(self):
+        assert text_matches_play("Hamlet", "William Shakespeare", "") is False
 
 
 class TestForeignBodyDetection:

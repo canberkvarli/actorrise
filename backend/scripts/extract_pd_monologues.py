@@ -106,6 +106,38 @@ def looks_foreign(text: str) -> bool:
     return hits / len(words) < 0.12
 
 
+def text_matches_play(title: str, author: str, text: str) -> bool:
+    """Does this text plausibly belong to the play row it was loaded for?
+
+    The last line of defence, and the one that turned out to matter most:
+    `source_url` is wrong on several rows, so clearing a bad `full_text` only
+    made them re-fetch the same wrong book. Verified on 2026-08-21 —
+
+        "The Well of the Saints" (Synge)  -> gutenberg.org/ebooks/36
+                                             = The War of the Worlds
+        "The Way of the World" (Congreve) -> ebooks/51060
+                                             = Poe's Arthur Gordon Pym
+        "Complete Works of William Shakespeare" -> a whole collection
+
+    Neither the shared-URL guard nor the size guard sees any of these, because
+    no URL is shared and the book is a normal size. Checking the text itself is
+    what catches them.
+
+    The bar is deliberately ONE of title-or-author appearing in the head, not
+    both: translations legitimately credit a translator instead of the
+    playwright (Tartuffe's text credits Jeffrey D. Hoeper, not Molière), and
+    demanding both would reject 10 of 32 real plays.
+    """
+    head = re.sub(r"[^a-z0-9 ]", "", (text or "")[:60_000].lower())
+    t = re.sub(r"[^a-z0-9 ]", "", re.sub(r"\(.*?\)", "", title or "").lower())
+    t = re.sub(r"^(the|a|an) ", "", t).strip()
+    if t and t in head:
+        return True
+    parts = (author or "").split()
+    surname = re.sub(r"[^a-z0-9]", "", parts[-1].lower()) if parts else ""
+    return bool(surname) and len(surname) > 3 and surname in head
+
+
 def body_looks_foreign(text: str) -> bool:
     """Same test, but sampled from the middle of the work as well as the head.
 
@@ -185,7 +217,26 @@ def folger_speeches(text: str) -> list[tuple[str, str]]:
     return [(s, t) for s, t in speeches if t]
 
 
-def _get_play_text(play, scraper, shared_urls: set[str] | None = None) -> str | None:
+# A row's OWN full_text can be a collected volume too, which the shared_urls
+# guard cannot see because no URL is shared. Two signals, both checked against
+# the live corpus on 2026-08-21:
+#
+#   1. Byte-identical full_text on two rows. Six pairs, every one a volume
+#      stored twice: Peer Gynt / Brand (638 kB each), Antigone / Oedipus at
+#      Colonus, The Critic / A Trip to Scarborough, Prometheus Bound / Seven
+#      Against Thebes.
+#   2. Sheer size. 195 of 201 rows sit under 250 kB; the six above 400 kB are
+#      "The Rising of the Moon" at 3.6 MB (a one-act play), "Every Man in His
+#      Humour" at 3.3 MB, Henry IV at 951 kB and Hecuba at 603 kB. Longest
+#      single Shakespeare runs ~250 kB, so 400 kB is generous.
+#
+# Extracting from either kind gives one volume's speeches to whichever row
+# happens to hold it. That is how "Hecuba" came to offer 119 monologues.
+MAX_SINGLE_PLAY_CHARS = 400_000
+
+
+def _get_play_text(play, scraper, shared_urls: set[str] | None = None,
+                   volume_play_ids: set[int] | None = None) -> str | None:
     """The play's own script, or None when we cannot get one safely.
 
     `shared_urls` are source_urls that more than one play row points at. Those
@@ -204,6 +255,8 @@ def _get_play_text(play, scraper, shared_urls: set[str] | None = None) -> str | 
     A row with its OWN full_text is fine — that text was stored per play. It is
     specifically the re-fetch of a shared URL that must not happen.
     """
+    if volume_play_ids and play.id in volume_play_ids:
+        return None
     if play.full_text and len(play.full_text) > 5000:
         return play.full_text
     if shared_urls and (play.source_url or "") in shared_urls:
@@ -263,6 +316,7 @@ def main() -> int:
         return 0
 
     from sqlalchemy import func
+    from sqlalchemy import text as sa_text
 
     from app.core.database import SessionLocal
     from app.models.actor import Monologue, Play
@@ -323,18 +377,39 @@ def main() -> int:
             print(f"{len(shared_urls)} source_urls are shared by multiple play "
                   f"rows (anthologies); those rows will not be re-fetched")
 
+        # Rows whose OWN full_text is a collected volume (see
+        # MAX_SINGLE_PLAY_CHARS). Shared text first, then oversized.
+        volume_play_ids: set[int] = set()
+        dup_text = db.execute(sa_text(
+            "SELECT array_agg(id) FROM plays WHERE full_text IS NOT NULL "
+            "AND length(full_text) > 2000 GROUP BY md5(full_text) "
+            "HAVING count(*) > 1")).fetchall()
+        for (ids,) in dup_text:
+            volume_play_ids.update(ids)
+        oversized = db.execute(sa_text(
+            "SELECT id FROM plays WHERE full_text IS NOT NULL "
+            "AND length(full_text) > :cap"), {"cap": MAX_SINGLE_PLAY_CHARS}).fetchall()
+        volume_play_ids.update(i for (i,) in oversized)
+        if volume_play_ids:
+            print(f"{len(volume_play_ids)} play rows hold a collected volume as "
+                  f"their own full_text; those will not be extracted from")
+
         candidates: list[dict] = []
         no_text: list[str] = []
         skipped_shared: list[str] = []
         skipped_foreign: list[str] = []
+        skipped_mismatch: list[str] = []
         skipped_nondramatic: list[str] = []
         for play in plays:
-            text = _get_play_text(play, scraper, shared_urls)
+            text = _get_play_text(play, scraper, shared_urls, volume_play_ids)
             if not text:
                 if (play.source_url or "") in shared_urls and not play.full_text:
                     skipped_shared.append(f"{play.title} ({play.author})")
                 else:
                     no_text.append(f"{play.title} ({play.author})")
+                continue
+            if not text_matches_play(play.title, play.author, text):
+                skipped_mismatch.append(f"{play.title} ({play.author})")
                 continue
             if body_looks_foreign(text):
                 skipped_foreign.append(f"{play.title} ({play.author})")
@@ -417,6 +492,11 @@ def main() -> int:
         if skipped_shared:
             print(f"shared-volume-skipped: {len(skipped_shared)} plays whose only "
                   f"source is an anthology URL shared with other rows")
+        if skipped_mismatch:
+            print(f"text-does-not-match-play: {len(skipped_mismatch)} rows whose "
+                  f"stored or fetched text is a different work")
+            for x in skipped_mismatch[:8]:
+                print(f"    {x}")
         print(f"\nplays scanned: {len(plays)}  no-text: {len(no_text)}  "
               f"foreign-skipped: {len(skipped_foreign)}  non-dramatic-skipped: {len(skipped_nondramatic)}  "
               f"candidates: {len(candidates)}")
