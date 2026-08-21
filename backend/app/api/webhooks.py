@@ -17,6 +17,7 @@ import stripe
 from app.core.database import get_db
 from app.models.billing import BillingHistory, PricingTier, UserSubscription
 from app.models.email_tracking import EmailSend
+from app.models.user import User
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -542,3 +543,127 @@ def _suppress(db: Session, email: str | None, reason: str) -> None:
             db.add(EmailDoNotContact(email=addr, reason=reason))
     except Exception as e:  # never let suppression break webhook ack
         logger.warning("Failed to suppress %s (%s): %s", addr, reason, e)
+
+
+# ============================================================================
+# RevenueCat Webhook Handler (Ghost Light iOS — spec §4 #3)
+# ============================================================================
+
+revenuecat_webhook_auth = os.getenv("REVENUECAT_WEBHOOK_AUTH")
+
+# RevenueCat's app_user_id is set to the Supabase user id at login, so it maps
+# straight onto users.supabase_id. The mobile Monologues tier is granted/revoked
+# entirely from these events — the App Store, not Stripe, is the source of truth
+# for iOS subscriptions.
+_RC_GRANT_EVENTS = {
+    "INITIAL_PURCHASE",
+    "RENEWAL",
+    "PRODUCT_CHANGE",
+    "UNCANCELLATION",
+    "NON_RENEWING_PURCHASE",
+}
+
+
+def _rc_find_user(event: dict, db: Session):
+    """Match a RevenueCat event to our user via supabase_id. Checks app_user_id
+    first, then aliases (RevenueCat may carry an earlier anonymous id)."""
+    candidates = []
+    if event.get("app_user_id"):
+        candidates.append(event["app_user_id"])
+    candidates.extend(event.get("aliases", []) or [])
+    for rc_id in candidates:
+        user = db.query(User).filter(User.supabase_id == str(rc_id)).first()
+        if user:
+            return user
+    return None
+
+
+def _rc_get_or_create_subscription(user_id: int, db: Session) -> UserSubscription:
+    sub = (
+        db.query(UserSubscription)
+        .filter(UserSubscription.user_id == user_id)
+        .first()
+    )
+    if not sub:
+        free_tier = db.query(PricingTier).filter(PricingTier.name == "free").first()
+        sub = UserSubscription(
+            user_id=user_id,
+            tier_id=free_tier.id if free_tier else 1,
+            status="active",
+        )
+        db.add(sub)
+    return sub
+
+
+@router.post("/revenuecat")
+async def revenuecat_webhook(request: Request, db: Session = Depends(get_db)):
+    """Grant/revoke the mobile Monologues tier from RevenueCat events.
+
+    RevenueCat authenticates with a static bearer set in its dashboard; we check
+    it against REVENUECAT_WEBHOOK_AUTH. INITIAL_PURCHASE/RENEWAL grant the tier;
+    EXPIRATION revokes to free. CANCELLATION only flags auto-renew off — access
+    is kept until the purchase actually EXPIRES, so a user who cancels still gets
+    what they paid for (this is the one place we read the spec's 'revoke on
+    cancellation' as 'stop renewing', not 'cut off now')."""
+    if revenuecat_webhook_auth:
+        if request.headers.get("Authorization") != revenuecat_webhook_auth:
+            raise HTTPException(status_code=401, detail="Invalid webhook auth")
+    else:
+        logger.warning("REVENUECAT_WEBHOOK_AUTH not set — webhook is unauthenticated")
+
+    try:
+        body = json.loads(await request.body())
+    except json.JSONDecodeError:
+        return JSONResponse(status_code=400, content={"error": "Invalid JSON"})
+
+    event = body.get("event") or {}
+    event_type = event.get("type", "")
+
+    user = _rc_find_user(event, db)
+    if not user:
+        # Ack so RevenueCat doesn't retry forever for an id we'll never know.
+        logger.warning("RevenueCat %s for unknown app_user_id %s", event_type, event.get("app_user_id"))
+        return {"status": "ok", "message": "user not found"}
+
+    sub = _rc_get_or_create_subscription(int(user.id), db)
+
+    if event_type in _RC_GRANT_EVENTS:
+        tier = db.query(PricingTier).filter(PricingTier.name == "monologues").first()
+        if not tier:
+            logger.error("Monologues tier not seeded — cannot grant RevenueCat entitlement")
+            return {"status": "ok", "message": "monologues tier missing"}
+        sub.tier_id = tier.id
+        sub.status = "active"
+        sub.cancel_at_period_end = False
+        sub.canceled_at = None
+        period = event.get("period_type")
+        sub.billing_period = "annual" if event.get("expiration_at_ms") and period == "NORMAL" else sub.billing_period
+        exp_ms = event.get("expiration_at_ms")
+        if exp_ms:
+            sub.current_period_end = datetime.utcfromtimestamp(int(exp_ms) / 1000)
+        db.commit()
+        logger.info("RevenueCat %s → granted Monologues to user %s", event_type, user.id)
+
+    elif event_type == "CANCELLATION":
+        # Auto-renew off; keep the tier until EXPIRATION.
+        sub.cancel_at_period_end = True
+        sub.canceled_at = datetime.now()
+        db.commit()
+
+    elif event_type == "EXPIRATION":
+        free_tier = db.query(PricingTier).filter(PricingTier.name == "free").first()
+        if free_tier:
+            sub.tier_id = free_tier.id
+        sub.status = "expired"
+        db.commit()
+        logger.info("RevenueCat EXPIRATION → revoked Monologues from user %s", user.id)
+
+    elif event_type == "BILLING_ISSUE":
+        # Grace: keep the tier, flag the trouble so a renewal can clear it.
+        sub.status = "past_due"
+        db.commit()
+
+    else:
+        return {"status": "ok", "message": f"unhandled event: {event_type}"}
+
+    return {"status": "ok"}

@@ -8,7 +8,13 @@ from typing import List, Literal, Optional, cast
 
 from app.api.auth import get_current_user, get_current_user_optional
 from app.api.public import record_demo_search
-from app.middleware.rate_limiting import record_total_search
+from app.middleware.rate_limiting import (
+    FREE_MONOLOGUE_READ_LIMIT,
+    lifetime_monologue_reads,
+    record_monologue_read,
+    record_total_search,
+)
+from app.models.billing import PricingTier, UserSubscription
 from app.services.email.resend_client import ResendEmailClient
 from app.core.config import settings
 from app.core.database import get_db
@@ -1273,6 +1279,51 @@ async def mark_studied(
     fav.last_studied_at = now  # type: ignore[assignment]
     db.commit()
     return {"monologue_id": monologue_id, "last_studied_at": now.isoformat()}
+
+
+def _user_has_unlimited_reads(user_id: int, db: Session) -> bool:
+    """True when the user is on any paid tier — Ghost Light's Monologues tier,
+    or any of the web tiers. Paid means unlimited full reads."""
+    sub = (
+        db.query(UserSubscription)
+        .filter(UserSubscription.user_id == user_id)
+        .first()
+    )
+    if not sub or not sub.is_active:
+        return False
+    tier = db.query(PricingTier).get(sub.tier_id)
+    return bool(tier and tier.name != "free")
+
+
+@router.post("/{monologue_id:int}/read")
+async def record_read(
+    monologue_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Spend one full monologue read (Ghost Light iOS, spec §4 #2).
+
+    The free tier gets three reads for their lifetime, then the paywall. The
+    count is server-side on purpose so it survives a reinstall — a device-local
+    tally would be trivially reset, and the whole business model is where the
+    wall sits. This records the read and reports the running lifetime total plus
+    the wall state; the client paints the paywall, the server owns the count."""
+    monologue = db.query(Monologue).filter(Monologue.id == monologue_id).first()
+    if not monologue:
+        raise HTTPException(status_code=404, detail="Monologue not found")
+
+    unlimited = _user_has_unlimited_reads(int(current_user.id), db)
+    reads_used = record_monologue_read(int(current_user.id), db)
+
+    return {
+        "monologue_id": monologue_id,
+        "reads_used": reads_used,
+        "reads_limit": -1 if unlimited else FREE_MONOLOGUE_READ_LIMIT,
+        "is_paid": unlimited,
+        # Whether the actor may still read for free after this one. Paid users
+        # are always allowed; free users until they cross the lifetime limit.
+        "paywalled": (not unlimited) and reads_used >= FREE_MONOLOGUE_READ_LIMIT,
+    }
 
 
 class SetCutRequest(BaseModel):

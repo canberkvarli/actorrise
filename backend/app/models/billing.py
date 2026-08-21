@@ -172,6 +172,11 @@ class UsageMetrics(Base):
     scene_partner_sessions = Column(Integer, default=0, nullable=False)
     craft_coach_sessions = Column(Integer, default=0, nullable=False)
     monologue_sessions = Column(Integer, default=0, nullable=False)
+    # Full monologue reads (Ghost Light iOS). The free tier gets 3 LIFETIME, so
+    # the meaningful figure is SUM(monologue_reads) across all of a user's rows,
+    # not today's — a device-local counter would reset on reinstall, which is why
+    # this lives here. Incremented by POST /api/monologues/{id}/read.
+    monologue_reads = Column(Integer, default=0, nullable=False)
 
     # Composite index for efficient monthly queries
     __table_args__ = (

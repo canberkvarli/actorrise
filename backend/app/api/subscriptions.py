@@ -114,6 +114,10 @@ class UsageLimitsResponse(BaseModel):
     craft_coach_limit: int
     scripts_used: int
     scripts_limit: int
+    # Ghost Light iOS — full monologue reads. Lifetime, not monthly: `used` is
+    # all-time, `limit` is 3 on free and -1 (unlimited) on any paid tier.
+    monologue_reads_used: int = 0
+    monologue_reads_limit: int = 3
 
 
 class BillingHistoryItem(BaseModel):
@@ -493,6 +497,16 @@ async def get_usage_limits(current_user: User = Depends(get_current_user), db: S
     else:
         scripts_used = current_user.total_scripts_uploaded or 0
 
+    # Monologue reads are lifetime (spec §4) — sum across ALL rows, not the
+    # month. Paid tiers read unlimited (-1); free gets the fixed free allowance.
+    from app.middleware.rate_limiting import (
+        FREE_MONOLOGUE_READ_LIMIT,
+        lifetime_monologue_reads,
+    )
+
+    monologue_reads_used = lifetime_monologue_reads(int(current_user.id), db)
+    monologue_reads_limit = -1 if is_paid else FREE_MONOLOGUE_READ_LIMIT
+
     return UsageLimitsResponse(
         ai_searches_used=ai_searches_used,
         ai_searches_limit=ai_searches_limit,
@@ -502,6 +516,8 @@ async def get_usage_limits(current_user: User = Depends(get_current_user), db: S
         craft_coach_limit=craft_coach_limit,
         scripts_used=scripts_used,
         scripts_limit=scripts_limit,
+        monologue_reads_used=monologue_reads_used,
+        monologue_reads_limit=monologue_reads_limit,
     )
 
 

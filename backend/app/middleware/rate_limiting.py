@@ -369,6 +369,38 @@ def record_total_search(user_id: int, db: Session) -> None:
     db.commit()
 
 
+# Ghost Light iOS — free monologue reads (3, lifetime). Server-side so the wall
+# survives reinstall; the client just reads the count and paints the paywall.
+FREE_MONOLOGUE_READ_LIMIT = 3
+
+
+def lifetime_monologue_reads(user_id: int, db: Session) -> int:
+    """Total full monologue reads this user has ever spent (across all days)."""
+    return int(
+        db.query(func.coalesce(func.sum(UsageMetrics.monologue_reads), 0))
+        .filter(UsageMetrics.user_id == user_id)
+        .scalar()
+        or 0
+    )
+
+
+def record_monologue_read(user_id: int, db: Session) -> int:
+    """Count one full monologue read against today's row; return the new lifetime total."""
+    today = date.today()
+    usage = (
+        db.query(UsageMetrics)
+        .filter(UsageMetrics.user_id == user_id, UsageMetrics.date == today)
+        .first()
+    )
+    if not usage:
+        usage = UsageMetrics(user_id=user_id, date=today)
+        db.add(usage)
+    current = getattr(usage, "monologue_reads", 0) or 0
+    setattr(usage, "monologue_reads", current + 1)
+    db.commit()
+    return lifetime_monologue_reads(user_id, db)
+
+
 # Convenience functions for common features
 
 
