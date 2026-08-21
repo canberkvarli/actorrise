@@ -16,6 +16,7 @@ from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import require_ai_search_when_query
 from app.models.actor import Monologue, MonologueFavorite, Play
 from app.models.user import User
+from app.services.search.grounding import query_is_unservable
 from app.services.search.query_optimizer import (correct_query_typos,
                                                  is_filter_only_query,
                                                  validate_query)
@@ -567,6 +568,18 @@ async def search_monologues(
         # must not trigger the "no strong matches" banner.
         if weak_match and q and is_filter_only_query(q.strip()):
             weak_match = False
+
+        # H-13: a confident score is not the same as an answer. "Erin Gruwell"
+        # cleared the weak bar and returned 20 monologues from a film we do not
+        # carry, with no warning — so the actor assumed they were searching
+        # wrong, rephrased twice, and left. Cosine cannot see this, because a
+        # name still lands near something. A dictionary lookup can: if the
+        # library contains the word nowhere at all, no ranking of it is an
+        # answer. Only short, name-shaped queries qualify; see grounding.py.
+        # Never applied to the pre-pass: naming a show we carry IS the answer.
+        if not weak_match and not title_prepass and q and all_results_with_scores:
+            if query_is_unservable(q.strip(), db):
+                weak_match = True
 
         # Two-person scene intent: users search this monologue surface for scenes
         # ("Scenes from films for two actors") and get monologues that don't fit.

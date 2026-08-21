@@ -101,6 +101,58 @@ the new floor and re-baseline the golden set, or revert the floor to 0.30. Until
 one or the other, the golden harness will keep reporting a regression that is
 really a config difference.
 
+## 2026-08-21 — Unservable-query check (H-13)
+
+When a short, name-shaped query contains a word the library has never heard of,
+search now says so instead of returning 20 confident results. Backed by a new
+`corpus_terms` table: every word the corpus can answer for, built from monologue
+text, titles, authors, character names, tones, emotions, themes and tags.
+
+**This deliberately RAISES `pct_weak_7d`.** It converts silent wrong answers into
+visible ones, which is the point. `pct_weak` is therefore NOT comparable across
+2026-08-21 — do not read the rise as a regression, and do not compare it to the
+H-07 target, which was measured under the old definition.
+
+Validated by replaying all 427 distinct queries of the last 60 days: 4.7% flagged,
+**0 false positives and 1 conservative miss** on a hand-checked set. Three earlier
+designs were tried and rejected on that same replay, and are pinned in the tests
+so they are not reinvented:
+
+1. **"Does any RESULT contain a query word?"** Flagged "female monologue ambition
+   overlooked" and "angry young man confronting his father". Thematic search is
+   answered by meaning, not literal overlap.
+2. **A hand-written stopword list.** Flagged "ambition", "confession",
+   "overlooked". No list of ordinary English is ever complete.
+3. **Corpus vocabulary from monologue TEXT only.** Flagged "sarcastic",
+   "manipulative", "heartfelt" — words actors search with that characters never
+   say. "sarcastic" is the tone of 540 pieces and appears in no speech. The
+   vocabulary has to include metadata, not just dialogue.
+
+Two guards, both from that replay: queries over 3 words are exempt (every false
+positive was 4+ words, every true positive 3 or fewer), and EVERY distinctive
+word must be unknown — "any one unknown" let "Erin Gruwell" through, since
+"erin" appears in the corpus and "gruwell" does not.
+
+`corpus_terms` frequency rules differ by source on purpose: text needs >= 3
+monologues (once is a typo or a proper noun inside one speech), identity and
+metadata qualify at 1 (a play with one monologue is still a play we carry —
+at a >= 3 bar "Rising Seniors", which has 2, was reported as unservable).
+
+**Rebuild `corpus_terms` after any bulk ingest**:
+`uv run python scripts/build_corpus_terms.py --apply`. Staleness costs precision,
+never correctness: a newly-ingested word missing from the table can only cause a
+servable query to be called unservable.
+
+### Found while building this: the typo corrector rewrites "rising" to "raisin"
+
+`correct_query_typos("rising seniors monologue")` returns "raisin seniors
+monologue" — it fuzzy-matches "rising" onto *A Raisin in the Sun*. This is a
+live bug on the normal search path, not something this change introduced, and it
+means an actor searching for the play *Rising Seniors* has their query silently
+rewritten to something else. The grounding check works around it by accepting
+the query as typed OR as corrected, but **the corrector itself is still wrong**
+and should be looked at. Untouched here.
+
 ## 2026-08-20 — Duplicate `plays` rows merged (327 deleted)
 
 Ingest creates a play row per run without checking for an existing one, so a
