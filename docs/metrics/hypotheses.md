@@ -96,6 +96,49 @@ Test: measure content_requests rows/week. If it stays at ~0 with the affordance
 now on every dead-end surface and failures visible, the demand is not there and
 the hypothesis is wrong.
 
+**2026-08-21, first real case since the fix, and it reframes the problem.** User
+1402 ran three searches in two minutes: "Erin Gruwell" (20 results, **not**
+flagged weak), then "Hillary Swank", then "Hilary Swank" (both weak). They were
+hunting a *Freedom Writers* monologue. We carry zero. No request was filed and
+they left.
+
+The affordance was not the binding constraint — it rendered on two of the three
+searches. The binding constraint is that **the first search returned 20 results
+and claimed confidence.** Nothing ever told them we do not have Freedom Writers,
+so they assumed they were searching wrong and tried a different phrasing rather
+than asking for the piece.
+
+This makes H-09 a symptom rather than a cause. The real hypothesis is **H-13**
+below. Do not spend more effort on the request affordance until that is settled;
+a request button is useless on a screen that says everything is fine.
+
+Checked and ruled out while investigating: resolving actor names to titles. Only
+**3 of 1,186 searches (0.3%)** are exactly an actor's name, despite 99% cast
+coverage in `film_tv_references`. Not a pattern. Not worth building.
+
+## H-13 Confident wrong answers are worse than empty ones
+
+Status: NEW, needs test (2026-08-21)
+
+Evidence: "Erin Gruwell" returned 20 monologues, `weak_match=false`, for a film
+we do not carry. weak_match keys off best_cosine alone, so a query that matches
+*something* thematically clears the bar regardless of whether it matches what
+was actually asked for. A named person or title we do not hold is exactly the
+case where 20 plausible-looking results are most misleading.
+
+Why it matters more than the request funnel: an actor who is told "we don't have
+this" can ask for it or move on. An actor handed 20 wrong results concludes the
+library is bad, or that they are searching wrong, and neither leads back.
+
+Test: when a query names a person or title (`query_type` in title/named_lookup)
+and the pre-pass finds nothing we carry, say so explicitly instead of returning
+the vector tail. Measure content_requests/week and repeat-search-within-2-min
+rate — the "Erin Gruwell -> Hillary Swank -> Hilary Swank" rephrase loop is the
+signature of this failure and should fall.
+
+Disconfirms if: the rephrase-loop rate does not drop, i.e. actors were rephrasing
+for reasons unrelated to being misled about coverage.
+
 ## H-10 activated_30d is not a meaningful metric
 
 Status: NEW, needs decision (2026-08-20)
