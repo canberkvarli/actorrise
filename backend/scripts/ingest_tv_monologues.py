@@ -43,7 +43,7 @@ def time_limit(seconds: int):
         signal.signal(signal.SIGALRM, old)
 
 import requests
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import defer
 from sqlalchemy.orm import sessionmaker
 
@@ -125,7 +125,33 @@ def load_refs(db) -> dict:
 
 
 def get_or_create_play(db, meta, slug, ref) -> Play:
+    """One Play row per SHOW, not per episode.
+
+    A `plays` row models the work an actor searches for — "The X Files" — and
+    every episode of it belongs to that one row. Keying on the episode's
+    ScriptSlug URL instead created a fresh row per episode, so a 16-episode
+    show became 16 identical rows all titled "The X Files". That is exactly the
+    duplication the 2026-08-19 plan flagged, and re-running the ingest on
+    2026-08-22 reproduced it: TV went from 223 rows / 223 titles to 372 rows /
+    228 titles in a single run.
+
+    Matching is on the normalised title within source_type='tv', so a re-run
+    lands new episodes on the existing show. source_url keeps whichever
+    episode created the row — it is a link to a representative script, not an
+    identity.
+    """
     source_url = SCRIPT_URL.format(slug=slug)
+    show = (meta.get("show") or "").strip()
+    if show:
+        existing = (
+            db.query(Play)
+            .filter(Play.source_type == "tv",
+                    func.lower(Play.title) == show.lower())
+            .order_by(Play.id)
+            .first()
+        )
+        if existing:
+            return existing
     existing = db.query(Play).filter(Play.source_url == source_url).first()
     if existing:
         return existing

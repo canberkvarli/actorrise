@@ -59,6 +59,9 @@ NORM_AUTHOR = "regexp_replace(lower(COALESCE(author,'')),'[^\\w\\s]','','g')"
 
 BACKUP_DIR = backend_dir / "backups"
 
+# Normalised author values that mean "we don't know", not a name.
+_PLACEHOLDER_AUTHORS = {"unknown", "various", "anonymous", "n a", "na", "none"}
+
 
 def load_groups(conn):
     """Duplicate groups keyed by (norm title, source_type). Author is carried
@@ -107,8 +110,13 @@ def main() -> None:
         for key, members in groups.items():
             authors = {m["na"] for m in members}
             # An empty author is not evidence of a different work, so it does
-            # not by itself make a group mixed.
-            named = {a for a in authors if a}
+            # not by itself make a group mixed. Neither is a placeholder: the
+            # TV ingest writes the literal string "Unknown" when no reference
+            # matched, and treating that as a rival name made every re-scraped
+            # show unmergeable — "Unknown" vs "Vince Gilligan" is a MISSING
+            # author, not a conflicting one. The real guard this protects is
+            # Strindberg's "The Father" vs Zeller's, where both names are real.
+            named = {a for a in authors if a and a not in _PLACEHOLDER_AUTHORS}
             if len(named) > 1:
                 mixed_author.append((key, members))
             else:
