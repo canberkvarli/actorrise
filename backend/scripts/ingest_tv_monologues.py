@@ -124,6 +124,68 @@ def load_refs(db) -> dict:
     return {(r.title or "").strip().lower(): r for r in refs}
 
 
+_PDF_HREF_RE = re.compile(r'https?://[^"\'<> ]+\.pdf')
+
+
+def pdf_url_from_page(slug: str) -> str | None:
+    """The PDF link as the script page actually gives it.
+
+    PDF_TPL assumes the asset filename equals the sitemap slug. For 66 of 473
+    episodes it does not, and the mismatch returns a 403 that reads exactly
+    like a block — same status, same 256-byte body, on every retry. It is not a
+    block; we were asking for a file that does not exist:
+
+        sitemap  atlanta-201-alligator-man-2016
+        actual   atlanta-2x01-alligator-man-2016.pdf      (2x01, not 201)
+
+        sitemap  barry-101-chapter-one-make-your-mark-2018
+        actual   barry-101-chapter-one-make-your-mark.pdf (no year)
+
+    The season/episode code and the trailing year are both unreliable, and
+    there is no rule to derive one from the other — so read the link off the
+    page instead of constructing it.
+    """
+    try:
+        r = requests.get(SCRIPT_URL.format(slug=slug), headers=UA, timeout=30)
+        if r.status_code != 200:
+            return None
+        for href in _PDF_HREF_RE.findall(r.text):
+            if "/pdf/scripts/" in href:
+                return href
+    except Exception:  # noqa: BLE001
+        return None
+    return None
+
+
+def fetch_pdf(slug: str):
+    """Response holding the episode PDF, or None.
+
+    Tries the constructed URL first because it is right ~86% of the time and
+    costs one request; falls back to the page only when that fails.
+    """
+    for url in (PDF_TPL.format(slug=slug), None):
+        if url is None:
+            url = pdf_url_from_page(slug)
+            if not url or url == PDF_TPL.format(slug=slug):
+                break
+            print(f"    {slug[:40]:40s} PDF via page link")
+        r = None
+        for attempt in range(3):
+            try:
+                r = requests.get(url, headers=UA, timeout=60)
+            except Exception as e:  # noqa: BLE001
+                print(f"    fetch error {e}")
+                time.sleep(2 * (attempt + 1))
+                continue
+            if r.status_code in (200, 404):
+                break
+            time.sleep(2 * (attempt + 1))
+        if r is not None and r.status_code == 200 and r.content[:5] == b"%PDF-":
+            return r
+    print(f"    {slug[:46]:46s} PDF unavailable")
+    return None
+
+
 def get_or_create_play(db, meta, slug, ref) -> Play:
     """One Play row per SHOW, not per episode.
 
@@ -186,20 +248,8 @@ def ingest_episode(db, analyzer, slug, refs, dry_run) -> int:
                 .filter(Play.source_url == SCRIPT_URL.format(slug=slug)).first())
         if done:
             return 0
-    url = PDF_TPL.format(slug=slug)
-    r = None
-    for attempt in range(4):  # retry 403/429 (intermittent rate-limiting)
-        try:
-            r = requests.get(url, headers=UA, timeout=60)
-        except Exception as e:  # noqa: BLE001
-            print(f"    fetch error {e}")
-            time.sleep(2 * (attempt + 1))
-            continue
-        if r.status_code == 200 or r.status_code == 404:
-            break
-        time.sleep(2 * (attempt + 1))  # backoff before retry
-    if r is None or r.status_code != 200 or r.content[:5] != b"%PDF-":
-        print(f"    {slug[:46]:46s} PDF {getattr(r, 'status_code', 'ERR')}")
+    r = fetch_pdf(slug)
+    if r is None:
         return 0
 
     with tempfile.NamedTemporaryFile(suffix=".pdf") as fh:
