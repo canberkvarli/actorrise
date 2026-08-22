@@ -2,10 +2,10 @@
 # Deploy: connect this repo in Render, then use "New" → "Blueprint" and point to this file.
 # Or create a Web Service manually and set build to Docker with dockerfilePath: ./backend/Dockerfile, dockerContext: ./backend.
 
-databases:
-  - name: actorrise-db
-    plan: free
-    # Optional: region, databaseName, user. Omit to use defaults.
+# No `databases:` block on purpose. Postgres lives in Supabase, not Render.
+# The old actorrise-db was a leftover from before that migration: zero open
+# connections, and re-declaring it here would both re-provision a ~$6/mo
+# instance and risk a blueprint sync repointing DATABASE_URL at an empty DB.
 
 services:
   - type: web
@@ -13,19 +13,18 @@ services:
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
-    plan: free
+    # Must match the live instance type. `free` here would let a blueprint sync
+    # downgrade the API to an instance that sleeps after 15 min idle.
+    plan: starter
 
     # Build only when backend changes (monorepo)
     buildFilter:
       paths:
         - backend/**
 
-    # Env: DATABASE_URL from Render Postgres above. Set the rest in Dashboard (or add here with sync).
+    # DATABASE_URL is deliberately NOT here: it's the Supabase pooler URL and is
+    # set in the Dashboard as a secret. Set the rest there too.
     envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: actorrise-db
-          property: connectionString
       - key: ENVIRONMENT
         value: production
       - key: CORS_ORIGINS
