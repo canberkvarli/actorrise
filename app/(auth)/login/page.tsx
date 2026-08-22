@@ -1,5 +1,6 @@
 import { AuthProgressiveDisclosure } from "@/components/auth/AuthProgressiveDisclosure";
 import { AuthSwitchLink } from "@/components/auth/AuthSwitchLink";
+import { RedirectIfAuthed } from "@/components/auth/RedirectIfAuthed";
 import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,9 @@ import { IconArrowLeft } from "@tabler/icons-react";
 export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4 py-8">
+      {/* Was middleware; moved here so this static page stops billing compute
+          on every request. See RedirectIfAuthed. */}
+      <RedirectIfAuthed />
       <div className="w-full max-w-md">
         {/* Back button */}
         <div className="mb-8">

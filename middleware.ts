@@ -3,6 +3,23 @@ import type { User } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export default async function middleware(request: NextRequest) {
+  // Cheap, auth-free redirects first. Both used to sit below a Supabase client
+  // construction plus a getSession() JWT verification they never consulted.
+  const url = request.nextUrl
+
+  // Supabase sometimes bounces OAuth to the Site URL (/) with ?code= instead of
+  // /auth/callback — hand it to the callback route so it can exchange the code.
+  if (url.pathname === '/' && url.searchParams.has('code')) {
+    const callbackUrl = new URL('/auth/callback', request.url)
+    url.searchParams.forEach((value, key) => callbackUrl.searchParams.set(key, value))
+    return NextResponse.redirect(callbackUrl, 307)
+  }
+
+  // Legacy onboarding URL -> profile.
+  if (url.pathname === '/onboarding') {
+    return NextResponse.redirect(new URL('/profile', request.url))
+  }
+
   const supabaseResponse = NextResponse.next({
     request: {
       headers: request.headers,
@@ -45,19 +62,7 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-  const { pathname, searchParams } = request.nextUrl
-
-  // Supabase sometimes redirects OAuth to Site URL (/) with ?code=... instead of /auth/callback – fix it so the callback route can exchange the code
-  if (pathname === '/' && searchParams.has('code')) {
-    const callbackUrl = new URL('/auth/callback', request.url)
-    searchParams.forEach((value, key) => callbackUrl.searchParams.set(key, value))
-    return NextResponse.redirect(callbackUrl, 307)
-  }
-
-  // Redirect legacy onboarding URL to profile (complete your profile in one place)
-  if (pathname === '/onboarding') {
-    return NextResponse.redirect(new URL('/profile', request.url))
-  }
+  const pathname = url.pathname
 
   // Protect platform (require auth): dashboard, profile, search, checkout, billing, admin.
   // /greenroom is here so an invited partner arriving at a room link logged out
@@ -81,10 +86,8 @@ export default async function middleware(request: NextRequest) {
     }
   }
 
-  // Redirect authenticated users away from auth pages
-  if ((pathname === '/login' || pathname === '/signup') && user) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
+  // (Redirecting signed-in users away from /login and /signup moved to
+  // <RedirectIfAuthed> on those pages — see the matcher note below.)
 
   return supabaseResponse
 }
@@ -104,9 +107,25 @@ export const config = {
    * path too (`/admin` as well as `/admin/users/1`).
    */
   matcher: [
-    '/',
-    '/login',
-    '/signup',
+    /*
+     * `/` is matched ONLY when Supabase has bounced an OAuth login back to the
+     * Site URL with ?code=. Every other visit to the homepage — 769 pageviews
+     * in August, the second busiest path on the site — used to run this
+     * middleware for nothing.
+     *
+     * This is the fix for the Fluid Active CPU ceiling. Middleware runs BEFORE
+     * the CDN cache, so a static page still pays for it, and Next fires ~7
+     * segment requests per pageview. `/` plus `/login` (861 pageviews) came to
+     * roughly 13,000 invocations a month, each constructing a Supabase server
+     * client and verifying a JWT, for a redirect that almost never fires.
+     */
+    { source: '/', has: [{ type: 'query', key: 'code' }] },
+    /*
+     * `/login` and `/signup` are deliberately NOT here. Bouncing an already
+     * signed-in visitor to the dashboard is a nicety, not a security control,
+     * and it now happens client-side in <RedirectIfAuthed>. The private routes
+     * below still gate on the server, where it matters.
+     */
     '/onboarding',
     '/dashboard/:path*',
     '/profile/:path*',
