@@ -196,16 +196,24 @@ def get_or_create_play(db, meta, slug, ref) -> Play:
     alone would merge a remake into its original. A row with no year recorded
     is matched only by title, since there is nothing better to compare.
     """
-    from sqlalchemy import func as _func
+    from sqlalchemy import text as _sa_text
 
     title = (meta.get("title") or "").strip()
     year = (ref.year if ref and ref.year else meta.get("year"))
     if title:
-        q = db.query(Play).filter(
-            Play.source_type == "film",
-            _func.lower(Play.title) == title.lower(),
-        )
-        for candidate in q.order_by(Play.id).all():
+        # Compare on the PUNCTUATION-STRIPPED title, not a lowercase equality.
+        # The slug carries no colons or hyphens, so an exact match let three
+        # sequels through in the first 110 films: "John Wick: Chapter 4" vs
+        # "John Wick Chapter 4", "Spider-Man: Across the Spider-Verse" vs
+        # "Spider Man Across The Spider Verse".
+        key = re.sub(r"[^a-z0-9]", "", title.lower())
+        ids = [
+            r[0] for r in db.execute(_sa_text(
+                "SELECT id FROM plays WHERE source_type='film' "
+                "AND regexp_replace(lower(title), '[^a-z0-9]', '', 'g') = :k "
+                "ORDER BY id"), {"k": key}).fetchall()
+        ]
+        for candidate in [db.get(Play, i) for i in ids]:
             if year and candidate.year_written and abs(int(candidate.year_written) - int(year)) > 1:
                 continue  # a different film that happens to share the title
             return candidate
