@@ -44,6 +44,8 @@ backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
 # pylint: disable=wrong-import-position
+from sqlalchemy import text as sa_text
+
 from app.core.database import SessionLocal
 from app.models.actor import Monologue
 from app.utils.duration import estimate_duration_seconds
@@ -57,14 +59,29 @@ def main() -> None:
 
     db = SessionLocal()
     try:
-        rows = db.query(Monologue).filter(Monologue.text.isnot(None)).all()
-        drifted = []
-        for m in rows:
-            actual = len((m.text or "").split())
-            if actual != (m.word_count or 0):
-                drifted.append((m, actual, estimate_duration_seconds(m.text)))
+        # Find the drifted ids server-side first. Loading every monologue with
+        # its text used to be fine and stopped being fine as the corpus grew —
+        # at ~14k rows the single SELECT exceeded what the transaction pooler
+        # would carry and the connection closed mid-query. Postgres can compare
+        # the stored count against the text without sending either back.
+        total = db.execute(sa_text(
+            "SELECT count(*) FROM monologues WHERE text IS NOT NULL")).scalar_one()
+        ids = [r[0] for r in db.execute(sa_text("""
+            SELECT id FROM monologues
+            WHERE text IS NOT NULL
+              AND COALESCE(word_count, 0) IS DISTINCT FROM
+                  array_length(regexp_split_to_array(trim(text), '\\s+'), 1)
+            ORDER BY id
+        """)).fetchall()]
 
-        print(f"{len(rows)} monologues scanned, {len(drifted)} drifted")
+        drifted = []
+        for chunk in (ids[i:i + 500] for i in range(0, len(ids), 500)):
+            for m in db.query(Monologue).filter(Monologue.id.in_(chunk)).all():
+                actual = len((m.text or "").split())
+                if actual != (m.word_count or 0):
+                    drifted.append((m, actual, estimate_duration_seconds(m.text)))
+
+        print(f"{total} monologues scanned, {len(drifted)} drifted")
         if drifted:
             worst = sorted(drifted, key=lambda t: abs((t[0].word_count or 0) - t[1]))[-5:]
             print("  largest gaps (stored -> actual):")
