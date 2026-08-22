@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
+import { safeClientPath } from "@/lib/safe-redirect";
 
 /**
  * Sends an already-signed-in visitor away from /login and /signup.
@@ -30,8 +31,7 @@ export function RedirectIfAuthed({ to = "/dashboard" }: { to?: string }) {
     // Honour ?redirect= so a login prompted from a deep link still returns
     // there, matching what the middleware did.
     const params = new URLSearchParams(window.location.search);
-    const target = params.get("redirect");
-    router.replace(target && target.startsWith("/") ? target : to);
+    router.replace(safeClientPath(params.get("redirect"), to));
   }, [user, loading, router, to]);
 
   return null;

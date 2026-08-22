@@ -7,6 +7,7 @@ import api, { primeSessionCache } from "./api";
 import { setStoredLastAuthMethod } from "./last-auth-method";
 import { clearSwrCache, clearReactQueryCache, clearUserSpecificQueryCache } from "./swrCache";
 import { suppressCachePersist } from "@/components/providers/AuthProviderWrapper";
+import { safeClientPath } from "./safe-redirect";
 
 interface User {
   id: number;
@@ -193,8 +194,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       // Full page redirect so session cookies are sent on the next request (e.g. /monologues).
       // router.push() is client-only and can leave middleware without cookies on first nav.
-      const redirectPath = redirectTo || "/practice";
-      window.location.href = redirectPath;
+      // redirectTo reaches us from ?redirect= and is attacker-controllable, so
+      // it has to be checked: this fires immediately after a successful login,
+      // which is the most convincing possible moment to hand someone to a
+      // lookalike page. See lib/safe-redirect.
+      window.location.href = safeClientPath(redirectTo, "/practice");
     } catch (error: unknown) {
       console.error("Login error:", error);
       const message = error instanceof Error ? error.message : "Failed to login";
@@ -243,7 +247,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         clearUserSpecificQueryCache(); // only wipe profile/stats — keep discover cache for instant load
         // Full page redirect so session cookies are sent on the next request and modal state is cleared
         // Using router.push() leaves the auth modal open because React state persists
-        window.location.href = redirectTo || "/practice";
+        window.location.href = safeClientPath(redirectTo, "/practice");
       } else {
         // Email confirmation required - show success message
         // User will need to confirm email before logging in
