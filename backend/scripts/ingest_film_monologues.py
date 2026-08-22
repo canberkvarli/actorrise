@@ -234,22 +234,61 @@ def build_play(meta, slug, ref) -> Play:
     )
 
 
+_PDF_HREF_RE = re.compile(r'https?://[^"\'<> ]+\.pdf')
+
+
+def pdf_url_from_page(slug: str) -> str | None:
+    """The PDF link as the script page actually gives it.
+
+    PDF_TPL assumes the asset filename equals the sitemap slug. It usually
+    does, and when it does not the CDN answers 403 — the same status, the same
+    short body, on every retry — which reads exactly like a deliberate block.
+    It is not. We are asking for a file that does not exist. On the TV side
+    this accounted for 66 of 473 episodes and every one came back once the link
+    was read off the page instead of constructed.
+    """
+    try:
+        r = requests.get(SCRIPT_URL.format(slug=slug), headers=UA, timeout=30)
+        if r.status_code != 200:
+            return None
+        for href in _PDF_HREF_RE.findall(r.text):
+            if "/pdf/scripts/" in href:
+                return href
+    except Exception:  # noqa: BLE001
+        return None
+    return None
+
+
 def fetch_pdf(slug: str):
-    url = PDF_TPL.format(slug=slug)
-    r = None
-    for attempt in range(4):  # 403/429 are intermittent here
-        try:
-            r = requests.get(url, headers=UA, timeout=90)
-        except Exception as e:  # noqa: BLE001
-            print(f"    fetch error {e}")
+    """PDF bytes for a slug, or (None, reason).
+
+    Constructed URL first — it is right most of the time and costs one
+    request — then the page link as a fallback.
+    """
+    tried_constructed = PDF_TPL.format(slug=slug)
+    last_status = "ERR"
+    for url in (tried_constructed, None):
+        if url is None:
+            url = pdf_url_from_page(slug)
+            if not url or url == tried_constructed:
+                break
+            print(f"    {slug[:40]:40s} PDF via page link")
+        r = None
+        for attempt in range(3):
+            try:
+                r = requests.get(url, headers=UA, timeout=90)
+            except Exception as e:  # noqa: BLE001
+                print(f"    fetch error {e}")
+                time.sleep(2 * (attempt + 1))
+                continue
+            if r.status_code in (200, 404):
+                break
             time.sleep(2 * (attempt + 1))
-            continue
-        if r.status_code in (200, 404):
-            break
-        time.sleep(2 * (attempt + 1))
-    if r is None or r.status_code != 200 or r.content[:5] != b"%PDF-":
-        return None, f"http_{getattr(r, 'status_code', 'ERR')}"
-    return r.content, None
+        if r is not None:
+            last_status = r.status_code
+            if r.status_code == 200 and r.content[:5] == b"%PDF-":
+                return r.content, None
+    return None, f"http_{last_status}"
 
 
 def ingest_film(db, analyzer, selector, slug, refs, apply, min_words,
