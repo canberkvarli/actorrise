@@ -179,6 +179,43 @@ def match_ref(refs: dict, title: str, year: int | None):
     return min(hits, key=lambda r: abs((r.year or 0) - year))
 
 
+def get_or_create_play(db, meta, slug, ref) -> Play:
+    """The existing row for this film, or a new one.
+
+    Keyed on normalised title AND year, not on source_url. The same film
+    reached from two catalogues — an IMSDb row from the original ingest and a
+    ScriptSlug slug now — has two different source_urls and used to become two
+    rows: "Dawn of the Dead" is three, "The Apartment" three, "Punch-Drunk
+    Love" and "Punch Drunk Love" two. It also meant filling an empty shell
+    never actually filled it; the monologues landed on a fresh row beside it
+    while the shell stayed at zero.
+
+    Year is part of the key because films genuinely reuse titles: Dawn of the
+    Dead 1978 and 2004 are different works, as are The Apartment 1960 and 1996,
+    Godzilla 1954 and 2014, The Little Mermaid 1989 and 2023. Matching on title
+    alone would merge a remake into its original. A row with no year recorded
+    is matched only by title, since there is nothing better to compare.
+    """
+    from sqlalchemy import func as _func
+
+    title = (meta.get("title") or "").strip()
+    year = (ref.year if ref and ref.year else meta.get("year"))
+    if title:
+        q = db.query(Play).filter(
+            Play.source_type == "film",
+            _func.lower(Play.title) == title.lower(),
+        )
+        for candidate in q.order_by(Play.id).all():
+            if year and candidate.year_written and abs(int(candidate.year_written) - int(year)) > 1:
+                continue  # a different film that happens to share the title
+            return candidate
+
+    play = build_play(meta, slug, ref)
+    db.add(play)
+    db.flush()
+    return play
+
+
 def build_play(meta, slug, ref) -> Play:
     genres = (ref.genre if ref and ref.genre else []) or []
     return Play(
@@ -311,9 +348,7 @@ def ingest_film(db, analyzer, selector, slug, refs, apply, min_words,
             directions = " ".join(re.findall(r"\([^)]*\)", text))
 
             if play is None:  # first keeper — only now is a Play warranted
-                play = build_play(meta, slug, ref)
-                db.add(play)
-                db.flush()
+                play = get_or_create_play(db, meta, slug, ref)
 
             mono = Monologue(
                 play_id=int(play.id),

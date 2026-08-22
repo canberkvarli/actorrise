@@ -430,6 +430,64 @@ cast ("Mollie"), or is genuinely in two casts ("Jim", "Mary" ×3). MANIKIN AND
 MINIKIN has no cast block in its front matter at all, so nothing in the source
 can place its pieces.
 
+## 2026-08-22 — The film ingest was throwing away servable monologues
+
+127 film rows had a play record and zero monologues — Alien, Toy Story,
+Indiana Jones, Dead Poets Society, Aladdin. They are inert for search
+(`find_catalogue_source_types` requires >=1 monologue, so the content-gap
+banner still fires correctly), but they are titles actors are searching for:
+`toy story` appears 3 times in 30 days.
+
+A first attempt to fill them returned **zero** monologues, dominated by
+`no_monologues` (53 of 75). That reading was wrong, and the reason is worth
+recording:
+
+**`ingest_film_monologues.DEFAULT_MIN_WORDS` is 90, while
+`semantic_search.FILM_TV_MIN_WORDS` is 50.** Every 50-89 word speech in those
+scripts was discarded at ingest as too short, despite search being perfectly
+willing to serve it. Re-running the same 83 slugs at `--min-words 50` dropped
+`no_monologues` from 53 to 9 and produced 221 candidates across 64 of the 127
+shells. **Two bars for the same question, 40 words apart, and the stricter one
+was silently deciding what the library contains.**
+
+Worth knowing for future runs: the audition-worthiness selector is an LLM call
+and is NOT deterministic. Indiana Jones, Aladdin and Moonrise Kingdom each
+showed keeps in the dry run and zero on apply, from identical candidate counts.
+76 rows landed from a 221-candidate dry run. A re-run picks up different
+pieces; that is variance, not a bug, but it means a single pass does not
+exhaust a slug.
+
+### The shells were never getting filled anyway
+
+`build_play` was called unconditionally, keyed on the ScriptSlug `source_url`.
+The same film reached from IMSDb (the original pass) and ScriptSlug (now) has
+two different URLs, so it became two rows — and filling a shell landed the
+monologues on a NEW row beside it while the shell stayed at zero. Hence
+"Dawn of the Dead" x3, "The Apartment" x3, "Punch-Drunk Love" / "Punch Drunk
+Love".
+
+Replaced with `get_or_create_play`, keyed on normalised title **and year**.
+Year is essential here in a way it is not for TV: films reuse titles
+constantly, and the pairs in this corpus are genuinely different works —
+Dawn of the Dead 1978/2004, The Apartment 1960/1996, Godzilla 1954/2014, The
+Little Mermaid 1989/2023, True Grit 1969/2010. Merging on title alone would
+fold a remake into its original, which is the collapsed-anthology mistake
+approached from the other direction.
+
+`backend/scripts/merge_film_title_year.py` cleaned up the existing damage: 9
+groups merged, and **16 same-title groups correctly kept apart by year**.
+
+Result: film shells 127 -> 99, film rows 1,013 -> 1,004, zero duplicate
+(title, year) pairs remaining. Corpus 12,003.
+
+Still unfillable and genuinely so: Alien, Toy Story and Dead Poets Society ship
+as scanned images (`no_text_layer` / `needs_ocr`), so there is no text layer to
+parse. Those need OCR or nothing.
+
+**Open question worth a decision: should `DEFAULT_MIN_WORDS` just be 50?**
+Keeping it at 90 means every future ingest discards material search would
+serve.
+
 ## 2026-08-21 — The volume text answers what the cast lists could not
 
 The morning's anthology repair placed 43 of 59 texts from each play's
