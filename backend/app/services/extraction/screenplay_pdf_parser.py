@@ -36,6 +36,15 @@ from app.services.extraction.monologue_quality import (
 
 _PAREN = re.compile(r"\([^)]*\)")
 
+# A cue carrying one of these markers is the same character continuing a speech
+# a page break or action beat split in two — the screenwriter's own "this is
+# still one speech" signal. Matched against the RAW cue, before the parentheses
+# are stripped by _clean_cue_name. The apostrophe class covers both the straight
+# (') and curly (’) forms: scripts overwhelmingly typeset "CONT’D" with the
+# curly quote, and matching only the straight one silently disabled the merge on
+# every such script (The Whale, whose whole opening is one Charlie lecture).
+_CONTD = re.compile(r"\bcont['’]?d\b|\bcontinued\b|\(\s*more\s*\)", re.I)
+
 # A real screenplay PDF has a text layer of this order. Below it we are looking
 # at a scan, not a script — see the note on cid_ratio() for why that is not
 # self-evident from the text alone.
@@ -66,6 +75,51 @@ def _clean_cue_name(text: str) -> str:
     # would then see as the character name.
     t = _PAREN.sub("", text).strip().title()
     return re.sub(r"'(\w)", lambda m: "'" + m.group(1).lower(), t)
+
+
+def _line_is_doubled(text: str) -> bool:
+    """True when a line is uniformly glyph-doubled ("TThhiiss" / "GGLLOORRIIAA").
+
+    A ScriptSlug PDF vintage draws some type double-struck, so every glyph
+    extracts twice. Detection sits at a 0.9 matched-pair ratio: a correctly
+    spelled double letter never reaches it, uniform doubling always does.
+    """
+    s = re.sub(r"[^a-z]", "", text.lower())
+    if len(s) < 6:
+        return False
+    pairs = len(s) // 2
+    return sum(1 for i in range(0, 2 * pairs, 2) if s[i] == s[i + 1]) / pairs >= 0.9
+
+
+def _dedouble(text: str) -> str:
+    """Fold each adjacent identical pair in half (case-insensitive).
+
+    Reverses uniform glyph doubling losslessly: "CCOONNTT'DD" -> "CONT'D", so the
+    cue reads and the (CONT'D) merge fires; a genuine double ("tt") survives
+    because it was itself doubled to four.
+    """
+    out = []
+    i = 0
+    n = len(text)
+    while i < n:
+        out.append(text[i])
+        if i + 1 < n and text[i + 1].lower() == text[i].lower():
+            i += 2
+        else:
+            i += 1
+    return "".join(out)
+
+
+def _dedouble_lines(lines):
+    """De-double any line the doubling artifact hit, leaving the rest untouched.
+
+    Run once before segmentation so a double-struck script is parsed as if it
+    had extracted cleanly — the cue names, the (CONT'D) markers and the dialogue
+    all come out single-struck. Fixes the artifact at ingest instead of leaving
+    it for a later repair pass, and a normal script is unchanged (no line clears
+    the 0.9 bar).
+    """
+    return [(x, _dedouble(t) if t and _line_is_doubled(t) else t) for x, t in lines]
 
 
 def segment_screenplay(lines, min_words: int = 40, max_words: int = 400):
@@ -105,11 +159,16 @@ def segment_screenplay(lines, min_words: int = 40, max_words: int = 400):
         return []
 
     monos: list[dict] = []
+    # cur_char owns whatever is in buf. It is retained across an action beat or
+    # page break (which only set active=False), so a following "(CONT'D)" re-cue
+    # can recognise the same speaker and resume. `active` is whether dialogue is
+    # live right now, as opposed to interrupted and awaiting a continuation.
     cur_char: str | None = None
     buf: list[str] = []
+    active = False
 
     def flush():
-        nonlocal cur_char, buf
+        nonlocal cur_char, buf, active
         if cur_char and buf:
             display = to_display_text(" ".join(buf))   # keeps (stage directions)
             dialogue = strip_artifacts(display)         # spoken lines only
@@ -124,20 +183,32 @@ def segment_screenplay(lines, min_words: int = 40, max_words: int = 400):
                     "word_count": wc,
                 })
         buf = []
+        cur_char = None
+        active = False
 
     for x0, t in lines:
-        if t is None:                       # page break
-            flush(); cur_char = None
+        if t is None:                       # page break — interrupt, keep buf
+            active = False
             continue
         band = round(x0 / 6) * 6
         if looks_like_cue(t) and abs(band - cue_band) <= 12:
+            name = _clean_cue_name(t)
+            # Same character + a (CONT'D)/(MORE) marker = one continuous speech
+            # the layout split. Keep accumulating rather than emitting the
+            # truncated fragment and starting over (The Whale's opening is one
+            # Charlie lecture broken across a dozen "CHARLIE (V.O.) (CONT'D)"
+            # cues; every fragment fell under the word floor and was lost).
+            if buf and name == cur_char and _CONTD.search(t):
+                active = True
+                continue
             flush()
-            cur_char = _clean_cue_name(t)
+            cur_char = name
+            active = True
             continue
-        if cur_char is None:
-            continue
-        if x0 <= cue_band - 130:            # action / scene heading at left margin
-            flush(); cur_char = None
+        if not active:                      # between speeches or interrupted:
+            continue                        # ignore action and any orphan dialogue
+        if x0 <= cue_band - 130:            # action / scene heading — interrupt, keep buf
+            active = False
         elif dlg_lo <= x0 <= dlg_hi:        # dialogue (wrylies stripped later)
             buf.append(t)
         # lines outside these bands are ignored without breaking the speech
@@ -184,7 +255,7 @@ def extract_with_status(path: str, min_words: int = 40, max_words: int = 400):
       needs_ocr            broken/subsetted fonts, text comes out as (cid:NN)
       not_screenplay_layout  no cue column, or one at the left margin
     """
-    lines = lines_from_pdf(path)
+    lines = _dedouble_lines(lines_from_pdf(path))
     text_lines = [(x, t) for x, t in lines if t]
     words = sum(len(t.split()) for _, t in text_lines)
 

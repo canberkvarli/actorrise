@@ -91,6 +91,43 @@ class SegmentationTests(unittest.TestCase):
         lines = [(CUE, "PEGGY"), (DIALOG, "No, only my work.")]
         self.assertEqual(segment_screenplay(lines), [])
 
+    def test_contd_continuation_merges_across_action(self):
+        # The Whale: one continuous Charlie speech the layout split with an action
+        # beat and a "(CONT'D)" re-cue. Each half is under the floor; merged it
+        # clears it as a single monologue.
+        lines = [
+            (CUE, "CHARLIE"), self._mono(50),
+            (ACTION, "A computer chimes. The image resolves into ocean waves."),
+            (CUE, "CHARLIE (CONT'D)"), self._mono(50),
+        ]
+        out = segment_screenplay(lines, min_words=80)
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0]["character"], "Charlie")
+        self.assertGreaterEqual(out[0]["word_count"], 100)
+
+    def test_contd_merge_handles_curly_apostrophe(self):
+        # Scripts overwhelmingly typeset the marker with a curly quote; matching
+        # only the straight one silently disabled the merge on every such script.
+        lines = [
+            (CUE, "CHARLIE (V.O.)"), self._mono(50),
+            (None, None),                       # page break
+            (CUE, "CHARLIE (V.O.) (CONT’D)"), self._mono(50),
+        ]
+        out = segment_screenplay(lines, min_words=80)
+        self.assertEqual(len(out), 1)
+        self.assertGreaterEqual(out[0]["word_count"], 100)
+
+    def test_contd_of_a_different_speaker_does_not_merge(self):
+        # A (CONT'D) marker only continues the SAME character; a different name
+        # closes the previous speech.
+        lines = [
+            (CUE, "CHARLIE"), self._mono(50),
+            (ACTION, "She crosses the room and sits."),
+            (CUE, "MARY (CONT'D)"), self._mono(50),
+        ]
+        out = segment_screenplay(lines, min_words=40)
+        self.assertEqual({m["character"] for m in out}, {"Charlie", "Mary"})
+
 
 class CueNameTests(unittest.TestCase):
     def test_possessive_cue_is_not_mangled(self):
@@ -106,6 +143,39 @@ class CueNameTests(unittest.TestCase):
 
         self.assertEqual(_clean_cue_name("JESSEP"), "Jessep")
         self.assertEqual(_clean_cue_name("DIANA (V.O.)"), "Diana")
+
+
+class DoubledGlyphTests(unittest.TestCase):
+    """A ScriptSlug PDF vintage renders type double-struck; extraction emits each
+    glyph twice. De-doubling before segmentation lets the cue, the (CONT'D)
+    marker and the dialogue parse as if the PDF had extracted cleanly."""
+
+    def test_doubled_line_detected_and_folded(self):
+        from app.services.extraction.screenplay_pdf_parser import (_dedouble,
+                                                                   _line_is_doubled)
+        self.assertTrue(_line_is_doubled("GGLLOORRIIAA"))
+        self.assertEqual(_dedouble("GGLLOORRIIAA"), "GLORIA")
+        self.assertEqual(_dedouble("CCOONNTT'DD"), "CONT'D")
+
+    def test_normal_line_untouched(self):
+        from app.services.extraction.screenplay_pdf_parser import (_dedouble_lines,
+                                                                   _line_is_doubled)
+        line = "The sound of a computer chiming fills the empty room."
+        self.assertFalse(_line_is_doubled(line))
+        self.assertEqual(_dedouble_lines([(108, line)]), [(108, line)])
+
+    def test_doubled_cue_merges_via_dedoubled_contd(self):
+        from app.services.extraction.screenplay_pdf_parser import (_dedouble_lines,
+                                                                   segment_screenplay)
+        long_dlg = " ".join(["word"] * 50) + " and that is the whole truth of it."
+        lines = _dedouble_lines([
+            (252, "GGLLOORRIIAA"), (180, long_dlg),
+            (108, "She pauses, gathering herself before continuing."),
+            (252, "GGLLOORRIIAA ((CCOONNTT'DD))"), (180, long_dlg),
+        ])
+        out = segment_screenplay(lines, min_words=80)
+        self.assertEqual(len(out), 1)
+        self.assertEqual(out[0]["character"], "Gloria")
 
 
 class UnusableLayoutTests(unittest.TestCase):
