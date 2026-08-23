@@ -8,6 +8,34 @@ instrumentation changes here even when they look harmless.
 
 Format: date, what changed, why, and which metric it should move.
 
+## 2026-08-23 — Numbered-title search + (CONT'D) extraction + glyph repair
+
+Three things landed together, all from working the search_logs demand signal
+(weak/zero-result queries were dominated by titles the library already held).
+
+1. Number-insensitive title lookup. "brooklyn 99" now resolves to the stored
+   "Brooklyn Nine Nine" (14 monologues), likewise Catch 22, 21/22 Jump Street,
+   Se7en typed the other way. Single-token number words fold to digits before
+   the space-insensitive squash; fires only when the query carries a number.
+   Should move the by-name findability rate / cut the weak-match share (was 14%
+   of searches, heavily numbered/named titles). Golden guard: named-brooklyn-99.
+
+2. Screenplay (CONT'D) stitching + glyph de-doubling in the extractor. Modern
+   scripts split one speech into stacked "CHARACTER (CONT'D)" blocks broken by
+   action lines; the segmenter lost the whole speech under the word floor. It
+   now resumes on a same-speaker (CONT'D)/(MORE) re-cue (curly apostrophe
+   included — matching only the straight one had disabled it everywhere), and
+   de-doubles double-struck glyphs up front. The Whale 0 -> 4 monologues (incl.
+   the Ishmael/Moby Dick speech), Hunger Games 0 -> 2. Barbie's Ferrera speech
+   assembles but is held out by the caps_residue gate, deliberately not
+   weakened (it also catches two-speaker garbage). Should move film retrieval
+   coverage for modern titles.
+
+3. Repaired 39 double-struck rows already in the corpus (34 cues like
+   "Gglloorriiaa", 5 whole bodies incl. Hannibal Lecter's speech + 4 Vertigo),
+   and purged 32 OCR-garbled film rows. Net film corpus quality up; findability
+   for those specific titles restored.
+
 ## 2026-08-23 — Film corpus crossed 4,000 (ScriptSlug + OMDb backfill)
 
 The film scraping cycle finished. `backfill_refs_for_slugs.py` resolved the
