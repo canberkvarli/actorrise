@@ -217,6 +217,39 @@ def _squash_title(value: str) -> str:
     return _normalise_title(value).replace(" ", "")
 
 
+# Single-token number words folded to their digits. Deliberately no compound
+# arithmetic ("twenty one" is left as two tokens, not resolved to 21) — see
+# _numeric_key for why that is still enough.
+_NUMBER_WORDS = {
+    "zero": "0", "one": "1", "two": "2", "three": "3", "four": "4",
+    "five": "5", "six": "6", "seven": "7", "eight": "8", "nine": "9",
+    "ten": "10", "eleven": "11", "twelve": "12", "thirteen": "13",
+    "fourteen": "14", "fifteen": "15", "sixteen": "16", "seventeen": "17",
+    "eighteen": "18", "nineteen": "19", "twenty": "20", "thirty": "30",
+    "forty": "40", "fifty": "50", "sixty": "60", "seventy": "70",
+    "eighty": "80", "ninety": "90", "hundred": "100", "thousand": "1000",
+}
+
+
+def _numeric_key(value: str) -> str:
+    """Space-insensitive title key with number-words folded to digits.
+
+    People swap digits and words freely in a title with a number in it:
+    "Brooklyn Nine Nine" is typed "brooklyn 99", "Ocean's Eleven" as
+    "ocean's 11", "Eight Mile" as "8 mile". Each number-word token is folded to
+    its digits and the spaces are then removed, so either spelling lands on the
+    same key ("brooklyn 9 9" and "brooklyn 99" both squash to "brooklyn99").
+
+    Only single-token numbers convert; a compound spelling like "twenty one" is
+    left as "20 1" rather than resolved to "21". That is fine on purpose: the
+    common miss is one side typing digits, and the stored digit title ("21 Jump
+    Street") still matches a digit query. The word spelling of a compound number
+    in a title is rare enough not to chase.
+    """
+    norm = _normalise_title(value)
+    return "".join(_NUMBER_WORDS.get(tok, tok) for tok in norm.split())
+
+
 def find_catalogue_source_types(db, title: str) -> list[str]:
     """source_types under which `title` actually exists, normalised both sides.
 
@@ -451,6 +484,7 @@ _MIN_TITLE_CHARS = 3
 _CATALOGUE_TTL_SECONDS = 6 * 3600
 _catalogue_cache: Optional[Dict[str, tuple]] = None
 _catalogue_squashed_cache: Dict[str, tuple] = {}
+_catalogue_numeric_cache: Dict[str, tuple] = {}
 _catalogue_loaded_at: float = 0.0
 
 
@@ -461,7 +495,8 @@ def _load_catalogue(db) -> Dict[str, tuple]:
     are empty (duplicate "Hamlet" shells, ingest debris like "test"), and
     promoting one of those would reorder results around nothing.
     """
-    global _catalogue_cache, _catalogue_squashed_cache, _catalogue_loaded_at
+    global _catalogue_cache, _catalogue_squashed_cache, _catalogue_numeric_cache
+    global _catalogue_loaded_at
     now = time.time()
     if _catalogue_cache is not None and now - _catalogue_loaded_at < _CATALOGUE_TTL_SECONDS:
         return _catalogue_cache
@@ -476,7 +511,9 @@ def _load_catalogue(db) -> Dict[str, tuple]:
     ).fetchall()
     catalogue: Dict[str, tuple] = {}
     squashed: Dict[str, tuple] = {}
+    numeric: Dict[str, tuple] = {}
     collisions: set[str] = set()
+    numeric_collisions: set[str] = set()
     for title, source_type in rows:
         n = _normalise_title(title)
         if len(n) >= _MIN_TITLE_CHARS and n not in catalogue:
@@ -491,17 +528,35 @@ def _load_catalogue(db) -> Dict[str, tuple]:
                 squashed.pop(s, None)
             else:
                 squashed[s] = (title, source_type)
+        # Tertiary index: only titles that contain a number, keyed with the
+        # number folded to digits so "Brooklyn Nine Nine" is reachable as
+        # "brooklyn 99". Same collision-drop discipline as the squashed index.
+        k = _numeric_key(title)
+        if (
+            any(ch.isdigit() for ch in k)
+            and len(k) >= _MIN_SQUASHED_CHARS
+            and k not in numeric_collisions
+        ):
+            existing = numeric.get(k)
+            if existing is not None and existing[0] != title:
+                numeric_collisions.add(k)
+                numeric.pop(k, None)
+            else:
+                numeric[k] = (title, source_type)
     _catalogue_cache = catalogue
     _catalogue_squashed_cache = squashed
+    _catalogue_numeric_cache = numeric
     _catalogue_loaded_at = now
     return catalogue
 
 
 def reset_catalogue_cache() -> None:
     """Drop the cached title list (tests, and after an ingest run)."""
-    global _catalogue_cache, _catalogue_squashed_cache, _catalogue_loaded_at
+    global _catalogue_cache, _catalogue_squashed_cache, _catalogue_numeric_cache
+    global _catalogue_loaded_at
     _catalogue_cache = None
     _catalogue_squashed_cache = {}
+    _catalogue_numeric_cache = {}
     _catalogue_loaded_at = 0.0
 
 
@@ -538,6 +593,19 @@ def detect_catalogue_title(db, query: str) -> Optional[Dict[str, str]]:
         s = candidate.replace(" ", "")
         if len(s) >= _MIN_SQUASHED_CHARS and s in _catalogue_squashed_cache:
             title, medium = _catalogue_squashed_cache[s]
+            return {"title": title, "medium": medium}
+
+    # Number-insensitive fallback: "brooklyn 99" -> "brooklyn99" -> the stored
+    # "Brooklyn Nine Nine" (whose key is also "brooklyn99"). Only fires when the
+    # query itself carries a number, so it never touches ordinary lookups.
+    for candidate in (nq, stripped):
+        k = _numeric_key(candidate)
+        if (
+            any(ch.isdigit() for ch in k)
+            and len(k) >= _MIN_SQUASHED_CHARS
+            and k in _catalogue_numeric_cache
+        ):
+            title, medium = _catalogue_numeric_cache[k]
             return {"title": title, "medium": medium}
 
     # Phrase match: only multi-word titles of real length, longest wins.
