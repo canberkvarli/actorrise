@@ -119,33 +119,55 @@ def main() -> None:
              if s.strip()]
     print(f"{len(slugs)} slugs to look up\n")
 
+    # Phase 1 — one short DB visit to learn what we already hold.
+    #
+    # The DB session is deliberately NOT held across the OMDb calls. The first
+    # version queried per film with an HTTP request between each, so over 162
+    # films the connection sat mostly idle and the transaction pooler closed
+    # it: the run died at "Prophetess" after 16 successes with
+    # "SSL connection has been closed unexpectedly". Network work and database
+    # work now happen in separate phases, so neither waits on the other.
     db = SessionLocal()
     try:
-        found, missing, already = [], [], 0
-        for slug in slugs:
-            title, year = parse_slug(slug)
-            exists = db.execute(sa_text(
-                "SELECT 1 FROM film_tv_references WHERE lower(title)=lower(:t) "
-                "AND director IS NOT NULL LIMIT 1"), {"t": title}).first()
-            if exists:
-                already += 1
-                continue
-            data = lookup(title, year, key)
-            row = to_row(data) if data else None
-            if row:
-                found.append((slug, row))
-                print(f"  ok      {title[:34]:<36} {row['year']}  {row['director'][:28]}")
-            else:
-                missing.append(slug)
-                print(f"  MISS    {title[:34]:<36} {year or '?'}")
-            time.sleep(args.delay)
+        have = {
+            (r[0] or "").strip().lower()
+            for r in db.execute(sa_text(
+                "SELECT title FROM film_tv_references WHERE director IS NOT NULL"
+            )).fetchall()
+        }
+    finally:
+        db.close()
 
-        print(f"\nalready present: {already}   resolved: {len(found)}   "
-              f"not on OMDb: {len(missing)}")
+    # Phase 2 — OMDb only, no database connection open.
+    found, missing, already = [], [], 0
+    for slug in slugs:
+        title, year = parse_slug(slug)
+        if title.strip().lower() in have:
+            already += 1
+            continue
+        data = lookup(title, year, key)
+        row = to_row(data) if data else None
+        if row:
+            found.append((slug, row))
+            print(f"  ok      {title[:34]:<36} {row['year']}  {row['director'][:28]}")
+        else:
+            missing.append(slug)
+            print(f"  MISS    {title[:34]:<36} {year or '?'}")
+        time.sleep(args.delay)
 
-        if not args.apply:
-            print("\n(dry run - pass --apply)")
-            return
+    print(f"\nalready present: {already}   resolved: {len(found)}   "
+          f"not on OMDb: {len(missing)}")
+    Path("/tmp/backfilled_slugs.txt").write_text(
+        ",".join(s for s, _r in found), encoding="utf-8")
+    print("slugs to re-ingest written to /tmp/backfilled_slugs.txt")
+
+    if not args.apply:
+        print("\n(dry run - pass --apply)")
+        return
+
+    # Phase 3 — one short DB visit to write.
+    db = SessionLocal()
+    try:
 
         wrote = 0
         for _slug, row in found:
