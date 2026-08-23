@@ -8,6 +8,20 @@ instrumentation changes here even when they look harmless.
 
 Format: date, what changed, why, and which metric it should move.
 
+## 2026-08-23 — Film corpus crossed 4,000 (ScriptSlug + OMDb backfill)
+
+The film scraping cycle finished. `backfill_refs_for_slugs.py` resolved the
+films the ingest had dropped for missing `film_tv_references` (no director =
+unreachable), and the re-ingest of those 101 slugs kept 202 more monologues
+across 79 clean films. Film is now 4,118 monologues over 1,393 titles, up from
+~2,000 at the start of the cycle; total corpus 13,738 (plays 7,158, tv 2,462).
+Post-ingest cleanup: 0 title/year merges and 0 in-play dupes (the
+punctuation-stripped title+year keying held), 45 word-counts resynced (none
+crossing the 50-word gate), `corpus_terms` rebuilt to 23,629 terms. Golden
+harness 130/131, no regressions vs baseline (the one FAIL, dear-evan-hansen, is
+a genuine missing-musical gap, not a regression). Should move film-source
+retrieval coverage and the by-name film findability rate.
+
 ## 2026-08-20 — Title pre-pass before vector search
 
 Naming a show is a lookup, not a similarity question. Before the vector query,
