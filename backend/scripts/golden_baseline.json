@@ -146,14 +146,18 @@
   "min_results": true
  },
  "named-beetlejuice": {
-  "gap_play_ilike": true,
-  "min_results": true
+  "min_results": true,
+  "top_play_ilike": true
  },
  "named-breaking-bad": {
   "min_results": true,
   "top_play_ilike": true
  },
  "named-bridgerton": {
+  "min_results": true,
+  "top_play_ilike": true
+ },
+ "named-brooklyn-99": {
   "min_results": true,
   "top_play_ilike": true
  },
@@ -176,8 +180,8 @@
   "top_play_ilike": true
  },
  "named-heathers": {
-  "gap_play_ilike": true,
-  "min_results": true
+  "min_results": true,
+  "top_play_ilike": true
  },
  "named-into-the-woods-witch": {
   "gap_play_ilike": true,

@@ -127,16 +127,42 @@ def _observe_full(query: str, filters: dict | None) -> dict:
     db = SessionLocal()
     try:
         svc = SemanticSearch(db)
-        results_with_scores, _ = svc.search(query, limit=20, filters=dict(filters or {}))
 
-        # Mirror the endpoint: named-title matches lead the results.
+        # Mirror the endpoint's title pre-pass faithfully. It does not merely
+        # reorder vector hits — it INJECTS the named show's monologues via
+        # find_title_monologues. A show's name rarely appears in its own
+        # dialogue, so "brooklyn 99" never surfaces Brooklyn Nine Nine by vector
+        # alone; reorder-only left the harness blind to that whole branch and
+        # unable to guard title injection (see monologues.py title_exact /
+        # title_exact_backfilled).
         from app.services.search.title_lookup import (detect_catalogue_title,
                                                       detect_title_lookup,
+                                                      find_title_monologues,
                                                       promote_title_matches)
 
+        fetch_limit = 20
+        filt = dict(filters or {})
         hit = detect_title_lookup(query) or detect_catalogue_title(db, query)
-        if hit:
-            results_with_scores = promote_title_matches(hit["title"], results_with_scores)
+        title_rows = (
+            find_title_monologues(db, hit["title"], filters=filt, limit=fetch_limit)
+            if hit else []
+        )
+        if len(title_rows) >= fetch_limit:
+            # The named show fills the page on its own; no vector query runs, so
+            # _best_cosine_sim stays unset and the search reads not-weak, exactly
+            # as the endpoint's title_exact branch does.
+            results_with_scores = [(m, None) for m in title_rows]
+        else:
+            results_with_scores, _ = svc.search(query, limit=fetch_limit, filters=filt)
+            if hit:
+                results_with_scores = promote_title_matches(
+                    hit["title"], results_with_scores)
+            if title_rows:
+                # We carry the show but it has fewer pieces than a page: lead
+                # with all of them, then let the vector tail fill the rest.
+                seen = {m.id for m in title_rows}
+                tail = [(m, s) for m, s in results_with_scores if m.id not in seen]
+                results_with_scores = [(m, None) for m in title_rows] + tail
         best_cosine = getattr(svc, "_best_cosine_sim", None)
         if best_cosine is not None:
             weak = best_cosine < STRONG_COSINE_SIM
