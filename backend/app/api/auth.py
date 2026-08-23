@@ -78,32 +78,36 @@ def get_current_user(
     user = db.query(User).filter(User.supabase_id == supabase_id).first()
 
     if not user:
-        # Create new user if it doesn't exist
+        # Anonymous Supabase users (Ghost Light mobile, spec §4) carry no email.
+        # Rather than reject them, mint the account with a synthetic, unique
+        # placeholder email so the not-null/unique constraint holds. No welcome
+        # email, no marketing, no "joined" event — there's no inbox and no real
+        # signup yet. When they upgrade (Apple/Google/email) the same
+        # supabase_id carries a real email and the `else` branch backfills it.
+        is_placeholder_email = False
         if not email:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token: missing email",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+            email = f"anon+{supabase_id}@anon.actorrise.com"
+            is_placeholder_email = True
 
         # Check if user with this email already exists (shouldn't happen, but handle it)
         existing_user = db.query(User).filter(User.email == email).first()
         if existing_user:
             # Update existing user with supabase_id and name
             existing_user.supabase_id = supabase_id
-            existing_user.marketing_opt_in = True
+            if not is_placeholder_email:
+                existing_user.marketing_opt_in = True
             if name:
                 existing_user.name = name
             db.commit()
             db.refresh(existing_user)
             return existing_user
 
-        # Create new user (all users receive marketing emails; they can unsubscribe).
+        # Create new user (real signups receive marketing emails; anon do not).
         user = User(
             email=email,
             supabase_id=supabase_id,
             name=name,
-            marketing_opt_in=True,
+            marketing_opt_in=not is_placeholder_email,
         )
         db.add(user)
         try:
@@ -121,31 +125,49 @@ def get_current_user(
                     db.refresh(user)
                 return user
             raise  # Unexpected — re-raise if we still can't find the user
-        # Send welcome email (fire-and-forget; don't block auth response)
-        try:
-            send_welcome_email(user_email=user.email, user_name=user.name)
-        except Exception:
-            pass  # Logged inside send_welcome_email
-        # While founding spots are open, also send the FOUNDER3 offer as a
-        # separate personal email. Admin-toggleable via the console.
-        try:
-            if app_settings.get_bool(
-                db, app_settings.FOUNDER_OFFER_ON_SIGNUP, default=True
-            ):
-                send_founder_offer_email(user_email=user.email, user_name=user.name)
-        except Exception as e:
-            # Fire-and-forget; never block auth. Log so a misconfig (e.g. missing
-            # app_settings table) isn't completely silent.
-            print(f"Error sending founder offer on signup to {user.email}: {e}")
-        # Green Room: "Someone from <city> just joined". Fire-and-forget, safe.
-        record_event(user.id, "joined")
+
+        # Anonymous accounts get none of the onboarding emails/events until they
+        # upgrade to a real email.
+        if not is_placeholder_email:
+            # Send welcome email (fire-and-forget; don't block auth response)
+            try:
+                send_welcome_email(user_email=user.email, user_name=user.name)
+            except Exception:
+                pass  # Logged inside send_welcome_email
+            # While founding spots are open, also send the FOUNDER3 offer as a
+            # separate personal email. Admin-toggleable via the console.
+            try:
+                if app_settings.get_bool(
+                    db, app_settings.FOUNDER_OFFER_ON_SIGNUP, default=True
+                ):
+                    send_founder_offer_email(user_email=user.email, user_name=user.name)
+            except Exception as e:
+                # Fire-and-forget; never block auth. Log so a misconfig (e.g. missing
+                # app_settings table) isn't completely silent.
+                print(f"Error sending founder offer on signup to {user.email}: {e}")
+            # Green Room: "Someone from <city> just joined". Fire-and-forget, safe.
+            record_event(user.id, "joined")
     else:
+        # An anonymous account that has since upgraded now carries a real email:
+        # backfill it (and opt into marketing + a belated welcome).
+        if email and user.email != email and user.email.endswith("@anon.actorrise.com"):
+            user.email = email
+            user.marketing_opt_in = True
+            if name:
+                user.name = name
+            db.commit()
+            db.refresh(user)
+            try:
+                send_welcome_email(user_email=user.email, user_name=user.name)
+            except Exception:
+                pass
+            record_event(user.id, "joined")
         # Update name if it's in the token and different from stored value
-        if name and user.name != name:
+        elif name and user.name != name:
             user.name = name
             db.commit()
             db.refresh(user)
-    
+
     return user
 
 
