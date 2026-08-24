@@ -49,6 +49,13 @@ _SCENE_HEADING = re.compile(
 _CAPS_WORD = re.compile(r"\b[A-Z]{4,}\b")
 _CAPS_CUE_THRESHOLD = 2
 
+# Editorial footnotes from scholarly Gutenberg editions open with a
+# line/page citation: "2. 298. The metre of this line...", "4. 111-113. Mr
+# Sidney Walker adopts Steevens' emendation". These are apparatus, not speech;
+# a play extraction that hits the notes section must reject them, or a search
+# returns a footnote where a monologue should be.
+_FOOTNOTE_CITATION = re.compile(r"^\s*\d+\.\s*\d+[.,\s-]")
+
 # Square-bracket cues: [LAUGHTER], [APPLAUSE], [MUSIC PLAYING], [SIGHS].
 _BRACKET_CUE = re.compile(r"\[[^\]]*\]")
 
@@ -192,6 +199,9 @@ def assess_monologue_quality(
 
     if _SCENE_HEADING.search(raw):
         reasons.append("scene_heading")
+
+    if _FOOTNOTE_CITATION.match(stripped):
+        reasons.append("footnote_citation")
 
     if len(set(_CAPS_WORD.findall(raw))) >= _CAPS_CUE_THRESHOLD:
         reasons.append("caps_residue")

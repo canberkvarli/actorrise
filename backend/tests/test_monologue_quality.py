@@ -143,6 +143,25 @@ class ScreenplayResidueTests(unittest.TestCase):
         )
         self.assertFalse(assess_monologue_quality(text).ok)
 
+    def test_scholarly_footnote_is_rejected(self):
+        # A Gutenberg edition's textual note, mis-captured as a speech by the
+        # play extractor: opens with a line/page citation.
+        text = (
+            "4. 111-113. Mr Sidney Walker adopts Steevens' emendation, and "
+            "affirms that among all the many conjectures on this passage none is "
+            "so probable as that the reading of the Folio is corrupt here."
+        )
+        self.assertFalse(assess_monologue_quality(text).ok)
+
+    def test_dialogue_starting_with_a_number_is_not_a_footnote(self):
+        # A real line that happens to start with a number must still pass.
+        text = (
+            "20 years I gave to this company, and what do I have to show for it? "
+            "Not a handshake, not a thank you, nothing but a gold watch and the "
+            "door. Well, I am done being grateful for scraps. I am done."
+        )
+        self.assertTrue(assess_monologue_quality(text).ok)
+
     def test_name_dot_speaker_cue_is_rejected(self):
         # Play library: classic "NAME . dialogue" cue with two characters.
         text = (

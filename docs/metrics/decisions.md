@@ -8,6 +8,27 @@ instrumentation changes here even when they look harmless.
 
 Format: date, what changed, why, and which metric it should move.
 
+## 2026-08-24 — Female/comedic PD plays (demand-driven) + footnote gate
+
+The search_logs said the live gaps are not missing titles but missing KINDS of
+monologue: the corpus is 74% male, 7% comedic, thin on teen/queer/Latino, while
+actors search "women struggles", "sexy flirty comedy", "20s girl". Public-domain
+drama has huge female roles the corpus had skipped, so added six via Gutenberg:
+Mrs Warren's Profession, Pygmalion, Candida (Shaw), The Sea-Gull (Chekhov),
+Lysistrata (Aristophanes — female comedy). 91 monologues kept, 42 female (46%),
+each play now findable by name.
+
+Caveat recorded honestly: against a 14.4k corpus this moved the aggregate female
+share only 25.7% -> 25.8%. Rebalancing toward demand needs many more such plays,
+or a search-side fix that surfaces the female/comedic content already held.
+
+Two extractor weaknesses surfaced and were handled: scholarly footnotes
+("2. 110. We retain here the stage direction...") got re-inserted from an empty
+Measure for Measure scholarly-edition row, and Shaw's novelistic stage
+directions polluted 3 Pygmalion/Candida rows — all purged. assess_monologue_quality
+now rejects a footnote-citation opening, so the notes can never be inserted
+again. Corpus 14,418.
+
 ## 2026-08-24 — 215 unscraped ScriptSlug TV episodes + garbage sweep
 
 The one clean vein left after ScriptSlug films were exhausted and 8FLiX proved
