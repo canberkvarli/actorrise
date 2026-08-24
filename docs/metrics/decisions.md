@@ -8,6 +8,28 @@ instrumentation changes here even when they look harmless.
 
 Format: date, what changed, why, and which metric it should move.
 
+## 2026-08-24 — Descriptive-query vocabulary (surface what we already hold)
+
+The higher-leverage half of the demand gap: actors search by description
+("sexy flirty comedy", "queer roles", "quirky teenage male") and got GOOD
+results flagged weak, because a short abstract phrase scores low cosine against
+monologue text and the optimizer didn't recognise the words, so it fell to raw
+vector with the discouraging soft-fail banner. Three fixes in query_optimizer:
+(1) "comedy" the noun (and quirky/hilarious/goofy/snarky/sardonic) now resolve
+the comedic tone — it was absent, so "a comedy monologue" got no tone;
+(2) flirty/sexy/seductive/sensual map to the love THEME not a tone, so
+"sexy flirty comedy" keeps comedic AND adds love; (3) descriptor and identity
+words (queer/gay/lesbian/trans, energetic, sarcastic, "roles") join _FILTER_WORDS
+so is_filter_only_query recognises them — suppressing the wrong banner and
+letting the relevance floor pass the filter-validated results.
+
+Verified live: "sexy flirty comedy" now returns female comedic pieces (was
+all-male, weak); "queer roles" -> Milk/Philadelphia/Tootsie; "quirky teenage
+male" -> Superbad/10 Things/Perks; "sultry seductive woman" -> all-female
+romantic. Helps every existing female/comedic row at once, not just new
+content. Should cut the weak-match rate (was 14% of searches, descriptor-heavy)
+and lift rehearse-from-search on those queries. Golden 132/133, no regressions.
+
 ## 2026-08-24 — Female/comedic PD plays (demand-driven) + footnote gate
 
 The search_logs said the live gaps are not missing titles but missing KINDS of

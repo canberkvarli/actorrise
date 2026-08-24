@@ -91,6 +91,15 @@ _FILTER_WORDS = frozenset("""
     classical contemporary modern
     under over max maximum minimum long short around any either about
     one two three four five six seven eight nine ten
+    comedy hilarious quirky goofy silly snarky playful wry sardonic
+    sassy sarcastic witty clever sharp bold fierce powerful intense lighthearted
+    romantic loving grim noir tragic heavy
+    sexy flirty flirtatious seductive sensual sultry sweet tender romance passion
+    passionate desire emotional emo raw vulnerable moving heartfelt crazy
+    energetic upbeat lively
+    roles role character characters audition auditioning topics topic stuff style
+    styles vibe
+    queer gay lesbian lgbtq lgbtqia trans transgender bisexual bi
 """.split())
 
 
@@ -268,6 +277,10 @@ class KeywordExtractor:
             'dating': 'love', 'relationship': 'love', 'relationships': 'love',
             'heartbreak': 'love', 'breakup': 'love', 'crush': 'love', 'flirting': 'love',
             'marriage': 'love', 'divorce': 'love', 'sex': 'love', 'desire': 'love',
+            # Flirty/sensual queries map to the love THEME, not a tone, so a query
+            # like "sexy flirty comedy" keeps its comedic tone and adds love.
+            'sexy': 'love', 'flirty': 'love', 'flirtatious': 'love', 'seductive': 'love',
+            'sensual': 'love', 'sultry': 'love', 'sweet': 'love', 'tender': 'love',
             'death': 'death', 'dying': 'death', 'mortality': 'death',
             'power': 'power', 'authority': 'power', 'control': 'power',
             'betrayal': 'betrayal', 'treachery': 'betrayal', 'backstab': 'betrayal',
@@ -377,6 +390,11 @@ class KeywordExtractor:
             # Comedic
             'funny': 'comedic', 'comedic': 'comedic', 'humorous': 'comedic',
             'comic': 'comedic', 'lighthearted': 'comedic',
+            # "comedy" the noun was absent, so "a comedy monologue" and
+            # "sexy flirty comedy" never resolved a tone and fell to weak vector.
+            'comedy': 'comedic', 'hilarious': 'comedic', 'quirky': 'comedic',
+            'goofy': 'comedic', 'silly': 'comedic', 'snarky': 'comedic',
+            'playful': 'comedic', 'wry': 'comedic', 'sardonic': 'comedic',
             # Non-English comedic (IT/ES/FR/PT)
             'comico': 'comedic', 'comica': 'comedic', 'cómico': 'comedic',
             'commedia': 'comedic', 'comedia': 'comedic', 'comédia': 'comedic',
