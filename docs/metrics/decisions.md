@@ -8,6 +8,25 @@ instrumentation changes here even when they look harmless.
 
 Format: date, what changed, why, and which metric it should move.
 
+## 2026-08-24 — 215 unscraped ScriptSlug TV episodes + garbage sweep
+
+The one clean vein left after ScriptSlug films were exhausted and 8FLiX proved
+off-limits (its robots.txt disallows the screenplay-download path). 215 TV
+episodes in the sitemap had never been ingested; ran them through the same
+pipeline (now with the (CONT'D) merge), adding 651 monologues and deepening the
+popular shows actors search by name: Euphoria 108, Breaking Bad 99, Big Little
+Lies 91, Twin Peaks 86, The Night Manager 75, Midnight Mass 68, plus Succession,
+Fargo, Cobra Kai, Black Mirror, True Detective, Yellowstone. TV 2,462 -> 3,099.
+
+Quality swept in the same pass: a no-vowel-token / hard-corrupt-char detector
+found 15 genuinely garbled extractions (a corrupted-font Mad Men episode, some
+JFK/Leftovers rows) and purged them, while deliberately keeping readable
+false-positives (X-Files, Reds). Reversible backups. Golden 132/133, no
+regressions. Corpus 14,328 (play 7,137 / film 4,092 / tv 3,099).
+
+Should move by-name TV retrieval depth (a search for a popular show now returns
+a full page, not one piece).
+
 ## 2026-08-23 — Numbered-title search + (CONT'D) extraction + glyph repair
 
 Three things landed together, all from working the search_logs demand signal
