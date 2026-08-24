@@ -1,8 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { getPublicMonologue, idFromSlug, monologueSlug, type PublicMonologue } from "@/lib/monologueSeo";
+import {
+  findReplacementMonologue,
+  getPublicMonologue,
+  idFromSlug,
+  monologueSlug,
+  type PublicMonologue,
+} from "@/lib/monologueSeo";
 import { displayableAuthor } from "@/lib/utils";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
@@ -58,9 +64,12 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 export default async function PublicMonologuePage({ params }: Params) {
   const { slug } = await params;
   const id = idFromSlug(slug);
-  if (!id) notFound();
-  const m = await getPublicMonologue(id);
-  if (!m) notFound();
+  const m = id ? await getPublicMonologue(id) : null;
+  if (!m) {
+    const replacement = await findReplacementMonologue(slug);
+    if (replacement) permanentRedirect(`/monologues/${monologueSlug(replacement)}`);
+    notFound();
+  }
 
   const title = displayTitle(m);
   const meta = [m.gender, m.tone, readableLength(m.durationSeconds)].filter(Boolean) as string[];

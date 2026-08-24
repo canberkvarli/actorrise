@@ -92,6 +92,56 @@ export async function getPublicMonologue(id: number): Promise<PublicMonologue | 
   };
 }
 
+/**
+ * When a monologue id from an old crawled URL no longer exists (purged as a dup, too-short,
+ * or bad-extraction row), look for a live monologue with the same character + play, parsed
+ * straight out of the dead slug's own text. Data-quality purges routinely leave a "sibling"
+ * row behind under a different id, so this turns what would be a dead end into a 301 instead
+ * of losing whatever search equity the old URL had.
+ */
+export async function findReplacementMonologue(slug: string): Promise<PublicMonologue | null> {
+  const withoutId = slug.replace(/-\d+$/, "");
+  const fromMarker = "-monologue-from-";
+  const fromIdx = withoutId.indexOf(fromMarker);
+  const characterSlug = fromIdx !== -1 ? withoutId.slice(0, fromIdx) : withoutId.replace(/-monologue$/, "");
+  const playSlug = fromIdx !== -1 ? withoutId.slice(fromIdx + fromMarker.length) : null;
+  if (!characterSlug) return null;
+
+  const { data, error } = await db()
+    .from("monologues")
+    .select(
+      "id, character_name, text, character_gender, estimated_duration_seconds, tone, plays(title, author, copyright_status, source_type)",
+    )
+    .ilike("character_name", characterSlug.replace(/-/g, " "))
+    .not("text", "is", null)
+    .order("id", { ascending: false })
+    .limit(20);
+  if (error || !data) return null;
+
+  const rows = data as unknown as MonologueRow[];
+  const match = rows.find((r) => {
+    if (!r.character_name || slugify(r.character_name) !== characterSlug) return false;
+    if (!r.plays || r.plays.copyright_status === "user_uploaded") return false;
+    if (playSlug && slugify(r.plays.title || "") !== playSlug) return false;
+    return true;
+  });
+  if (!match || !match.text || !match.plays) return null;
+
+  return {
+    id: match.id,
+    character: match.character_name?.trim() || "Monologue",
+    playTitle: match.plays.title?.trim() || null,
+    author: match.plays.author?.trim() || null,
+    copyrightStatus: match.plays.copyright_status,
+    sourceType: match.plays.source_type,
+    gender: match.character_gender || null,
+    durationSeconds: match.estimated_duration_seconds ?? null,
+    tone: match.tone || null,
+    text: match.text,
+    isPublicDomain: match.plays.copyright_status === "public_domain",
+  };
+}
+
 /** Ids + slug fields for the sitemap (excludes user-uploaded). Paginated past the 1k row cap. */
 export async function getIndexableMonologues(
   max = 12000,
