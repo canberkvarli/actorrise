@@ -88,6 +88,43 @@ def _send_scene_feedback_email(
         print(f"Failed to send scene feedback email: {e}")
 
 
+def _send_negative_feedback_email(
+    context: str,
+    user_email: str | None,
+    comment: str | None,
+):
+    """Email the founder the moment negative feedback with a written note lands.
+
+    Covers every context except scene_extraction (which has its own structured
+    email above). This is the "I need to see it" half of the feedback loop; the
+    admin inbox at /admin/feedback is the durable list."""
+    if not comment or not comment.strip():
+        return
+    try:
+        from app.services.email.resend_client import ResendEmailClient
+        client = ResendEmailClient()
+
+        who = user_email or "anonymous"
+        ctx_label = context.replace("_", " ")
+        # Comment is user text — escape the angle brackets so it can't inject markup.
+        safe = comment.strip().replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        html = f"""
+        <div style="font-family: sans-serif; max-width: 520px;">
+            <p style="color:#CB4B00; font-weight:600; margin:0 0 12px;">negative feedback · {ctx_label}</p>
+            <blockquote style="margin:0 0 16px; padding:12px 16px; border-left:3px solid #CB4B00; background:#faf6f2; font-size:16px; line-height:1.5;">{safe}</blockquote>
+            <p style="color:#666; font-size:13px; margin:0;">from {who}</p>
+            <p style="color:#999; font-size:12px; margin:16px 0 0;">see all in admin → actorrise.com/admin/feedback</p>
+        </div>
+        """
+        client.send_email(
+            to="canberk@actorrise.com",
+            subject=f"negative feedback: {ctx_label}",
+            html=html,
+        )
+    except Exception as e:
+        print(f"Failed to send negative feedback email: {e}")
+
+
 @router.post("")
 def submit_feedback(
     body: FeedbackRequest,
@@ -142,6 +179,14 @@ def submit_feedback(
             scene_id=body.scene_id,
             script_id=body.script_id,
             category=body.category,
+            comment=body.comment,
+        )
+    # Every other negative note with free-text pings the founder immediately.
+    elif body.rating == "negative":
+        background_tasks.add_task(
+            _send_negative_feedback_email,
+            context=body.context,
+            user_email=user.email if user else None,
             comment=body.comment,
         )
 

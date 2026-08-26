@@ -69,6 +69,9 @@ export interface AdminStats {
   };
   subscribers: {
     plus_subscribers: number;
+    paid_active: number;
+    comped: number;
+    trialing: number;
     founding_goal: number;
     founding_progress_percent: number;
   };
@@ -437,28 +440,16 @@ export default function AdminOverviewPage() {
       icon: IconThumbDown,
     },
     {
-      title: "Pending manual review",
-      value: stats.submissions.by_status.manual_review ?? 0,
-      icon: IconFileSearch,
-    },
-    {
-      title: "Approved today",
-      value: stats.submissions.approved_today,
-      icon: IconCircleCheck,
-    },
-    {
-      title: "Rejected today",
-      value: stats.submissions.rejected_today,
-      icon: IconCircleX,
-    },
-    {
       title: "All-time AI searches",
       value: stats.usage.alltime_searches ?? 0,
       icon: IconSearch,
     },
     {
-      title: "Paid subscribers",
-      value: stats.subscribers.plus_subscribers,
+      // The honest one: only card-on-file payers. Comps and trials are $0 and
+      // shown separately so this number can never be mistaken for revenue.
+      title: "Paying",
+      value: stats.subscribers.paid_active,
+      hint: `${stats.subscribers.comped} comped · ${stats.subscribers.trialing} trial`,
       icon: IconRocket,
     },
   ];
@@ -542,7 +533,7 @@ export default function AdminOverviewPage() {
       {/* Compact KPI strip (was 8 chunky cards) */}
       <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
         {cards.map((card) => (
-          <MiniStat key={card.title} label={card.title} value={card.value.toLocaleString()} />
+          <MiniStat key={card.title} label={card.title} value={card.value.toLocaleString()} hint={"hint" in card ? card.hint : undefined} />
         ))}
       </div>
 
@@ -607,6 +598,10 @@ export default function AdminOverviewPage() {
               }}
             />
           </div>
+          <p className="text-xs text-muted-foreground">
+            {stats.subscribers.paid_active} paying · {stats.subscribers.comped} comped · {stats.subscribers.trialing} on trial
+            <span className="opacity-70"> (all count toward the goal; only paying shows up in MRR)</span>
+          </p>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">
               {stats.subscribers.founding_progress_percent}% of goal

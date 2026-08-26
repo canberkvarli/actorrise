@@ -40,6 +40,28 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
     total_searches = summary_base.count()
     zero_results = summary_base.filter(SearchLog.results_count == 0).count()
 
+    # --- Quality diagnostics (the columns that were logged but never surfaced) ---
+    weak_matches = summary_base.filter(SearchLog.weak_match.is_(True)).count()
+    content_gaps = summary_base.filter(SearchLog.content_gap.is_(True)).count()
+    avg_cosine = (
+        summary_base.with_entities(func.avg(SearchLog.best_cosine))
+        .filter(SearchLog.best_cosine.isnot(None))
+        .scalar()
+    )
+
+    def _distribution(column):
+        rows = (
+            summary_base.with_entities(column.label("k"), func.count().label("cnt"))
+            .filter(column.isnot(None))
+            .group_by(column)
+            .order_by(desc("cnt"))
+            .all()
+        )
+        return [{"key": k, "count": c} for k, c in rows]
+
+    by_match_strategy = _distribution(SearchLog.match_strategy)
+    by_query_type = _distribution(SearchLog.query_type)
+
     top_queries = (
         summary_base
         .with_entities(
@@ -68,6 +90,12 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
     return {
         "total_searches": total_searches,
         "zero_result_count": zero_results,
+        "weak_match_count": weak_matches,
+        "weak_match_rate": round(weak_matches / total_searches * 100, 1) if total_searches else 0.0,
+        "content_gap_count": content_gaps,
+        "avg_best_cosine": round(float(avg_cosine), 3) if avg_cosine is not None else None,
+        "by_match_strategy": by_match_strategy,
+        "by_query_type": by_query_type,
         "top_queries": [{"query": q, "count": c} for q, c in top_queries],
         "top_zero_result_queries": [{"query": q, "count": c} for q, c in top_zero],
     }
@@ -127,6 +155,11 @@ def get_search_logs(
             "result_ids": log.result_ids,
             "user_email": user_map.get(log.user_id),
             "source": log.source,
+            "weak_match": log.weak_match,
+            "best_cosine": round(float(log.best_cosine), 3) if log.best_cosine is not None else None,
+            "match_strategy": log.match_strategy,
+            "query_type": log.query_type,
+            "content_gap": log.content_gap,
             "created_at": log.created_at.isoformat(),
         }
         for log in logs

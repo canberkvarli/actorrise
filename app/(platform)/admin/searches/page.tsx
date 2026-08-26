@@ -20,6 +20,11 @@ interface SearchLogEntry {
   result_ids: number[] | null;
   user_email: string | null;
   source: string;
+  weak_match: boolean | null;
+  best_cosine: number | null;
+  match_strategy: string | null;
+  query_type: string | null;
+  content_gap: boolean | null;
   created_at: string;
 }
 
@@ -44,6 +49,12 @@ interface SearchesResponse {
   summary: {
     total_searches: number;
     zero_result_count: number;
+    weak_match_count: number;
+    weak_match_rate: number;
+    content_gap_count: number;
+    avg_best_cosine: number | null;
+    by_match_strategy: { key: string; count: number }[];
+    by_query_type: { key: string; count: number }[];
     top_queries: { query: string; count: number }[];
     top_zero_result_queries: { query: string; count: number }[];
   };
@@ -373,6 +384,66 @@ export default function AdminSearchesPage() {
         </div>
       )}
 
+      {/* Quality diagnostics — signals logged on every search, surfaced here. */}
+      {summary && (
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardContent className="p-4 pt-6">
+              <p className="text-sm text-muted-foreground">Weak matches</p>
+              <p className="text-2xl font-bold" style={{ color: summary.weak_match_rate > 15 ? "#CB4B00" : undefined }}>
+                {summary.weak_match_rate}%
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {summary.weak_match_count.toLocaleString()} of {summary.total_searches.toLocaleString()} below the strong bar
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 pt-6">
+              <p className="text-sm text-muted-foreground">Avg top match</p>
+              <p className="text-2xl font-bold">
+                {summary.avg_best_cosine != null ? summary.avg_best_cosine.toFixed(3) : "—"}
+              </p>
+              <p className="text-xs text-muted-foreground">cosine of the best hit</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 pt-6">
+              <p className="text-sm font-medium mb-2">Match strategy</p>
+              {summary.by_match_strategy.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No data</p>
+              ) : (
+                <div className="space-y-1">
+                  {summary.by_match_strategy.slice(0, 5).map((d) => (
+                    <div key={d.key} className="flex justify-between text-xs gap-2">
+                      <span className="truncate">{d.key}</span>
+                      <span className="text-muted-foreground shrink-0">{d.count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 pt-6">
+              <p className="text-sm font-medium mb-2">Query type</p>
+              {summary.by_query_type.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No data</p>
+              ) : (
+                <div className="space-y-1">
+                  {summary.by_query_type.slice(0, 5).map((d) => (
+                    <div key={d.key} className="flex justify-between text-xs gap-2">
+                      <span className="truncate">{d.key}</span>
+                      <span className="text-muted-foreground shrink-0">{d.count}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
       {/* Filters */}
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 md:p-6">
@@ -475,6 +546,14 @@ export default function AdminSearchesPage() {
                         {" · "}
                         {entry.user_email || "anonymous"}
                       </p>
+                      {(entry.match_strategy || entry.best_cosine != null || entry.weak_match || entry.content_gap) && (
+                        <p className="text-[11px] text-muted-foreground flex flex-wrap gap-x-2 gap-y-0.5">
+                          {entry.match_strategy && <span>{entry.match_strategy}</span>}
+                          {entry.best_cosine != null && <span>cos {entry.best_cosine.toFixed(3)}</span>}
+                          {entry.weak_match && <span className="font-medium" style={{ color: "#CB4B00" }}>weak</span>}
+                          {entry.content_gap && <span className="font-medium" style={{ color: "#CB4B00" }}>gap</span>}
+                        </p>
+                      )}
                       <div className="flex flex-wrap gap-1">
                         <Badge
                           variant="outline"
@@ -517,6 +596,7 @@ export default function AdminSearchesPage() {
                       <th className="py-2 text-left font-medium">User</th>
                       <th className="py-2 text-left font-medium">Filters</th>
                       <th className="py-2 text-left font-medium">Results</th>
+                      <th className="py-2 text-left font-medium">Match</th>
                       <th className="py-2 text-left font-medium">Source</th>
                       <th className="py-2 text-left font-medium">When</th>
                       <th className="py-2 text-left font-medium w-8"></th>
@@ -568,6 +648,15 @@ export default function AdminSearchesPage() {
                               {entry.results_count}
                             </span>
                           </td>
+                          <td className="py-2 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                              {entry.best_cosine != null && <span className="tabular-nums">{entry.best_cosine.toFixed(3)}</span>}
+                              {entry.match_strategy && <span className="opacity-80">{entry.match_strategy}</span>}
+                              {entry.weak_match && <span className="font-medium" style={{ color: "#CB4B00" }}>weak</span>}
+                              {entry.content_gap && <span className="font-medium" style={{ color: "#CB4B00" }}>gap</span>}
+                              {entry.best_cosine == null && !entry.match_strategy && !entry.weak_match && !entry.content_gap && <span>—</span>}
+                            </div>
+                          </td>
                           <td className="py-2">
                             <Badge
                               variant="outline"
@@ -595,7 +684,7 @@ export default function AdminSearchesPage() {
                         </tr>
                         {expandedId === entry.id && (
                           <tr key={`${entry.id}-results`}>
-                            <td colSpan={7} className="bg-muted/10 px-4">
+                            <td colSpan={8} className="bg-muted/10 px-4">
                               <ExpandableResults logId={entry.id} />
                             </td>
                           </tr>

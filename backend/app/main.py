@@ -2,8 +2,8 @@ import logging
 from contextlib import asynccontextmanager
 
 from app.api.account import router as account_router
+from app.api.admin.feedback import router as admin_feedback_router
 from app.api.admin.film_tv import router as admin_film_tv_router
-from app.api.admin.moderation import router as moderation_router
 from app.api.admin.monologues import router as admin_monologues_router
 from app.api.admin.stats import router as admin_stats_router
 from app.api.admin.emails import router as admin_emails_router
@@ -241,11 +241,11 @@ app.include_router(pricing_router)
 app.include_router(subscriptions_router)
 app.include_router(tracking_router)
 app.include_router(webhooks_router)
-app.include_router(moderation_router)
 app.include_router(admin_monologues_router)
 app.include_router(admin_film_tv_router)
 app.include_router(admin_stats_router)
 app.include_router(admin_users_router)
+app.include_router(admin_feedback_router)
 app.include_router(admin_emails_router)
 app.include_router(admin_searches_router)
 app.include_router(admin_sessions_router)

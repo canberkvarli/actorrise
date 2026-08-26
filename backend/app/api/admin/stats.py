@@ -250,18 +250,28 @@ def get_admin_stats(
         usage["current_user"]["total_searches"] = usage["current_user"]["ai_searches"]
 
     # --- Paid subscribers (founding actors goal) ---
+    # Split by what's actually true: card-on-file payers vs $0 comps vs trials.
+    # "plus_subscribers" (total members) still drives the founding-actor goal,
+    # since a comped founding actor is still a founding actor — but MRR-facing
+    # UI must read `paid_active`, never this total.
     FOUNDING_GOAL = 50
     free_tier = db.query(PricingTier).filter(PricingTier.name == "free").first()
     free_tier_id = free_tier.id if free_tier else 1
-    plus_subscribers = (
-        db.query(UserSubscription)
+    member_rows = (
+        db.query(UserSubscription.status, UserSubscription.stripe_subscription_id)
         .filter(
             UserSubscription.tier_id != free_tier_id,
             UserSubscription.status.in_(["active", "trialing"]),
             UserSubscription.user_id.in_(real_ids),
         )
-        .count()
+        .all()
     )
+    plus_subscribers = len(member_rows)
+    paid_active = sum(
+        1 for status, sub_id in member_rows if status == "active" and sub_id is not None
+    )
+    comped = sum(1 for _status, sub_id in member_rows if sub_id is None)
+    trialing = sum(1 for status, _sub_id in member_rows if status == "trialing")
 
     return {
         "from": from_d.isoformat(),
@@ -283,7 +293,10 @@ def get_admin_stats(
         },
         "usage": usage,
         "subscribers": {
-            "plus_subscribers": plus_subscribers,
+            "plus_subscribers": plus_subscribers,  # total members (paid + comp + trial)
+            "paid_active": paid_active,             # card on file, actually paying
+            "comped": comped,                       # gifts / grants, $0
+            "trialing": trialing,                   # on trial, not charged yet
             "founding_goal": FOUNDING_GOAL,
             "founding_progress_percent": round(
                 min(plus_subscribers / FOUNDING_GOAL * 100, 100), 1

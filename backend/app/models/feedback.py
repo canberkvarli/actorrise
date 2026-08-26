@@ -20,5 +20,8 @@ class ResultFeedback(Base):
     comment = Column(Text, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=text("now()"), nullable=False)
+    # Set when the founder has seen this in the admin feedback inbox. Drives the
+    # unread badge; only meaningful for negative (actionable) feedback.
+    read_at = Column(DateTime(timezone=True), nullable=True)
 
     user = relationship("User", backref="result_feedback")
