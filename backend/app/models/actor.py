@@ -201,6 +201,7 @@ class MonologueFavorite(Base):
     cut_start_line = Column(Integer, nullable=True)  # Audition cut: first line index (over split text)
     cut_end_line = Column(Integer, nullable=True)  # Audition cut: last line index (inclusive)
     removed_at = Column(DateTime(timezone=True), nullable=True)  # Soft-delete: in "Recently removed", restorable
+    reminder_sent_at = Column(DateTime(timezone=True), nullable=True)  # Day-1 "you saved this" nudge sent; claimed atomically so it sends at most once
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
 
     # Relationships

@@ -125,6 +125,50 @@ def _warmup_title_catalogue_background():
     threading.Thread(target=warmup, daemon=True).start()
 
 
+def _start_saved_piece_reminder_scheduler():
+    """Hourly day-1 "you saved a piece" re-engagement (H-14: savers return 2.1x).
+
+    An in-process daemon thread, on purpose: it reuses the API's own env and
+    secrets (DATABASE_URL, RESEND_API_KEY), so there is no separate Render service
+    to stand up and no dashboard step. Each saver is emailed at most once, claimed
+    atomically in the DB (see services/email/saved_piece_reminder.py), so a
+    redeploy or restart can never re-send. Production only; kill switch is
+    SAVED_PIECE_REMINDER_ENABLED=false.
+    """
+    import os
+    import threading
+    import time
+
+    if os.getenv("ENVIRONMENT", "").strip().lower() != "production":
+        return
+    if os.getenv("SAVED_PIECE_REMINDER_ENABLED", "true").strip().lower() == "false":
+        logger.info("Saved-piece reminder scheduler disabled by env flag")
+        return
+
+    def loop():
+        time.sleep(120)  # let the app settle after boot before the first run
+        while True:
+            try:
+                from datetime import datetime, timezone
+
+                from app.services.email.saved_piece_reminder import run_reminders
+
+                hour = datetime.now(timezone.utc).hour
+                stats = run_reminders(send=True, active_hour=hour)
+                if stats["eligible"]:
+                    logger.info(
+                        "saved_piece_reminder: eligible %s sent %s failed %s (hour %s UTC)",
+                        stats["eligible"], stats["sent"], stats["failed"], hour,
+                    )
+            except Exception as e:  # noqa: BLE001
+                logger.warning("saved_piece_reminder scheduler run failed (non-fatal): %s", e)
+            # Wake at the top of the next hour so each save fires in its own hour.
+            time.sleep(max(60, 3600 - (time.time() % 3600)))
+
+    threading.Thread(target=loop, daemon=True).start()
+    logger.info("Saved-piece reminder scheduler started (hourly)")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _init_db()
@@ -135,6 +179,7 @@ async def lifespan(app: FastAPI):
     # Warmup search cache in background (non-blocking)
     _warmup_search_cache_background()
     _warmup_title_catalogue_background()
+    _start_saved_piece_reminder_scheduler()
     yield
 
 

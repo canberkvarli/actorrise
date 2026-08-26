@@ -8,6 +8,22 @@ instrumentation changes here even when they look harmless.
 
 Format: date, what changed, why, and which metric it should move.
 
+## 2026-08-26 — Day-1 saved-piece reminder is now AUTOMATED (H-14)
+
+The re-engagement email now sends itself. An hourly in-process daemon thread in
+the API (app/main.py `_start_saved_piece_reminder_scheduler`) runs
+`services/email/saved_piece_reminder.run_reminders(send=True, active_hour=<hour>)`.
+In-process on purpose: reuses the API's env/secrets, so no separate Render service
+and no dashboard step. Sends to a free, opted-in user who saved a monologue 24-72h
+ago with no activity since, at the UTC hour they saved it (timezone-free proxy for
+their waking window, since we store no timezone). Dedup is DB-backed:
+`monologue_favorites.reminder_sent_at`, CLAIMED atomically before send, so a
+redeploy/restart/second worker can never re-email anyone. Cap 200/run. Kill switch:
+SAVED_PIECE_REMINDER_ENABLED=false. Copy is deliberately lowercase/human (not a
+SaaS blast). Migration `add_reminder_sent_at_to_monologue_favorites` applied to
+prod first. Should move: returned_2plus for savers. Watch for over-send in logs
+(the atomic claim should make it impossible) and unsubscribe spikes.
+
 ## 2026-08-26 — Save gets a next step; collection button elevated (retention)
 
 The keeping half of H-14. Detail page (app/(platform)/monologue/[id]/page.tsx):
