@@ -303,6 +303,25 @@ _PREPASS_SUPPORTED_FILTERS = {
 }
 
 
+# One-word catalogue titles that are ALSO ordinary descriptive words. When an
+# attribute filter is active, a bare one of these most likely means the
+# descriptor, not the title ("Awkward" + female = an awkward piece, not the 4
+# monologues of the play "Awkward"), so the pre-pass stands down for these and
+# lets the vector path serve the attribute search. Everything NOT in this set —
+# Hamlet, Macbeth, Fleabag, Euphoria, The Office — is a distinctive title and is
+# honoured even under filters, applying those filters to the show's own pieces.
+# Derived from the live one-word title list (2026-08-26); safe to tune, a wrong
+# call only decides title-pieces vs vector, both non-broken.
+_AMBIGUOUS_SINGLE_WORD_TITLES = frozenset({
+    "awkward", "happy", "evil", "power", "love", "desire", "shame", "silence",
+    "joy", "fury", "doubt", "fresh", "fine", "first", "big", "super",
+    "precious", "lost", "buried", "empty", "bound", "wanted", "following",
+    "haunting", "betrayal", "denial", "obsession", "respect", "justice",
+    "proof", "tradition", "identity", "strife", "substance", "separation",
+    "vice", "civil", "father", "queen", "hero", "help", "night", "soul",
+})
+
+
 def prepass_can_honour(filters: Optional[dict], title: str) -> bool:
     """Whether the title pre-pass may answer this search.
 
@@ -314,19 +333,21 @@ def prepass_can_honour(filters: Optional[dict], title: str) -> bool:
        strongest case for the pre-pass — 20 pieces sitting in the library — and
        it fell through to the vector path and came back weak anyway.
 
-    2. When attribute filters ARE active, the title must be multi-word. The
-       library holds one-word titles that are also ordinary descriptive words:
-       an actor searching "Awkward" with a gender filter wants an awkward
-       *piece*, and the library has a title called "Awkward" with 4 monologues.
-       Answering that as a title lookup would hijack the search. With no
-       filters the query is bare and naming the title is the likeliest intent,
-       so single words are allowed through as before.
+    2. When attribute filters are active AND the title is a single word that is
+       also an ordinary descriptor (see _AMBIGUOUS_SINGLE_WORD_TITLES), stand
+       down: "Awkward" + a gender filter wants an awkward *piece*, and the
+       library holds a play called "Awkward". A distinctive one-word title
+       ("Hamlet" + male + 20s + <2min) is NOT ambiguous — the actor wants those
+       Hamlet pieces, filtered — so it is honoured. This reverses the earlier
+       blanket single-word stand-down, which sent every filtered "hamlet" to the
+       vector path and returned generic weak matches (2026-08-26 log read).
     """
     filters = filters or {}
     attribute_keys = [k for k in filters if k != "source_type"]
     if any(k not in _PREPASS_SUPPORTED_FILTERS for k in filters):
         return False
-    if attribute_keys and " " not in _normalise_title(title):
+    norm = _normalise_title(title)
+    if attribute_keys and " " not in norm and norm in _AMBIGUOUS_SINGLE_WORD_TITLES:
         return False
     return True
 

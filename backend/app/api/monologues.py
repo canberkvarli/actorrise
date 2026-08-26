@@ -812,6 +812,7 @@ async def search_demo(
             user_id=int(current_user.id) if current_user else None,
             source="demo",
             query_type=classify_query(q),
+            match_strategy="vector",  # demo runs the semantic path only
         ))
         db.commit()
     except Exception:

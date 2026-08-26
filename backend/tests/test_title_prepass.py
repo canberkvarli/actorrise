@@ -207,17 +207,29 @@ class TestFilterGuard:
         # them and quietly return the wrong pieces, decline.
         assert prepass_can_honour({key: value}, "The Night Manager") is False
 
-    def test_single_word_title_with_an_attribute_filter_is_refused(self):
+    def test_ambiguous_single_word_title_with_an_attribute_filter_is_refused(self):
         # "Awkward" is a real title with 4 monologues AND an ordinary word an
         # actor would type to describe a piece. With a filter on, the actor is
-        # describing, not naming — do not hijack the search.
+        # describing, not naming — do not hijack the search. Only the words in
+        # _AMBIGUOUS_SINGLE_WORD_TITLES trigger this stand-down.
         assert prepass_can_honour({"gender": "female"}, "Awkward") is False
-        assert prepass_can_honour({"tone": "comedic"}, "Crazy") is False
+        assert prepass_can_honour({"tone": "comedic"}, "Power") is False
+        assert prepass_can_honour({"tone": "comedic"}, "Love") is False
 
-    def test_leading_article_does_not_make_a_title_multiword(self):
-        # _normalise_title drops "the", so "The Office" is one word after
-        # normalisation and must not slip past the hijack rule.
-        assert prepass_can_honour({"gender": "female"}, "The Office") is False
+    def test_distinctive_single_word_title_is_honoured_under_filters(self):
+        # The 2026-08-26 regression: a bare "hamlet" with gender/age/duration
+        # filters stood down and returned generic weak vector results, when the
+        # actor plainly wanted those Hamlet pieces, filtered. Distinctive
+        # one-word titles (not ordinary descriptors) are now honoured.
+        assert prepass_can_honour({"gender": "male", "age_range": "20s"}, "Hamlet") is True
+        assert prepass_can_honour({"max_duration": 120}, "Macbeth") is True
+        assert prepass_can_honour({"gender": "female"}, "Fleabag") is True
+        assert prepass_can_honour({"gender": "female"}, "The Office") is True
+
+    def test_leading_article_does_not_hide_an_ambiguous_word(self):
+        # _normalise_title drops "the", so "The Night" is the one-word "night"
+        # after normalisation and must still trigger the hijack rule.
+        assert prepass_can_honour({"gender": "female"}, "The Night") is False
 
     def test_declining_returns_no_rows(self):
         # The guard is enforced inside find_title_monologues, not just advisory.
@@ -226,3 +238,10 @@ class TestFilterGuard:
         assert find_title_monologues(
             db, "The Night Manager", filters={"category": "classical"}
         ) == []
+
+    def test_distinctive_single_word_title_runs_the_prepass_under_filters(self):
+        # The other half of the regression: the guard now lets "Hamlet" through,
+        # so find_title_monologues actually returns the show's filtered pieces.
+        db = FakeDB([1], [mono(1, 0.9), mono(2, 0.5)])
+        got = find_title_monologues(db, "Hamlet", filters={"gender": "male"})
+        assert [m.id for m in got] == [1, 2]
