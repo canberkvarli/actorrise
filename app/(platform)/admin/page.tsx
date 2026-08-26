@@ -448,8 +448,8 @@ export default function AdminOverviewPage() {
       // The honest one: only card-on-file payers. Comps and trials are $0 and
       // shown separately so this number can never be mistaken for revenue.
       title: "Paying",
-      value: stats.subscribers.paid_active,
-      hint: `${stats.subscribers.comped} comped · ${stats.subscribers.trialing} trial`,
+      value: stats.subscribers.paid_active ?? 0,
+      hint: `${stats.subscribers.comped ?? 0} comped · ${stats.subscribers.trialing ?? 0} trial`,
       icon: IconRocket,
     },
   ];
@@ -533,7 +533,7 @@ export default function AdminOverviewPage() {
       {/* Compact KPI strip (was 8 chunky cards) */}
       <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8">
         {cards.map((card) => (
-          <MiniStat key={card.title} label={card.title} value={card.value.toLocaleString()} hint={"hint" in card ? card.hint : undefined} />
+          <MiniStat key={card.title} label={card.title} value={(card.value ?? 0).toLocaleString()} hint={"hint" in card ? card.hint : undefined} />
         ))}
       </div>
 
@@ -599,7 +599,7 @@ export default function AdminOverviewPage() {
             />
           </div>
           <p className="text-xs text-muted-foreground">
-            {stats.subscribers.paid_active} paying · {stats.subscribers.comped} comped · {stats.subscribers.trialing} on trial
+            {stats.subscribers.paid_active ?? 0} paying · {stats.subscribers.comped ?? 0} comped · {stats.subscribers.trialing ?? 0} on trial
             <span className="opacity-70"> (all count toward the goal; only paying shows up in MRR)</span>
           </p>
           <div className="flex items-center justify-between text-sm">

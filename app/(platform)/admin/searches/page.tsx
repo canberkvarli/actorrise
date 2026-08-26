@@ -384,17 +384,18 @@ export default function AdminSearchesPage() {
         </div>
       )}
 
-      {/* Quality diagnostics — signals logged on every search, surfaced here. */}
-      {summary && (
+      {/* Quality diagnostics — signals logged on every search, surfaced here.
+          Gated on the new fields existing so an older backend can't crash the page. */}
+      {summary && summary.by_match_strategy != null && (
         <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardContent className="p-4 pt-6">
               <p className="text-sm text-muted-foreground">Weak matches</p>
-              <p className="text-2xl font-bold" style={{ color: summary.weak_match_rate > 15 ? "#CB4B00" : undefined }}>
-                {summary.weak_match_rate}%
+              <p className="text-2xl font-bold" style={{ color: (summary.weak_match_rate ?? 0) > 15 ? "#CB4B00" : undefined }}>
+                {summary.weak_match_rate ?? 0}%
               </p>
               <p className="text-xs text-muted-foreground">
-                {summary.weak_match_count.toLocaleString()} of {summary.total_searches.toLocaleString()} below the strong bar
+                {(summary.weak_match_count ?? 0).toLocaleString()} of {summary.total_searches.toLocaleString()} below the strong bar
               </p>
             </CardContent>
           </Card>
@@ -427,11 +428,11 @@ export default function AdminSearchesPage() {
           <Card>
             <CardContent className="p-4 pt-6">
               <p className="text-sm font-medium mb-2">Query type</p>
-              {summary.by_query_type.length === 0 ? (
+              {(summary.by_query_type ?? []).length === 0 ? (
                 <p className="text-xs text-muted-foreground">No data</p>
               ) : (
                 <div className="space-y-1">
-                  {summary.by_query_type.slice(0, 5).map((d) => (
+                  {(summary.by_query_type ?? []).slice(0, 5).map((d) => (
                     <div key={d.key} className="flex justify-between text-xs gap-2">
                       <span className="truncate">{d.key}</span>
                       <span className="text-muted-foreground shrink-0">{d.count}</span>
