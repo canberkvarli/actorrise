@@ -35,7 +35,7 @@ from app.services.email.resend_client import ResendEmailClient
 from app.services.email.templates import EmailTemplates
 
 SITE_URL = os.getenv("SITE_URL", "https://actorrise.com")
-DEFAULT_SUBJECT = "your {character} monologue is still sitting there"
+DEFAULT_SUBJECT = "you saved {character} and never opened it"
 DEDUPE_LOG = Path(__file__).resolve().parent.parent / "backups" / "saved_piece_reminder_sent.log"
 
 
@@ -57,7 +57,13 @@ def _has_activity_since(db, uid: int, since: datetime) -> bool:
     return False
 
 
-def eligible(db, hours_min: int, hours_max: int) -> list[dict]:
+def eligible(db, hours_min: int, hours_max: int, active_hour: int | None = None) -> list[dict]:
+    """Eligible recipients. When active_hour is set (0-23 UTC), only users whose
+    save landed in that hour of day are returned — a timezone-free proxy for
+    "send when they're awake": people save during their own daytime, so replaying
+    at that same hour-of-day hits their active window. Run hourly, each user fires
+    once, near the time of day they actually use the app. (We store no timezone,
+    so this is the closest thing to a local-morning send without guessing.)"""
     now = datetime.now(timezone.utc)
     lo, hi = now - timedelta(hours=hours_max), now - timedelta(hours=hours_min)
     favs = (
@@ -80,6 +86,8 @@ def eligible(db, hours_min: int, hours_max: int) -> list[dict]:
         if uid in seen:
             continue  # most-recent qualifying save only (favs are user, created desc)
         seen.add(uid)
+        if active_hour is not None and fav.created_at is not None and fav.created_at.hour != active_hour:
+            continue  # not this user's active hour yet; a later hourly run catches them
         user = db.get(User, uid)
         if not user or not user.email:
             continue
@@ -113,15 +121,22 @@ def main() -> None:
     ap.add_argument("--send", action="store_true", help="actually send via Resend (default: dry run)")
     ap.add_argument("--hours-min", type=int, default=24)
     ap.add_argument("--hours-max", type=int, default=72)
+    ap.add_argument(
+        "--active-hour-only",
+        action="store_true",
+        help="only users whose save landed in the current UTC hour (run hourly to "
+        "hit each person's active/waking window without storing timezones)",
+    )
     ap.add_argument("--subject", default=DEFAULT_SUBJECT)
     ap.add_argument("--limit", type=int, default=0, help="cap recipients (0 = no cap)")
     ap.add_argument("--out", default=str(Path(__file__).resolve().parent.parent / "backups" / "saved_piece_reminder_preview.txt"))
     args = ap.parse_args()
 
     tpl = EmailTemplates()
+    active_hour = datetime.now(timezone.utc).hour if args.active_hour_only else None
     db = SessionLocal()
     try:
-        people = eligible(db, args.hours_min, args.hours_max)
+        people = eligible(db, args.hours_min, args.hours_max, active_hour)
     finally:
         db.close()
     if args.limit:

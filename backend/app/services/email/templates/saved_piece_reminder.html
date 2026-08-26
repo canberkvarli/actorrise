@@ -3,19 +3,15 @@
 {% block title %}your {{ character }} monologue{% endblock %}
 
 {% block content %}
-        <p>Hey{% if user_name %} {{ user_name }}{% endif %},</p>
+        <p>hey{% if user_name %} {{ user_name }}{% endif %},</p>
 
-        <p>You saved {{ character }} from {{ play }} a couple days ago, then life happened. I do the same thing, bookmark a monologue and never open it again.</p>
+        <p>you saved {{ character }} from {{ play }} a few days ago and never came back to it. i do that all the time, bookmark something and forget it exists.</p>
 
-        <p><a href="{{ link }}" style="font-weight:500;">It's still right here &rarr;</a></p>
+        <p>here it is again: <a href="{{ link }}" style="font-weight:500;">{{ character }} from {{ play }}</a></p>
 
-        <p>Two minutes with it beats another scroll. Cut it down to audition length, or just run it out loud once and see how it sits in your mouth. That's the whole reason to save one.</p>
+        <p>give it two minutes. read it out loud once, or cut it down to audition size. that's the whole reason you saved it.</p>
 
-        <p style="margin-top:24px;">reply UNSUBSCRIBE and I'll take you off the list, no hard feelings.</p>
+        <p style="margin-top:28px;">canberk</p>
 
-        <p style="margin-top:28px;">
-            Canberk<br>
-            <span class="ar-sig" style="color:{{ c.muted }};">Founder, ActorRise</span><br>
-            <a href="https://actorrise.com" style="color:{{ c.muted }};">actorrise.com</a>
-        </p>
+        <p class="ar-muted" style="margin-top:20px; color:{{ c.muted }}; font-size:13px;">reply unsubscribe and i'll take you off, no worries.</p>
 {% endblock %}

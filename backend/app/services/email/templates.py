@@ -237,26 +237,23 @@ class EmailTemplates:
         user_name: Optional[str] = None,
         **kwargs,
     ) -> str:
-        name = (user_name or "").split()[0] if user_name else ""
-        greeting = f"Hey {name}," if name else "Hey,"
+        name = (user_name or "").split()[0].lower() if user_name else ""
+        greeting = f"hey {name}," if name else "hey,"
         return "\n".join([
             greeting,
             "",
-            f"You saved {character} from {play} a couple days ago, then life "
-            "happened. I do the same thing, bookmark a monologue and never open "
-            "it again.",
+            f"you saved {character} from {play} a few days ago and never came "
+            "back to it. i do that all the time, bookmark something and forget "
+            "it exists.",
             "",
-            f"It's still right here: {link}",
+            f"here it is again: {link}",
             "",
-            "Two minutes with it beats another scroll. Cut it down to audition "
-            "length, or just run it out loud once and see how it sits in your "
-            "mouth. That's the whole reason to save one.",
+            "give it two minutes. read it out loud once, or cut it down to "
+            "audition size. that's the whole reason you saved it.",
             "",
-            "reply UNSUBSCRIBE and I'll take you off the list, no hard feelings.",
+            "canberk",
             "",
-            "Canberk",
-            "Founder, ActorRise",
-            "actorrise.com",
+            "reply unsubscribe and i'll take you off, no worries.",
         ])
 
     def render_welcome_plain(self, user_name: str, **kwargs) -> str:
