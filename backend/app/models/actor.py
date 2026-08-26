@@ -471,8 +471,11 @@ class FilmTvReference(Base):
     imdb_rating = Column(Float, nullable=True, index=True)
     poster_url = Column(String, nullable=True)
     imsdb_url = Column(String, nullable=True)
-    # Embedding: text-embedding-3-large (1536 dims for pgvector HNSW indexing)
-    embedding = Column(Vector(1536), nullable=True)
+    # Embedding: text-embedding-3-large (1536 dims for pgvector HNSW indexing).
+    # deferred() so the ~20KB/row vector is never shipped to the backend on a
+    # normal query — it's only used server-side in pgvector ORDER BY (cosine).
+    # Loading it on every film/TV search/browse was burning Supabase egress.
+    embedding = deferred(Column(Vector(1536), nullable=True))
     created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))
 
     # Relationships
