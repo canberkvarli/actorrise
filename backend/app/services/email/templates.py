@@ -207,7 +207,57 @@ class EmailTemplates:
             unsubscribe_url=unsubscribe_url,
         )
 
+    def render_saved_piece_reminder(
+        self,
+        character: str,
+        play: str,
+        link: str,
+        user_name: Optional[str] = None,
+        unsubscribe_url: Optional[str] = None,
+        **kwargs,
+    ) -> str:
+        """Day-1 nudge back to a monologue the actor saved but never worked."""
+        template = self.env.get_template('saved_piece_reminder.html')
+        return template.render(
+            character=character,
+            play=play,
+            link=link,
+            user_name=(user_name or "").split()[0] if user_name else None,
+            preheader="it takes two minutes. cut it, or just say it out loud once.",
+            unsubscribe_url=unsubscribe_url,
+        )
+
     # ── Plain text renderers (for Gmail Primary tab placement) ──
+
+    def render_saved_piece_reminder_plain(
+        self,
+        character: str,
+        play: str,
+        link: str,
+        user_name: Optional[str] = None,
+        **kwargs,
+    ) -> str:
+        name = (user_name or "").split()[0] if user_name else ""
+        greeting = f"Hey {name}," if name else "Hey,"
+        return "\n".join([
+            greeting,
+            "",
+            f"You saved {character} from {play} a couple days ago, then life "
+            "happened. I do the same thing, bookmark a monologue and never open "
+            "it again.",
+            "",
+            f"It's still right here: {link}",
+            "",
+            "Two minutes with it beats another scroll. Cut it down to audition "
+            "length, or just run it out loud once and see how it sits in your "
+            "mouth. That's the whole reason to save one.",
+            "",
+            "reply UNSUBSCRIBE and I'll take you off the list, no hard feelings.",
+            "",
+            "Canberk",
+            "Founder, ActorRise",
+            "actorrise.com",
+        ])
 
     def render_welcome_plain(self, user_name: str, **kwargs) -> str:
         name = user_name or "there"
