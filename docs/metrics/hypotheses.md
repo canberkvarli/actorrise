@@ -206,3 +206,36 @@ Evidence: flat at 7-8 for 14 consecutive days.
 
 Keep collecting the column in metrics-history.csv so the series stays unbroken, but
 drop it from the weekly read until it moves.
+
+## H-14 The second session fails because the first keeps nothing
+
+Status: OPEN, intervention shipped (2026-08-26)
+
+The retention gap the brief flagged (2nd-day return 9.7%) is a *keeping* problem,
+not an activation one. Activation is solved: 275 of 294 usage_metrics rows have
+nonzero searches.
+
+Evidence:
+- 30d cohort funnel: 281 signups -> 152 searched -> 173 opened a monologue ->
+  24 saved -> 20 rehearsed. Reading is healthy (889 opens, ~5 per opener); the
+  leak is open -> save (5%, 45 saves on 889 opens).
+- Savers return at 21.6 pct vs 10.1 pct for non-savers (2.1x), and average 2.68
+  active days vs 1.16. Keeping a piece is the strongest retention correlate we
+  have. (Correlation, not proof of cause — savers may just be keener.)
+- Code read: saving was a silent bookmark with no next step, and the tools that
+  make a save a *working* piece — cut, notes — sat two scrolls down the detail
+  page (favs_with_cut / favs_with_notes ~= 2 each, ever). The Collection is a tab
+  users must self-navigate to; signup/login lands on /practice (ScenePartner),
+  not their saved monologues. No automated day-1 re-engagement exists.
+
+Intervention (shipped 91db015c): on save, an inline panel offers the next step
+(Cut / Add a note / Rehearse) and the collection button was elevated to second
+place beside Rehearse. See decisions.md.
+
+Disconfirms if: open->save does not rise above ~10 pct within 3 weeks, OR it
+rises but 2nd-day return stays flat (would mean saving is a marker of intent, not
+a cause of it — then the lever is landing/return nudges, H-14b, not the save UX).
+
+Not yet shipped (need Canberk): land returning users on their Collection instead
+of /practice; one automated day-1 "your saved piece is ready" email (no scheduler
+exists yet, and sends are never automatic).

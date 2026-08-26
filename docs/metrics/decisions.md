@@ -8,6 +8,33 @@ instrumentation changes here even when they look harmless.
 
 Format: date, what changed, why, and which metric it should move.
 
+## 2026-08-26 — Save gets a next step; collection button elevated (retention)
+
+The keeping half of H-14. Detail page (app/(platform)/monologue/[id]/page.tsx):
+on save, an inline panel now offers the next step — Cut it to time (scrolls to
+CutEditor), Add a note (scrolls + focuses the notes field), Rehearse it — instead
+of a silent bookmark. The collection button moved to second place, next to
+Rehearse, out from behind Memorize/Self-tape/the bulb. Additive, no API/data
+change. Should move: open->save (5 pct now), favs_with_cut / favs_with_notes
+(~2 each), and downstream returned_2plus. Watch open->save first; return is the
+slower, noisier signal. If save rises but return does not, saving is a marker of
+intent not a cause, and the next lever is landing/return nudges, not save UX.
+
+## 2026-08-26 — Distinctive one-word titles honoured under attribute filters
+
+prepass_can_honour stood down on EVERY single-word title when an attribute filter
+was active (guard against descriptor-titles like "Awkward" hijacking a search),
+which also sent filtered "hamlet"/"macbeth"/"fleabag" to the vector path and back
+as weak. Inverted: honour a single-word title under supported filters by default,
+stand down only for a curated set of one-word titles that are also ordinary
+descriptors (_AMBIGUOUS_SINGLE_WORD_TITLES in title_lookup.py). "hamlet" + male +
+20s + <=2min now returns 9 real Hamlet pieces via title_exact instead of weak
+vector padding. Also set match_strategy='vector' on the demo-search log insert
+(last path leaving it null; the 319 historical nulls are all pre-2026-08-20 and
+age out). Should move: pct_weak down, title_exact share up. NOTE the brief's
+paid_invoices=0 is not a bug here — billing_history only writes status='succeeded';
+the 'paid' query lives in the external snapshot task, not this repo (see below).
+
 ## 2026-08-24 — Descriptive-query vocabulary (surface what we already hold)
 
 The higher-leverage half of the demand gap: actors search by description
