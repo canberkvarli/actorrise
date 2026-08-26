@@ -38,8 +38,11 @@ export default function LoginPage() {
             </div>
           </div>
 
-          {/* Three options: Google, Apple, Sign in with email (expandable) */}
-          <AuthProgressiveDisclosure mode="login" redirectTo="/practice" />
+          {/* Three options: Google, Apple, Sign in with email (expandable).
+              A returning sign-in lands on the Collection — the saved pieces they
+              came back for (H-14 retention). ?redirect= still wins for deep
+              links (a Green Room invite, checkout). New signups keep /practice. */}
+          <AuthProgressiveDisclosure mode="login" redirectTo="/rehearse" />
 
           {/* Sign up link */}
           <div className="text-center text-sm text-muted-foreground pt-2">
