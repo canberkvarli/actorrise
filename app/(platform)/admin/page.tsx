@@ -93,6 +93,33 @@ function useAdminStats(from?: string, to?: string) {
   });
 }
 
+interface StripeRevenue {
+  available: boolean;
+  reason?: string;
+  active_subscriptions?: number;
+  trialing?: number;
+  mrr_run_rate_usd?: number;
+  collected_30d_usd?: number;
+  collected_30d_count?: number;
+  collected_90d_usd?: number;
+  collected_lifetime_usd?: number;
+  collected_lifetime_count?: number;
+  cached_age_seconds?: number;
+  stale?: boolean;
+}
+
+function useStripeRevenue() {
+  return useQuery({
+    queryKey: ["admin-stripe-revenue"],
+    queryFn: async () => {
+      const res = await api.get<StripeRevenue>("/api/admin/stripe-revenue");
+      return res.data;
+    },
+    staleTime: 10 * 60_000,
+    gcTime: 20 * 60_000,
+  });
+}
+
 const BRAND = "#CB4B00";
 
 export interface GrowthStats {
@@ -241,9 +268,9 @@ function RetentionPanel({ retention }: { retention: GrowthStats["retention"] }) 
 function RevenuePanel({ revenue }: { revenue: GrowthStats["revenue"] }) {
   return (
     <div className="border border-border bg-card p-4 space-y-3">
-      <p className="text-sm font-medium">Revenue &amp; conversion</p>
+      <p className="text-sm font-medium">Expected <span className="font-normal text-muted-foreground">· from our records</span></p>
       <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        <div className="flex justify-between"><span className="text-muted-foreground">MRR</span><span className="font-semibold tabular-nums" style={{ color: BRAND }}>${revenue.mrr_usd.toLocaleString()}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">MRR (list price)</span><span className="font-semibold tabular-nums">${revenue.mrr_usd.toLocaleString()}</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground">Free→paid</span><span className="font-semibold tabular-nums">{revenue.conversion_percent}%</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground">Paid (card on file)</span><span className="tabular-nums">{revenue.paid_active}</span></div>
         <div className="flex justify-between"><span className="text-muted-foreground">Comped</span><span className="tabular-nums">{revenue.comped}</span></div>
@@ -256,6 +283,37 @@ function RevenuePanel({ revenue }: { revenue: GrowthStats["revenue"] }) {
           {revenue.by_tier.map((t) => `${t.tier}: ${t.count}`).join(" · ")}
         </div>
       )}
+    </div>
+  );
+}
+
+function StripeRevenuePanel({ data }: { data: StripeRevenue | undefined }) {
+  if (data && data.available === false) {
+    return (
+      <div className="border border-border bg-card p-4 space-y-1">
+        <p className="text-sm font-medium">Actual <span className="font-normal text-muted-foreground">· from Stripe</span></p>
+        <p className="text-xs text-muted-foreground">Stripe not reachable{data.reason ? `: ${data.reason}` : ""}.</p>
+      </div>
+    );
+  }
+  const money = (n?: number) => (n == null ? "—" : `$${n.toLocaleString()}`);
+  return (
+    <div className="border-2 p-4 space-y-3" style={{ borderColor: BRAND }}>
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium">Actual <span className="font-normal text-muted-foreground">· live from Stripe</span></p>
+        {data?.stale && <span className="text-[10px] uppercase tracking-wide text-muted-foreground">stale</span>}
+      </div>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+        <div className="flex justify-between"><span className="text-muted-foreground">Collected · 30d</span><span className="font-semibold tabular-nums" style={{ color: BRAND }}>{money(data?.collected_30d_usd)}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Collected · lifetime</span><span className="font-semibold tabular-nums" style={{ color: BRAND }}>{money(data?.collected_lifetime_usd)}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">MRR run-rate</span><span className="tabular-nums">{money(data?.mrr_run_rate_usd)}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Active subs</span><span className="tabular-nums">{data?.active_subscriptions ?? "—"}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Trialing</span><span className="tabular-nums">{data?.trialing ?? "—"}</span></div>
+        <div className="flex justify-between"><span className="text-muted-foreground">Charges · lifetime</span><span className="tabular-nums">{data?.collected_lifetime_count ?? "—"}</span></div>
+      </div>
+      <p className="pt-2 border-t border-border/50 text-xs text-muted-foreground">
+        &ldquo;Collected&rdquo; is real cash Stripe charged. Run-rate is what active subs would bill if they all pay.
+      </p>
     </div>
   );
 }
@@ -397,6 +455,7 @@ export default function AdminOverviewPage() {
     refetch: refetchHealth,
   } = useSystemHealth(healthEnabled);
   const { data: changelogModalEntry } = useChangelogModalEntry();
+  const { data: stripeRevenue } = useStripeRevenue();
 
   if (isLoading) {
     return (
@@ -541,7 +600,12 @@ export default function AdminOverviewPage() {
       {growth && (
         <>
           <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
-            <MiniStat label="MRR" value={`$${growth.revenue.mrr_usd.toLocaleString()}`} hint={`${growth.revenue.conversion_percent}% free→paid`} accent />
+            <MiniStat
+              label="Collected 30d"
+              value={stripeRevenue?.available && stripeRevenue.collected_30d_usd != null ? `$${stripeRevenue.collected_30d_usd.toLocaleString()}` : "—"}
+              hint={stripeRevenue?.mrr_run_rate_usd != null ? `$${stripeRevenue.mrr_run_rate_usd.toLocaleString()} run-rate` : "from Stripe"}
+              accent
+            />
             <MiniStat label="Active (7d)" value={growth.active_users.wau.toLocaleString()} hint="WAU" />
             <MiniStat label="Active (30d)" value={growth.active_users.mau.toLocaleString()} hint="MAU" />
             <MiniStat label="Stickiness" value={growth.active_users.stickiness_percent != null ? `${growth.active_users.stickiness_percent}%` : "-"} hint="DAU÷MAU" />
@@ -550,9 +614,11 @@ export default function AdminOverviewPage() {
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">
-            <ActivationFunnel steps={growth.activation} />
+            <StripeRevenuePanel data={stripeRevenue} />
             <RevenuePanel revenue={growth.revenue} />
           </div>
+
+          <ActivationFunnel steps={growth.activation} />
 
           <RetentionPanel retention={growth.retention} />
 
