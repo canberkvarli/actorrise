@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter, notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -32,6 +32,21 @@ export default function MonologueDetailPage() {
   const [editMonologueSaving, setEditMonologueSaving] = useState(false);
   const saveNotes = useSaveNotes();
   const toggleMemorized = useToggleMemorized();
+  // Saving used to be a silent bookmark: 889 opens produced 45 saves, and the
+  // things that turn a save into a working piece (a cut, a note) sat two scrolls
+  // down where ~nobody found them. On save we now surface the next step inline,
+  // right where the intent is. (Savers return 2.1x more than non-savers.)
+  const [justSaved, setJustSaved] = useState(false);
+  const notesRef = useRef<HTMLTextAreaElement>(null);
+  const cutRef = useRef<HTMLDivElement>(null);
+
+  const scrollToNotes = () => {
+    notesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    notesRef.current?.focus();
+  };
+  const scrollToCut = () => {
+    cutRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
 
   useEffect(() => {
     if (params.id) {
@@ -65,9 +80,11 @@ export default function MonologueDetailPage() {
       if (isFavorited) {
         await api.delete(`/api/monologues/${monologue.id}/favorite`);
         setIsFavorited(false);
+        setJustSaved(false);
       } else {
         await api.post(`/api/monologues/${monologue.id}/favorite`);
         setIsFavorited(true);
+        setJustSaved(true);
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
@@ -150,6 +167,18 @@ export default function MonologueDetailPage() {
                   >
                     Rehearse
                   </Button>
+                  {/* The retention lever. Savers return 2.1x more, so the
+                      collection control sits second — right after Rehearse —
+                      not buried behind the quieter secondary paths. */}
+                  <Button
+                    variant={isFavorited ? "default" : "outline"}
+                    onClick={toggleFavorite}
+                    aria-label={isFavorited ? "In your collection" : "Add to collection"}
+                    className={`flex-shrink-0 gap-2 ${isFavorited ? "bg-accent text-accent-foreground hover:bg-accent/90" : "hover:text-accent"}`}
+                  >
+                    <IconBookmark className={`h-5 w-5 ${isFavorited ? "fill-current" : ""}`} />
+                    {isFavorited ? "In collection" : "Add to collection"}
+                  </Button>
                   <Button
                     variant="ghost"
                     onClick={() => router.push(`/monologue/${monologue.id}/memorize`)}
@@ -189,22 +218,46 @@ export default function MonologueDetailPage() {
                       <IconBulb className="h-5 w-5 text-muted-foreground/50 hover:text-muted-foreground" />
                     )}
                   </button>
-                  {/* Owning the piece is the point of this surface, so the
-                      collection control is a labeled button, not a bare icon. */}
-                  <Button
-                    variant={isFavorited ? "default" : "outline"}
-                    onClick={toggleFavorite}
-                    aria-label={isFavorited ? "In your collection" : "Add to collection"}
-                    className={`flex-shrink-0 gap-2 ${isFavorited ? "bg-accent text-accent-foreground hover:bg-accent/90" : "hover:text-accent"}`}
-                  >
-                    <IconBookmark className={`h-5 w-5 ${isFavorited ? "fill-current" : ""}`} />
-                    {isFavorited ? "In collection" : "Add to collection"}
-                  </Button>
                 </div>
               }
             />
           </CardContent>
         </Card>
+
+        {/* Saving is only the first half of a keepable piece. The moment it
+            lands, offer the next step — cut, note, or run — instead of leaving
+            the actor on a silent bookmark with nothing to come back for. */}
+        {justSaved && isFavorited && (
+          <motion.div
+            initial={{ opacity: 0, y: -6 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <Card className="rounded-lg border-accent/40 bg-accent/5">
+              <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold">Saved to your collection.</p>
+                  <p className="text-sm text-muted-foreground">
+                    Make it yours — cut it to time, note your beats, or run it.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={scrollToCut}>
+                    Cut it to time
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={scrollToNotes}>
+                    Add a note
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => router.push(`/monologue/${monologue.id}/work`)}
+                  >
+                    Rehearse it
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
         <Card className="rounded-lg">
           <CardContent className="space-y-3 pt-6">
@@ -215,6 +268,7 @@ export default function MonologueDetailPage() {
               </p>
             </div>
             <textarea
+              ref={notesRef}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               onBlur={() => {
@@ -230,7 +284,7 @@ export default function MonologueDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-lg">
+        <Card ref={cutRef} className="rounded-lg">
           <CardContent className="pt-6">
             <CutEditor
               monologue={monologue}
