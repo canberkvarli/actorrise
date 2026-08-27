@@ -56,7 +56,11 @@ SessionLocal = sessionmaker(
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
-MODEL = "gpt-4o-mini"
+# gpt-4o, not -mini: the 2026-08-27 segmentation audit showed mini mis-attributes
+# a character's own rhetorical questions to a crowd as another speaker's line, and
+# over-greys real spoken lines that describe action. gpt-4o gets both right. Cost
+# is ~10x but segmentation runs once per monologue. Override with SEGMENT_MODEL.
+MODEL = os.getenv("SEGMENT_MODEL", "gpt-4o")
 ALLOWED_TYPES = {"dialogue", "interjection", "direction"}
 BATCH_SIZE = 25
 FETCH_BATCH_SIZE = 250  # rows per DB page (keeps pooler happy)
@@ -74,26 +78,30 @@ You receive:
   (3) Stage directions, parentheticals, AND screenplay narration (description, not speech)
 
 Return ONLY a JSON object: { "segments": [...] }. Each segment is one of:
-  { "type": "dialogue",     "text": "..." }                       // target character speaking aloud
-  { "type": "interjection", "speaker": "NAME", "text": "..." }    // ANY other character speaking aloud
+  { "type": "dialogue",     "text": "..." }                       // the TARGET character speaking aloud
+  { "type": "interjection", "speaker": "NAME", "text": "..." }    // a DIFFERENT named character speaking aloud
   { "type": "direction",    "text": "..." }                       // anything NOT spoken aloud
 
 How to choose the type — apply this test to every span:
-- "DIALOGUE" — Could the target character physically speak these words aloud in performance? First-person speech, addressed at someone in scene.
-- "INTERJECTION" — Could ANOTHER character speak these words aloud? Often a short cue, question, or response. Use even when the line is unattributed (no "NAME:" prefix). Infer speaker from context (use the other character's name when it appears in the text); fall back to "OTHER" only if truly unknown.
-- "DIRECTION" — Anything that describes what is happening rather than something being spoken. This INCLUDES:
+- "DIALOGUE" — the TARGET character speaking aloud in performance. This is the DEFAULT for spoken words. It includes their rhetorical questions, asides, and lines shouted to a crowd. If the words are spoken by the target character, the type is ALWAYS dialogue — NEVER interjection. Interjection is only ever a DIFFERENT character.
+- "INTERJECTION" — a DIFFERENT, specific character speaking aloud: a short cue, question, or reply from a named scene partner. Two hard requirements: (a) it is clearly NOT the target character, and (b) it is an actual spoken line, not a description of one. Set "speaker" to that other character's name; use "OTHER" only when a real different character speaks but is unnamed. NEVER put the target character's name as the interjection speaker — that span is dialogue.
+- "DIRECTION" — anything that describes what is happening rather than a specific character's spoken words. This INCLUDES:
     * Parentheticals: "(laughing)", "(he turns away)"
     * Action lines: "She crosses to the window and stares out."
-    * Screenplay narration (third-person prose describing the scene): "The fireball barrels through the sky.", "His mouth is agape.", "An otherworldly voice comes from the hole."
+    * Screenplay narration (third-person prose describing the scene): "The fireball barrels through the sky.", "His mouth is agape."
     * Scene-setting prose: "In the sky above, a star is moving toward us."
-  If the words describe what the audience SEES or HEARS happening (rather than something a character SAYS), it is direction.
+    * Crowd / group / offstage reaction described in the third person: "Individuals in the crowd start shouting 'Yes!'", "The crowd chants.", "Voices cry out in the dark." These describe a SOUND the audience hears, not a scripted line for a named character, so they are DIRECTION — never interjection.
+  If the words describe what the audience SEES or HEARS happening (rather than a specific character SAYING them), it is direction.
 
-Bias rule: when unsure between dialogue and direction, choose DIRECTION. Better to mute narration than to spotlight it as the character's speech.
+Bias rules:
+- When unsure between dialogue and direction, choose DIRECTION. Better to mute narration than to spotlight it as the character's speech.
+- When unsure between interjection and direction, choose DIRECTION. Interjection is only for an unmistakable line from a specific other character.
 
 Strict preservation rules:
 - Preserve original ordering and wording exactly. Do not rephrase, summarize, or expand.
 - The concatenation of all segment texts (in order) must reconstruct the original text closely.
 - Do not split a single sentence across segments unless it actually shifts type mid-sentence.
+- Conversely, when the text DOES shift type — a spoken line immediately followed by a stage direction, or vice versa — you MUST split them into separate segments. Never bundle a spoken line and a direction into one segment.
 
 Output: a JSON object with exactly one key "segments" whose value is the array of segments. No prose, no code fences."""
 
@@ -189,6 +197,31 @@ def _strip_fences(raw: str) -> str:
     return raw.strip()
 
 
+def _normalize_segments(segs, character: str):
+    """Deterministic post-fixes the LLM cannot be trusted to always get right.
+
+    An interjection attributed to the TARGET character is a contradiction —
+    interjection means a DIFFERENT character speaking — so the span is really the
+    target's own line: convert it to dialogue and drop the speaker. In the
+    2026-08-27 audit this single rule corrected 287 segments across 156
+    monologues (e.g. Bane's "Do you accept this man's resignation?" was tagged
+    interjection/Bane). Applied BEFORE validation so a monologue whose lines were
+    all mis-tagged this way still passes the has-dialogue check.
+    """
+    if not isinstance(segs, list) or not character:
+        return segs
+    target = character.strip().lower()
+    for seg in segs:
+        if (
+            isinstance(seg, dict)
+            and seg.get("type") == "interjection"
+            and (seg.get("speaker") or "").strip().lower() == target
+        ):
+            seg["type"] = "dialogue"
+            seg.pop("speaker", None)
+    return segs
+
+
 def _validate_segments(segs, original_text: str | None = None) -> tuple[bool, str]:
     """Return (ok, reason). Non-list, empty, or malformed → not ok."""
     if not isinstance(segs, list):
@@ -277,6 +310,7 @@ def segment_monologue(
         return None, "response object missing 'segments' key"
     segs = parsed["segments"]
 
+    segs = _normalize_segments(segs, character)
     ok, reason = _validate_segments(segs, original_text=text)
     if not ok:
         return None, reason
