@@ -42,6 +42,37 @@ stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 logger = logging.getLogger(__name__)
 
 
+def _delete_supabase_auth_user(supabase_id: str) -> None:
+    """Delete the Supabase auth.users identity for this account.
+
+    Without this, wiping the app's `users` row leaves the LOGIN alive: the person
+    (and an App Store reviewer testing Guideline 5.1.1(v)) can still sign in, so
+    the account was never really deleted. Raises on failure so the caller rolls
+    the whole deletion back and the client can retry — we must never report a
+    successful deletion while the auth row survives.
+
+    Idempotent: an already-absent auth user counts as success, so a retry after a
+    partial delete still completes.
+    """
+    from app.core.security import get_supabase_client
+
+    client = get_supabase_client()
+    if client is None:
+        raise RuntimeError(
+            "Supabase admin client unavailable (SUPABASE_URL / "
+            "SUPABASE_SERVICE_ROLE_KEY not set); cannot delete the auth identity"
+        )
+    try:
+        client.auth.admin.delete_user(supabase_id)
+        logger.info("Deleted Supabase auth user %s", supabase_id)
+    except Exception as e:  # noqa: BLE001
+        msg = str(e).lower()
+        if "not found" in msg or "404" in msg or "user_not_found" in msg:
+            logger.info("Supabase auth user %s already absent", supabase_id)
+            return
+        raise
+
+
 def delete_user_completely(db: Session, user_id: int) -> None:
     """Delete a user and every record that references their users.id.
 
@@ -54,6 +85,11 @@ def delete_user_completely(db: Session, user_id: int) -> None:
     (search logs, public founding roster, feedback, etc.) without losing
     the link to a now-deleted user.
     """
+    # Capture the Supabase auth id before its `users` row is gone — it is what
+    # we need to delete the login identity at the very end.
+    user_row = db.query(User).filter(User.id == user_id).first()
+    supabase_id = getattr(user_row, "supabase_id", None) if user_row else None
+
     subscription = (
         db.query(UserSubscription)
         .filter(UserSubscription.user_id == user_id)
@@ -187,3 +223,14 @@ def delete_user_completely(db: Session, user_id: int) -> None:
         db.delete(subscription)
 
     db.query(User).filter(User.id == user_id).delete(synchronize_session=False)
+
+    # Delete the login identity itself, last. Done before the caller commits: if
+    # this fails the whole deletion rolls back rather than leaving a working
+    # login behind a wiped profile — the exact bug App Store review flags under
+    # Guideline 5.1.1(v). Idempotent, raises on real failure (see helper).
+    if supabase_id:
+        _delete_supabase_auth_user(str(supabase_id))
+    else:
+        logger.warning(
+            "User %s had no supabase_id; no Supabase auth identity to delete", user_id
+        )
