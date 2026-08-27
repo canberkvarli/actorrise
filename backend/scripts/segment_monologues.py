@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor
 import re
 import sys
 import time
@@ -56,11 +57,12 @@ SessionLocal = sessionmaker(
 
 # ── Constants ────────────────────────────────────────────────────────────────
 
-# gpt-4o, not -mini: the 2026-08-27 segmentation audit showed mini mis-attributes
-# a character's own rhetorical questions to a crowd as another speaker's line, and
-# over-greys real spoken lines that describe action. gpt-4o gets both right. Cost
-# is ~10x but segmentation runs once per monologue. Override with SEGMENT_MODEL.
-MODEL = os.getenv("SEGMENT_MODEL", "gpt-4o")
+# Default gpt-4o-mini for cost (~$0.0005/monologue vs ~$0.01 for gpt-4o): a full
+# 14k re-segment is ~$8 vs ~$150. The improved prompt + _normalize_segments carry
+# most of the quality; mini's residual misses are the hardest attribution cases
+# (a character's rhetorical questions to a crowd, over-greying descriptive spoken
+# lines). Set SEGMENT_MODEL=gpt-4o for a premium pass over just those.
+MODEL = os.getenv("SEGMENT_MODEL", "gpt-4o-mini")
 ALLOWED_TYPES = {"dialogue", "interjection", "direction"}
 BATCH_SIZE = 25
 FETCH_BATCH_SIZE = 250  # rows per DB page (keeps pooler happy)
@@ -328,6 +330,9 @@ def main() -> None:
                         help="Comma-separated monologue IDs to target (implies --force)")
     parser.add_argument("--source-type", type=str, default=None,
                         help="Comma-separated Play.source_type values: film,tv,play")
+    parser.add_argument("--workers", type=int, default=12,
+                        help="Concurrent segmentation API calls per page (the API is the "
+                             "bottleneck; DB fetch/flush stay sequential). Default 12.")
     args = parser.parse_args()
 
     target_ids: list[int] | None = None
@@ -464,38 +469,50 @@ def main() -> None:
                 f"(id range {page_rows[0].id}..{page_rows[-1].id})"
             )
 
+            # Build this page's jobs first (skip empty text, respect --limit),
+            # then segment them concurrently. The OpenAI call is the whole cost;
+            # doing them one at a time is why a full run took ~30h. DB fetch and
+            # flush stay sequential and single-session so the pooler is untouched.
+            page_jobs: list[tuple[int, str, str, str]] = []
             for mono in page_rows:
-                if args.limit is not None and args.limit > 0 and attempted >= args.limit:
+                if args.limit is not None and args.limit > 0 and attempted + len(page_jobs) >= args.limit:
                     done = True
                     break
-
-                attempted += 1
-                mono_id = mono.id
-                character = mono.character_name or "UNKNOWN"
-                play_title = mono.play.title if mono.play else "UNKNOWN"
                 text = mono.text or ""
-
                 if not text.strip():
-                    print(f"  [{attempted}/{total_to_process}] id={mono_id} {character!r} SKIP: empty text")
+                    print(f"  id={mono.id} SKIP: empty text")
                     continue
+                page_jobs.append((
+                    mono.id,
+                    mono.character_name or "UNKNOWN",
+                    mono.play.title if mono.play else "UNKNOWN",
+                    text,
+                ))
 
-                segs, reason = segment_monologue(
-                    client,
-                    character=character,
-                    play_title=play_title,
-                    text=text,
-                )
+            def _seg_one(job):
+                mid, ch, title, txt = job
+                try:
+                    segs, reason = segment_monologue(client, character=ch, play_title=title, text=txt)
+                    return mid, ch, segs, reason
+                except Exception as e:  # noqa: BLE001 - a thread failure must not kill the page
+                    return mid, ch, None, f"thread error: {type(e).__name__}: {e}"
 
+            if page_jobs:
+                with ThreadPoolExecutor(max_workers=max(1, args.workers)) as pool:
+                    results = list(pool.map(_seg_one, page_jobs))
+            else:
+                results = []
+
+            for mono_id, character, segs, reason in results:
+                attempted += 1
                 if segs is None:
                     print(f"  [{attempted}/{total_to_process}] id={mono_id} {character!r} WARN: {reason}")
                     continue
 
-                # Count by type for logging
                 type_counts: dict[str, int] = {}
                 for s in segs:
                     type_counts[s["type"]] = type_counts.get(s["type"], 0) + 1
                 counts_str = ", ".join(f"{k}={v}" for k, v in sorted(type_counts.items()))
-
                 print(
                     f"  [{attempted}/{total_to_process}] id={mono_id} {character!r} "
                     f"OK: {len(segs)} segments ({counts_str})"
@@ -503,7 +520,6 @@ def main() -> None:
 
                 if args.write:
                     pending_updates.append((mono_id, segs))
-
                 success += 1
 
                 if args.write and len(pending_updates) >= BATCH_SIZE:
