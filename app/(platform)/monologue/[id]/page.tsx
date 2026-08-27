@@ -159,8 +159,12 @@ export default function MonologueDetailPage() {
               onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
               headerActions={
                 <div className="flex items-center gap-2">
-                  {/* One primary action — Rehearse -> the /work stage. Memorize and
-                      Self-tape are quieter secondary paths, not competing buttons. */}
+                  {/* One primary action — Rehearse -> the /work stage. Memorize is
+                      the one quieter secondary path, not a competing button.
+                      Self-tape entry point pulled 2026-08-27: 0 uses across 649
+                      users, and it cluttered the core flow we lose people in. The
+                      /audition recorder + tapes API stay intact, just unlinked —
+                      re-add this button to bring it back. */}
                   <Button
                     onClick={() => router.push(`/monologue/${monologue.id}/work`)}
                     className="flex-shrink-0"
@@ -185,13 +189,6 @@ export default function MonologueDetailPage() {
                     className="flex-shrink-0 text-muted-foreground hover:text-foreground"
                   >
                     Memorize
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => router.push(`/audition?monologue=${monologue.id}`)}
-                    className="flex-shrink-0 text-muted-foreground hover:text-foreground"
-                  >
-                    Self-tape
                   </Button>
                   {user?.is_moderator && (
                     <Button
