@@ -676,6 +676,7 @@ async def search_monologues(
                         parsed_constraints=getattr(search_service, "_parsed_constraints", None),
                         intended_play=getattr(search_service, "_intended_play", None),
                         intended_author=getattr(search_service, "_intended_author", None),
+                        db=db,
                     ),
                 )
                 db.add(log_row)
@@ -842,7 +843,7 @@ async def search_demo(
             result_ids=all_result_ids,
             user_id=int(current_user.id) if current_user else None,
             source="demo",
-            query_type=classify_query(q),
+            query_type=classify_query(q, db=db),
             match_strategy="vector",  # demo runs the semantic path only
         ))
         db.commit()

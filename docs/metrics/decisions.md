@@ -27,6 +27,23 @@ character's 67, not the 1-shell title row. New `match_strategy` values
 real character lookups, not thematic queries wrongly routed (the guards are
 tested against exactly that).
 
+## 2026-08-27 — query_type classifier is now catalogue-aware (analytics)
+
+`classify_query` only knew the ~90-title curated dictionary, so every real
+catalogue title ("brooklyn 99", "medea") and character ("hamlet", "joan clarke",
+"anne frank") fell to `query_type='other'` — the reason the 2026-08-27 brief
+measured only 9 of 260 as `title` and 142 as `other`. Added an optional
+catalogue pass (reuses `detect_catalogue_title` / `detect_catalogue_character`,
+title wins over character so a word that is both does not inflate `multi`).
+STILL LOG-ONLY: it feeds nothing in ranking or the response, so it cannot change
+a result set — only the analytics label. **Attribution note (à la H-08): the
+query_type distribution will shift starting 2026-08-27 from a classifier change,
+NOT a change in what actors type.** Uncarried names ("erin gruwell", "marvel")
+stay `other` on purpose — the catalogue can only label what we hold; those are
+handled by grounding.py (unservable) and the content-gap banner. Verified live +
+30 tests. H-13's confident-wrong-answer guard (`query_is_unservable`) was found
+already shipped and working for person-name queries; not rebuilt.
+
 ## 2026-08-27 — Admin search diagnostics + retry signal instrumented (H-13)
 
 `/admin/searches` now surfaces the columns that were logged but never shown:

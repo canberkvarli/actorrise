@@ -26,7 +26,10 @@ from __future__ import annotations
 import re
 from typing import Optional
 
-from app.services.search.title_lookup import TITLE_ALIASES, detect_title_lookup
+from app.services.search.title_lookup import (TITLE_ALIASES,
+                                              detect_catalogue_character,
+                                              detect_catalogue_title,
+                                              detect_title_lookup)
 
 QUERY_TYPES = ("title", "named_lookup", "occupation", "attribute", "multi", "other")
 
@@ -132,8 +135,18 @@ def classify_query(
     parsed_constraints: Optional[dict] = None,
     intended_play: Optional[str] = None,
     intended_author: Optional[str] = None,
+    db=None,
 ) -> str:
-    """Return one of QUERY_TYPES. Never raises."""
+    """Return one of QUERY_TYPES. Never raises.
+
+    `db` is optional and used only to consult the real title/character catalogue.
+    Without it the classifier sees only the ~90-title curated dictionary, so
+    every catalogue title ("fleabag", "brooklyn 99") and character ("hamlet",
+    "joan clarke") lands in `other` — the reason the 2026-08-27 brief measured
+    only 9 of 260 searches as `title`. This stays LOG-ONLY: it feeds nothing in
+    ranking or the response, so a catalogue lookup here can only improve an
+    analytics label, never a result set.
+    """
     try:
         norm = _normalize(query)
         if len(norm) < _MIN_MEANINGFUL_LEN:
@@ -153,6 +166,24 @@ def classify_query(
         is_title = bool(intended_play) or detect_title_lookup(remainder) is not None
         is_occupation = _has_occupation(padded)
         is_attribute = _has_attribute(padded, parsed_constraints)
+
+        # Catalogue-aware pass (log-only). Ask the real catalogue what the
+        # curated dictionary could not. Title wins over character for a word that
+        # is both (Hamlet the play vs Hamlet the character) so it does not
+        # inflate `multi`.
+        if db is not None:
+            if not is_title:
+                try:
+                    if detect_catalogue_title(db, query) is not None:
+                        is_title = True
+                except Exception:
+                    pass
+            if not is_title and not is_person:
+                try:
+                    if detect_catalogue_character(db, query) is not None:
+                        is_person = True
+                except Exception:
+                    pass
 
         signals = [
             ("title", is_title),
