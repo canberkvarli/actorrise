@@ -50,6 +50,10 @@ class User(Base):
 
     # Attribution — free-text answer to "How did you hear about us?" (optional)
     referral_source = Column(String, nullable=True)
+    # Optional free-text follow-up, only for the "other" (Somewhere else) tile —
+    # lets partner-listing traffic (e.g. a theatre association's homepage link)
+    # be told apart from generic "somewhere else" signups.
+    referral_detail = Column(String, nullable=True)
 
     # Last changelog entry the user dismissed (drives the "What's new" modal)
     last_seen_feature_id = Column(String, nullable=True)

@@ -120,6 +120,7 @@ export default function ProfileOnboardingFlow({
   const [submitting, setSubmitting] = useState(false);
 
   const [referral, setReferral] = useState<string | null>(null);
+  const [referralDetail, setReferralDetail] = useState("");
   const [casting, setCasting] = useState<string | null>(null);
   const [ageRange, setAgeRange] = useState<string | null>(null);
   const [workOn, setWorkOn] = useState<string[]>([]);
@@ -133,7 +134,22 @@ export default function ProfileOnboardingFlow({
   const chooseReferral = useCallback((id: string) => {
     setReferral(id);
     void api.patch("/api/auth/onboarding", { referral_source: id }).catch(() => {});
+    // Switching away from "Somewhere else" clears any detail already typed, so an
+    // Instagram signup never carries a stray "state theatre" note.
+    if (id !== "other") {
+      setReferralDetail((prev) => {
+        if (prev) void api.patch("/api/auth/onboarding", { referral_detail: "" }).catch(() => {});
+        return "";
+      });
+    }
   }, []);
+
+  // Optional free-text for "Somewhere else". A second fire-and-forget write (on
+  // blur / Continue), never a blocker: an empty box is valid and must still let
+  // the required step pass. Empty string clears the column to null server-side.
+  const saveReferralDetail = useCallback(() => {
+    void api.patch("/api/auth/onboarding", { referral_detail: referralDetail.trim() }).catch(() => {});
+  }, [referralDetail]);
 
   const answers: OnboardingAnswers = useMemo(
     () => ({ casting, ageRange, workOn, mediums, stage }),
@@ -285,6 +301,18 @@ export default function ProfileOnboardingFlow({
                     REFERRAL_SOURCES.map((r) => (
                       <Tile key={r.id} label={r.label} selected={referral === r.id} onClick={() => chooseReferral(r.id)} />
                     ))}
+                  {questions[step].key === "referral" && referral === "other" && (
+                    <input
+                      type="text"
+                      value={referralDetail}
+                      onChange={(e) => setReferralDetail(e.target.value)}
+                      onBlur={saveReferralDetail}
+                      maxLength={280}
+                      autoFocus
+                      placeholder="Where'd you hear about me? (optional)"
+                      className="col-span-2 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary"
+                    />
+                  )}
                   {questions[step].key === "casting" &&
                     CASTING.map((c) => (
                       <Tile key={c.id} label={c.label} selected={casting === c.id} onClick={() => setCasting(c.id)} />

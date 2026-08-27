@@ -37,6 +37,7 @@ class UpdateOnboardingRequest(BaseModel):
     has_completed_profile_onboarding: bool | None = None
     has_seen_first_rehearsal: bool | None = None
     referral_source: str | None = None
+    referral_detail: str | None = None
     last_seen_feature_id: str | None = None
 
 
@@ -239,6 +240,7 @@ def get_me(
             else None
         ),
         "referral_source": current_user.referral_source,
+        "referral_detail": current_user.referral_detail,
         "last_seen_feature_id": current_user.last_seen_feature_id,
         "is_moderator": current_user.is_moderator,
         "can_approve_submissions": current_user.can_approve_submissions,
@@ -301,6 +303,11 @@ def update_onboarding(
         # Trim and cap; empty string clears it.
         cleaned = body.referral_source.strip()[:280]
         current_user.referral_source = cleaned or None
+    if body.referral_detail is not None:
+        # Same rule as referral_source: trim, cap, empty string clears to null.
+        # Only the "other" tile sends this; an empty box on Continue is normal.
+        cleaned = body.referral_detail.strip()[:280]
+        current_user.referral_detail = cleaned or None
     if body.last_seen_feature_id is not None:
         # Empty string clears the value (used by admin "preview" reset).
         current_user.last_seen_feature_id = body.last_seen_feature_id or None
@@ -314,6 +321,7 @@ def update_onboarding(
         "has_completed_profile_onboarding": current_user.has_completed_profile_onboarding,
         "has_seen_first_rehearsal": current_user.has_seen_first_rehearsal,
         "referral_source": current_user.referral_source,
+        "referral_detail": current_user.referral_detail,
         "last_seen_feature_id": current_user.last_seen_feature_id,
     }
 
