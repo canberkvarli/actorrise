@@ -333,6 +333,10 @@ def main() -> None:
     parser.add_argument("--workers", type=int, default=12,
                         help="Concurrent segmentation API calls per page (the API is the "
                              "bottleneck; DB fetch/flush stay sequential). Default 12.")
+    parser.add_argument("--min-id", type=int, default=0,
+                        help="Resume: skip monologues with id <= this (keyset start). "
+                             "Use to continue an interrupted --force run without redoing "
+                             "the rows already processed.")
     args = parser.parse_args()
 
     target_ids: list[int] | None = None
@@ -421,7 +425,7 @@ def main() -> None:
 
         success = 0
         attempted = 0
-        last_id = 0
+        last_id = args.min_id  # resume point; 0 = from the start
         page_num = 0
         done = False
         pending_updates: list[tuple[int, list]] = []
