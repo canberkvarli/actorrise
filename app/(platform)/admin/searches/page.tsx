@@ -55,6 +55,8 @@ interface SearchesResponse {
     avg_best_cosine: number | null;
     by_match_strategy: { key: string; count: number }[];
     by_query_type: { key: string; count: number }[];
+    retry_events: number;
+    retry_users: number;
     top_queries: { query: string; count: number }[];
     top_zero_result_queries: { query: string; count: number }[];
   };
@@ -387,7 +389,7 @@ export default function AdminSearchesPage() {
       {/* Quality diagnostics — signals logged on every search, surfaced here.
           Gated on the new fields existing so an older backend can't crash the page. */}
       {summary && summary.by_match_strategy != null && (
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
           <Card>
             <CardContent className="p-4 pt-6">
               <p className="text-sm text-muted-foreground">Weak matches</p>
@@ -406,6 +408,17 @@ export default function AdminSearchesPage() {
                 {summary.avg_best_cosine != null ? summary.avg_best_cosine.toFixed(3) : "—"}
               </p>
               <p className="text-xs text-muted-foreground">cosine of the best hit</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4 pt-6">
+              <p className="text-sm text-muted-foreground">Retry loops</p>
+              <p className="text-2xl font-bold" style={{ color: (summary.retry_users ?? 0) > 0 ? "#CB4B00" : undefined }}>
+                {summary.retry_users ?? 0}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                users who retried a query 3+× in 30 min
+              </p>
             </CardContent>
           </Card>
           <Card>

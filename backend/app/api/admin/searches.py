@@ -11,7 +11,7 @@ from app.models.search_log import SearchLog
 from app.models.user import User
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, text as sa_text
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/admin", tags=["admin", "searches"])
@@ -62,6 +62,24 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
     by_match_strategy = _distribution(SearchLog.match_strategy)
     by_query_type = _distribution(SearchLog.query_type)
 
+    # Retry signal (H-13): the same normalised query issued 3+ times by one user
+    # inside a 30-min window — the strongest dissatisfaction indicator we have.
+    # search_logs has no session_id, so a 30-min epoch bucket stands in for a
+    # session. Raw SQL: the group-by-then-count-groups shape is awkward in ORM.
+    retry = db.execute(
+        sa_text(
+            "SELECT count(*) AS events, count(DISTINCT user_id) AS users FROM ("
+            "  SELECT user_id FROM search_logs"
+            "  WHERE created_at >= :start AND created_at < :end AND user_id IS NOT NULL"
+            "  GROUP BY user_id, lower(btrim(query)), floor(extract(epoch from created_at)/1800)"
+            "  HAVING count(*) >= 3"
+            ") r"
+        ),
+        {"start": start_dt, "end": end_dt},
+    ).fetchone()
+    retry_events = int(retry[0] or 0) if retry else 0
+    retry_users = int(retry[1] or 0) if retry else 0
+
     top_queries = (
         summary_base
         .with_entities(
@@ -96,6 +114,8 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
         "avg_best_cosine": round(float(avg_cosine), 3) if avg_cosine is not None else None,
         "by_match_strategy": by_match_strategy,
         "by_query_type": by_query_type,
+        "retry_events": retry_events,
+        "retry_users": retry_users,
         "top_queries": [{"query": q, "count": c} for q, c in top_queries],
         "top_zero_result_queries": [{"query": q, "count": c} for q, c in top_zero],
     }

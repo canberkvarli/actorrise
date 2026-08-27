@@ -1,3 +1,4 @@
 snapshot_date,total_users,signups_7d,signups_30d,returned_2plus_30d,cohort_30d,activated_30d,searches_7d,pct_weak_7d,avg_cosine_7d,favorites_total,favs_with_cut,favs_with_notes,favs_memorized,users_with_favorites,rehearsals_7d,pct_rehearsal_completed_30d,content_requests,fb_pos_30d,fb_neg_30d,monologues,scenes,user_scripts,paid_invoices,subs_active
 2026-08-20,515,48,197,20,197,171,114,36.0,0.404,105,2,2,8,36,7,18.4,2,0,2,13244,37,14,0,35
 2026-08-21,535,66,210,19,210,181,154,33.1,0.416,106,2,2,8,37,9,21.3,2,0,2,12435,37,14,0,35
+2026-08-27,641,128,289,27,289,251,260,38.1,0.416,117,2,2,8,47,11,31.7,10,0,2,14418,37,14,0,36

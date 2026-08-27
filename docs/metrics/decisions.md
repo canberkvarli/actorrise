@@ -8,6 +8,35 @@ instrumentation changes here even when they look harmless.
 
 Format: date, what changed, why, and which metric it should move.
 
+## 2026-08-27 — Character-name searches route to a lookup, not the vector path (H-07)
+
+The title pre-pass only matched `plays.title`, so a query naming a CHARACTER had
+nowhere to go and scored weak (a character's name rarely appears in their own
+dialogue). 27 of 91 weak vector searches (7d) had a direct catalogue match,
+dominated by character names: hamlet (67 pieces), joan clarke (4), anne frank
+(1). Added a character sibling to the pre-pass in `title_lookup.py`
+(`detect_catalogue_character` + `find_character_monologues`), same filter
+cascade/review gate/quality order, same precision guards (whole-query equality;
+multi-word names always eligible; single-word names need a >=5-piece body and
+must clear generic-role + ambiguous-descriptor lists). The endpoint runs both
+pre-passes and prefers whichever returns more pieces, so bare "hamlet" gets the
+character's 67, not the 1-shell title row. New `match_strategy` values
+`character_exact` / `character_exact_backfilled`. 9 tests, 601 pass. Commit
+4b8c6963. Should move: pct_weak_7d (38.1 -> down), and add a visible
+`character_exact` slice to the match_strategy mix. Watch: that the new mass is
+real character lookups, not thematic queries wrongly routed (the guards are
+tested against exactly that).
+
+## 2026-08-27 — Admin search diagnostics + retry signal instrumented (H-13)
+
+`/admin/searches` now surfaces the columns that were logged but never shown:
+weak-match rate, avg best_cosine, match_strategy and query_type distributions,
+per-row match signals, and a `retry_signal` (users who retried one normalised
+query 3+ times within 30 min — the strongest dissatisfaction indicator, per the
+2026-08-27 brief). No metric definition changed; this makes the existing
+`search_logs` columns auditable without re-running SQL. Ties H-13's rephrase-loop
+test to a live number.
+
 ## 2026-08-26 — Day-1 saved-piece reminder is now AUTOMATED (H-14)
 
 The re-engagement email now sends itself. An hourly in-process daemon thread in

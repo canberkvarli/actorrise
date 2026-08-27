@@ -50,6 +50,21 @@ title-lookup problem.** 15 of the 41 have no detectable title at all
 ("Serious topics", "dramedy", "crazy", "Kenny Omega") and 13 more are attribute
 searches. The next move on weak matches is not more title work.
 
+**2026-08-27 — the retrieval gap was CHARACTER names, and it was bigger than
+the title slice.** Brief re-count: 27 of 91 weak vector searches (7d) had a
+direct catalogue match, dominated by character names the title pre-pass could
+not see (it only matched `plays.title`): hamlet (67 pieces; the "Hamlet" play
+row is a 1-shell), joan clarke (4), anne frank (1), lila, barry, anastasia.
+13 distinct users hit this, several retyping the same string 3-5x before
+quitting. Fix shipped (commit 4b8c6963, decisions.md): a character sibling to
+the title pre-pass (`detect_catalogue_character` + `find_character_monologues`),
+same precision guards, new `match_strategy=character_exact`. This is the
+concrete retrieval move H-07 kept pointing at without naming. Watch pct_weak_7d
+(38.1 now) and the share of `match_strategy=character_exact` next pull.
+Disconfirms if character_exact volume is real but pct_weak does not fall below
+~30, which would move the remaining weak mass to attribute/multi-constraint
+NL queries (the growing `other` type) and off titles/characters entirely.
+
 ## H-08 The Aug 15 weak-match step is a query mix shift, not a threshold change
 
 Status: OPEN, evidence for (2026-08-20)
@@ -139,14 +154,77 @@ signature of this failure and should fall.
 Disconfirms if: the rephrase-loop rate does not drop, i.e. actors were rephrasing
 for reasons unrelated to being misled about coverage.
 
+**2026-08-27 — the retry loop is the clearest dissatisfaction signal in the data
+and it was not being measured.** The brief re-flagged it (its H4): 13 users
+retyped the same string 3-5x before quitting this week, driven by the
+character-name miss H-07 now fixes. Instrumented two ways: (1) a live
+`retry_signal` on the admin search diagnostics (`/admin/searches`) so it is
+watched, not just pulled; (2) the weekly-pull query below. search_logs has no
+session_id, so a "session" is approximated as the same normalised query by the
+same user inside a 30-minute window.
+
+```sql
+-- users who retried one normalised query 3+ times within 30 min, last 7 days
+with tagged as (
+  select user_id, lower(btrim(query)) q, created_at,
+         floor(extract(epoch from created_at)/1800) win
+  from search_logs
+  where created_at >= now() - interval '7 days' and user_id is not null
+)
+select count(*) retry_events,
+       count(distinct user_id) retry_users
+from (
+  select user_id, q, win from tagged
+  group by user_id, q, win having count(*) >= 3
+) r;
+```
+
+Cross-check after the character fix lands: retry_users should fall, and
+high-retry users' 7d return should be lower than the base rate (if it is not,
+retries are not the abandonment driver we think). Ties to H-14's return metric.
+
 ## H-10 activated_30d is not a meaningful metric
 
 Status: NEW, needs decision (2026-08-20)
 
 Evidence: 86.8 pct activation vs 10.2 pct 30d retention. The day-0-or-1 window
-catches nearly every signup, so the metric cannot discriminate.
+catches nearly every signup, so the metric cannot discriminate. 2026-08-27
+re-confirmed: activated_30d reads 251/289 (87%) because it counts any
+usage_metrics row on day 0 or 1, which is nearly free.
 
-Proposal: redefine activation as "ran >=1 search AND saved >=1 favorite within 7 days".
+Proposal (2026-08-20): redefine activation as "ran >=1 search AND saved >=1
+favorite within 7 days".
+
+**Decision (2026-08-27): adopt a two-tier definition, do not overwrite the
+column.** The old day-0/1 definition stays in metrics-history.csv as-is so the
+series is unbroken; a new column is added going forward rather than rewriting
+history.
+
+- `activated_search_30d` (search floor, matches the 2026-08-27 brief): in the
+  first 7 days after signup, ran >=1 search that returned a NON-weak result AND
+  opened >=1 monologue. This is "the product worked once."
+- `activated_save_30d` (value floor, the 2026-08-20 proposal): also saved >=1
+  favorite in the first 7 days. This is the retention-correlated behaviour from
+  H-14 (savers return 2.1x).
+
+SQL for the search floor (re-baseline over the current cohort before trusting a
+week-over-week move):
+
+```sql
+with cohort as (
+  select id uid, date(created_at) d0 from users
+  where created_at >= now() - interval '30 days'
+)
+select count(*) cohort,
+  count(*) filter (where uid in (
+    select s.user_id from search_logs s join cohort c on c.uid=s.user_id
+    where s.created_at < c.d0 + interval '7 days' and coalesce(s.weak_match,false)=false
+    intersect
+    select v.user_id from monologue_views v join cohort c on c.uid=v.user_id
+    where v.created_at < c.d0 + interval '7 days'
+  )) activated_search_30d
+from cohort;
+```
 
 ## H-11 The result_feedback widget may be broken or invisible
 
