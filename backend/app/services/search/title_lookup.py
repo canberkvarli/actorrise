@@ -508,6 +508,37 @@ _catalogue_squashed_cache: Dict[str, tuple] = {}
 _catalogue_numeric_cache: Dict[str, tuple] = {}
 _catalogue_loaded_at: float = 0.0
 
+# Character-name lookup, sibling to the title catalogue. Naming a CHARACTER is
+# also a lookup, not a similarity question: "hamlet" (67 pieces), "joan clarke"
+# (4), "anne frank" (1) all sat in the library and came back weak on the vector
+# path because a character's name rarely appears in their own dialogue
+# (2026-08-27 brief: 27 of 91 weak searches had a direct catalogue match, and
+# the misses were dominated by character names the title path can't see).
+# normalised name -> (tuple of raw character_name variants, total monologue count)
+_character_cache: Optional[Dict[str, tuple]] = None
+_character_loaded_at: float = 0.0
+
+# A single-word character name only routes to the character path if it has at
+# least this many pieces — a real recurring character (Hamlet, Medea), not a
+# one-off first name that would hijack a thematic search.
+_MIN_CHAR_SINGLE_WORD_MONOS = 5
+
+# Generic role labels that are character_name values but are NOT what an actor
+# means when they type them — "man", "woman", "mother" is an attribute search,
+# not a request for the pieces of a character literally named Man. A name whose
+# every token is generic stands down and lets the vector path serve it.
+_GENERIC_ROLE_WORDS = frozenset({
+    "man", "woman", "girl", "boy", "guy", "lady", "kid", "child", "baby",
+    "narrator", "chorus", "ensemble", "voice", "voiceover", "announcer",
+    "mother", "father", "mom", "dad", "mum", "son", "daughter", "sister",
+    "brother", "wife", "husband", "aunt", "uncle", "grandmother", "grandfather",
+    "doctor", "nurse", "servant", "maid", "butler", "guard", "soldier",
+    "messenger", "king", "queen", "prince", "princess", "waiter", "waitress",
+    "teacher", "student", "boss", "manager", "cop", "officer", "priest",
+    "stranger", "friend", "neighbor", "neighbour", "young", "old", "first",
+    "second", "third", "male", "female", "person", "people", "he", "she", "they",
+})
+
 
 def _load_catalogue(db) -> Dict[str, tuple]:
     """normalised title -> (title, source_type), for plays that have monologues.
@@ -572,13 +603,187 @@ def _load_catalogue(db) -> Dict[str, tuple]:
 
 
 def reset_catalogue_cache() -> None:
-    """Drop the cached title list (tests, and after an ingest run)."""
+    """Drop the cached title + character lists (tests, and after an ingest run)."""
     global _catalogue_cache, _catalogue_squashed_cache, _catalogue_numeric_cache
-    global _catalogue_loaded_at
+    global _catalogue_loaded_at, _character_cache, _character_loaded_at
     _catalogue_cache = None
     _catalogue_squashed_cache = {}
     _catalogue_numeric_cache = {}
     _catalogue_loaded_at = 0.0
+    _character_cache = None
+    _character_loaded_at = 0.0
+
+
+def _normalise_name(value: str) -> str:
+    """Lowercase, strip punctuation, collapse whitespace. Unlike _normalise_title
+    this does NOT drop a leading article — names don't carry one, and dropping it
+    would fold "A. J." oddly. Kept deliberately simple."""
+    v = re.sub(r"[^\w\s]", " ", (value or "").lower())
+    return re.sub(r"\s+", " ", v).strip()
+
+
+def _is_generic_name(norm: str) -> bool:
+    """True when every token is a generic role word, so the name is really an
+    attribute ("young woman", "old man") rather than a specific character."""
+    toks = norm.split()
+    return bool(toks) and all(t in _GENERIC_ROLE_WORDS for t in toks)
+
+
+def _load_character_catalogue(db) -> Dict[str, tuple]:
+    """normalised character name -> (raw variants tuple, total monologue count).
+
+    Grouped by the raw stored value so retrieval can hit the
+    ix_monologues_character_name btree with an IN list instead of a functional
+    scan. Cached like the title catalogue: rebuilt only when an ingest runs.
+    """
+    global _character_cache, _character_loaded_at
+    now = time.time()
+    if _character_cache is not None and now - _character_loaded_at < _CATALOGUE_TTL_SECONDS:
+        return _character_cache
+    from sqlalchemy import text as sa_text
+
+    rows = db.execute(
+        sa_text(
+            "SELECT character_name, count(*) FROM monologues "
+            "WHERE character_name IS NOT NULL AND length(trim(character_name)) >= 3 "
+            "GROUP BY character_name"
+        )
+    ).fetchall()
+    cat: Dict[str, tuple] = {}
+    for raw, cnt in rows:
+        n = _normalise_name(raw)
+        if len(n) < _MIN_TITLE_CHARS:
+            continue
+        variants, total = cat.get(n, ((), 0))
+        cat[n] = (variants + (raw,), total + int(cnt))
+    _character_cache = cat
+    _character_loaded_at = now
+    return cat
+
+
+def detect_catalogue_character(db, query: str) -> Optional[Dict[str, object]]:
+    """Return {"character", "names": [...]} when the whole query names a catalogue
+    character. Conservative on purpose, mirroring the title path:
+
+    - the trimmed query must EQUAL a character name, not merely contain one
+      (so "hamlet" hits, but "a monologue about hamlet's grief" does not);
+    - multi-word full names ("joan clarke") are always eligible — they are
+      inherently a lookup;
+    - a single-word name must be distinctive: not a generic role word, not one of
+      the ambiguous descriptor words, and carried on enough pieces to be a real
+      recurring character (>= _MIN_CHAR_SINGLE_WORD_MONOS).
+
+    Never raises: a failed load degrades to "no character detected".
+    """
+    if db is None or not query:
+        return None
+    nq = _normalise_name(query)
+    if len(nq) < _MIN_TITLE_CHARS:
+        return None
+    try:
+        cat = _load_character_catalogue(db)
+    except Exception:
+        return None
+
+    stripped = " ".join(w for w in nq.split() if w not in _TITLE_FILLER).strip()
+    for cand in (nq, stripped):
+        if not cand:
+            continue
+        entry = cat.get(cand)
+        if entry is None:
+            continue
+        if _is_generic_name(cand):
+            continue
+        variants, count = entry
+        toks = cand.split()
+        if len(toks) == 1:
+            if cand in _AMBIGUOUS_SINGLE_WORD_TITLES:
+                continue
+            if count < _MIN_CHAR_SINGLE_WORD_MONOS:
+                continue
+        return {"character": cand, "names": list(variants)}
+    return None
+
+
+def find_character_monologues(db, names: list, filters: Optional[dict] = None,
+                              limit: int = 20) -> list:
+    """Monologues whose character is `names` (the raw variants of one normalised
+    name), best-first. The character sibling of find_title_monologues: same
+    filter cascade, same review gate, same quality ordering. Empty on anything
+    it cannot honour, so the caller falls through to the vector path unbroken.
+    """
+    if db is None or not names:
+        return []
+    filters = filters or {}
+    # Reuse the title guard's filter-support check (the ambiguous-single-word
+    # arm keys off the title text and is a no-op here).
+    if any(k not in _PREPASS_SUPPORTED_FILTERS for k in filters):
+        return []
+
+    from sqlalchemy import or_ as sa_or
+    from sqlalchemy.orm import joinedload, undefer
+
+    from app.models.actor import Monologue, Play
+    from app.services.search.semantic_search import (_age_hard_values,
+                                                     review_hides_from_search)
+
+    try:
+        q = (
+            db.query(Monologue)
+            .options(joinedload(Monologue.play), undefer(Monologue.review_status))
+            .filter(Monologue.character_name.in_(names))
+        )
+
+        source_type = filters.get("source_type")
+        if source_type:
+            st = source_type if isinstance(source_type, list) else [source_type]
+            st = [s for s in st if s]
+            if st:
+                q = q.join(Play).filter(
+                    func_coalesce_source_type(Play).in_(st)
+                )
+        if filters.get("gender"):
+            q = q.filter(
+                Monologue.character_gender.in_([filters["gender"], "any", "either gender"])
+            )
+        if filters.get("age_range"):
+            q = q.filter(
+                Monologue.character_age_range.in_(_age_hard_values(filters["age_range"]))
+            )
+        if filters.get("emotion"):
+            q = q.filter(Monologue.primary_emotion == filters["emotion"])
+        if filters.get("tone"):
+            q = q.filter(Monologue.tone == filters["tone"])
+        if filters.get("difficulty"):
+            q = q.filter(Monologue.difficulty_level == filters["difficulty"])
+        if filters.get("max_duration"):
+            q = q.filter(Monologue.estimated_duration_seconds <= filters["max_duration"])
+        if filters.get("min_duration"):
+            q = q.filter(Monologue.estimated_duration_seconds >= filters["min_duration"])
+        if filters.get("act"):
+            q = q.filter(Monologue.act == filters["act"])
+        if filters.get("scene"):
+            q = q.filter(Monologue.scene == filters["scene"])
+        if filters.get("max_overdone_score") is not None:
+            threshold = float(filters["max_overdone_score"])
+            q = q.filter(
+                sa_or(Monologue.overdone_score.is_(None), Monologue.overdone_score <= threshold)
+            )
+        rows = q.all()
+    except Exception:
+        return []
+
+    keep = [m for m in rows if not review_hides_from_search(m.review_status)]
+    keep.sort(
+        key=lambda m: (-(m.quality_score if m.quality_score is not None else -1.0), m.id)
+    )
+    return keep[:limit]
+
+
+def func_coalesce_source_type(play_model):
+    """COALESCE(Play.source_type, 'play') as a SQLAlchemy expression."""
+    from sqlalchemy import func
+    return func.coalesce(play_model.source_type, "play")
 
 
 def detect_catalogue_title(db, query: str) -> Optional[Dict[str, str]]:
