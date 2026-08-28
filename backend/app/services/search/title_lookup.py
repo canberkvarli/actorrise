@@ -93,6 +93,29 @@ KNOWN_TITLES: Dict[str, str] = {
     "Radium Girls": "play",
     "The Crucible": "play",
     "Our Town": "play",
+    # 20th-century American straight-play canon. Actors audition from these
+    # constantly, but they are all post-1928 and copyrighted, so a public-domain
+    # corpus holds nothing of them. Being in this dictionary is what lets
+    # compute_content_gap answer "I don't carry Death of a Salesman yet" instead
+    # of returning 20 unrelated pieces at a middling cosine — the exact confident
+    # -wrong failure (H-13) that "death of a salesman" hit (it also mis-classified
+    # as an occupation search, since "salesman" is a job). Multi-word only: a
+    # single-word title here ("Doubt", "Fences", "Proof") would hijack ordinary
+    # searches, and the ones we DO carry already route through the catalogue.
+    # _resolve re-checks the catalogue, so a title we later add still reports
+    # available_in rather than a false gap.
+    "Death of a Salesman": "play",
+    "A Raisin in the Sun": "play",
+    "Long Day's Journey Into Night": "play",
+    "Who's Afraid of Virginia Woolf": "play",
+    "Angels in America": "play",
+    "True West": "play",
+    "The Zoo Story": "play",
+    "'night, Mother": "play",
+    "A Streetcar Named Desire": "play",
+    "The Glass Menagerie": "play",
+    "Cat on a Hot Tin Roof": "play",
+    "August: Osage County": "play",
 }
 
 # Phrases that imply a title without naming it verbatim (characters, alt names).
@@ -131,7 +154,12 @@ _SAFE_SINGLE_WORDS = {
 
 
 def _normalize(text: str) -> str:
-    text = re.sub(r"[^a-z0-9\s]", " ", text.lower())
+    # Collapse apostrophes rather than splitting on them, so a contraction folds
+    # to one token the way people type it: "Long Day's Journey" and "long days
+    # journey" both become "long days journey", and "Who's" == "whos". Applied to
+    # query and title alike, so both sides always agree.
+    text = text.lower().replace("'", "").replace("’", "")
+    text = re.sub(r"[^a-z0-9\s]", " ", text)
     return re.sub(r"\s+", " ", text).strip()
 
 

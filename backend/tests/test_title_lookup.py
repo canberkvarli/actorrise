@@ -61,6 +61,31 @@ class DetectTitleLookupTests(unittest.TestCase):
             "Clue",
         )
 
+    def test_american_canon_plays_recognized(self):
+        # Copyrighted straight plays a public-domain corpus can't hold. Being
+        # recognized is what lets the search answer "not carried" instead of 20
+        # unrelated pieces (H-13, the "death of a salesman" case).
+        self.assertEqual(self._title("death of a salesman"), "Death of a Salesman")
+        self.assertEqual(self._title("a raisin in the sun"), "A Raisin in the Sun")
+        self.assertEqual(self._title("true west monologue"), "True West")
+
+    def test_apostrophe_typed_either_way(self):
+        # _normalize collapses apostrophes, so a contraction folds to one token
+        # the same on both sides however the actor types it.
+        for q in ["long day's journey into night", "long days journey into night"]:
+            self.assertEqual(self._title(q), "Long Day's Journey Into Night", q)
+        self.assertEqual(
+            self._title("whos afraid of virginia woolf"), "Who's Afraid of Virginia Woolf"
+        )
+
+    def test_canon_titles_do_not_hijack_attribute_searches(self):
+        for q in [
+            "dramatic monologue about a salesman",
+            "death of a loved one",
+            "my true feelings",
+        ]:
+            self.assertIsNone(detect_title_lookup(q), q)
+
     def test_long_audition_sentence(self):
         self.assertEqual(
             self._title(
