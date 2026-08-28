@@ -33,6 +33,27 @@ matches are test typing and inflate pct_weak.
 Moves: paid_invoices (0 -> real, ~2 lifetime payers), pct_weak_7d (down once junk
 is filtered), and adds activated_search/save columns.
 
+## 2026-08-28 — Shipped: fuzzy title matching, feedback impressions, canon-play gaps
+
+All deployed to prod (main) same day. Expect these to move next pull:
+
+- **Fuzzy/partial/reordered/typo title matching** (990efd96). detect_catalogue_title
+  gained a guarded in-memory fuzzy stage (prefix, whole-title reorder, contiguous
+  fragment, single-typo) returning the canonical stored title, plus a static
+  abbreviation map (tfios, lotr, ...). monologues.py now prefers the real-catalogue
+  match over the curated dict. Recovers title-shaped weak matches that exist
+  (sweeney todd, corey taylor, tfios). Should lower pct_weak_7d and raise the
+  match_strategy=title_exact share.
+- **Feedback impression logging** (ab67e8ab). New feedback_impressions table +
+  POST /api/feedback/impression; the admin feedback summary now reports
+  impressions_30d / votes_30d / response_rate_30d. Makes H-11 (visibility vs
+  indifference) finally measurable — watch response_rate_30d.
+- **Canon-play content gaps** (7210ef1e). Added the copyrighted 20th-c American
+  straight-play canon (Death of a Salesman, Raisin, Long Day's Journey, Virginia
+  Woolf, True West, ...) to KNOWN_TITLES so an uncarried one reports an honest gap
+  + request CTA instead of 20 unrelated pieces (H-13). Should raise content_requests
+  for these and cut confident-wrong results. _normalize now collapses apostrophes.
+
 ## 2026-08-28 — Title-lookup hand-check: weak matches are ~half retrieval, ~half content (H-07, H-15)
 
 Ran the brief's gating test before building: hand-checked the 16 most recent
