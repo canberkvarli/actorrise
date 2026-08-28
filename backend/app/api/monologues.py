@@ -432,11 +432,14 @@ async def search_monologues(
             # monologue text because a show's name rarely appears in its own
             # dialogue. 13 of 41 weak matches in the week to 2026-08-20 were
             # searches for shows the library already held (H-07).
-            # The curated dictionary is checked first, then real plays.title
-            # values: the dictionary is small and missed titles the library
-            # genuinely holds ("queen's gambit" ranked Hamlet above the five
-            # Queen's Gambit pieces it had all along).
-            title_hit = detect_title_lookup(search_q) or detect_catalogue_title(db, search_q)
+            # Real plays.title values are checked FIRST, then the curated
+            # dictionary. The catalogue match returns the CANONICAL stored title
+            # (and only ever a title we carry), which retrieves cleanly; the
+            # curated dict holds a short label ("Sweeney Todd") that would fail
+            # find_title_monologues against the stored "Sweeney Todd: The Demon
+            # Barber of Fleet Street", so it belongs after, as the fallback that
+            # names uncarried titles for the content-gap banner (Beetlejuice).
+            title_hit = detect_catalogue_title(db, search_q) or detect_title_lookup(search_q)
             # find_title_monologues decides for itself whether it can honour
             # the active filters, and returns nothing when it cannot.
             title_rows: list[Monologue] = []

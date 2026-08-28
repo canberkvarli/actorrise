@@ -17,6 +17,7 @@ resolution, shared by the search endpoint and scripts/run_golden_search.py.
 
 from __future__ import annotations
 
+import difflib
 import re
 import time
 from typing import Dict, Iterable, Optional
@@ -786,6 +787,107 @@ def func_coalesce_source_type(play_model):
     return func.coalesce(play_model.source_type, "play")
 
 
+# Abbreviations and acronyms actors type instead of the full title. This is the
+# "let AI understand it" layer, done as a static map on purpose: an LLM call on
+# the hot path of every title search costs money and ~1s of latency (the exact
+# OpenAI/egress cost we spend the rest of search avoiding), and the moment an
+# abbreviation is known once it never needs re-deriving. Keyed and valued in the
+# _normalise_title space (lowercase, no punctuation, no leading article). Only
+# TITLE abbreviations belong here — a person's initials ("srk") is an
+# actor/character lookup, not a title, and would never resolve on this path.
+# When an entry's expansion is a title we do NOT carry, expanding still helps:
+# it routes the query to an honest content-gap answer faster than the vector
+# tail would. Extend freely as new abbreviations show up in the weak-match logs.
+_TITLE_ALIASES: Dict[str, str] = {
+    "tfios": "the fault in our stars",
+    "lotr": "the lord of the rings",
+    "hsm": "high school musical",
+    "himym": "how i met your mother",
+    "gwtw": "gone with the wind",
+    "rhps": "the rocky horror picture show",
+    "ftw": "freedom writers",
+    "ddlj": "dilwale dulhania le jayenge",
+    "k3g": "kabhi khushi kabhie gham",
+}
+
+
+def _expand_title_alias(nq: str) -> str:
+    """Expand a whole-query abbreviation to its full title, else return nq.
+
+    Only the entire normalised query is matched against the alias table — an
+    abbreviation buried inside a longer phrase is left alone, so this can never
+    quietly rewrite an ordinary search that happens to contain "hsm".
+    """
+    return _TITLE_ALIASES.get(nq, nq)
+
+
+# A fuzzy match must clear this token-level similarity to be trusted for a typo.
+# High on purpose: this branch runs only after every exact form has failed, and
+# a loose threshold here is how an attribute search gets hijacked by a title.
+_FUZZY_TYPO_RATIO = 0.9
+
+# The shortest normalised query the fuzzy branch will touch. Below this, partial
+# and typo matching is too collision-prone to be worth the false promotes.
+_MIN_FUZZY_CHARS = 6
+
+
+def _fuzzy_catalogue_match(nq: str, catalogue: Dict[str, tuple]) -> Optional[Dict[str, str]]:
+    """Partial / reordered / single-typo match over the in-memory catalogue.
+
+    The exact, squashed, numeric and phrase stages all match a title the actor
+    typed *whole and in order*. The remaining weak-match class is titles typed
+    as a PREFIX or FRAGMENT of a longer stored title ("sweeney todd" for
+    "Sweeney Todd: The Demon Barber of Fleet Street") or with the words REORDERED
+    ("corey taylor finding" for "Finding Corey Taylor"). find_title_monologues
+    matches the stored title exactly, so the value of this branch is that it
+    returns the CANONICAL stored title, which then retrieves cleanly.
+
+    Ground-truth only: every candidate is a real catalogue key, so a hit is
+    always a title we carry. Heavily guarded — multi-word queries only, a length
+    floor, and every tier requires exactly ONE distinct title to qualify, so an
+    ambiguous fragment stands down to the vector path rather than guessing.
+    """
+    q_tokens = [t for t in nq.split() if t not in _TITLE_FILLER]
+    # Single words are far too collision-prone here ("Big", "It", "Up" are real
+    # one-word titles); leave them to the exact stages and the phrase guard.
+    if len(q_tokens) < 2:
+        return None
+    q_norm = " ".join(q_tokens)
+    if len(q_norm) < _MIN_FUZZY_CHARS:
+        return None
+    q_set = set(q_tokens)
+
+    prefix_hits: list = []    # stored title starts with the typed phrase
+    reorder_hits: list = []   # same set of words, any order (whole title)
+    contig_hits: list = []    # typed phrase is a contiguous run inside the title
+    typo_hits: list = []      # same token count, one/two letters off
+    for key, (title, medium) in catalogue.items():
+        if key == q_norm:
+            continue                       # exact form handled upstream
+        k_tokens = key.split()
+        if key.startswith(q_norm + " "):
+            prefix_hits.append((title, medium))
+            continue
+        if len(k_tokens) == len(q_tokens):
+            if set(k_tokens) == q_set:
+                reorder_hits.append((title, medium))
+                continue
+            if difflib.SequenceMatcher(None, q_norm, key).ratio() >= _FUZZY_TYPO_RATIO:
+                typo_hits.append((title, medium))
+                continue
+        if q_set <= set(k_tokens) and f" {q_norm} " in f" {key} ":
+            contig_hits.append((title, medium))
+
+    # Strongest evidence first. A tier only fires when a single distinct title
+    # qualifies; two different titles matching equally well is ambiguous and
+    # must not be resolved by arbitrary dict order.
+    for hits in (reorder_hits, prefix_hits, typo_hits, contig_hits):
+        if hits and len({h[0] for h in hits}) == 1:
+            title, medium = hits[0]
+            return {"title": title, "medium": medium}
+    return None
+
+
 def detect_catalogue_title(db, query: str) -> Optional[Dict[str, str]]:
     """Return {"title", "medium"} when the query names a title we actually carry.
 
@@ -802,6 +904,9 @@ def detect_catalogue_title(db, query: str) -> Optional[Dict[str, str]]:
     nq = _normalise_title(query)
     if len(nq) < _MIN_TITLE_CHARS:
         return None
+    # Expand a known abbreviation ("tfios" -> "the fault in our stars") before
+    # any matching, then re-normalise so the leading article is dropped again.
+    nq = _normalise_title(_expand_title_alias(nq))
     try:
         catalogue = _load_catalogue(db)
     except Exception:
@@ -845,6 +950,14 @@ def detect_catalogue_title(db, query: str) -> Optional[Dict[str, str]]:
     if best_norm:
         title, medium = catalogue[best_norm]
         return {"title": title, "medium": medium}
+
+    # Last resort: partial / reordered / single-typo match, which resolves to the
+    # canonical stored title so find_title_monologues can match it exactly. Run
+    # against the filler-stripped form too ("sweeney todd monologue").
+    for candidate in (nq, stripped):
+        hit = _fuzzy_catalogue_match(candidate, catalogue)
+        if hit:
+            return hit
     return None
 
 

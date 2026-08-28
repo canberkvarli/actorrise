@@ -129,6 +129,79 @@ class TestEmptyShellDoesNotSuppressTheGap:
         assert self._gap(monkeypatch, ["film"]) is None
 
 
+# Library for the fuzzy/alias tests: titles typed as a prefix, a reorder, or a
+# typo of a longer stored title — the class detect_catalogue_title missed until
+# _fuzzy_catalogue_match. Kept separate from LIBRARY so the guard tests above
+# keep their exact fixture.
+FUZZY_LIBRARY = [
+    ("Sweeney Todd: The Demon Barber of Fleet Street", "film"),
+    ("Finding Corey Taylor", "play"),
+    ("Hannah Montana", "tv"),
+    ("The Fault in Our Stars", "film"),
+    # Two titles that share a two-word prefix, to prove an ambiguous fragment
+    # stands down instead of guessing one.
+    ("High School Musical", "musical"),
+    ("High School Reunion", "tv"),
+]
+
+
+class TestFuzzyPartialAndReorder:
+    @pytest.fixture
+    def db(self):
+        return FakeDB(FUZZY_LIBRARY)
+
+    def test_prefix_of_a_long_title_resolves_to_the_canonical_title(self, db):
+        # "sweeney todd" is a prefix of the stored title; it must return the FULL
+        # stored form so find_title_monologues can match it exactly.
+        hit = detect_catalogue_title(db, "sweeney todd")
+        assert hit["title"] == "Sweeney Todd: The Demon Barber of Fleet Street"
+
+    def test_prefix_with_filler_word(self, db):
+        hit = detect_catalogue_title(db, "sweeney todd monologue")
+        assert hit["title"] == "Sweeney Todd: The Demon Barber of Fleet Street"
+
+    def test_reordered_words_match_the_whole_title(self, db):
+        assert detect_catalogue_title(db, "corey taylor finding")["title"] == "Finding Corey Taylor"
+
+    def test_contiguous_fragment_inside_a_title(self, db):
+        assert detect_catalogue_title(db, "corey taylor")["title"] == "Finding Corey Taylor"
+
+    def test_single_letter_typo_still_matches(self, db):
+        assert detect_catalogue_title(db, "hannah montanna")["title"] == "Hannah Montana"
+
+    def test_ambiguous_prefix_stands_down(self, db):
+        # "high school" prefixes two different titles; guessing one would be
+        # worse than falling through to the vector path.
+        assert detect_catalogue_title(db, "high school") is None
+
+    def test_single_word_never_fuzzy_matches(self, db):
+        # A lone word must not partial-match a longer title ("todd" -> Sweeney).
+        assert detect_catalogue_title(db, "todd") is None
+
+    def test_attribute_query_not_hijacked_by_fuzzy(self, db):
+        for q in ["dramatic teen monologue", "funny two minute monologue"]:
+            assert detect_catalogue_title(db, q) is None, q
+
+
+class TestAliasExpansion:
+    @pytest.fixture
+    def db(self):
+        return FakeDB(FUZZY_LIBRARY)
+
+    def test_known_abbreviation_expands_and_resolves(self, db):
+        # "tfios" -> "the fault in our stars" -> stored "The Fault in Our Stars".
+        assert detect_catalogue_title(db, "tfios")["title"] == "The Fault in Our Stars"
+
+    def test_uncarried_abbreviation_still_returns_none(self, db):
+        # "ddlj" expands to a title we do not carry: silence, so the content-gap
+        # path can report it honestly.
+        assert detect_catalogue_title(db, "ddlj") is None
+
+    def test_abbreviation_inside_a_phrase_is_left_alone(self, db):
+        # Only a whole-query abbreviation expands; "hsm energy" is not HSM.
+        assert detect_catalogue_title(db, "hsm energy monologue") is None
+
+
 class TestSafety:
     def test_no_db_returns_none(self):
         assert detect_catalogue_title(None, "hamlet") is None
