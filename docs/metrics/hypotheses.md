@@ -65,6 +65,59 @@ Disconfirms if character_exact volume is real but pct_weak does not fall below
 ~30, which would move the remaining weak mass to attribute/multi-constraint
 NL queries (the growing `other` type) and off titles/characters entirely.
 
+**2026-08-28 hand-check — the split is roughly even, and both halves are now
+named.** Took the 16 most recent proper-noun (title/character/author-shaped)
+weak queries and checked by hand whether the piece exists in the 14,418-row
+catalogue (ILIKE across `monologues.title`, `character_name`, `plays.title`,
+`plays.author`, then verified the "exists" hits were real, not substring noise):
+
+- **Retrieval bugs (piece EXISTS, search failed) — ~5:** `sing street`
+  (=Sing Street), `sweeney todd` (=Sweeney Todd: The Demon Barber of Fleet
+  Street), `hannah montana` (=Hannah Montana), `corey taylor finding`
+  (=Finding Corey Taylor), `bane`. These are lexical/partial-title failures the
+  vector path mishandles. Root cause found: the title catalogue matches on
+  **full normalised-title equality** (plus squashed/numeric variants), so a user
+  who types a PREFIX or reordered fragment of a long title ("sweeney todd" for
+  the full "…Demon Barber…", "corey taylor finding" for "Finding Corey Taylor")
+  never matches. This is exactly what brief-task-4 (pg_trgm partial/trigram
+  lexical pre-search) fixes.
+- **Catalog gaps (piece ABSENT, no search change helps) — ~10:** and they
+  cluster, which is the real content signal: (a) a **South Asian / Bollywood
+  cluster** — ddlj, dilwale dulhania le jayenge, veer zaara, dil se, shah rukh
+  khan, srk — ALL zero supply, appearing together (see H-15); (b) **contemporary
+  copyrighted playwrights** — Del Shores ("yellow del shores"), Christopher
+  Durang — not in a public-domain-anchored corpus; (c) recent screen the corpus
+  never carried — the Netflix show "Adolescence" (only unrelated "Big Time
+  Adolescence" is present), "mia dolan" (La La Land), "bad habits".
+
+Verdict for the brief's gating question ("search vs content for the next two
+weeks"): **both, and separable.** Ship the pg_trgm lexical pre-search — it is a
+confirmed fix for ~1/3 of proper-noun weak matches — but do NOT expect it to
+move the Bollywood or copyrighted-playwright clusters; those are H-15 content
+decisions, and the honest response there is H-13 ("we don't carry this"), not a
+weak vector tail.
+
+## H-15 There is an unmet South Asian / Bollywood content demand
+
+Status: NEW, needs decision (2026-08-28)
+
+Evidence: in one week of weak matches, ddlj, dilwale dulhania le jayenge, veer
+zaara, dil se, shah rukh khan, and srk all appear and all return ZERO catalogue
+matches (2026-08-28 hand-check, H-07). They co-occur, which suggests either one
+determined actor or an audience segment the corpus (public-domain Western plays +
+English-language film/TV) does not serve at all. Separately "in hindi" was
+searched as a bare language filter.
+
+Why it matters: this is the one weak-match cluster that is a clean, nameable
+content gap with zero supply, not a retrieval artifact. If it is an audience
+Canberk wants (South Asian actors are a large, underserved slice of the
+English-language audition market), it is a content-sourcing call, not a code one.
+
+Test / next step: classify the trailing 200 weak queries for a South-Asian
+signal (Hindi/Bollywood titles, Devanagari, named Bollywood actors) and count
+distinct users. Disconfirms if it is <3 distinct users over 30 days — then it is
+one persistent searcher, not a segment, and not worth sourcing for.
+
 ## H-08 The Aug 15 weak-match step is a query mix shift, not a threshold change
 
 Status: OPEN, evidence for (2026-08-20)

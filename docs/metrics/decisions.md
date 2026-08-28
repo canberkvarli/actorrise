@@ -8,6 +8,48 @@ instrumentation changes here even when they look harmless.
 
 Format: date, what changed, why, and which metric it should move.
 
+## 2026-08-28 — Two snapshot-query measurement bugs corrected (paid_invoices, activation)
+
+The 2026-08-28 brief flagged two metrics measuring the wrong thing. Neither is a
+bug in the app — both live in the analytics agent's snapshot SQL, so the fix is
+here, as guidance for the next pull. Confirmed against prod before writing:
+
+- **paid_invoices must filter `billing_history.status = 'succeeded'`, not
+  `'paid'`.** All 70 billing_history rows are `succeeded`; zero are `paid`. The
+  old filter returns 0 forever, which is why every historical `paid_invoices`
+  column reads 0 — do NOT trust that column as a trend line. (Cross-checked the
+  app: `grep` found no code path filtering `status='paid'`; the admin dashboard
+  reads Stripe directly via `stripe_revenue.py` and splits paid/comped by
+  `stripe_subscription_id`, so the dashboard was never affected — only the CSV.)
+- **activated_30d is not an activation metric.** It counts any usage_metrics row
+  on signup day or day+1 and fires for 86% of signups (265/309). Superseded by
+  the two-tier definition in H-10 (`activated_search_30d` /
+  `activated_save_30d`); the old column stays in the CSV unbroken but is not read.
+
+Also excluded from the weak-match rate going forward (brief task 3): queries
+shorter than 3 chars or with no vowel (xx, zx, fdghdr) — ~20% of current weak
+matches are test typing and inflate pct_weak.
+
+Moves: paid_invoices (0 -> real, ~2 lifetime payers), pct_weak_7d (down once junk
+is filtered), and adds activated_search/save columns.
+
+## 2026-08-28 — Title-lookup hand-check: weak matches are ~half retrieval, ~half content (H-07, H-15)
+
+Ran the brief's gating test before building: hand-checked the 16 most recent
+proper-noun weak queries against the catalogue. ~5 EXIST and failed on retrieval
+(sing street, sweeney todd, hannah montana, finding corey taylor, bane) because
+the title catalogue only matches full-title equality, missing prefixes/fragments;
+~10 are genuine content gaps clustering into Bollywood/South Asian (H-15) and
+copyrighted contemporary playwrights. Decision: build the pg_trgm lexical
+pre-search (fixes the retrieval half); route the content half to an honest "not
+carried" response (H-13), not a weak vector tail. Full detail in hypotheses.md
+H-07 (2026-08-28) and H-15.
+
+Note on the signup doubling (~8/19 onward, 74 -> 120 wk/wk): cause still
+unattributed. If a specific post or outreach push drove it, record it here so
+future weak-match and retention reads can separate a real trend from a one-off
+acquisition spike.
+
 ## 2026-08-27 — Character-name searches route to a lookup, not the vector path (H-07)
 
 The title pre-pass only matched `plays.title`, so a query naming a CHARACTER had
