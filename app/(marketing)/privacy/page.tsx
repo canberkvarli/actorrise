@@ -33,14 +33,14 @@ export default function PrivacyPage() {
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-3xl">
       <p className="text-sm text-muted-foreground mb-10">
-        Last updated: February 2025
+        Last updated: August 2026
       </p>
 
       <div className="space-y-8 text-muted-foreground">
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">1. Introduction</h2>
           <p>
-            ActorRise (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) operates the website and platform at actorrise.com (the &quot;Service&quot;). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Service. By accessing or using the Service, you agree to this Privacy Policy. If you do not agree, please do not use the Service.
+            ActorRise (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) operates the website and platform at actorrise.com and our mobile applications, including Ghost Light: Monologues for iOS (together, the &quot;Service&quot;). This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our Service. By accessing or using the Service, you agree to this Privacy Policy. If you do not agree, please do not use the Service.
           </p>
         </section>
 
@@ -52,7 +52,7 @@ export default function PrivacyPage() {
             <li><strong className="text-foreground">Profile information:</strong> You may choose to provide name, age range, gender, ethnicity, height, build, location, experience level, actor type, training background, union status, preferred genres, and similar details to personalize recommendations and features.</li>
             <li><strong className="text-foreground">Headshot and images:</strong> If you upload a headshot or other images, we store and process them to provide the Service (e.g., display on your profile).</li>
             <li><strong className="text-foreground">Usage and preferences:</strong> We collect data about how you use the Service (e.g., searches, bookmarks, feature usage) to operate, improve, and personalize the Service.</li>
-            <li><strong className="text-foreground">Payment information:</strong> If you subscribe to a paid plan, payment is processed by our payment provider (e.g., Stripe). We do not store your full card number; we receive and store only what is necessary for billing and support (e.g., last four digits, billing email).</li>
+            <li><strong className="text-foreground">Payment information:</strong> If you subscribe on the web, payment is processed by our payment provider (e.g., Stripe). If you subscribe inside our iOS app, payment is processed by Apple through in-app purchase. In neither case do we store your full card number; we receive and store only what is necessary for billing and support (e.g., last four digits or a receipt identifier, and billing email).</li>
             <li><strong className="text-foreground">Technical and device data:</strong> We may collect IP address, browser type, device type, and similar technical data for security, fraud prevention, and analytics.</li>
           </ul>
         </section>
@@ -86,7 +86,8 @@ export default function PrivacyPage() {
           <ul className="list-disc pl-6 space-y-2">
             <li><strong className="text-foreground">Authentication and storage:</strong> Supabase (auth and cloud storage). Their privacy practices apply to data they process.</li>
             <li><strong className="text-foreground">Sign-in providers:</strong> If you sign in with Google or Apple, those providers share with us the information you consent to (e.g., email, name) in accordance with their policies.</li>
-            <li><strong className="text-foreground">Payments:</strong> Stripe or another payment processor for subscriptions. Payment data is handled by them; we do not store full payment card details.</li>
+            <li><strong className="text-foreground">Payments on the web:</strong> Stripe or another payment processor for subscriptions bought on actorrise.com. Payment data is handled by them; we do not store full payment card details.</li>
+            <li><strong className="text-foreground">Payments in our iOS app:</strong> Subscriptions bought inside Ghost Light: Monologues are processed by Apple through in-app purchase. Apple does not share your payment details with us. We use RevenueCat to record which subscription you hold and to keep it in sync across your devices; it receives a pseudonymous identifier for your account, your purchase and receipt history, and basic device and app-version data. We never receive your card number.</li>
             <li><strong className="text-foreground">AI and analytics:</strong> We may use services (e.g., OpenAI) to power features such as search and recommendations. Data sent to such providers is used only to provide the feature and in accordance with their data terms.</li>
           </ul>
           <p className="mt-3">

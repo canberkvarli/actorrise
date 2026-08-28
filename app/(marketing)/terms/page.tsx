@@ -33,14 +33,14 @@ export default function TermsPage() {
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-3xl">
       <p className="text-sm text-muted-foreground mb-10">
-        Last updated: February 2025
+        Last updated: August 2026
       </p>
 
       <div className="space-y-8 text-muted-foreground">
         <section>
           <h2 className="text-xl font-semibold text-foreground mb-3">1. Acceptance of Terms</h2>
           <p>
-            These Terms of Service (&quot;Terms&quot;) are a binding agreement between you and ActorRise (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) governing your access to and use of the website and platform at actorrise.com and related services (the &quot;Service&quot;). By creating an account, signing in, or otherwise using the Service, you agree to these Terms and our Privacy Policy. If you do not agree, you must not use the Service.
+            These Terms of Service (&quot;Terms&quot;) are a binding agreement between you and ActorRise (&quot;we,&quot; &quot;us,&quot; or &quot;our&quot;) governing your access to and use of the website and platform at actorrise.com, our mobile applications including Ghost Light: Monologues for iOS, and related services (together, the &quot;Service&quot;). By creating an account, signing in, or otherwise using the Service, you agree to these Terms and our Privacy Policy. If you do not agree, you must not use the Service.
           </p>
         </section>
 
@@ -80,8 +80,18 @@ export default function TermsPage() {
           <p className="mb-3">
             Some parts of the Service may require a paid subscription. By subscribing, you agree to pay the fees stated at the time of purchase (e.g., monthly or annual). Fees are charged in advance and are generally non-refundable except as required by law or as we explicitly state (e.g., in a refund policy on the pricing or checkout page). Payment is processed by our payment provider (e.g., Stripe); their terms apply to the payment transaction. You are responsible for any taxes that apply to your purchase.
           </p>
-          <p>
+          <p className="mb-3">
             You may cancel your subscription in accordance with the options we provide (e.g., in account or billing settings). Cancellation will stop future charges; you will retain access until the end of the current billing period. We may change subscription fees with reasonable notice; continued use after the change constitutes acceptance.
+          </p>
+          <h3 className="text-base font-semibold text-foreground mt-6 mb-2">Subscriptions purchased through Apple</h3>
+          <p className="mb-3">
+            Subscriptions bought inside Ghost Light: Monologues on iOS are sold and processed by Apple through in-app purchase, not by Stripe. Payment is charged to your Apple Account at confirmation of purchase. The subscription renews automatically for the same period at the same price unless auto-renew is turned off at least 24 hours before the end of the current period, and your Apple Account is charged for renewal within 24 hours before that period ends.
+          </p>
+          <p className="mb-3">
+            Manage or cancel an Apple subscription in Settings on your device, under your Apple Account, Subscriptions. Cancelling stops future renewals; access continues until the end of the period you have already paid for. Deleting the app does not cancel a subscription.
+          </p>
+          <p>
+            Where a free trial is offered, any unused portion of that trial is forfeited if you buy a subscription before the trial ends. Refunds for Apple purchases are handled by Apple under its own terms, not by us; request one at reportaproblem.apple.com.
           </p>
         </section>
 
