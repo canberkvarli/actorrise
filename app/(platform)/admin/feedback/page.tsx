@@ -31,6 +31,9 @@ interface FeedbackSummary {
   unread: number;
   total_negative: number;
   by_context: { context: string; count: number }[];
+  impressions_30d?: number;
+  votes_30d?: number;
+  response_rate_30d?: number | null;
 }
 
 const CONTEXT_LABELS: Record<string, string> = {
@@ -145,6 +148,21 @@ export default function AdminFeedbackPage() {
           </p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">
             {summary?.total_negative ?? "—"}
+          </p>
+        </div>
+        <div className="border border-border/60 bg-card/40 p-4">
+          <p className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">
+            Response rate 30d
+          </p>
+          <p className="mt-1 text-2xl font-semibold tabular-nums">
+            {summary?.response_rate_30d != null
+              ? `${Math.round(summary.response_rate_30d * 100)}%`
+              : "—"}
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground tabular-nums">
+            {summary
+              ? `${summary.votes_30d ?? 0} of ${summary.impressions_30d ?? 0} shown`
+              : ""}
           </p>
         </div>
         <div className="col-span-2 border border-border/60 bg-card/40 p-4 sm:col-span-1">

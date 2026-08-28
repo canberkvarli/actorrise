@@ -5,12 +5,12 @@ note is emailed on arrival (see app/api/feedback.py) AND listed here so it can b
 worked through and marked read. `read_at` drives the unread badge in the nav.
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from app.api.admin.stats import require_moderator
 from app.core.database import get_db
-from app.models.feedback import ResultFeedback
+from app.models.feedback import FeedbackImpression, ResultFeedback
 from app.models.user import User
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import desc, func
@@ -117,10 +117,32 @@ def feedback_summary(
         .group_by(ResultFeedback.context)
         .all()
     )
+    # Visibility (H-11): a prompt nobody answers and a prompt nobody sees are the
+    # same zero without a denominator. impressions = times shown; votes = any
+    # answer (positive or negative). response_rate is the ratio that tells a
+    # visibility problem from an indifference one.
+    since = datetime.now(timezone.utc) - timedelta(days=30)
+    impressions_30d = (
+        db.query(func.count(FeedbackImpression.id))
+        .filter(FeedbackImpression.created_at >= since)
+        .scalar()
+        or 0
+    )
+    votes_30d = (
+        db.query(func.count(ResultFeedback.id))
+        .filter(ResultFeedback.created_at >= since)
+        .scalar()
+        or 0
+    )
+    response_rate = round(votes_30d / impressions_30d, 4) if impressions_30d else None
+
     return {
         "unread": int(unread),
         "total_negative": int(total_negative),
         "by_context": [{"context": c, "count": int(n)} for c, n in by_context],
+        "impressions_30d": int(impressions_30d),
+        "votes_30d": int(votes_30d),
+        "response_rate_30d": response_rate,
     }
 
 

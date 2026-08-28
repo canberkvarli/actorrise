@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { IconThumbUp, IconThumbDown } from "@tabler/icons-react";
 import api from "@/lib/api";
 
 const VOTE_STORAGE_PREFIX = "feedback_voted_";
+const IMPRESSION_STORAGE_PREFIX = "feedback_impression_";
 
 export interface ResultsFeedbackPromptProps {
   /** Context for the feedback API (e.g. "search"). */
@@ -46,6 +47,21 @@ export function ResultsFeedbackPrompt({
   const [reasonForCount, setReasonForCount] = useState<number | null>(null);
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Record that the prompt was shown, once per result set. Pairs with the
+  // vote below so the response rate is computable: without the denominator,
+  // "nobody answered" and "nobody saw it" are the same number (H-11).
+  useEffect(() => {
+    if (resultsViewCount < 1) return;
+    const key = `${IMPRESSION_STORAGE_PREFIX}${context}_${resultsViewCount}`;
+    try {
+      if (sessionStorage.getItem(key) === "true") return;
+      sessionStorage.setItem(key, "true");
+    } catch {
+      // sessionStorage unavailable: still log once for this mount.
+    }
+    api.post("/api/feedback/impression", { context }).catch(() => { /* fire-and-forget */ });
+  }, [context, resultsViewCount]);
 
   const markHandled = () => {
     try {

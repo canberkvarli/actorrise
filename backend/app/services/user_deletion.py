@@ -30,7 +30,7 @@ from app.models.billing import (
 )
 from app.models.email_do_not_contact import EmailDoNotContact
 from app.models.email_tracking import EmailBatch, EmailSend
-from app.models.feedback import ResultFeedback
+from app.models.feedback import FeedbackImpression, ResultFeedback
 from app.models.founding_actor import FoundingActor
 from app.models.moderation import ModerationLog, MonologueSubmission
 from app.models.search_log import SearchLog
@@ -218,6 +218,11 @@ def delete_user_completely(db: Session, user_id: int) -> None:
     db.query(ResultFeedback).filter(ResultFeedback.user_id == user_id).update(
         {"user_id": None}, synchronize_session=False
     )
+    # Impressions are anonymous telemetry; unlink rather than delete so the
+    # aggregate response-rate series stays intact after an account goes away.
+    db.query(FeedbackImpression).filter(
+        FeedbackImpression.user_id == user_id
+    ).update({"user_id": None}, synchronize_session=False)
 
     if subscription:
         db.delete(subscription)

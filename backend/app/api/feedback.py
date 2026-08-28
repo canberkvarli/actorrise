@@ -5,7 +5,7 @@ Stores in DB for product insight. Auth optional; anonymous feedback allowed.
 
 import os
 from app.core.database import get_db
-from app.models.feedback import ResultFeedback
+from app.models.feedback import FeedbackImpression, ResultFeedback
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
@@ -25,6 +25,10 @@ SCENE_FEEDBACK_CATEGORIES = {
     "missing_lines", "wrong_character", "missing_scene",
     "wrong_metadata", "other",
 }
+
+
+class ImpressionRequest(BaseModel):
+    context: str = Field(..., min_length=1, max_length=64, description="e.g. search")
 
 
 class FeedbackRequest(BaseModel):
@@ -123,6 +127,28 @@ def _send_negative_feedback_email(
         )
     except Exception as e:
         print(f"Failed to send negative feedback email: {e}")
+
+
+@router.post("/impression")
+def log_impression(
+    body: ImpressionRequest,
+    db: Session = Depends(get_db),
+    user: User | None = Depends(get_current_user_optional),
+) -> dict:
+    """Record that the results feedback prompt was SHOWN.
+
+    Pairs with submit_feedback to make a response rate computable: a prompt that
+    nobody answers and a prompt nobody sees are indistinguishable without this
+    (H-11). Fire-and-forget from the client, deduped there per result set, so
+    this only ever counts distinct times the prompt was seen. Silently ignores
+    an unknown context rather than 400ing — an impression is telemetry, never
+    something worth failing a user's page over.
+    """
+    if body.context not in ALLOWED_CONTEXTS:
+        return {"ok": True}
+    db.add(FeedbackImpression(context=body.context, user_id=user.id if user else None))
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("")
