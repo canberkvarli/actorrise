@@ -783,15 +783,13 @@ export function ActorProfileForm() {
                 </div>
                 <div className="flex-1 min-w-0 pt-1">
                   <div className="flex items-center gap-2 mb-2">
-                    <Label className="text-base font-semibold">Headshot</Label>
-                    {headshotPreview && (
-                      <span className="text-xs text-muted-foreground">• Click to view or edit</span>
-                    )}
+                    <Label className="text-base font-semibold">Profile photo</Label>
+                    <span className="border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">Optional</span>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">
-                    {headshotPreview 
-                      ? "Shown on profile and in search. Click to view or replace." 
-                      : "Upload a headshot. JPG/PNG, max 5MB. +6% completion."}
+                    {headshotPreview
+                      ? "Your photo in the app and community. Click to view or replace."
+                      : "Just your photo in the app, if you want one. Never required, and casting doesn't see it here. JPG or PNG, up to 5MB."}
                   </p>
                 </div>
               </div>
