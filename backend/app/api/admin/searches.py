@@ -37,17 +37,28 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
         SearchLog.created_at < end_dt,
     )
 
-    total_searches = summary_base.count()
-    zero_results = summary_base.filter(SearchLog.results_count == 0).count()
-
-    # --- Quality diagnostics (the columns that were logged but never surfaced) ---
-    weak_matches = summary_base.filter(SearchLog.weak_match.is_(True)).count()
-    content_gaps = summary_base.filter(SearchLog.content_gap.is_(True)).count()
-    avg_cosine = (
-        summary_base.with_entities(func.avg(SearchLog.best_cosine))
-        .filter(SearchLog.best_cosine.isnot(None))
-        .scalar()
-    )
+    # The five headline aggregates in ONE index scan / ONE round trip instead of
+    # five. On a single-worker backend talking to Supabase, each avoided round
+    # trip is real wall-clock — this endpoint was doing ~10 sequential queries,
+    # wide enough that a deploy restart mid-request dropped the whole page.
+    totals = db.execute(
+        sa_text(
+            "SELECT count(*) AS total, "
+            "count(*) FILTER (WHERE results_count = 0) AS zero, "
+            "count(*) FILTER (WHERE weak_match IS TRUE) AS weak, "
+            # content_gap is jsonb: a real gap is an object; most rows store the
+            # jsonb literal 'null' (NOT sql NULL), so IS NOT NULL over-counts.
+            "count(*) FILTER (WHERE jsonb_typeof(content_gap) = 'object') AS gaps, "
+            "avg(best_cosine) FILTER (WHERE best_cosine IS NOT NULL) AS avg_cos "
+            "FROM search_logs WHERE created_at >= :start AND created_at < :end"
+        ),
+        {"start": start_dt, "end": end_dt},
+    ).fetchone()
+    total_searches = int(totals[0] or 0)
+    zero_results = int(totals[1] or 0)
+    weak_matches = int(totals[2] or 0)
+    content_gaps = int(totals[3] or 0)
+    avg_cosine = totals[4]
 
     def _distribution(column):
         rows = (

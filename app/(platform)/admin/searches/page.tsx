@@ -287,6 +287,10 @@ export default function AdminSearchesPage() {
     // Stop refetching on every nav back and stop the flash on pagination.
     staleTime: 30_000,
     placeholderData: keepPreviousData,
+    // A backend redeploy drops in-flight requests; retry so a transient blip
+    // recovers on its own instead of stranding the page on an error.
+    retry: 2,
+    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 4000),
   });
 
   // Backend only sends `summary` on page 1 — keep the last one we got so

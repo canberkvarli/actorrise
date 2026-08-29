@@ -143,7 +143,10 @@ async function request<T = unknown>(
     const isNetworkError =
       err instanceof TypeError ||
       (err instanceof Error && /fetch|network|loaded/i.test((err as Error).message));
-    const isSearch = url.includes("/search");
+    // Only the actor-facing monologue search should get the "search is slow"
+    // copy. Admin endpoints like /api/admin/searches also contain "/search" and
+    // were wrongly showing a search-timeout message on any network blip.
+    const isSearch = url.includes("/monologues/search");
     const isLocal = typeof window !== "undefined" ? API_URL.includes("localhost") : !process.env.VERCEL;
     let message: string;
     if (isSearch && (isAbort || isNetworkError)) {
