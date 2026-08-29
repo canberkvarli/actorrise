@@ -69,6 +69,13 @@ export function MonologueResultCard({
   const showIndicator = showMatchBadge && matchLabel;
   const indicatorLabel = showIndicator ? matchLabel : null;
 
+  // Why-you-got-this, profile edition: the recommender's per-piece fit reason
+  // ("Matches your preferred genre", "Right difficulty for your level") was
+  // computed and passed in but never shown. Surface the first one so the profile
+  // visibly pays off on the results themselves, not just the "For you" shelf.
+  const profileReason =
+    matchReasons?.find((r) => r.category === "profile")?.label ?? null;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -118,6 +125,11 @@ export function MonologueResultCard({
                   {mono.play_title}
                   {displayableAuthor(mono.author) ? ` · ${displayableAuthor(mono.author)}` : ""}
                 </p>
+                {profileReason && (
+                  <span className="mt-1.5 inline-block border border-primary/30 bg-primary/[0.06] px-1.5 py-0.5 text-[11px] font-medium text-primary">
+                    {profileReason}
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-1">
                 {isModerator && onEdit && (
