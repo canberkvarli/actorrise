@@ -16,6 +16,13 @@ FOUNDER_OFFER_ON_SIGNUP = "founder_offer_on_signup"
 # noise/coverage tradeoff can be adjusted without a deploy.
 SEARCH_RELEVANCE_FLOOR = "search_relevance_floor"
 
+# When true, the hourly day-1 "you saved a piece" re-engagement scheduler sends.
+# Flip off from the admin console to pause it at runtime (takes effect within the
+# hour) without a Render env change or redeploy. The env var
+# SAVED_PIECE_REMINDER_ENABLED=false remains a hard kill that stops the scheduler
+# from starting at all.
+SAVED_PIECE_REMINDER_ENABLED = "saved_piece_reminder_enabled"
+
 
 def get_bool(db: Session, key: str, default: bool = False) -> bool:
     """Return a stored boolean setting, or `default` if the row doesn't exist."""

@@ -119,6 +119,36 @@ def set_founder_offer_on_signup(
     return FounderOfferToggle(enabled=enabled)
 
 
+class SavedPieceReminderToggle(BaseModel):
+    enabled: bool
+
+
+@router.get("/saved-piece-reminder", response_model=SavedPieceReminderToggle)
+def get_saved_piece_reminder(
+    _: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+) -> SavedPieceReminderToggle:
+    """Whether the hourly day-1 'you saved a piece' re-engagement email is sending."""
+    enabled = app_settings.get_bool(
+        db, app_settings.SAVED_PIECE_REMINDER_ENABLED, default=True
+    )
+    return SavedPieceReminderToggle(enabled=enabled)
+
+
+@router.put("/saved-piece-reminder", response_model=SavedPieceReminderToggle)
+def set_saved_piece_reminder(
+    payload: SavedPieceReminderToggle,
+    _: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+) -> SavedPieceReminderToggle:
+    """Pause/resume the day-1 saved-piece reminder at runtime (takes effect within
+    the hour). The scheduler re-reads this every run, so no redeploy is needed."""
+    enabled = app_settings.set_bool(
+        db, app_settings.SAVED_PIECE_REMINDER_ENABLED, payload.enabled
+    )
+    return SavedPieceReminderToggle(enabled=enabled)
+
+
 # ========================================
 # Template metadata registry
 # ========================================

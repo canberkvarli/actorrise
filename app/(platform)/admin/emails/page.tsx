@@ -249,6 +249,10 @@ export default function AdminEmailsPage() {
   const [founderOfferOn, setFounderOfferOn] = useState<boolean | null>(null);
   const [founderOfferSaving, setFounderOfferSaving] = useState(false);
 
+  // Day-1 saved-piece reminder toggle
+  const [savedReminderOn, setSavedReminderOn] = useState<boolean | null>(null);
+  const [savedReminderSaving, setSavedReminderSaving] = useState(false);
+
   // Dialogs
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [sending, setSending] = useState(false);
@@ -270,8 +274,32 @@ export default function AdminEmailsPage() {
       api.get<DncEntry[]>("/api/admin/emails/do-not-contact").then(({ data }) => setDncEntries(data)).catch(() => {}),
       api.get<Lead[]>("/api/admin/emails/leads").then(({ data }) => setLeads(data)).catch(() => {}),
       api.get<{ enabled: boolean }>("/api/admin/emails/founder-offer-on-signup").then(({ data }) => setFounderOfferOn(data.enabled)).catch(() => {}),
+      api.get<{ enabled: boolean }>("/api/admin/emails/saved-piece-reminder").then(({ data }) => setSavedReminderOn(data.enabled)).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
+
+  async function updateSavedPieceReminder(enabled: boolean) {
+    const prev = savedReminderOn;
+    setSavedReminderOn(enabled); // optimistic
+    setSavedReminderSaving(true);
+    try {
+      const { data } = await api.put<{ enabled: boolean }>(
+        "/api/admin/emails/saved-piece-reminder",
+        { enabled },
+      );
+      setSavedReminderOn(data.enabled);
+      toast.success(
+        data.enabled
+          ? "Day-1 saved-piece reminder is on"
+          : "Day-1 saved-piece reminder paused. No more will send until you turn it back on.",
+      );
+    } catch {
+      setSavedReminderOn(prev); // revert
+      toast.error("Failed to update the saved-piece reminder setting");
+    } finally {
+      setSavedReminderSaving(false);
+    }
+  }
 
   async function updateFounderOfferOnSignup(enabled: boolean) {
     const prev = founderOfferOn;
@@ -863,6 +891,28 @@ export default function AdminEmailsPage() {
             disabled={founderOfferSaving}
             onCheckedChange={updateFounderOfferOnSignup}
             aria-label="Toggle founder offer email on signup"
+          />
+        </div>
+      )}
+
+      {canSend && savedReminderOn !== null && (
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-3 sm:p-4">
+          <div className="flex items-start gap-2.5">
+            <IconClock className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Day-1 saved-piece reminder</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {savedReminderOn
+                  ? "On. A free user who saved a monologue and didn't return gets one nudge to rehearse it (sent once, ~a day later)."
+                  : "Paused. No saved-piece reminders will send until you turn this back on."}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={savedReminderOn}
+            disabled={savedReminderSaving}
+            onCheckedChange={updateSavedPieceReminder}
+            aria-label="Toggle day-1 saved-piece reminder"
           />
         </div>
       )}

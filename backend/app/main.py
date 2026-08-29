@@ -152,7 +152,23 @@ def _start_saved_piece_reminder_scheduler():
             try:
                 from datetime import datetime, timezone
 
+                from app.core.database import SessionLocal
+                from app.services import app_settings
                 from app.services.email.saved_piece_reminder import run_reminders
+
+                # Runtime kill switch from the admin console (app_settings),
+                # checked every run so a toggle takes effect within the hour with
+                # no redeploy. Defaults to on. The env flag above is the hard kill.
+                _db = SessionLocal()
+                try:
+                    enabled = app_settings.get_bool(
+                        _db, app_settings.SAVED_PIECE_REMINDER_ENABLED, default=True
+                    )
+                finally:
+                    _db.close()
+                if not enabled:
+                    time.sleep(max(60, 3600 - (time.time() % 3600)))
+                    continue
 
                 hour = datetime.now(timezone.utc).hour
                 stats = run_reminders(send=True, active_hour=hour)
