@@ -178,19 +178,20 @@ export function ActorProfileForm() {
       hasType,
       unionStatus,
     ];
+    // Headshot is intentionally excluded — it is a bonus, not part of completion,
+    // so a full casting profile reads 100% without a photo (matches backend).
     const optionalFields = [
       ethnicity,
       height,
       build,
       trainingBackground,
-      headshotUrl,
     ];
 
     const requiredCount = requiredFields.filter(Boolean).length;
     const optionalCount = optionalFields.filter(Boolean).length;
 
     // Required fields are 70% of completion, optional are 30% - matches backend
-    const percentage = (requiredCount / 7) * 70 + (optionalCount / 5) * 30;
+    const percentage = (requiredCount / 7) * 70 + (optionalCount / 4) * 30;
     return Math.min(100, Math.round(percentage * 10) / 10); // Round to 1 decimal like backend
   }, [
     name,
@@ -205,7 +206,6 @@ export function ActorProfileForm() {
     height,
     build,
     trainingBackground,
-    headshotUrl,
   ]);
 
   // Next-step nudge: which required fields are missing (for progress card when <100%)
@@ -385,10 +385,11 @@ export function ActorProfileForm() {
     // Optimistically compute and set profile-stats so dashboard shows correct % instantly
     const filled = (v: unknown) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0);
     const reqFields = [saveData.name, saveData.age_range, saveData.gender, saveData.location, saveData.experience_level, saveData.type, saveData.union_status];
-    const optFields = [saveData.ethnicity, saveData.height, saveData.build, saveData.training_background, saveData.headshot_url];
+    // Headshot excluded from completion (bonus, not required) — matches backend.
+    const optFields = [saveData.ethnicity, saveData.height, saveData.build, saveData.training_background];
     const reqCount = reqFields.filter(filled).length;
     const optCount = optFields.filter(filled).length;
-    const pct = Math.min(100, Math.round(((reqCount / 7) * 70 + (optCount / 5) * 30) * 10) / 10);
+    const pct = Math.min(100, Math.round(((reqCount / 7) * 70 + (optCount / 4) * 30) * 10) / 10);
     queryClient.setQueryData(["profile-stats"], () => ({
       completion_percentage: pct,
       has_headshot: Boolean(filled(saveData.headshot_url)),

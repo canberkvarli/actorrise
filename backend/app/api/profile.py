@@ -179,12 +179,15 @@ def get_profile_stats(
         profile.type,
         profile.union_status,
     ]
+    # Headshot is deliberately NOT part of completion. ActorRise is not a
+    # casting-submission platform, only 5% ever upload one, and treating it as a
+    # completion field left every headshot-less profile stuck at ~94% and nagged
+    # for a photo it does not need. It stays a pure bonus the actor can add later.
     optional_fields = [
         profile.ethnicity,
         profile.height,
         profile.build,
         profile.training_background,
-        profile.headshot_url,
     ]
     
     def _filled(field: object) -> bool:
@@ -201,7 +204,7 @@ def get_profile_stats(
     optional_count = sum(1 for field in optional_fields if _filled(field))
     
     # Required fields are 70% of completion, optional are 30%
-    completion_percentage = min(100.0, (required_count / 7) * 70 + (optional_count / 5) * 30)
+    completion_percentage = min(100.0, (required_count / 7) * 70 + (optional_count / 4) * 30)
     
     preferred_genres_list = cast(List[str], profile.preferred_genres) if profile.preferred_genres is not None else []
     return ProfileStatsResponse(
