@@ -370,3 +370,74 @@ a cause of it — then the lever is landing/return nudges, H-14b, not the save U
 Not yet shipped (need Canberk): land returning users on their Collection instead
 of /practice; one automated day-1 "your saved piece is ready" email (no scheduler
 exists yet, and sends are never automatic).
+
+## H-16 Retention is falling because the new traffic is lower-intent, not because the product got worse
+
+Status: OPEN, strong evidence for (2026-08-29)
+
+The 2+day return rate fell three cohorts running (14.3 -> 10.3 -> 8.5 pct) while
+weekly signups nearly tripled (39 -> 109). The brief's hypothesis was a mix shift,
+and the referral split confirms it. 30d cohort, 2+ distinct-day return by
+`referral_source`:
+
+- organic **search: 3.0 pct** (67 signups) — the fastest-growing source (+194 pct
+  wk/wk) and the LOWEST-retaining named one
+- chatgpt: 6.5 pct (31), friend: 6.7 pct (15), other: 2.1 pct (47)
+- unknown (no source recorded): 7.6 pct (157) — the biggest bucket
+
+So the marginal new user is an organic-search visitor who returns at ~3 pct, and
+their share is growing fastest. The blended cohort rate falls not because
+existing users churn harder but because the intake is diluting. This is discovery
+traffic (organic + ChatGPT tripling), which reads as SEO/LLM-surface arrival, not
+a launch.
+
+Disconfirms if: the per-source return rates rise over the next cohorts while the
+blend keeps falling (would mean the product IS decaying under everyone), OR
+organic-search return climbs toward the friend/chatgpt rate on its own (would mean
+it was a cold-start artifact, not a durable intent gap).
+
+Implication, not yet acted on: the retention lever for this traffic is the FIRST
+session for a low-intent arrival — landing them somewhere sticky and giving the
+first search a real answer — not another nudge aimed at already-engaged users.
+
+## H-17 The weak-match rate understated failure (FIXED at source)
+
+Status: CONFIRMED + fixed (2026-08-29)
+
+pct_weak was computed over ALL searches, but title/character pre-pass hits never
+set weak_match or best_cosine (they are lookups, not vector scores). With 53 such
+`title_exact`/`character_exact` rows in the 7d window, the reported rate was
+33.2 pct (85/256) while the real VECTOR weak rate is 43.8 pct (85/194 scoreable) —
+verified live, and `title_lookup`=53 matches the brief exactly. Also invisible:
+silent retries — 63 searches in 7d re-ran an identical (user, query) within 10 min
+(the brief counted 81 identical repeats, 41 within 2 min). weak_match captures
+none of it.
+
+Fixed in `_compute_summary` (admin `/searches`): weak-rate denominator is now the
+scoreable set only, and two metrics were added — `scoreable_count` /
+`title_lookup_count` (keeps the lookup path visible) and `repeat_count` /
+`repeat_rate` (the silent-retry signal, computed at read time via a LAG window, no
+stored column). See decisions.md.
+
+Disconfirms if: nothing — this was a definitional error, now corrected. Watch
+repeat_rate as the retry signal going forward.
+
+## H-18 Screen-title demand is real and unmet, but it is a minority of weak volume
+
+Status: OPEN, sized (2026-08-29)
+
+Of 145 weak searches (14d, junk-filtered), 36 name a title we can recognize, and
+among those it is **33 screen vs 3 stage (92 pct screen)** — matched against
+`film_tv_references` (known screen titles) and carried `plays`. Confirms screen
+demand (Severance, Better Call Saul, La La Land, Sing Street, Hannah Montana, ...),
+but the other 109 of 145 are not title-shaped at all (attribute / NL / typo). So a
+screen library would address ~23 pct of weak searches (33/145) — real, worth
+sizing, NOT the majority. Do not scope catalog work as if it fixes most weak
+matches.
+
+Disconfirms if: with the fuzzy title match now live (2026-08-28), the recognized
+screen share falls because more of them resolve via title_exact — i.e. some of the
+33 were retrieval misses, not true content gaps. Re-run this split after a week.
+
+Related content gap: H-15 (South Asian / Bollywood) is a subset of this screen
+demand with zero supply.

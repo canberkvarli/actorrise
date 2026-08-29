@@ -33,6 +33,33 @@ matches are test typing and inflate pct_weak.
 Moves: paid_invoices (0 -> real, ~2 lifetime payers), pct_weak_7d (down once junk
 is filtered), and adds activated_search/save columns.
 
+## 2026-08-29 — Admin search-logs dashboard: fixed a 500, a lying weak-rate, and added the retry signal
+
+- **Page-1 was 500-ing.** `_compute_summary` counted content gaps with
+  `content_gap.is_(True)` → `content_gap IS true`, which Postgres rejects on a
+  jsonb column, so the whole summary threw on every page-1 load. Rewrote the five
+  headline counts as ONE FILTER query (also fewer round trips on a single-worker
+  backend) and count a real gap as `jsonb_typeof(content_gap)='object'` (the
+  column stores the jsonb literal 'null' on most rows; true gaps = 29, not 262).
+- **Weak-rate denominator fixed (H-17).** Now over scoreable (vector) rows only:
+  the reported 33.2 pct was 85/256; the real vector rate is 43.8 pct (85/194).
+  Added `scoreable_count` + `title_lookup_count` (53) so the lookup path stays
+  visible, and `repeat_count`/`repeat_rate` (63 silent retries in 7d, read-time
+  LAG window, no stored column — deviates from the brief's stored-column ask on
+  purpose: same metric, no migration/backfill/hot-path cost).
+- **Misleading error message.** The API client showed "Search is taking longer"
+  for any network error on a `/search` URL, including `/api/admin/searches`.
+  Narrowed to `/monologues/search`; the admin query now retries so a deploy blip
+  self-heals. (commit 8e96ac2d)
+- **paid_invoices (brief #1):** confirmed no app code filters `status='paid'`
+  (the dashboard reads Stripe directly); it is purely the analytics snapshot SQL.
+  Correct filter: `status='succeeded' AND amount_cents>0`. Truth: 10 paid events,
+  $120, 2 paying users, last Aug 18.
+- **37 subs, 2 payers — NOT a webhook bug.** Breakdown: 12 active comps + 5
+  trialing comps (no Stripe, $0) + 20 with a real Stripe sub, of which only 2 have
+  ever been charged (the other 18 are on unexpired free trials, card on file).
+  Legit; nothing writing subscription rows without payment.
+
 ## 2026-08-28 — Shipped: fuzzy title matching, feedback impressions, canon-play gaps
 
 All deployed to prod (main) same day. Expect these to move next pull:

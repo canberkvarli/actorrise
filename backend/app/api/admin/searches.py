@@ -49,7 +49,14 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
             # content_gap is jsonb: a real gap is an object; most rows store the
             # jsonb literal 'null' (NOT sql NULL), so IS NOT NULL over-counts.
             "count(*) FILTER (WHERE jsonb_typeof(content_gap) = 'object') AS gaps, "
-            "avg(best_cosine) FILTER (WHERE best_cosine IS NOT NULL) AS avg_cos "
+            "avg(best_cosine) FILTER (WHERE best_cosine IS NOT NULL) AS avg_cos, "
+            # The weak-rate denominator must be the SCOREABLE (vector) rows only.
+            # Title/character pre-pass hits never set weak_match or best_cosine,
+            # so counting them dilutes the rate (33.2% reported vs 41.9% real).
+            "count(*) FILTER (WHERE best_cosine IS NOT NULL) AS scoreable, "
+            "count(*) FILTER (WHERE match_strategy IN "
+            "  ('title_exact','title_exact_backfilled','character_exact','character_exact_backfilled')"
+            ") AS title_lookup "
             "FROM search_logs WHERE created_at >= :start AND created_at < :end"
         ),
         {"start": start_dt, "end": end_dt},
@@ -59,6 +66,8 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
     weak_matches = int(totals[2] or 0)
     content_gaps = int(totals[3] or 0)
     avg_cosine = totals[4]
+    scoreable = int(totals[5] or 0)
+    title_lookup_count = int(totals[6] or 0)
 
     def _distribution(column):
         rows = (
@@ -91,6 +100,28 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
     retry_events = int(retry[0] or 0) if retry else 0
     retry_users = int(retry[1] or 0) if retry else 0
 
+    # Silent-retry rate (2026-08-29 brief): a search whose (user, normalized
+    # query) had an identical predecessor within 10 minutes — people re-running
+    # the same words hoping for a different answer. weak_match never captures
+    # this, and it is the cheapest dissatisfaction signal we have. Computed at
+    # read time via a LAG window (no stored column / backfill needed): correct
+    # over the whole window and free of any hot-path cost on the search itself.
+    repeat_count = int(
+        db.execute(
+            sa_text(
+                "WITH r AS ("
+                "  SELECT created_at, lag(created_at) OVER ("
+                "    PARTITION BY user_id, lower(btrim(query)) ORDER BY created_at) AS prev"
+                "  FROM search_logs"
+                "  WHERE created_at >= :start AND created_at < :end AND user_id IS NOT NULL"
+                ") SELECT count(*) FROM r "
+                "WHERE prev IS NOT NULL AND created_at - prev <= interval '10 minutes'"
+            ),
+            {"start": start_dt, "end": end_dt},
+        ).scalar()
+        or 0
+    )
+
     top_queries = (
         summary_base
         .with_entities(
@@ -120,13 +151,19 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
         "total_searches": total_searches,
         "zero_result_count": zero_results,
         "weak_match_count": weak_matches,
-        "weak_match_rate": round(weak_matches / total_searches * 100, 1) if total_searches else 0.0,
+        # Rate over SCOREABLE (vector) searches only — title/character lookups
+        # can never be weak, so including them understated the true failure rate.
+        "weak_match_rate": round(weak_matches / scoreable * 100, 1) if scoreable else 0.0,
+        "scoreable_count": scoreable,
+        "title_lookup_count": title_lookup_count,
         "content_gap_count": content_gaps,
         "avg_best_cosine": round(float(avg_cosine), 3) if avg_cosine is not None else None,
         "by_match_strategy": by_match_strategy,
         "by_query_type": by_query_type,
         "retry_events": retry_events,
         "retry_users": retry_users,
+        "repeat_count": repeat_count,
+        "repeat_rate": round(repeat_count / total_searches * 100, 1) if total_searches else 0.0,
         "top_queries": [{"query": q, "count": c} for q, c in top_queries],
         "top_zero_result_queries": [{"query": q, "count": c} for q, c in top_zero],
     }

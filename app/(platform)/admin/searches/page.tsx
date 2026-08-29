@@ -51,12 +51,16 @@ interface SearchesResponse {
     zero_result_count: number;
     weak_match_count: number;
     weak_match_rate: number;
+    scoreable_count?: number;
+    title_lookup_count?: number;
     content_gap_count: number;
     avg_best_cosine: number | null;
     by_match_strategy: { key: string; count: number }[];
     by_query_type: { key: string; count: number }[];
     retry_events: number;
     retry_users: number;
+    repeat_count?: number;
+    repeat_rate?: number;
     top_queries: { query: string; count: number }[];
     top_zero_result_queries: { query: string; count: number }[];
   };
@@ -401,7 +405,11 @@ export default function AdminSearchesPage() {
                 {summary.weak_match_rate ?? 0}%
               </p>
               <p className="text-xs text-muted-foreground">
-                {(summary.weak_match_count ?? 0).toLocaleString()} of {summary.total_searches.toLocaleString()} below the strong bar
+                {(summary.weak_match_count ?? 0).toLocaleString()} of{" "}
+                {(summary.scoreable_count ?? summary.total_searches).toLocaleString()} scoreable (vector) searches
+                {summary.title_lookup_count != null && summary.title_lookup_count > 0
+                  ? ` · ${summary.title_lookup_count.toLocaleString()} title/character lookups excluded`
+                  : ""}
               </p>
             </CardContent>
           </Card>
@@ -416,12 +424,14 @@ export default function AdminSearchesPage() {
           </Card>
           <Card>
             <CardContent className="p-4 pt-6">
-              <p className="text-sm text-muted-foreground">Retry loops</p>
-              <p className="text-2xl font-bold" style={{ color: (summary.retry_users ?? 0) > 0 ? "#CB4B00" : undefined }}>
-                {summary.retry_users ?? 0}
+              <p className="text-sm text-muted-foreground">Silent retries</p>
+              <p className="text-2xl font-bold" style={{ color: (summary.repeat_rate ?? 0) > 10 ? "#CB4B00" : undefined }}>
+                {summary.repeat_rate != null ? `${summary.repeat_rate}%` : (summary.retry_users ?? 0)}
               </p>
               <p className="text-xs text-muted-foreground">
-                users who retried a query 3+× in 30 min
+                {summary.repeat_count != null
+                  ? `${summary.repeat_count.toLocaleString()} re-ran the same query ≤10 min · ${summary.retry_users ?? 0} did it 3+×`
+                  : "users who retried a query 3+× in 30 min"}
               </p>
             </CardContent>
           </Card>
