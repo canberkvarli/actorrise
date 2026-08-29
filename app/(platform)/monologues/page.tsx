@@ -64,6 +64,7 @@ import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
 import { TrendingPreSearch } from "@/components/monologue/TrendingPreSearch";
+import { ForYouShelf } from "@/components/monologue/ForYouShelf";
 import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
@@ -2377,6 +2378,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
             >
+              {/* Personalization, surfaced by default (not hidden behind "Find
+                  for me"): profile-havers rehearse ~1.6x more. Recruits a profile
+                  when there isn't one. Plays only — film/TV recs are separate. */}
+              {searchMode === "plays" && <ForYouShelf />}
               <TrendingPreSearch />
             </motion.div>
           )}
