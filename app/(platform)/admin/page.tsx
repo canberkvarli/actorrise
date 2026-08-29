@@ -265,56 +265,190 @@ function RetentionPanel({ retention }: { retention: GrowthStats["retention"] }) 
   );
 }
 
-function RevenuePanel({ revenue }: { revenue: GrowthStats["revenue"] }) {
+const money = (n?: number | null) =>
+  n == null ? "—" : `$${n.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+
+/** One fact with the sentence that explains it. */
+function MoneyLine({
+  label,
+  value,
+  explain,
+  big,
+}: {
+  label: string;
+  value: string;
+  explain: string;
+  big?: boolean;
+}) {
   return (
-    <div className="border border-border bg-card p-4 space-y-3">
-      <p className="text-sm font-medium">Expected <span className="font-normal text-muted-foreground">· from our records</span></p>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        <div className="flex justify-between"><span className="text-muted-foreground">MRR (list price)</span><span className="font-semibold tabular-nums">${revenue.mrr_usd.toLocaleString()}</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Free→paid</span><span className="font-semibold tabular-nums">{revenue.conversion_percent}%</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Paid (card on file)</span><span className="tabular-nums">{revenue.paid_active}</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Comped</span><span className="tabular-nums">{revenue.comped}</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Trialing</span><span className="tabular-nums">{revenue.trialing}</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Free</span><span className="tabular-nums">{revenue.free}</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Total</span><span className="tabular-nums">{revenue.total_users}</span></div>
-      </div>
-      {revenue.by_tier.length > 0 && (
-        <div className="pt-2 border-t border-border/50 text-xs text-muted-foreground">
-          {revenue.by_tier.map((t) => `${t.tier}: ${t.count}`).join(" · ")}
-        </div>
-      )}
+    <div className="border border-border bg-background px-3 py-3">
+      <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p
+        className={`mt-1 font-bold tabular-nums leading-none ${big ? "text-3xl" : "text-xl"}`}
+        style={big ? { color: BRAND } : undefined}
+      >
+        {value}
+      </p>
+      <p className="mt-1.5 text-[11px] leading-snug text-muted-foreground">{explain}</p>
     </div>
   );
 }
 
-function StripeRevenuePanel({ data }: { data: StripeRevenue | undefined }) {
-  if (data && data.available === false) {
-    return (
-      <div className="border border-border bg-card p-4 space-y-1">
-        <p className="text-sm font-medium">Actual <span className="font-normal text-muted-foreground">· from Stripe</span></p>
-        <p className="text-xs text-muted-foreground">Stripe not reachable{data.reason ? `: ${data.reason}` : ""}.</p>
-      </div>
-    );
-  }
-  const money = (n?: number) => (n == null ? "—" : `$${n.toLocaleString()}`);
+/**
+ * The money screen, written to be read rather than decoded.
+ *
+ * There used to be two panels here — "Expected" (our subscription rows × list
+ * price) and "Actual" (Stripe) — each with a different figure called MRR. Two
+ * numbers with the same name and no stated relationship is why the section
+ * never made sense. Now Stripe is the single source for dollars, our own rows
+ * only count *people*, and every figure carries the sentence that says what it
+ * is and what it isn't.
+ */
+function MoneyPanel({
+  stripe,
+  revenue,
+}: {
+  stripe: StripeRevenue | undefined;
+  revenue: GrowthStats["revenue"];
+}) {
+  const stripeOk = stripe?.available !== false && stripe != null;
+  const mrr = stripe?.mrr_run_rate_usd;
+  const arr = mrr != null ? mrr * 12 : null;
+
+  // Our own DB figure, kept only as a cross-check on Stripe. It multiplies
+  // active rows by *list* price, so a legacy price or a missed cancel webhook
+  // shows up as a gap — worth flagging, never worth reporting as revenue.
+  const dbMrr = revenue.mrr_usd;
+  const drift = mrr != null ? Math.abs(dbMrr - mrr) : 0;
+  const driftIsReal = mrr != null && mrr > 0 && drift / Math.max(mrr, 1) > 0.1;
+
+  const notPaying = revenue.trialing + revenue.comped;
+
   return (
-    <div className="border-2 p-4 space-y-3" style={{ borderColor: BRAND }}>
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium">Actual <span className="font-normal text-muted-foreground">· live from Stripe</span></p>
-        {data?.stale && <span className="text-[10px] uppercase tracking-wide text-muted-foreground">stale</span>}
-      </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        <div className="flex justify-between"><span className="text-muted-foreground">Collected · 30d</span><span className="font-semibold tabular-nums" style={{ color: BRAND }}>{money(data?.collected_30d_usd)}</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Collected · lifetime</span><span className="font-semibold tabular-nums" style={{ color: BRAND }}>{money(data?.collected_lifetime_usd)}</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">MRR run-rate</span><span className="tabular-nums">{money(data?.mrr_run_rate_usd)}</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Active subs</span><span className="tabular-nums">{data?.active_subscriptions ?? "—"}</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Trialing</span><span className="tabular-nums">{data?.trialing ?? "—"}</span></div>
-        <div className="flex justify-between"><span className="text-muted-foreground">Charges · lifetime</span><span className="tabular-nums">{data?.collected_lifetime_count ?? "—"}</span></div>
-      </div>
-      <p className="pt-2 border-t border-border/50 text-xs text-muted-foreground">
-        &ldquo;Collected&rdquo; is real cash Stripe charged. Run-rate is what active subs would bill if they all pay.
-      </p>
-    </div>
+    <section className="border-2 bg-card" style={{ borderColor: BRAND }}>
+      <header className="flex items-baseline justify-between gap-3 border-b border-border p-4">
+        <div>
+          <h2 className="text-sm font-semibold">Money</h2>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Dollar figures come straight from Stripe. Head counts come from our own records.
+          </p>
+        </div>
+        {stripe?.stale && (
+          <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            stale, Stripe unreachable
+          </span>
+        )}
+      </header>
+
+      {!stripeOk ? (
+        <p className="p-4 text-sm text-muted-foreground">
+          Can&apos;t reach Stripe{stripe?.reason ? `: ${stripe.reason}` : ""}. Head counts below are
+          still accurate; dollar amounts aren&apos;t available until it reconnects.
+        </p>
+      ) : (
+        <div className="space-y-4 p-4">
+          {/* 1. What you earn per month, on repeat. */}
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Your income right now
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <MoneyLine
+                big
+                label="Per month"
+                value={mrr != null ? `${money(mrr)}/mo` : "—"}
+                explain={`What your ${stripe?.active_subscriptions ?? 0} active subscriptions work out to each month. Nearly everyone is on a yearly plan, so this is their year price divided by 12 — an average month, not a charge that lands monthly.`}
+              />
+              <MoneyLine
+                label="Per year"
+                value={arr != null ? `${money(arr)}/yr` : "—"}
+                explain="The same subscriptions over twelve months, if nobody cancels and nobody new joins. This is the number to grow."
+              />
+            </div>
+          </div>
+
+          {/* 2. What has actually hit the bank. */}
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Cash that actually landed
+            </p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <MoneyLine
+                label="Last 30 days"
+                value={money(stripe?.collected_30d_usd)}
+                explain={`${stripe?.collected_30d_count ?? 0} card charge${stripe?.collected_30d_count === 1 ? "" : "s"} went through. Yearly plans only charge once, so a quiet month here is normal.`}
+              />
+              <MoneyLine
+                label="Last 90 days"
+                value={money(stripe?.collected_90d_usd)}
+                explain="A wider window, which smooths out the fact that annual renewals bunch up."
+              />
+              <MoneyLine
+                label="Since day one"
+                value={money(stripe?.collected_lifetime_usd)}
+                explain={`Everything ActorRise has ever collected, across ${stripe?.collected_lifetime_count ?? 0} charges.`}
+              />
+            </div>
+          </div>
+
+          {/* 3. The people behind those dollars. */}
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Who&apos;s behind it
+            </p>
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+              <MoneyLine
+                label="Paying"
+                value={revenue.paid_active.toLocaleString()}
+                explain="Card on file, actually being charged. These are the only people producing the numbers above."
+              />
+              <MoneyLine
+                label="On trial"
+                value={revenue.trialing.toLocaleString()}
+                explain="Card on file, $0 so far. They turn into paying members when the trial ends unless they cancel first."
+              />
+              <MoneyLine
+                label="Comped by you"
+                value={revenue.comped.toLocaleString()}
+                explain="Free on purpose — gifts, educators, founding actors. Full access, $0 forever. Never counted as revenue."
+              />
+              <MoneyLine
+                label="Free"
+                value={revenue.free.toLocaleString()}
+                explain={`Of ${revenue.total_users.toLocaleString()} total actors, ${revenue.conversion_percent}% have converted to paying.`}
+              />
+            </div>
+            {revenue.by_tier.length > 0 && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Paying members by plan: {revenue.by_tier.map((t) => `${t.tier} ${t.count}`).join(" · ")}
+              </p>
+            )}
+          </div>
+
+          {/* 4. Say the quiet part: why two systems disagree. */}
+          <p className="border-t border-border/50 pt-3 text-xs leading-relaxed text-muted-foreground">
+            <strong className="text-foreground">Reading this:</strong> &ldquo;Per month&rdquo; is
+            what you&apos;re owed on repeat; &ldquo;cash that landed&rdquo; is what was charged.
+            They rarely match, because annual plans collect a year at once.{" "}
+            {driftIsReal ? (
+              <>
+                Heads up — our own records work out to {money(dbMrr)}/mo using list prices, which is{" "}
+                {money(drift)} off Stripe. That usually means someone is on an old price, or a
+                cancellation never synced back. Stripe is the one to trust.
+              </>
+            ) : (
+              <>Our own records agree with Stripe ({money(dbMrr)}/mo from list prices), so nothing looks out of sync.</>
+            )}{" "}
+            {notPaying > 0 && (
+              <>
+                {notPaying} member{notPaying === 1 ? "" : "s"} have full access at $0 (trials and
+                comps) — real users, no revenue.
+              </>
+            )}
+          </p>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -601,9 +735,13 @@ export default function AdminOverviewPage() {
         <>
           <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
             <MiniStat
-              label="Collected 30d"
-              value={stripeRevenue?.available && stripeRevenue.collected_30d_usd != null ? `$${stripeRevenue.collected_30d_usd.toLocaleString()}` : "—"}
-              hint={stripeRevenue?.mrr_run_rate_usd != null ? `$${stripeRevenue.mrr_run_rate_usd.toLocaleString()} run-rate` : "from Stripe"}
+              label="Income / month"
+              value={stripeRevenue?.mrr_run_rate_usd != null ? money(stripeRevenue.mrr_run_rate_usd) : "—"}
+              hint={
+                stripeRevenue?.collected_30d_usd != null
+                  ? `${money(stripeRevenue.collected_30d_usd)} charged in 30d`
+                  : "from Stripe"
+              }
               accent
             />
             <MiniStat label="Active (7d)" value={growth.active_users.wau.toLocaleString()} hint="WAU" />
@@ -613,10 +751,7 @@ export default function AdminOverviewPage() {
             <MiniStat label="Dormant" value={growth.retention.dormant.toLocaleString()} hint="14d+ silent" />
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-2">
-            <StripeRevenuePanel data={stripeRevenue} />
-            <RevenuePanel revenue={growth.revenue} />
-          </div>
+          <MoneyPanel stripe={stripeRevenue} revenue={growth.revenue} />
 
           <ActivationFunnel steps={growth.activation} />
 
@@ -666,7 +801,10 @@ export default function AdminOverviewPage() {
           </div>
           <p className="text-xs text-muted-foreground">
             {stats.subscribers.paid_active ?? 0} paying · {stats.subscribers.comped ?? 0} comped · {stats.subscribers.trialing ?? 0} on trial
-            <span className="opacity-70"> (all count toward the goal; only paying shows up in MRR)</span>
+            <span className="opacity-70">
+              {" "}
+              (all three count toward the 50, but only the paying ones show up in Money above)
+            </span>
           </p>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">

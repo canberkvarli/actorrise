@@ -1,764 +1,89 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { IconSearch, IconRefresh, IconChevronDown, IconChevronUp } from "@tabler/icons-react";
+import { useState } from "react";
 
-import api from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { ContentRequestsTab } from "@/components/admin/searches/ContentRequestsTab";
+import { DemandTab } from "@/components/admin/searches/DemandTab";
+import { PeopleTab } from "@/components/admin/searches/PeopleTab";
+import { ProblemsTab } from "@/components/admin/searches/ProblemsTab";
+import { SearchLogsTable } from "@/components/admin/searches/SearchLogsTable";
+import { BRAND, EMPTY_FILTERS, type LogFilters } from "@/components/admin/searches/shared";
 
-const PAGE_SIZE = 25;
+/**
+ * Search admin, organised by the question you walked in with.
+ *
+ * Search is the busiest surface on the platform, and the single screen that
+ * used to serve it made every question equally hard: nine metric cards, then a
+ * flat reverse-chronological feed. Each tab now answers one thing, and the tabs
+ * hand off to each other — a query in Demand or an actor in People drops you
+ * into the raw feed already filtered.
+ */
 
-interface SearchLogEntry {
-  id: number;
-  query: string;
-  filters_used: Record<string, string> | null;
-  results_count: number;
-  result_ids: number[] | null;
-  user_email: string | null;
-  source: string;
-  weak_match: boolean | null;
-  best_cosine: number | null;
-  match_strategy: string | null;
-  query_type: string | null;
-  content_gap: boolean | null;
-  is_repeat: boolean | null;
-  created_at: string;
-}
+const TABS = [
+  { id: "problems", label: "What's broken", hint: "Failed and weak searches" },
+  { id: "demand", label: "What they want", hint: "Top queries and gaps" },
+  { id: "people", label: "Who's searching", hint: "Per-actor behaviour" },
+  { id: "recent", label: "Recent activity", hint: "The raw feed" },
+  { id: "requests", label: "Requests", hint: "Titles to add" },
+] as const;
 
-interface MonologueSnapshot {
-  id: number;
-  title: string;
-  character_name: string;
-  gender: string | null;
-  age_range: string | null;
-  emotion: string | null;
-  duration_seconds: number;
-  word_count: number;
-  play_title: string;
-  author: string;
-}
-
-interface SearchesResponse {
-  searches: SearchLogEntry[];
-  total: number;
-  page: number;
-  limit: number;
-  summary: {
-    total_searches: number;
-    zero_result_count: number;
-    weak_match_count: number;
-    weak_match_rate: number;
-    scoreable_count?: number;
-    title_lookup_count?: number;
-    content_gap_count: number;
-    avg_best_cosine: number | null;
-    by_match_strategy: { key: string; count: number }[];
-    by_query_type: { key: string; count: number }[];
-    retry_events: number;
-    retry_users: number;
-    repeat_count?: number;
-    repeat_rate?: number;
-    top_queries: { query: string; count: number }[];
-    top_zero_result_queries: { query: string; count: number }[];
-  };
-}
-
-function formatDuration(seconds: number): string {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return mins > 0 ? `${mins}:${String(secs).padStart(2, "0")}` : `0:${String(secs).padStart(2, "0")}`;
-}
-
-function timeAgo(dateStr: string): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  if (diffMins < 1) return "just now";
-  if (diffMins < 60) return `${diffMins}m ago`;
-  const diffHours = Math.floor(diffMins / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  const diffDays = Math.floor(diffHours / 24);
-  return `${diffDays}d ago`;
-}
-
-function ExpandableResults({ logId }: { logId: number }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ["admin-search-results", logId],
-    queryFn: async () => {
-      const res = await api.get<{ monologues: MonologueSnapshot[] }>(
-        `/api/admin/searches/${logId}/results`
-      );
-      return res.data;
-    },
-    staleTime: 5 * 60_000,
-    gcTime: 10 * 60_000,
-  });
-
-  if (isLoading) {
-    return <p className="py-3 text-sm text-muted-foreground">Loading results...</p>;
-  }
-
-  const monologues = data?.monologues ?? [];
-  if (monologues.length === 0) {
-    return <p className="py-3 text-sm text-muted-foreground">No results returned.</p>;
-  }
-
-  return (
-    <div className="grid gap-2 py-3 sm:grid-cols-2 lg:grid-cols-3">
-      {monologues.map((m) => (
-        <div
-          key={m.id}
-          className="border border-border/60 bg-muted/20 p-3 text-sm space-y-1"
-        >
-          <p className="font-medium">{m.title}</p>
-          <p className="text-xs text-muted-foreground">
-            {m.character_name} in <span className="italic">{m.play_title}</span>
-          </p>
-          <p className="text-xs text-muted-foreground">by {m.author}</p>
-          <div className="flex flex-wrap gap-1 pt-1">
-            {m.gender && m.gender !== "any" && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-none">{m.gender}</Badge>
-            )}
-            {m.age_range && m.age_range !== "any" && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-none">{m.age_range}</Badge>
-            )}
-            {m.emotion && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 rounded-none">{m.emotion}</Badge>
-            )}
-            <span className="text-[10px] text-muted-foreground">
-              {formatDuration(m.duration_seconds)} · {m.word_count}w
-            </span>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-interface ContentRequestItem {
-  id: number;
-  play_title: string;
-  author: string | null;
-  character_name: string | null;
-  request_count: number;
-  first_requested_at: string;
-  last_requested_at: string;
-  status: string;
-}
-
-function statusBadgeClass(status: string): string {
-  if (status === "added") return "bg-green-50 text-green-700 border-green-200 rounded-none";
-  if (status === "planned") return "bg-blue-50 text-blue-700 border-blue-200 rounded-none";
-  return "rounded-none";
-}
-
-function ContentRequestsTab() {
-  const queryClient = useQueryClient();
-  const { data, isLoading } = useQuery({
-    queryKey: ["admin-content-requests"],
-    queryFn: async () => {
-      const res = await api.get<{ requests: ContentRequestItem[] }>("/api/admin/content-requests");
-      return res.data;
-    },
-    staleTime: 60_000,
-  });
-
-  const statusMutation = useMutation({
-    mutationFn: async ({ id, status }: { id: number; status: string }) => {
-      await api.patch(`/api/admin/content-requests/${id}`, { status });
-    },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin-content-requests"] }),
-  });
-
-  const requests = data?.requests ?? [];
-
-  return (
-    <Card>
-      <CardHeader className="p-3 sm:p-4 md:p-6">
-        <CardTitle className="text-base sm:text-lg md:text-xl">Content Requests</CardTitle>
-      </CardHeader>
-      <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
-        {isLoading ? (
-          <p className="py-8 text-center text-muted-foreground">Loading...</p>
-        ) : requests.length === 0 ? (
-          <p className="py-8 text-center text-muted-foreground">No content requests yet.</p>
-        ) : (
-          <>
-            <div className="md:hidden space-y-3">
-              {requests.map((r) => (
-                <div
-                  key={r.id}
-                  className="border border-border/60 bg-card p-3 space-y-2"
-                >
-                  <div className="space-y-0.5">
-                    <p className="font-medium text-sm">{r.play_title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {r.author || "Unknown author"} · {r.request_count} requests · {timeAgo(r.last_requested_at)}
-                    </p>
-                  </div>
-                  <select
-                    value={r.status}
-                    onChange={(e) => statusMutation.mutate({ id: r.id, status: e.target.value })}
-                    className={`rounded border border-input bg-background px-2 py-2 text-xs min-h-[44px] w-full ${statusBadgeClass(r.status)}`}
-                  >
-                    <option value="requested">requested</option>
-                    <option value="planned">planned</option>
-                    <option value="added">added</option>
-                  </select>
-                </div>
-              ))}
-            </div>
-            <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="py-2 text-left font-medium">Play</th>
-                    <th className="py-2 text-left font-medium">Author</th>
-                    <th className="py-2 text-left font-medium">Requests</th>
-                    <th className="py-2 text-left font-medium">Last Requested</th>
-                    <th className="py-2 text-left font-medium">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {requests.map((r) => (
-                    <tr key={r.id} className="border-b border-border/60 hover:bg-muted/30">
-                      <td className="py-2 font-medium">{r.play_title}</td>
-                      <td className="py-2 text-muted-foreground">{r.author || "-"}</td>
-                      <td className="py-2 font-semibold">{r.request_count}</td>
-                      <td className="py-2 text-muted-foreground">{timeAgo(r.last_requested_at)}</td>
-                      <td className="py-2">
-                        <select
-                          value={r.status}
-                          onChange={(e) => statusMutation.mutate({ id: r.id, status: e.target.value })}
-                          className={`rounded border border-input bg-background px-2 py-1 text-xs ${statusBadgeClass(r.status)}`}
-                        >
-                          <option value="requested">requested</option>
-                          <option value="planned">planned</option>
-                          <option value="added">added</option>
-                        </select>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
+type TabId = (typeof TABS)[number]["id"];
 
 export default function AdminSearchesPage() {
-  const [tab, setTab] = useState<"logs" | "requests">("logs");
-  const [q, setQ] = useState("");
-  const [debouncedQ, setDebouncedQ] = useState("");
-  const [sourceFilter, setSourceFilter] = useState<string>("all");
-  const [zeroOnly, setZeroOnly] = useState(false);
-  const [offset, setOffset] = useState(0);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [stickySummary, setStickySummary] = useState<SearchesResponse["summary"] | null>(null);
+  const [tab, setTab] = useState<TabId>("problems");
+  const [filters, setFilters] = useState<LogFilters>(EMPTY_FILTERS);
 
-  // Debounce the search query so typing doesn't fire a new request per keystroke.
-  useEffect(() => {
-    const id = setTimeout(() => setDebouncedQ(q), 350);
-    return () => clearTimeout(id);
-  }, [q]);
-
-  // Reset to page 1 whenever the filters that affect the result set change.
-  useEffect(() => {
-    setOffset(0);
-  }, [debouncedQ, sourceFilter, zeroOnly]);
-
-  const page = Math.floor(offset / PAGE_SIZE) + 1;
-
-  const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
-    queryKey: ["admin-searches", debouncedQ, sourceFilter, zeroOnly, page],
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (debouncedQ.trim()) params.set("q", debouncedQ.trim());
-      if (sourceFilter !== "all") params.set("source", sourceFilter);
-      if (zeroOnly) params.set("zero_only", "true");
-      params.set("page", String(page));
-      params.set("limit", String(PAGE_SIZE));
-      const res = await api.get<SearchesResponse>(`/api/admin/searches?${params}`);
-      return res.data;
-    },
-    // Stop refetching on every nav back and stop the flash on pagination.
-    staleTime: 30_000,
-    placeholderData: keepPreviousData,
-    // A backend redeploy drops in-flight requests; retry so a transient blip
-    // recovers on its own instead of stranding the page on an error.
-    retry: 2,
-    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 4000),
-  });
-
-  // Backend only sends `summary` on page 1 — keep the last one we got so
-  // paginating doesn't blank out the stats cards.
-  useEffect(() => {
-    if (data?.summary) setStickySummary(data.summary);
-  }, [data?.summary]);
-
-  const total = data?.total ?? 0;
-  const summary = useMemo(() => data?.summary ?? stickySummary, [data?.summary, stickySummary]);
-  const pageStart = offset + 1;
-  const pageEnd = Math.min(offset + PAGE_SIZE, total);
-  const canPrev = offset > 0;
-  const canNext = offset + PAGE_SIZE < total;
+  /** Jump from an aggregate straight to the rows that produced it. */
+  const drillInto = (patch: Partial<LogFilters>) => {
+    setFilters({ ...EMPTY_FILTERS, ...patch });
+    setTab("recent");
+  };
 
   return (
     <div className="space-y-4 p-3 sm:p-4 md:p-6">
-      <div className="flex gap-2 border-b border-border pb-3 overflow-x-auto">
-        <Button
-          variant={tab === "logs" ? "secondary" : "ghost"}
-          size="sm"
-          className="min-h-[44px] sm:min-h-0 shrink-0"
-          onClick={() => setTab("logs")}
-        >
-          Search Logs
-        </Button>
-        <Button
-          variant={tab === "requests" ? "secondary" : "ghost"}
-          size="sm"
-          className="min-h-[44px] sm:min-h-0 shrink-0"
-          onClick={() => setTab("requests")}
-        >
-          Content Requests
-        </Button>
-      </div>
+      <header>
+        <h1 className="text-lg font-semibold sm:text-xl">Search</h1>
+        <p className="mt-0.5 text-sm text-muted-foreground">
+          What actors are looking for, and whether they&apos;re finding it.
+        </p>
+      </header>
 
-      {tab === "requests" ? (
-        <ContentRequestsTab />
-      ) : (
-      <>
-      {/* Summary cards */}
-      {summary && (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardContent className="p-3 sm:p-4 md:p-6 pt-6">
-              <p className="text-sm text-muted-foreground">Total Searches</p>
-              <p className="text-2xl font-bold">{summary.total_searches.toLocaleString()}</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3 sm:p-4 md:p-6 pt-6">
-              <p className="text-sm text-muted-foreground">Zero Results</p>
-              <p className="text-2xl font-bold text-destructive">
-                {summary.zero_result_count.toLocaleString()}
-              </p>
-              {summary.total_searches > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {((summary.zero_result_count / summary.total_searches) * 100).toFixed(1)}% of searches
-                </p>
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3 sm:p-4 md:p-6 pt-6">
-              <p className="text-sm font-medium mb-2">Top Queries</p>
-              {summary.top_queries.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No data yet</p>
-              ) : (
-                <div className="space-y-1">
-                  {summary.top_queries.slice(0, 5).map((tq, i) => (
-                    <div key={i} className="flex justify-between text-xs gap-2">
-                      <span className="truncate">{tq.query}</span>
-                      <span className="text-muted-foreground shrink-0">{tq.count}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-3 sm:p-4 md:p-6 pt-6">
-              <p className="text-sm font-medium mb-2 text-destructive">Content Gaps</p>
-              {summary.top_zero_result_queries.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No zero-result queries</p>
-              ) : (
-                <div className="space-y-1">
-                  {summary.top_zero_result_queries.slice(0, 5).map((tq, i) => (
-                    <div key={i} className="flex justify-between text-xs gap-2">
-                      <span className="truncate">{tq.query}</span>
-                      <span className="text-muted-foreground shrink-0">{tq.count}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Quality diagnostics — signals logged on every search, surfaced here.
-          Gated on the new fields existing so an older backend can't crash the page. */}
-      {summary && summary.by_match_strategy != null && (
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
-          <Card>
-            <CardContent className="p-4 pt-6">
-              <p className="text-sm text-muted-foreground">Weak matches</p>
-              <p className="text-2xl font-bold" style={{ color: (summary.weak_match_rate ?? 0) > 15 ? "#CB4B00" : undefined }}>
-                {summary.weak_match_rate ?? 0}%
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {(summary.weak_match_count ?? 0).toLocaleString()} of{" "}
-                {(summary.scoreable_count ?? summary.total_searches).toLocaleString()} scoreable (vector) searches
-                {summary.title_lookup_count != null && summary.title_lookup_count > 0
-                  ? ` · ${summary.title_lookup_count.toLocaleString()} title/character lookups excluded`
-                  : ""}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 pt-6">
-              <p className="text-sm text-muted-foreground">Avg top match</p>
-              <p className="text-2xl font-bold">
-                {summary.avg_best_cosine != null ? summary.avg_best_cosine.toFixed(3) : "—"}
-              </p>
-              <p className="text-xs text-muted-foreground">cosine of the best hit</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 pt-6">
-              <p className="text-sm text-muted-foreground">Silent retries</p>
-              <p className="text-2xl font-bold" style={{ color: (summary.repeat_rate ?? 0) > 10 ? "#CB4B00" : undefined }}>
-                {summary.repeat_rate != null ? `${summary.repeat_rate}%` : (summary.retry_users ?? 0)}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {summary.repeat_count != null
-                  ? `${summary.repeat_count.toLocaleString()} re-ran the same query ≤10 min · ${summary.retry_users ?? 0} did it 3+×`
-                  : "users who retried a query 3+× in 30 min"}
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 pt-6">
-              <p className="text-sm font-medium mb-2">Match strategy</p>
-              {summary.by_match_strategy.length === 0 ? (
-                <p className="text-xs text-muted-foreground">No data</p>
-              ) : (
-                <div className="space-y-1">
-                  {summary.by_match_strategy.slice(0, 5).map((d) => (
-                    <div key={d.key} className="flex justify-between text-xs gap-2">
-                      <span className="truncate">{d.key}</span>
-                      <span className="text-muted-foreground shrink-0">{d.count}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 pt-6">
-              <p className="text-sm font-medium mb-2">Query type</p>
-              {(summary.by_query_type ?? []).length === 0 ? (
-                <p className="text-xs text-muted-foreground">No data</p>
-              ) : (
-                <div className="space-y-1">
-                  {(summary.by_query_type ?? []).slice(0, 5).map((d) => (
-                    <div key={d.key} className="flex justify-between text-xs gap-2">
-                      <span className="truncate">{d.key}</span>
-                      <span className="text-muted-foreground shrink-0">{d.count}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* Filters */}
-      <Card>
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 md:p-6">
-          <CardTitle className="text-base sm:text-lg md:text-xl">Search Logs</CardTitle>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 min-h-[44px] sm:min-h-0 w-full sm:w-auto"
-              onClick={() => refetch()}
+      <nav className="flex gap-1 overflow-x-auto border-b border-border">
+        {TABS.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              aria-current={active ? "page" : undefined}
+              className={`shrink-0 border-b-2 px-3 py-2.5 text-left transition-colors ${
+                active ? "" : "border-transparent hover:bg-muted/30"
+              }`}
+              style={active ? { borderColor: BRAND, color: BRAND } : undefined}
             >
-              <IconRefresh className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-              Refresh
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3 p-3 sm:p-4 md:p-6 pt-0">
-          <div className="flex flex-wrap gap-2">
-            <div className="relative w-full sm:w-64">
-              <IconSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={q}
-                onChange={(e) => {
-                  setOffset(0);
-                  setQ(e.target.value);
-                }}
-                className="pl-9 w-full"
-                placeholder="Filter by query text..."
-              />
-            </div>
-            <select
-              value={sourceFilter}
-              onChange={(e) => {
-                setOffset(0);
-                setSourceFilter(e.target.value);
-              }}
-              className="rounded-md border border-input bg-background px-3 py-2 text-sm w-full sm:w-auto"
-            >
-              <option value="all">All sources</option>
-              <option value="search">Plays</option>
-              <option value="film_tv">Film/TV</option>
-              <option value="demo">Demo (landing)</option>
-            </select>
-            <label className="flex items-center gap-2 text-sm cursor-pointer w-full sm:w-auto py-2">
-              <input
-                type="checkbox"
-                checked={zeroOnly}
-                onChange={(e) => {
-                  setOffset(0);
-                  setZeroOnly(e.target.checked);
-                }}
-                className="rounded border-input"
-              />
-              Zero results only
-            </label>
-          </div>
-        </CardContent>
-      </Card>
+              <span className="block text-sm font-medium">{t.label}</span>
+              <span className="block text-[11px] text-muted-foreground">{t.hint}</span>
+            </button>
+          );
+        })}
+      </nav>
 
-      {/* Table */}
-      <Card>
-        <CardContent className="p-3 sm:p-4 md:p-6 pt-6">
-          {isLoading ? (
-            <p className="py-8 text-center text-muted-foreground">Loading searches...</p>
-          ) : isError ? (
-            <p className="py-8 text-center text-destructive">
-              {(error as Error)?.message || "Failed to load searches"}
-            </p>
-          ) : (
-            <div className="space-y-3">
-              <div className="md:hidden space-y-3">
-                {data?.searches.map((entry) => (
-                  <Fragment key={entry.id}>
-                    <div
-                      className="border border-border/60 bg-card p-3 space-y-2 cursor-pointer"
-                      onClick={() =>
-                        setExpandedId(expandedId === entry.id ? null : entry.id)
-                      }
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <p className="font-medium text-sm break-words flex-1">{entry.query}</p>
-                        {expandedId === entry.id ? (
-                          <IconChevronUp className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                        ) : (
-                          <IconChevronDown className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        <span
-                          className={
-                            entry.results_count === 0
-                              ? "font-medium text-destructive"
-                              : "font-medium text-foreground"
-                          }
-                        >
-                          {entry.results_count} results
-                        </span>
-                        {" · "}
-                        {timeAgo(entry.created_at)}
-                        {" · "}
-                        {entry.user_email || "anonymous"}
-                      </p>
-                      {(entry.match_strategy || entry.best_cosine != null || entry.weak_match || entry.content_gap || entry.is_repeat) && (
-                        <p className="text-[11px] text-muted-foreground flex flex-wrap gap-x-2 gap-y-0.5">
-                          {entry.match_strategy && <span>{entry.match_strategy}</span>}
-                          {entry.best_cosine != null && <span>cos {entry.best_cosine.toFixed(3)}</span>}
-                          {entry.weak_match && <span className="font-medium" style={{ color: "#CB4B00" }}>weak</span>}
-                          {entry.content_gap && <span className="font-medium" style={{ color: "#CB4B00" }}>gap</span>}
-                          {entry.is_repeat && <span className="font-medium" style={{ color: "#CB4B00" }}>repeat</span>}
-                        </p>
-                      )}
-                      <div className="flex flex-wrap gap-1">
-                        <Badge
-                          variant="outline"
-                          className={
-                            entry.source === "demo"
-                              ? "bg-blue-50 text-blue-700 border-blue-200 rounded-none"
-                              : entry.source === "film_tv"
-                                ? "bg-purple-50 text-purple-700 border-purple-200 rounded-none"
-                                : "rounded-none"
-                          }
-                        >
-                          {entry.source === "film_tv" ? "Film/TV" : entry.source === "search" ? "Plays" : entry.source}
-                        </Badge>
-                        {entry.filters_used && Object.entries(entry.filters_used).map(([k, v]) => (
-                          <Badge
-                            key={k}
-                            variant="outline"
-                            className="text-xs px-2 py-0.5 rounded-none"
-                          >
-                            <span className="font-semibold text-foreground">{k}:</span>{" "}
-                            {String(v)}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                    {expandedId === entry.id && (
-                      <div className="bg-muted/10 px-3 border border-border/60">
-                        <ExpandableResults logId={entry.id} />
-                      </div>
-                    )}
-                  </Fragment>
-                ))}
-              </div>
+      {tab === "problems" && <ProblemsTab />}
 
-              <div className="hidden md:block overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border">
-                      <th className="py-2 text-left font-medium">Query</th>
-                      <th className="py-2 text-left font-medium">User</th>
-                      <th className="py-2 text-left font-medium">Filters</th>
-                      <th className="py-2 text-left font-medium">Results</th>
-                      <th className="py-2 text-left font-medium">Match</th>
-                      <th className="py-2 text-left font-medium">Source</th>
-                      <th className="py-2 text-left font-medium">When</th>
-                      <th className="py-2 text-left font-medium w-8"></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data?.searches.map((entry) => (
-                      <Fragment key={entry.id}>
-                        <tr
-                          className="border-b border-border/60 hover:bg-muted/30 cursor-pointer"
-                          onClick={() =>
-                            setExpandedId(expandedId === entry.id ? null : entry.id)
-                          }
-                        >
-                          <td className="py-2 max-w-[240px]">
-                            <p className="font-medium truncate">{entry.query}</p>
-                          </td>
-                          <td className="py-2">
-                            <span className="text-xs text-muted-foreground">
-                              {entry.user_email || "anonymous"}
-                            </span>
-                          </td>
-                          <td className="py-2">
-                            {entry.filters_used && Object.keys(entry.filters_used).length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {Object.entries(entry.filters_used).map(([k, v]) => (
-                                  <Badge
-                                    key={k}
-                                    variant="outline"
-                                    className="text-xs px-2 py-0.5 rounded-none"
-                                  >
-                                    <span className="font-semibold text-foreground">{k}:</span>{" "}
-                                    {String(v)}
-                                  </Badge>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">none</span>
-                            )}
-                          </td>
-                          <td className="py-2">
-                            <span
-                              className={
-                                entry.results_count === 0
-                                  ? "font-medium text-destructive"
-                                  : ""
-                              }
-                            >
-                              {entry.results_count}
-                            </span>
-                          </td>
-                          <td className="py-2 whitespace-nowrap">
-                            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                              {entry.best_cosine != null && <span className="tabular-nums">{entry.best_cosine.toFixed(3)}</span>}
-                              {entry.match_strategy && <span className="opacity-80">{entry.match_strategy}</span>}
-                              {entry.weak_match && <span className="font-medium" style={{ color: "#CB4B00" }}>weak</span>}
-                              {entry.content_gap && <span className="font-medium" style={{ color: "#CB4B00" }}>gap</span>}
-                              {entry.best_cosine == null && !entry.match_strategy && !entry.weak_match && !entry.content_gap && <span>—</span>}
-                            </div>
-                          </td>
-                          <td className="py-2">
-                            <Badge
-                              variant="outline"
-                              className={
-                                entry.source === "demo"
-                                  ? "bg-blue-50 text-blue-700 border-blue-200 rounded-none"
-                                  : entry.source === "film_tv"
-                                    ? "bg-purple-50 text-purple-700 border-purple-200 rounded-none"
-                                    : "rounded-none"
-                              }
-                            >
-                              {entry.source === "film_tv" ? "Film/TV" : entry.source === "search" ? "Plays" : entry.source}
-                            </Badge>
-                          </td>
-                          <td className="py-2 text-muted-foreground whitespace-nowrap">
-                            {timeAgo(entry.created_at)}
-                          </td>
-                          <td className="py-2">
-                            {expandedId === entry.id ? (
-                              <IconChevronUp className="h-4 w-4 text-muted-foreground" />
-                            ) : (
-                              <IconChevronDown className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </td>
-                        </tr>
-                        {expandedId === entry.id && (
-                          <tr key={`${entry.id}-results`}>
-                            <td colSpan={8} className="bg-muted/10 px-4">
-                              <ExpandableResults logId={entry.id} />
-                            </td>
-                          </tr>
-                        )}
-                      </Fragment>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+      {tab === "demand" && <DemandTab onDrillIntoQuery={(q) => drillInto({ q })} />}
 
-              {/* Pagination */}
-              {total > 0 && (
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-2">
-                  <p className="text-xs text-muted-foreground text-center sm:text-left">
-                    {pageStart}-{pageEnd} of {total}
-                  </p>
-                  <div className="flex gap-2 justify-center sm:justify-end">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none"
-                      disabled={!canPrev}
-                      onClick={() => setOffset(Math.max(0, offset - PAGE_SIZE))}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="min-h-[44px] sm:min-h-0 flex-1 sm:flex-none"
-                      disabled={!canNext}
-                      onClick={() => setOffset(offset + PAGE_SIZE)}
-                    >
-                      Next
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-      </>
+      {tab === "people" && <PeopleTab onDrillIntoUser={(user) => drillInto({ user })} />}
+
+      {tab === "recent" && (
+        <SearchLogsTable
+          filters={filters}
+          onFiltersChange={setFilters}
+          title="Every search, newest first"
+        />
       )}
+
+      {tab === "requests" && <ContentRequestsTab />}
     </div>
   );
 }

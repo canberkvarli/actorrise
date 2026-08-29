@@ -129,6 +129,23 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
         .all()
     )
 
+    # Weak-but-not-empty queries: we returned *something* and it was bad. These
+    # never show up in the zero-result list, so without them the "what's broken"
+    # view misses the larger half of the failures.
+    top_weak = (
+        summary_base
+        .filter(SearchLog.weak_match.is_(True), SearchLog.results_count > 0)
+        .with_entities(
+            func.lower(SearchLog.query).label("q"),
+            func.count().label("cnt"),
+            func.avg(SearchLog.best_cosine).label("avg_cos"),
+        )
+        .group_by(func.lower(SearchLog.query))
+        .order_by(desc("cnt"))
+        .limit(10)
+        .all()
+    )
+
     return {
         "total_searches": total_searches,
         "zero_result_count": zero_results,
@@ -148,6 +165,14 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
         "repeat_rate": round(repeat_count / total_searches * 100, 1) if total_searches else 0.0,
         "top_queries": [{"query": q, "count": c} for q, c in top_queries],
         "top_zero_result_queries": [{"query": q, "count": c} for q, c in top_zero],
+        "top_weak_queries": [
+            {
+                "query": q,
+                "count": c,
+                "avg_cosine": round(float(cos), 3) if cos is not None else None,
+            }
+            for q, c, cos in top_weak
+        ],
     }
 
 
@@ -158,6 +183,11 @@ def get_search_logs(
     from_date: Optional[str] = Query(None, alias="from"),
     to_date: Optional[str] = Query(None, alias="to"),
     zero_only: bool = Query(False, description="Only show zero-result searches"),
+    problem: Optional[str] = Query(
+        None,
+        description="Only failures of one kind: zero | weak | gap | repeat | any",
+    ),
+    user: Optional[str] = Query(None, description="Filter by user email (substring)"),
     source: Optional[str] = Query(None, description="Filter by source: search or demo"),
     q: Optional[str] = Query(None, description="Filter by query text"),
     db: Session = Depends(get_db),
@@ -175,6 +205,36 @@ def get_search_logs(
 
     if zero_only:
         base = base.filter(SearchLog.results_count == 0)
+    if problem:
+        # `content_gap` is jsonb — most rows hold the jsonb literal 'null', so a
+        # plain IS NOT NULL matches everything. Same test as _compute_summary.
+        gap_clause = sa_text("jsonb_typeof(search_logs.content_gap) = 'object'")
+        clauses = {
+            "zero": lambda qy: qy.filter(SearchLog.results_count == 0),
+            "weak": lambda qy: qy.filter(SearchLog.weak_match.is_(True)),
+            "gap": lambda qy: qy.filter(gap_clause),
+            "repeat": lambda qy: qy.filter(SearchLog.is_repeat.is_(True)),
+            "any": lambda qy: qy.filter(
+                (SearchLog.results_count == 0)
+                | (SearchLog.weak_match.is_(True))
+                | (SearchLog.is_repeat.is_(True))
+            ),
+        }
+        if problem not in clauses:
+            raise HTTPException(
+                status_code=400,
+                detail="problem must be one of: zero, weak, gap, repeat, any",
+            )
+        base = clauses[problem](base)
+    if user:
+        # search_logs stores user_id only; resolve emails to ids up front so the
+        # log query stays a plain indexed filter instead of a join per page.
+        matching_ids = [
+            row.id for row in db.query(User.id).filter(User.email.ilike(f"%{user}%")).all()
+        ]
+        if not matching_ids:
+            return {"searches": [], "total": 0, "page": page, "limit": limit, "summary": None}
+        base = base.filter(SearchLog.user_id.in_(matching_ids))
     if source:
         base = base.filter(SearchLog.source == source)
     if q:
@@ -243,6 +303,73 @@ def get_search_logs_summary(
     return _compute_summary(start_dt, end_dt, db)
 
 
+@router.get("/searches/by-user")
+def get_searches_by_user(
+    from_date: Optional[str] = Query(None, alias="from"),
+    to_date: Optional[str] = Query(None, alias="to"),
+    limit: int = Query(50, le=200),
+    db: Session = Depends(get_db),
+    _mod: User = Depends(require_moderator),
+) -> dict[str, Any]:
+    """Per-actor search behaviour, busiest first.
+
+    One row per user with how much they searched and how often it failed, so a
+    struggling user is visible as a person rather than as scattered log rows.
+    """
+    start_dt, end_dt = _date_range(from_date, to_date)
+
+    rows = db.execute(
+        sa_text(
+            "SELECT user_id, count(*) AS searches, "
+            "count(*) FILTER (WHERE results_count = 0) AS zero, "
+            "count(*) FILTER (WHERE weak_match IS TRUE) AS weak, "
+            "count(*) FILTER (WHERE is_repeat IS TRUE) AS repeats, "
+            "count(DISTINCT lower(btrim(query))) AS distinct_queries, "
+            "avg(best_cosine) FILTER (WHERE best_cosine IS NOT NULL) AS avg_cos, "
+            "max(created_at) AS last_seen, min(created_at) AS first_seen "
+            "FROM search_logs "
+            "WHERE created_at >= :start AND created_at < :end AND user_id IS NOT NULL "
+            "GROUP BY user_id ORDER BY searches DESC LIMIT :limit"
+        ),
+        {"start": start_dt, "end": end_dt, "limit": limit},
+    ).fetchall()
+
+    user_ids = [r[0] for r in rows]
+    user_map: dict = {}
+    if user_ids:
+        users = db.query(User.id, User.email).filter(User.id.in_(user_ids)).all()
+        user_map = {u.id: u.email for u in users}
+
+    # How many anonymous (logged-out / demo) searches we're not attributing —
+    # otherwise the per-user numbers silently don't add up to the total.
+    anon = db.execute(
+        sa_text(
+            "SELECT count(*) FROM search_logs WHERE created_at >= :start "
+            "AND created_at < :end AND user_id IS NULL"
+        ),
+        {"start": start_dt, "end": end_dt},
+    ).scalar()
+
+    return {
+        "users": [
+            {
+                "user_id": r[0],
+                "email": user_map.get(r[0]),
+                "searches": int(r[1] or 0),
+                "zero_results": int(r[2] or 0),
+                "weak_matches": int(r[3] or 0),
+                "repeats": int(r[4] or 0),
+                "distinct_queries": int(r[5] or 0),
+                "avg_best_cosine": round(float(r[6]), 3) if r[6] is not None else None,
+                "last_seen": r[7].isoformat() if r[7] else None,
+                "first_seen": r[8].isoformat() if r[8] else None,
+            }
+            for r in rows
+        ],
+        "anonymous_searches": int(anon or 0),
+    }
+
+
 @router.get("/searches/{log_id}/results")
 def get_search_result_monologues(
     log_id: int,
@@ -304,46 +431,180 @@ def get_content_requests(
     db: Session = Depends(get_db),
     _mod: User = Depends(require_moderator),
 ) -> dict[str, Any]:
-    """All content requests sorted by most requested."""
+    """All content requests, most-demanded first, freshest breaking the tie."""
     requests = (
         db.query(ContentRequest)
-        .order_by(desc(ContentRequest.request_count))
+        .order_by(desc(ContentRequest.request_count), desc(ContentRequest.last_requested_at))
         .all()
     )
+    return {"requests": [_serialize_request(r) for r in requests]}
+
+
+VALID_STATUSES = ("requested", "planned", "added", "rejected")
+
+
+def _serialize_request(r: ContentRequest) -> dict[str, Any]:
     return {
-        "requests": [
-            {
-                "id": r.id,
-                "play_title": r.play_title,
-                "author": r.author,
-                "character_name": r.character_name,
-                "request_count": r.request_count,
-                "first_requested_at": r.first_requested_at.isoformat(),
-                "last_requested_at": r.last_requested_at.isoformat(),
-                "status": r.status,
-            }
-            for r in requests
-        ],
+        "id": r.id,
+        "play_title": r.play_title,
+        "author": r.author,
+        "character_name": r.character_name,
+        "request_count": r.request_count,
+        "first_requested_at": r.first_requested_at.isoformat(),
+        "last_requested_at": r.last_requested_at.isoformat(),
+        "status": r.status,
     }
 
 
-class ContentRequestStatusUpdate(BaseModel):
-    status: str  # "requested" | "planned" | "added"
+class ContentRequestUpdate(BaseModel):
+    """Every field optional — a status-only PATCH stays valid, which is what the
+    old status dropdown sends."""
+
+    play_title: Optional[str] = None
+    author: Optional[str] = None
+    character_name: Optional[str] = None
+    status: Optional[str] = None
+
+
+class ContentRequestCreate(BaseModel):
+    play_title: str
+    author: Optional[str] = None
+    character_name: Optional[str] = None
+    status: Optional[str] = None
+
+
+def _clean(value: Optional[str]) -> Optional[str]:
+    """Trim, and treat a cleared field as NULL rather than an empty string — the
+    (play_title, author) unique index treats '' and NULL as different keys, so
+    empty strings would quietly split what should be one row."""
+    if value is None:
+        return None
+    trimmed = value.strip()
+    return trimmed or None
 
 
 @router.patch("/content-requests/{request_id}")
-def update_content_request_status(
+def update_content_request(
     request_id: int,
-    body: ContentRequestStatusUpdate,
+    body: ContentRequestUpdate,
     db: Session = Depends(get_db),
     _mod: User = Depends(require_moderator),
-) -> dict[str, str]:
-    """Update a content request's status."""
+) -> dict[str, Any]:
+    """Edit a content request: retitle it, fix the author, set a character, or
+    move its status. Fields left out of the body are untouched."""
     req = db.query(ContentRequest).filter(ContentRequest.id == request_id).first()
     if not req:
         raise HTTPException(status_code=404, detail="Content request not found")
-    if body.status not in ("requested", "planned", "added"):
-        raise HTTPException(status_code=400, detail="Status must be requested, planned, or added")
-    req.status = body.status
+
+    if body.status is not None:
+        if body.status not in VALID_STATUSES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Status must be one of: {', '.join(VALID_STATUSES)}",
+            )
+        req.status = body.status
+
+    if body.play_title is not None:
+        title = _clean(body.play_title)
+        if not title:
+            raise HTTPException(status_code=400, detail="Title cannot be empty")
+        req.play_title = title
+
+    if body.author is not None:
+        req.author = _clean(body.author)
+
+    if body.character_name is not None:
+        req.character_name = _clean(body.character_name)
+
+    # Renaming can collide with the unique (play_title, author) index — which is
+    # exactly what happens when you fix a typo'd duplicate into its real title.
+    # Fold the two rows together instead of 500ing on the constraint.
+    if body.play_title is not None or body.author is not None:
+        twin = (
+            db.query(ContentRequest)
+            .filter(
+                ContentRequest.id != req.id,
+                func.lower(ContentRequest.play_title) == req.play_title.lower(),
+                func.lower(func.coalesce(ContentRequest.author, ""))
+                == (req.author or "").lower(),
+            )
+            .first()
+        )
+        if twin:
+            twin.request_count += req.request_count
+            twin.last_requested_at = max(twin.last_requested_at, req.last_requested_at)
+            twin.first_requested_at = min(twin.first_requested_at, req.first_requested_at)
+            if body.status is not None:
+                twin.status = req.status
+            if req.character_name and not twin.character_name:
+                twin.character_name = req.character_name
+            db.delete(req)
+            db.commit()
+            return {"status": "ok", "merged_into": twin.id, "request": _serialize_request(twin)}
+
+    db.commit()
+    db.refresh(req)
+    return {"status": "ok", "request": _serialize_request(req)}
+
+
+@router.delete("/content-requests/{request_id}")
+def delete_content_request(
+    request_id: int,
+    db: Session = Depends(get_db),
+    _mod: User = Depends(require_moderator),
+) -> dict[str, str]:
+    """Drop a request outright — for junk entries like a stray keyboard mash."""
+    req = db.query(ContentRequest).filter(ContentRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Content request not found")
+    db.delete(req)
     db.commit()
     return {"status": "ok"}
+
+
+@router.post("/content-requests")
+def create_content_request(
+    body: ContentRequestCreate,
+    db: Session = Depends(get_db),
+    _mod: User = Depends(require_moderator),
+) -> dict[str, Any]:
+    """Add a request by hand — used by the 'track this' action on a failed
+    search, so a content gap spotted in the logs becomes a tracked row without
+    retyping it. Reuses the same (title, author) dedupe as the user-facing path,
+    so tracking a query users already requested bumps the existing row."""
+    title = _clean(body.play_title)
+    if not title:
+        raise HTTPException(status_code=400, detail="Title cannot be empty")
+    if body.status is not None and body.status not in VALID_STATUSES:
+        raise HTTPException(
+            status_code=400, detail=f"Status must be one of: {', '.join(VALID_STATUSES)}"
+        )
+
+    author = _clean(body.author)
+    existing = (
+        db.query(ContentRequest)
+        .filter(
+            func.lower(ContentRequest.play_title) == title.lower(),
+            func.lower(func.coalesce(ContentRequest.author, "")) == (author or "").lower(),
+        )
+        .first()
+    )
+    if existing:
+        existing.request_count += 1
+        existing.last_requested_at = datetime.utcnow()
+        if body.status:
+            existing.status = body.status
+        db.commit()
+        db.refresh(existing)
+        return {"status": "ok", "created": False, "request": _serialize_request(existing)}
+
+    row = ContentRequest(
+        play_title=title,
+        author=author,
+        character_name=_clean(body.character_name),
+        status=body.status or "requested",
+    )
+    db.add(row)
+    db.commit()
+    db.refresh(row)
+    return {"status": "ok", "created": True, "request": _serialize_request(row)}
