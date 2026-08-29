@@ -1,5 +1,6 @@
 import { HeroCta } from "@/components/landing/HeroCta";
 import { GhostLight } from "@/components/brand/GhostLight";
+import { CurtainSketch } from "@/components/brand/sketches";
 
 /**
  * Closing scene: the ghost light. A single bulb on a stand, the theatre's
@@ -11,6 +12,8 @@ export function FinalCta() {
       <div aria-hidden className="absolute inset-0 -z-10 stage-wash" />
 
       <div className="container mx-auto px-4 sm:px-6 pt-20 pb-16 sm:pt-24 sm:pb-20 flex flex-col items-center text-center">
+        <CurtainSketch className="text-[var(--stage-faint)] mb-10" />
+
         {/* The ghost light */}
         <GhostLight stem />
 

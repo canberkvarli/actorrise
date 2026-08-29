@@ -1,14 +1,17 @@
 "use client";
 
 /**
- * Landing page pricing section. Uses cached pricing tiers (same as /pricing)
- * so the pricing page loads instantly when the user clicks through.
+ * Landing page pricing — quiet light cards, with the featured tier inverted
+ * to the dark stage palette and lit by the glow: the lead, under the light.
+ * Uses cached pricing tiers (same as /pricing) so the pricing page loads
+ * instantly when the user clicks through.
  */
 
 import { usePricingTiers, DEFAULT_PRICING_TIERS, type PricingTier } from "@/hooks/usePricingTiers";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
+import { motion } from "framer-motion";
 
 function getFeaturesList(tier: PricingTier): string[] {
   const features: string[] = [];
@@ -58,37 +61,80 @@ function getFeaturesList(tier: PricingTier): string[] {
 
 const MOBILE_VISIBLE_FEATURES = 4;
 
-function PricingCard({ tier, formatPrice, isHighlighted }: { tier: PricingTier; formatPrice: (cents: number) => string; isHighlighted: boolean }) {
+const rise = {
+  hidden: { opacity: 0, y: 24 },
+  visible: (i: number) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const, delay: i * 0.1 },
+  }),
+};
+
+function PricingCard({
+  tier,
+  index,
+  formatPrice,
+  isHighlighted,
+}: {
+  tier: PricingTier;
+  index: number;
+  formatPrice: (cents: number) => string;
+  isHighlighted: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
   const features = getFeaturesList(tier);
   const isFree = tier.name === "free";
   const hasMore = features.length > MOBILE_VISIBLE_FEATURES;
+  const price = isFree ? "$0" : formatPrice(tier.monthly_price_cents);
 
   const toggleExpanded = useCallback(() => setExpanded((v) => !v), []);
 
   return (
-    <div className={`border p-5 sm:p-6 flex flex-col relative ${isHighlighted ? "border-primary/40 bg-primary/[0.03]" : "border-border/60 bg-card/40"}`}>
+    <motion.div
+      custom={index}
+      variants={rise}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.3 }}
+      className={
+        isHighlighted
+          ? "dark stage-scene relative flex flex-col rounded-xl border border-[color-mix(in_oklab,var(--stage-glow)_35%,var(--stage-line))] p-5 sm:p-6 lg:-my-3 lg:py-8 shadow-[0_24px_70px_-24px_color-mix(in_oklab,var(--stage-glow)_45%,transparent)]"
+          : "relative flex flex-col rounded-xl border border-border/60 bg-card/40 p-5 sm:p-6 transition-colors duration-300 hover:border-border"
+      }
+    >
       {isHighlighted && (
-        <div className="absolute -top-2.5 left-4">
-          <span className="bg-primary px-2 py-0.5 text-[11px] font-medium text-white">
-            Most popular
-          </span>
-        </div>
+        <p className="stage-direction text-xs text-primary">(most popular.)</p>
       )}
-      <div className="flex items-baseline justify-between sm:block">
-        <h3 className="text-lg sm:text-xl font-semibold tracking-tight">{tier.display_name}</h3>
-        <p className="sm:mt-1 text-lg sm:text-xl font-bold">
-          {isFree ? "$0" : formatPrice(tier.monthly_price_cents)}
-          <span className="text-xs font-normal text-muted-foreground">/mo</span>
+
+      <div className={isHighlighted ? "mt-2" : ""}>
+        <h3 className={`text-lg font-semibold tracking-tight ${isHighlighted ? "text-[var(--stage-fg)]" : "text-foreground"}`}>
+          {tier.display_name}
+        </h3>
+        <p className={`mt-2 font-brand text-3xl sm:text-4xl font-medium ${isHighlighted ? "text-[var(--stage-fg)]" : "text-foreground"}`}>
+          {price}
+          <span className={`text-sm font-normal ${isHighlighted ? "text-[var(--stage-muted)]" : "text-muted-foreground"}`}>
+            /mo
+          </span>
         </p>
       </div>
-      <ul className="mt-4 space-y-2 flex-1">
+
+      <Button
+        asChild
+        variant={isHighlighted ? "default" : "outline"}
+        className="mt-5 w-full"
+      >
+        <Link href={isFree ? "/signup" : "/pricing"}>
+          {isFree ? "Get started free" : "Subscribe"}
+        </Link>
+      </Button>
+
+      <ul className={`mt-5 pt-5 space-y-2.5 flex-1 border-t ${isHighlighted ? "border-[var(--stage-line)]" : "border-border/40"}`}>
         {features.map((f, i) => (
           <li
             key={i}
-            className={`text-sm text-muted-foreground flex items-start gap-2 ${
-              !expanded && i >= MOBILE_VISIBLE_FEATURES ? "hidden sm:flex" : ""
-            }`}
+            className={`text-sm leading-relaxed flex items-start gap-2 ${
+              isHighlighted ? "text-[var(--stage-muted)]" : "text-muted-foreground"
+            } ${!expanded && i >= MOBILE_VISIBLE_FEATURES ? "hidden sm:flex" : ""}`}
           >
             <span className="text-primary mt-0.5 text-sm shrink-0">&#10003;</span>
             <span>{f}</span>
@@ -99,17 +145,16 @@ function PricingCard({ tier, formatPrice, isHighlighted }: { tier: PricingTier; 
         <button
           type="button"
           onClick={toggleExpanded}
-          className="sm:hidden mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors text-left"
+          className={`sm:hidden mt-2 text-xs text-left transition-colors ${
+            isHighlighted
+              ? "text-[var(--stage-muted)] hover:text-[var(--stage-fg)]"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
         >
           {expanded ? "Show less" : `+${features.length - MOBILE_VISIBLE_FEATURES} more`}
         </button>
       )}
-      <Button asChild variant={isHighlighted ? "default" : "outline"} className="mt-4 w-full">
-        <Link href={isFree ? "/signup" : "/pricing"}>
-          {isFree ? "Get started free" : "Subscribe"}
-        </Link>
-      </Button>
-    </div>
+    </motion.div>
   );
 }
 
@@ -126,52 +171,39 @@ export function LandingPricing() {
   };
 
   return (
-    <section id="pricing" className="container mx-auto px-4 sm:px-6 py-14 sm:py-20 md:py-28 border-t border-border/60">
-      <div className="w-full max-w-[min(1400px,100%)] mx-auto">
-        {/* Header */}
-        <div className="max-w-2xl">
+    <section id="pricing" className="container mx-auto px-4 sm:px-6 py-14 sm:py-20 md:py-28">
+      <div className="w-full max-w-6xl mx-auto">
+        <div className="text-center">
           <h2 className="font-brand font-semibold text-2xl sm:text-3xl md:text-4xl tracking-[-0.02em]">
             Your craft, your plan.
           </h2>
-          <p className="mt-3 text-sm sm:text-base text-muted-foreground">
-            Upgrade when you need more.
+          <p className="stage-direction mt-4 text-sm text-muted-foreground">
+            (new here? <span className="text-foreground">plus starts with a 2-week free trial.</span>{" "}
+            $0 today, cancel anytime.)
+          </p>
+          <p className="stage-direction mt-1.5 text-sm text-muted-foreground">
+            (students &amp; educators rehearse free. just email me.)
           </p>
         </div>
 
-        {/* Early access + student/educator banner */}
-        <div className="mt-6 space-y-3">
-          <div className="inline-flex items-center gap-3 px-4 py-2.5 border border-primary/20 bg-primary/[0.03]">
-            <span className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />
-            <p className="text-sm">
-              <span className="font-medium">New here?</span>{" "}
-              <span className="text-muted-foreground">Plus starts with a 2-week free trial. $0 today, cancel anytime.</span>
-            </p>
-          </div>
-          <div className="inline-flex items-center gap-3 px-4 py-2.5 border border-border/40 bg-card/40">
-            <p className="text-sm text-muted-foreground">
-              <span className="font-medium text-foreground">Students & educators</span> get free access. Just email me.
-            </p>
-          </div>
-        </div>
-
-        {/* Pricing cards */}
-        <div className="mt-10 sm:mt-12 grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {tiers.map((tier) => (
+        <div className="mt-12 sm:mt-16 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 items-start lg:items-stretch">
+          {tiers.map((tier, i) => (
             <PricingCard
               key={tier.id}
               tier={tier}
+              index={i}
               formatPrice={formatPrice}
               isHighlighted={tier.name === "plus"}
             />
           ))}
         </div>
 
-        <p className="mt-6 text-center">
+        <p className="mt-10 text-center">
           <Link
             href="/pricing"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="stage-direction text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            Compare all plans &amp; FAQ &#8594;
+            (compare all plans &amp; faq &#8594;)
           </Link>
         </p>
       </div>

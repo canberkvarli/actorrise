@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { motion, useScroll, useSpring } from "framer-motion";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
@@ -15,6 +17,9 @@ import { LandingTestimonials } from "@/components/landing/LandingTestimonials";
 import { LandingVideoShowcase } from "@/components/landing/LandingVideoShowcase";
 import { RevealSection } from "@/components/landing/RevealSection";
 import { FinalCta } from "@/components/landing/v2/FinalCta";
+import { FlowingLine } from "@/components/landing/v2/FlowingLine";
+import { GhostLightAppTeaser } from "@/components/landing/v2/GhostLightAppTeaser";
+import { InkStatement } from "@/components/landing/v2/InkStatement";
 import { LandingCallboardTeaser } from "@/components/landing/v2/LandingCallboardTeaser";
 import { SpotlightHero } from "@/components/landing/v2/SpotlightHero";
 import { ThreeActs } from "@/components/landing/v2/ThreeActs";
@@ -30,8 +35,21 @@ function SceneMark({ children }: { children: string }) {
 }
 
 export function LandingGhostLight() {
+  // Header settles once you leave the top: darker glass, a soft edge shadow.
+  const [scrolled, setScrolled] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // A thin beam of light under the header tracks reading progress.
+  const { scrollYProgress } = useScroll();
+  const beam = useSpring(scrollYProgress, { stiffness: 90, damping: 25, restDelta: 0.001 });
+
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    <div className="min-h-screen bg-background overflow-x-clip">
       {/* Header lives on the stage: always dark, floats over every scene.
           The cursor spotlight tracks across it like the hero. wash + overflow
           off so the glow stays subtle and the mobile-nav dropdown isn't clipped. */}
@@ -39,7 +57,11 @@ export function LandingGhostLight() {
         as="header"
         wash={false}
         overflowHidden={false}
-        className="dark sticky top-0 z-20 border-b border-[var(--stage-line)] bg-[color-mix(in_oklab,var(--stage)_84%,transparent)] backdrop-blur-md text-[var(--stage-fg)] animate-header-enter"
+        className={`dark sticky top-0 z-20 border-b border-[var(--stage-line)] backdrop-blur-md text-[var(--stage-fg)] animate-header-enter transition-[background-color,box-shadow] duration-500 ${
+          scrolled
+            ? "bg-[color-mix(in_oklab,var(--stage)_94%,transparent)] shadow-[0_10px_35px_-15px_rgba(0,0,0,0.6)]"
+            : "bg-[color-mix(in_oklab,var(--stage)_84%,transparent)]"
+        }`}
       >
         <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-3.5">
           <div className="flex items-center gap-4">
@@ -77,17 +99,24 @@ export function LandingGhostLight() {
             </div>
           </div>
         </div>
+        <motion.div
+          aria-hidden
+          className="absolute bottom-0 left-0 right-0 h-px origin-left bg-gradient-to-r from-primary/70 via-primary to-primary/70 shadow-[0_0_8px_var(--stage-glow)]"
+          style={{ scaleX: beam }}
+        />
       </SpotlightSurface>
 
       <main>
         {/* ACT 0 — the dark stage */}
         <div className="dark stage-scene">
           <SpotlightHero />
+          <FlowingLine />
           <TitleMarquee />
           <ThreeActs />
         </div>
 
         {/* House lights up — the product, in daylight */}
+        <div aria-hidden className="stage-footlights" />
         <div id="watch">
           <SceneMark>(house lights up.)</SceneMark>
           <LandingVideoShowcase />
@@ -97,6 +126,8 @@ export function LandingGhostLight() {
           <SceneMark>(now you try.)</SceneMark>
           <LandingSearchShowcase />
         </div>
+
+        <InkStatement />
 
         <RevealSection id="testimonials">
           <SceneMark>(the notices.)</SceneMark>
@@ -118,8 +149,10 @@ export function LandingGhostLight() {
           <LandingFaq />
         </RevealSection>
 
-        {/* Final scene — back to the dark */}
+        {/* Final scenes — back to the dark: the app, then the ghost light */}
+        <div aria-hidden className="stage-footlights" />
         <div className="dark stage-scene">
+          <GhostLightAppTeaser />
           <FinalCta />
         </div>
       </main>

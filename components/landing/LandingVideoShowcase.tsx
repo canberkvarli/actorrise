@@ -52,7 +52,7 @@ export function LandingVideoShowcase() {
   return (
     <section
       ref={sectionRef}
-      className="relative py-28 sm:py-36 md:py-44 border-t border-border/60 overflow-hidden"
+      className="relative py-28 sm:py-36 md:py-44 overflow-hidden"
     >
       <VideoSchema
         name="ActorRise ScenePartner demo"

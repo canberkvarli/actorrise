@@ -253,15 +253,19 @@
 
 /* Scroll-triggered reveal — runs on compositor thread, no JS jank */
 @keyframes section-reveal {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateY(26px); filter: blur(6px); }
+  to   { opacity: 1; transform: translateY(0); filter: blur(0); }
 }
 .section-reveal {
   opacity: 0;
-  will-change: opacity, transform;
+  will-change: opacity, transform, filter;
 }
 .section-reveal.is-visible {
-  animation: section-reveal 0.45s cubic-bezier(0.25, 0.1, 0.25, 1) both;
+  animation: section-reveal 0.75s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .section-reveal { opacity: 1; }
+  .section-reveal.is-visible { animation: none; }
 }
 
 /* ============================================================
@@ -270,9 +274,9 @@
    These tokens are theme-independent: the stage is always dark.
    ============================================================ */
 :root {
-  --stage: oklch(0.16 0.015 50);
-  --stage-deep: oklch(0.115 0.012 50);
-  --stage-raised: oklch(0.20 0.018 52);
+  --stage: oklch(0.155 0.021 52);
+  --stage-deep: oklch(0.11 0.017 52);
+  --stage-raised: oklch(0.195 0.024 54);
   --stage-fg: oklch(0.95 0.012 78);
   --stage-muted: oklch(0.67 0.022 62);
   --stage-faint: oklch(0.46 0.02 58);
@@ -359,6 +363,87 @@
 .marquee-mask {
   mask-image: linear-gradient(to right, transparent, black 12%, black 88%, transparent);
 }
+/* Let the reader stop the titles to actually read them */
+.marquee-mask:hover .animate-marquee-left,
+.marquee-mask:hover .animate-marquee-right {
+  animation-play-state: paused;
+}
+
+/* A glint of light sweeps across the hot words every few seconds —
+   like a spotlight passing over gold leaf. No halo, no blur. */
+@keyframes shimmer-sweep {
+  0%, 58%  { background-position: 130% 0; }
+  88%, 100% { background-position: -130% 0; }
+}
+.text-shimmer {
+  background-image: linear-gradient(
+    105deg,
+    var(--primary) 0%,
+    var(--primary) 42%,
+    oklch(0.86 0.13 72) 50%,
+    var(--primary) 58%,
+    var(--primary) 100%
+  );
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer-sweep 9s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .text-shimmer { animation: none; color: var(--primary); background-image: none; }
+}
+
+/* Selecting text lights it, like everything else here */
+::selection {
+  background: color-mix(in oklab, var(--stage-glow) 35%, transparent);
+}
+
+/* Dust motes drifting up through the spotlight beam */
+@keyframes mote-drift {
+  0%   { transform: translate3d(0, 0, 0); opacity: 0; }
+  12%  { opacity: var(--mote-o, 0.4); }
+  85%  { opacity: var(--mote-o, 0.4); }
+  100% { transform: translate3d(var(--mote-x, 18px), -46vh, 0); opacity: 0; }
+}
+.stage-mote {
+  position: absolute;
+  border-radius: 9999px;
+  background: color-mix(in oklab, var(--stage-glow) 80%, white);
+  filter: blur(0.5px);
+  animation: mote-drift var(--mote-t, 14s) linear infinite;
+  animation-delay: var(--mote-d, 0s);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .stage-mote { animation: none; opacity: 0; }
+}
+
+/* Slow breathing aura behind the app-teaser phones */
+@keyframes glow-breathe {
+  0%, 100% { opacity: 0.75; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: 1;    transform: translate(-50%, -50%) scale(1.06); }
+}
+.animate-glow-breathe {
+  animation: glow-breathe 6s ease-in-out infinite;
+}
+
+/* Scene change: a clean blackout cut, marked by a strip of footlights
+   glowing at the lip of the stage. No gradient mush. */
+.stage-footlights {
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent 3%,
+    color-mix(in oklab, var(--stage-glow) 55%, transparent) 22%,
+    color-mix(in oklab, var(--stage-glow) 75%, transparent) 50%,
+    color-mix(in oklab, var(--stage-glow) 55%, transparent) 78%,
+    transparent 97%
+  );
+  box-shadow:
+    0 0 14px 1px color-mix(in oklab, var(--stage-glow) 35%, transparent),
+    0 0 42px 4px color-mix(in oklab, var(--stage-glow) 16%, transparent);
+}
 
 /* Hero line reveal — rises like a curtain, pure CSS so it runs from first paint */
 @keyframes stage-rise {
@@ -372,7 +457,8 @@
 @media (prefers-reduced-motion: reduce) {
   .animate-marquee-left,
   .animate-marquee-right,
-  .animate-ghost-flicker {
+  .animate-ghost-flicker,
+  .animate-glow-breathe {
     animation: none;
   }
   .animate-stage-rise {

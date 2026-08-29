@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { MasksSketch, SkullSketch, StageDoorSketch } from "@/components/brand/sketches";
 
 const ACTS = [
   {
@@ -8,18 +9,22 @@ const ACTS = [
     direction: "(the search.)",
     title: "Describe it. Don't dig for it.",
     body: "Plain English is enough. Funny piece for drama school, two minutes, male. The AI reads the whole library and hands you pieces that actually fit you, with overdone warnings so you never bring the piece everyone else brought.",
+    // Yorick: the piece everyone else brought.
+    Sketch: SkullSketch,
   },
   {
     numeral: "II",
     direction: "(the rehearsal.)",
     title: "Run lines at 2am if you want.",
     body: "Your AI scene partner reads every other role, holds the script, and waits for your cue. No scheduling, no favors to repay, no one getting tired on take twelve.",
+    Sketch: MasksSketch,
   },
   {
     numeral: "III",
     direction: "(the room.)",
     title: "Walk in off book.",
     body: "You arrive with a piece chosen for you, rehearsed until it sits in your body. The work is done before you open the door. Now go book the room.",
+    Sketch: StageDoorSketch,
   },
 ];
 
@@ -48,15 +53,16 @@ export function ThreeActs() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, amount: 0.35 }}
-            className="relative border-t border-[var(--stage-line)] pt-8 md:pt-10"
+            className="group relative border-t border-[var(--stage-line)] pt-8 md:pt-10 transition-colors duration-500 hover:border-[color-mix(in_oklab,var(--stage-glow)_40%,var(--stage-line))]"
           >
             <span
               aria-hidden
-              className="absolute -top-7 sm:-top-9 right-0 font-serif text-[5rem] sm:text-[6.5rem] leading-none font-semibold text-transparent select-none [-webkit-text-stroke:1px_var(--stage-line)]"
+              className="absolute -top-7 sm:-top-9 right-0 font-serif text-[5rem] sm:text-[6.5rem] leading-none font-semibold text-transparent select-none [-webkit-text-stroke:1px_var(--stage-line)] transition-all duration-500 group-hover:[-webkit-text-stroke:1px_color-mix(in_oklab,var(--stage-glow)_55%,var(--stage-line))]"
             >
               {act.numeral}
             </span>
-            <p className="stage-direction text-xs text-primary">{act.direction}</p>
+            <act.Sketch size={44} delay={0.25 + i * 0.12} className="text-[var(--stage-faint)]" />
+            <p className="mt-4 stage-direction text-xs text-primary">{act.direction}</p>
             <h3 className="mt-3 font-brand text-2xl sm:text-[1.7rem] font-semibold tracking-[-0.01em] text-[var(--stage-fg)]">
               {act.title}
             </h3>

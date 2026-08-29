@@ -16,10 +16,14 @@ interface TeaserEvent {
   created_at: string;
 }
 
+/** Each notice hangs at its own slight angle, like a real callboard. */
+const TILTS = ["-rotate-[1.1deg]", "rotate-[0.8deg]", "rotate-[1.3deg]", "-rotate-[0.7deg]", "rotate-[0.5deg]", "-rotate-[1.4deg]"];
+
 /**
- * Logged-out acquisition tease: real activity, names masked server-side (and
- * blurred), no faces. "Join to see who's in the room." Fetches the public feed
- * with anonymize=true — no auth, no React Query dependency (landing has none).
+ * Logged-out acquisition tease styled as the backstage callboard: real
+ * activity pinned up as notices, names masked server-side (and blurred),
+ * no faces. Fetches the public feed with anonymize=true — no auth, no
+ * React Query dependency (landing has none).
  */
 export function LandingCallboardTeaser() {
   const [events, setEvents] = useState<TeaserEvent[]>([]);
@@ -43,33 +47,36 @@ export function LandingCallboardTeaser() {
   if (events.length === 0) return null;
 
   return (
-    <div className="mx-auto max-w-2xl px-4 text-center">
+    <div className="mx-auto max-w-3xl px-4 text-center">
       <h2 className="font-brand text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-        Actors are already in here
+        The callboard
       </h2>
       {count !== null && (
-        <p className="mt-2 text-sm text-muted-foreground">
-          {count} {count === 1 ? "actor" : "actors"} working this week.
+        <p className="stage-direction mt-3 text-sm text-muted-foreground">
+          ({count} {count === 1 ? "actor" : "actors"} working this week. these are their notices.)
         </p>
       )}
 
-      <div className="relative mt-8 text-left">
-        <ul className="space-y-1">
+      <div className="relative mt-10">
+        <ul className="grid gap-4 sm:grid-cols-2 text-left">
           {events.map((e, i) => (
             <motion.li
               key={e.id}
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.4, delay: i * 0.05, ease: [0.25, 0.1, 0.25, 1] }}
-              className="flex items-center gap-3 rounded-lg px-2 py-2.5"
+              initial={{ opacity: 0, y: 16, scale: 0.97 }}
+              whileInView={{ opacity: 1, y: 0, scale: 1 }}
+              viewport={{ once: true, amount: 0.4 }}
+              transition={{ duration: 0.45, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+              className={`relative rounded-sm border border-border/70 bg-card px-4 pb-4 pt-5 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.15)] transition-transform duration-300 hover:rotate-0 hover:shadow-[0_6px_18px_-6px_rgba(0,0,0,0.2)] ${TILTS[i % TILTS.length]}`}
             >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary/70 to-[#B03000] text-sm font-semibold text-background blur-[2px]">
-                {(e.name[0] || "?").toUpperCase()}
-              </span>
-              <p className="min-w-0 flex-1 truncate text-[15px] text-muted-foreground">
-                <span className="font-medium text-foreground blur-[3px] select-none">
-                  {e.name}
+              {/* The pin */}
+              <span
+                aria-hidden
+                className="absolute -top-1.5 left-1/2 -translate-x-1/2 h-3 w-3 rounded-full bg-primary shadow-[0_2px_3px_rgba(0,0,0,0.35),inset_-1px_-1px_2px_rgba(0,0,0,0.3)]"
+              />
+              <p className="min-w-0 text-[15px] leading-relaxed text-muted-foreground">
+                {/* "joined" lines already carry the city ("…from Seattle") */}
+                <span className="font-medium text-foreground">
+                  {e.city && e.event_type !== "joined" ? `An actor in ${e.city}` : "An actor"}
                 </span>{" "}
                 <EventLine e={e as unknown as FeedEvent} />
               </p>
@@ -77,13 +84,13 @@ export function LandingCallboardTeaser() {
           ))}
         </ul>
 
-        {/* scrim fading the lower rows into the CTA */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
+        {/* scrim fading the lower notices into the CTA */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-background to-transparent" />
       </div>
 
       <Link
         href="/signup"
-        className="mt-6 inline-flex rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-[0_0_28px_-8px_var(--primary)] transition-colors hover:bg-[#B03000]"
+        className="mt-8 inline-flex rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-[0_0_28px_-8px_var(--primary)] transition-colors hover:bg-[#B03000]"
       >
         Join to see who's in the room
       </Link>

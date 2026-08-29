@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { AnimatePresence, motion } from "framer-motion";
 
 const FAQ_ITEMS = [
   {
@@ -37,7 +39,87 @@ const faqJsonLd = {
   })),
 };
 
+const EASE = [0.22, 1, 0.36, 1] as const;
+
+function FaqItem({
+  item,
+  open,
+  onToggle,
+  id,
+}: {
+  item: (typeof FAQ_ITEMS)[number];
+  open: boolean;
+  onToggle: () => void;
+  id: string;
+}) {
+  return (
+    <li
+      className={`rounded-lg border overflow-hidden transition-colors duration-300 ${
+        open ? "border-primary/35 bg-card/70" : "border-border/60 bg-card/40"
+      }`}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={`${id}-panel`}
+        onClick={onToggle}
+        className="w-full text-left cursor-pointer px-4 py-3 font-medium text-foreground hover:bg-card/60 transition-colors flex items-center justify-between gap-3"
+      >
+        <span>{item.q}</span>
+        <motion.svg
+          aria-hidden
+          width="14"
+          height="14"
+          viewBox="0 0 14 14"
+          animate={{ rotate: open ? 45 : 0 }}
+          transition={{ duration: 0.3, ease: EASE }}
+          className={`shrink-0 transition-colors duration-300 ${open ? "text-primary" : "text-muted-foreground"}`}
+        >
+          <path d="M7 1 L7 13 M1 7 L13 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </motion.svg>
+      </button>
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            id={`${id}-panel`}
+            key="panel"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{
+              height: { duration: 0.38, ease: EASE },
+              opacity: { duration: 0.28, ease: "easeOut" },
+            }}
+            className="overflow-hidden"
+          >
+            <motion.div
+              initial={{ y: -6 }}
+              animate={{ y: 0 }}
+              exit={{ y: -6 }}
+              transition={{ duration: 0.32, ease: EASE }}
+              className="px-4 pb-4 pt-3 text-muted-foreground text-sm md:text-base leading-relaxed border-t border-border/40"
+            >
+              {item.a}
+              {item.link && (
+                <>
+                  {" "}
+                  <Link href={item.link.href} className="text-primary hover:underline">
+                    {item.link.label}
+                  </Link>
+                  .
+                </>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </li>
+  );
+}
+
 export function LandingFaq() {
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
   return (
     <section
       className="border-t border-border/60 py-16 md:py-20 bg-muted/20"
@@ -54,28 +136,13 @@ export function LandingFaq() {
           </h2>
           <ul className="mt-8 space-y-4">
             {FAQ_ITEMS.map((item, i) => (
-              <li key={i}>
-                <details className="group rounded-lg border border-border/60 bg-card/40 overflow-hidden">
-                  <summary className="list-none cursor-pointer px-4 py-3 font-medium text-foreground hover:bg-card/60 transition-colors flex items-center justify-between gap-2">
-                    <span>{item.q}</span>
-                    <span className="text-muted-foreground group-open:rotate-180 transition-transform shrink-0" aria-hidden>
-                      ▼
-                    </span>
-                  </summary>
-                  <div className="px-4 pb-4 pt-0 text-muted-foreground text-sm md:text-base leading-relaxed border-t border-border/40">
-                    {item.a}
-                    {item.link && (
-                      <>
-                        {" "}
-                        <Link href={item.link.href} className="text-primary hover:underline">
-                          {item.link.label}
-                        </Link>
-                        .
-                      </>
-                    )}
-                  </div>
-                </details>
-              </li>
+              <FaqItem
+                key={i}
+                id={`faq-${i}`}
+                item={item}
+                open={openIndex === i}
+                onToggle={() => setOpenIndex(openIndex === i ? null : i)}
+              />
             ))}
           </ul>
         </div>

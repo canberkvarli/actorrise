@@ -1,6 +1,8 @@
+import { GhostLight } from "@/components/brand/GhostLight";
 import { HeroCta } from "@/components/landing/HeroCta";
 import { LandingLiveCount } from "@/components/landing/LandingLiveCount";
 import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
+import { StageMotes } from "@/components/landing/v2/StageMotes";
 
 /**
  * Ghost Light hero: a dark stage, one spotlight that follows the cursor,
@@ -9,10 +11,14 @@ import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
 export function SpotlightHero() {
   return (
     <SpotlightSurface as="section" flicker className="stage-grain" aria-label="ActorRise introduction">
+      <StageMotes />
       <div className="container mx-auto px-4 sm:px-6 pt-20 pb-16 sm:pt-28 sm:pb-20 md:pt-36 md:pb-24 text-center">
-        {/* Stage direction eyebrow */}
+        {/* The one light, then the stage direction naming it */}
+        <div className="flex justify-center animate-stage-rise">
+          <GhostLight size="sm" />
+        </div>
         <p
-          className="stage-direction text-xs sm:text-sm text-[var(--stage-muted)] animate-stage-rise"
+          className="mt-4 stage-direction text-xs sm:text-sm text-[var(--stage-muted)] animate-stage-rise"
           style={{ animationDelay: "0.05s" }}
         >
           (a bare stage. one light. you.)
