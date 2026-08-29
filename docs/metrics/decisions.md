@@ -44,9 +44,12 @@ is filtered), and adds activated_search/save columns.
 - **Weak-rate denominator fixed (H-17).** Now over scoreable (vector) rows only:
   the reported 33.2 pct was 85/256; the real vector rate is 43.8 pct (85/194).
   Added `scoreable_count` + `title_lookup_count` (53) so the lookup path stays
-  visible, and `repeat_count`/`repeat_rate` (63 silent retries in 7d, read-time
-  LAG window, no stored column — deviates from the brief's stored-column ask on
-  purpose: same metric, no migration/backfill/hot-path cost).
+  visible, and `repeat_count`/`repeat_rate` (63 silent retries in 7d). Shipped
+  first as a read-time LAG window, then (8baf0944) backed by a stored
+  `search_logs.is_repeat` column (migration + backfill: 344 historical, 63 in 7d;
+  set at write time on the monologue + film/TV search paths, NULL for anonymous /
+  demo). Summary now reads the column; the admin log list shows a per-row "repeat"
+  marker. The two computations agree exactly (63 = 63).
 - **Misleading error message.** The API client showed "Search is taking longer"
   for any network error on a `/search` URL, including `/api/admin/searches`.
   Narrowed to `/monologues/search`; the admin query now retries so a deploy blip
