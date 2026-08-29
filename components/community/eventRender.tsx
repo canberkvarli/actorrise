@@ -22,7 +22,9 @@ function pronoun(g?: string): string {
 // A typewriter span for any piece/play title — matches the app's rule that
 // monologue titles render in the typewriter face.
 function Title({ children }: { children: React.ReactNode }) {
-  return <span className="font-typewriter text-foreground/90">{children}</span>;
+  // align-baseline: Courier's line box differs from the sans around it, so in
+  // any flex/inline-block context the title would otherwise ride high.
+  return <span className="font-typewriter align-baseline text-foreground/90">{children}</span>;
 }
 
 export function relativeTime(iso: string): string {

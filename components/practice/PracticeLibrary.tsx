@@ -8,8 +8,8 @@ import { toast } from "sonner";
 
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
+import { getGenreDotClassName } from "@/lib/genreColors";
 import { HelpVideoDialog } from "@/components/help/HelpVideoDialog";
 import { FIRST_SCENE_VIDEO } from "@/lib/help-videos";
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
@@ -59,8 +59,11 @@ export function PracticeLibrary({
   const effectiveId = isValid ? selectedId : defaultId;
   const selectedScript = ordered.find((s) => s.id === effectiveId) ?? null;
 
-  if (ordered.length === 0) {
-    return <EmptyState demoScriptId={demoScriptId} />;
+  // First run means "nothing of your own yet" — not "nothing at all". The API
+  // hands every account the sample scripts, so keying the welcome off the total
+  // meant it never showed in production and its demo button was unreachable.
+  if (userScripts.length === 0) {
+    return <EmptyState demos={demoScripts} />;
   }
 
   const handleConfirmDelete = async () => {
@@ -103,7 +106,7 @@ export function PracticeLibrary({
 
   return (
     <>
-      <div className="space-y-8">
+      <div className="space-y-5">
         <div>
           <h2 className="mb-3 font-typewriter text-xs uppercase tracking-[0.18em] text-muted-foreground">
             Your shelf
@@ -133,11 +136,11 @@ export function PracticeLibrary({
   );
 }
 
-function EmptyState({ demoScriptId }: { demoScriptId: number | null }) {
+function EmptyState({ demos }: { demos: UserScript[] }) {
   const [videoOpen, setVideoOpen] = useState(false);
 
   return (
-    <section className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-12 text-center">
+    <section className="flex flex-col items-center justify-center px-4 py-4 text-center sm:py-6">
       <p className="stage-direction text-sm sm:text-base text-muted-foreground/70">
         (an empty stage. for now.)
       </p>
@@ -150,19 +153,6 @@ function EmptyState({ demoScriptId }: { demoScriptId: number | null }) {
       </p>
       <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:items-center justify-center">
         <UploadScriptButton variant="primary">Upload a script</UploadScriptButton>
-        {demoScriptId != null && (
-          <Button
-            asChild
-            size="lg"
-            variant="ghost"
-            className="gap-1.5 h-11 px-3 font-medium text-foreground hover:text-foreground hover:bg-muted/60"
-          >
-            <Link href={`/practice/${demoScriptId}`}>
-              Open the demo
-              <IconArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        )}
       </div>
 
       {/* Free carried 0 script uploads until 2026-08-11, so "upload a script"
@@ -171,6 +161,39 @@ function EmptyState({ demoScriptId }: { demoScriptId: number | null }) {
       <p className="mt-4 text-xs text-muted-foreground">
         Your first script is free.
       </p>
+
+      {/* Nothing of your own yet — so borrow one of mine and hear it work. */}
+      {demos.length > 0 && (
+        <div className="mt-8 w-full max-w-lg">
+          <p className="stage-direction text-xs text-muted-foreground/70">
+            (or borrow one of mine.)
+          </p>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {demos.map((demo) => (
+              <Link
+                key={demo.id}
+                href={`/practice/${demo.id}`}
+                className="group relative overflow-hidden rounded-lg border border-border/60 bg-card/30 py-4 pl-5 pr-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/30"
+              >
+                <span
+                  aria-hidden
+                  className={`absolute inset-y-0 left-0 w-1 opacity-70 ${getGenreDotClassName(demo.genre)}`}
+                />
+                <p className="font-typewriter text-sm font-semibold text-foreground">
+                  {demo.title}
+                </p>
+                <p className="mt-0.5 truncate font-typewriter text-xs text-muted-foreground">
+                  {demo.author}
+                </p>
+                <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors group-hover:text-primary">
+                  Open it
+                  <IconArrowRight className="h-3.5 w-3.5" />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       {FIRST_SCENE_VIDEO.youtubeId && (
         <>

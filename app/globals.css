@@ -220,6 +220,8 @@
   .font-brand {
     font-family: var(--font-brand), var(--font-serif), serif;
     letter-spacing: 0.04em;
+    /* Playfair's fi/fl ligatures fuse the letters ("first" reads cramped) */
+    font-variant-ligatures: no-common-ligatures;
   }
 
   /* Hero headline keyword – slick neon-style emphasis (gradient + soft glow) */

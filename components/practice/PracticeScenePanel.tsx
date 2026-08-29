@@ -13,7 +13,11 @@ import {
 } from "@tabler/icons-react";
 
 import { Skeleton } from "@/components/ui/skeleton";
-import { getGenreBadgeClassName } from "@/lib/genreColors";
+import {
+  getGenreBadgeClassName,
+  getGenreBorderClassName,
+  getGenreDotClassName,
+} from "@/lib/genreColors";
 import { useScript, type UserScript } from "@/hooks/useScripts";
 import { groupScenesByAct, formatSceneDuration, type Scene } from "@/lib/scenes";
 import { EditScriptDetailsModal } from "@/components/practice/EditScriptDetailsModal";
@@ -64,34 +68,40 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
   const sceneHref = (sceneId: number) => `/practice/${script.id}/scenes/${sceneId}/edit`;
 
   return (
-    <div className="min-w-0">
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3 pb-5 border-b border-border/60">
-        <div className="min-w-0 space-y-2">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
-            <h2 className="font-sans text-2xl md:text-3xl tracking-tight text-foreground">
-              {script.title}
-            </h2>
-            {script.genre && (
-              <span
-                className={`inline-flex items-center border px-1.5 py-0.5 text-[10px] uppercase tracking-wide font-medium ${getGenreBadgeClassName(script.genre)}`}
-              >
-                {script.genre}
-              </span>
-            )}
-          </div>
-          {metaParts.length > 0 && (
-            <p className="text-sm text-muted-foreground">{metaParts.join(" · ")}</p>
-          )}
-          {script.description && (
-            <p className="text-sm text-muted-foreground/90 leading-relaxed max-w-prose line-clamp-2">
-              {script.description}
-            </p>
+    // The selected script, opened like a playbook: title page on the left,
+    // the scenes on the right. Same spine color as its card on the shelf,
+    // so the eye connects the two.
+    <div className="relative min-w-0 overflow-hidden rounded-xl border border-border/60 bg-card/40 md:grid md:grid-cols-[280px_minmax(0,1fr)]">
+      <span
+        aria-hidden
+        className={`absolute inset-y-0 left-0 w-1 ${getGenreDotClassName(script.genre)} opacity-70`}
+      />
+
+      {/* Title page */}
+      <div className="flex min-w-0 flex-col gap-3 border-b border-border/60 px-5 py-5 sm:px-6 md:border-b-0 md:border-r">
+        <div>
+          <h2 className="font-brand text-2xl font-medium tracking-tight text-foreground text-balance">
+            {script.title}
+          </h2>
+          {script.genre && (
+            <span
+              className={`mt-2 inline-flex items-center border px-1.5 py-0.5 text-[10px] uppercase tracking-wide font-medium ${getGenreBadgeClassName(script.genre)}`}
+            >
+              {script.genre}
+            </span>
           )}
         </div>
+        {metaParts.length > 0 && (
+          <p className="text-sm text-muted-foreground">{metaParts.join(" · ")}</p>
+        )}
+        {script.description && (
+          <p className="text-sm text-muted-foreground/90 leading-relaxed line-clamp-5">
+            {script.description}
+          </p>
+        )}
 
         {canManage && (
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="mt-auto flex flex-wrap items-center gap-2 pt-3">
             <button
               type="button"
               onClick={() => setEditOpen(true)}
@@ -112,8 +122,8 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
         )}
       </div>
 
-      {/* Body */}
-      <div className="pt-6">
+      {/* The scenes */}
+      <div className="min-w-0 px-5 py-5 sm:px-6">
         {isProcessing ? (
           <StatusNote>
             <IconLoader2 className="h-4 w-4 animate-spin" />
@@ -136,12 +146,12 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
             {groups.map((group, gi) => (
               <div key={group.act ?? `g${gi}`} className="space-y-3">
                 {group.act && (
-                  <div className="flex items-baseline justify-between gap-3">
-                    <h3 className="font-sans text-2xl md:text-3xl tracking-tight text-foreground">
+                  <div className="flex items-baseline justify-between gap-3 border-t border-border/60 pt-4">
+                    <h3 className="font-brand text-xl md:text-2xl font-medium tracking-tight text-foreground">
                       {group.act}
                     </h3>
-                    <span className="shrink-0 text-sm text-muted-foreground/60 tabular-nums">
-                      {group.scenes.length} {group.scenes.length === 1 ? "scene" : "scenes"}
+                    <span className="shrink-0 font-typewriter text-xs italic text-muted-foreground/60 tabular-nums">
+                      ({group.scenes.length} {group.scenes.length === 1 ? "scene" : "scenes"}.)
                     </span>
                   </div>
                 )}
@@ -150,6 +160,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
                     <SceneRow
                       key={scene.id}
                       scene={scene}
+                      accentClass={getGenreBorderClassName(script.genre ?? "")}
                       expanded={expandedSceneId === scene.id}
                       onToggle={() => {
                         setExpandedSceneId((cur) => (cur === scene.id ? null : scene.id));
@@ -183,11 +194,14 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
 
 function SceneRow({
   scene,
+  accentClass,
   expanded,
   onToggle,
   onOpen,
 }: {
   scene: Scene;
+  /** Genre-tinted left edge (border-l-* class from genreColors). */
+  accentClass: string;
   expanded: boolean;
   onToggle: () => void;
   onOpen: () => void;
@@ -200,23 +214,34 @@ function SceneRow({
   if (duration) subParts.push(duration);
   if (scene.line_count > 0) subParts.push(`${scene.line_count} lines`);
 
+  // scene_number is free text ("Scene 2", "2A") — the ghost numeral wants the
+  // digits alone, and nothing at all when there aren't any.
+  const numeral = String(scene.scene_number ?? "").match(/\d+/)?.[0] ?? null;
+
   return (
     <div
       className={[
-        "rounded-lg border transition-colors",
-        expanded ? "border-[#CB4B00]/45 bg-muted/20" : "border-border/70 hover:border-border",
+        "rounded-lg border border-l-2 transition-colors",
+        accentClass,
+        expanded ? "border-[#CB4B00]/45 bg-muted/20" : "border-border/70 hover:border-border hover:bg-muted/10",
       ].join(" ")}
     >
       <button
         type="button"
         onClick={onToggle}
-        onMouseEnter={() => {}}
         aria-expanded={expanded}
         className="w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
+        {numeral && (
+          <span
+            aria-hidden
+            className="w-6 shrink-0 select-none text-center font-brand text-xl leading-none text-foreground/15 tabular-nums"
+          >
+            {numeral}
+          </span>
+        )}
         <div className="min-w-0 flex-1">
-          <p className="font-medium text-sm text-foreground truncate">
-            {scene.scene_number ? `${scene.scene_number}. ` : ""}
+          <p className="font-typewriter font-semibold text-sm text-foreground truncate">
             {scene.title}
           </p>
           {subParts.length > 0 && (

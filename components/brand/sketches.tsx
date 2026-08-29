@@ -193,6 +193,49 @@ export function StageDoorSketch({ size = 48, className, delay = 0, title }: Sket
   );
 }
 
+/** A stage mic, waves coming off it — say the lines out loud. */
+export function MicSketch({ size = 48, className, delay = 0, title }: SketchProps) {
+  const draw = useSketchAnimation(delay);
+  return (
+    <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
+      <motion.path {...strokeProps} {...draw(0)} d="M22 18 A10 10 0 1 1 42 18 A10 10 0 1 1 22 18" />
+      <motion.path {...strokeProps} {...draw(1)} d="M25 13 L39 13 M23 18 L41 18 M25 23 L39 23" />
+      <motion.path
+        {...strokeProps}
+        {...draw(2)}
+        d="M22 22 C22 32 42 32 42 22 M32 32 L32 50 M22 56 C26 52 38 52 42 56"
+      />
+      <motion.path
+        {...strokeProps}
+        {...draw(3)}
+        d="M12 10 C9 15 9 21 12 26 M52 10 C55 15 55 21 52 26"
+      />
+    </Frame>
+  );
+}
+
+/** The ghost light — a bare bulb on a stand, left burning on the empty stage. */
+export function GhostLightSketch({ size = 48, className, delay = 0, title }: SketchProps) {
+  const draw = useSketchAnimation(delay);
+  return (
+    <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
+      <motion.path {...strokeProps} {...draw(0)} d="M24 16 A8 8 0 1 1 40 16 A8 8 0 1 1 24 16" />
+      <motion.path {...strokeProps} {...draw(1)} d="M29 18 L31 13 L33 18 L35 13" />
+      <motion.path
+        {...strokeProps}
+        {...draw(2)}
+        d="M28 23 L28 27 C28 28.5 36 28.5 36 27 L36 23 M32 28 L32 48"
+      />
+      <motion.path {...strokeProps} {...draw(3)} d="M32 48 L21 58 M32 48 L43 58 M32 48 L32 58" />
+      <motion.path
+        {...strokeProps}
+        {...draw(4)}
+        d="M13 16 L18 16 M51 16 L46 16 M18 4 L21.5 7.5 M46 4 L42.5 7.5"
+      />
+    </Frame>
+  );
+}
+
 /** Curtain swag with tassels — the scene ends, another begins. */
 export function CurtainSketch({
   width = 220,

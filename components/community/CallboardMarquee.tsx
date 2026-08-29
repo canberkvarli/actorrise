@@ -48,13 +48,15 @@ export function CallboardMarquee() {
           className="cb-track flex w-max items-center whitespace-nowrap group-hover:[animation-play-state:paused]"
           style={{ animation: "cb-marquee 60s linear infinite" }}
         >
+          {/* One inline flow per notice, not flex children — the typewriter
+              titles inside EventLine have different metrics than the sans, and
+              as separate flex items each got centered on its own line box, so
+              words like "saved" rode above the rest. */}
           {run.map((e, i) => (
-            <span key={i} className="flex items-center py-2.5 text-sm text-muted-foreground">
-              <span className="mx-4 text-muted-foreground/30">•</span>
-              <span className="font-medium text-foreground">{e.name}</span>
-              <span className="ml-1">
-                <EventLine e={e} />
-              </span>
+            <span key={i} className="block py-2.5 text-sm leading-6 text-muted-foreground">
+              <span className="mx-4 align-baseline text-muted-foreground/30">•</span>
+              <span className="align-baseline font-medium text-foreground">{e.name}</span>{" "}
+              <EventLine e={e} />
             </span>
           ))}
         </div>

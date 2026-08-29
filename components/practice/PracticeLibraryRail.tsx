@@ -76,16 +76,30 @@ function ScriptCard({
         onClick={onSelect}
         aria-current={selected ? "true" : undefined}
         className={[
-          "flex h-full w-full flex-col rounded-xl border p-4 text-left transition-all",
+          "relative flex h-full w-full flex-col overflow-hidden rounded-lg border py-4 pl-5 pr-4 text-left transition-all",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           selected
             ? "border-primary/50 bg-primary/[0.06] shadow-[0_0_28px_-14px_var(--primary)]"
             : "border-border/60 bg-card/30 hover:-translate-y-0.5 hover:border-primary/30",
         ].join(" ")}
       >
-        <div className="mb-3 flex items-center justify-between">
-          {/* genre spine — sharp swatch (non-interactive indicator) */}
-          <span aria-hidden className={`h-2.5 w-8 ${getGenreDotClassName(script.genre)}`} />
+        {/* the spine — a playscript's colored binding */}
+        <span
+          aria-hidden
+          className={`absolute inset-y-0 left-0 w-1 ${getGenreDotClassName(script.genre)} ${
+            selected ? "" : "opacity-70"
+          }`}
+        />
+        <h3 className="font-typewriter text-base font-semibold leading-snug line-clamp-2 text-foreground">
+          {script.title}
+        </h3>
+        <p className="mt-0.5 truncate font-typewriter text-xs text-muted-foreground">
+          {script.author}
+        </p>
+        <div className="mt-auto flex items-center justify-between gap-2 pt-3">
+          <span className="truncate text-[10px] uppercase tracking-[0.15em] text-muted-foreground/60">
+            {script.genre || " "}
+          </span>
           {isProcessing ? (
             <IconLoader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground/70" />
           ) : script.is_sample ? (
@@ -94,18 +108,12 @@ function ScriptCard({
             </span>
           ) : (
             sceneCount > 0 && (
-              <span className="text-xs tabular-nums text-muted-foreground/60">
+              <span className="shrink-0 text-xs tabular-nums text-muted-foreground/60">
                 {sceneCount} {sceneCount === 1 ? "scene" : "scenes"}
               </span>
             )
           )}
         </div>
-        <h3 className="font-typewriter text-base font-semibold leading-snug line-clamp-2 text-foreground">
-          {script.title}
-        </h3>
-        <p className="mt-0.5 truncate font-typewriter text-xs text-muted-foreground">
-          {script.author}
-        </p>
       </button>
 
       {/* actions — user scripts only, on hover */}
