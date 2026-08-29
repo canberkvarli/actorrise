@@ -56,7 +56,10 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
             "count(*) FILTER (WHERE best_cosine IS NOT NULL) AS scoreable, "
             "count(*) FILTER (WHERE match_strategy IN "
             "  ('title_exact','title_exact_backfilled','character_exact','character_exact_backfilled')"
-            ") AS title_lookup "
+            ") AS title_lookup, "
+            # Silent-retry signal: the stored is_repeat flag (same user re-ran an
+            # identical query within 10 min). Set at write time, backfilled once.
+            "count(*) FILTER (WHERE is_repeat IS TRUE) AS repeats "
             "FROM search_logs WHERE created_at >= :start AND created_at < :end"
         ),
         {"start": start_dt, "end": end_dt},
@@ -68,6 +71,7 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
     avg_cosine = totals[4]
     scoreable = int(totals[5] or 0)
     title_lookup_count = int(totals[6] or 0)
+    repeat_count = int(totals[7] or 0)
 
     def _distribution(column):
         rows = (
@@ -99,28 +103,6 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
     ).fetchone()
     retry_events = int(retry[0] or 0) if retry else 0
     retry_users = int(retry[1] or 0) if retry else 0
-
-    # Silent-retry rate (2026-08-29 brief): a search whose (user, normalized
-    # query) had an identical predecessor within 10 minutes — people re-running
-    # the same words hoping for a different answer. weak_match never captures
-    # this, and it is the cheapest dissatisfaction signal we have. Computed at
-    # read time via a LAG window (no stored column / backfill needed): correct
-    # over the whole window and free of any hot-path cost on the search itself.
-    repeat_count = int(
-        db.execute(
-            sa_text(
-                "WITH r AS ("
-                "  SELECT created_at, lag(created_at) OVER ("
-                "    PARTITION BY user_id, lower(btrim(query)) ORDER BY created_at) AS prev"
-                "  FROM search_logs"
-                "  WHERE created_at >= :start AND created_at < :end AND user_id IS NOT NULL"
-                ") SELECT count(*) FROM r "
-                "WHERE prev IS NOT NULL AND created_at - prev <= interval '10 minutes'"
-            ),
-            {"start": start_dt, "end": end_dt},
-        ).scalar()
-        or 0
-    )
 
     top_queries = (
         summary_base
@@ -228,6 +210,7 @@ def get_search_logs(
             "match_strategy": log.match_strategy,
             "query_type": log.query_type,
             "content_gap": log.content_gap,
+            "is_repeat": log.is_repeat,
             "created_at": log.created_at.isoformat(),
         }
         for log in logs

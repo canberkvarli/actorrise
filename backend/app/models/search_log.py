@@ -7,6 +7,33 @@ from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import JSONB
 
 
+def compute_is_repeat(db, user_id, query):
+    """True when this (user, normalized query) was already searched in the last
+    10 minutes — the silent-retry signal, set on the row at write time.
+
+    Returns None for anonymous searches (no session to compare against). Cheap:
+    an EXISTS on the (user_id) index bounded by created_at. Never raises — a
+    telemetry flag must not be able to break a search — so any failure (or a
+    SQLite test backend without now()/btrim) degrades to None.
+    """
+    if not user_id or not query or not (query or "").strip():
+        return None
+    try:
+        return bool(
+            db.execute(
+                sql_text(
+                    "SELECT EXISTS (SELECT 1 FROM search_logs "
+                    "WHERE user_id = :uid "
+                    "AND lower(btrim(query)) = lower(btrim(:q)) "
+                    "AND created_at >= now() - interval '10 minutes')"
+                ),
+                {"uid": user_id, "q": query},
+            ).scalar()
+        )
+    except Exception:
+        return None
+
+
 class SearchLog(Base):
     __tablename__ = "search_logs"
 
@@ -41,6 +68,11 @@ class SearchLog(Base):
     # Added 2026-08-20 to measure the split, since H-07 predicts the title
     # branch should absorb roughly a third of weak matches.
     match_strategy = Column(String(24), nullable=True)
+    # True when this same (user, normalized query) was searched within the last
+    # 10 minutes — the silent-retry / dissatisfaction signal (weak_match misses
+    # it entirely). NULL for anonymous searches, which have no session to compare
+    # against. Set at write time by log_search_row(); see H-17.
+    is_repeat = Column(Boolean, nullable=True)
     # Parenthesised like ContentRequest's: valid Postgres either way, and the
     # bare form is a DDL syntax error on SQLite, which the tests build this
     # table on. Prod columns are created by hand-written migration scripts, so

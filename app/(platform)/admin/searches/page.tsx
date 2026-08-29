@@ -25,6 +25,7 @@ interface SearchLogEntry {
   match_strategy: string | null;
   query_type: string | null;
   content_gap: boolean | null;
+  is_repeat: boolean | null;
   created_at: string;
 }
 
@@ -574,12 +575,13 @@ export default function AdminSearchesPage() {
                         {" · "}
                         {entry.user_email || "anonymous"}
                       </p>
-                      {(entry.match_strategy || entry.best_cosine != null || entry.weak_match || entry.content_gap) && (
+                      {(entry.match_strategy || entry.best_cosine != null || entry.weak_match || entry.content_gap || entry.is_repeat) && (
                         <p className="text-[11px] text-muted-foreground flex flex-wrap gap-x-2 gap-y-0.5">
                           {entry.match_strategy && <span>{entry.match_strategy}</span>}
                           {entry.best_cosine != null && <span>cos {entry.best_cosine.toFixed(3)}</span>}
                           {entry.weak_match && <span className="font-medium" style={{ color: "#CB4B00" }}>weak</span>}
                           {entry.content_gap && <span className="font-medium" style={{ color: "#CB4B00" }}>gap</span>}
+                          {entry.is_repeat && <span className="font-medium" style={{ color: "#CB4B00" }}>repeat</span>}
                         </p>
                       )}
                       <div className="flex flex-wrap gap-1">

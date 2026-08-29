@@ -655,7 +655,7 @@ async def search_monologues(
         search_log_id = None
         if q and q.strip():
             try:
-                from app.models.search_log import SearchLog
+                from app.models.search_log import SearchLog, compute_is_repeat
                 from app.services.search.query_type import classify_query
                 all_result_ids = [int(m.id) for m, _ in all_results_with_scores]
                 log_row = SearchLog(
@@ -674,6 +674,7 @@ async def search_monologues(
                     ),
                     best_cosine=best_cosine,
                     match_strategy=match_strategy,
+                    is_repeat=compute_is_repeat(db, int(current_user.id), q),
                     query_type=classify_query(
                         q,
                         parsed_constraints=getattr(search_service, "_parsed_constraints", None),

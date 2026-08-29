@@ -356,6 +356,7 @@ async def search_film_tv_references(
 
         # Log film/TV search
         try:
+            from app.models.search_log import compute_is_repeat
             from app.services.search.query_type import classify_query
             filters_used = {k: v for k, v in {"type": type, "genre": genre, "director": director, "year_min": year_min, "year_max": year_max}.items() if v}
             result_ids = [r.id for r in results[:20]]
@@ -367,6 +368,7 @@ async def search_film_tv_references(
                 user_id=int(current_user.id),
                 source="film_tv",
                 query_type=classify_query(q_clean),
+                is_repeat=compute_is_repeat(db, int(current_user.id), q_clean),
             ))
             db.commit()
         except Exception:
