@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { IconSparkles } from "@tabler/icons-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type { Monologue } from "@/types/actor";
+import ProfileOnboardingFlow from "@/components/onboarding/ProfileOnboardingFlow";
 
 /**
  * Pre-search "Picked for your type" shelf on /monologues.
@@ -18,6 +20,8 @@ import type { Monologue } from "@/types/actor";
  * TrendingPreSearch (navigates via Link, fetches its own data).
  */
 export function ForYouShelf() {
+  const queryClient = useQueryClient();
+  const [wizardOpen, setWizardOpen] = useState(false);
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["for-you-shelf"],
     queryFn: async () => {
@@ -30,14 +34,32 @@ export function ForYouShelf() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const closeWizard = () => {
+    setWizardOpen(false);
+    // A profile may now exist — refresh the shelf and completion so the "Picked
+    // for your type" payoff appears immediately without a reload.
+    queryClient.invalidateQueries({ queryKey: ["for-you-shelf"] });
+    queryClient.invalidateQueries({ queryKey: ["profile-stats"] });
+  };
+
   // The recommender 400s when there is no profile yet. Turn the slot into a
-  // one-line nudge so the empty state itself recruits the 54% who never fill it.
+  // one-line nudge that opens the quick 5-tap wizard (not the full form), so the
+  // empty state itself recruits the 54% who never fill a profile — smoothly.
   const noProfile =
     isError &&
     /profile|complete your profile|actor profile not found/i.test(
       (error as Error)?.message ?? "",
     );
-  if (noProfile) return <ProfileNudge />;
+  if (noProfile) {
+    return (
+      <>
+        <ProfileNudge onOpen={() => setWizardOpen(true)} />
+        {wizardOpen && (
+          <ProfileOnboardingFlow variant="backfill" onClose={closeWizard} />
+        )}
+      </>
+    );
+  }
 
   if (isLoading) return <ForYouSkeleton />;
   const items = data ?? [];
@@ -98,12 +120,13 @@ function ForYouCard({ m }: { m: Monologue }) {
   );
 }
 
-function ProfileNudge() {
+function ProfileNudge({ onOpen }: { onOpen: () => void }) {
   return (
     <div className="mx-auto max-w-4xl pt-2 pb-8">
-      <Link
-        href="/profile"
-        className="group flex items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/[0.04] p-4 transition-all hover:border-primary/50"
+      <button
+        type="button"
+        onClick={onOpen}
+        className="group flex w-full items-center justify-between gap-3 rounded-xl border border-primary/30 bg-primary/[0.04] p-4 text-left transition-all hover:border-primary/50"
       >
         <div className="flex items-start gap-2.5">
           <IconSparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
@@ -112,13 +135,12 @@ function ProfileNudge() {
               Add your type, get monologues picked for you
             </p>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              Age range, gender, experience. Takes a minute, and every search
-              gets tailored to you.
+              A few quick taps, and every search gets tailored to you.
             </p>
           </div>
         </div>
         <span className="shrink-0 text-sm font-medium text-primary">Add it →</span>
-      </Link>
+      </button>
     </div>
   );
 }
