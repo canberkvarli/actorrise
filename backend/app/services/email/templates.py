@@ -248,8 +248,8 @@ class EmailTemplates:
             "",
             f"here it is again: {link}",
             "",
-            "give it two minutes. read it out loud once, or cut it down to "
-            "audition size. that's the whole reason you saved it.",
+            "give it two minutes. hit rehearse and run it out loud, or cut it "
+            "down to audition size. that's the whole reason you saved it.",
             "",
             "canberk",
             "",
