@@ -49,6 +49,7 @@ export function MonologueResultCard({
   isModerator = false,
   onEdit,
   highlightFields,
+  matchReasons,
   size = "default",
 }: MonologueResultCardProps) {
   const isBestMatch = variant === "bestMatch";
