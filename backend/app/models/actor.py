@@ -325,7 +325,10 @@ class RehearsalSession(Base):
     ai_character = Column(String, nullable=False)  # Which character the AI is playing
 
     # Session Status
-    status = Column(String, nullable=False, default="in_progress")  # in_progress, completed, abandoned
+    # in_progress | completed | abandoned (they left, client told us) |
+    # timed_out (they vanished; the hourly sweep closed it). abandoned and
+    # timed_out both mean "didn't finish" — see services/rehearsal_cleanup.
+    status = Column(String, nullable=False, default="in_progress")
     current_line_index = Column(Integer, default=0)  # Where they left off
 
     # Line Cap (resolved from tier at session start; NULL = unlimited)

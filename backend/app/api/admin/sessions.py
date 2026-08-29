@@ -7,11 +7,28 @@ from app.api.admin.stats import require_moderator
 from app.core.database import get_db
 from app.models.actor import Play, RehearsalLineDelivery, RehearsalSession, Scene
 from app.models.user import User
+from app.services.rehearsal_cleanup import TIMED_OUT_STATUS, UNFINISHED_STATUSES
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import desc, func
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/admin", tags=["admin", "sessions"])
+
+# Reusable aggregate expressions. `unfinished` is the union of the two ways a
+# session ends badly — completion math needs the union, the display needs them
+# apart (see services/rehearsal_cleanup for why they're different events).
+_COMPLETED = func.count().filter(RehearsalSession.status == "completed")
+_ABANDONED = func.count().filter(RehearsalSession.status == "abandoned")
+_TIMED_OUT = func.count().filter(RehearsalSession.status == TIMED_OUT_STATUS)
+_UNFINISHED = func.count().filter(RehearsalSession.status.in_(UNFINISHED_STATUSES))
+_IN_PROGRESS = func.count().filter(RehearsalSession.status == "in_progress")
+
+
+def _rate(completed: int, unfinished: int) -> Optional[float]:
+    """Completion rate over *ended* sessions only. In-progress rows are excluded
+    because they haven't had the chance to succeed or fail yet."""
+    ended = completed + unfinished
+    return round(completed / ended * 100, 1) if ended else None
 
 
 def _date_range(from_date: Optional[str], to_date: Optional[str]) -> tuple[datetime, datetime]:
@@ -28,7 +45,11 @@ def get_rehearsal_sessions(
     limit: int = Query(25, le=100),
     from_date: Optional[str] = Query(None, alias="from"),
     to_date: Optional[str] = Query(None, alias="to"),
-    status: Optional[str] = Query(None, description="Filter by status: in_progress, completed, abandoned"),
+    status: Optional[str] = Query(
+        None,
+        description="Filter by status: in_progress, completed, abandoned, timed_out, "
+        "or 'unfinished' for abandoned+timed_out together",
+    ),
     q: Optional[str] = Query(None, description="Filter by user email or scene title"),
     db: Session = Depends(get_db),
     _mod: User = Depends(require_moderator),
@@ -45,7 +66,9 @@ def get_rehearsal_sessions(
         )
     )
 
-    if status:
+    if status == "unfinished":
+        base = base.filter(RehearsalSession.status.in_(UNFINISHED_STATUSES))
+    elif status:
         base = base.filter(RehearsalSession.status == status)
 
     # For text search, join user/scene
@@ -124,9 +147,10 @@ def get_rehearsal_sessions(
         summary_row = (
             db.query(
                 func.count().label("total_sessions"),
-                func.count().filter(RehearsalSession.status == "completed").label("completed"),
-                func.count().filter(RehearsalSession.status == "abandoned").label("abandoned"),
-                func.count().filter(RehearsalSession.status == "in_progress").label("in_progress"),
+                _COMPLETED.label("completed"),
+                _ABANDONED.label("abandoned"),
+                _TIMED_OUT.label("timed_out"),
+                _IN_PROGRESS.label("in_progress"),
                 func.avg(RehearsalSession.duration_seconds).filter(
                     RehearsalSession.duration_seconds.isnot(None)
                 ).label("avg_duration"),
@@ -164,6 +188,7 @@ def get_rehearsal_sessions(
             "total_sessions": summary_row.total_sessions if summary_row else 0,
             "completed": summary_row.completed if summary_row else 0,
             "abandoned": summary_row.abandoned if summary_row else 0,
+            "timed_out": summary_row.timed_out if summary_row else 0,
             "in_progress": summary_row.in_progress if summary_row else 0,
             "avg_duration_seconds": round(summary_row.avg_duration) if summary_row and summary_row.avg_duration else None,
             "avg_rating": round(float(summary_row.avg_rating), 1) if summary_row and summary_row.avg_rating else None,
@@ -198,9 +223,10 @@ def get_session_analytics(
     f = (
         db.query(
             func.count().label("total"),
-            func.count().filter(RehearsalSession.status == "completed").label("completed"),
-            func.count().filter(RehearsalSession.status == "abandoned").label("abandoned"),
-            func.count().filter(RehearsalSession.status == "in_progress").label("in_progress"),
+            _COMPLETED.label("completed"),
+            _ABANDONED.label("abandoned"),
+            _TIMED_OUT.label("timed_out"),
+            _IN_PROGRESS.label("in_progress"),
             func.avg(RehearsalSession.duration_seconds).filter(
                 RehearsalSession.duration_seconds.isnot(None)
             ).label("avg_duration"),
@@ -208,20 +234,29 @@ def get_session_analytics(
                 RehearsalSession.status == "completed",
                 RehearsalSession.duration_seconds.isnot(None),
             ).label("avg_completed_duration"),
+            # How many rows the duration average is actually built from. It used
+            # to silently skip every swept session (they had no duration), so a
+            # number drawn from half the data looked like a number drawn from all
+            # of it.
+            func.count().filter(RehearsalSession.duration_seconds.isnot(None)).label("timed_rows"),
         )
         .filter(*window)
         .first()
     )
     completed = f.completed if f else 0
     abandoned = f.abandoned if f else 0
-    ended = completed + abandoned
-    completion_rate = round(completed / ended * 100, 1) if ended else None
+    timed_out = f.timed_out if f else 0
+    unfinished = abandoned + timed_out
+    ended = completed + unfinished
+    completion_rate = _rate(completed, unfinished)
 
-    # --- Drop-off: abandoned sessions bucketed by how far they got ---
-    abandoned_pcts = [
+    # --- Drop-off: unfinished sessions bucketed by how far they got ---
+    # Both kinds count: someone who went silent at 40% dropped off at 40%
+    # exactly as much as someone who clicked away.
+    dropoff_pcts = [
         float(p or 0.0)
         for (p,) in db.query(RehearsalSession.completion_percentage)
-        .filter(*window, RehearsalSession.status == "abandoned")
+        .filter(*window, RehearsalSession.status.in_(UNFINISHED_STATUSES))
         .all()
     ]
     buckets = [
@@ -232,7 +267,7 @@ def get_session_analytics(
         ("76-99%", lambda x: 75 < x < 100),
     ]
     dropoff = [
-        {"bucket": label, "count": sum(1 for x in abandoned_pcts if test(x))}
+        {"bucket": label, "count": sum(1 for x in dropoff_pcts if test(x))}
         for label, test in buckets
     ]
 
@@ -242,9 +277,11 @@ def get_session_analytics(
             Scene.title.label("scene_title"),
             Play.title.label("play_title"),
             func.count().label("total"),
-            func.count().filter(RehearsalSession.status == "completed").label("completed"),
-            func.count().filter(RehearsalSession.status == "abandoned").label("abandoned"),
-            func.count().filter(RehearsalSession.status == "in_progress").label("in_progress"),
+            _COMPLETED.label("completed"),
+            _ABANDONED.label("abandoned"),
+            _TIMED_OUT.label("timed_out"),
+            _UNFINISHED.label("unfinished"),
+            _IN_PROGRESS.label("in_progress"),
             func.avg(RehearsalSession.duration_seconds).filter(
                 RehearsalSession.duration_seconds.isnot(None)
             ).label("avg_duration"),
@@ -264,9 +301,11 @@ def get_session_analytics(
             "total": r.total,
             "completed": r.completed,
             "abandoned": r.abandoned,
+            "timed_out": r.timed_out,
+            "unfinished": r.unfinished,
             "in_progress": r.in_progress,
-            "completion_rate": round(r.completed / (r.completed + r.abandoned) * 100, 1)
-            if (r.completed + r.abandoned) else None,
+            "completion_rate": _rate(r.completed, r.unfinished),
+            "ended": r.completed + r.unfinished,
             "avg_duration_seconds": round(r.avg_duration) if r.avg_duration else None,
         }
         for r in scene_rows
@@ -277,8 +316,10 @@ def get_session_analytics(
         db.query(
             User.email.label("email"),
             func.count().label("total"),
-            func.count().filter(RehearsalSession.status == "completed").label("completed"),
-            func.count().filter(RehearsalSession.status == "abandoned").label("abandoned"),
+            _COMPLETED.label("completed"),
+            _ABANDONED.label("abandoned"),
+            _TIMED_OUT.label("timed_out"),
+            _UNFINISHED.label("unfinished"),
             func.max(RehearsalSession.started_at).label("last_active"),
         )
         .join(User, RehearsalSession.user_id == User.id)
@@ -294,8 +335,10 @@ def get_session_analytics(
             "total": r.total,
             "completed": r.completed,
             "abandoned": r.abandoned,
-            "completion_rate": round(r.completed / (r.completed + r.abandoned) * 100, 1)
-            if (r.completed + r.abandoned) else None,
+            "timed_out": r.timed_out,
+            "unfinished": r.unfinished,
+            "completion_rate": _rate(r.completed, r.unfinished),
+            "ended": r.completed + r.unfinished,
             "last_active": r.last_active.isoformat() if r.last_active else None,
         }
         for r in user_rows
@@ -306,10 +349,16 @@ def get_session_analytics(
             "total": f.total if f else 0,
             "completed": completed,
             "abandoned": abandoned,
+            "timed_out": timed_out,
+            "unfinished": unfinished,
             "in_progress": f.in_progress if f else 0,
             "completion_rate": completion_rate,
+            # Sample size behind the rate. 27 ended sessions swings hard week to
+            # week; the UI shows this so the percentage isn't read as settled.
+            "ended": ended,
         },
         "avg_duration_seconds": round(f.avg_duration) if f and f.avg_duration else None,
+        "avg_duration_sample": f.timed_rows if f else 0,
         "avg_completed_duration_seconds": round(f.avg_completed_duration) if f and f.avg_completed_duration else None,
         "dropoff": dropoff,
         "by_scene": by_scene,

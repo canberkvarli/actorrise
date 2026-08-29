@@ -186,6 +186,41 @@ def _start_saved_piece_reminder_scheduler():
     logger.info("Saved-piece reminder scheduler started (hourly)")
 
 
+def _start_rehearsal_sweep_scheduler() -> None:
+    """Hourly global sweep of rehearsal sessions left open.
+
+    Until now the sweep only ran when a user started a *new* session, scoped to
+    that user — so anyone who rehearsed once and never came back stayed
+    `in_progress` forever, and the admin dashboard reported dead sessions from
+    days ago as people currently rehearsing. A Render Cron Job would be a second
+    paid service; this rides the existing web dyno, which is on `starter` and
+    doesn't sleep.
+    """
+
+    def loop() -> None:
+        # Offset from the reminder scheduler so the two don't both wake on the
+        # hour and contend for the single worker's DB connections.
+        time.sleep(90)
+        while True:
+            try:
+                from app.core.database import SessionLocal
+                from app.services.rehearsal_cleanup import close_stale_sessions
+
+                _db = SessionLocal()
+                try:
+                    closed = close_stale_sessions(_db)
+                    if closed:
+                        logger.info("rehearsal sweep: closed %s stale session(s)", closed)
+                finally:
+                    _db.close()
+            except Exception as e:  # noqa: BLE001
+                logger.warning("rehearsal sweep failed (non-fatal): %s", e)
+            time.sleep(max(60, 3600 - (time.time() % 3600)))
+
+    threading.Thread(target=loop, daemon=True).start()
+    logger.info("Rehearsal session sweep started (hourly)")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _init_db()
@@ -197,6 +232,7 @@ async def lifespan(app: FastAPI):
     _warmup_search_cache_background()
     _warmup_title_catalogue_background()
     _start_saved_piece_reminder_scheduler()
+    _start_rehearsal_sweep_scheduler()
     yield
 
 

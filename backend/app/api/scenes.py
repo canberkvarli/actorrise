@@ -734,13 +734,15 @@ async def start_rehearsal(
     user_roles, ai_character = resolved
     user_character = user_roles[0]
 
-    # Close this user's own stale in_progress sessions before opening a new one,
-    # so `in_progress` stays meaningful instead of accumulating (38 were stuck in
-    # prod). Only the truly inactive are swept — a recently paused one stays
-    # resumable. Best-effort: a cleanup failure must not block the new session.
+    # Close this user's own stale in_progress sessions before opening a new one.
+    # The hourly sweep in main.py is what actually keeps `in_progress` honest
+    # globally; this per-user pass just means their own list is tidy the instant
+    # they return, without waiting for the next hour. Only the truly inactive are
+    # swept — a recently paused one stays resumable. Best-effort: a cleanup
+    # failure must not block the new session.
     try:
-        from app.services.rehearsal_cleanup import abandon_stale_sessions
-        abandon_stale_sessions(db, user_id=int(current_user.id))
+        from app.services.rehearsal_cleanup import close_stale_sessions
+        close_stale_sessions(db, user_id=int(current_user.id))
     except Exception:
         db.rollback()
 

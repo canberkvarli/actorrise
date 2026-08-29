@@ -1,9 +1,10 @@
 """Close rehearsal sessions stuck in `in_progress`.
 
 38 rows sat in `in_progress` in prod, making the status column meaningless and
-poisoning completion math. This backfills them (and any future stragglers) to
-`abandoned`. New sessions self-clean via app.services.rehearsal_cleanup on start;
-this is the one-time sweep for the pile that already exists.
+poisoning completion math. This closes them (and any future stragglers) as
+`timed_out`. An hourly sweep in main.py now does this automatically and new
+sessions self-clean on start, so this script is the manual escape hatch — for
+running a wider `--hours` window, or checking what the sweep would do.
 
 Dry-run by default — prints what it WOULD close. Pass --apply to write, which
 first dumps a reversible backup to backend/backups/ so the change can be undone.
@@ -26,7 +27,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from app.core.database import SessionLocal  # noqa: E402
 from app.services.rehearsal_cleanup import (  # noqa: E402
     STALE_AFTER_HOURS,
-    abandon_stale_sessions,
+    TIMED_OUT_STATUS,
+    close_stale_sessions,
     find_stale_sessions,
 )
 
@@ -63,14 +65,15 @@ def main() -> int:
                     "id": s.id,
                     "status": s.status,
                     "completed_at": s.completed_at.isoformat() if s.completed_at else None,
+                    "duration_seconds": s.duration_seconds,
                 }
                 for s in stale
             ]
             backup_path.write_text(json.dumps(backup, indent=2))
             print(f"\nBackup written: {backup_path}")
 
-        closed = abandon_stale_sessions(db, now=now, hours=args.hours)
-        print(f"Closed {closed} session(s) -> abandoned.")
+        closed = close_stale_sessions(db, now=now, hours=args.hours)
+        print(f"Closed {closed} session(s) -> {TIMED_OUT_STATUS}.")
         return 0
     finally:
         db.close()

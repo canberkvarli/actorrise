@@ -47,11 +47,19 @@ interface Analytics {
   funnel: {
     total: number;
     completed: number;
+    /** They left and the client told us. */
     abandoned: number;
+    /** They went silent; the hourly sweep closed it. */
+    timed_out: number;
+    /** abandoned + timed_out — the union that completion rate divides by. */
+    unfinished: number;
     in_progress: number;
     completion_rate: number | null;
+    /** Sessions that actually ended — the sample behind completion_rate. */
+    ended: number;
   };
   avg_duration_seconds: number | null;
+  avg_duration_sample: number;
   avg_completed_duration_seconds: number | null;
   dropoff: { bucket: string; count: number }[];
   by_scene: {
@@ -60,8 +68,11 @@ interface Analytics {
     total: number;
     completed: number;
     abandoned: number;
+    timed_out: number;
+    unfinished: number;
     in_progress: number;
     completion_rate: number | null;
+    ended: number;
     avg_duration_seconds: number | null;
   }[];
   by_user: {
@@ -69,7 +80,10 @@ interface Analytics {
     total: number;
     completed: number;
     abandoned: number;
+    timed_out: number;
+    unfinished: number;
     completion_rate: number | null;
+    ended: number;
     last_active: string | null;
   }[];
 }
@@ -117,7 +131,19 @@ function statusColor(status: string): string {
     return "bg-green-50 text-green-700 border-green-200 dark:bg-green-950 dark:text-green-300 dark:border-green-800";
   if (status === "abandoned")
     return "bg-red-50 text-red-700 border-red-200 dark:bg-red-950 dark:text-red-300 dark:border-red-800";
+  // Timed out is a softer failure than a deliberate exit — they may simply have
+  // closed the laptop. Amber, not red, so the two read as different at a glance.
+  if (status === "timed_out")
+    return "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800";
   return "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800";
+}
+
+/** Plain-English name for a status. "timed_out" means nothing to read cold. */
+function statusLabel(status: string): string {
+  if (status === "timed_out") return "went silent";
+  if (status === "abandoned") return "left mid-scene";
+  if (status === "in_progress") return "in progress";
+  return status;
 }
 
 function pacingColor(pacing: string | null): string {
@@ -163,24 +189,35 @@ function FunnelBar({ f }: { f: Analytics["funnel"] }) {
         <p className="text-xs text-muted-foreground tabular-nums">{f.total} sessions</p>
       </div>
       <div className="flex h-3 w-full overflow-hidden">
-        <div style={{ width: seg(f.completed), backgroundColor: BRAND }} title={`${f.completed} completed`} />
-        <div className="bg-muted-foreground/30" style={{ width: seg(f.in_progress) }} title={`${f.in_progress} in progress`} />
-        <div className="bg-red-400/70 dark:bg-red-500/50" style={{ width: seg(f.abandoned) }} title={`${f.abandoned} abandoned`} />
+        <div style={{ width: seg(f.completed), backgroundColor: BRAND }} title={`${f.completed} finished the scene`} />
+        <div className="bg-muted-foreground/30" style={{ width: seg(f.in_progress) }} title={`${f.in_progress} rehearsing right now`} />
+        <div className="bg-red-400/70 dark:bg-red-500/50" style={{ width: seg(f.abandoned) }} title={`${f.abandoned} left mid-scene`} />
+        <div className="bg-amber-400/70 dark:bg-amber-500/50" style={{ width: seg(f.timed_out) }} title={`${f.timed_out} went silent`} />
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs">
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5" style={{ backgroundColor: BRAND }} />
-          {f.completed} completed
+          {f.completed} finished
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5 bg-muted-foreground/30" />
-          {f.in_progress} in progress
+          {f.in_progress} rehearsing now
         </span>
         <span className="flex items-center gap-1.5">
           <span className="inline-block h-2.5 w-2.5 bg-red-400/70 dark:bg-red-500/50" />
-          {f.abandoned} abandoned
+          {f.abandoned} left mid-scene
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="inline-block h-2.5 w-2.5 bg-amber-400/70 dark:bg-amber-500/50" />
+          {f.timed_out} went silent
         </span>
       </div>
+      <p className="text-[11px] leading-snug text-muted-foreground">
+        &ldquo;Left mid-scene&rdquo; means they navigated away and we caught it. &ldquo;Went
+        silent&rdquo; means they vanished and an hourly sweep closed the session six hours later.
+        Both count as not finishing. &ldquo;Rehearsing now&rdquo; is live — anything older than six
+        hours has already been swept.
+      </p>
     </div>
   );
 }
@@ -193,11 +230,12 @@ function DropOff({ rows }: { rows: Analytics["dropoff"] }) {
       <div>
         <p className="text-sm font-medium">Where actors drop off</p>
         <p className="text-xs text-muted-foreground">
-          {totalAbandoned} abandoned sessions, by how far they got
+          {totalAbandoned} unfinished session{totalAbandoned === 1 ? "" : "s"}, by how far they got
+          — whether they left or went silent
         </p>
       </div>
       {totalAbandoned === 0 ? (
-        <p className="text-xs text-muted-foreground">No abandoned sessions in range.</p>
+        <p className="text-xs text-muted-foreground">Everyone who started, finished.</p>
       ) : (
         <div className="space-y-1.5">
           {rows.map((r) => (
@@ -404,9 +442,15 @@ export default function AdminSessionsPage() {
   const [offset, setOffset] = useState(0);
   const [expandedId, setExpandedId] = useState<number | null>(null);
 
-  useEffect(() => {
+  // Narrowing the list invalidates the current page number. Adjusted during
+  // render rather than in an effect — it's derived state going stale, which
+  // React wants resolved before paint instead of as a second render pass.
+  const filterKey = `${debouncedQ}|${statusFilter}`;
+  const [lastFilterKey, setLastFilterKey] = useState(filterKey);
+  if (lastFilterKey !== filterKey) {
+    setLastFilterKey(filterKey);
     setOffset(0);
-  }, [debouncedQ, statusFilter]);
+  }
 
   const page = Math.floor(offset / PAGE_SIZE) + 1;
 
@@ -472,15 +516,33 @@ export default function AdminSessionsPage() {
             <Stat
               label="Completion rate"
               value={a.funnel.completion_rate != null ? `${a.funnel.completion_rate}%` : "-"}
-              hint={`${a.funnel.completed} of ${a.funnel.completed + a.funnel.abandoned} ended`}
+              // Sample size up front: at these volumes one or two sessions move
+              // the percentage several points, and a bare "29.6%" hides that.
+              hint={
+                a.funnel.ended < 30
+                  ? `only ${a.funnel.completed} of ${a.funnel.ended} ended sessions — too few to trust`
+                  : `${a.funnel.completed} of ${a.funnel.ended} ended sessions`
+              }
               accent
             />
-            <Stat label="Total sessions" value={a.funnel.total.toLocaleString()} hint={`${a.funnel.in_progress} still active`} />
-            <Stat label="Avg duration" value={formatDuration(a.avg_duration_seconds)} hint="all ended sessions" />
+            <Stat
+              label="Total sessions"
+              value={a.funnel.total.toLocaleString()}
+              hint={
+                a.funnel.in_progress > 0
+                  ? `${a.funnel.in_progress} rehearsing right now`
+                  : "nobody rehearsing right now"
+              }
+            />
+            <Stat
+              label="Avg duration"
+              value={formatDuration(a.avg_duration_seconds)}
+              hint={`across ${a.avg_duration_sample} timed session${a.avg_duration_sample === 1 ? "" : "s"}`}
+            />
             <Stat
               label="Avg completed"
               value={formatDuration(a.avg_completed_duration_seconds)}
-              hint="completed only"
+              hint="the ones that reached the end"
             />
           </div>
 
@@ -526,9 +588,11 @@ export default function AdminSessionsPage() {
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
             >
               <option value="all">All statuses</option>
-              <option value="completed">Completed</option>
-              <option value="in_progress">In Progress</option>
-              <option value="abandoned">Abandoned</option>
+              <option value="completed">Finished the scene</option>
+              <option value="in_progress">Rehearsing now</option>
+              <option value="unfinished">Didn&apos;t finish (either kind)</option>
+              <option value="abandoned">Left mid-scene</option>
+              <option value="timed_out">Went silent</option>
             </select>
           </div>
         </CardContent>
@@ -567,7 +631,7 @@ export default function AdminSessionsPage() {
                       </div>
                       <div className="flex flex-wrap items-center gap-2 text-xs">
                         <Badge variant="outline" className={statusColor(s.status)}>
-                          {s.status.replace("_", " ")}
+                          {statusLabel(s.status)}
                         </Badge>
                         <span className="text-muted-foreground">
                           as <span className="font-medium text-foreground">{s.user_character}</span>
@@ -634,7 +698,7 @@ export default function AdminSessionsPage() {
                           </td>
                           <td className="py-2">
                             <Badge variant="outline" className={statusColor(s.status)}>
-                              {s.status.replace("_", " ")}
+                              {statusLabel(s.status)}
                             </Badge>
                           </td>
                           <td className="py-2">
