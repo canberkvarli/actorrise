@@ -1029,6 +1029,25 @@ class SemanticSearch:
             self.db.query(Monologue)
             .join(Play)
             .options(joinedload(Monologue.play), defer(Monologue.embedding_vector))
+            # Known-broken pieces stay out of results. review_hides_from_search
+            # has existed since the first repair pass and says exactly this in
+            # its docstring, but it was only ever wired into title_lookup — so a
+            # flagged monologue was hidden when found BY NAME and served
+            # normally by every other search. #5365 ("Leader" in Iphigenia in
+            # Tauris, which is really Iphigenia's speech with the Leader's two
+            # lines in front) had been queued for review and was still turning
+            # up in the library.
+            #
+            # Expressed as SQL rather than the helper because this runs before
+            # scoring; the helper still guards the title path, where rows are
+            # already in memory. Mirrors it exactly: only 'pending' hides, so a
+            # reviewed row with any other status stays searchable.
+            .filter(
+                or_(
+                    Monologue.review_status.is_(None),
+                    Monologue.review_status != "pending",
+                )
+            )
         )
 
         # Apply ONLY hard filters as SQL WHERE clauses.

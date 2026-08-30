@@ -148,9 +148,23 @@ def _distinctive(name: str) -> bool:
 
 
 def _cue_pattern(name: str) -> re.Pattern:
-    """``Name.`` or ``Name:`` as a speaker cue (case-insensitive, word-anchored)."""
+    """``Name.`` or ``Name:`` as a speaker cue, at a sentence boundary.
+
+    The boundary is the whole discriminator. A character naming another
+    character reads identically to a cue on its own —
+
+        "I'm every doubt you've ever had, Sherlock."     <- direct address
+        "...live they still or live they not. IPHIGENIA . Listen!"  <- a cue
+
+    — and the only difference is what comes before the name: a comma (or any
+    mid-sentence word) means someone is being spoken TO, while a full stop means
+    a new speaker is starting. Without this, Moriarty addressing Sherlock,
+    Agent Smith addressing Morpheus and Oberon addressing Robin all read as
+    interleaved dialogue.
+    """
     return re.compile(
-        r"(?<![\w'’])" + re.escape(name.strip()) + r"\s*[.:]", re.IGNORECASE
+        r"(?:(?<=[.!?])|^)\s*" + re.escape(name.strip()) + r"\s*[.:]",
+        re.IGNORECASE | re.MULTILINE,
     )
 
 

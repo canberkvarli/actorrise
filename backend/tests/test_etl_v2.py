@@ -129,15 +129,36 @@ class TestInterleaveGate:
             "Enter my house and I will show you what my father left me.", CAST
         )
 
+    @pytest.mark.parametrize("line", [
+        # Real prod false positives, all direct address rather than a cue.
+        "I'm every doubt you've ever had, Rosencrantz. Every bad day.",
+        "Have you ever stood and stared at it, Rosencrantz? Marvelled at it.",
+        "Hie therefore, Rosencrantz, overcast the night with drooping fog.",
+    ])
+    def test_addressing_a_character_is_not_a_cue(self, line):
+        """The whole discriminator is what precedes the name.
+
+        A comma means someone is being spoken TO; a full stop means a new
+        speaker starts. Without that, Moriarty naming Sherlock, Agent Smith
+        naming Morpheus and Oberon naming Robin all read as interleaved
+        dialogue — 189 of 257 corpus hits were this.
+        """
+        assert not has_interleaved_dialogue(line, CAST)
+
+    def test_cue_after_a_full_stop_is_caught(self):
+        """#5365: '...live they not. IPHIGENIA . Listen!'"""
+        text = "None heedeth, live they still or live they not. Rosencrantz. Listen to me now."
+        assert has_interleaved_dialogue(text, CAST)
+
     def test_gate_reports_reason(self):
-        text = " ".join(["word"] * 60) + " Rosencrantz. And so I left."
+        text = " ".join(["word"] * 58) + " end. Rosencrantz. And so I left."
         r = assess_monologue_quality(text, cast=CAST)
         assert "interleaved_dialogue" in r.reasons
         assert not r.ok
 
     def test_gate_without_cast_is_blind_to_it(self):
         """Documents the pre-existing behaviour: no cast, no cast-aware check."""
-        text = " ".join(["word"] * 60) + " Rosencrantz. And so I left."
+        text = " ".join(["word"] * 58) + " end. Rosencrantz. And so I left."
         r = assess_monologue_quality(text)
         assert "interleaved_dialogue" not in r.reasons
 
