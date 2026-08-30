@@ -66,6 +66,7 @@ import { TrendingPreSearch } from "@/components/monologue/TrendingPreSearch";
 import { ForYouShelf } from "@/components/monologue/ForYouShelf";
 import { MasksSketch } from "@/components/brand/sketches";
 import { SearchFiltersPanel } from "@/components/monologue/SearchFiltersPanel";
+import { NoResultsState } from "@/components/monologue/NoResultsState";
 import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
@@ -1454,8 +1455,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         className={
           hasSearched
             /* top offsets clear the sticky nav, which measures 65px on mobile
-               and 81px from sm up — any less and the mode toggle tucks under it */
-            ? "sticky top-16 z-30 -mx-4 mb-4 border-b border-border/50 bg-background/90 px-4 py-3 backdrop-blur-md sm:top-20 sm:-mx-6 sm:px-6"
+               and 81px from sm up — any less and the mode toggle tucks under it.
+               From sm up the mode toggle and the search bar sit on one line;
+               the title has animated away by then, so they're the only children. */
+            ? "sticky top-16 z-30 -mx-4 mb-4 border-b border-border/50 bg-background/90 px-4 py-3 backdrop-blur-md sm:top-20 sm:-mx-6 sm:flex sm:items-center sm:gap-3 sm:px-6"
             : "mb-4 sm:mb-6 md:mb-10"
         }
       >
@@ -1484,7 +1487,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         {/* Plays vs Film & TV toggle: spacious on mobile, 44px touch targets */}
         <div
           className={`flex items-center justify-center gap-2 px-1 ${
-            hasSearched ? "mb-2" : "mb-3 sm:mb-4"
+            hasSearched ? "mb-2 sm:mb-0 sm:shrink-0" : "mb-3 sm:mb-4"
           }`}
         >
           <div className="w-full max-w-sm sm:max-w-none sm:w-auto inline-flex rounded-xl border border-border bg-muted/40 p-2 gap-2 sm:p-1 sm:gap-0">
@@ -1539,7 +1542,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </div>
         </div>
         {/* Search Bar - stacked on mobile for easier tap targets */}
-        <div className="max-w-3xl mx-auto">
+        <div className={hasSearched ? "min-w-0 sm:flex-1" : "max-w-3xl mx-auto"}>
           <div className="relative group">
             {/* Ambient glow effect - subtle background */}
             <div
@@ -1631,14 +1634,65 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   "Search"
                 )}
               </Button>
+
+              {/* Once you've searched, refining is the next thing you reach
+                  for — so it rides inside the search bar instead of costing
+                  its own row in the sticky header. */}
+              {hasSearched && (
+                <>
+                  <span aria-hidden className="hidden md:block h-6 w-px shrink-0 bg-border" />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowFiltersSheet(true)}
+                    className="md:hidden shrink-0 gap-1.5 min-h-[44px] min-w-[44px] px-2 text-muted-foreground hover:text-foreground"
+                    aria-label="Filters"
+                  >
+                    <IconAdjustments className="h-4 w-4" />
+                    {(activeFilters.length > 0 || hasFreshnessFilter) && (
+                      <span className="tabular-nums text-xs text-primary">
+                        {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
+                      </span>
+                    )}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowFilters(true)}
+                    className="hidden md:inline-flex shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
+                  >
+                    <IconAdjustments className="h-4 w-4" />
+                    Filters
+                    {(activeFilters.length > 0 || hasFreshnessFilter) && (
+                      <span className="tabular-nums text-xs text-primary">
+                        {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
+                      </span>
+                    )}
+                  </Button>
+                  {searchMode === "plays" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={handleFindForMe}
+                      disabled={isLoading}
+                      className="hidden lg:inline-flex shrink-0 gap-1.5 text-primary hover:bg-primary/10 hover:text-primary"
+                    >
+                      <IconSparkles className="h-4 w-4" />
+                      For me
+                    </Button>
+                  )}
+                </>
+              )}
             </div>
           </div>
 
-          {/* Action Row - Filters (Plays or Film & TV) + Find for me (Plays only) */}
+          {/* Action Row - Filters (Plays or Film & TV) + Find for me (Plays only).
+              After a search these controls move inside the search bar itself,
+              so this row would just be a duplicate taking up sticky height. */}
           <div
             id="search-filters"
-            className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
-              hasSearched ? "mt-2" : "mt-3 sm:mt-4"
+            className={`flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
+              hasSearched ? "hidden" : "flex mt-3 sm:mt-4"
             }`}
           >
             <div className="flex items-center gap-2 flex-wrap">
@@ -2063,41 +2117,35 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
             >
-              <div className="pt-12 pb-12 text-center max-w-md mx-auto">
-                <IconSearch className="h-16 w-16 text-muted-foreground/50 mx-auto mb-4" />
-                {contentGap ? (
+              {contentGap ? (
+                <div className="pt-12 pb-12 text-center max-w-md mx-auto">
                   <ContentGapBanner
-                  play={contentGap.play}
-                  author={contentGap.author}
-                  availableIn={contentGap.available_in}
-                  onSwitchSource={(st) => setSearchMode(st === "play" ? "plays" : "film_tv")}
-                />
-                ) : queryInvalidReason === "gibberish" ? (
-                  <>
-                    <h3 className="text-2xl font-semibold mb-2">We couldn&apos;t understand that search</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Try describing what you&apos;re looking for, like &quot;funny monologue for a woman in her 20s&quot; or a play title like &quot;Hamlet&quot;
-                    </p>
-                  </>
-                ) : queryInvalidReason ? (
-                  <>
-                    <h3 className="text-2xl font-semibold mb-2">That search is too short</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Try adding more detail, like &quot;sad monologue about loss&quot;
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <h3 className="text-2xl font-semibold mb-2">Nothing matched your search</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Try different words or remove some filters to see more results
-                    </p>
-                    {queryUsedForResults.trim() && (
-                      <RequestQueryButton query={queryUsedForResults} className="flex items-center justify-center" />
-                    )}
-                  </>
-                )}
-              </div>
+                    play={contentGap.play}
+                    author={contentGap.author}
+                    availableIn={contentGap.available_in}
+                    onSwitchSource={(st) => setSearchMode(st === "play" ? "plays" : "film_tv")}
+                  />
+                </div>
+              ) : (
+                <NoResultsState
+                  reason={
+                    queryInvalidReason === "gibberish"
+                      ? "gibberish"
+                      : queryInvalidReason
+                        ? "short"
+                        : "none"
+                  }
+                  activeFilterCount={activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
+                  onClearFilters={() => {
+                    setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" });
+                    setMaxOverdoneScore(1);
+                  }}
+                >
+                  {!queryInvalidReason && queryUsedForResults.trim() && (
+                    <RequestQueryButton query={queryUsedForResults} className="flex items-center justify-center" />
+                  )}
+                </NoResultsState>
+              )}
             </motion.div>
           ) : results.length > 0 ? (
             <div id="search-results" className="space-y-4">
