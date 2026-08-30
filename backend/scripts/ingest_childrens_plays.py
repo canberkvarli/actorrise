@@ -54,6 +54,7 @@ from app.models.actor import Monologue, Play
 from app.services.data_ingestion.cross_source_dedupe import find_duplicate
 from app.services.extraction.monologue_quality import (
     assess_monologue_quality,
+    looks_non_english,
     to_display_text,
 )
 from app.services.extraction.plain_text_parser import PlainTextParser
@@ -80,6 +81,10 @@ UA = {"User-Agent": "ActorRise/1.0 (+https://actorrise.com) monologue ingest"}
 #: Staying at 50 also keeps purge_sub_50_word_monologues.py harmless; a lower
 #: floor here would have quietly queued this whole shelf for deletion.
 MIN_WORDS = 50
+
+#: Rows per commit + per embedding request. Small enough that an interrupted
+#: run loses little, large enough that embedding round-trips stop dominating.
+CHUNK = 25
 MAX_WORDS = 400
 
 #: Curated from Gutendex subjects "Children's plays", "Juvenile drama",
@@ -185,11 +190,13 @@ def main() -> None:
     analyzer = None
     if args.apply:
         from app.services.ai.content_analyzer import ContentAnalyzer
-        from app.services.ai.embedding_text_builder import build_monologue_enriched_text
+        from app.services.ai.langchain.embeddings import generate_embeddings_batch
         analyzer = ContentAnalyzer()
+        embed_batch = generate_embeddings_batch
 
     new_plays, new_monos = [], []
-    totals = {"books": 0, "candidates": 0, "gated": 0, "dupe": 0, "kept": 0}
+    totals = {"books": 0, "candidates": 0, "gated": 0, "dupe": 0, "kept": 0,
+              "non_english": 0}
 
     for book_id, title, author in books:
         raw = download(book_id)
@@ -198,6 +205,15 @@ def main() -> None:
             continue
         totals["books"] += 1
         text = strip_gutenberg_boilerplate(raw)
+
+        # Gutenberg carries translations INTO other languages under an English
+        # title and author, so neither can be trusted. Two Dutch Ibsen volumes
+        # and a Hindi screenplay reached the library as English this way.
+        # Checked on the whole book, where the signal is unambiguous.
+        if looks_non_english(text):
+            print(f"{title[:44]:44s} SKIPPED — not English")
+            totals["non_english"] += 1
+            continue
         cands = parser.extract_monologues(text, min_words=MIN_WORDS, max_words=MAX_WORDS)
         totals["candidates"] += len(cands)
 
@@ -243,49 +259,70 @@ def main() -> None:
                 db.flush()
                 new_plays.append(play.id)
 
-            for c in kept:
-                dup = find_duplicate(db, c["text"])
-                if dup:
-                    totals["dupe"] += 1
+            # Work in chunks: one embedding request per chunk instead of one per
+            # row, and a commit after each so an interrupted run loses a handful
+            # of rows rather than a whole book. The per-row LLM analysis cannot
+            # be batched — ContentAnalyzer.batch_analyze is a loop over
+            # analyze_monologue — so it stays the floor on how fast this goes.
+            for start in range(0, len(kept), CHUNK):
+                chunk = kept[start:start + CHUNK]
+                prepared = []
+                for c in chunk:
+                    if find_duplicate(db, c["text"]):
+                        totals["dupe"] += 1
+                        continue
+                    analysis = analyzer.analyze_monologue(
+                        text=c["text"], character=c["character"],
+                        play_title=title, author=author)
+                    prepared.append((c, analysis))
+                if not prepared:
                     continue
-                analysis = analyzer.analyze_monologue(
-                    text=c["text"], character=c["character"],
-                    play_title=title, author=author)
-                # Playing age is a fact about the book, not a guess about the
-                # character. See the module docstring.
-                meta = resolve_metadata({"character_age_range": "child"}, analysis)
-                emb = analyzer.generate_embedding(c["text"])
-                if not emb:
-                    continue
-                mono = Monologue(
-                    play_id=play.id,
-                    title=f"{c['character']}, {title}",
-                    character_name=c["character"],
-                    text=c["text"],
-                    stage_directions=c.get("stage_directions"),
-                    character_gender=meta.values.get("character_gender"),
-                    character_age_range=meta.values.get("character_age_range"),
-                    tone=meta.values.get("tone"),
-                    word_count=len(c["text"].split()),
-                    estimated_duration_seconds=estimate_duration_seconds(c["text"]),
-                    difficulty_level=analysis.get("difficulty_level"),
-                    primary_emotion=analysis.get("primary_emotion"),
-                    emotion_scores=analysis.get("emotion_scores"),
-                    themes=analysis.get("themes"),
-                    embedding_vector=emb,
-                    search_tags=(analyzer.generate_search_tags(
-                        analysis, c["text"], c["character"]) + ["children", "youth"]),
+
+                # model/dimensions must match ContentAnalyzer.generate_embedding
+                # (text-embedding-3-large @ 1536); the batch helper defaults to
+                # -small, which is a different vector space entirely.
+                vectors = embed_batch(
+                    [c["text"] for c, _ in prepared],
+                    model="text-embedding-3-large", dimensions=1536,
                 )
-                db.add(mono)
-                db.flush()
-                new_monos.append(mono.id)
-                totals["kept"] += 1
-            db.commit()
+
+                for (c, analysis), emb in zip(prepared, vectors):
+                    if not emb:
+                        continue
+                    # Playing age is a fact about the book, not a guess about
+                    # the character. See the module docstring.
+                    meta = resolve_metadata({"character_age_range": "child"}, analysis)
+                    mono = Monologue(
+                        play_id=play.id,
+                        title=f"{c['character']}, {title}",
+                        character_name=c["character"],
+                        text=c["text"],
+                        stage_directions=c.get("stage_directions"),
+                        character_gender=meta.values.get("character_gender"),
+                        character_age_range=meta.values.get("character_age_range"),
+                        tone=meta.values.get("tone"),
+                        word_count=len(c["text"].split()),
+                        estimated_duration_seconds=estimate_duration_seconds(c["text"]),
+                        difficulty_level=analysis.get("difficulty_level"),
+                        primary_emotion=analysis.get("primary_emotion"),
+                        emotion_scores=analysis.get("emotion_scores"),
+                        themes=analysis.get("themes"),
+                        embedding_vector=emb,
+                        search_tags=(analyzer.generate_search_tags(
+                            analysis, c["text"], c["character"]) + ["children", "youth"]),
+                    )
+                    db.add(mono)
+                    db.flush()
+                    new_monos.append(mono.id)
+                    totals["kept"] += 1
+                db.commit()
+                print(f"    +{totals['kept']} inserted", flush=True)
         finally:
             db.close()
 
     print(f"\nbooks={totals['books']} candidates={totals['candidates']} "
-          f"gated_out={totals['gated']} duplicates={totals['dupe']} kept={totals['kept']}")
+          f"gated_out={totals['gated']} non_english={totals['non_english']} "
+          f"duplicates={totals['dupe']} kept={totals['kept']}")
 
     if not args.apply:
         print("\nDRY RUN — nothing written. Re-run with --apply.")

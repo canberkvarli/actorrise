@@ -294,6 +294,61 @@ _CID = re.compile(r"\(cid:\d+\)")
 _REVISION_MARK = re.compile(r"(?:(?<=\s)|^)\*+(?=\s|$)", re.M)
 
 
+# --- language ---------------------------------------------------------------
+#
+# Nothing checked this, so a Dutch Ibsen volume and a Hindi screenplay were
+# stored as English and served to English-speaking actors. Gutenberg in
+# particular is full of translations INTO other languages that carry an English
+# title and an English author, so title and author cannot be trusted to tell
+# you what language the text is in.
+#
+# Function words are the giveaway. English prose runs about a quarter of them;
+# Dutch or Hindi transliteration scores near zero even sharing the alphabet.
+_EN_FUNCTION_WORDS = frozenset("""
+the and of to a in that is it you for with as not but have be this are on my i
+he she we they his her him was were will would what from me your all no so if
+""".split())
+
+#: Archaic forms count too. Without them Shakespeare fails the test: "O,
+#: farewell, dear Hector! Look how thou diest. Look how thy eye turns pale"
+#: scores 0.047 on modern function words alone, which is Dutch territory.
+_EN_FUNCTION_WORDS = _EN_FUNCTION_WORDS | frozenset("""
+thou thy thee thine hath doth dost art ere nay yea shall unto o oh upon
+""".split())
+
+#: Below this share of English function words the text is very unlikely to be
+#: English.
+MIN_ENGLISH_RATIO = 0.10
+
+_WORDS = re.compile(r"[a-zà-öø-ÿ']+")
+
+
+def english_word_ratio(text: str) -> float:
+    """Share of tokens that are common English function words.
+
+    Returns 1.0 for anything under 200 words: below that there is not enough
+    signal, and a wrong answer is worse than no answer.
+    """
+    words = _WORDS.findall((text or "").lower())
+    if len(words) < 200:
+        return 1.0
+    return sum(1 for w in words if w in _EN_FUNCTION_WORDS) / len(words)
+
+
+def looks_non_english(text: str) -> bool:
+    """True if ``text`` is very unlikely to be English.
+
+    Deliberately NOT part of assess_monologue_quality. Language is a property of
+    the SOURCE, not of an individual speech: a Dutch play is Dutch throughout,
+    and 90,000 characters of it are unmistakable, while fifty words of archaic
+    verse are not. Judging per monologue rejected real Shakespeare.
+
+    So ingest calls this once on the whole downloaded text and records the
+    answer on `plays.language`, which search then filters on.
+    """
+    return english_word_ratio(text) < MIN_ENGLISH_RATIO
+
+
 def strip_revision_marks(text: str) -> str:
     """Remove margin revision marks ONLY, leaving all other formatting alone.
 
@@ -445,6 +500,7 @@ def assess_monologue_quality(
     # orphaned answers give it away on their own.
     if has_flattened_scene(raw):
         reasons.append("flattened_scene")
+
 
     # Cast-aware interleave — the checks that need to know who else is in the
     # play. Only run when a cast list was supplied.

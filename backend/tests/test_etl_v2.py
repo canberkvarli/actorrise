@@ -14,7 +14,10 @@ from app.services.extraction.monologue_quality import (
     assess_monologue_quality,
     has_flattened_scene,
     has_interleaved_dialogue,
+    english_word_ratio,
     has_stage_direction_residue,
+    looks_non_english,
+    MIN_ENGLISH_RATIO,
     strip_revision_marks,
     to_display_text,
 )
@@ -256,6 +259,51 @@ class TestRevisionMarks:
 
     def test_leading_mark_on_a_line(self):
         assert to_display_text("* This line was revised.") == "This line was revised."
+
+
+class TestLanguageDetection:
+    """Source-level language check.
+
+    A Dutch Ibsen volume and a Hindi screenplay reached the library stored as
+    English, because Gutenberg carries translations INTO other languages under
+    an English title and author — neither field can be trusted.
+    """
+
+    SHAKESPEARE = (
+        "O farewell dear Hector Look how thou diest Look how thy eye turns pale "
+        "Look how thy wounds do bleed at many vents Hark how Troy roars how "
+        "Hecuba cries out how poor Andromache shrills her dolours forth Behold "
+        "distraction frenzy and amazement like witless antics one another meet "
+        "and all cry Hector Hector is dead O Hector "
+    ) * 6
+    DUTCH = (
+        "Dat is waar ik heb die-en-die zij geloofd Enkel behoefte aan een vriend "
+        "die luistert naar mijn woorden en mij begrijpt in alles wat ik zeg en "
+        "doe hier in dit huis vandaag "
+    ) * 12
+
+    def test_archaic_english_is_not_foreign(self):
+        """Without thou/thy/hath in the word list this scores 0.047 — Dutch
+        territory — and real Shakespeare gets thrown away."""
+        assert not looks_non_english(self.SHAKESPEARE)
+
+    def test_dutch_is_caught(self):
+        assert looks_non_english(self.DUTCH)
+
+    def test_english_scores_clear_of_the_threshold(self):
+        assert english_word_ratio(self.SHAKESPEARE) > MIN_ENGLISH_RATIO
+        assert english_word_ratio(self.DUTCH) < MIN_ENGLISH_RATIO
+
+    def test_short_text_is_never_judged(self):
+        """Under 200 words there is not enough signal; a wrong answer is worse
+        than none, so it abstains rather than guessing."""
+        assert not looks_non_english("Dat is waar ik heb zij geloofd behoefte aan een vriend")
+
+    def test_not_part_of_the_quality_gate(self):
+        """Language is a property of the source, not of one speech. Judging a
+        single archaic monologue rejected genuine Troilus and Cressida."""
+        r = assess_monologue_quality(TestLanguageDetection.DUTCH[:1200])
+        assert "non_english" not in r.reasons
 
 
 class TestStripRevisionMarksOnly:

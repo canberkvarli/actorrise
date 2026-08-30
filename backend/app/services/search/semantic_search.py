@@ -1048,6 +1048,13 @@ class SemanticSearch:
                     Monologue.review_status != "pending",
                 )
             )
+            # Only known-foreign work is excluded, never merely unlabelled.
+            # `language` defaults to 'en' and is right for all but three plays
+            # (a Dutch Ibsen volume that became Peer Gynt + Brand, and the Hindi
+            # film Aligarh) — but five plays carry NULL, and hiding those 89
+            # monologues for missing metadata would cost far more than the eight
+            # foreign ones it removes.
+            .filter(or_(Play.language.is_(None), Play.language == "en"))
         )
 
         # Apply ONLY hard filters as SQL WHERE clauses.
