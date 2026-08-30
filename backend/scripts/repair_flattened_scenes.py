@@ -209,10 +209,16 @@ def main() -> None:
                 print(f"  {title[:38]:38s} {item['character'][:14]:14s} queue")
                 continue
             best = max(pool, key=lambda c: c["word_count"])
+            # Count the words we STORE, not the parser's dialogue-only count.
+            # The parser reports len(dialogue.split()) with stage directions
+            # stripped, while the row keeps the display text with directions in
+            # it. ingest_film_monologues.py stores the mismatched pair, but
+            # resync_word_counts.py later rewrites every row to the text-based
+            # count, so text-based is the invariant the corpus actually holds.
             ops.append({
                 **item, "kind": "replace",
                 "new_text": best["text"],
-                "new_word_count": best["word_count"],
+                "new_word_count": len(best["text"].split()),
             })
             print(f"  {title[:38]:38s} {item['character'][:14]:14s} "
                   f"replace {item['old_word_count']}w -> {best['word_count']}w")
