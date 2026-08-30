@@ -1,4 +1,6 @@
 import logging
+import threading
+import time
 from contextlib import asynccontextmanager
 
 from app.api.account import router as account_router
@@ -76,7 +78,6 @@ def _init_db() -> None:
 
 def _warmup_search_cache_background():
     """Warm up search cache in background thread (non-blocking)."""
-    import threading
 
     def warmup():
         try:
@@ -107,7 +108,6 @@ def _warmup_title_catalogue_background():
     actor happens to search first after a deploy or a cache expiry, so it is
     paid here instead, off the request path.
     """
-    import threading
 
     def warmup():
         try:
@@ -137,8 +137,6 @@ def _start_saved_piece_reminder_scheduler():
     SAVED_PIECE_REMINDER_ENABLED=false.
     """
     import os
-    import threading
-    import time
 
     if os.getenv("ENVIRONMENT", "").strip().lower() != "production":
         return
