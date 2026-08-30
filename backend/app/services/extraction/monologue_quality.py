@@ -89,6 +89,128 @@ def has_narration(text: str) -> bool:
     """True if ``text`` contains a screenplay-narration sentence (see _NARRATION)."""
     return bool(_NARRATION.search(text or ""))
 
+
+# --- co-character interleave (cast-aware) ----------------------------------
+#
+# The checks above are all format-based: they look for a colon, a bare CAPS
+# line, a bracket cue. A play text that has already been normalised into flowing
+# prose defeats every one of them, because another character's line reads as an
+# ordinary sentence and the cue survives only as "Name." mid-paragraph.
+#
+# That is the #7521 class, and it is why `clean_interleaved_dialogue.py` had to
+# exist as a post-hoc repair: contaminated rows PASSED this gate (grammatical,
+# in-range word count, no artifacts) and only a human reading them noticed.
+#
+# These checks need something the format checks don't: the play's cast list. Ask
+# for it and the gate catches the problem at extraction instead of in prod.
+
+# A stage direction welded into the body. Anchored to a leading capital and kept
+# short so it cannot swallow a spoken sentence ("Enter the room, close the door,
+# and listen to me." is 10+ words and is not matched).
+_STAGE_DIRECTION = re.compile(
+    r"(?<![\w'’])(?:Re-enter|Enter|Exeunt|Exit)\b(?:\s+[A-Z][^.!?;]{0,55})?[.!?;]",
+)
+
+# First-person speech inside a would-be stage direction means it is really a
+# line: "Enter my house and I'll show you" stays, "Enter Rosencrantz." goes.
+_FIRST_PERSON = re.compile(r"\b(?:I|I'|me|my|mine|we|us|our)\b")
+
+# Small words allowed inside a capitalised speaker label ("The Sentimental High
+# School Girl", "Duke of Vienna").
+_LABEL_CONNECTORS = frozenset({
+    "the", "a", "an", "of", "and", "de", "la", "le", "young", "old",
+})
+
+
+def _distinctive(name: str) -> bool:
+    """Would this co-character name, used as ``Name.``, be a real speaker cue?
+
+    Multi-word or long names ("The Vivacious Girl", "Rosencrantz") are cues.
+    Short single names ("Tracy", "Oliver") are excluded — they appear whenever a
+    character simply addresses another, and would fire constantly.
+    """
+    n = (name or "").strip()
+    if not n:
+        return False
+    return len(n.split()) >= 2 or len(n) >= 8
+
+
+def _cue_pattern(name: str) -> re.Pattern:
+    """``Name.`` or ``Name:`` as a speaker cue (case-insensitive, word-anchored)."""
+    return re.compile(
+        r"(?<![\w'’])" + re.escape(name.strip()) + r"\s*[.:]", re.IGNORECASE
+    )
+
+
+def _is_speaker_label(clause: str, cast: list[str]) -> bool:
+    """Is this clause a speaker label rather than words somebody speaks?
+
+    A label is short, ends on (or equals) a cast name, and is entirely
+    capitalised bar small connectors. This is what distinguishes the full cue
+    "The Sentimental High School Girl" — a superset of the cast name "High
+    School Girl" — from a spoken line that merely names another character.
+    """
+    core = clause.strip().rstrip(".:").strip()
+    if not core or len(core.split()) > 8:
+        return False
+    cl = core.lower()
+    if not any(cl == n.lower() or cl.endswith(" " + n.lower()) for n in cast):
+        return False
+    for w in core.split():
+        if (
+            w[:1].isalpha()
+            and not w[:1].isupper()
+            and w.lower().strip(",") not in _LABEL_CONNECTORS
+        ):
+            return False
+    return True
+
+
+def has_interleaved_dialogue(text: str, cast: list[str]) -> bool:
+    """True if another character's speaker cue appears inside ``text``.
+
+    ``cast`` is the co-characters of the play, NOT including the speaker. Only
+    distinctive names are considered (see :func:`_distinctive`).
+    """
+    others = [n for n in (cast or []) if _distinctive(n)]
+    if not others:
+        return False
+
+    body = (text or "").strip()
+    for name in others:
+        m = _cue_pattern(name).search(body)
+        # A cue at the very start is the speech opening by addressing someone
+        # ("Horatio: thou art e'en as just a man") — not an interleave.
+        if m and m.start() > 3:
+            return True
+
+    # A cue label stranded as the final sentence, which is what a naive
+    # paragraph join leaves behind.
+    parts = re.split(r"(?<=[.!?])\s+", body)
+    if len(parts) >= 2 and _is_speaker_label(parts[-1], others):
+        return True
+
+    return False
+
+
+def has_stage_direction_residue(text: str, cast: list[str]) -> bool:
+    """True if an ``Enter/Exit/Exeunt`` direction is welded into ``text``."""
+    cast_l = {c.lower() for c in (cast or [])}
+    for m in _STAGE_DIRECTION.finditer(text or ""):
+        span = m.group(0)
+        if _FIRST_PERSON.search(span) or len(span.split()) > 7:
+            continue  # reads as speech, not a cue
+        head = span.split()[0].lower()
+        if head in ("enter", "re-enter"):
+            tail = " ".join(span.split()[1:]).rstrip(".!?;:").strip().lower()
+            # "Enter <someone>" only counts when it names a cast member.
+            if tail and not any(
+                tail.startswith(c) or c.startswith(tail) for c in cast_l
+            ):
+                continue
+        return True
+    return False
+
 # Trailing closing quotes / brackets to peel before checking terminal punctuation.
 _TRAILING_CLOSERS = "\"'”’)]}"
 
@@ -155,12 +277,19 @@ def assess_monologue_quality(
     min_words: int = DEFAULT_MIN_WORDS,
     max_words: int = DEFAULT_MAX_WORDS,
     check_narration: bool = False,
+    cast: list[str] | None = None,
 ) -> QualityResult:
     """Assess whether ``text`` is a clean single-speaker monologue.
 
     Returns a :class:`QualityResult`; ``ok`` is True only when ``reasons`` is
     empty. Collecting all reasons (rather than failing fast) makes rejected
     extractions easy to audit and the gate easy to tune.
+
+    ``cast`` is the play's other characters (excluding the speaker). Pass it
+    whenever it is known: the format-based checks cannot see a co-character cue
+    that has been normalised into prose, and that is the failure mode that put
+    296 contaminated rows into the library. Without it the gate still works,
+    just blind to that one class.
     """
     reasons: list[str] = []
     raw = text or ""
@@ -218,6 +347,14 @@ def assess_monologue_quality(
     # Lowercase screenplay-narration residue (film/TV only — see _NARRATION).
     if check_narration and _NARRATION.search(raw):
         reasons.append("narration")
+
+    # Cast-aware interleave — the checks that need to know who else is in the
+    # play. Only run when a cast list was supplied.
+    if cast:
+        if has_interleaved_dialogue(raw, cast):
+            reasons.append("interleaved_dialogue")
+        if has_stage_direction_residue(raw, cast):
+            reasons.append("stage_direction_residue")
 
     # --- truncation ---
     tail = stripped.rstrip(_TRAILING_CLOSERS).rstrip()

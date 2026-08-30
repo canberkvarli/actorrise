@@ -16,6 +16,7 @@ from app.middleware.rate_limiting import (
 )
 from app.models.billing import PricingTier, UserSubscription
 from app.services.email.resend_client import ResendEmailClient
+from app.services.licensing import may_serve_text
 from app.core.config import settings
 from app.core.database import get_db
 from app.middleware.burst_limiter import BurstLimiter
@@ -214,13 +215,31 @@ def _monologue_to_response(
         if relevance_score is not None
         else None
     )
+
+    # Rights guard. Every monologue the API returns passes through here, so this
+    # is the one place the /sources promise can actually be enforced rather than
+    # trusted. Fails closed: a work with no recorded basis gets a linked excerpt,
+    # not its full text. See app/services/licensing.py.
+    body_text = cast(str, m.text)
+    segments = m.text_segments
+    if not may_serve_text(
+        getattr(play, "copyright_status", None),
+        getattr(play, "license_type", None),
+        word_count=cast(Optional[int], m.word_count),
+    ):
+        body_text = _teaser(body_text, lines=2)
+        # text_segments is a second copy of the same words; withholding one and
+        # serving the other would defeat the guard entirely. The renderer falls
+        # back to plain `text` when this is null.
+        segments = None
+
     return MonologueResponse(
         id=cast(int, m.id),
         title=cast(str, m.title),
         character_name=cast(str, m.character_name),
-        text=cast(str, m.text),
+        text=body_text,
         stage_directions=cast(Optional[str], m.stage_directions),
-        text_segments=m.text_segments,
+        text_segments=segments,
         play_title=cast(str, play.title),
         play_id=cast(int, play.id),
         author=cast(str, play.author),
