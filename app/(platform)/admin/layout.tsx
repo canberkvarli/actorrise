@@ -11,7 +11,6 @@ import {
   IconFileSearch,
   IconUsers,
   IconMail,
-  IconStar,
   IconSearch,
   IconMicrophone,
   IconMessageReport,
@@ -43,7 +42,6 @@ const GROUPS: NavGroup[] = [
     title: "People",
     items: [
       { href: "/admin/users", label: "Users", icon: IconUsers },
-      { href: "/admin/founding-actors", label: "Founding actors", icon: IconStar },
     ],
   },
   {

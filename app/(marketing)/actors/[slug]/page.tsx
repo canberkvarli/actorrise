@@ -3,24 +3,16 @@
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
-import { IconEdit } from "@tabler/icons-react";
-import { useAuth } from "@/lib/auth";
-import { useFoundingActor, useMyFoundingActor } from "@/hooks/useFoundingActors";
+import { useFoundingActor } from "@/hooks/useFoundingActors";
 import { HeadshotGallery } from "@/components/founding-actor/HeadshotGallery";
 import { SocialLinkIcons } from "@/components/founding-actor/SocialLinkIcons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StageHero } from "@/components/marketing/StageHero";
 
-export default function FoundingActorPage() {
+export default function ActorPage() {
   const params = useParams();
   const slug = params.slug as string;
-  const { user } = useAuth();
   const { data: actor, isLoading } = useFoundingActor(slug);
-  const { data: myActor } = useMyFoundingActor();
-
-  const isOwnPage = myActor?.slug === slug;
-  const isAdmin = user?.is_moderator === true;
-  const canEdit = isOwnPage || isAdmin;
 
   if (isLoading) {
     return (
@@ -45,13 +37,13 @@ export default function FoundingActorPage() {
           Actor not found
         </h1>
         <p className="text-muted-foreground mb-6">
-          This founding actor page doesn&apos;t exist or is not published yet.
+          This actor page doesn&apos;t exist or is not published yet.
         </p>
         <Link
           href="/actors"
           className="text-primary hover:underline font-medium"
         >
-          &larr; Back to all founding actors
+          &larr; Back to all actors
         </Link>
       </div>
     );
@@ -63,17 +55,7 @@ export default function FoundingActorPage() {
         direction="(now playing.)"
         title={actor.name}
         lede={actor.descriptor || undefined}
-      >
-        {canEdit && (
-          <Link
-            href={isOwnPage ? "/founding-actor" : "/admin/founding-actors"}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
-          >
-            <IconEdit className="h-4 w-4" />
-            Edit
-          </Link>
-        )}
-      </StageHero>
+      />
 
       <div className="container mx-auto px-4 sm:px-6 py-12 md:py-16 max-w-5xl">
       {/* Back link */}
@@ -82,7 +64,7 @@ export default function FoundingActorPage() {
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
       >
         <ArrowLeft className="h-4 w-4" />
-        All founding actors
+        All actors
       </Link>
 
       <div className="grid grid-cols-1 md:grid-cols-[380px_1fr] gap-8 md:gap-12">

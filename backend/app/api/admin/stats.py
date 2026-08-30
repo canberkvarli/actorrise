@@ -249,12 +249,10 @@ def get_admin_stats(
     except Exception:
         usage["current_user"]["total_searches"] = usage["current_user"]["ai_searches"]
 
-    # --- Paid subscribers (founding actors goal) ---
+    # --- Paid subscribers ---
     # Split by what's actually true: card-on-file payers vs $0 comps vs trials.
-    # "plus_subscribers" (total members) still drives the founding-actor goal,
-    # since a comped founding actor is still a founding actor — but MRR-facing
-    # UI must read `paid_active`, never this total.
-    FOUNDING_GOAL = 50
+    # `plus_subscribers` is the total member head count; money-facing UI must
+    # read `paid_active`, never this total.
     free_tier = db.query(PricingTier).filter(PricingTier.name == "free").first()
     free_tier_id = free_tier.id if free_tier else 1
     member_rows = (
@@ -297,10 +295,6 @@ def get_admin_stats(
             "paid_active": paid_active,             # card on file, actually paying
             "comped": comped,                       # gifts / grants, $0
             "trialing": trialing,                   # on trial, not charged yet
-            "founding_goal": FOUNDING_GOAL,
-            "founding_progress_percent": round(
-                min(plus_subscribers / FOUNDING_GOAL * 100, 100), 1
-            ),
         },
     }
 

@@ -14,14 +14,14 @@ export default function ActorsPage() {
         direction="(the company.)"
         title={
           <>
-            Meet the <em className="italic text-primary">founding</em> actors
+            The <em className="italic text-primary">actors</em>
           </>
         }
         lede={
           <>
-            The actors who believed in ActorRise from day one. They shape the
-            platform, provide feedback, and help build something that truly
-            serves the craft.
+            The actors who backed ActorRise from day one. They shape the
+            platform, tell me what&apos;s broken, and help build something that
+            actually serves the craft.
           </>
         }
       />
@@ -57,9 +57,25 @@ export default function ActorsPage() {
           </div>
         ) : (
           <p className="text-center text-muted-foreground">
-            No founding actors to display yet.
+            No actors to display yet.
           </p>
         )}
+
+        {/* Open invitation. Canberk's voice: first person, no dashes, no
+            corporate phrasing, and a real conversation rather than a form. */}
+        <div className="mt-14 border-t border-border/60 pt-10 text-center">
+          <p className="mx-auto max-w-xl text-base leading-relaxed text-muted-foreground">
+            Want to be considered as a founding actor? Send me an email and
+            let&apos;s talk. I&apos;d rather have a real conversation than take
+            applications.
+          </p>
+          <a
+            href="mailto:canberk@actorrise.com?subject=Founding%20actor"
+            className="mt-4 inline-block text-base font-medium text-primary underline underline-offset-4"
+          >
+            canberk@actorrise.com
+          </a>
+        </div>
         </div>
       </div>
     </>

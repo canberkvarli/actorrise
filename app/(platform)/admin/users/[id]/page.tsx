@@ -624,7 +624,7 @@ export default function AdminUserDetailPage() {
               <Input
                 value={grantNote}
                 onChange={(e) => setGrantNote(e.target.value)}
-                placeholder="Reason (e.g. Founding actor, 3 months free)"
+                placeholder="Reason (e.g. educator, 3 months free)"
               />
 
               <div className="flex flex-wrap gap-2">

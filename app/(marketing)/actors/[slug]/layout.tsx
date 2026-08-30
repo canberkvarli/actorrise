@@ -20,8 +20,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     const actor = await res.json();
     const title = actor.name;
     const description = actor.descriptor
-      ? `${actor.name}, ${actor.descriptor}. Founding actor at ActorRise.`
-      : `${actor.name} is a founding actor at ActorRise, helping shape the platform for actors everywhere.`;
+      ? `${actor.name}, ${actor.descriptor}. An actor on ActorRise.`
+      : `${actor.name} is an actor on ActorRise, helping shape the platform for actors everywhere.`;
 
     return {
       title,
