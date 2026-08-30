@@ -40,7 +40,7 @@ export const getDurationLabel = (seconds: string) =>
 
 const CHARACTER_FILTERS = [
   { key: "gender" as const, label: "Gender", options: ["male", "female", "any"] },
-  { key: "age_range" as const, label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
+  { key: "age_range" as const, label: "Age Range", options: ["child", "teens", "20s", "30s", "40s", "50s", "60+"] },
 ];
 
 const MOOD_FILTERS = [

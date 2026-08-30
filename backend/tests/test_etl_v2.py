@@ -161,8 +161,15 @@ class TestNormalizers:
         ("70s", "60+"),              # folds into the top bucket the filter offers
         ("Late Teen, Young Adult", "teens"),   # multi -> youngest
         ("900+", None),              # junk
-        ("5", None),
         ("", None),
+        # Children stay their own bucket — teachers search for this specifically.
+        ("Child", "child"),
+        ("6-10", "child"),
+        ("8-10", "child"),
+        ("kid", "child"),
+        ("12", "child"),
+        ("13", "teens"),             # boundary
+        ("Child, Early Teen", "child"),
     ])
     def test_age_range(self, raw, expected):
         assert normalize_age_range(raw) == expected

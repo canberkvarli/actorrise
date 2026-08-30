@@ -33,7 +33,7 @@ from typing import Any
 # pick) and services/search/query_optimizer.py (what free text maps to). Adding
 # a value here without adding it there makes rows unreachable.
 
-AGE_RANGES = ("teens", "20s", "30s", "40s", "50s", "60+", "any")
+AGE_RANGES = ("child", "teens", "20s", "30s", "40s", "50s", "60+", "any")
 GENDERS = ("male", "female", "any")
 TONES = (
     "defiant", "anguished", "contemplative", "dark", "dramatic", "comedic",
@@ -51,7 +51,8 @@ _GENDER_MAP = {
 
 # Word-form playing ages, as printed by StageAgent and the audition aggregators.
 _AGE_WORD_MAP = {
-    "child": "teens",          # nearest bucket the filter offers
+    "child": "child",
+    "kid": "child",
     "early teen": "teens",
     "late teen": "teens",
     "teen": "teens",
@@ -120,8 +121,13 @@ def normalize_age_range(value: Any) -> str | None:
         return _AGE_WORD_MAP[v]
 
     def bucket(age: int) -> str | None:
-        if age < 6 or age > 120:      # "5", "900+" — junk, not a playing age
+        if age < 4 or age > 120:      # "900+" — junk, not a playing age
             return None
+        # Kept separate from "teens" on purpose: teachers and youth programmes
+        # look for children's material specifically, and folding a 9-year-old in
+        # with a 19-year-old throws away the distinction they are searching on.
+        if age < 13:
+            return "child"
         if age < 20:
             return "teens"
         if age >= 60:

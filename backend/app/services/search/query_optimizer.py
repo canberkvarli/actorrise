@@ -249,9 +249,15 @@ class KeywordExtractor:
         },
 
         'age_range': {
+            # Children. Teachers and youth programmes search for this
+            # specifically, so it is its own bucket rather than folded into
+            # teens — a 9-year-old and a 19-year-old are not the same ask.
+            'child': 'child', 'children': 'child', 'kid': 'child', 'kids': 'child',
+            'elementary': 'child', 'middle school': 'child',
+
             # Teens (include numeric ranges that imply teens/young)
             'teen': 'teens', 'teenager': 'teens', 'youth': 'teens', 'young': 'teens',
-            'adolescent': 'teens', 'teenage': 'teens',
+            'adolescent': 'teens', 'teenage': 'teens', 'high school': 'teens',
             '18-21': 'teens', '16-21': 'teens', '13-19': 'teens',
 
             # 20s
