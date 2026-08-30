@@ -2580,10 +2580,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       >
                     {/* Minimal Header */}
                     <div className="text-center space-y-2">
-                      <h1
-                        className="text-4xl font-semibold"
-                        style={{ fontFamily: "var(--font-sans), Georgia, serif" }}
-                      >
+                      {/* font-brand, same as the detail page and the slide-over,
+                          so the character name doesn't change face depending on
+                          which of the three you opened it from. The old inline
+                          `var(--font-sans), Georgia, serif` also fell back to a
+                          serif whenever Montserrat hadn't loaded yet, so the
+                          title could visibly swap fonts mid-paint. */}
+                      <h1 className="font-brand text-4xl font-medium">
                         {selectedMonologue.character_name}
                       </h1>
                       <p className="text-muted-foreground">

@@ -30,7 +30,10 @@ const item = {
 
 export function LandingPageAnimated() {
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden">
+    // overflow-x-clip, not -hidden: `hidden` forces overflow-y to auto, which
+    // makes this a scroll container and breaks `position: sticky` for
+    // everything inside it — including the sticky header directly below.
+    <div className="min-h-screen bg-background overflow-x-clip">
       <header
         className="sticky top-0 z-20 border-b border-border/40 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/70 animate-header-enter"
       >

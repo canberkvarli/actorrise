@@ -63,7 +63,14 @@ export default function ResumePage() {
         ]);
         if (cancelled) return;
         setProfile(p.data);
-        setCredits(c.data || []);
+        // Array.isArray, not `|| []`: `||` only catches null/undefined, so any
+        // other shape (an error envelope, a paginated object) sails through and
+        // blows up at `credits.map` in render — which takes the whole route out
+        // via the error boundary rather than degrading to an empty list.
+        setCredits(Array.isArray(c.data) ? c.data : []);
+      } catch (err) {
+        // Was an unhandled rejection: the page just rendered blank with no clue.
+        console.error("Error loading resume:", err);
       } finally {
         if (!cancelled) setLoading(false);
       }

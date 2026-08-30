@@ -43,7 +43,9 @@ export function MarketingFooter() {
 
   return (
     <>
-      <footer className="border-t border-border/60 bg-background py-8 overflow-x-hidden">
+      {/* overflow-x-clip contains the same overflow without turning this into a
+          scroll container (which `hidden` does, breaking sticky descendants). */}
+      <footer className="border-t border-border/60 bg-background py-8 overflow-x-clip">
         <div className="container mx-auto px-4 sm:px-6 max-w-full">
           <p className="text-xs text-muted-foreground/90 mb-2 max-w-xl">
             Every piece links back to its source (see{" "}
