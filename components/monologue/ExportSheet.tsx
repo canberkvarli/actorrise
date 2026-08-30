@@ -13,7 +13,14 @@ import { estimateDurationSeconds, formatClock } from "@/lib/estimateDuration";
  * PDF can earn its dependency later. The monologue itself renders in the
  * typewriter face because it is the piece, not UI chrome.
  */
-export function ExportSheet({ monologue }: { monologue: Monologue }) {
+export function ExportSheet({
+  monologue,
+  embedded = false,
+}: {
+  monologue: Monologue;
+  /** Inside a labelled tab, skip the "Audition copy" heading — the tab said it. */
+  embedded?: boolean;
+}) {
   const [copied, setCopied] = useState(false);
 
   const source = useMemo(() => {
@@ -87,7 +94,7 @@ export function ExportSheet({ monologue }: { monologue: Monologue }) {
     <div className="space-y-3">
       <div className="flex items-baseline justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold">Audition copy</h2>
+          {!embedded && <h2 className="text-base font-semibold">Audition copy</h2>}
           <p className="text-sm text-muted-foreground">
             {isCut ? `Your cut · ${formatClock(seconds)}` : `Full piece · ${formatClock(seconds)}`}
           </p>

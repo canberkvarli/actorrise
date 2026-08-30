@@ -19,9 +19,13 @@ import { estimateDurationSeconds, formatClock } from "@/lib/estimateDuration";
 export function CutEditor({
   monologue,
   onSaved,
+  embedded = false,
 }: {
   monologue: Monologue;
   onSaved?: (start: number | null, end: number | null) => void;
+  /** Inside a labelled tab the "Your cut" heading just repeats the tab, so drop
+   *  it and keep the parts that carry information: the instruction and clock. */
+  embedded?: boolean;
 }) {
   const lines = useMemo(() => (monologue.text ?? "").split("\n"), [monologue.text]);
   // Indices of the lines that actually carry words — only these are selectable.
@@ -79,7 +83,7 @@ export function CutEditor({
     <div className="space-y-4">
       <div className="flex items-baseline justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold">Your cut</h2>
+          {!embedded && <h2 className="text-base font-semibold">Your cut</h2>}
           <p className="text-sm text-muted-foreground">
             {hasCut ? "Tap a line to start a new cut." : "Tap the first and last line of your cut."}
           </p>

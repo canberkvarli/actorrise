@@ -5,11 +5,21 @@ import { useParams, useRouter, notFound } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IconBookmark, IconArrowLeft, IconEdit, IconBulb, IconBulbFilled } from "@tabler/icons-react";
+import {
+  IconBookmark,
+  IconArrowLeft,
+  IconEdit,
+  IconBulb,
+  IconBulbFilled,
+} from "@tabler/icons-react";
 import { Monologue } from "@/types/actor";
 import api from "@/lib/api";
-import { motion } from "framer-motion";
-import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  MonologueHeader,
+  MonologueBody,
+  MonologueFooter,
+} from "@/components/monologue/MonologueDetailContent";
 import { CutEditor } from "@/components/monologue/CutEditor";
 import { ExportSheet } from "@/components/monologue/ExportSheet";
 import { useSaveNotes } from "@/hooks/useCollectionMeta";
@@ -18,6 +28,27 @@ import { useAuth } from "@/lib/auth";
 import { EditMonologueModal } from "@/components/admin/EditMonologueModal";
 import type { EditMonologueBody } from "@/components/admin/EditMonologueModal";
 import { toast } from "sonner";
+
+/**
+ * One piece, three ways of looking at it.
+ *
+ * This page used to stack four cards, and three of them rendered the whole
+ * monologue again: once to read, once inside the cut editor, once inside the
+ * export preview. On anything longer than a minute you scrolled past the same
+ * speech three times to reach the bottom.
+ *
+ * Reading it, cutting it, and printing it aren't separate features — they're
+ * three views of the same text. So the text renders once, on one surface, and
+ * the mode switch above it changes what you can do to it.
+ */
+
+type Mode = "read" | "cut" | "copy";
+
+const MODES: { id: Mode; label: string; hint: string }[] = [
+  { id: "read", label: "Read", hint: "The piece as written" },
+  { id: "cut", label: "Cut", hint: "Trim it to an audition length" },
+  { id: "copy", label: "Copy", hint: "Print or copy your sides" },
+];
 
 export default function MonologueDetailPage() {
   const params = useParams();
@@ -28,6 +59,7 @@ export default function MonologueDetailPage() {
   const [isFavorited, setIsFavorited] = useState(false);
   const [notes, setNotes] = useState("");
   const [memorized, setMemorized] = useState(false);
+  const [mode, setMode] = useState<Mode>("read");
   const [editMonologueId, setEditMonologueId] = useState<number | null>(null);
   const [editMonologueSaving, setEditMonologueSaving] = useState(false);
   const saveNotes = useSaveNotes();
@@ -38,14 +70,42 @@ export default function MonologueDetailPage() {
   // right where the intent is. (Savers return 2.1x more than non-savers.)
   const [justSaved, setJustSaved] = useState(false);
   const notesRef = useRef<HTMLTextAreaElement>(null);
-  const cutRef = useRef<HTMLDivElement>(null);
+  /** Zero-height marker just above the sticky bar. The bar itself can't be the
+   *  scroll target — once it sticks, its own rect stops moving. */
+  const anchorRef = useRef<HTMLDivElement>(null);
+
+  /** Platform nav is 65px on mobile / 81px from sm up, plus a little air. */
+  const NAV_OFFSET = 96;
+
+  const scrollToStage = () => {
+    const el = anchorRef.current;
+    if (!el) return;
+    window.scrollTo({
+      top: el.getBoundingClientRect().top + window.scrollY - NAV_OFFSET,
+      behavior: "smooth",
+    });
+  };
 
   const scrollToNotes = () => {
     notesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     notesRef.current?.focus();
   };
-  const scrollToCut = () => {
-    cutRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+
+  /**
+   * Each mode has its own header — the live cut clock, the copy/print buttons —
+   * and if you switch while scrolled into the text, that header opens above the
+   * fold and you never see it. So switching brings the top of the stage back.
+   */
+  const selectMode = (next: Mode) => {
+    setMode(next);
+    const top = anchorRef.current?.getBoundingClientRect().top;
+    if (top !== undefined && top < NAV_OFFSET) scrollToStage();
+  };
+
+  /** The cut is a mode now, not a panel, so "cut it" means switch and look. */
+  const openCut = () => {
+    setMode("cut");
+    scrollToStage();
   };
 
   useEffect(() => {
@@ -103,30 +163,28 @@ export default function MonologueDetailPage() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <Skeleton className="h-8 w-32 mb-8" />
-        <Card className="rounded-lg">
-          <CardContent className="pt-6 space-y-6">
-            <Skeleton className="h-10 w-3/4 rounded-lg" />
-            <Skeleton className="h-6 w-1/2" />
-            <div className="flex gap-2">
-              <Skeleton className="h-8 w-20" />
-              <Skeleton className="h-8 w-20" />
-              <Skeleton className="h-8 w-20" />
-            </div>
-            <Skeleton className="h-64 w-full" />
-          </CardContent>
-        </Card>
+      <div className="container mx-auto max-w-3xl px-4 py-10">
+        <Skeleton className="mb-8 h-4 w-16" />
+        <Skeleton className="h-3 w-40" />
+        <Skeleton className="mt-3 h-12 w-2/3 rounded-lg" />
+        <Skeleton className="mt-4 h-3 w-1/2" />
+        <Skeleton className="mt-8 h-10 w-full" />
+        <div className="mt-8 space-y-3">
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-11/12" />
+          <Skeleton className="h-4 w-full" />
+          <Skeleton className="h-4 w-4/5" />
+        </div>
       </div>
     );
   }
 
   if (!monologue) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="container mx-auto max-w-4xl px-4 py-8">
         <Card className="rounded-lg">
-          <CardContent className="pt-12 pb-12 text-center">
-            <h3 className="text-lg font-semibold mb-2">Monologue not found</h3>
+          <CardContent className="pb-12 pt-12 text-center">
+            <h3 className="mb-2 text-lg font-semibold">Monologue not found</h3>
             <Button onClick={() => router.push("/monologues")} className="mt-4">
               Back to Monologues
             </Button>
@@ -137,108 +195,180 @@ export default function MonologueDetailPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto max-w-3xl px-4 py-8 sm:py-10">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="space-y-6"
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       >
-        <Button
-          variant="ghost"
+        <button
+          type="button"
           onClick={() => router.back()}
-          className="mb-4 hover:text-primary"
+          className="mb-8 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           <IconArrowLeft className="h-4 w-4" />
           Back
-        </Button>
+        </button>
 
-        <Card className="rounded-lg">
-          <CardContent className="pt-8">
-            <MonologueDetailContent
-              monologue={monologue}
-              onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
-              headerActions={
-                <div className="flex items-center gap-2">
-                  {/* One primary action — Rehearse -> the /work stage. Memorize is
-                      the one quieter secondary path, not a competing button.
-                      Self-tape entry point pulled 2026-08-27: 0 uses across 649
-                      users, and it cluttered the core flow we lose people in. The
-                      /audition recorder + tapes API stay intact, just unlinked —
-                      re-add this button to bring it back. */}
-                  <Button
-                    onClick={() => router.push(`/monologue/${monologue.id}/work`)}
-                    className="flex-shrink-0"
-                  >
-                    Rehearse
-                  </Button>
-                  {/* The retention lever. Savers return 2.1x more, so the
-                      collection control sits second — right after Rehearse —
-                      not buried behind the quieter secondary paths. */}
-                  <Button
-                    variant={isFavorited ? "default" : "outline"}
-                    onClick={toggleFavorite}
-                    aria-label={isFavorited ? "In your collection" : "Add to collection"}
-                    className={`flex-shrink-0 gap-2 ${isFavorited ? "bg-accent text-accent-foreground hover:bg-accent/90" : "hover:text-accent"}`}
-                  >
-                    <IconBookmark className={`h-5 w-5 ${isFavorited ? "fill-current" : ""}`} />
-                    {isFavorited ? "In collection" : "Add to collection"}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={() => router.push(`/monologue/${monologue.id}/memorize`)}
-                    className="flex-shrink-0 text-muted-foreground hover:text-foreground"
-                  >
-                    Memorize
-                  </Button>
-                  {user?.is_moderator && (
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => setEditMonologueId(monologue.id)}
-                      className="flex-shrink-0"
-                      aria-label="Edit monologue"
-                    >
-                      <IconEdit className="h-5 w-5" />
-                    </Button>
+        <MonologueHeader monologue={monologue} />
+
+        {/* The working bar. It follows you down the piece so the one thing you
+            came to do — run it — is never scrolled away, and so switching how
+            you're looking at the text doesn't mean scrolling back up.
+            top-16/sm:top-20 clears the platform nav (65px / 81px). */}
+        <div ref={anchorRef} aria-hidden className="mt-8" />
+        <div className="sticky top-16 z-30 -mx-4 border-y border-border/60 bg-background/95 px-4 py-2.5 backdrop-blur-md sm:top-20">
+          <div className="flex items-center justify-between gap-3">
+            <div
+              role="tablist"
+              aria-label="How to view this piece"
+              className="flex items-center gap-0.5"
+            >
+              {MODES.map((m) => (
+                <button
+                  key={m.id}
+                  role="tab"
+                  aria-selected={mode === m.id}
+                  title={m.hint}
+                  onClick={() => selectMode(m.id)}
+                  className={`relative rounded-md px-3 py-1.5 text-sm transition-colors ${
+                    mode === m.id
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {mode === m.id && (
+                    <motion.span
+                      layoutId="monologue-mode-pill"
+                      className="absolute inset-0 rounded-md bg-muted"
+                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                    />
                   )}
-                  <button
-                    type="button"
-                    onClick={handleToggleMemorized}
-                    aria-pressed={memorized}
-                    aria-label={memorized ? "Memorized — tap to unmark" : "Mark as memorized"}
-                    title={memorized ? "Memorized — tap to unmark" : "Mark as memorized"}
-                    className="flex-shrink-0 rounded-full p-1.5"
-                  >
-                    {memorized ? (
-                      <IconBulbFilled className="h-5 w-5 text-amber-400 drop-shadow-[0_0_7px_rgba(251,191,36,0.6)]" />
-                    ) : (
-                      <IconBulb className="h-5 w-5 text-muted-foreground/50 hover:text-muted-foreground" />
-                    )}
-                  </button>
+                  <span className="relative">{m.label}</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="flex flex-shrink-0 items-center gap-1.5">
+              {/* Off-book status. Distinct from the "Memorize" drill below —
+                  this one only records where you are, it doesn't go anywhere. */}
+              <button
+                type="button"
+                onClick={handleToggleMemorized}
+                aria-pressed={memorized}
+                aria-label={memorized ? "Off book — tap to unmark" : "Mark as off book"}
+                title={memorized ? "Off book — tap to unmark" : "Mark as off book"}
+                className="rounded-full p-2 transition-colors hover:bg-muted"
+              >
+                {memorized ? (
+                  <IconBulbFilled className="h-5 w-5 text-amber-400 drop-shadow-[0_0_7px_rgba(251,191,36,0.6)]" />
+                ) : (
+                  <IconBulb className="h-5 w-5 text-muted-foreground/50 hover:text-muted-foreground" />
+                )}
+              </button>
+
+              {/* The retention lever. Savers return 2.1x more, so the collection
+                  control keeps its place right beside the primary action. */}
+              <button
+                type="button"
+                onClick={toggleFavorite}
+                aria-pressed={isFavorited}
+                aria-label={isFavorited ? "In your collection" : "Add to collection"}
+                title={isFavorited ? "In your collection" : "Add to collection"}
+                className={`rounded-full p-2 transition-colors hover:bg-muted ${
+                  isFavorited ? "text-accent" : "text-muted-foreground"
+                }`}
+              >
+                <IconBookmark className={`h-5 w-5 ${isFavorited ? "fill-current" : ""}`} />
+              </button>
+
+              {user?.is_moderator && (
+                <button
+                  type="button"
+                  onClick={() => setEditMonologueId(monologue.id)}
+                  className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted"
+                  aria-label="Edit monologue"
+                  title="Edit monologue"
+                >
+                  <IconEdit className="h-5 w-5" />
+                </button>
+              )}
+
+              {/* One primary action — Rehearse -> the /work stage. Self-tape entry
+                  point pulled 2026-08-27: 0 uses across 649 users, and it
+                  cluttered the core flow we lose people in. The /audition
+                  recorder + tapes API stay intact, just unlinked. */}
+              <Button
+                size="sm"
+                onClick={() => router.push(`/monologue/${monologue.id}/work`)}
+                className="ml-1 flex-shrink-0"
+              >
+                Rehearse
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* The stage: one text, whichever way you're currently working it. */}
+        <div className="pt-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={mode}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+            >
+              {mode === "read" && <MonologueBody monologue={monologue} measured />}
+
+              {/* Cut and Copy hold the same reading measure as Read, so the piece
+                  doesn't jump width every time you change what you're doing to it. */}
+              {mode === "cut" && (
+                <div className="mx-auto max-w-[62ch]">
+                  <CutEditor
+                    embedded
+                    monologue={monologue}
+                    onSaved={(start, end) =>
+                      setMonologue((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              cut_start_line: start ?? undefined,
+                              cut_end_line: end ?? undefined,
+                            }
+                          : prev,
+                      )
+                    }
+                  />
                 </div>
-              }
-            />
-          </CardContent>
-        </Card>
+              )}
+              {mode === "copy" && (
+                <div className="mx-auto max-w-[62ch]">
+                  <ExportSheet embedded monologue={monologue} />
+                </div>
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
 
         {/* Saving is only the first half of a keepable piece. The moment it
             lands, offer the next step — cut, note, or run — instead of leaving
             the actor on a silent bookmark with nothing to come back for. */}
-        {justSaved && isFavorited && (
-          <motion.div
-            initial={{ opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            <Card className="rounded-lg border-accent/40 bg-accent/5">
-              <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <p className="text-sm font-semibold">Saved to your collection.</p>
-                  <p className="text-sm text-muted-foreground">
-                    Make it yours — cut it to time, note your beats, or run it.
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline" onClick={scrollToCut}>
+        <AnimatePresence>
+          {justSaved && isFavorited && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-10 border-l-2 border-accent/50 bg-accent/5 p-4">
+                <p className="text-sm font-semibold">Saved to your collection.</p>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Make it yours — cut it to time, note your beats, or run it.
+                </p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button size="sm" variant="outline" onClick={openCut}>
                     Cut it to time
                   </Button>
                   <Button size="sm" variant="outline" onClick={scrollToNotes}>
@@ -251,54 +381,60 @@ export default function MonologueDetailPage() {
                     Rehearse it
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        <Card className="rounded-lg">
-          <CardContent className="space-y-3 pt-6">
-            <div>
-              <h2 className="text-base font-semibold">Your notes</h2>
-              <p className="text-sm text-muted-foreground">
-                Beats, intentions, reminders. Saved to your collection.
-              </p>
-            </div>
-            <textarea
-              ref={notesRef}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              onBlur={() => {
-                if ((notes ?? "") !== (monologue.notes ?? "")) {
-                  saveNotes.mutate({ monologueId: monologue.id, notes });
-                  setMonologue((prev) => (prev ? { ...prev, notes } : prev));
-                }
-              }}
-              placeholder="Add a note…"
-              rows={4}
-              className="w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
-            />
-          </CardContent>
-        </Card>
-
-        <Card ref={cutRef} className="rounded-lg">
-          <CardContent className="pt-6">
-            <CutEditor
-              monologue={monologue}
-              onSaved={(start, end) =>
-                setMonologue((prev) =>
-                  prev ? { ...prev, cut_start_line: start ?? undefined, cut_end_line: end ?? undefined } : prev,
-                )
+        {/* Your marks on the piece. Not a card — it belongs to the monologue
+            above it, so it reads as margin notes rather than another feature. */}
+        <section className="mt-12 border-t border-border/60 pt-6">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Your notes
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Beats, intentions, reminders. Saved to your collection.
+          </p>
+          <textarea
+            ref={notesRef}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            onBlur={() => {
+              if ((notes ?? "") !== (monologue.notes ?? "")) {
+                saveNotes.mutate({ monologueId: monologue.id, notes });
+                setMonologue((prev) => (prev ? { ...prev, notes } : prev));
               }
-            />
-          </CardContent>
-        </Card>
+            }}
+            placeholder="Add a note…"
+            rows={4}
+            className="mt-3 w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+          />
+        </section>
 
-        <Card className="rounded-lg">
-          <CardContent className="pt-6">
-            <ExportSheet monologue={monologue} />
-          </CardContent>
-        </Card>
+        {/* The other way to work it, kept as a quiet path rather than a button
+            competing with Rehearse. */}
+        <section className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-6">
+          <div>
+            <p className="text-sm font-medium text-foreground">Get it off book</p>
+            <p className="text-sm text-muted-foreground">
+              Line-by-line drill until you don&apos;t need the page.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/monologue/${monologue.id}/memorize`)}
+          >
+            Memorize
+          </Button>
+        </section>
+
+        <div className="mt-10">
+          <MonologueFooter
+            monologue={monologue}
+            onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
+          />
+        </div>
 
         <EditMonologueModal
           monologueId={editMonologueId}
@@ -348,7 +484,7 @@ export default function MonologueDetailPage() {
                         word_count: res.data.word_count,
                         estimated_duration_seconds: res.data.estimated_duration_seconds,
                       }
-                    : prev
+                    : prev,
                 );
               }
             } catch (err) {
