@@ -84,7 +84,7 @@ export function GhostLightAppTeaser() {
           (the ghost light goes home with you.)
         </p>
 
-        <h2 className="mt-5 pb-2 font-brand font-medium tracking-[-0.02em] leading-[1.22] text-3xl sm:text-5xl md:text-6xl max-w-3xl mx-auto text-balance">
+        <h2 className="mt-5 pb-2 font-brand font-medium leading-[1.22] text-3xl sm:text-5xl md:text-6xl max-w-3xl mx-auto text-balance">
           The stage, <em className="italic text-primary">in your pocket</em>.
         </h2>
 

@@ -306,7 +306,7 @@ export default function AdminContentPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="font-brand text-2xl font-semibold tracking-[-0.02em] flex items-center gap-2">
+        <h1 className="font-brand text-2xl font-semibold flex items-center gap-2">
           <IconFileSearch className="h-6 w-6 text-primary" />
           Content
         </h1>

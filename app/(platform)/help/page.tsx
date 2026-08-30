@@ -13,7 +13,7 @@ export default function HelpPage() {
   return (
     <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
       <header className="space-y-2">
-        <h1 className="font-brand text-3xl sm:text-4xl font-semibold tracking-[-0.02em]">
+        <h1 className="font-brand text-3xl sm:text-4xl font-semibold">
           Quick guides
         </h1>
         <p className="text-muted-foreground">

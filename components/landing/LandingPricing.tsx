@@ -174,7 +174,7 @@ export function LandingPricing() {
     <section id="pricing" className="container mx-auto px-4 sm:px-6 py-14 sm:py-20 md:py-28">
       <div className="w-full max-w-6xl mx-auto">
         <div className="text-center">
-          <h2 className="font-brand font-semibold text-2xl sm:text-3xl md:text-4xl tracking-[-0.02em]">
+          <h2 className="font-brand font-semibold text-2xl sm:text-3xl md:text-4xl">
             Your craft, your plan.
           </h2>
           <p className="stage-direction mt-4 text-sm text-muted-foreground">

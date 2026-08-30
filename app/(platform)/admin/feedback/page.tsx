@@ -114,7 +114,7 @@ export default function AdminFeedbackPage() {
       {/* Header */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="font-brand text-2xl font-semibold tracking-[-0.02em] flex items-center gap-2">
+          <h1 className="font-brand text-2xl font-semibold flex items-center gap-2">
             <IconMessageReport className="h-6 w-6 text-primary" />
             Feedback
           </h1>

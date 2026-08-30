@@ -92,7 +92,7 @@ export function RehearseHub() {
       {/* Header */}
       <header>
         <p className="stage-direction text-sm text-muted-foreground/70">(your repertoire.)</p>
-        <h1 className="mt-2 font-brand text-4xl font-medium tracking-[-0.02em] leading-[1.05] sm:text-5xl">
+        <h1 className="mt-2 font-brand text-4xl font-medium leading-[1.05] sm:text-5xl">
           Collection
         </h1>
         <div

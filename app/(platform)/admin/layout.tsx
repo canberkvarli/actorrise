@@ -148,7 +148,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <aside className="hidden lg:flex lg:w-60 lg:flex-col lg:shrink-0 lg:border-r lg:border-border/40 lg:min-h-screen">
           <div className="px-5 py-5">
             <Link href="/admin" className="block">
-              <p className="font-brand text-xl font-semibold tracking-[-0.02em] text-foreground">
+              <p className="font-brand text-xl font-semibold text-foreground">
                 ActorRise
               </p>
               <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mt-0.5">
@@ -173,7 +173,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Top strip — mobile / tablet */}
         <div className="lg:hidden border-b border-border/40 bg-card/30">
           <div className="flex items-center justify-between px-4 pt-3">
-            <p className="font-brand text-lg font-semibold tracking-[-0.02em]">
+            <p className="font-brand text-lg font-semibold">
               ActorRise <span className="text-muted-foreground font-normal">Admin</span>
             </p>
           </div>

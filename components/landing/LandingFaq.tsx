@@ -147,7 +147,7 @@ export function LandingFaq() {
       />
       <div className="container mx-auto px-4 sm:px-6">
         <div className="max-w-2xl mx-auto">
-          <h2 className="font-brand font-semibold text-2xl sm:text-3xl md:text-4xl tracking-[-0.02em] text-foreground">
+          <h2 className="font-brand font-semibold text-2xl sm:text-3xl md:text-4xl text-foreground">
             Frequently asked questions
           </h2>
           <ul className="mt-8 space-y-4">

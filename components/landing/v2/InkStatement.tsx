@@ -46,7 +46,7 @@ export function InkStatement() {
       <p className="stage-direction text-center text-xs sm:text-sm text-muted-foreground/70">
         (the point.)
       </p>
-      <p className="mt-6 mx-auto max-w-3xl text-center font-brand font-medium tracking-[-0.02em] leading-[1.3] text-3xl sm:text-4xl md:text-5xl text-balance">
+      <p className="mt-6 mx-auto max-w-3xl text-center font-brand font-medium leading-[1.3] text-3xl sm:text-4xl md:text-5xl text-balance">
         {reduce
           ? WORDS.join(" ")
           : WORDS.map((w, i) => (
