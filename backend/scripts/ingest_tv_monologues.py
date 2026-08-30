@@ -315,7 +315,11 @@ def ingest_episode(db, analyzer, slug, refs, dry_run) -> int:
                 character_gender=analysis.get("character_gender"),
                 character_age_range=analysis.get("character_age_range"),
                 character_description=f"From {meta['show']}{epname}",
-                word_count=wc,
+                # See ingest_film_monologues.py: word_count must describe the
+                # text actually stored (directions included) or the next
+                # resync_word_counts.py run silently rewrites it.
+                word_count=len(text.split()),
+                # Duration stays on the spoken count — directions aren't said.
                 estimated_duration_seconds=round(wc / 2.5),
                 difficulty_level=analysis.get("difficulty_level"),
                 primary_emotion=analysis.get("primary_emotion"),

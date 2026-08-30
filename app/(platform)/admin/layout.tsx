@@ -14,20 +14,27 @@ import {
   IconSearch,
   IconMicrophone,
   IconMessageReport,
+  IconClipboardCheck,
 } from "@tabler/icons-react";
 
 type NavItem = {
   href: string;
   label: string;
   icon: typeof IconChartBar;
-  badgeKey?: "feedback";
+  badgeKey?: "feedback" | "review";
 };
 
 type NavGroup = { title: string; items: NavItem[] };
 
 // Ordered by what actually gets used. Search + Sessions + Feedback are the daily
-// drivers, so they sit at the top under Pulse. Moderation and the monologue
-// review queue were removed — retired, not hidden.
+// drivers, so they sit at the top under Pulse. Moderation was removed — retired,
+// not hidden.
+//
+// The monologue review queue is back. It was retired while it sat empty, but the
+// interleaved-dialogue and flattened-scene passes now route anything they cannot
+// repair safely into it instead of guessing, so there is real work in there and
+// it needs a way in. The badge is the point: a queue with no counter is a queue
+// nobody opens.
 const GROUPS: NavGroup[] = [
   {
     title: "Pulse",
@@ -46,7 +53,15 @@ const GROUPS: NavGroup[] = [
   },
   {
     title: "Library",
-    items: [{ href: "/admin/content", label: "Content", icon: IconFileSearch }],
+    items: [
+      { href: "/admin/content", label: "Content", icon: IconFileSearch },
+      {
+        href: "/admin/monologues/review",
+        label: "Review",
+        icon: IconClipboardCheck,
+        badgeKey: "review",
+      },
+    ],
   },
   {
     title: "Comms",
@@ -86,7 +101,22 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
-  const badges = { feedback: fb?.unread ?? 0 };
+  // Flagged-monologue count → nav badge, same shape as the feedback one. Single
+  // COUNT, moderators only.
+  const { data: rv } = useQuery({
+    queryKey: ["admin-review-badge"],
+    queryFn: async () => {
+      const res = await api.get<{ count: number }>(
+        "/api/admin/monologues/review/count"
+      );
+      return res.data;
+    },
+    enabled: !!user?.is_moderator,
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+
+  const badges = { feedback: fb?.unread ?? 0, review: rv?.count ?? 0 };
 
   if (loading) {
     return (

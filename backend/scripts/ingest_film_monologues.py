@@ -406,7 +406,15 @@ def ingest_film(db, analyzer, selector, slug, refs, apply, min_words,
                 character_gender=analysis.get("character_gender"),
                 character_age_range=analysis.get("character_age_range"),
                 character_description=f"From {meta['title']} ({meta['year']})",
-                word_count=wc,
+                # Count the words of the text we STORE. `wc` is the parser's
+                # dialogue-only count with stage directions stripped, but `text`
+                # keeps them, so writing wc here left the pair inconsistent and
+                # resync_word_counts.py rewrote it on its next run. word_count is
+                # a stored column read by the film/TV word gate and the duration
+                # filters, so the two must not disagree.
+                word_count=len(text.split()),
+                # Duration DOES use the spoken count: parentheticals are not
+                # said out loud, so they should not add to the running time.
                 estimated_duration_seconds=round(wc / 2.5),
                 difficulty_level=analysis.get("difficulty_level"),
                 primary_emotion=analysis.get("primary_emotion"),
