@@ -40,7 +40,9 @@ export function RehearseHub() {
   const { data, isLoading } = useBookmarks({ alwaysFresh: true });
 
   const { all, toStudy, memorized, due } = useMemo(() => {
-    const all = data ?? [];
+    // A cached or unexpected non-array payload would crash the whole page
+    // at .map, so widen the guard past null/undefined.
+    const all = Array.isArray(data) ? data : [];
     const memorized = all.filter((m) => m.memorized);
     // Spaced review: a memorized piece is "due" if it hasn't been studied in a
     // week (or never since being marked off-book), so it doesn't quietly fade.

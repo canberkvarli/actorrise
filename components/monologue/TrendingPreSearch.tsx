@@ -15,7 +15,10 @@ export function TrendingPreSearch() {
   const { data, isLoading } = useTrending(6);
 
   if (isLoading) return <TrendingSkeleton />;
-  const items = data ?? [];
+  // Array.isArray, not ?? : this shelf sits on the app's busiest page, and a
+  // non-array payload (stale persisted cache, an error body) reaching .map
+  // throws inside render and blanks the whole route.
+  const items = Array.isArray(data) ? data : [];
   if (items.length === 0) return null;
 
   return (

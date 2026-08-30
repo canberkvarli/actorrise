@@ -16,7 +16,9 @@ export function RecentlyRemoved() {
   const restore = useRestoreMonologue();
   const [open, setOpen] = useState(false);
 
-  const items = data ?? [];
+  // Array.isArray, not ?? : a non-array payload (stale cache, error body)
+  // would otherwise reach .map and take the page down.
+  const items = Array.isArray(data) ? data : [];
   if (items.length === 0) return null;
 
   return (

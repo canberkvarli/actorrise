@@ -62,7 +62,9 @@ export function ForYouShelf() {
   }
 
   if (isLoading) return <ForYouSkeleton />;
-  const items = data ?? [];
+  // Array.isArray, not ?? — see TrendingPreSearch: a non-array payload here
+  // takes the whole /monologues route down at render time.
+  const items = Array.isArray(data) ? data : [];
   if (isError || items.length === 0) return null;
 
   return (
