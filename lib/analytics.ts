@@ -91,7 +91,7 @@ type RehearsalErrorParams = {
    * than an actor giving up: 51 abandoned at ~2.1 lines had no way to tell the
    * two apart, so a load error looked identical to disinterest.
    */
-  stage: "load" | "ai_line" | "audio" | "other";
+  stage: "load" | "ai_line" | "audio" | "speech" | "other";
   /** Short error class/message, no PII. */
   message?: string;
 };

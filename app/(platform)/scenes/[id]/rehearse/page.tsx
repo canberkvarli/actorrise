@@ -1535,6 +1535,11 @@ export default function RehearsalPage() {
         displayMatched.forEach(i => bestMatchedRef.current.add(i));
         setLiveMatchedIndices(new Set(bestMatchedRef.current));
 
+        // Words are landing, so whatever failed earlier has recovered. Clear the
+        // warning rather than leaving a permanent "I can't hear you" over a
+        // session that is plainly working.
+        setSpeechError(prev => (prev ? null : prev));
+
         // ADVANCE: match against full transcript (including current interim)
         const spokenWords = norm(fullTranscript).split(/\s+/).filter(Boolean);
         const matched = new Set<number>();
@@ -1576,9 +1581,18 @@ export default function RehearsalPage() {
       };
       let alive = true; // flipped in cleanup to prevent restarts after unmount
       recognition.onerror = (ev: any) => {
-        // Fatal errors — don't attempt restart
+        // Fatal errors — don't attempt restart.
         if (ev.error === 'not-allowed' || ev.error === 'service-not-available') {
           alive = false;
+          // This used to stop here, silently, and it is the most likely reason
+          // 70% of mobile rehearsals never reach a single spoken line: the actor
+          // is left looking at a scene that will never advance, with nothing
+          // saying why. The `isSupported` guard above does not catch it — iOS
+          // Safari *does* expose webkitSpeechRecognition, it just fails at
+          // runtime when Apple's speech service refuses or an in-app browser
+          // blocks it. So say it out loud and point at the way forward.
+          setSpeechError(ev.error === 'not-allowed' ? 'mic-blocked' : 'unavailable');
+          trackRehearsalError({ mode: 'scene', stage: 'speech', message: ev.error });
         }
       };
       recognition.onend = () => {
@@ -1872,6 +1886,13 @@ export default function RehearsalPage() {
   }, [stopAllAudio]);
 
   // Manual tap-to-advance: if speech recognition fails, user can tap their line
+  /**
+   * Speech is not going to carry this session — either the API is missing, or
+   * it threw a fatal error at runtime. Both mean the actor must tap to advance,
+   * so both need to say so.
+   */
+  const speechIsBroken = !isSpeechRecognitionSupported || speechError !== null;
+
   const handleManualAdvance = useCallback(() => {
     if (!currentUserLineText || isProcessing) return;
     if (isListening) stopListening();
@@ -2704,20 +2725,31 @@ export default function RehearsalPage() {
                         }
                       </p>
 
-                      {/* Skip */}
+                      {/* Advance by hand. When speech is working this is a quiet
+                          "skip"; when it isn't, it's the only way through the
+                          scene, so it stops being an 11px grey underline and
+                          becomes the obvious next action. */}
                       {isCurrentUserLine && isUserTurn && !isTranscribing && (
                         <div className="flex justify-center mt-2">
                           <button
                             type="button"
                             onClick={(e) => { e.stopPropagation(); handleManualAdvance(); }}
-                            className="text-[11px] text-neutral-500 hover:text-neutral-800 underline underline-offset-2 transition-colors"
+                            className={
+                              speechIsBroken
+                                ? 'rounded-full border border-amber-500 px-4 py-2 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-50 min-h-[44px]'
+                                : 'text-[11px] text-neutral-500 hover:text-neutral-800 underline underline-offset-2 transition-colors'
+                            }
                           >
-                            Skip line
+                            {speechIsBroken ? 'I said my line →' : 'Skip line'}
                           </button>
                         </div>
                       )}
-                      {isCurrentUserLine && !isSpeechRecognitionSupported && (
-                        <p className="text-xs text-amber-600 mt-1.5 text-center">Mic not available in this browser.</p>
+                      {isCurrentUserLine && speechIsBroken && (
+                        <p className="text-xs text-amber-600 mt-1.5 text-center">
+                          {speechError === 'mic-blocked'
+                            ? 'I can’t hear you — the mic is blocked. Tap above after each line.'
+                            : 'I can’t hear you in this browser. Tap above after you say each line.'}
+                        </p>
                       )}
                     </motion.div>
                   );
