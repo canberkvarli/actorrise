@@ -10,8 +10,12 @@ Why this file was rewritten
 The old version summed ``price.unit_amount`` across active subscriptions and
 called it MRR. It reported $185/mo while the business was really taking $48.75.
 The gap was discounts: 10 of 17 active subscriptions carry a 100%-off coupon and
-bill $0 forever, and 2 more have no upcoming invoice at all. List price is not
-revenue.
+bill $0, and 2 more have no upcoming invoice at all. List price is not revenue.
+
+Those coupons are time-limited, not permanent — all ten are the same 12-month
+code expiring between Feb and May 2027. So a $0 subscription is deferred revenue
+with a date on it, which is why ``coupon_expiry_worth_usd`` is reported rather
+than writing the money off.
 
 Reconstructing the discount ourselves is fragile — Stripe's newer API returns a
 subscription discount as ``{"source": {"coupon": "..."}}`` rather than
@@ -81,20 +85,35 @@ def _list_monthly(sub) -> float:
     return _to_monthly(total, interval, ic)
 
 
-def _real_monthly(sub) -> float:
-    """What Stripe will actually charge next, per month, after all discounts.
+def _real_monthly(sub) -> tuple[float, int | None]:
+    """What Stripe will actually charge next, per month, after all discounts,
+    plus when the discount holding it down runs out.
 
     A subscription with no upcoming invoice (cancelling, or otherwise not going
     to bill again) contributes nothing — which is the honest answer, not an
     error.
+
+    The expiry matters: every 100%-off coupon in use here is time-limited, so a
+    $0 subscription is deferred revenue with a date on it, not a write-off.
+    Discounts must be expanded or Stripe returns them as bare id strings.
     """
     try:
-        preview = stripe.Invoice.create_preview(subscription=sub["id"])
+        preview = stripe.Invoice.create_preview(
+            subscription=sub["id"], expand=["discounts"]
+        )
     except Exception as e:  # noqa: BLE001
         logger.info("no upcoming invoice for %s: %s", sub.get("id"), str(e)[:120])
-        return 0.0
+        return 0.0, None
+
     interval, ic = _cadence(sub)
-    return _to_monthly(preview.get("amount_due") or 0, interval, ic)
+    monthly = _to_monthly(preview.get("amount_due") or 0, interval, ic)
+
+    ends = [
+        d.get("end")
+        for d in (preview.get("discounts") or [])
+        if isinstance(d, dict) and d.get("end")
+    ]
+    return monthly, (min(ends) if ends else None)
 
 
 def _compute() -> dict:
@@ -107,19 +126,29 @@ def _compute() -> dict:
     trialing = list(stripe.Subscription.list(status="trialing", limit=100).auto_paging_iter())
 
     estimated = len(active) + len(trialing) > _PREVIEW_LIMIT
-    amount_of = _list_monthly if estimated else _real_monthly
+
+    def amount_of(sub) -> tuple[float, int | None]:
+        return (_list_monthly(sub), None) if estimated else _real_monthly(sub)
 
     now_cents = 0.0
     paying = free = 0
+    # Money currently held down by a coupon that has an end date, and when the
+    # first of those dates arrives.
+    coupon_cents = 0.0
+    coupon_ends: list[int] = []
+
     for sub in active:
-        m = amount_of(sub)
+        m, discount_end = amount_of(sub)
         now_cents += m
         if m > 0:
             paying += 1
-        else:
-            free += 1
+            continue
+        free += 1
+        if discount_end:
+            coupon_cents += _list_monthly(sub)
+            coupon_ends.append(discount_end)
 
-    trial_cents = sum(amount_of(sub) for sub in trialing)
+    trial_cents = sum(amount_of(sub)[0] for sub in trialing)
     list_cents = sum(_list_monthly(s) for s in active)
 
     return {
@@ -137,6 +166,11 @@ def _compute() -> dict:
         # the cost of the discounting, stated plainly instead of hidden inside
         # an inflated MRR.
         "discounted_away_usd": round(max(0.0, (list_cents - now_cents)) / 100, 2),
+        # Deferred, not lost: these coupons expire on a date.
+        "coupon_expiry_worth_usd": round(coupon_cents / 100, 2),
+        "coupon_count_expiring": len(coupon_ends),
+        "first_coupon_expiry": min(coupon_ends) if coupon_ends else None,
+        "last_coupon_expiry": max(coupon_ends) if coupon_ends else None,
     }
 
 

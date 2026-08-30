@@ -103,6 +103,12 @@ interface StripeRevenue {
   trial_worth_usd?: number;
   /** List-price value of what the discounts give away each month. */
   discounted_away_usd?: number;
+  /** Of that, what sits behind coupons with an expiry date — deferred, not lost. */
+  coupon_expiry_worth_usd?: number;
+  coupon_count_expiring?: number;
+  /** Unix seconds. */
+  first_coupon_expiry?: number | null;
+  last_coupon_expiry?: number | null;
   estimated?: boolean;
   cached_age_seconds?: number;
   stale?: boolean;
@@ -320,6 +326,18 @@ function MoneyPanel({ stripe }: { stripe: StripeRevenue | undefined }) {
   const after = stripe.mrr_after_trials_usd;
   const uplift = now != null && after != null ? after - now : null;
   const givenAway = stripe.discounted_away_usd ?? 0;
+  const couponCount = stripe.coupon_count_expiring ?? 0;
+  const couponWorth = stripe.coupon_expiry_worth_usd ?? 0;
+
+  // "between Feb and May 2027", or just the single month if they all land together.
+  const monthOf = (unix?: number | null) =>
+    unix == null
+      ? null
+      : new Date(unix * 1000).toLocaleDateString(undefined, { month: "short", year: "numeric" });
+  const firstEnd = monthOf(stripe.first_coupon_expiry);
+  const lastEnd = monthOf(stripe.last_coupon_expiry);
+  const couponWindow =
+    firstEnd && lastEnd ? (firstEnd === lastEnd ? `in ${firstEnd}` : `between ${firstEnd} and ${lastEnd}`) : null;
 
   return (
     <section className="border-2 bg-card" style={{ borderColor: BRAND }}>
@@ -354,10 +372,18 @@ function MoneyPanel({ stripe }: { stripe: StripeRevenue | undefined }) {
         {(stripe.free_count ?? 0) > 0 && (
           <p className="text-xs leading-relaxed text-muted-foreground">
             <strong className="text-foreground">{stripe.free_count}</strong> more subscription
-            {stripe.free_count === 1 ? " is" : "s are"} active but billing $0 — full access on a
-            100%-off coupon. At list price {stripe.free_count === 1 ? "it" : "they"} would be worth{" "}
-            {moneyExact(givenAway)}/mo. That gap is why this number used to look bigger than your
-            bank account.
+            {stripe.free_count === 1 ? " is" : "s are"} active but billing $0 right now, worth{" "}
+            {moneyExact(givenAway)}/mo at list price.
+            {couponCount > 0 && (
+              <>
+                {" "}
+                {couponCount} of those {couponCount === 1 ? "is" : "are"} on a 100%-off coupon that{" "}
+                <strong className="text-foreground">expires</strong>
+                {couponWindow ? ` ${couponWindow}` : ""}, so{" "}
+                <strong className="text-foreground">{moneyExact(couponWorth)}/mo</strong> starts
+                billing on its own. Deferred, not lost.
+              </>
+            )}
           </p>
         )}
 
