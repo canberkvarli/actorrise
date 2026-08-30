@@ -1458,7 +1458,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                and 81px from sm up — any less and the mode toggle tucks under it.
                From sm up the mode toggle and the search bar sit on one line;
                the title has animated away by then, so they're the only children. */
-            ? "sticky top-16 z-30 -mx-4 mb-4 border-b border-border/50 bg-background/90 px-4 py-3 backdrop-blur-md sm:top-20 sm:-mx-6 sm:flex sm:items-center sm:gap-3 sm:px-6"
+            ? "sticky top-16 z-30 -mx-4 mb-4 border-b border-border/50 bg-background/90 px-4 py-2.5 backdrop-blur-md sm:top-20 sm:-mx-6 sm:flex sm:items-center sm:gap-4 sm:px-6"
             : "mb-4 sm:mb-6 md:mb-10"
         }
       >
@@ -1490,14 +1490,30 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             hasSearched ? "mb-2 sm:mb-0 sm:shrink-0" : "mb-3 sm:mb-4"
           }`}
         >
-          <div className="w-full max-w-sm sm:max-w-none sm:w-auto inline-flex rounded-xl border border-border bg-muted/40 p-2 gap-2 sm:p-1 sm:gap-0">
+          {/* Boxed segmented control while it's the hero; once you've searched
+              it drops to quiet text tabs so the bar reads as one thing. */}
+          <div
+            className={
+              hasSearched
+                ? "inline-flex shrink-0 gap-1 sm:gap-0.5"
+                : "w-full max-w-sm sm:max-w-none sm:w-auto inline-flex rounded-xl border border-border bg-muted/40 p-2 gap-2 sm:p-1 sm:gap-0"
+            }
+          >
             <button
               type="button"
-              className={`flex-1 sm:flex-none min-h-[44px] sm:min-w-0 sm:px-4 sm:py-2 rounded-lg sm:rounded-md text-sm font-medium transition-colors touch-manipulation ${
-                searchMode === "plays"
-                  ? "bg-primary/15 text-primary shadow-sm ring-1 ring-primary/30 ring-inset"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-              }`}
+              className={
+                hasSearched
+                  ? `shrink-0 rounded-md px-2.5 py-1.5 text-sm transition-colors ${
+                      searchMode === "plays"
+                        ? "font-medium text-primary"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`
+                  : `flex-1 sm:flex-none min-h-[44px] sm:min-w-0 sm:px-4 sm:py-2 rounded-lg sm:rounded-md text-sm font-medium transition-colors touch-manipulation ${
+                      searchMode === "plays"
+                        ? "bg-primary/15 text-primary shadow-sm ring-1 ring-primary/30 ring-inset"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    }`
+              }
               onClick={() => {
                 playsActionAtRef.current = Date.now();
                 setSearchMode("plays");
@@ -1518,11 +1534,19 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </button>
             <button
               type="button"
-              className={`flex-1 sm:flex-none min-h-[44px] sm:min-w-0 sm:px-4 sm:py-2 rounded-lg sm:rounded-md text-sm font-medium transition-colors touch-manipulation ${
-                searchMode === "film_tv"
-                  ? "bg-[rgba(167,139,250,0.12)] shadow text-foreground ring-1 ring-[rgba(167,139,250,0.45)] ring-inset"
-                  : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-              }`}
+              className={
+                hasSearched
+                  ? `shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm transition-colors ${
+                      searchMode === "film_tv"
+                        ? "font-medium text-[rgb(167,139,250)]"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`
+                  : `flex-1 sm:flex-none min-h-[44px] sm:min-w-0 sm:px-4 sm:py-2 rounded-lg sm:rounded-md text-sm font-medium transition-colors touch-manipulation ${
+                      searchMode === "film_tv"
+                        ? "bg-[rgba(167,139,250,0.12)] shadow text-foreground ring-1 ring-[rgba(167,139,250,0.45)] ring-inset"
+                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    }`
+              }
               onClick={() => {
                 filmTvActionAtRef.current = Date.now();
                 setSearchMode("film_tv");
@@ -1537,9 +1561,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               Film &amp; TV
             </button>
           </div>
-          <div className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0">
-            <span className="w-10 h-10" aria-hidden />
-          </div>
+          {!hasSearched && (
+            <div className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0">
+              <span className="w-10 h-10" aria-hidden />
+            </div>
+          )}
         </div>
         {/* Search Bar - stacked on mobile for easier tap targets */}
         <div className={hasSearched ? "min-w-0 sm:flex-1" : "max-w-3xl mx-auto"}>
@@ -1564,13 +1590,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               className={`relative flex ${
                 /* stacked is roomier for a first search, but inside the sticky
                    bar it costs a button's height of results on every phone */
-                hasSearched ? "flex-row items-center" : "flex-col"
-              } md:flex-row md:items-center gap-2 p-2 bg-card border rounded-xl shadow-sm transition-all duration-300 ${
+                hasSearched
+                  ? "flex-row items-center gap-1 rounded-full border bg-muted/30 p-1 pl-1.5"
+                  : "flex-col gap-2 rounded-xl border bg-card p-2 shadow-sm"
+              } md:flex-row md:items-center transition-all duration-300 ${
                 isTyping
                   ? searchMode === "film_tv"
-                    ? "border-violet-400/50 shadow-lg shadow-violet-400/5"
-                    : "border-primary/50 shadow-lg shadow-primary/5"
-                  : "border-border"
+                    ? "border-violet-400/50"
+                    : "border-primary/50"
+                  : "border-border/70"
               } ${jitter ? "search-jitter" : ""}`}
               onAnimationEnd={() => setJitter(false)}
             >
@@ -1604,7 +1632,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     setTimeout(() => setIsTyping(false), 200);
                     if (!currentQuery) resumeTypewriter();
                   }}
-                  className="pl-12 pr-10 min-h-[48px] md:h-12 text-base border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                  /* pr clears the absolutely-positioned clear button (44px wide
+                     at right-3); pr-10 let long queries run underneath it. */
+                  className={`pl-11 pr-14 text-base border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 ${
+                    hasSearched ? "min-h-[40px] h-10" : "min-h-[48px] md:h-12"
+                  }`}
                 />
                 {!isLoading && (searchMode === "plays" ? playsQuery : filmTvQuery) && (
                   <button
@@ -1621,15 +1653,25 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 onClick={isLoading ? stopSearch : handleSearch}
                 size="default"
                 variant={isLoading ? "outline" : "default"}
-                className={`shrink-0 min-h-[44px] min-w-[44px] md:min-h-[2.5rem] md:min-w-0 px-4 md:px-6 rounded-lg transition-all duration-300 ${
-                  isLoading ? "" : isTyping ? (searchMode === "film_tv" ? "shadow-md shadow-violet-400/20" : "shadow-md shadow-primary/20") : ""
+                aria-label={isLoading ? "Stop search" : "Search"}
+                /* Full "Search" button while it's the hero. Afterwards the query
+                   is already in the field and Enter re-runs it, so it shrinks to
+                   a round icon instead of shouting from the middle of the bar. */
+                className={`shrink-0 transition-all duration-300 ${
+                  hasSearched
+                    ? "h-9 w-9 min-h-0 min-w-0 rounded-full p-0"
+                    : `min-h-[44px] min-w-[44px] md:min-h-[2.5rem] md:min-w-0 px-4 md:px-6 rounded-lg ${
+                        isLoading ? "" : isTyping ? (searchMode === "film_tv" ? "shadow-md shadow-violet-400/20" : "shadow-md shadow-primary/20") : ""
+                      }`
                 }`}
               >
                 {isLoading ? (
                   <>
                     <IconX className="h-4 w-4" />
-                    <span className="hidden md:inline ml-1">Stop</span>
+                    {!hasSearched && <span className="hidden md:inline ml-1">Stop</span>}
                   </>
+                ) : hasSearched ? (
+                  <IconSearch className="h-4 w-4" />
                 ) : (
                   "Search"
                 )}
@@ -1640,7 +1682,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   its own row in the sticky header. */}
               {hasSearched && (
                 <>
-                  <span aria-hidden className="hidden md:block h-6 w-px shrink-0 bg-border" />
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1669,18 +1710,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       </span>
                     )}
                   </Button>
-                  {searchMode === "plays" && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleFindForMe}
-                      disabled={isLoading}
-                      className="hidden lg:inline-flex shrink-0 gap-1.5 text-primary hover:bg-primary/10 hover:text-primary"
-                    >
-                      <IconSparkles className="h-4 w-4" />
-                      For me
-                    </Button>
-                  )}
                 </>
               )}
             </div>
