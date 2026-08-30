@@ -67,6 +67,7 @@ import { ForYouShelf } from "@/components/monologue/ForYouShelf";
 import { MasksSketch } from "@/components/brand/sketches";
 import { SearchFiltersPanel } from "@/components/monologue/SearchFiltersPanel";
 import { NoResultsState } from "@/components/monologue/NoResultsState";
+import { StartingPoints } from "@/components/monologue/StartingPoints";
 import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
@@ -2393,6 +2394,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   when there isn't one. Plays only — film/TV recs are separate. */}
               {searchMode === "plays" && <ForYouShelf />}
               <TrendingPreSearch />
+              {/* Last, not first: the shelves are personal and current, these
+                  are the fallback for when nothing there catches you. */}
+              <StartingPoints mode={searchMode} />
             </motion.div>
           )}
         </AnimatePresence>
