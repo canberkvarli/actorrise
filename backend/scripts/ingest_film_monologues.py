@@ -66,6 +66,7 @@ sys.path.insert(0, str(backend_dir))
 from app.core.config import settings
 from app.models.actor import FilmTvReference, Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
+from app.services.data_ingestion.cross_source_dedupe import find_duplicate
 from app.services.extraction.screenplay_pdf_parser import extract_with_status
 from scripts.extract_film_tv_monologues import select_best_monologues
 # pylint: enable=wrong-import-position
@@ -390,6 +391,18 @@ def ingest_film(db, analyzer, selector, slug, refs, apply, min_words,
             if not embedding:  # unsearchable without it
                 print(f"      skip (no embedding): {char}")
                 continue
+
+            # Corpus-wide duplicate check. The guard above only looks inside
+            # THIS play row for the same character name, so the same speech
+            # arriving under a second play row went straight in — that is how
+            # Joker ended up stored twice, once from IMSDb and once from
+            # ScriptSlug. This compares against every monologue regardless of
+            # how its title or author is spelled.
+            dup = find_duplicate(db, text, embedding)
+            if dup:
+                print(f"      skip (duplicate of #{dup[0]}, {dup[1]}): {char}")
+                continue
+
             tags = analyzer.generate_search_tags(analysis, dialogue, char)
             tags.extend(["film", "screenplay"])
             directions = " ".join(re.findall(r"\([^)]*\)", text))

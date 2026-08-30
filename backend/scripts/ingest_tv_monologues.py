@@ -54,6 +54,7 @@ sys.path.insert(0, str(backend_dir))
 from app.core.config import settings
 from app.models.actor import FilmTvReference, Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
+from app.services.data_ingestion.cross_source_dedupe import find_duplicate
 from app.services.extraction.screenplay_pdf_parser import extract_screenplay_monologues
 # pylint: enable=wrong-import-position
 
@@ -299,6 +300,16 @@ def ingest_episode(db, analyzer, slug, refs, dry_run) -> int:
             if not embedding:  # unsearchable without it — skip
                 print(f"      skip (no embedding): {char}")
                 continue
+
+            # Corpus-wide duplicate check — see ingest_film_monologues.py. TV is
+            # where this bit hardest: one Play row holds every episode of a show,
+            # so a recap or a re-used speech across episodes lands in the same
+            # row and the old same-play check could not tell them apart.
+            dup = find_duplicate(db, text, embedding)
+            if dup:
+                print(f"      skip (duplicate of #{dup[0]}, {dup[1]}): {char}")
+                continue
+
             tags = analyzer.generate_search_tags(analysis, dialogue, char)
             tags.extend(["tv series", "television"])
             directions = " ".join(re.findall(r"\([^)]*\)", text))
