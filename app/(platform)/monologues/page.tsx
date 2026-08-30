@@ -1458,7 +1458,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                and 81px from sm up — any less and the mode toggle tucks under it.
                From sm up the mode toggle and the search bar sit on one line;
                the title has animated away by then, so they're the only children. */
-            ? "sticky top-16 z-30 -mx-4 mb-4 border-b border-border/50 bg-background/90 px-4 py-2.5 backdrop-blur-md sm:top-20 sm:-mx-6 sm:flex sm:items-center sm:gap-4 sm:px-6"
+            ? "sticky top-16 z-30 -mx-4 mb-4 border-b border-border/50 bg-background/90 px-4 py-2.5 backdrop-blur-md sm:top-20 sm:-mx-6 sm:px-6"
             : "mb-4 sm:mb-6 md:mb-10"
         }
       >
@@ -1487,7 +1487,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         {/* Plays vs Film & TV toggle: spacious on mobile, 44px touch targets */}
         <div
           className={`flex items-center justify-center gap-2 px-1 ${
-            hasSearched ? "mb-2 sm:mb-0 sm:shrink-0" : "mb-3 sm:mb-4"
+            hasSearched ? "mb-1.5" : "mb-3 sm:mb-4"
           }`}
         >
           {/* Boxed segmented control while it's the hero; once you've searched
@@ -1567,9 +1567,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </div>
           )}
         </div>
-        {/* Search Bar - stacked on mobile for easier tap targets */}
-        <div className={hasSearched ? "min-w-0 sm:flex-1" : "max-w-3xl mx-auto"}>
-          <div className="relative group">
+        {/* Search Bar - stacked on mobile for easier tap targets. Searched or
+            not, it stays a centred column on the same axis as the hero rather
+            than stretching across the viewport. */}
+        <div className={hasSearched ? "mx-auto w-full max-w-2xl" : "max-w-3xl mx-auto"}>
+          <div className={hasSearched ? "flex items-center gap-2" : ""}>
+          <div className="relative group flex-1 min-w-0">
             {/* Ambient glow effect - subtle background */}
             <div
               className={`absolute -inset-0.5 rounded-2xl bg-gradient-to-r from-primary/0 via-primary/30 to-primary/0 blur-lg transition-all duration-500 ${
@@ -1649,70 +1652,70 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </button>
                 )}
               </div>
-              <Button
-                onClick={isLoading ? stopSearch : handleSearch}
-                size="default"
-                variant={isLoading ? "outline" : "default"}
-                aria-label={isLoading ? "Stop search" : "Search"}
-                /* Full "Search" button while it's the hero. Afterwards the query
-                   is already in the field and Enter re-runs it, so it shrinks to
-                   a round icon instead of shouting from the middle of the bar. */
-                className={`shrink-0 transition-all duration-300 ${
-                  hasSearched
-                    ? "h-9 w-9 min-h-0 min-w-0 rounded-full p-0"
-                    : `min-h-[44px] min-w-[44px] md:min-h-[2.5rem] md:min-w-0 px-4 md:px-6 rounded-lg ${
-                        isLoading ? "" : isTyping ? (searchMode === "film_tv" ? "shadow-md shadow-violet-400/20" : "shadow-md shadow-primary/20") : ""
-                      }`
-                }`}
-              >
-                {isLoading ? (
-                  <>
-                    <IconX className="h-4 w-4" />
-                    {!hasSearched && <span className="hidden md:inline ml-1">Stop</span>}
-                  </>
-                ) : hasSearched ? (
-                  <IconSearch className="h-4 w-4" />
-                ) : (
-                  "Search"
-                )}
-              </Button>
-
-              {/* Once you've searched, refining is the next thing you reach
-                  for — so it rides inside the search bar instead of costing
-                  its own row in the sticky header. */}
-              {hasSearched && (
-                <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowFiltersSheet(true)}
-                    className="md:hidden shrink-0 gap-1.5 min-h-[44px] min-w-[44px] px-2 text-muted-foreground hover:text-foreground"
-                    aria-label="Filters"
-                  >
-                    <IconAdjustments className="h-4 w-4" />
-                    {(activeFilters.length > 0 || hasFreshnessFilter) && (
-                      <span className="tabular-nums text-xs text-primary">
-                        {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
-                      </span>
-                    )}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowFilters(true)}
-                    className="hidden md:inline-flex shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
-                  >
-                    <IconAdjustments className="h-4 w-4" />
-                    Filters
-                    {(activeFilters.length > 0 || hasFreshnessFilter) && (
-                      <span className="tabular-nums text-xs text-primary">
-                        {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
-                      </span>
-                    )}
-                  </Button>
-                </>
+              {/* The labelled button belongs to the hero, where searching is
+                  the whole point of the screen. Once results are up the query
+                  sits in the field and Enter re-runs it, so the button would
+                  only be another thing competing inside the bar. */}
+              {(!hasSearched || isLoading) && (
+                <Button
+                  onClick={isLoading ? stopSearch : handleSearch}
+                  size="default"
+                  variant={isLoading ? "outline" : "default"}
+                  aria-label={isLoading ? "Stop search" : "Search"}
+                  className={`shrink-0 transition-all duration-300 ${
+                    hasSearched
+                      ? "h-9 w-9 min-h-0 min-w-0 rounded-full p-0"
+                      : `min-h-[44px] min-w-[44px] md:min-h-[2.5rem] md:min-w-0 px-4 md:px-6 rounded-lg ${
+                          isLoading ? "" : isTyping ? (searchMode === "film_tv" ? "shadow-md shadow-violet-400/20" : "shadow-md shadow-primary/20") : ""
+                        }`
+                  }`}
+                >
+                  {isLoading ? (
+                    <>
+                      <IconX className="h-4 w-4" />
+                      {!hasSearched && <span className="hidden md:inline ml-1">Stop</span>}
+                    </>
+                  ) : (
+                    "Search"
+                  )}
+                </Button>
               )}
             </div>
+          </div>
+
+          {/* Filters sits beside the field, not crammed inside it */}
+          {hasSearched && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFiltersSheet(true)}
+                className="md:hidden shrink-0 gap-1 min-h-[40px] min-w-[40px] px-2 text-muted-foreground hover:text-foreground"
+                aria-label="Filters"
+              >
+                <IconAdjustments className="h-4 w-4" />
+                {(activeFilters.length > 0 || hasFreshnessFilter) && (
+                  <span className="tabular-nums text-xs text-primary">
+                    {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
+                  </span>
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowFilters(true)}
+                className="hidden md:inline-flex shrink-0 gap-1.5 text-muted-foreground hover:text-foreground"
+              >
+                <IconAdjustments className="h-4 w-4" />
+                Filters
+                {(activeFilters.length > 0 || hasFreshnessFilter) && (
+                  <span className="tabular-nums text-xs text-primary">
+                    {activeFilters.length + (hasFreshnessFilter ? 1 : 0)}
+                  </span>
+                )}
+              </Button>
+            </>
+          )}
           </div>
 
           {/* Action Row - Filters (Plays or Film & TV) + Find for me (Plays only).
