@@ -193,6 +193,41 @@ def has_interleaved_dialogue(text: str, cast: list[str]) -> bool:
     return False
 
 
+# --- flattened dialogue scenes ---------------------------------------------
+#
+# A third failure class, distinct from the two above and invisible to both. Some
+# film rows are a whole two-person scene collapsed into one "monologue": the
+# other character's lines were removed and what remained was concatenated, often
+# out of order. #9750 (Joker) runs backwards through the Murray interview —
+# "thanks for having me on" sits after the knock-knock that ends it.
+#
+# Nothing else catches it. The text is single-speaker, grammatical, in range and
+# artifact-free, so it passes every check including the cast-aware ones.
+#
+# The tell is a blank-line gap (where the other character was cut out) followed
+# by a fragment that ANSWERS something no longer present: "Yeah, ...",
+# "You're right...", "No, don't do that.". A real monologue does not contain
+# answers to absent questions.
+#
+# Fragment count alone is NOT the signal — Sling Blade, Gladiator, Apocalypse
+# Now and Tony Stark's recording in Endgame all run to 4+ paragraphs and are
+# perfectly good. Both conditions are required.
+_MIN_FRAGMENTS_FOR_SCENE = 4
+_REPLY_OPENER = re.compile(
+    r"^\s*(?:yeah|yes|no|nope|well|okay|ok|sure|right|you'?re right|i know|"
+    r"thanks|thank you|uh|um|oh|exactly|of course|i guess|maybe)\b",
+    re.I,
+)
+
+
+def has_flattened_scene(text: str) -> bool:
+    """True if ``text`` looks like a dialogue scene flattened into one speech."""
+    frags = [f for f in re.split(r"\n\s*\n", text or "") if f.strip()]
+    if len(frags) < _MIN_FRAGMENTS_FOR_SCENE:
+        return False
+    return any(_REPLY_OPENER.match(f) for f in frags)
+
+
 def has_stage_direction_residue(text: str, cast: list[str]) -> bool:
     """True if an ``Enter/Exit/Exeunt`` direction is welded into ``text``."""
     cast_l = {c.lower() for c in (cast or [])}
@@ -347,6 +382,11 @@ def assess_monologue_quality(
     # Lowercase screenplay-narration residue (film/TV only — see _NARRATION).
     if check_narration and _NARRATION.search(raw):
         reasons.append("narration")
+
+    # A dialogue scene flattened into one speech. Needs no cast list — the
+    # orphaned answers give it away on their own.
+    if has_flattened_scene(raw):
+        reasons.append("flattened_scene")
 
     # Cast-aware interleave — the checks that need to know who else is in the
     # play. Only run when a cast list was supplied.

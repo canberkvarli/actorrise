@@ -12,6 +12,7 @@ from app.services.licensing import (
 )
 from app.services.extraction.monologue_quality import (
     assess_monologue_quality,
+    has_flattened_scene,
     has_interleaved_dialogue,
     has_stage_direction_residue,
 )
@@ -137,6 +138,80 @@ class TestInterleaveGate:
         text = " ".join(["word"] * 60) + " Rosencrantz. And so I left."
         r = assess_monologue_quality(text)
         assert "interleaved_dialogue" not in r.reasons
+
+
+# --- flattened dialogue scenes ---------------------------------------------
+
+# #9750, verbatim from prod. Arthur's own lines with Murray's cut out and the
+# remainder concatenated backwards through the interview.
+JOKER = (
+    "Happy?! I'm not happy. I haven't been happy for one minute of my entire "
+    "fucking life. \n\nBut you know what's funny? You know what really makes me "
+    "laugh? I used to think my life was nothing but a tragedy, but now, now I "
+    "realize it's all just a fucking comedy. \n\nYou wanna hear a joke, Murray? "
+    "\n\nKnock-knock. \n\nYeah, I don't know if I should cross or uncross 'em. "
+    "Both feel completely unnatural. \n\nThanks for having me on, Murray. I "
+    "can't tell you how much this means to me, it's been a life long dream. I "
+    "have a joke for you— \n\nYou're right. You're right, uncrossed is "
+    "better. \n\nYou shouldn't be here. It's not right."
+)
+
+# A real 4-paragraph monologue. Must NOT trip the check — fragment count alone
+# is not the signal, or Sling Blade and Gladiator go with it.
+GOOD_LONG = (
+    "It was the strangest thing, I don't know that I can explain it. Two of my "
+    "men dead, and all I could think of was whether Kurtz was dead too."
+    "\n\nSomething happened out there that I could not put into words."
+    "\n\nEvery day I stayed made the river feel longer behind me."
+    "\n\nI wanted to see him. That was all I wanted, to see Kurtz."
+)
+
+
+class TestFlattenedScene:
+    def test_catches_the_joker_row(self):
+        assert has_flattened_scene(JOKER)
+
+    def test_long_real_monologue_survives(self):
+        assert not has_flattened_scene(GOOD_LONG)
+
+    def test_fragment_count_alone_is_not_enough(self):
+        """Six paragraphs, no orphaned answers — a real speech."""
+        text = "\n\n".join([
+            "I learned to read some, and I've read on the Bible quite a bit.",
+            "I don't understand all of it, but I understand a good deal.",
+            "Them stories Mama and you told me ain't in there at all.",
+            "You ort not to have told them to me that way.",
+            "I reckon I know that now, though it took me a long while.",
+            "That is about all I have got to say about it.",
+        ])
+        assert not has_flattened_scene(text)
+
+    def test_reply_opener_alone_is_not_enough(self):
+        """Under the fragment floor, a reply word is just a way to start."""
+        assert not has_flattened_scene("Yeah, I remember that day.\n\nIt rained.")
+
+    def test_no_paragraph_breaks_never_fires(self):
+        assert not has_flattened_scene("Yeah. " * 200)
+
+    @pytest.mark.parametrize("opener", [
+        "Yeah, I don't know.", "You're right, uncrossed is better.",
+        "No, don't do that.", "Well, maybe not exactly.",
+        "Okay?", "Exactly what I meant.", "Thanks for having me on.",
+    ])
+    def test_orphaned_answer_shapes(self, opener):
+        text = "\n\n".join(["A real opening line that runs on a while.",
+                            "Another substantial thought entirely.",
+                            "A third one, still going.", opener])
+        assert has_flattened_scene(text)
+
+    def test_gate_reports_reason(self):
+        r = assess_monologue_quality(JOKER)
+        assert "flattened_scene" in r.reasons
+        assert not r.ok
+
+    def test_gate_passes_the_good_one(self):
+        r = assess_monologue_quality(GOOD_LONG)
+        assert "flattened_scene" not in r.reasons
 
 
 # --- metadata normalising ---------------------------------------------------
