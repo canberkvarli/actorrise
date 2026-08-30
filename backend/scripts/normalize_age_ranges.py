@@ -142,41 +142,54 @@ def main() -> None:
     backup.write_text(json.dumps(changes, indent=2))
     print(f"\nbackup written: {backup}")
 
-    analyzer = None
+    embed_batch = None
     if not args.no_reembed:
-        from app.services.ai.content_analyzer import ContentAnalyzer
         from app.services.ai.embedding_text_builder import (
             build_monologue_enriched_text,
         )
-        analyzer = ContentAnalyzer()
+        from app.services.ai.langchain.embeddings import generate_embeddings_batch
+        embed_batch = generate_embeddings_batch
 
     # --- Phase 2: write in short transactions ---
     done = 0
     reembedded = 0
     for start in range(0, len(changes), BATCH):
         chunk = changes[start:start + BATCH]
+        new_by_id = {c["id"]: c["new"] for c in chunk}
         db = SessionLocal()
         try:
-            for c in chunk:
-                m = db.query(Monologue).filter(Monologue.id == c["id"]).first()
-                if not m:
-                    continue
-                m.character_age_range = c["new"]
-                if analyzer is not None:
-                    # The age string is part of the embedded text, so the vector
-                    # is stale the moment the column changes.
-                    try:
-                        m.embedding_vector = analyzer.generate_embedding(
-                            build_monologue_enriched_text(m)
-                        )
-                        reembedded += 1
-                    except Exception as exc:  # noqa: BLE001
-                        print(f"  re-embed failed for {c['id']}: {exc}")
+            ms = db.query(Monologue).filter(Monologue.id.in_(list(new_by_id))).all()
+            for m in ms:
+                m.character_age_range = new_by_id[m.id]
                 done += 1
+
+            if embed_batch is not None and ms:
+                # The age string is part of the embedded text, so the vector is
+                # stale the moment the column changes. One API call per batch
+                # rather than one per row — the per-row version took hours and
+                # was killed twice before finishing.
+                #
+                # model/dimensions MUST match ContentAnalyzer.generate_embedding
+                # (text-embedding-3-large @ 1536). The batch helper defaults to
+                # -small, and a different model means a different vector space:
+                # those rows would still be searchable-looking but would never
+                # match anything.
+                try:
+                    vecs = embed_batch(
+                        [build_monologue_enriched_text(m) for m in ms],
+                        model="text-embedding-3-large",
+                        dimensions=1536,
+                    )
+                    for m, v in zip(ms, vecs):
+                        if v:
+                            m.embedding_vector = v
+                            reembedded += 1
+                except Exception as exc:  # noqa: BLE001
+                    print(f"  batch re-embed failed at {start}: {exc}")
             db.commit()
         finally:
             db.close()
-        print(f"  {done}/{len(changes)} written, {reembedded} re-embedded")
+        print(f"  {done}/{len(changes)} written, {reembedded} re-embedded", flush=True)
 
     print(f"\napplied {done} rows ({reembedded} re-embedded)")
     print(f"undo: uv run python scripts/normalize_age_ranges.py --restore {backup}")
