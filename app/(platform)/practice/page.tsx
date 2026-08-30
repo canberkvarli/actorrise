@@ -30,11 +30,7 @@ export default function PracticePage() {
   const { user, loading: authLoading } = useAuth();
   const { data: scripts, isLoading: scriptsLoading, isFetched: scriptsFetched } = useScripts();
 
-  // The playbill walkthrough: introduces itself once, then lives behind (?).
   const [walkthroughOpen, setWalkthroughOpen] = useState(false);
-  useEffect(() => {
-    if (user && shouldAutoOpenWalkthrough()) setWalkthroughOpen(true);
-  }, [user]);
 
   const { demoScript, featuredScriptId, safeScripts, hasOwnScript } = useMemo(() => {
     const safeScripts = scripts ?? [];
@@ -52,6 +48,17 @@ export default function PracticePage() {
 
   const hasCachedData = scriptsFetched || safeScripts.length > 0;
   const isLoading = (authLoading && !user) || (scriptsLoading && !hasCachedData);
+
+  // The playbill walkthrough introduces itself to first-timers only, then lives
+  // behind (?). Two gates, because either alone is wrong: the seen-flag is
+  // per-browser, so an established actor signing in on a new device would get
+  // pitched the basics; and "no scripts yet" alone would re-pitch on every visit
+  // until they upload. Wait for the script list before deciding, or everyone
+  // looks like a first-timer for the first second.
+  useEffect(() => {
+    if (!user || !scriptsFetched || hasOwnScript) return;
+    if (shouldAutoOpenWalkthrough()) setWalkthroughOpen(true);
+  }, [user, scriptsFetched, hasOwnScript]);
 
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
