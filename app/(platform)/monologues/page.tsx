@@ -1726,18 +1726,36 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             />
           )}
 
-          {/* Expandable Filters - desktop only (shared for both modes) */}
-          {showFilters && (
-            <SearchFiltersPanel
-              filters={filters}
-              onChange={setFilters}
-              maxOverdoneScore={maxOverdoneScore}
-              onMaxOverdoneScoreChange={setMaxOverdoneScore}
-              activeFilters={activeFilters as [string, string][]}
-              hasFreshnessFilter={hasFreshnessFilter}
-              getFilterDisplay={getFilterDisplay}
-            />
-          )}
+          {/* Desktop filters, as a modal. Inline it pushed the results down the
+              page every time it opened; in a modal the stage clears, you set
+              what you want, and the results are where you left them. */}
+          <Dialog open={showFilters} onOpenChange={setShowFilters}>
+            <DialogContent className="max-w-3xl p-0 gap-0">
+              <DialogHeader className="border-b border-border/60 px-6 py-4">
+                <DialogTitle className="font-brand text-2xl font-medium">Narrow it down</DialogTitle>
+                <DialogDescription className="stage-direction text-xs text-muted-foreground/70">
+                  (who you are, what it feels like, how long you have.)
+                </DialogDescription>
+              </DialogHeader>
+              <div className="max-h-[70vh] overflow-y-auto px-6 pb-6">
+                <SearchFiltersPanel
+                  filters={filters}
+                  onChange={setFilters}
+                  maxOverdoneScore={maxOverdoneScore}
+                  onMaxOverdoneScoreChange={setMaxOverdoneScore}
+                  activeFilters={activeFilters as [string, string][]}
+                  hasFreshnessFilter={hasFreshnessFilter}
+                  getFilterDisplay={getFilterDisplay}
+                  className="pt-5"
+                />
+              </div>
+              <div className="flex items-center justify-end gap-2 border-t border-border/60 px-6 py-3">
+                <Button size="sm" onClick={() => setShowFilters(false)}>
+                  Show results
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
@@ -2083,27 +2101,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </motion.div>
           ) : results.length > 0 ? (
             <div id="search-results" className="space-y-4">
-              <ActiveFilterChips
-                filters={filters}
-                labels={{ gender: "Gender", age_range: "Age", emotion: "Emotion", theme: "Theme", category: "Category", tone: "Tone", difficulty: "Difficulty", author: "Author", max_duration: "Max Duration" }}
-                onRemove={(key) => setFilters((f) => ({ ...f, [key]: "" }))}
-                onClearAll={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" })}
-              />
-              <ParsedConstraintChips constraints={parsedConstraints} onRemove={handleRemoveConstraint} />
               {searchParams.get("ai") === "true" && (
                 <div className="flex items-center gap-2 p-4 bg-secondary/10 border border-secondary/30 rounded-lg">
                   <IconSparkles className="h-5 w-5 text-foreground flex-shrink-0" />
                   <p className="text-sm font-medium text-secondary-foreground">
                     AI-powered recommendations based on your profile
                   </p>
-                </div>
-              )}
-              {/* Profile completeness nudge — only when user has searched but has no personalization data */}
-              {hasSearched && results.length > 0 && profileData && !isPersonalized &&
-                !profileData.preferred_genres?.length && !profileData.experience_level && !isDemoUser && (
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded border border-border/60 bg-muted/20 text-xs text-muted-foreground">
-                  <span>Complete your profile for personalized results.</span>
-                  <Link href="/profile" className="text-primary underline underline-offset-2 shrink-0">Set it up →</Link>
                 </div>
               )}
               {correctedQuery && (
@@ -2140,42 +2143,44 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   <RequestQueryButton query={queryUsedForResults} className="flex items-center" />
                 </div>
               )}
-              {/* Results header: 3-col grid on desktop so feedback is always truly centered */}
-              <div className="flex flex-col gap-3 mb-8 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:items-center sm:gap-4">
-                {/* Left: count + mobile bookmark */}
-                <div className="flex items-center justify-between sm:justify-start gap-3 min-w-0">
-                  <div className="flex items-baseline gap-2 flex-wrap min-w-0">
-                    <span className="text-2xl font-semibold tabular-nums text-foreground">
-                      {showBookmarkedOnly
-                        ? results.filter((m) => m.is_favorited).length
-                        : total > 0 ? total : results.length}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      {showBookmarkedOnly ? "in your collection" : "monologues"}
-                    </span>
-                  </div>
-                  <Button
-                    variant={showBookmarkedOnly ? "secondary" : "outline"}
-                    size="sm"
-                    onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
-                    className={`sm:hidden gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
-                  >
-                    <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                    Collection
-                  </Button>
+              {/* One toolbar: how many, what shaped the search, and the
+                  collection toggle. These used to be four stacked strips —
+                  filter chips, "Understood:" chips, a profile nudge and the
+                  count row — which pushed the results down and read as noise. */}
+              <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border/50 pb-4">
+                <div className="flex items-baseline gap-2 shrink-0">
+                  <span className="text-2xl font-semibold tabular-nums text-foreground">
+                    {showBookmarkedOnly
+                      ? results.filter((m) => m.is_favorited).length
+                      : total > 0 ? total : results.length}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {showBookmarkedOnly ? "in your collection" : "monologues"}
+                  </span>
                 </div>
-                {/* Middle column intentionally empty: the feedback prompt moved
-                    below the results, where the actor has something to judge. */}
-                <div />
-                {/* Right: desktop collection filter button */}
+
+                {/* basis-full drops the chips onto their own line on a phone,
+                    where squeezing them between the count and the button
+                    interleaved everything; inline from sm up. */}
+                <div className="order-last flex min-w-0 basis-full flex-wrap items-center gap-2 sm:order-none sm:basis-auto sm:flex-1">
+                  <ActiveFilterChips
+                    filters={filters}
+                    labels={{ gender: "Gender", age_range: "Age", emotion: "Emotion", theme: "Theme", category: "Category", tone: "Tone", difficulty: "Difficulty", author: "Author", max_duration: "Max Duration" }}
+                    onRemove={(key) => setFilters((f) => ({ ...f, [key]: "" }))}
+                    onClearAll={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" })}
+                  />
+                  <ParsedConstraintChips constraints={parsedConstraints} onRemove={handleRemoveConstraint} />
+                </div>
+
                 <Button
                   variant={showBookmarkedOnly ? "secondary" : "outline"}
                   size="sm"
                   onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
-                  className={`hidden sm:inline-flex gap-2 rounded-full shrink-0 justify-self-end ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
+                  className={`ml-auto gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
                 >
                   <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
-                  In your collection
+                  <span className="hidden sm:inline">In your collection</span>
+                  <span className="sm:hidden">Collection</span>
                 </Button>
               </div>
 
@@ -2279,6 +2284,18 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   onOpenContact={() => setContactOpen(true)}
                 />
               </div>
+
+              {/* Profile nudge, after the results rather than above them: it's
+                  an offer to improve the next search, not a toll on this one. */}
+              {hasSearched && results.length > 0 && profileData && !isPersonalized &&
+                !profileData.preferred_genres?.length && !profileData.experience_level && !isDemoUser && (
+                <p className="pb-2 text-center text-xs text-muted-foreground">
+                  Add your type and I&apos;ll tailor these.{" "}
+                  <Link href="/profile" className="text-primary underline underline-offset-2">
+                    Set it up →
+                  </Link>
+                </p>
+              )}
             </div>
           ) : (
             // Pre-search: fill the space with something that helps them start —

@@ -80,6 +80,9 @@ interface SearchFiltersPanelProps {
   hasFreshnessFilter: boolean;
   /** "max duration: 2 min" — the page owns the duration-label lookup. */
   getFilterDisplay: (key: string, value: string) => string;
+  /** Wrapper classes. Defaults to the standalone card; a modal passes its own
+   *  so the panel doesn't draw a second border inside the dialog. */
+  className?: string;
 }
 
 /**
@@ -95,6 +98,7 @@ export function SearchFiltersPanel({
   activeFilters,
   hasFreshnessFilter,
   getFilterDisplay,
+  className = "hidden md:block mt-4 p-4 bg-card border border-border rounded-lg",
 }: SearchFiltersPanelProps) {
   const set = (key: keyof SearchFilters, value: string) =>
     onChange({ ...filters, [key]: value });
@@ -138,7 +142,7 @@ export function SearchFiltersPanel({
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: "auto" }}
       exit={{ opacity: 0, height: 0 }}
-      className="hidden md:block mt-4 p-4 bg-card border border-border rounded-lg"
+      className={className}
     >
       <div className="grid grid-cols-3 gap-6">
         {renderGroup("Character", CHARACTER)}
