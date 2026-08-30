@@ -262,6 +262,24 @@ _CID = re.compile(r"\(cid:\d+\)")
 _REVISION_MARK = re.compile(r"(?:(?<=\s)|^)\*+(?=\s|$)", re.M)
 
 
+def strip_revision_marks(text: str) -> str:
+    """Remove margin revision marks ONLY, leaving all other formatting alone.
+
+    Split out from :func:`to_display_text` so a retroactive cleanup can fix the
+    marks on already-stored rows without also applying that function's other
+    normalisations — in particular its whitespace collapse, which would flatten
+    the paragraph breaks of every legitimate multi-paragraph monologue in the
+    library.
+    """
+    raw = text or ""
+    if not _REVISION_MARK.search(raw):
+        return raw          # strict no-op: never touch text that has no mark
+    t = _REVISION_MARK.sub(" ", raw)
+    # Only tidy the spaces the removal itself created; newlines are preserved.
+    t = re.sub(r"[ \t]{2,}", " ", t)
+    return re.sub(r"[ \t]+([,.;:!?])", r"\1", t).strip()
+
+
 def to_display_text(text: str) -> str:
     """Clean a monologue for storage while KEEPING stage directions as `(...)`.
 

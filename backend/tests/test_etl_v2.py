@@ -15,6 +15,7 @@ from app.services.extraction.monologue_quality import (
     has_flattened_scene,
     has_interleaved_dialogue,
     has_stage_direction_residue,
+    strip_revision_marks,
     to_display_text,
 )
 from app.services.extraction.source_adapter import (
@@ -234,6 +235,37 @@ class TestRevisionMarks:
 
     def test_leading_mark_on_a_line(self):
         assert to_display_text("* This line was revised.") == "This line was revised."
+
+
+class TestStripRevisionMarksOnly:
+    """The retroactive cleaner must fix marks and change nothing else.
+
+    to_display_text also collapses whitespace, so reusing it for a bulk cleanup
+    would flatten the paragraph breaks of every legitimate multi-paragraph
+    monologue. A dry run over prod showed it touching 1,138 rows against the 172
+    that actually carry a mark.
+    """
+
+    def test_paragraph_breaks_survive(self):
+        text = "First para here.\n\nSecond * para here.\n\nThird para."
+        out = strip_revision_marks(text)
+        assert out.count("\n\n") == 2
+        assert "*" not in out
+
+    def test_text_without_a_mark_is_returned_untouched(self):
+        """Byte-for-byte, including double spaces it is not our job to tidy."""
+        text = "Plain  text  here.\n\nWith   odd spacing."
+        assert strip_revision_marks(text) == text
+
+    def test_to_display_text_would_have_flattened_it(self):
+        """Documents why this helper exists at all."""
+        text = "One.\n\nTwo.\n\nThree."
+        assert "\n\n" not in to_display_text(text)
+        assert strip_revision_marks(text) == text
+
+    def test_word_count_drops_by_the_marks_removed(self):
+        text = "I said * this and * that."
+        assert len(strip_revision_marks(text).split()) == len(text.split()) - 2
 
 
 # --- metadata normalising ---------------------------------------------------
