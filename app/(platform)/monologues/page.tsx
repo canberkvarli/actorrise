@@ -9,7 +9,6 @@ import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +65,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { TrendingPreSearch } from "@/components/monologue/TrendingPreSearch";
 import { ForYouShelf } from "@/components/monologue/ForYouShelf";
 import { MasksSketch } from "@/components/brand/sketches";
+import { SearchFiltersPanel } from "@/components/monologue/SearchFiltersPanel";
 import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
@@ -76,7 +76,6 @@ import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 import { ReportMonologueModal } from "@/components/monologue/ReportMonologueModal";
 import { EditMonologueModal } from "@/components/admin/EditMonologueModal";
 import type { EditMonologueBody } from "@/components/admin/EditMonologueModal";
-import { FreshnessToggle } from "@/components/search/FreshnessToggle";
 import { ContactModal } from "@/components/contact/ContactModal";
 import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackPrompt";
 import { extractQueryHighlights } from "@/lib/queryMatchHighlight";
@@ -99,7 +98,6 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function MonologuesPage() {
   return (
@@ -1730,156 +1728,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
 
           {/* Expandable Filters - desktop only (shared for both modes) */}
           {showFilters && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              className="hidden md:block mt-4 p-4 bg-card border border-border rounded-lg"
-            >
-              {/* 3-section grouped layout: Character | Mood & Style | Practical */}
-              <div className="grid grid-cols-3 gap-6">
-                {/* Character */}
-                <div className="space-y-2.5">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground/80">Character</h4>
-                  {[
-                    { key: "gender", label: "Gender", options: ["male", "female", "any"] },
-                    { key: "age_range", label: "Age Range", options: ["teens", "20s", "30s", "40s", "50s", "60+"] },
-                  ].map(({ key, label, options }) => (
-                    <div key={key} className="space-y-1">
-                      <Label className="text-[11px] text-muted-foreground">{label}</Label>
-                      <Select
-                        value={filters[key as keyof typeof filters] || "__any__"}
-                        onValueChange={(v) => setFilters({ ...filters, [key]: v === "__any__" ? "" : v })}
-                      >
-                        <SelectTrigger className="w-full h-9 px-2.5 text-sm">
-                          <SelectValue placeholder="Any" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__any__">Any</SelectItem>
-                          {options.map((opt) => (
-                            <SelectItem key={opt} value={opt} className="capitalize">{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Mood & Style */}
-                <div className="space-y-2.5">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground/80">Mood & Style</h4>
-                  {[
-                    { key: "emotion", label: "Emotion", options: ["joy", "sadness", "anger", "fear", "melancholy", "hope"] },
-                    { key: "tone", label: "Tone", options: ["dramatic", "comedic", "dark", "romantic", "philosophical", "contemplative"] },
-                    { key: "theme", label: "Theme", options: ["love", "death", "betrayal", "identity", "power", "revenge"] },
-                  ].map(({ key, label, options }) => (
-                    <div key={key} className="space-y-1">
-                      <Label className="text-[11px] text-muted-foreground">{label}</Label>
-                      <Select
-                        value={filters[key as keyof typeof filters] || "__any__"}
-                        onValueChange={(v) => setFilters({ ...filters, [key]: v === "__any__" ? "" : v })}
-                      >
-                        <SelectTrigger className="w-full h-9 px-2.5 text-sm">
-                          <SelectValue placeholder="Any" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__any__">Any</SelectItem>
-                          {options.map((opt) => (
-                            <SelectItem key={opt} value={opt} className="capitalize">{opt}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Practical */}
-                <div className="space-y-2.5">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-foreground/80">Practical</h4>
-                  {[
-                    { key: "category", label: "Category", options: ["classical", "contemporary"] },
-                    { key: "difficulty", label: "Difficulty", options: ["beginner", "intermediate", "advanced"] },
-                    { key: "max_duration", label: "Max Duration", options: [
-                      { value: "60", label: "1 min" },
-                      { value: "90", label: "1.5 min" },
-                      { value: "120", label: "2 min" },
-                      { value: "180", label: "3 min" },
-                      { value: "300", label: "5 min" },
-                    ] },
-                  ].map(({ key, label, options }) => (
-                    <div key={key} className="space-y-1">
-                      <Label className="text-[11px] text-muted-foreground">{label}</Label>
-                      <Select
-                        value={filters[key as keyof typeof filters] || "__any__"}
-                        onValueChange={(v) => setFilters({ ...filters, [key]: v === "__any__" ? "" : v })}
-                      >
-                        <SelectTrigger className="w-full h-9 px-2.5 text-sm">
-                          <SelectValue placeholder="Any" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__any__">Any</SelectItem>
-                          {(options as Array<string | { value: string; label: string }>).map((opt) =>
-                            typeof opt === "string" ? (
-                              <SelectItem key={opt} value={opt} className="capitalize">{opt}</SelectItem>
-                            ) : (
-                              <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                            )
-                          )}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ))}
-                  <div className="space-y-1">
-                    <Label className="text-[11px] text-muted-foreground">Author</Label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Shakespeare"
-                      value={filters.author}
-                      onChange={(e) => setFilters({ ...filters, author: e.target.value })}
-                      className="w-full h-9 px-2.5 text-sm rounded-md border border-input bg-background"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Originality toggle — full width below the 3 columns */}
-              <div className="mt-4 pt-4 border-t border-border/60">
-                <FreshnessToggle value={maxOverdoneScore} onChange={setMaxOverdoneScore} />
-              </div>
-
-              {(activeFilters.length > 0 || hasFreshnessFilter) && (
-                <div className="flex flex-wrap items-center gap-1.5 mt-4 pt-4 border-t">
-                  {activeFilters.map(([key, value]) => (
-                    <span key={key} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted/80 text-foreground border border-border/40 capitalize">
-                      <span className="text-muted-foreground">{key.replace(/_/g, " ")}:</span> {getFilterDisplay(key, value).split(": ").pop()}
-                      <button
-                        onClick={() => setFilters({ ...filters, [key]: "" })}
-                        className="ml-0.5 hover:text-destructive"
-                      >
-                        <IconX className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))}
-                  {hasFreshnessFilter && (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs bg-muted/80 text-foreground border border-border/40">
-                      <span className="text-muted-foreground">originality:</span> {maxOverdoneScore <= 0.3 ? "Fresh picks" : "Popular too"}
-                      <button
-                        onClick={() => setMaxOverdoneScore(1)}
-                        className="ml-0.5 hover:text-destructive"
-                      >
-                        <IconX className="h-3 w-3" />
-                      </button>
-                    </span>
-                  )}
-                  <button
-                    onClick={() => { setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" }); setMaxOverdoneScore(1); }}
-                    className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
-                  >
-                    Clear all
-                  </button>
-                </div>
-              )}
-            </motion.div>
+            <SearchFiltersPanel
+              filters={filters}
+              onChange={setFilters}
+              maxOverdoneScore={maxOverdoneScore}
+              onMaxOverdoneScoreChange={setMaxOverdoneScore}
+              activeFilters={activeFilters as [string, string][]}
+              hasFreshnessFilter={hasFreshnessFilter}
+              getFilterDisplay={getFilterDisplay}
+            />
           )}
         </div>
       </div>
