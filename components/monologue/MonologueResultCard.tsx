@@ -10,12 +10,15 @@ import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 import { motion } from "framer-motion";
 import { Monologue } from "@/types/actor";
 import { isMeaningfulMonologueTitle, displayableAuthor } from "@/lib/utils";
+import { getGenreDotClassName } from "@/lib/genreColors";
 import { MatchIndicatorTag, accentTeal } from "@/components/search/MatchIndicatorTag";
 import type { QueryHighlights } from "@/lib/queryMatchHighlight";
 import type { MatchReason } from "@/lib/matchReasons";
 
+/** `rank` is the 0-based result index, so only index 0 is the best pick —
+ *  `<= 1` claimed it for the first two, and two cards both read "Best pick". */
 function getRankLabel(rank: number): string | null {
-  if (rank <= 1) return "Best pick";
+  if (rank === 0) return "Best pick";
   if (rank <= 4) return "Great match";
   if (rank <= 9) return "Good match";
   return null;
@@ -86,14 +89,17 @@ export function MonologueResultCard({
     >
       {indicatorLabel && <MatchIndicatorTag label={indicatorLabel} />}
       <Card
-        className={`shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col group rounded-lg ${
-          size === "dashboard" ? "h-[500px]" : "h-full min-h-[480px]"
-        } ${
-          isBestMatch ? "border-l-4 border-border hover:border-muted-foreground/40" : "hover:border-secondary/50"
-        }`}
+        className={`relative overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 cursor-pointer flex flex-col group rounded-lg ${
+          size === "dashboard" ? "h-[500px]" : "h-full min-h-[380px]"
+        } ${isBestMatch ? "border-border hover:border-muted-foreground/40" : "hover:border-secondary/50"}`}
         onClick={onSelect}
       >
-        <CardContent className="p-6 flex-1 flex flex-col">
+        {/* Category spine — the same shelf-to-page colour cue ScenePartner uses */}
+        <span
+          aria-hidden
+          className={`absolute inset-y-0 left-0 w-1 opacity-70 ${getGenreDotClassName(mono.category)}`}
+        />
+        <CardContent className="p-6 pl-7 flex-1 flex flex-col">
           <div className="space-y-4 flex-1">
             <div className="flex items-start justify-between gap-2">
               {mono.poster_url && (
@@ -169,6 +175,24 @@ export function MonologueResultCard({
               </div>
             </div>
 
+            {/* What the actor decides on, before the words: how long is it, and
+                is everyone else already bringing it. Length used to sit in the
+                footer under eight lines of excerpt. */}
+            <div className="flex items-center gap-x-2 gap-y-1 flex-wrap text-xs">
+              <span className="font-medium text-foreground tabular-nums">
+                {Math.floor(mono.estimated_duration_seconds / 60)}:
+                {(mono.estimated_duration_seconds % 60).toString().padStart(2, "0")}
+              </span>
+              <span className="text-muted-foreground/40">·</span>
+              <span className="text-muted-foreground tabular-nums">{mono.word_count} words</span>
+              {/* Only 151 of 14.4k pieces score above 0.7, so this stays rare */}
+              {mono.overdone_score > 0.7 && (
+                <span className="border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-400">
+                  everyone brings this
+                </span>
+              )}
+            </div>
+
             {/* One quiet line: gender · age · category · emotion */}
             <div className="flex items-center gap-x-2 gap-y-1 flex-wrap text-xs text-muted-foreground min-h-[20px]">
               {mono.character_gender && mono.character_gender.toLowerCase() !== "any" && (
@@ -203,30 +227,20 @@ export function MonologueResultCard({
             </div>
 
             {/* The piece — the focus. It's the monologue text, so: typewriter. */}
+            {/* A taste, not the whole speech — eight lines of it pushed the
+                length, the label and the action off the bottom of the card. */}
             <p
               className={`font-typewriter text-[15px] leading-relaxed text-foreground/80 ${
-                size === "dashboard" ? "line-clamp-[10]" : "line-clamp-[8]"
+                size === "dashboard" ? "line-clamp-[6]" : "line-clamp-4"
               }`}
             >
-              &ldquo;{mono.text.substring(0, size === "dashboard" ? 640 : 500)}…&rdquo;
+              &ldquo;{mono.text.substring(0, size === "dashboard" ? 400 : 280)}…&rdquo;
             </p>
-          </div>
-
-          <div className="mt-4 pt-4 border-t flex items-center gap-4 text-xs text-muted-foreground">
-            <span>
-              {Math.floor(mono.estimated_duration_seconds / 60)}:
-              {(mono.estimated_duration_seconds % 60).toString().padStart(2, "0")} min
-            </span>
-            <span>{mono.word_count} words</span>
-            <span className="ml-auto flex items-center gap-1">
-              <IconBookmark className="h-3 w-3" />
-              {mono.favorite_count}
-            </span>
           </div>
 
           {/* One clear action: rehearse the piece. Memorize/self-tape live on the
               detail view + Collection, so the card stays a single obvious step. */}
-          <div className="mt-3">
+          <div className="mt-4 pt-4 border-t flex items-center gap-3">
             <Link
               href={`/monologue/${mono.id}/work`}
               onClick={(e) => e.stopPropagation()}
@@ -235,6 +249,12 @@ export function MonologueResultCard({
               Rehearse
               <IconArrowRight className="h-3.5 w-3.5" />
             </Link>
+            {mono.favorite_count > 0 && (
+              <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+                <IconBookmark className="h-3 w-3" />
+                {mono.favorite_count}
+              </span>
+            )}
           </div>
         </CardContent>
       </Card>

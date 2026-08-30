@@ -65,6 +65,7 @@ import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
 import { TrendingPreSearch } from "@/components/monologue/TrendingPreSearch";
 import { ForYouShelf } from "@/components/monologue/ForYouShelf";
+import { MasksSketch } from "@/components/brand/sketches";
 import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
@@ -1448,19 +1449,46 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8 max-w-[88rem] relative">
       {outlineOverlay}
 
-      {/* Hero Search Section - compact on mobile */}
-      <div className="mb-4 sm:mb-6 md:mb-10">
-        <div className="text-center mb-3 sm:mb-4 md:mb-8">
-          <p className="hidden md:block stage-direction text-sm md:text-base text-muted-foreground/70 mb-3">
-            (the search.)
-          </p>
-          <h1 className="font-brand font-medium leading-[1.05] text-4xl sm:text-5xl md:text-6xl">
-            Find your next <em className="italic text-primary">piece</em>
-          </h1>
-        </div>
+      {/* Hero Search Section. Once a search has run the title gets out of the
+          way and the search bar sticks to the top — otherwise the answer opens
+          below the fold and every search costs a scroll. */}
+      <div
+        className={
+          hasSearched
+            /* top offsets clear the sticky nav, which measures 65px on mobile
+               and 81px from sm up — any less and the mode toggle tucks under it */
+            ? "sticky top-16 z-30 -mx-4 mb-4 border-b border-border/50 bg-background/90 px-4 py-3 backdrop-blur-md sm:top-20 sm:-mx-6 sm:px-6"
+            : "mb-4 sm:mb-6 md:mb-10"
+        }
+      >
+        <AnimatePresence initial={false}>
+          {!hasSearched && (
+            <motion.div
+              key="hero-title"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+              className="overflow-hidden"
+            >
+              <div className="text-center mb-3 sm:mb-4 md:mb-8">
+                <p className="hidden md:block stage-direction text-sm md:text-base text-muted-foreground/70 mb-3">
+                  (the search.)
+                </p>
+                <h1 className="font-brand font-medium leading-[1.05] text-4xl sm:text-5xl md:text-6xl">
+                  Find your next <em className="italic text-primary">piece</em>
+                </h1>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Plays vs Film & TV toggle: spacious on mobile, 44px touch targets */}
-        <div className="flex items-center justify-center gap-2 mb-3 sm:mb-4 px-1">
+        <div
+          className={`flex items-center justify-center gap-2 px-1 ${
+            hasSearched ? "mb-2" : "mb-3 sm:mb-4"
+          }`}
+        >
           <div className="w-full max-w-sm sm:max-w-none sm:w-auto inline-flex rounded-xl border border-border bg-muted/40 p-2 gap-2 sm:p-1 sm:gap-0">
             <button
               type="button"
@@ -1532,7 +1560,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </div>
 
             <div
-              className={`relative flex flex-col md:flex-row md:items-center gap-2 p-2 bg-card border rounded-xl shadow-sm transition-all duration-300 ${
+              className={`relative flex ${
+                /* stacked is roomier for a first search, but inside the sticky
+                   bar it costs a button's height of results on every phone */
+                hasSearched ? "flex-row items-center" : "flex-col"
+              } md:flex-row md:items-center gap-2 p-2 bg-card border rounded-xl shadow-sm transition-all duration-300 ${
                 isTyping
                   ? searchMode === "film_tv"
                     ? "border-violet-400/50 shadow-lg shadow-violet-400/5"
@@ -1605,7 +1637,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </div>
 
           {/* Action Row - Filters (Plays or Film & TV) + Find for me (Plays only) */}
-          <div id="search-filters" className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-3 sm:mt-4">
+          <div
+            id="search-filters"
+            className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
+              hasSearched ? "mt-2" : "mt-3 sm:mt-4"
+            }`}
+          >
             <div className="flex items-center gap-2 flex-wrap">
               <Button
                 variant="ghost"
@@ -1644,7 +1681,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 disabled={isLoading}
                 variant="outline"
                 size="sm"
-                className="gap-2 min-h-[44px] md:min-h-0 border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary"
+                /* a way in before you've searched; on a phone afterwards it's
+                   just another row between the actor and the results */
+                className={`gap-2 min-h-[44px] md:min-h-0 border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary ${
+                  hasSearched ? "hidden md:inline-flex" : ""
+                }`}
               >
                 <IconSparkles className="h-4 w-4" />
                 Find for me
@@ -1652,14 +1693,19 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             )}
           </div>
 
-          {/* Quick filter chips — one-tap popular filters */}
-          <div className="mt-3">
-            <QuickFilterChips
-              filters={filters}
-              onToggle={(key, value) => setFilters({ ...filters, [key]: value })}
-              hideCategory={searchMode === "film_tv"}
-            />
-          </div>
+          {/* Quick filter chips — one-tap popular filters. They're a way in to
+              the first search; after that the parsed-constraint chips and the
+              filter panel do this job, and keeping them would fatten the
+              sticky bar. */}
+          {!hasSearched && (
+            <div className="mt-3">
+              <QuickFilterChips
+                filters={filters}
+                onToggle={(key, value) => setFilters({ ...filters, [key]: value })}
+                hideCategory={searchMode === "film_tv"}
+              />
+            </div>
+          )}
 
           {/* Mobile: filters in sheet (SearchFiltersSheet). Desktop: expandable inline filters */}
           <SearchFiltersSheet
@@ -1951,8 +1997,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </>
                 ) : (
                   <Card className="border-dashed bg-muted/20">
-                    <CardContent className="pt-12 pb-12 text-center">
-                      <p className="text-muted-foreground text-sm">No results found</p>
+                    <CardContent className="flex flex-col items-center pt-12 pb-12 text-center">
+                      <MasksSketch size={56} className="text-muted-foreground/50" />
+                      <p className="stage-direction mt-5 text-sm text-muted-foreground">
+                        (nothing on this bill.)
+                      </p>
                     </CardContent>
                   </Card>
                 )}
@@ -2016,11 +2065,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   if (filmTvDisplay.length === 0) {
                     return (
                       <Card className="border-dashed bg-muted/20">
-                        <CardContent className="pt-12 pb-12 text-center">
-                          <p className="text-muted-foreground text-sm">
+                        <CardContent className="flex flex-col items-center pt-12 pb-12 text-center">
+                          <MasksSketch size={56} className="text-muted-foreground/50" />
+                          <p className="stage-direction mt-5 text-sm text-muted-foreground">
                             {showBookmarkedOnly
-                              ? "Nothing in your collection yet"
-                              : "No results found"}
+                              ? "(nothing saved here yet.)"
+                              : "(nothing on this bill.)"}
                           </p>
                         </CardContent>
                       </Card>
@@ -2304,7 +2354,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     onToggleFavorite={toggleFavorite}
                     variant={variant}
                     index={idx}
-                    showMatchBadge={showBadges}
+                    /* The rank label comes from position alone, so a piece below
+                       the divider could read "Great match" while the divider
+                       above it says these are the further-afield ones. The
+                       divider already states the band; drop the badge there. */
+                    showMatchBadge={showBadges && mono.band !== "looser"}
                     isModerator={!!user?.is_moderator}
                     onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
                     highlightFields={queryHighlights}
@@ -2325,9 +2379,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     </div>
                     {showDivider && (
                       <>
+                        {/* "Looser matches" read like a verdict on the actor's
+                            taste. Same meaning, said as a stage direction. */}
                         <div className="mt-8 mb-4 border-t border-border pt-3">
-                          <span className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                            Looser matches
+                          <span className="stage-direction text-sm text-muted-foreground/70">
+                            (further afield.)
                           </span>
                         </div>
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">

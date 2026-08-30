@@ -236,7 +236,10 @@ export default function PlatformLayout({
     >
     <TooltipProvider>
     <UploadProvider>
-    <div className="min-h-screen bg-background overflow-x-hidden relative">
+    {/* overflow-x-clip, not -hidden: `hidden` forces overflow-y to auto, which
+        makes this a scroll container and silently breaks `position: sticky` for
+        everything inside it. `clip` contains the same overflow without that. */}
+    <div className="min-h-screen bg-background overflow-x-clip relative">
       {/* Logout transition overlay */}
       <AnimatePresence>
         {isLoggingOut && (
