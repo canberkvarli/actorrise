@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { ActorProfileForm } from "@/components/profile/ActorProfileForm";
+import { ProfilePrivacyCard } from "@/components/profile/ProfilePrivacyCard";
 import { ProfileTour } from "@/components/onboarding/ProfileTour";
 import { useAuth } from "@/lib/auth";
 
@@ -26,6 +27,7 @@ export default function ProfilePage() {
         </p>
       </div>
       <ActorProfileForm />
+      <ProfilePrivacyCard />
       {showProfileTour && (
         <ProfileTour
           onDismiss={async () => {

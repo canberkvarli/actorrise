@@ -7,7 +7,7 @@
       "emoji": "🎭",
       "description": "Rehearse with an AI scene partner. Upload your own script, extract scenes, and run your lines voice-to-voice. Available now.",
       "category": "feature",
-      "show_modal": true,
+      "show_modal": false,
       "cta_text": "Try it now",
       "cta_link": "/my-scripts",
       "image_url": null
@@ -19,7 +19,7 @@
       "emoji": "🎬",
       "description": "Search 14,000+ film and TV references. We'll point you directly to the script.",
       "category": "feature",
-      "show_modal": true,
+      "show_modal": false,
       "cta_text": "Try it now",
       "cta_link": "/search?type=film",
       "image_url": null

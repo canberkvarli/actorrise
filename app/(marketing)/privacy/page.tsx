@@ -91,6 +91,9 @@ export default function PrivacyPage() {
             <li><strong className="text-foreground">AI and analytics:</strong> We may use services (e.g., OpenAI) to power features such as search and recommendations. Data sent to such providers is used only to provide the feature and in accordance with their data terms.</li>
           </ul>
           <p className="mt-3">
+            <strong className="text-foreground">Community feed (the callboard).</strong> ActorRise includes a community activity feed visible to other signed-in users. It can show your first name, city, and profile photo alongside activity such as joining, reading, saving, or rehearsing a particular monologue. It never shows the text of your searches: raw search queries are not stored in the feed at all, and a search appears only as a general description (for example, &ldquo;searched for a comedic monologue&rdquo;). You can turn this off at any time using &ldquo;Hide my activity&rdquo; on the callboard, which also hides your past activity, not just future activity. A logged-out preview of the feed shows only a first initial and no photo.
+          </p>
+          <p className="mt-3">
             We do not sell your personal information. We may disclose your information if required by law, to protect our rights or safety, or in connection with a merger, sale, or transfer of assets (with notice where required).
           </p>
         </section>

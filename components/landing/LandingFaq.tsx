@@ -6,21 +6,37 @@ import { AnimatePresence, motion } from "framer-motion";
 
 const FAQ_ITEMS = [
   {
-    q: "Is the search really AI?",
-    a: "Yes, the search is AI. ActorRise runs semantic (AI) search over 12,000+ real monologues from plays, films, and TV, so you can describe what you need in plain English. The AI only finds the piece. The monologue text itself is the original published work, never AI-generated or invented.",
+    q: "Are the monologues AI-written?",
+    a: "No. Every piece is the original published text from a real play, film, or show. The AI only helps you find the right one, it never writes or rewrites a word of the monologue itself.",
+  },
+  {
+    q: "How does the search actually work?",
+    a: "You describe what you need the way you'd say it out loud, like \"angry woman in her twenties, under two minutes\" or \"something funny that isn't Shakespeare.\" It searches meaning, not keywords, across 14,000+ monologues from nearly 2,000 plays, films, and shows.",
   },
   {
     q: "Where do the monologues come from?",
-    a: "Every piece links back to its source and original publication (e.g. Project Gutenberg and similar). We never host full scripts of copyrighted works. Full details: ",
+    a: "Public domain plays, plus film and TV. Every piece links back to its source and original publication, and I don't host full scripts of copyrighted work. Full details: ",
     link: { href: "/sources", label: "Sources & copyright" },
   },
   {
-    q: "Is my data private?",
-    a: "We don't sell your data. Your searches are private and used only to provide the service and improve search quality.",
+    q: "Can other people see what I search for?",
+    a: "Your searches are never shown to anyone, and the raw text you type is never even stored. The callboard can show that someone searched for a comedic monologue, never the words you used. Pieces you read, save, or rehearse do appear there with your first name and photo, and you can switch that off anytime with \"Hide my activity\" on the callboard. It hides everything you've already done too, not just what comes next.",
+  },
+  {
+    q: "Will everyone in the room be doing the same piece?",
+    a: "That's the real problem with monologue books. Every piece here is scored on how overdone it is, from fresh to warhorse, so you can see what you're walking in with before you commit to it.",
+  },
+  {
+    q: "What is ScenePartner?",
+    a: "An AI reader for your scenes. Upload a script, it pulls out the scenes and characters, and you run your lines with it out loud, voice to voice. It's for the nights you need to rehearse at 1am and nobody is around.",
+  },
+  {
+    q: "Do I have to pay to try it?",
+    a: "No. You can start free without a card and search right away. Plus is $12 a month or $99 a year if you want unlimited searches and more time with ScenePartner.",
   },
   {
     q: "How do I cancel?",
-    a: "Cancel anytime from your account or billing page. No long-term commitment.",
+    a: "Anytime, from your billing page, in a couple of clicks. No commitment and no retention maze to click through.",
   },
 ];
 

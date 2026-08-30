@@ -79,8 +79,8 @@ export function EventLine({ e }: { e: FeedEvent }) {
       );
     case "milestone":
       return <>hit {p.milestone_n} rehearsals</>;
-    case "went_plus":
-      return <>went Plus</>;
+    // "went_plus" is retired: it published billing status next to a real name
+    // and face. Filtered server-side too; falls through to null if one slips by.
     case "trending":
       return (
         <>

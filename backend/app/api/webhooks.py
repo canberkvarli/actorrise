@@ -157,9 +157,9 @@ def handle_checkout_completed(session: dict, db: Session):
 
     db.commit()
 
-    # Green Room: "Maya went Plus" — social proof for the paywall. Safe/no-throw.
-    from app.services.community import record_event
-    record_event(user_id, "went_plus")
+    # No community event here. "Maya went Plus" was social proof for the paywall,
+    # but it published a user's billing status next to their name, city, and
+    # headshot. Rehearsal activity belongs in the feed; who is paying does not.
 
     print(f"✅ Checkout completed for user {user_id} - {billing_period} subscription")
 

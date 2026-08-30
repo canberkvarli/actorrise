@@ -36,9 +36,14 @@ VALID_EVENT_TYPES = {
     "rehearsing",  # live: rehearsing a scene with a partner in the Green Room
     "shared",  # shared a script with the community library
     "milestone",
-    "went_plus",
     "trending",
 }
+
+# Retired event types. "went_plus" outed who was paying, tied to a real first
+# name, city, and face, which is billing status rather than rehearsal activity.
+# Kept here (and filtered at feed read time) so historical rows stay out of the
+# feed without needing a destructive delete.
+RETIRED_EVENT_TYPES = {"went_plus"}
 
 # The ONLY keys that may be persisted in payload. Anything else is dropped on
 # write — this is the hard wall that keeps raw queries / PII out of the feed.

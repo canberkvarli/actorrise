@@ -27,6 +27,7 @@ from app.core.database import get_db
 from app.models.actor import ActorProfile, UserScript
 from app.models.community import CommunityEvent
 from app.models.user import User
+from app.services.community import RETIRED_EVENT_TYPES
 
 # Community library needs at least this many shared scripts before it stops
 # showing the "still gathering" cold-start state.
@@ -93,6 +94,7 @@ def get_feed(
         .outerjoin(User, CommunityEvent.user_id == User.id)
         .outerjoin(ActorProfile, ActorProfile.user_id == User.id)
         .filter(CommunityEvent.created_at >= cutoff)
+        .filter(CommunityEvent.event_type.notin_(RETIRED_EVENT_TYPES))
         .filter(
             or_(
                 CommunityEvent.user_id.is_(None),
