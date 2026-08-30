@@ -80,9 +80,21 @@ _NARRATION_VERB = (
     "sees|smiles|nods|looks|turns|stares|frowns|shrugs|glances|enters|exits|"
     "stands|sits|walks|steps|pauses|crosses|grabs|pulls|opens|closes|watches|"
     "moves|reaches|leans|gestures|gazes|points|laughs|sighs|rises|kneels|stops|"
-    "drops|lifts|raises|holds|picks|waves|hands|stares|whispers|shouts|screams"
+    "drops|lifts|raises|holds|picks|waves|hands|stares|whispers|shouts|screams|"
+    # Added after #11309 (Heathers) and #9715 (Coco) slipped through with whole
+    # action paragraphs inside the dialogue.
+    "crawls|hangs|wriggles|reveals|tunes|sucks|begins|climbs|slides|throws|"
+    "takes|puts|sets|carries|pushes|runs|jumps|kicks|slams|tosses|wipes"
 )
-_NARRATION = re.compile(r"\b[A-Z][a-z]+\s+(?:" + _NARRATION_VERB + r")\b")
+# Two shapes of subject. Title-Case ("Truman nods") is the prose form; ALL-CAPS
+# ("VERONICA hangs up") is how screenplays actually write character names in
+# action lines, and the original pattern could not see it at all — which is why
+# Heathers kept an entire stage-action paragraph in the middle of a monologue.
+# ALL-CAPS is also the safer half: classical verse never shouts a name mid-line,
+# so it cannot produce the false positives this check is opt-in to avoid.
+_NARRATION = re.compile(
+    r"\b(?:[A-Z][a-z]+|[A-Z]{2,})\s+(?:" + _NARRATION_VERB + r")\b"
+)
 
 
 def has_narration(text: str) -> bool:
@@ -225,7 +237,13 @@ def has_flattened_scene(text: str) -> bool:
     frags = [f for f in re.split(r"\n\s*\n", text or "") if f.strip()]
     if len(frags) < _MIN_FRAGMENTS_FOR_SCENE:
         return False
-    return any(_REPLY_OPENER.match(f) for f in frags)
+    # frags[1:] on purpose. The signal is an answer sitting AFTER a gap where the
+    # other character's line was removed. A speech's own opening may legitimately
+    # begin "Of course," or "Well," — it is answering something in the scene that
+    # was never part of this monologue. Notting Hill's opening voiceover starts
+    # "Of course, I've seen her films" and is five clean paragraphs of one man
+    # talking; counting the first fragment condemned it.
+    return any(_REPLY_OPENER.match(f) for f in frags[1:])
 
 
 def has_stage_direction_residue(text: str, cast: list[str]) -> bool:
