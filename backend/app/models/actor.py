@@ -449,6 +449,58 @@ class UserScript(Base):
 
     # Relationships
     scenes = relationship("Scene", back_populates="user_script", foreign_keys="Scene.user_script_id")
+    tags = relationship(
+        "ScriptTag", back_populates="script", cascade="all, delete-orphan"
+    )
+
+
+class ScriptTag(Base):
+    """A tag on a shared script. Written by the OWNER only.
+
+    Deliberately not a folksonomy: letting any actor write free text onto
+    someone else's upload creates a moderation queue and an abuse surface for a
+    solo-run product. The community's voice comes through votes instead (see
+    :class:`ScriptTagVote`) — strangers can amplify a tag but never author one,
+    so popular tags still rise without anyone policing stranger-written text.
+    """
+    __tablename__ = "script_tags"
+    __table_args__ = (
+        UniqueConstraint("user_script_id", "tag", name="uq_script_tag"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_script_id = Column(
+        Integer, ForeignKey("user_scripts.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    tag = Column(String(32), nullable=False, index=True)  # normalised, lowercase
+    created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))
+
+    script = relationship("UserScript", back_populates="tags")
+    votes = relationship(
+        "ScriptTagVote", back_populates="tag", cascade="all, delete-orphan"
+    )
+
+
+class ScriptTagVote(Base):
+    """One actor's upvote on one tag. Unique per (tag, user), so it toggles."""
+    __tablename__ = "script_tag_votes"
+    __table_args__ = (
+        UniqueConstraint("script_tag_id", "user_id", name="uq_script_tag_vote"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    script_tag_id = Column(
+        Integer, ForeignKey("script_tags.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False, index=True,
+    )
+    created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))
+
+    tag = relationship("ScriptTag", back_populates="votes")
 
 
 # ============================================================================

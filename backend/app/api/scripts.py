@@ -10,7 +10,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
@@ -24,8 +24,11 @@ from app.models.actor import (
     Scene,
     SceneFavorite,
     SceneLine,
+    ScriptTag,
+    ScriptTagVote,
     UserScript,
 )
+from app.services.script_tags import normalize_tag_list
 from app.models.user import User
 from app.services.character_names import canonicalize_scene_characters
 from app.services.script_parser import ScriptParser
@@ -1291,6 +1294,145 @@ async def set_script_shared(
         record_event(int(current_user.id), "shared", title=script.title)
 
     return UserScriptResponse.model_validate(script)
+
+
+# ---------------------------------------------------------------------------
+# Tags on shared scripts — owner writes, community votes.
+# See app/services/script_tags.py for why it is not an open folksonomy.
+# ---------------------------------------------------------------------------
+
+
+class ScriptTagResponse(BaseModel):
+    id: int
+    tag: str
+    votes: int
+    voted_by_me: bool = False
+
+
+class SetTagsRequest(BaseModel):
+    tags: List[str]
+
+
+def _tags_for_scripts(
+    db: Session, script_ids: List[int], viewer_id: Optional[int]
+) -> dict[int, List[ScriptTagResponse]]:
+    """Load tags + vote counts for many scripts in one pass.
+
+    Batched deliberately: the community library renders a list, and a per-card
+    query here would be an N+1 straight onto the hot path.
+    """
+    if not script_ids:
+        return {}
+
+    rows = (
+        db.query(
+            ScriptTag.id,
+            ScriptTag.user_script_id,
+            ScriptTag.tag,
+            func.count(ScriptTagVote.id).label("votes"),
+        )
+        .outerjoin(ScriptTagVote, ScriptTagVote.script_tag_id == ScriptTag.id)
+        .filter(ScriptTag.user_script_id.in_(script_ids))
+        .group_by(ScriptTag.id, ScriptTag.user_script_id, ScriptTag.tag)
+        .all()
+    )
+
+    mine: set[int] = set()
+    if viewer_id:
+        mine = {
+            v.script_tag_id
+            for v in db.query(ScriptTagVote.script_tag_id)
+            .join(ScriptTag, ScriptTag.id == ScriptTagVote.script_tag_id)
+            .filter(
+                ScriptTagVote.user_id == viewer_id,
+                ScriptTag.user_script_id.in_(script_ids),
+            )
+            .all()
+        }
+
+    out: dict[int, List[ScriptTagResponse]] = {}
+    for tag_id, script_id, tag, votes in rows:
+        out.setdefault(script_id, []).append(
+            ScriptTagResponse(
+                id=tag_id, tag=tag, votes=int(votes or 0),
+                voted_by_me=tag_id in mine,
+            )
+        )
+    # Most-upvoted first; ties alphabetical so ordering is stable between loads.
+    for tags in out.values():
+        tags.sort(key=lambda t: (-t.votes, t.tag))
+    return out
+
+
+@router.put("/{script_id}/tags", response_model=List[ScriptTagResponse])
+async def set_script_tags(
+    script_id: int,
+    body: SetTagsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Replace the tags on your own script (owner only, max 8).
+
+    Votes on tags that survive the edit are preserved — retagging shouldn't
+    silently discard the community's signal. Votes on removed tags go with them.
+    """
+    script = db.query(UserScript).filter(
+        UserScript.id == script_id,
+        UserScript.user_id == current_user.id,
+    ).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="Script not found")
+
+    wanted = set(normalize_tag_list(body.tags))
+    existing = db.query(ScriptTag).filter(ScriptTag.user_script_id == script_id).all()
+    by_name = {t.tag: t for t in existing}
+
+    for tag in existing:
+        if tag.tag not in wanted:
+            db.delete(tag)          # cascade drops its votes
+    for name in wanted:
+        if name not in by_name:
+            db.add(ScriptTag(user_script_id=script_id, tag=name))
+
+    db.commit()
+    return _tags_for_scripts(db, [script_id], int(current_user.id)).get(script_id, [])
+
+
+@router.post("/{script_id}/tags/{tag_id}/vote", response_model=ScriptTagResponse)
+async def toggle_tag_vote(
+    script_id: int,
+    tag_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Toggle your upvote on a tag. Only on scripts shared with the community."""
+    tag = db.query(ScriptTag).filter(
+        ScriptTag.id == tag_id,
+        ScriptTag.user_script_id == script_id,
+    ).first()
+    if not tag:
+        raise HTTPException(status_code=404, detail="Tag not found")
+
+    script = db.query(UserScript).filter(UserScript.id == script_id).first()
+    if not script or not script.shared_with_community:
+        # Not shared means not public, so its tags aren't votable either.
+        raise HTTPException(status_code=404, detail="Tag not found")
+
+    existing = db.query(ScriptTagVote).filter(
+        ScriptTagVote.script_tag_id == tag_id,
+        ScriptTagVote.user_id == current_user.id,
+    ).first()
+    if existing:
+        db.delete(existing)
+    else:
+        db.add(ScriptTagVote(script_tag_id=tag_id, user_id=int(current_user.id)))
+    db.commit()
+
+    tags = _tags_for_scripts(db, [script_id], int(current_user.id)).get(script_id, [])
+    found = next((t for t in tags if t.id == tag_id), None)
+    if not found:
+        raise HTTPException(status_code=404, detail="Tag not found")
+    return found
 
 
 @router.delete("/{script_id}")
