@@ -254,6 +254,13 @@ _TERMINAL_PUNCT = ".!?"
 
 _CID = re.compile(r"\(cid:\d+\)")
 
+# Revision marks from a shooting script's right margin. Production drafts print
+# an asterisk beside every changed line; x-position flattening pulls it into the
+# sentence, so Joker's speech arrives as "Do you ever actually * leave the
+# studio?". Same family as _JOIN_ARTIFACT — never meaningful inside dialogue.
+# Anchored to whitespace boundaries so an in-word asterisk is left alone.
+_REVISION_MARK = re.compile(r"(?:(?<=\s)|^)\*+(?=\s|$)", re.M)
+
 
 def to_display_text(text: str) -> str:
     """Clean a monologue for storage while KEEPING stage directions as `(...)`.
@@ -267,6 +274,7 @@ def to_display_text(text: str) -> str:
     t = t.replace("[", "(").replace("]", ")")          # bracket cues -> parens
     t = t.replace("�", "")                         # mojibake replacement char
     t = "".join(c for c in t if c == "\n" or ord(c) >= 32)  # drop control chars
+    t = _REVISION_MARK.sub(" ", t)                      # shooting-script margin marks
     t = re.sub(r"\(\s*\)", " ", t)                      # empty parens left by cid removal
     t = re.sub(r"\s+([,.;:!?])", r"\1", t)
     t = re.sub(r"\s+", " ", t).strip()

@@ -15,6 +15,7 @@ from app.services.extraction.monologue_quality import (
     has_flattened_scene,
     has_interleaved_dialogue,
     has_stage_direction_residue,
+    to_display_text,
 )
 from app.services.extraction.source_adapter import (
     fields_needing_inference,
@@ -212,6 +213,27 @@ class TestFlattenedScene:
     def test_gate_passes_the_good_one(self):
         r = assess_monologue_quality(GOOD_LONG)
         assert "flattened_scene" not in r.reasons
+
+
+class TestRevisionMarks:
+    """Shooting-script margin asterisks, pulled in by x-position flattening."""
+
+    def test_stripped_from_display_text(self):
+        raw = "Do you ever actually * leave the studio? Nobody's * civil anymore."
+        assert "*" not in to_display_text(raw)
+
+    def test_real_joker_line_cleans_up(self):
+        raw = "Everybody just * yells and screams at each other. * Nobody's civil."
+        assert to_display_text(raw) == (
+            "Everybody just yells and screams at each other. Nobody's civil."
+        )
+
+    def test_in_word_asterisk_survives(self):
+        """Only whitespace-bounded marks are margin noise."""
+        assert "f*ck" in to_display_text("He said f*ck under his breath.")
+
+    def test_leading_mark_on_a_line(self):
+        assert to_display_text("* This line was revised.") == "This line was revised."
 
 
 # --- metadata normalising ---------------------------------------------------

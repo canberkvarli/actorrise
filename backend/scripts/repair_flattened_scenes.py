@@ -162,16 +162,23 @@ def main() -> None:
 
     for play_id, items in films:
         title = items[0]["play_title"]
+        # A film we cannot re-fetch still has broken rows. Queue them for review
+        # rather than leaving them live and unflagged, which is how they
+        # survived the last four months.
+        def _queue_all(why: str) -> None:
+            unmatched.append(title)
+            for it in items:
+                ops.append({**it, "kind": "queue"})
+            print(f"  {title[:38]:38s} {why} ({len(items)} queued)")
+
         slug = slug_index.get(_norm_title(title))
         if not slug:
-            unmatched.append(title)
-            print(f"  {title[:38]:38s} no_scriptslug_match")
+            _queue_all("no_scriptslug_match")
             continue
 
         content, reason = fetch_pdf(slug)
         if content is None:
-            unmatched.append(title)
-            print(f"  {title[:38]:38s} fetch_failed ({reason})")
+            _queue_all(f"fetch_failed {reason}")
             continue
         try:
             with tempfile.NamedTemporaryFile(suffix=".pdf") as fh:
@@ -181,8 +188,7 @@ def main() -> None:
                     fh.name, min_words=MIN_WORDS, max_words=MAX_WORDS
                 )
         except Exception as exc:  # noqa: BLE001 — one bad PDF must not stop the run
-            unmatched.append(title)
-            print(f"  {title[:38]:38s} parse_failed ({type(exc).__name__})")
+            _queue_all(f"parse_failed {type(exc).__name__}")
             continue
 
         # Group fresh candidates by character so a broken row can be matched to
