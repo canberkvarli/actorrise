@@ -27,7 +27,7 @@ import { SearchCurtain } from "@/components/monologue/SearchCurtain";
 // A ticket stub for "nothing on this bill" — the masks were already doing duty
 // as the gibberish/short empty state and as a starting-point tile, so film & TV
 // coming back empty looked identical to two other things.
-import { TicketSketch } from "@/components/brand/sketches";
+import { ScriptPagesSketch, TicketSketch } from "@/components/brand/sketches";
 import { SearchFiltersPanel } from "@/components/monologue/SearchFiltersPanel";
 import { NoResultsState } from "@/components/monologue/NoResultsState";
 import { StartingPoints } from "@/components/monologue/StartingPoints";
@@ -1573,11 +1573,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </button>
                 )}
               </div>
-              {/* The labelled button belongs to the hero, where searching is
-                  the whole point of the screen. Once results are up the query
-                  sits in the field and Enter re-runs it, so the button would
-                  only be another thing competing inside the bar. */}
-              {(!hasSearched || isLoading) && (
+              {/* Always present. It shrinks to a round icon button once results
+                  are up (see the `hasSearched` branch below) but it must not
+                  disappear: hiding it left Enter as the only way to re-run a
+                  search, which on a phone keyboard is not a discoverable path
+                  and on desktop reads as the search box having gone dead. */}
+              {(
                 <Button
                   onClick={isLoading ? stopSearch : handleSearch}
                   size="default"
@@ -2019,9 +2020,17 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border/50 pb-4">
                 <div className="flex items-baseline gap-2 shrink-0">
                   <span className="text-2xl font-semibold tabular-nums text-foreground">
+                    {/* `total` is the server's full count for paging, but it was
+                        shown even when we held no results — a page reading
+                        "11 monologues" above nothing. Never report more than we
+                        actually have to show. */}
                     {showBookmarkedOnly
                       ? results.filter((m) => m.is_favorited).length
-                      : total > 0 ? total : results.length}
+                      : results.length === 0
+                        ? 0
+                        : total > 0
+                          ? total
+                          : results.length}
                   </span>
                   <span className="text-sm text-muted-foreground">
                     {showBookmarkedOnly ? "in your collection" : "monologues"}
@@ -2057,7 +2066,30 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {(() => {
                 const relatedOrBookmarked = showBookmarkedOnly ? results.filter((m) => m.is_favorited) : sortedRelated;
                 const hasCards = (!showBookmarkedOnly && bestMatches.length > 0) || relatedOrBookmarked.length > 0;
-                if (!hasCards) return null;
+                // Never `return null` here. This block sits directly under a
+                // count, so rendering nothing produced a screen that said
+                // "11 monologues" above an empty page with no explanation.
+                // Whatever emptied the list, say so.
+                if (!hasCards) {
+                  return (
+                    <Card className="border-dashed bg-muted/20">
+                      <CardContent className="flex flex-col items-center pt-12 pb-12 text-center">
+                        <ScriptPagesSketch size={56} className="text-muted-foreground/50" />
+                        <p className="stage-direction mt-5 text-sm text-muted-foreground">
+                          {showBookmarkedOnly ? "(nothing saved here yet.)" : "(nothing to show.)"}
+                        </p>
+                        {showBookmarkedOnly && (
+                          <button
+                            onClick={() => setShowBookmarkedOnly(false)}
+                            className="mt-4 text-sm text-primary underline-offset-4 hover:underline"
+                          >
+                            Show all results
+                          </button>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                }
                 // Show match badges for all semantic results (score > 0.1 check is in the card itself).
                 // showConfidence only gates the "Best Matches" section header, not individual badges.
                 const showBadges = !showBookmarkedOnly;

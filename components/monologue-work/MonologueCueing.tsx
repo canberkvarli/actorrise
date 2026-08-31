@@ -32,7 +32,6 @@ const MATCH_THRESHOLD = 0.85;
 /** Silence (ms) on the current line before we cue it (reveal the text). */
 const STALL_MS = 3000;
 
-const SERIF = "var(--font-sans), Georgia, 'Times New Roman', serif";
 /** Typewriter face — reserved for the monologue TEXT itself (never titles/UI). */
 const SCRIPT = "var(--font-typewriter), 'Courier Prime', 'Courier New', monospace";
 
@@ -166,13 +165,45 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
     setActiveIndex(next);
   }, []);
 
-  const { transcript, isListening, isSupported, startListening, stopListening, resetTranscript } =
-    useSpeechRecognition({ continuous: true, interimResults: true });
+  const {
+    transcript,
+    isListening,
+    isSupported,
+    startListening,
+    stopListening,
+    resetTranscript,
+    error: speechError,
+  } = useSpeechRecognition({ continuous: true, interimResults: true });
 
-  // No Web Speech API (iOS Safari, most phones) → run as a tap-to-advance
+  /**
+   * The support check is not enough on its own, and this was the whole mobile
+   * problem: iOS Safari HAS webkitSpeechRecognition, so `isSupported` is true and
+   * we committed to voice mode — then `start()` failed at runtime and the error
+   * went nowhere, because this component never read `error` off the hook. You got
+   * a stage that said "Listening" while nothing advanced, forever. Mobile reached
+   * a spoken line 30% of the time against desktop's 64%.
+   *
+   * 'no-speech' fires on any quiet stretch and 'aborted' is our own unmount
+   * cleanup — neither means a broken mic. Anything else does.
+   */
+  const micBroke =
+    !!speechError && speechError !== "no-speech" && speechError !== "aborted";
+
+  // Latch it. `startListening` clears `error`, so without this the UI would flap
+  // between voice and tap mode instead of settling.
+  const [micDead, setMicDead] = useState(false);
+  useEffect(() => {
+    if (micBroke) setMicDead(true);
+  }, [micBroke]);
+
+  /** Set when the re-listen budget below runs out — the mic never errored, it
+   *  just refused to stay on. Same outcome for the actor, so same fallback. */
+  const [listenExhausted, setListenExhausted] = useState(false);
+
+  // No Web Speech API at all, or it died on us → run as a tap-to-advance
   // teleprompter instead of silently failing. Voice-follow is a bonus, not a
   // requirement, so the whole feature works on every device.
-  const tapToAdvance = !isSupported;
+  const tapToAdvance = !isSupported || micDead || listenExhausted;
 
   // Reset the live transcript when we move to a new line so highlighting is fresh.
   const goToLineAndReset = useCallback(
@@ -216,10 +247,37 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
     if (completed && isListening) stopListening();
   }, [completed, isListening, stopListening]);
 
+  /**
+   * The other way a run silently stalls. Chrome ends a "continuous" session on
+   * its own after a stretch of silence — which is most of a monologue, since you
+   * pause between beats. `onend` flips isListening false, the dock reads "Paused"
+   * and nothing ever starts it again. Pick the mic back up while the run is live.
+   *
+   * Budgeted so a mic that refuses to start can't spin here forever; past the
+   * budget we fall through to tap mode rather than pretending to listen.
+   */
+  const restartsRef = useRef(0);
+  const RESTART_BUDGET = 40;
+
+  useEffect(() => {
+    if (!started || completed || tapToAdvance || isListening || listenExhausted) return;
+    if (restartsRef.current >= RESTART_BUDGET) {
+      setListenExhausted(true);
+      return;
+    }
+    const t = setTimeout(() => {
+      restartsRef.current += 1;
+      startListening();
+    }, 400);
+    return () => clearTimeout(t);
+  }, [started, completed, tapToAdvance, isListening, listenExhausted, startListening]);
+
   const resetRun = useCallback(() => {
     resetTranscript();
     setRevealCurrent(false);
     setActiveIndex(0);
+    restartsRef.current = 0;
+    setListenExhausted(false);
   }, [resetTranscript]);
 
   const begin = useCallback(async () => {
@@ -248,7 +306,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   const spokenCount = spokenPrefixCount(currentLine, transcript);
 
   if (lines.length === 0) {
-    return <p className="text-white/50" style={{ fontFamily: SERIF }}>This piece has no usable text to run.</p>;
+    return <p className="font-sans text-white/50">This piece has no usable text to run.</p>;
   }
 
   return (
@@ -275,7 +333,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
           <IconArrowLeft className="h-5 w-5" />
         </button>
         <div className="min-w-0">
-          <h1 className="truncate text-2xl leading-tight text-white sm:text-3xl" style={{ fontFamily: SERIF }}>
+          <h1 className="truncate font-brand text-2xl font-medium leading-tight text-white sm:text-3xl">
             {monologue.character_name}
           </h1>
           <p className="truncate text-sm text-white/55">{monologue.title}</p>
@@ -355,9 +413,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             className="relative z-10 flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 py-10 text-center"
           >
             <span className="text-[0.68rem] uppercase tracking-[0.3em] text-[#CB4B00]">Curtain</span>
-            <h2 className="text-3xl text-white/90" style={{ fontFamily: SERIF }}>
-              You made it through.
-            </h2>
+            <h2 className="font-brand text-3xl font-medium text-white/90">You made it through.</h2>
             <p className="max-w-xs text-sm leading-relaxed text-white/45">
               Run it again, or take it into the room.
             </p>
@@ -401,7 +457,10 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
               {tapToAdvance ? (
                 <span className="pointer-events-none flex select-none items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-white/45">
                   <StatusDot state="tap" />
-                  Tap to advance
+                  {/* If the mic dropped out mid-run, say so. Switching the rules
+                      of the screen without a word is how the old silent failure
+                      read as the app being broken. */}
+                  {micDead || listenExhausted ? "Mic dropped · tap to advance" : "Tap to advance"}
                 </span>
               ) : (
                 <span className="pointer-events-none flex select-none items-center gap-2.5 text-[0.7rem] uppercase tracking-[0.18em] text-white/55">
