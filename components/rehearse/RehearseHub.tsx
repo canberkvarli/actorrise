@@ -91,19 +91,14 @@ export function RehearseHub() {
       transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
       className="space-y-8"
     >
-      {/* Header */}
+      {/* The eyebrow, the title and the description all said "this is where your
+          saved pieces live". Three lines, one fact. The eyebrow says it best, so
+          the third line goes and the rule goes with it. */}
       <header>
         <p className="stage-direction text-sm text-muted-foreground/70">(your repertoire.)</p>
         <h1 className="mt-2 font-brand text-4xl font-medium leading-[1.05] sm:text-5xl">
           Collection
         </h1>
-        <div
-          aria-hidden
-          className="mt-3 h-0.5 w-12 rounded-full bg-gradient-to-r from-primary to-primary/30"
-        />
-        <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-          Your study shelf. Work through each monologue, then mark it off-book.
-        </p>
       </header>
 
       {!showContent ? (

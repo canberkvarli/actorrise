@@ -94,42 +94,32 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
     });
   };
 
-  const meta = [monologue.character_name, monologue.play_title, monologue.author]
-    .filter(Boolean)
-    .join(" · ");
+  /**
+   * Lead with the character, not `title`.
+   *
+   * The stored titles are machine-made and mostly useless — "Hamlet's speech
+   * from Hamlet", "King's speech from Hamlet", "Gina's Monologue" — and the old
+   * code knew it: it had a comment saying most titles are generic, and then set
+   * them in 30px bold anyway. Two Hamlet speeches were indistinguishable at a
+   * glance. Every other card in the app leads with the character; this one now
+   * does too, and falls back to the title only when there is no character.
+   */
+  const lead = monologue.character_name?.trim() || monologue.title;
+  const source = [monologue.play_title, monologue.author].filter(Boolean).join(" · ");
 
-  // Adaptive title size: longer titles step down so they fit (and wrap) instead
-  // of getting cut off. (e.g. "Lady Bracknell's speech from The Importance…")
-  const titleLen = monologue.title?.length ?? 0;
-  const titleSize =
-    titleLen > 54
-      ? "text-lg sm:text-xl"
-      : titleLen > 36
-        ? "text-xl sm:text-2xl"
-        : "text-2xl sm:text-3xl";
-
-  // Most monologue titles are generic ("Hamlet's speech from Hamlet"), so lead
-  // with the opening line — the quickest "which one is this" cue. A short scene
-  // description, when present, sets the stage before the quote.
-  const excerpt = monologue.text?.replace(/\s+/g, " ").trim().slice(0, 160);
+  // Scene and quote on separate lines. They used to be welded together with an
+  // em dash, which made one long grey sentence with a quote buried inside it.
+  const excerpt = monologue.text?.replace(/\s+/g, " ").trim().slice(0, 150);
   const scene = monologue.scene_description?.replace(/\s+/g, " ").trim();
-  const synopsis = scene && excerpt
-    ? `${scene} — “${excerpt}…”`
-    : excerpt
-      ? `“${excerpt}…”`
-      : scene || null;
 
-  // A few sharp-cornered chips for whatever's present (capped, empties skipped).
-  const chips = [
+  // Plain text with dot separators, not a row of bordered chips: these are
+  // facts about the piece, not filters, and four little boxes read as controls.
+  const facts = [
     formatDuration(monologue.estimated_duration_seconds),
     sourceLabel(monologue.source_type),
     titleCase(monologue.tone),
-    titleCase(monologue.primary_emotion),
     titleCase(monologue.category),
-    monologue.character_age_range?.trim(),
-  ]
-    .filter((c): c is string => Boolean(c))
-    .slice(0, 4);
+  ].filter((c): c is string => Boolean(c));
 
   const lastWorked = lastWorkedLabel(monologue.last_studied_at);
 
@@ -144,7 +134,7 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
         ease: [0.25, 0.1, 0.25, 1],
         delay: Math.min(index * 0.04, 0.32),
       }}
-      className="group relative -mx-3 flex flex-col gap-4 overflow-hidden rounded-lg px-3 py-6 transition-colors hover:bg-primary/[0.04] sm:flex-row sm:items-start sm:justify-between sm:gap-6"
+      className="group relative -mx-3 overflow-hidden rounded-lg px-3 py-6 transition-colors hover:bg-primary/[0.04]"
     >
       {/* Left accent bar: amber once off-book, a quick orange slide-in on hover. */}
       <span
@@ -156,109 +146,106 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
         }`}
       />
 
-      {/* Left: title, meta, synopsis, chips */}
-      <div className="min-w-0">
-        {/* h2 so the title renders in the Cormorant Garamond heading face (same as
-            the "Collection" title), and for proper heading semantics. */}
+      {/* One column, held to a readable measure.
+          The row used to be flex + justify-between across the full page width,
+          which parked the title hard left and Rehearse/Memorize hard right with
+          400px of nothing between them. Nothing was near anything it acted on. */}
+      <div className="max-w-2xl">
         <h2 className="min-w-0">
           <Link
-            href={memorizeHref}
-            className={`block min-w-0 text-balance break-words font-bold leading-snug tracking-tight text-foreground transition-colors hover:text-primary ${titleSize}`}
+            href={`/monologue/${monologue.id}`}
+            className="font-typewriter block min-w-0 break-words text-xl font-semibold leading-snug text-foreground transition-colors hover:text-primary sm:text-2xl"
           >
-            {monologue.title}
+            {lead}
           </Link>
         </h2>
 
-        {meta && (
-          <p className="mt-1.5 truncate text-sm text-muted-foreground">
-            {meta}
-            {lastWorked ? <span className="text-muted-foreground/60"> · {lastWorked}</span> : null}
+        {source && (
+          <p className="font-typewriter mt-1 truncate text-sm text-muted-foreground">
+            {source}
           </p>
         )}
 
-        {synopsis && (
-          <p className="mt-2 line-clamp-2 text-sm italic leading-relaxed text-muted-foreground/70">
-            {synopsis}
+        {scene && (
+          <p className="mt-3 line-clamp-1 text-sm text-muted-foreground/70">{scene}</p>
+        )}
+        {excerpt && (
+          <p className="font-typewriter mt-1.5 line-clamp-2 text-sm leading-relaxed text-muted-foreground/80">
+            &ldquo;{excerpt}&hellip;&rdquo;
           </p>
         )}
 
-        {chips.length > 0 && (
-          <ul className="mt-3 flex flex-wrap items-center gap-1.5">
-            {chips.map((chip) => (
-              <li
-                key={chip}
-                className="border border-border/70 bg-muted/40 px-2 py-0.5 text-xs text-muted-foreground"
-              >
-                {chip}
-              </li>
-            ))}
-          </ul>
+        {(facts.length > 0 || lastWorked) && (
+          <p className="mt-3 text-xs text-muted-foreground/60">
+            {[...facts, lastWorked].filter(Boolean).join(" · ")}
+          </p>
         )}
-      </div>
 
-      {/* Right: Remove (hover) · Memorize · a bulb that lights up once off-book */}
-      <div className="flex shrink-0 items-center gap-4 sm:pt-1">
-        <button
-          type="button"
-          className="text-xs text-muted-foreground/70 underline-offset-4 opacity-0 transition-opacity hover:text-foreground hover:underline group-hover:opacity-100 max-sm:opacity-100"
-          onClick={handleRemove}
-        >
-          Remove
-        </button>
+        {/* Actions sit under the thing they act on, not across the page from it. */}
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
+          <Link
+            href={`/monologue/${monologue.id}/work`}
+            className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+          >
+            Rehearse
+          </Link>
+          <Link
+            href={memorizeHref}
+            className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+          >
+            Memorize
+          </Link>
+          <button
+            type="button"
+            onClick={handleRemove}
+            className="text-sm text-muted-foreground/60 underline-offset-4 transition-colors hover:text-foreground hover:underline"
+          >
+            Remove
+          </button>
 
-        <Link
-          href={`/monologue/${monologue.id}/work`}
-          className="shrink-0 text-sm font-semibold text-primary underline-offset-4 hover:underline"
-        >
-          Rehearse
-        </Link>
-
-        <Link
-          href={memorizeHref}
-          className="shrink-0 text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
-          Memorize
-        </Link>
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <motion.button
-              type="button"
-              onClick={() =>
-                mark.mutate({ monologueId: monologue.id, memorized: !memorized })
-              }
-              aria-pressed={memorized}
-              whileTap={{ scale: 0.8 }}
-              className="shrink-0 rounded-full p-1 cursor-pointer"
-            >
-              <motion.span
-                key={memorized ? "on" : "off"}
-                initial={{ scale: 0.5 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 520, damping: 14 }}
-                className="inline-flex"
+          {/* The bulb was a lone icon floating at the far right of the row. It
+              is a toggle, so it lives with the other things you can do; the
+              amber accent bar down the left edge already carries the status. */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <motion.button
+                type="button"
+                onClick={() =>
+                  mark.mutate({ monologueId: monologue.id, memorized: !memorized })
+                }
+                aria-pressed={memorized}
+                whileTap={{ scale: 0.8 }}
+                className="shrink-0 cursor-pointer rounded-full p-1"
               >
-                {memorized ? (
-                  <IconBulbFilled
-                    className="size-6 text-amber-400 drop-shadow-[0_0_7px_rgba(251,191,36,0.6)]"
-                    aria-hidden
-                  />
-                ) : (
-                  <IconBulb
-                    className="size-6 text-muted-foreground/35 transition-colors hover:text-muted-foreground"
-                    aria-hidden
-                  />
-                )}
-              </motion.span>
-              <span className="sr-only">
-                {memorized ? "Memorized" : "Mark as memorized"}
-              </span>
-            </motion.button>
-          </TooltipTrigger>
-          <TooltipContent>
-            {memorized ? "Memorized — tap to unmark" : "Mark as memorized"}
-          </TooltipContent>
-        </Tooltip>
+                <motion.span
+                  key={memorized ? "on" : "off"}
+                  initial={{ scale: 0.5 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", stiffness: 520, damping: 14 }}
+                  className="inline-flex"
+                >
+                  {memorized ? (
+                    <IconBulbFilled
+                      className="size-5 text-amber-400 drop-shadow-[0_0_7px_rgba(251,191,36,0.6)]"
+                      aria-hidden
+                    />
+                  ) : (
+                    <IconBulb
+                      className="size-5 text-muted-foreground/35 transition-colors hover:text-muted-foreground"
+                      aria-hidden
+                    />
+                  )}
+                </motion.span>
+                <span className="sr-only">
+                  {memorized ? "Off book" : "Mark as off book"}
+                </span>
+              </motion.button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {memorized ? "Off book. Tap to unmark." : "Mark as off book"}
+            </TooltipContent>
+          </Tooltip>
+        </div>
       </div>
     </motion.article>
   );
