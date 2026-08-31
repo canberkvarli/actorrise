@@ -10,26 +10,30 @@ import { IconLoader2 } from "@tabler/icons-react";
 /**
  * /first-scene — the zero-setup first rehearsal intro.
  *
- * A focused interstitial that drops a brand-new actor straight into one curated
- * scene. No script upload, no character picker: we fetch a guaranteed-valid
- * casting from the backend, show a single "tap to start" card, then hand off to
- * the existing rehearsal page with a freshly-created session (the exact handoff
- * the practice editor already uses). This is the move that targets the
- * 88.6%-search → 3.9%-rehearse activation cliff.
+ * A focused interstitial that drops a brand-new actor straight into one piece.
+ * No search, no saving, no setup: fetch one short monologue matched loosely to
+ * their profile, show a single "tap to start" card, and hand off to /work. This
+ * is the move that targets the 88.6%-search → 3.9%-rehearse activation cliff.
+ *
+ * It used to hand off to a curated two-hander from the scene library. That
+ * library was deleted in the monologue-study pivot (purge_library_scenes.py)
+ * and this screen was never repointed, so its endpoint 404'd for all 265
+ * eligible actors and the flow only ever ran its bail-out path. Same intent,
+ * content that still exists.
  */
 
-interface FirstScene {
-  scene_id: number;
-  user_character: string;
-  ai_character: string;
-  title: string;
+interface FirstPiece {
+  monologue_id: number;
+  character_name: string;
   play_title?: string | null;
+  author?: string | null;
+  estimated_duration_seconds?: number | null;
 }
 
 export default function FirstScenePage() {
   const router = useRouter();
   const { user, loading, refreshUser } = useAuth();
-  const [scene, setScene] = useState<FirstScene | null>(null);
+  const [scene, setScene] = useState<FirstPiece | null>(null);
   const [starting, setStarting] = useState(false);
   const fetchedRef = useRef(false);
 
@@ -82,11 +86,11 @@ export default function FirstScenePage() {
     if (fetchedRef.current || loading || !user) return;
     fetchedRef.current = true;
     api
-      .get<FirstScene>("/api/scenes/first-rehearsal")
+      .get<FirstPiece>("/api/monologues/first-rehearsal")
       .then(({ data }) => setScene(data))
       .catch(() => {
-        // No scene seeded in this environment — don't trap the user.
-        leaveTo("/practice");
+        // Nothing servable — don't trap the user.
+        leaveTo("/monologues");
       });
   }, [loading, user, leaveTo]);
 
@@ -104,34 +108,18 @@ export default function FirstScenePage() {
     return () => clearTimeout(id);
   }, [scene, leaveTo]);
 
-  const handleStart = useCallback(async () => {
+  const handleStart = useCallback(() => {
     if (!scene || starting) return;
     setStarting(true);
-    try {
-      const { data } = await api.post<{ id: number } & Record<string, unknown>>(
-        "/api/scenes/rehearse/start",
-        { scene_id: scene.scene_id, user_character: scene.user_character },
-      );
-      // Cache so the rehearsal page skips the extra GET round-trip.
-      try {
-        sessionStorage.setItem(`actorrise_session_${data.id}`, JSON.stringify(data));
-      } catch {
-        /* quota — fine, page will GET instead */
-      }
-      // Mark seen but don't await the refresh; navigate immediately.
-      void api
-        .patch("/api/auth/onboarding", { has_seen_first_rehearsal: true })
-        .catch(() => {});
-      router.push(`/scenes/${scene.scene_id}/rehearse?session=${data.id}&firstRun=1`);
-    } catch {
-      // Couldn't start (rare) — send them to the scene library so they still
-      // have a path forward, and don't loop them back here.
-      setStarting(false);
-      void leaveTo("/rehearse");
-    }
-  }, [scene, starting, router, leaveTo]);
+    // No session to create: /work takes the monologue id and starts. The old
+    // scene flow needed a POST first, which is why this used to be async.
+    router.push(`/monologue/${scene.monologue_id}/work`);
+    void markSeen();
+  }, [scene, starting, router, markSeen]);
 
   const ready = !loading && !!user && !!scene;
+  const secs = scene?.estimated_duration_seconds ?? 0;
+  const mins = secs > 0 ? Math.max(1, Math.round(secs / 60)) : 0;
 
   return (
     <div className="fixed inset-0 z-[10040] flex items-center justify-center bg-neutral-950 px-5 text-neutral-100">
@@ -142,23 +130,27 @@ export default function FirstScenePage() {
         <div className="flex flex-col items-center gap-4 text-center">
           <IconLoader2 className="h-6 w-6 animate-spin text-neutral-500" />
           <p className="stage-direction text-xs text-neutral-500">
-            (finding you a scene.)
+            (finding you a piece.)
           </p>
         </div>
       ) : (
         <div className="w-full max-w-md text-center">
-          <p className="text-xs font-medium uppercase tracking-widest text-neutral-500">
-            Your first scene
+          <p className="stage-direction text-xs text-neutral-500">
+            (your first piece.)
           </p>
-          <h1 className="mt-3 text-2xl font-bold leading-snug text-neutral-50">
-            {scene!.title}
+          <h1 className="font-typewriter mt-3 text-3xl font-semibold leading-tight text-neutral-50">
+            {scene!.character_name}
           </h1>
-          <p className="mt-4 text-sm leading-relaxed text-neutral-400">
-            About 90 seconds. You play{" "}
-            <span className="font-medium text-neutral-200">{scene!.user_character}</span>. I
-            read{" "}
-            <span className="font-medium text-neutral-200">{scene!.ai_character}</span> back to
-            you, out loud. Speak your lines when it&apos;s your turn.
+          {scene!.play_title && (
+            <p className="font-typewriter mt-1.5 text-sm text-neutral-400">
+              {scene!.play_title}
+              {scene!.author ? `, by ${scene!.author}` : ""}
+            </p>
+          )}
+          <p className="mt-5 text-sm leading-relaxed text-neutral-400">
+            {mins ? `About ${mins} minute${mins === 1 ? "" : "s"}. ` : ""}
+            You read it out loud, I keep your place and follow along. Nothing to
+            set up.
           </p>
 
           <Button
@@ -166,20 +158,16 @@ export default function FirstScenePage() {
             disabled={starting}
             className="mt-8 h-12 w-full bg-primary text-base font-semibold text-primary-foreground hover:bg-primary/90"
           >
-            {starting ? (
-              <IconLoader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              "Tap to start"
-            )}
+            {starting ? <IconLoader2 className="h-5 w-5 animate-spin" /> : "Start"}
           </Button>
 
           <button
             type="button"
-            onClick={() => void leaveTo("/practice")}
+            onClick={() => leaveTo("/monologues")}
             disabled={starting}
             className="mt-4 text-sm text-neutral-500 underline-offset-4 hover:text-neutral-300 hover:underline disabled:opacity-50"
           >
-            Skip for now
+            Find my own instead
           </button>
         </div>
       )}

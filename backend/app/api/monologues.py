@@ -943,6 +943,22 @@ _AGE_TO_CORPUS = {
 }
 
 
+def _stable_pick(query, user_id: int):
+    """Same actor, same piece; different actors, different pieces.
+
+    A plain `ORDER BY id LIMIT 1` handed every actor in the same bracket the
+    identical monologue, and the lowest ids all belong to one play — so the
+    entire cohort would have opened on Benvolio. Offsetting by the user id
+    spreads the cohort across the front of the pool while staying deterministic,
+    so coming back to this screen does not reshuffle the piece underneath them.
+    """
+    ordered = query.order_by(Monologue.id)
+    spread = 50
+    chosen = ordered.offset(user_id % spread).first()
+    # Fewer candidates than the spread — fall back to the head of the list.
+    return chosen if chosen is not None else ordered.first()
+
+
 @router.get("/first-rehearsal", response_model=FirstPieceResponse)
 def get_first_rehearsal_monologue(
     db: Session = Depends(get_db),
