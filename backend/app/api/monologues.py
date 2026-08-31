@@ -11,7 +11,7 @@ from app.api.auth import get_current_user, get_current_user_optional
 from app.api.public import record_demo_search
 from app.middleware.rate_limiting import (
     FREE_MONOLOGUE_READ_LIMIT,
-    lifetime_monologue_reads,
+    monthly_distinct_reads,
     record_monologue_read,
     record_total_search,
 )
@@ -916,6 +916,105 @@ async def get_recommendations(
     ]
 
 
+class FirstPieceResponse(BaseModel):
+    """One monologue to rehearse on the very first run."""
+    monologue_id: int
+    character_name: str
+    play_title: Optional[str] = None
+    author: Optional[str] = None
+    estimated_duration_seconds: Optional[int] = None
+
+
+# A first piece has to be short enough to finish, long enough to be a real
+# speech, and not a warhorse the actor has already heard fifty times.
+_FIRST_PIECE_SECONDS = (40, 100)
+_FIRST_PIECE_WORDS = (80, 220)
+_FIRST_PIECE_MAX_OVERDONE = 0.5
+
+# The profile and the corpus do not share a vocabulary: profiles store "Male"
+# and "25-35", the corpus stores "male" and "20s"/"30s". Mapping it explicitly
+# here rather than comparing the strings, which silently matches nothing.
+_AGE_TO_CORPUS = {
+    "18-25": ("teens", "20s"),
+    "25-35": ("20s", "30s"),
+    "35-45": ("30s", "40s"),
+    "45-55": ("40s", "50s"),
+    "55+": ("50s", "60+"),
+}
+
+
+@router.get("/first-rehearsal", response_model=FirstPieceResponse)
+def get_first_rehearsal_monologue(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """The one piece a brand-new actor is handed to rehearse.
+
+    Replaces the old scene-library version of this flow, whose content was
+    deleted in the monologue-study pivot (purge_library_scenes.py) while the
+    endpoint and its redirect were left in place — so every eligible user got a
+    404 and a dead screen.
+
+    Profile matching is a preference, never a requirement: if the actor's range
+    narrows the pool to nothing we hand back an unfiltered pick rather than
+    repeating the original mistake and failing closed.
+    """
+    from sqlalchemy import or_
+
+    def base_query():
+        return (
+            db.query(Monologue)
+            .join(Play, Play.id == Monologue.play_id)
+            .filter(
+                Monologue.review_status.is_(None),
+                Monologue.estimated_duration_seconds.between(*_FIRST_PIECE_SECONDS),
+                Monologue.word_count.between(*_FIRST_PIECE_WORDS),
+                or_(
+                    Monologue.overdone_score.is_(None),
+                    Monologue.overdone_score < _FIRST_PIECE_MAX_OVERDONE,
+                ),
+                Monologue.character_name.isnot(None),
+                Monologue.character_name != "",
+                Play.title.isnot(None),
+            )
+        )
+
+    chosen = None
+    profile = current_user.actor_profile
+    if profile is not None:
+        q = base_query()
+        gender = (profile.gender or "").strip().lower()
+        if gender in ("male", "female"):
+            q = q.filter(
+                or_(
+                    Monologue.character_gender == gender,
+                    Monologue.character_gender.in_(("any", "either gender")),
+                )
+            )
+        ages = _AGE_TO_CORPUS.get((profile.age_range or "").strip())
+        if ages:
+            q = q.filter(Monologue.character_age_range.in_(ages + ("any",)))
+        chosen = _stable_pick(q, current_user.id)
+
+    if chosen is None:
+        chosen = _stable_pick(base_query(), current_user.id)
+
+    if chosen is None:
+        raise HTTPException(
+            status_code=404,
+            detail="No first-rehearsal monologue is available",
+        )
+
+    play = db.query(Play).filter(Play.id == chosen.play_id).first()
+    return FirstPieceResponse(
+        monologue_id=chosen.id,
+        character_name=chosen.character_name,
+        play_title=play.title if play else None,
+        author=play.author if play else None,
+        estimated_duration_seconds=chosen.estimated_duration_seconds,
+    )
+
+
 @router.get("/discover", response_model=List[MonologueResponse])
 async def discover_monologues(
     limit: int = Query(10, le=50),
@@ -1075,11 +1174,19 @@ async def get_monologue(
     )
 
     # The wall, enforced here. A saved piece stays open (don't lock their own
-    # shelf); an unsaved one, once the free reads are gone, comes back as teaser
-    # only. The count is spent via POST /read, so merely opening the wall costs
-    # nothing and re-opening it shows the same teaser.
+    # shelf); an unsaved one, once the month's free reads are gone, comes back
+    # as teaser only.
+    #
+    # Counted from the view rows written above rather than from a spent counter.
+    # POST /read is the iOS client's, and nothing on the web has ever called it,
+    # so a counter-based wall simply did not exist here. Counting distinct
+    # pieces also makes re-opening something you are already working on free,
+    # which a per-open counter would punish.
     if fav is None and not _user_has_unlimited_reads(int(current_user.id), db):
-        if lifetime_monologue_reads(int(current_user.id), db) >= FREE_MONOLOGUE_READ_LIMIT:
+        already_read = monthly_distinct_reads(
+            int(current_user.id), db, exclude_monologue_id=monologue_id
+        )
+        if already_read >= FREE_MONOLOGUE_READ_LIMIT:
             resp.text = _teaser(resp.text)
             resp.text_segments = None
             resp.paywalled = True
@@ -1430,15 +1537,20 @@ async def record_read(
         raise HTTPException(status_code=404, detail="Monologue not found")
 
     unlimited = _user_has_unlimited_reads(int(current_user.id), db)
-    reads_used = record_monologue_read(int(current_user.id), db)
+    # Still recorded, because the daily counter is what the usage dashboards
+    # read. It is no longer what the wall consults: the gate counts distinct
+    # pieces opened this month, so both clients agree on the number even though
+    # only one of them calls this endpoint.
+    record_monologue_read(int(current_user.id), db)
+    reads_used = monthly_distinct_reads(int(current_user.id), db)
 
     return {
         "monologue_id": monologue_id,
         "reads_used": reads_used,
         "reads_limit": -1 if unlimited else FREE_MONOLOGUE_READ_LIMIT,
         "is_paid": unlimited,
-        # Whether the actor may still read for free after this one. Paid users
-        # are always allowed; free users until they cross the lifetime limit.
+        # Whether the NEXT new piece will be walled. Paid users are always
+        # allowed; free users until they have opened the month's allowance.
         "paywalled": (not unlimited) and reads_used >= FREE_MONOLOGUE_READ_LIMIT,
     }
 

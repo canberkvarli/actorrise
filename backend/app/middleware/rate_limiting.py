@@ -369,23 +369,79 @@ def record_total_search(user_id: int, db: Session) -> None:
     db.commit()
 
 
-# Ghost Light iOS — free monologue reads (3, lifetime). Server-side so the wall
-# survives reinstall; the client just reads the count and paints the paywall.
-FREE_MONOLOGUE_READ_LIMIT = 3
+# Free monologue reads: 5 a month. Server-side so the wall survives a reinstall;
+# the client reads the count and paints the paywall.
+#
+# Monthly, not lifetime. A lifetime cap gives you exactly one conversion moment
+# per actor — once it is spent they either pay that day or the library is shut
+# to them permanently, and the second outcome is the common one. A monthly cap
+# is the same wall twelve times a year, and a free tier that keeps working is
+# what brings them back to hit it again.
+FREE_MONOLOGUE_READ_LIMIT = 5
 
 
-def lifetime_monologue_reads(user_id: int, db: Session) -> int:
-    """Total full monologue reads this user has ever spent (across all days)."""
+def _period_start() -> date:
+    """First day of the current calendar month, local time.
+
+    Paired with UsageMetrics.date, which is written with date.today().
+    """
+    return date.today().replace(day=1)
+
+
+def _period_start_utc() -> datetime:
+    """First moment of the current month in UTC, as a naive datetime.
+
+    monologue_views.created_at defaults to the database's now() and is stored
+    without a timezone, so it is UTC. Comparing it against a LOCAL month start
+    silently drops rows: a view written at 23:42 UTC on the 31st falls outside
+    its own month the moment the server's local clock has already rolled over.
+    Near a month boundary that hands somebody a fresh allowance, or eats one.
+    """
+    now = datetime.now(timezone.utc)
+    return datetime(now.year, now.month, 1)
+
+
+def monthly_monologue_reads(user_id: int, db: Session) -> int:
+    """Full monologue reads this user has spent in the current month."""
     return int(
         db.query(func.coalesce(func.sum(UsageMetrics.monologue_reads), 0))
-        .filter(UsageMetrics.user_id == user_id)
+        .filter(
+            UsageMetrics.user_id == user_id,
+            UsageMetrics.date >= _period_start(),
+        )
         .scalar()
         or 0
     )
 
 
+def monthly_distinct_reads(
+    user_id: int, db: Session, *, exclude_monologue_id: int | None = None
+) -> int:
+    """Distinct monologues this user has opened this month.
+
+    The gate counts pieces, not page loads, and it reads the view rows the
+    detail endpoint already writes. That buys two things a counter cannot:
+    re-opening something you have already read is free, which is what an actor
+    does with a piece they are working on, and the web is gated without the
+    client having to spend anything. `POST /read` was only ever called by the
+    iOS app, so a counter-based wall did not exist on the web at all.
+
+    ``exclude_monologue_id`` leaves the piece being opened out of its own count,
+    so the fifth new piece is the fifth free one rather than the first walled.
+    """
+    from app.models.search_log import MonologueView
+
+    query = db.query(func.count(func.distinct(MonologueView.monologue_id))).filter(
+        MonologueView.user_id == user_id,
+        MonologueView.created_at >= _period_start_utc(),
+    )
+    if exclude_monologue_id is not None:
+        query = query.filter(MonologueView.monologue_id != exclude_monologue_id)
+    return int(query.scalar() or 0)
+
+
 def record_monologue_read(user_id: int, db: Session) -> int:
-    """Count one full monologue read against today's row; return the new lifetime total."""
+    """Count one full monologue read against today's row; return the month's total."""
     today = date.today()
     usage = (
         db.query(UsageMetrics)
@@ -398,7 +454,7 @@ def record_monologue_read(user_id: int, db: Session) -> int:
     current = getattr(usage, "monologue_reads", 0) or 0
     setattr(usage, "monologue_reads", current + 1)
     db.commit()
-    return lifetime_monologue_reads(user_id, db)
+    return monthly_monologue_reads(user_id, db)
 
 
 # Convenience functions for common features

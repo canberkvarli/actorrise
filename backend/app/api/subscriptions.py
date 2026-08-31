@@ -501,10 +501,10 @@ async def get_usage_limits(current_user: User = Depends(get_current_user), db: S
     # month. Paid tiers read unlimited (-1); free gets the fixed free allowance.
     from app.middleware.rate_limiting import (
         FREE_MONOLOGUE_READ_LIMIT,
-        lifetime_monologue_reads,
+        monthly_distinct_reads,
     )
 
-    monologue_reads_used = lifetime_monologue_reads(int(current_user.id), db)
+    monologue_reads_used = monthly_distinct_reads(int(current_user.id), db)
     monologue_reads_limit = -1 if is_paid else FREE_MONOLOGUE_READ_LIMIT
 
     return UsageLimitsResponse(

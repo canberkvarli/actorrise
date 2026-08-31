@@ -50,9 +50,15 @@ export function MonologueWall({ feature = "monologue_read" }: MonologueWallProps
         <p className="font-typewriter text-sm text-muted-foreground">
           The rest of this one is behind the curtain.
         </p>
+        {/* No number. The cap has already moved once and copy that names it
+            goes stale silently, which is the same reason MonologuePaywallModal
+            refuses to count. */}
         <p className="mt-2 text-base text-foreground">
-          That&rsquo;s your three free reads. Plus opens every piece in the
-          library, start to finish.
+          That&rsquo;s your free reads for this month. Plus opens every piece in
+          the library, start to finish.
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Anything you&rsquo;ve already saved stays open.
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
           Two weeks free, card on file, cancel before it renews.
