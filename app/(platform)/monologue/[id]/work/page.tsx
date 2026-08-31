@@ -1,16 +1,56 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import api from "@/lib/api";
 import type { Monologue } from "@/types/actor";
 import { MonologueCueing } from "@/components/monologue-work/MonologueCueing";
+
+/**
+ * The stage fills what is LEFT of the viewport, not all of it.
+ *
+ * This page was `h-dvh` while sitting under the platform's sticky header, so it
+ * was always a header taller than the screen and the control dock at its foot
+ * (Reveal / Skip / Restart) hung permanently below the fold. You couldn't even
+ * scroll to it: on the running screen the monologue scrolls inside its own
+ * container, not the page.
+ *
+ * The header's height is measured rather than hardcoded. A constant would be a
+ * second place to remember whenever the nav changes, and it has already been
+ * two different numbers (64 phone / 80 desktop) — subtracting the wrong one
+ * just moves the clipping instead of fixing it.
+ */
+function useRemainingViewportHeight() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState("100dvh");
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const measure = () => {
+      // Distance from the top of the document to the top of the stage — which
+      // is exactly whatever chrome sits above it.
+      const offset = Math.max(0, Math.round(el.getBoundingClientRect().top + window.scrollY));
+      setHeight(`calc(100dvh - ${offset}px)`);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", measure);
+    return () => {
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("orientationchange", measure);
+    };
+  }, []);
+
+  return { ref, height };
+}
 
 export default function MonologueWorkPage() {
   const id = useParams().id as string;
   const router = useRouter();
   const [monologue, setMonologue] = useState<Monologue | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "notfound" | "error">("loading");
+  const { ref, height } = useRemainingViewportHeight();
 
   useEffect(() => {
     let active = true;
@@ -31,30 +71,30 @@ export default function MonologueWorkPage() {
     };
   }, [id]);
 
-  if (status === "loading") {
-    return (
-      <div className="flex h-dvh items-center justify-center bg-[#0b0908]">
-        <span className="h-2 w-2 animate-pulse rounded-full bg-[#CB4B00]" />
-      </div>
-    );
-  }
-
-  if (status === "notfound" || status === "error" || !monologue) {
-    return (
-      <div className="flex h-dvh flex-col items-center justify-center gap-4 bg-[#0b0908] text-[#ece5d8]">
-        <p className="font-sans text-white/60">
-          {status === "notfound" ? "This piece has left the stage." : "Something went dark loading this piece."}
-        </p>
-        <button onClick={() => router.back()} className="text-sm text-[#CB4B00] hover:underline">
-          Go back
-        </button>
-      </div>
-    );
-  }
-
   return (
-    <div className="h-dvh">
-      <MonologueCueing monologue={monologue} onExit={() => router.back()} />
+    <div ref={ref} style={{ height }} className="bg-[var(--stage)] text-[var(--stage-fg)]">
+      {status === "loading" && (
+        <div className="flex h-full items-center justify-center">
+          <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+        </div>
+      )}
+
+      {(status === "notfound" || status === "error") && (
+        <div className="flex h-full flex-col items-center justify-center gap-4">
+          <p className="font-sans text-[var(--stage-fg)]/60">
+            {status === "notfound"
+              ? "This piece has left the stage."
+              : "Something went dark loading this piece."}
+          </p>
+          <button onClick={() => router.back()} className="text-sm text-primary hover:underline">
+            Go back
+          </button>
+        </div>
+      )}
+
+      {status === "ready" && monologue && (
+        <MonologueCueing monologue={monologue} onExit={() => router.back()} />
+      )}
     </div>
   );
 }

@@ -340,11 +340,15 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   const spokenCount = spokenPrefixCount(currentLine, transcript);
 
   if (lines.length === 0) {
-    return <p className="font-sans text-white/50">This piece has no usable text to run.</p>;
+    return <p className="font-sans text-[var(--stage-fg)]/50">This piece has no usable text to run.</p>;
   }
 
   return (
-    <div className="stage-grain relative flex h-full w-full flex-col overflow-hidden bg-[var(--stage)] text-[var(--stage-fg)]">
+    /* `dark` so the theme tokens resolve to their dark values on this always-dark
+       surface — the stage was painting itself with hardcoded #CB4B00 instead of
+       the brightened orange the rest of the dark shell uses. Same move the
+       landing header makes. */
+    <div className="dark stage-grain relative flex h-full w-full flex-col overflow-hidden bg-[var(--stage)] text-[var(--stage-fg)]">
       {/* Ambient stage — the landing's own vocabulary: warm overhead wash, then a
           soft shadow pooling at the foot so the stage never reads as flat black. */}
       <div aria-hidden className="stage-wash pointer-events-none absolute inset-0" />
@@ -358,23 +362,26 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
       />
 
       {/* Top bar — playbill */}
-      <header className="relative z-10 flex items-center gap-3 px-5 pt-5">
+      {/* Everything on this screen sits in one column so the title, the piece and
+          the dock share an edge. They used to be pinned to opposite sides of the
+          viewport with the text stranded in the middle. */}
+      <header className="relative z-10 mx-auto flex w-full max-w-3xl items-center gap-3 px-5 pt-4">
         <button
           onClick={onExit}
           aria-label="Leave"
-          className="text-white/40 transition-colors hover:text-white/80"
+          className="text-[var(--stage-fg)]/40 transition-colors hover:text-[var(--stage-fg)]/80"
         >
           <IconArrowLeft className="h-5 w-5" />
         </button>
         <div className="min-w-0">
-          <h1 className="truncate font-brand text-2xl font-medium leading-tight text-white sm:text-3xl">
+          <h1 className="truncate font-brand text-2xl font-medium leading-tight text-[var(--stage-fg)] sm:text-3xl">
             {monologue.character_name}
           </h1>
-          <p className="truncate text-sm text-white/55">{monologue.title}</p>
+          <p className="truncate text-sm text-[var(--stage-fg)]/55">{monologue.title}</p>
         </div>
         <div className="ml-auto flex items-center gap-4">
           {started && !completed && (
-            <span className="text-[0.7rem] uppercase tracking-[0.22em] text-white/45">
+            <span className="text-[0.7rem] uppercase tracking-[0.22em] text-[var(--stage-fg)]/45">
               {Math.min(activeIndex + 1, lines.length)} / {lines.length}
             </span>
           )}
@@ -382,7 +389,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             onClick={onToggleFav}
             aria-label={favorited ? "Remove from saved" : "Save this monologue"}
             aria-pressed={favorited}
-            className={`transition-colors ${favorited ? "text-[#CB4B00]" : "text-white/40 hover:text-white/80"}`}
+            className={`transition-colors ${favorited ? "text-primary" : "text-[var(--stage-fg)]/40 hover:text-[var(--stage-fg)]/80"}`}
           >
             <BookmarkIcon filled={favorited} size="md" />
           </button>
@@ -405,24 +412,24 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                   the same glyph as the page's loading indicator, so the screen
                   you land on looked like a screen still loading. */}
               {tapToAdvance ? (
-                <ScriptPagesSketch size={64} className="text-white/55" />
+                <ScriptPagesSketch size={64} className="text-[var(--stage-fg)]/55" />
               ) : (
-                <MicSketch size={64} className="text-white/55" />
+                <MicSketch size={64} className="text-[var(--stage-fg)]/55" />
               )}
               {/* Was "Off book", which fought the hide-the-lines control below —
                   two different meanings of off-book on one screen. Say where we
                   are instead. */}
-              <span className="stage-direction text-xs text-white/45">(places.)</span>
-              <p className="max-w-md text-2xl font-medium leading-snug text-white">
+              <span className="stage-direction text-xs text-[var(--stage-fg)]/45">(places.)</span>
+              <p className="max-w-md text-2xl font-medium leading-snug text-[var(--stage-fg)]">
                 {tapToAdvance
                   ? "Run it at your own pace. Tap to move through it."
                   : "Say it out loud. I’ll follow along."}
               </p>
-              <p className="text-sm text-white/45">
+              <p className="text-sm text-[var(--stage-fg)]/45">
                 {monologue.play_title}
                 {displayableAuthor(monologue.author) ? ` · ${displayableAuthor(monologue.author)}` : ""}
               </p>
-              <p className="text-xs text-white/35">
+              <p className="text-xs text-[var(--stage-fg)]/35">
                 {lines.length} line{lines.length === 1 ? "" : "s"}
                 {monologue.estimated_duration_seconds
                   ? ` · about ${Math.max(1, Math.round(monologue.estimated_duration_seconds / 60))} min`
@@ -430,7 +437,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                 {tapToAdvance && " · tap anywhere to advance"}
               </p>
               {inTrial && (
-                <p className="text-xs uppercase tracking-[0.2em] text-[#CB4B00]/85">
+                <p className="text-xs uppercase tracking-[0.2em] text-primary/85">
                   {trialDaysLeft} {trialDaysLeft === 1 ? "day" : "days"} of full access left
                 </p>
               )}
@@ -438,7 +445,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
 
             <button
               onClick={() => void begin()}
-              className="group inline-flex items-center gap-2.5 rounded-full bg-[#CB4B00] px-8 py-3.5 text-sm font-semibold tracking-wide text-white shadow-[0_0_40px_-8px_rgba(203,75,0,0.7)] transition-all hover:bg-[#B03000] hover:shadow-[0_0_55px_-6px_rgba(203,75,0,0.85)]"
+              className="group inline-flex items-center gap-2.5 rounded-full bg-primary px-8 py-3.5 text-sm font-semibold tracking-wide text-primary-foreground shadow-[0_0_40px_-8px_rgba(203,75,0,0.7)] transition-all hover:bg-primary/90 hover:shadow-[0_0_55px_-6px_rgba(203,75,0,0.85)]"
             >
               <IconPlayerPlayFilled className="h-4 w-4" />
               Begin
@@ -451,8 +458,8 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
               aria-pressed={offBook}
               className={`rounded-full border px-4 py-2 text-xs transition-colors ${
                 offBook
-                  ? "border-[#CB4B00] bg-[#CB4B00]/10 text-[#CB4B00]"
-                  : "border-white/15 text-white/50 hover:border-white/35 hover:text-white/80"
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-[var(--stage-fg)]/15 text-[var(--stage-fg)]/50 hover:border-[var(--stage-fg)]/35 hover:text-[var(--stage-fg)]/80"
               }`}
             >
               {offBook ? "Lines hidden — tap to show them" : "Hide the lines · harder"}
@@ -471,10 +478,10 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             exit={{ opacity: 0 }}
             className="relative z-10 flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 py-10 text-center"
           >
-            <GhostLightSketch size={56} className="text-white/40" />
-            <span className="text-[0.68rem] uppercase tracking-[0.3em] text-[#CB4B00]">Curtain</span>
-            <h2 className="font-brand text-3xl font-medium text-white/90">You made it through.</h2>
-            <p className="max-w-xs text-sm leading-relaxed text-white/45">
+            <GhostLightSketch size={56} className="text-[var(--stage-fg)]/40" />
+            <span className="text-[0.68rem] uppercase tracking-[0.3em] text-primary">Curtain</span>
+            <h2 className="font-brand text-3xl font-medium text-[var(--stage-fg)]/90">You made it through.</h2>
+            <p className="max-w-xs text-sm leading-relaxed text-[var(--stage-fg)]/45">
               Run it again, or take it into the room.
             </p>
 
@@ -484,7 +491,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             <div className="flex flex-wrap items-center justify-center gap-2">
               <button
                 onClick={restart}
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-medium text-white/80 transition-colors hover:border-[#CB4B00] hover:text-white"
+                className="inline-flex items-center gap-2 rounded-full border border-[var(--stage-fg)]/15 px-6 py-3 text-sm font-medium text-[var(--stage-fg)]/80 transition-colors hover:border-primary hover:text-[var(--stage-fg)]"
               >
                 <IconRefresh className="h-4 w-4" />
                 Run it again
@@ -495,7 +502,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                 className={`inline-flex items-center gap-2 rounded-full border px-6 py-3 text-sm font-medium transition-colors ${
                   markedOffBook
                     ? "border-amber-400/40 text-amber-300"
-                    : "border-white/15 text-white/80 hover:border-amber-400/60 hover:text-white"
+                    : "border-[var(--stage-fg)]/15 text-[var(--stage-fg)]/80 hover:border-amber-400/60 hover:text-[var(--stage-fg)]"
                 }`}
               >
                 {markedOffBook ? (
@@ -509,7 +516,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             {onExit && (
               <button
                 onClick={onExit}
-                className="text-sm text-white/40 underline-offset-4 transition-colors hover:text-white/70 hover:underline"
+                className="text-sm text-[var(--stage-fg)]/40 underline-offset-4 transition-colors hover:text-[var(--stage-fg)]/70 hover:underline"
               >
                 Back to the piece
               </button>
@@ -538,13 +545,13 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="relative z-10 flex min-h-0 flex-1 flex-col overflow-hidden px-6 pb-5"
+            className="relative z-10 mx-auto flex w-full min-h-0 max-w-3xl flex-1 flex-col overflow-hidden px-5 pb-4"
           >
             {/* Listening indicator, top-center — the live waveform reacts to your
                 voice so you can see you're being heard while you run the piece. */}
             <div className="flex items-center justify-center gap-2 pt-1 pb-2">
               {tapToAdvance ? (
-                <span className="pointer-events-none flex select-none items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-white/45">
+                <span className="pointer-events-none flex select-none items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--stage-fg)]/45">
                   <StatusDot state="tap" />
                   {/* If the mic dropped out mid-run, say so. Switching the rules
                       of the screen without a word is how the old silent failure
@@ -552,7 +559,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                   {micDead || listenExhausted ? "Mic dropped · tap to advance" : "Tap to advance"}
                 </span>
               ) : (
-                <span className="pointer-events-none flex select-none items-center gap-2.5 text-[0.7rem] uppercase tracking-[0.18em] text-white/55">
+                <span className="pointer-events-none flex select-none items-center gap-2.5 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--stage-fg)]/55">
                   <MicWaveform active={isListening} className="w-24" />
                   {isListening ? "Listening" : "Paused"}
                 </span>
@@ -578,7 +585,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                     }
                   : undefined
               }
-              className={`flex min-h-0 flex-1 flex-col items-center gap-5 overflow-y-auto py-[42vh] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden${tapToAdvance ? " cursor-pointer select-none" : ""}`}
+              className={`flex min-h-0 flex-1 flex-col items-center gap-5 overflow-y-auto pt-[22vh] pb-[46vh] [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden${tapToAdvance ? " cursor-pointer select-none" : ""}`}
             >
               {lines.map((line, i) => {
                 if (i === activeIndex) {
@@ -602,7 +609,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                             }}
                           >
                             {masked ? (
-                              <span className="text-white/15">{"•".repeat(Math.max(2, word.replace(/[^\p{L}\p{N}]/gu, "").length))}</span>
+                              <span className="text-[var(--stage-fg)]/15">{"•".repeat(Math.max(2, word.replace(/[^\p{L}\p{N}]/gu, "").length))}</span>
                             ) : (
                               word
                             )}{" "}
@@ -617,7 +624,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                   <p
                     key={i}
                     className={`w-full max-w-2xl text-center leading-relaxed transition-all duration-500 ${
-                      done ? "text-white/25" : offBook ? "text-white/20 blur-[5px]" : "text-white/40"
+                      done ? "text-[var(--stage-fg)]/25" : offBook ? "text-[var(--stage-fg)]/20 blur-[5px]" : "text-[var(--stage-fg)]/40"
                     }`}
                     style={{ fontFamily: SCRIPT, fontSize: "clamp(0.95rem, 2vw, 1.2rem)" }}
                   >
@@ -627,14 +634,24 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
               })}
             </div>
 
-            {/* Control dock — just the actions now; the listening status lives up
-                top so you always know you're being heard. */}
-            <div className="mt-4 flex items-center justify-center gap-2">
-              {offBook && <DockButton onClick={() => setRevealCurrent(true)}>Reveal</DockButton>}
-              {!tapToAdvance && (
-                <DockButton onClick={() => goToLineAndReset(activeIndex + 1)}>Skip</DockButton>
-              )}
-              <DockButton onClick={restart}>Restart</DockButton>
+            {/* Control dock — just the actions; the listening status lives up top
+                so you always know you're being heard.
+
+                Pinned to the foot of the stage rather than sitting in the flex
+                column. In flow it lost the shrink race against the scrolling
+                text — the text box held 672px inside a 727px container and the
+                dock rendered 25px past the bottom edge, under `overflow-hidden`,
+                so Skip and Restart were invisible AND unreachable (the piece
+                scrolls, not the page). Pinned, it also stops moving about as
+                lines change length. */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center bg-gradient-to-t from-[var(--stage)] via-[var(--stage)]/85 to-transparent pb-4 pt-12">
+              <div className="pointer-events-auto flex items-center justify-center gap-2">
+                {offBook && <DockButton onClick={() => setRevealCurrent(true)}>Reveal</DockButton>}
+                {!tapToAdvance && (
+                  <DockButton onClick={() => goToLineAndReset(activeIndex + 1)}>Skip</DockButton>
+                )}
+                <DockButton onClick={restart}>Restart</DockButton>
+              </div>
             </div>
           </motion.div>
         )}
@@ -648,11 +665,11 @@ function StatusDot({ state }: { state: "listening" | "paused" | "tap" }) {
   return (
     <span className="relative flex h-1.5 w-1.5">
       {state === "listening" && (
-        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#CB4B00]/60" />
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/60" />
       )}
       <span
         className={`relative inline-flex h-1.5 w-1.5 rounded-full ${
-          state === "paused" ? "bg-white/30" : "bg-[#CB4B00]"
+          state === "paused" ? "bg-[var(--stage-fg)]/30" : "bg-primary"
         }`}
       />
     </span>
@@ -664,7 +681,7 @@ function DockButton({ onClick, children }: { onClick: () => void; children: Reac
   return (
     <button
       onClick={onClick}
-      className="rounded-full border border-white/15 px-3.5 py-1.5 text-[0.7rem] uppercase tracking-[0.14em] text-white/60 transition-colors hover:border-[#CB4B00]/60 hover:text-white"
+      className="rounded-full border border-[var(--stage-fg)]/15 px-3.5 py-1.5 text-[0.7rem] uppercase tracking-[0.14em] text-[var(--stage-fg)]/60 transition-colors hover:border-primary/60 hover:text-[var(--stage-fg)]"
     >
       {children}
     </button>
