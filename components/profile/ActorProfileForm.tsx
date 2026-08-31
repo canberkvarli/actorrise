@@ -11,17 +11,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Progress } from "@/components/ui/progress";
+import { Card, CardContent } from "@/components/ui/card";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
-import { IconLoader2, IconInfoCircle, IconPhoto, IconEdit, IconX, IconUser, IconBriefcase, IconSettings, IconSparkles, IconTrash, IconUpload } from "@tabler/icons-react";
+import { IconLoader2, IconPhoto, IconEdit, IconX, IconTrash, IconUpload } from "@tabler/icons-react";
 import { PhotoEditor } from "./PhotoEditor";
+import { FieldLabel } from "./FieldHint";
+import { ProfileCallSheet, type CallSheetSlot } from "./ProfileCallSheet";
+import { ProfilePayoff } from "./ProfilePayoff";
+import { MasksSketch, SpotlightSketch, StageDoorSketch } from "@/components/brand/sketches";
 import { useProfileFormData, type FullProfileResponse } from "@/hooks/useDashboardData";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import {
   LOCATIONS,
@@ -66,6 +68,67 @@ const profileSchema = z.object({
 });
 
 type ProfileFormData = z.infer<typeof profileSchema>;
+
+/**
+ * "Basic Info / Acting Info / Preferences" named the database, not the actor.
+ * These name what the actor is doing in each one.
+ */
+const TAB_RAIL = [
+  { value: "basic", label: "Who you are" },
+  { value: "acting", label: "How you work" },
+  { value: "preferences", label: "What you see" },
+] as const;
+
+/** Fields rise in together on a tab change rather than appearing all at once. */
+const RISE = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0 },
+};
+const RISE_LIST = { show: { transition: { staggerChildren: 0.045 } } };
+
+function Field({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+  return (
+    <motion.div
+      variants={RISE}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className={`space-y-2 ${className}`}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function SectionHead({
+  sketch: Sketch,
+  title,
+  aside,
+}: {
+  sketch: typeof MasksSketch;
+  title: string;
+  aside: string;
+}) {
+  return (
+    <div className="flex items-center gap-4 border-b border-border/60 px-6 py-5">
+      <Sketch size={40} className="shrink-0 text-muted-foreground/55" />
+      <div className="min-w-0">
+        <h2 className="font-brand text-xl font-medium text-foreground">{title}</h2>
+        <p className="stage-direction mt-0.5 text-xs text-muted-foreground/70">{aside}</p>
+      </div>
+    </div>
+  );
+}
+
+/** The quiet rule that separates "we need this" from "this helps". */
+function GroupRule({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 pt-2">
+      <span className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground/70">
+        {children}
+      </span>
+      <span className="h-px flex-1 bg-border/70" />
+    </div>
+  );
+}
 
 export function ActorProfileForm() {
   const queryClient = useQueryClient();
@@ -208,23 +271,81 @@ export function ActorProfileForm() {
     trainingBackground,
   ]);
 
-  // Next-step nudge: which required fields are missing (for progress card when <100%)
-  const requiredChecklist = useMemo(() => {
-    const hasType = type || actorTypes.length > 0;
-    const items: { key: string; label: string; filled: boolean }[] = [
-      { key: "name", label: "Name", filled: Boolean(name?.trim()) },
-      { key: "age_range", label: "Age range", filled: Boolean(ageRange) },
-      { key: "gender", label: "Gender", filled: Boolean(gender) },
-      { key: "location", label: "Location", filled: Boolean(location) },
-      { key: "experience_level", label: "Experience level", filled: Boolean(experienceLevel) },
-      { key: "type", label: "Actor type(s)", filled: Boolean(hasType) },
-      { key: "union_status", label: "Union status", filled: Boolean(unionStatus) },
-    ];
-    const missing = items.filter((i) => !i.filled);
-    return { items, missing, count: missing.length };
-  }, [name, ageRange, gender, location, experienceLevel, type, actorTypes, unionStatus]);
-
   const heightParsed = useMemo(() => parseHeight(height), [height]);
+
+  /**
+   * The profile, phrased as a casting breakdown.
+   *
+   * Split over two lines: who you read as, then how you work. The order is the
+   * order a breakdown is written in, not the order the form asks in — the point
+   * is that it reads like something, so a gap in it reads like a gap.
+   */
+  const actorTypeText = useMemo(
+    () => actorTypes.map((id) => ACTOR_TYPE_LABELS[id] || id).join(", "),
+    [actorTypes],
+  );
+  const experienceLabel = useMemo(
+    () => EXPERIENCE_LEVELS.find((l) => l.id === experienceLevel)?.label || "",
+    [experienceLevel],
+  );
+
+  const callSheet = useMemo(() => {
+    const primary: CallSheetSlot[] = [
+      { key: "age_range", value: ageRange, blank: "age range", tab: "basic", fieldId: "age_range" },
+      { key: "gender", value: gender, blank: "gender", tab: "basic", fieldId: "gender" },
+      { key: "union_status", value: unionStatus, blank: "union status", tab: "acting", fieldId: "union_status" },
+      { key: "location", value: location, blank: "market", tab: "basic", fieldId: "location" },
+    ];
+    const secondary: CallSheetSlot[] = [
+      { key: "type", value: actorTypeText, blank: "what you act in", tab: "acting", fieldId: "actor-types" },
+      { key: "experience_level", value: experienceLabel, blank: "experience", tab: "acting", fieldId: "experience_level" },
+    ];
+    return { primary, secondary };
+  }, [ageRange, gender, unionStatus, location, actorTypeText, experienceLabel]);
+
+  /**
+   * Only the fields the recommender actually reads. Height and name do not
+   * change which monologue suits you, and putting `name` in here would fire a
+   * request per keystroke.
+   */
+  const payoffSignature = [
+    ageRange,
+    gender,
+    experienceLevel,
+    actorTypes.join(","),
+    typeof type === "string" ? type : "",
+    (preferredGenresValue || []).join(","),
+  ].join("|");
+  const payoffReady = Boolean(ageRange && (actorTypes.length > 0 || experienceLevel));
+  const payoffBecause = [ageRange, gender?.toLowerCase(), actorTypeText.toLowerCase()].filter(
+    Boolean,
+  ) as string[];
+
+  /**
+   * The slider used to read "Overdone Alert Sensitivity: 0.7", which tells an
+   * actor nothing. Say what 0.7 does.
+   */
+  const overdoneCopy = useMemo(() => {
+    const v = Number(overdoneSensitivity ?? 0.5);
+    if (v <= 0.3) return "Only the pieces everyone in the room has already heard.";
+    if (v <= 0.6) return "The well-worn ones, before you get attached to them.";
+    return "Anything a reader might recognise, so you can go somewhere else.";
+  }, [overdoneSensitivity]);
+
+  /** A blank on the call sheet is a shortcut to the field that fills it. */
+  const jumpToField = useCallback((tab: string, fieldId: string) => {
+    setActiveTab(tab);
+    // Radix mounts the tab panel on the next frame, so the element does not
+    // exist yet at this point in the handler.
+    requestAnimationFrame(() => {
+      const el = document.getElementById(fieldId);
+      if (!el) return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      // preventScroll: scrollIntoView above already owns the scroll, and focus
+      // would otherwise fight it with an instant jump.
+      (el as HTMLElement).focus({ preventScroll: true });
+    });
+  }, []);
 
   // Populate form from React Query cached data — runs only once per mount
   useEffect(() => {
@@ -659,93 +780,24 @@ export function ActorProfileForm() {
   return (
     <TooltipProvider delayDuration={300}>
       <div className="space-y-6">
-        {/* Auto-save Status Indicator - Bottom Right */}
-        {saveStatus && (
+        {/* Headshot beside the casting line, not in a card of its own below it.
+            That is the shape of an actual breakdown — photo, then the facts —
+            and it saves a full card of vertical space for an optional field. */}
+        <div className="flex flex-row items-start gap-4 sm:gap-6">
           <motion.div
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: 20 }}
-            className="fixed bottom-6 right-6 z-[9999] flex items-center gap-2 text-sm bg-background border-2 border-border rounded-lg shadow-xl py-3 px-4 backdrop-blur-sm"
-            style={{ 
-              boxShadow: '0 10px 25px rgba(0, 0, 0, 0.2)',
-              minWidth: '120px'
-            }}
-          >
-            {saveStatus === "saving" ? (
-              <>
-                <IconLoader2 className="h-4 w-4 animate-spin text-primary" />
-                <span className="text-muted-foreground">Saving...</span>
-              </>
-            ) : saveStatus === "saved" ? (
-              <>
-                <IconSparkles className="h-4 w-4 text-green-600" />
-                <span className="text-green-600 font-semibold">Saved</span>
-              </>
-            ) : null}
-          </motion.div>
-        )}
-
-        {/* Progress Bar - Only show if profile is not 100% complete */}
-        {completionPercentage < 100 && (
-          <motion.div
-            id="profile-progress"
-            initial={{ opacity: 0, y: -10 }}
+            id="profile-headshot"
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.05 }}
+            className="shrink-0"
           >
-            <Card>
-              <CardContent className="pt-6">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-base font-semibold">Profile Completion</Label>
-                    <span className="text-sm font-medium text-muted-foreground">
-                      {Math.round(completionPercentage)}%
-                    </span>
-                  </div>
-                  <Progress value={completionPercentage} className="h-2" />
-                  <p className="text-xs text-muted-foreground">
-                    We save as you go. No button to click.
-                  </p>
-                  {requiredChecklist.count > 0 && (
-                    <>
-                      <p className="text-xs text-muted-foreground font-medium">
-                        {requiredChecklist.count} to go
-                      </p>
-                      <ul className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mt-1" aria-label="Required fields">
-                        {requiredChecklist.items.map((item) => (
-                          <li key={item.key} className="flex items-center gap-1.5">
-                            <span className={item.filled ? "text-primary" : "text-muted-foreground"} aria-hidden>
-                              {item.filled ? "✓" : "○"}
-                            </span>
-                            {/* Struck-through text reads as cancelled, not done — the tick already
-    says it is done. Dim it instead so the eye goes to what is left. */}
-                            <span className={item.filled ? "text-muted-foreground/60" : ""}>{item.label}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        )}
-
-        {/* Headshot Section - Compact */}
-        <motion.div
-          id="profile-headshot"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-        >
-          <Card className="border-border/50">
-            <CardContent className="pt-6">
-              <div className="flex items-start gap-5">
+              <div className="flex flex-col gap-2">
                 <div className="flex-shrink-0">
                   {headshotPreview ? (
                     <button
                       type="button"
                       onClick={handlePhotoClick}
-                      className="relative w-32 h-48 rounded-md overflow-hidden border-2 border-border bg-muted shadow-sm hover:shadow-md hover:border-primary/60 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 group"
+                      className="relative w-24 h-36 sm:w-32 sm:h-48 rounded-md overflow-hidden border-2 border-border bg-muted shadow-sm hover:shadow-md hover:border-primary/60 transition-all duration-200 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 group"
                       aria-label="View headshot"
                     >
                       <img
@@ -767,7 +819,7 @@ export function ActorProfileForm() {
                   ) : (
                     <label
                       htmlFor="headshot"
-                      className="flex flex-col items-center justify-center w-32 h-48 rounded-md border-2 border-dashed border-border bg-muted/30 hover:bg-muted/50 hover:border-primary/50 transition-all duration-200 cursor-pointer group"
+                      className="flex flex-col items-center justify-center w-24 h-36 sm:w-32 sm:h-48 rounded-md border-2 border-dashed border-border bg-muted/30 hover:bg-muted/50 hover:border-primary/50 transition-all duration-200 cursor-pointer group"
                     >
                       <IconPhoto className="h-8 w-8 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
                       <span className="text-xs text-muted-foreground group-hover:text-foreground text-center px-2">
@@ -783,58 +835,72 @@ export function ActorProfileForm() {
                     </label>
                   )}
                 </div>
-                <div className="flex-1 min-w-0 pt-1">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Label className="text-base font-semibold">Profile photo</Label>
-                    <span className="border border-border px-1.5 py-0.5 text-[11px] text-muted-foreground">Optional</span>
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {headshotPreview
-                      ? "Your photo in the app and community. Click to view or replace."
-                      : "Just your photo in the app, if you want one. Never required, and casting doesn't see it here. JPG or PNG, up to 5MB."}
-                  </p>
-                </div>
+                {/* One line, not a paragraph. The frame already says "photo". */}
+                <p className="stage-direction w-24 text-[11px] leading-snug text-muted-foreground/70 sm:w-32">
+                  {headshotPreview ? "(tap to replace.)" : "(optional.)"}
+                </p>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
+          </motion.div>
+
+          <div className="min-w-0 flex-1">
+            <ProfileCallSheet
+              name={name}
+              primary={callSheet.primary}
+              secondary={callSheet.secondary}
+              completion={completionPercentage}
+              saveStatus={saveStatus}
+              onJump={jumpToField}
+            />
+          </div>
+        </div>
 
         {/* Tabs for organized sections */}
         <div id="profile-tabs">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="basic" className="flex items-center gap-2">
-              <IconUser className="h-4 w-4" />
-              Basic Info
-            </TabsTrigger>
-            <TabsTrigger value="acting" className="flex items-center gap-2">
-              <IconBriefcase className="h-4 w-4" />
-              Acting Info
-            </TabsTrigger>
-            <TabsTrigger value="preferences" id="profile-preferences" className="flex items-center gap-2">
-              <IconSettings className="h-4 w-4" />
-              Preferences
-            </TabsTrigger>
+          {/* A rail, not a segmented control. The grey pill made three equal
+              buttons look like a toolbar; these are the acts of one document. */}
+          <TabsList className="grid w-full grid-cols-3 gap-0 rounded-none border-b border-border bg-transparent p-0">
+            {TAB_RAIL.map((t) => (
+              <TabsTrigger
+                key={t.value}
+                value={t.value}
+                id={t.value === "preferences" ? "profile-preferences" : undefined}
+                className="relative rounded-none px-2 pb-3 pt-2 text-[13px] font-medium leading-tight text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none sm:text-sm"
+              >
+                {t.label}
+                {activeTab === t.value && (
+                  // layoutId, so the underline slides between tabs instead of
+                  // blinking out and back in somewhere else.
+                  <motion.span
+                    layoutId="profile-tab-underline"
+                    className="absolute inset-x-0 -bottom-px h-0.5 bg-primary"
+                    transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                  />
+                )}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
-          <div className="min-h-[600px]">
+          <div>
             <TabsContent value="basic" className="mt-6">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Basic Information</CardTitle>
-                      <CardDescription>Used for matching you to roles.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required for matching</p>
-                      <div className="space-y-2 max-w-xs">
-                        <Label htmlFor="name" className="">Name *</Label>
-                        <Input 
-                          id="name" 
+              <motion.div initial="hidden" animate="show" variants={RISE_LIST}>
+                  <Card className="overflow-hidden">
+                    <SectionHead
+                      sketch={MasksSketch}
+                      title="Who you are"
+                      aside="(what a casting office reads before you open your mouth.)"
+                    />
+                    <CardContent className="space-y-6 pt-6">
+                      <GroupRule>Needed to match you</GroupRule>
+                      <Field className="max-w-sm">
+                        <FieldLabel
+                          htmlFor="name"
+                          hint="Your stage name is fine. It shows on the callboard if you have that on, nowhere else."
+                        >
+                          Name
+                        </FieldLabel>
+                        <Input
+                          id="name"
                           {...register("name")}
                         />
                         {errors.name && (
@@ -846,11 +912,16 @@ export function ActorProfileForm() {
                             {errors.name.message}
                           </motion.p>
                         )}
-                      </div>
+                      </Field>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="age_range" className="">Age Range *</Label>
+                        <Field>
+                          <FieldLabel
+                            htmlFor="age_range"
+                            hint="Casting reads you by range, not birthday. This filters every search you run."
+                          >
+                            Age range
+                          </FieldLabel>
                         <Select
                           value={watch("age_range") || undefined}
                           onValueChange={(v) => setValue("age_range", v)}
@@ -873,10 +944,15 @@ export function ActorProfileForm() {
                               {errors.age_range.message}
                             </motion.p>
                           )}
-                        </div>
+                        </Field>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="gender" className="">Gender Identity *</Label>
+                        <Field>
+                          <FieldLabel
+                            htmlFor="gender"
+                            hint="Only used to match characters written for a gender. Pick Other and say your own if none of these fit."
+                          >
+                            Gender identity
+                          </FieldLabel>
                         <Select
                           value={watch("gender")?.startsWith("Other") ? "Other" : watch("gender") || undefined}
                           onValueChange={(v) => setValue("gender", v)}
@@ -907,13 +983,58 @@ export function ActorProfileForm() {
                               {errors.gender.message}
                             </motion.p>
                           )}
-                        </div>
+                        </Field>
                       </div>
 
-                      <Separator className="my-6" />
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Optional: improves recommendations</p>
-                      <div className="space-y-2">
-                        <Label htmlFor="ethnicity" className="">Ethnicity</Label>
+                      {/* Location counts toward completion, so like union status
+                          it belongs above the rule, not under "optional". */}
+                      <Field>
+                        <FieldLabel
+                          htmlFor="location"
+                          hint="Your market, not your address. It decides which theatres and auditions I put in front of you."
+                        >
+                          Location / market
+                        </FieldLabel>
+                        <Select
+                          value={watch("location")?.startsWith("Other") ? "Other" : watch("location") || undefined}
+                          onValueChange={(v) => setValue("location", v)}
+                        >
+                          <SelectTrigger id="location">
+                            <SelectValue placeholder="Select location" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {LOCATIONS.map((loc) => (
+                              <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {(watch("location") === "Other" || watch("location")?.startsWith("Other:")) && (
+                          <Input
+                            placeholder="Please specify"
+                            className="mt-2"
+                            value={watch("location")?.startsWith("Other:") ? watch("location")?.slice(7).trim() : ""}
+                            onChange={(e) => setValue("location", e.target.value ? `Other: ${e.target.value}` : "Other")}
+                          />
+                        )}
+                        {errors.location && (
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-sm text-destructive"
+                          >
+                            {errors.location.message}
+                          </motion.p>
+                        )}
+                      </Field>
+
+                      <GroupRule>Optional, sharpens the picks</GroupRule>
+                      <Field>
+                        <FieldLabel
+                          htmlFor="ethnicity"
+                          hint="Only for roles written for a specific background. Never shown to anyone, and leaving it blank costs you nothing."
+                        >
+                          Ethnicity
+                        </FieldLabel>
                         <Select
                           value={watch("ethnicity")?.startsWith("Other") ? "Other" : watch("ethnicity") || "__none__"}
                           onValueChange={(v) => setValue("ethnicity", v === "__none__" ? "" : v)}
@@ -936,11 +1057,16 @@ export function ActorProfileForm() {
                             onChange={(e) => setValue("ethnicity", e.target.value ? `Other: ${e.target.value}` : "Other")}
                           />
                         )}
-                      </div>
+                      </Field>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="">Height</Label>
+                        <Field>
+                          <FieldLabel
+                            htmlFor="height-feet"
+                            hint="Comes up for roles with a physical requirement. It never filters a monologue out."
+                          >
+                            Height
+                          </FieldLabel>
                           <div className="flex gap-2">
                             <Select
                               value={heightParsed.feet === "__none__" ? "__none__" : heightParsed.feet}
@@ -989,10 +1115,15 @@ export function ActorProfileForm() {
                               </SelectContent>
                             </Select>
                           </div>
-                        </div>
+                        </Field>
 
-                        <div className="space-y-2">
-                          <Label htmlFor="build" className="">Build</Label>
+                        <Field>
+                          <FieldLabel
+                            htmlFor="build"
+                            hint="Same as height: it shapes role suggestions, not which speeches you can play."
+                          >
+                            Build
+                          </FieldLabel>
                           <Select
                             value={watch("build")?.startsWith("Other") ? "Other" : watch("build") || "__none__"}
                             onValueChange={(v) => setValue("build", v === "__none__" ? "" : v)}
@@ -1015,107 +1146,70 @@ export function ActorProfileForm() {
                               onChange={(e) => setValue("build", e.target.value ? `Other: ${e.target.value}` : "Other")}
                             />
                           )}
-                        </div>
+                        </Field>
                       </div>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="location" className="">Location / market</Label>
-                        <Select
-                          value={watch("location")?.startsWith("Other") ? "Other" : watch("location") || undefined}
-                          onValueChange={(v) => setValue("location", v)}
-                        >
-                          <SelectTrigger id="location">
-                            <SelectValue placeholder="Select location" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {LOCATIONS.map((loc) => (
-                              <SelectItem key={loc} value={loc}>{loc}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {(watch("location") === "Other" || watch("location")?.startsWith("Other:")) && (
-                          <Input
-                            placeholder="Please specify"
-                            className="mt-2"
-                            value={watch("location")?.startsWith("Other:") ? watch("location")?.slice(7).trim() : ""}
-                            onChange={(e) => setValue("location", e.target.value ? `Other: ${e.target.value}` : "Other")}
-                          />
-                        )}
-                        {errors.location && (
-                          <motion.p
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="text-sm text-destructive"
-                          >
-                            {errors.location.message}
-                          </motion.p>
-                        )}
-                      </div>
                     </CardContent>
                   </Card>
                 </motion.div>
               </TabsContent>
 
             <TabsContent value="acting" className="mt-6">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Acting Background</CardTitle>
-                      <CardDescription>Used to tailor recommendations.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Required for matching</p>
-                      <div className="space-y-2">
-                        <Label className="">Actor types</Label>
-                        <p className="text-xs text-muted-foreground mb-2">Select all that apply (e.g. Theater, Film & TV)</p>
-                        <div className="flex flex-wrap gap-2">
+              <motion.div initial="hidden" animate="show" variants={RISE_LIST}>
+                  <Card className="overflow-hidden">
+                    <SectionHead
+                      sketch={StageDoorSketch}
+                      title="How you work"
+                      aside="(where you came up, and what you walk into.)"
+                    />
+                    <CardContent className="space-y-6 pt-6">
+                      <GroupRule>Needed to match you</GroupRule>
+                      <Field>
+                        <FieldLabel
+                          hint="Theater pulls from plays. Film & TV pulls from scripts. Pick both if you do both, and you get both."
+                        >
+                          What you act in
+                        </FieldLabel>
+                        <p className="text-xs text-muted-foreground">Pick every one that applies.</p>
+                        <div id="actor-types" tabIndex={-1} className="flex flex-wrap gap-2 pt-1">
                           {ACTOR_TYPE_IDS.filter((id) => id !== "other").map((id) => {
                             const isSelected = actorTypes.includes(id);
                             return (
-                              <button
+                              <motion.button
                                 key={id}
                                 type="button"
+                                whileTap={{ scale: 0.96 }}
+                                aria-pressed={isSelected}
                                 onClick={() => {
                                   setActorTypes((prev) =>
                                     prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
                                   );
                                 }}
-                                className={`px-3 py-2 rounded-lg border text-sm transition ${
-                                  isSelected ? "border-accent bg-accent/10" : "border-border hover:border-accent/50 bg-card"
+                                className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
+                                  isSelected
+                                    ? "border-primary bg-primary/10 text-foreground"
+                                    : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
                                 }`}
                               >
                                 {ACTOR_TYPE_LABELS[id] || id}
-                              </button>
+                              </motion.button>
                             );
                           })}
                         </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor="experience_level" className="">Experience Level *</Label>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button 
-                                type="button" 
-                                className="inline-flex items-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm"
-                                aria-label="Experience level information"
-                              >
-                                <IconInfoCircle className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p className="text-sm">
-                                <strong>Student:</strong> Currently studying acting or just starting out<br/>
-                                <strong>Emerging:</strong> Some experience, building your career<br/>
-                                <strong>Professional:</strong> Established actor with significant experience
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
+                      </Field>
+                      <Field>
+                        <FieldLabel
+                          htmlFor="experience_level"
+                          hint={
+                            <>
+                              <strong>Student</strong> — studying, or just starting.<br />
+                              <strong>Emerging</strong> — some credits, building it.<br />
+                              <strong>Professional</strong> — established, working.
+                            </>
+                          }
+                        >
+                          Experience level
+                        </FieldLabel>
                         <Select
                           value={watch("experience_level") || undefined}
                           onValueChange={(v) => setValue("experience_level", v)}
@@ -1138,10 +1232,64 @@ export function ActorProfileForm() {
                             {errors.experience_level.message}
                           </motion.p>
                         )}
-                      </div>
+                      </Field>
 
-                      <div className="space-y-2">
-                        <Label htmlFor="type" className="text-muted-foreground">Character Type</Label>
+                      {/* Union status sat under "Optional" while counting toward
+                          completion, so the form asked for it and then told you
+                          it didn't matter. It counts; it goes above the rule. */}
+                      <Field>
+                        <FieldLabel
+                          htmlFor="union_status"
+                          hint={
+                            <>
+                              <strong>Non-union</strong> — not a member of anything.<br />
+                              <strong>SAG-E</strong> — eligible to join SAG-AFTRA, not in yet.<br />
+                              <strong>SAG</strong> — full SAG-AFTRA member.
+                            </>
+                          }
+                        >
+                          Union status
+                        </FieldLabel>
+                        <Select
+                          value={watch("union_status")?.startsWith("Other") ? "Other" : watch("union_status") || undefined}
+                          onValueChange={(v) => setValue("union_status", v)}
+                        >
+                          <SelectTrigger id="union_status">
+                            <SelectValue placeholder="Select union status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {UNION_STATUSES.map((s) => (
+                              <SelectItem key={s} value={s}>{s}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {(watch("union_status") === "Other" || watch("union_status")?.startsWith("Other:")) && (
+                          <Input
+                            placeholder="Please specify"
+                            className="mt-2"
+                            value={watch("union_status")?.startsWith("Other:") ? watch("union_status")?.slice(7).trim() : ""}
+                            onChange={(e) => setValue("union_status", e.target.value ? `Other: ${e.target.value}` : "Other")}
+                          />
+                        )}
+                        {errors.union_status && (
+                          <motion.p
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            className="text-sm text-destructive"
+                          >
+                            {errors.union_status.message}
+                          </motion.p>
+                        )}
+                      </Field>
+
+                      <GroupRule>Optional, sharpens the picks</GroupRule>
+                      <Field>
+                        <FieldLabel
+                          htmlFor="type"
+                          hint="The lane you actually get cast in. Optional, but of everything here it moves the picks the most."
+                        >
+                          Character type
+                        </FieldLabel>
                         <Select
                           value={typeof watch("type") === "string" && watch("type")?.startsWith("Other") ? "Other" : watch("type") || "__none__"}
                           onValueChange={(v) => setValue("type", v === "__none__" ? "" : v)}
@@ -1173,12 +1321,15 @@ export function ActorProfileForm() {
                             {errors.type.message}
                           </motion.p>
                         )}
-                      </div>
+                      </Field>
 
-                      <Separator className="my-6" />
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Optional: improves recommendations</p>
-                      <div className="space-y-2">
-                        <Label htmlFor="training_background" className="">Training background</Label>
+                      <Field>
+                        <FieldLabel
+                          htmlFor="training_background"
+                          hint="Meisner, Method, Chekhov, none of the above. It shapes how rehearsal notes are written for you, not what search returns."
+                        >
+                          Training background
+                        </FieldLabel>
                         <Select
                           value={watch("training_background")?.startsWith("Other") ? "Other" : watch("training_background") || "__none__"}
                           onValueChange={(v) => setValue("training_background", v === "__none__" ? "" : v)}
@@ -1201,155 +1352,99 @@ export function ActorProfileForm() {
                             onChange={(e) => setValue("training_background", e.target.value ? `Other: ${e.target.value}` : "Other")}
                           />
                         )}
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor="union_status" className="">Union Status *</Label>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button 
-                                type="button" 
-                                className="inline-flex items-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm"
-                                aria-label="Union status information"
-                              >
-                                <IconInfoCircle className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p className="text-sm">
-                                <strong>Non-union:</strong> Not a member of any acting union<br/>
-                                <strong>SAG-E:</strong> SAG Eligible - Can join SAG-AFTRA but not yet a member<br/>
-                                <strong>SAG:</strong> Full member of SAG-AFTRA (Screen Actors Guild)
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                        <Select
-                          value={watch("union_status")?.startsWith("Other") ? "Other" : watch("union_status") || undefined}
-                          onValueChange={(v) => setValue("union_status", v)}
-                        >
-                          <SelectTrigger id="union_status">
-                            <SelectValue placeholder="Select union status" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {UNION_STATUSES.map((s) => (
-                              <SelectItem key={s} value={s}>{s}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        {(watch("union_status") === "Other" || watch("union_status")?.startsWith("Other:")) && (
-                          <Input
-                            placeholder="Please specify"
-                            className="mt-2"
-                            value={watch("union_status")?.startsWith("Other:") ? watch("union_status")?.slice(7).trim() : ""}
-                            onChange={(e) => setValue("union_status", e.target.value ? `Other: ${e.target.value}` : "Other")}
-                          />
-                        )}
-                        {errors.union_status && (
-                          <motion.p
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            className="text-sm text-destructive"
-                          >
-                            {errors.union_status.message}
-                          </motion.p>
-                        )}
-                      </div>
+                      </Field>
                     </CardContent>
                   </Card>
                 </motion.div>
               </TabsContent>
 
             <TabsContent value="preferences" className="mt-6">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.2 }}
-              >
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                        <IconSparkles className="h-5 w-5" />
-                        Search Preferences
-                      </CardTitle>
-                      <CardDescription>Customize search.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
-                        <div className="space-y-0.5">
-                          <Label htmlFor="profile_bias" className="text-base font-semibold">
-                            AI-Powered Recommendations
-                          </Label>
-                          <p className="text-sm text-muted-foreground">
-                            Enable semantic search with personalized recommendations
-                          </p>
+              <motion.div initial="hidden" animate="show" variants={RISE_LIST}>
+                  <Card className="overflow-hidden">
+                    <SectionHead
+                      sketch={SpotlightSketch}
+                      title="What you see"
+                      aside="(how hard the search leans on all of the above.)"
+                    />
+                    <CardContent className="space-y-6 pt-6">
+                      <Field>
+                        <div className="flex items-start justify-between gap-6 rounded-lg border border-border/60 bg-muted/40 p-4">
+                          <div className="min-w-0">
+                            <Label htmlFor="profile_bias" className="text-sm font-medium">
+                              Use my profile when I search
+                            </Label>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Results get weighted toward your range, type and market.
+                              Turn it off and you search the whole library flat.
+                            </p>
+                          </div>
+                          <Switch
+                            id="profile_bias"
+                            checked={profileBiasEnabled}
+                            onCheckedChange={(checked) => setValue("profile_bias_enabled", checked)}
+                          />
                         </div>
-                        <Switch
-                          id="profile_bias"
-                          checked={profileBiasEnabled}
-                          onCheckedChange={(checked) => setValue("profile_bias_enabled", checked)}
-                        />
-                      </div>
+                      </Field>
 
-                      <Separator />
-
-                      <div className="space-y-2">
-                        <Label className="">Preferred genres</Label>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                          {PREFERRED_GENRES.map((genre) => (
-                            <motion.label
-                              key={genre}
-                              whileHover={{ scale: 1.05 }}
-                              whileTap={{ scale: 0.95 }}
-                              className="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-muted transition-colors"
-                            >
-                              <Checkbox
-                                checked={preferredGenres?.includes(genre)}
-                                onChange={() => toggleGenre(genre)}
-                              />
-                              <span className="text-sm">{genre}</span>
-                            </motion.label>
-                          ))}
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor="sensitivity" className="">
-                            Overdone Alert Sensitivity: {watch("overdone_alert_sensitivity")}
-                          </Label>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button 
-                                type="button" 
-                                className="inline-flex items-center cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-sm"
-                                aria-label="Overdone alert sensitivity information"
+                      <Field>
+                        <FieldLabel hint="Not a filter. These float to the top; nothing gets hidden because it isn't on the list.">
+                          Genres you gravitate to
+                        </FieldLabel>
+                        {/* Chips, like the actor types above — the form asked the
+                            same kind of question two different ways. */}
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          {PREFERRED_GENRES.map((genre) => {
+                            const on = preferredGenres?.includes(genre);
+                            return (
+                              <motion.button
+                                key={genre}
+                                type="button"
+                                whileTap={{ scale: 0.96 }}
+                                aria-pressed={on}
+                                onClick={() => toggleGenre(genre)}
+                                className={`rounded-lg border px-3 py-2 text-sm transition-colors ${
+                                  on
+                                    ? "border-primary bg-primary/10 text-foreground"
+                                    : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                                }`}
                               >
-                                <IconInfoCircle className="h-4 w-4 text-muted-foreground hover:text-foreground transition-colors" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p className="text-sm">
-                                Controls how sensitive the system is to flagging &quot;overdone&quot; monologues (pieces that are frequently used in auditions).<br/><br/>
-                                <strong>Low (0.0-0.3):</strong> Only flags extremely overdone monologues<br/>
-                                <strong>Medium (0.4-0.6):</strong> Flags moderately overdone pieces<br/>
-                                <strong>High (0.7-1.0):</strong> Flags any monologue that might be overdone, helping you stand out with unique choices
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
+                                {genre}
+                              </motion.button>
+                            );
+                          })}
                         </div>
+                      </Field>
+
+                      <Separator />
+
+                      <Field>
+                        <FieldLabel
+                          htmlFor="sensitivity"
+                          hint="Every piece carries a score for how often it gets used in auditions. This decides at what point I warn you."
+                        >
+                          Warn me about overdone pieces
+                        </FieldLabel>
+                        <p className="text-sm text-muted-foreground">
+                          {overdoneCopy}
+                        </p>
+                        {/* The default range control paints a bright white track,
+                            which on this page is the lightest thing on screen and
+                            pulls the eye off the copy above it. */}
                         <input
+                          id="sensitivity"
                           type="range"
                           min="0"
                           max="1"
                           step="0.1"
+                          aria-valuetext={overdoneCopy}
                           {...register("overdone_alert_sensitivity", { valueAsNumber: true })}
-                          className="w-full"
+                          className="w-full cursor-pointer appearance-none bg-transparent focus:outline-none [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-[var(--primary)] [&::-moz-range-track]:h-1 [&::-moz-range-track]:rounded-full [&::-moz-range-track]:bg-border [&::-webkit-slider-runnable-track]:h-1 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-runnable-track]:bg-border [&::-webkit-slider-thumb]:-mt-1.5 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-[var(--primary)]"
                         />
-                      </div>
+                        <div className="flex justify-between text-[11px] uppercase tracking-[0.12em] text-muted-foreground/70">
+                          <span>only the warhorses</span>
+                          <span>anything familiar</span>
+                        </div>
+                      </Field>
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -1357,6 +1452,12 @@ export function ActorProfileForm() {
           </div>
         </Tabs>
         </div>
+
+        <ProfilePayoff
+          signature={payoffSignature}
+          ready={payoffReady}
+          because={payoffBecause}
+        />
       </div>
       {/* Photo Viewer Modal */}
       {showPhotoViewer && headshotPreview && (

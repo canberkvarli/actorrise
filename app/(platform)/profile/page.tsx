@@ -19,12 +19,12 @@ export default function ProfilePage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
+      {/* The call sheet below already states the actor's name and how complete
+          the profile is, so a second "Actor Profile / better profile = better
+          matches" heading above it was saying the same thing twice, worse. */}
       <div className="mb-8">
         <p className="stage-direction text-xs text-muted-foreground/70 mb-2">(your dressing room.)</p>
-        <h1 className="font-brand text-3xl sm:text-4xl font-semibold mb-2">Actor Profile</h1>
-        <p className="text-muted-foreground">
-          Better profile = better matches and recommendations.
-        </p>
+        <h1 className="font-brand text-3xl sm:text-4xl font-semibold">Your profile</h1>
       </div>
       <ActorProfileForm />
       <ProfilePrivacyCard />

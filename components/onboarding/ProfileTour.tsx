@@ -15,8 +15,8 @@ interface TourStep {
 const TOUR_STEPS: TourStep[] = [
   {
     targetId: "profile-progress",
-    title: "Your completion",
-    body: "Fill in the sections below to reach 100%. More details mean better matches.",
+    title: "Your casting line",
+    body: "This is how you read on paper. Tap any blank in it and you land on the field that fills it.",
     placement: "bottom",
   },
   {
