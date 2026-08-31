@@ -698,7 +698,7 @@ export function ActorProfileForm() {
                   <div className="flex items-center justify-between">
                     <Label className="text-base font-semibold">Profile Completion</Label>
                     <span className="text-sm font-medium text-muted-foreground">
-                      {completionPercentage.toFixed(1)}%
+                      {Math.round(completionPercentage)}%
                     </span>
                   </div>
                   <Progress value={completionPercentage} className="h-2" />
@@ -716,7 +716,9 @@ export function ActorProfileForm() {
                             <span className={item.filled ? "text-primary" : "text-muted-foreground"} aria-hidden>
                               {item.filled ? "✓" : "○"}
                             </span>
-                            <span className={item.filled ? "line-through decoration-muted-foreground" : ""}>{item.label}</span>
+                            {/* Struck-through text reads as cancelled, not done — the tick already
+    says it is done. Dim it instead so the eye goes to what is left. */}
+                            <span className={item.filled ? "text-muted-foreground/60" : ""}>{item.label}</span>
                           </li>
                         ))}
                       </ul>
