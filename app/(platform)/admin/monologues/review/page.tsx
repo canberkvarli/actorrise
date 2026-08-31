@@ -33,7 +33,8 @@ interface ReviewItem {
   source_type: string;
   text: string;
   proposed_text: string | null;
-  review_reasons: string[];
+  /** Nullable in Postgres; the type claimed otherwise. */
+  review_reasons: string[] | null;
   word_count: number;
 }
 
@@ -109,7 +110,7 @@ function ReviewCard({ item }: { item: ReviewItem }) {
         </div>
 
         <div className="mt-2 flex flex-wrap gap-1.5">
-          {item.review_reasons.map((r) => (
+          {(item.review_reasons ?? []).map((r) => (
             <ReasonTag key={r} reason={r} />
           ))}
         </div>
@@ -200,17 +201,23 @@ export default function AdminMonologueReviewPage() {
     staleTime: 15_000,
   });
 
-  const items = useMemo(() => data ?? [], [data]);
+  // Array.isArray, not `?? []`: `??` only catches null/undefined, so any other
+  // shape reaches the for-of below and throws in render, taking the whole queue
+  // out through the error boundary.
+  const items = useMemo(() => (Array.isArray(data) ? data : []), [data]);
   const reasons = useMemo(() => {
     const counts = new Map<string, number>();
     for (const it of items) {
-      for (const r of it.review_reasons) counts.set(r, (counts.get(r) ?? 0) + 1);
+      // review_reasons is a nullable Postgres array. Every pending row happens
+      // to have one today, so this is defensive rather than a live fault — but
+      // one NULL would blank the review queue entirely.
+      for (const r of it.review_reasons ?? []) counts.set(r, (counts.get(r) ?? 0) + 1);
     }
     return [...counts.entries()].sort((a, b) => b[1] - a[1]);
   }, [items]);
 
   const shown = reason
-    ? items.filter((i) => i.review_reasons.includes(reason))
+    ? items.filter((i) => (i.review_reasons ?? []).includes(reason))
     : items;
 
   return (
