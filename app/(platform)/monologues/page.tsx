@@ -16,54 +16,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { toastBookmark } from "@/lib/toast";
 import { trackSearchPerformed, trackResultClicked } from "@/lib/analytics";
-import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconEye, IconEyeOff, IconDownload, IconAdjustments, IconFlag, IconDeviceTv, IconCheck } from "@tabler/icons-react";
+import { IconSearch, IconSparkles, IconLoader2, IconX, IconBookmark, IconEye, IconEyeOff, IconDownload, IconAdjustments, IconFlag, IconDeviceTv } from "@tabler/icons-react";
 
-// Fun loading messages for AI search (theater)
-const LOADING_MESSAGES = [
-  "Asking Shakespeare for advice...",
-  "Consulting the drama gods...",
-  "Squeezing the monologue database...",
-  "Searching backstage...",
-  "Finding your perfect piece...",
-  "Digging through the classics...",
-  "Working our magic...",
-  "Rifling through the script pile...",
-];
-
-// Playful loading messages for film/TV search
-const LOADING_MESSAGES_FILM_TV = [
-  "Checking the IMDb files…",
-  "Asking the director's cut…",
-  "Scanning the credits…",
-  "Rolling through the reels…",
-  "Searching the green room…",
-  "Reading the script supervisor's notes…",
-  "Finding your scene…",
-  "Checking the call sheet…",
-];
-
-const SEARCH_LOADING_STEPS = [
-  "Consulting the drama gods",
-  "Rifling through 12,000+ scripts and plays",
-  "Asking Shakespeare which one hits hardest",
-  "Weighing every speech for emotional weight",
-  "Finding the ones that'll stop the room",
-  "Curating your shortlist",
-];
-
-const FILM_TV_LOADING_STEPS = [
-  "Scanning the IMDb archives",
-  "Checking with Scorsese's casting notes",
-  "Digging through iconic film scenes",
-  "Matching roles to your search",
-  "Pulling the best audition-worthy moments",
-  "Lining up your shortlist",
-];
 import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
 import { TrendingPreSearch } from "@/components/monologue/TrendingPreSearch";
 import { ForYouShelf } from "@/components/monologue/ForYouShelf";
+import { SearchCurtain } from "@/components/monologue/SearchCurtain";
 import { MasksSketch } from "@/components/brand/sketches";
 import { SearchFiltersPanel } from "@/components/monologue/SearchFiltersPanel";
 import { NoResultsState } from "@/components/monologue/NoResultsState";
@@ -249,10 +209,6 @@ function SearchContent() {
   const PAGE_SIZE = 20;
   const [hasMore, setHasMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
-  const [loadingSteps, setLoadingSteps] = useState<string[]>([]);
-  const loadingStepsTimers = useRef<NodeJS.Timeout[]>([]);
-  const loadingScrollRef = useRef<HTMLDivElement>(null);
   const [isTyping, setIsTyping] = useState(false);
   const [jitter, setJitter] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -321,46 +277,7 @@ function SearchContent() {
     }
   }, [user]);
 
-  // Rotate loading messages every 2 seconds while searching
-  useEffect(() => {
-    if (!isLoading) return;
-    const interval = setInterval(() => {
-      setLoadingMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [isLoading]);
 
-  const currentLoadingMessage =
-    searchMode === "film_tv"
-      ? LOADING_MESSAGES_FILM_TV[loadingMessageIndex % LOADING_MESSAGES_FILM_TV.length]
-      : LOADING_MESSAGES[loadingMessageIndex % LOADING_MESSAGES.length];
-
-  // Build whimsical step-by-step loading list for both search modes
-  // Steps are spread evenly across the search duration (not fixed interval)
-  // so the last step never "gets stuck" — all 6 finish just before results arrive.
-  const loadingStartRef = useRef<number>(0);
-  const searchModeRef = useRef(searchMode);
-  searchModeRef.current = searchMode;
-  const anyLoading = isPlaysLoading || isFilmTvLoading;
-  useEffect(() => {
-    if (!anyLoading) {
-      loadingStepsTimers.current.forEach(clearTimeout);
-      loadingStepsTimers.current = [];
-      setLoadingSteps([]);
-      return;
-    }
-    loadingStartRef.current = Date.now();
-    setLoadingSteps([]);
-    const steps = isFilmTvLoading ? FILM_TV_LOADING_STEPS : SEARCH_LOADING_STEPS;
-    // Steps spaced to feel synced with a real backend process (~3-8s search).
-    // Intervals increase so early steps feel quick, later ones feel like heavy work.
-    const delays = [0, 1200, 2800, 4800, 7000, 9500];
-    const timers = steps.map((step, i) =>
-      setTimeout(() => setLoadingSteps((prev) => [...prev, step]), delays[i])
-    );
-    loadingStepsTimers.current = timers;
-    return () => timers.forEach(clearTimeout);
-  }, [anyLoading, isFilmTvLoading]);
 
   // Auto-scroll: handled via ref callback on the latest step
 
@@ -1879,63 +1796,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="pt-6 pb-10"
               >
-                <div className="max-w-3xl mx-auto">
-                  <div className="relative">
-                    {loadingSteps.length > 3 && (
-                      <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-background to-transparent z-10 pointer-events-none" />
-                    )}
-                    <div
-                      ref={loadingScrollRef}
-                      className="border-l-2 border-violet-400/40 pl-3 sm:pl-5 max-h-44 sm:max-h-64 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                    >
-                      <AnimatePresence initial={false}>
-                        {loadingSteps.map((step, i) => {
-                          const isLatest = i === loadingSteps.length - 1;
-                          const isCompleted = i < loadingSteps.length - 1;
-                          return (
-                            <motion.div
-                              key={`step-${i}`}
-                              initial={{ opacity: 0, height: 0, x: -8 }}
-                              animate={{ opacity: 1, height: "auto", x: 0 }}
-                              transition={{ duration: 0.35, ease: "easeOut" }}
-                              className="overflow-hidden"
-                              ref={isLatest ? (el: HTMLDivElement | null) => {
-                                if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "end" }), 150);
-                              } : undefined}
-                            >
-                              <div className="flex items-center gap-3 py-2.5">
-                                <div className="shrink-0">
-                                  {isCompleted ? (
-                                    <motion.div
-                                      initial={{ scale: 0 }}
-                                      animate={{ scale: 1 }}
-                                      transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                                    >
-                                      <IconCheck className="w-4 h-4 text-emerald-500" />
-                                    </motion.div>
-                                  ) : (
-                                    <IconLoader2 className="w-4 h-4 text-violet-400 animate-spin" />
-                                  )}
-                                </div>
-                                <span
-                                  className={`text-sm sm:text-base leading-snug ${
-                                    isLatest
-                                      ? "text-violet-400 font-medium"
-                                      : "text-muted-foreground"
-                                  }`}
-                                >
-                                  {step}{isLatest && <span className="animate-pulse">...</span>}
-                                </span>
-                              </div>
-                            </motion.div>
-                          );
-                        })}
-                      </AnimatePresence>
-                    </div>
-                  </div>
-                </div>
+                <SearchCurtain mode="film_tv" />
               </motion.div>
             ) : filmTvResults.length === 0 && !filmTvHasSearched ? (
               <div />
@@ -2063,85 +1925,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="pt-6 pb-10"
             >
-              <div className="max-w-3xl mx-auto">
-                <div className="relative">
-                  {loadingSteps.length > 3 && (
-                    <div className="absolute top-0 left-0 right-0 h-10 bg-gradient-to-b from-background to-transparent z-10 pointer-events-none" />
-                  )}
-                  <div
-                    ref={loadingScrollRef}
-                    className="border-l-2 border-border/60 pl-3 sm:pl-5 max-h-44 sm:max-h-64 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
-                  >
-                    <AnimatePresence initial={false}>
-                      {loadingSteps.map((step, i) => {
-                        const isLatest = i === loadingSteps.length - 1;
-                        const isCompleted = i < loadingSteps.length - 1;
-                        return (
-                          <motion.div
-                            key={`step-${i}`}
-                            initial={{ opacity: 0, height: 0, x: -8 }}
-                            animate={{ opacity: 1, height: "auto", x: 0 }}
-                            transition={{ duration: 0.35, ease: "easeOut" }}
-                            className="overflow-hidden"
-                            ref={isLatest ? (el: HTMLDivElement | null) => {
-                              if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "end" }), 150);
-                            } : undefined}
-                          >
-                            <div className="flex items-center gap-3 py-2.5">
-                              <div className="shrink-0">
-                                {isCompleted ? (
-                                  <motion.div
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                                  >
-                                    <IconCheck className="w-4 h-4 text-emerald-500" />
-                                  </motion.div>
-                                ) : (
-                                  <IconLoader2 className="w-4 h-4 text-primary animate-spin" />
-                                )}
-                              </div>
-                              <span
-                                className={`text-sm sm:text-base leading-snug ${
-                                  isLatest
-                                    ? "text-primary font-medium"
-                                    : "text-muted-foreground/60"
-                                }`}
-                              >
-                                {step}
-                                {isLatest && (
-                                  <motion.span
-                                    animate={{ opacity: [0.3, 1, 0.3] }}
-                                    transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-                                  >
-                                    ...
-                                  </motion.span>
-                                )}
-                              </span>
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </AnimatePresence>
-                    {loadingSteps.length === 0 && (
-                      <div className="flex items-center gap-3 py-2.5">
-                        <IconLoader2 className="w-4 h-4 text-primary animate-spin shrink-0" />
-                        <span className="text-sm sm:text-base text-primary font-medium">
-                          Waking the theater up
-                          <motion.span
-                            animate={{ opacity: [0.3, 1, 0.3] }}
-                            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-                          >
-                            ...
-                          </motion.span>
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <SearchCurtain mode="plays" />
             </motion.div>
           ) : hasSearched && results.length === 0 && !searchError ? (
             <motion.div
