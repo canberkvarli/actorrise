@@ -6,6 +6,8 @@ import {
   IconPlayerPlayFilled,
   IconRefresh,
   IconArrowLeft,
+  IconBulb,
+  IconBulbFilled,
 } from "@tabler/icons-react";
 import type { Monologue } from "@/types/actor";
 import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
@@ -22,7 +24,13 @@ import {
 import api from "@/lib/api";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { useTrialOffer, TrialOfferCard } from "@/components/billing/TrialOffer";
-import { GhostLight } from "@/components/brand/GhostLight";
+import {
+  GhostLightSketch,
+  MicSketch,
+  ScriptPagesSketch,
+} from "@/components/brand/sketches";
+import { useToggleMemorized } from "@/hooks/useMemorized";
+import { displayableAuthor } from "@/lib/utils";
 import { MicWaveform } from "@/components/scenepartner/MicWaveform";
 
 /** How far through the line (in order) you must read before it advances — high
@@ -95,6 +103,21 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   const inTrial = trialDaysLeft > 0;
 
   const completed = started && activeIndex >= lines.length;
+
+  /**
+   * The off-book mark, claimable from the curtain call. Same pair of calls the
+   * detail page makes — the flag plus the studied ping that drives the spaced
+   * review clock. Named `markedOffBook` to stay clear of `offBook` above, which
+   * is the hide-the-lines display mode and an unrelated thing entirely.
+   */
+  const toggleMemorized = useToggleMemorized();
+  const [markedOffBook, setMarkedOffBook] = useState(!!monologue.memorized);
+  const markOffBook = useCallback(() => {
+    if (markedOffBook) return;
+    setMarkedOffBook(true);
+    toggleMemorized.mutate({ monologueId: monologue.id, memorized: true });
+    api.post(`/api/monologues/${monologue.id}/studied`, {}).catch(() => {});
+  }, [markedOffBook, monologue.id, toggleMemorized]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const activeRef = useRef<HTMLParagraphElement>(null);
@@ -257,7 +280,18 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
    * budget we fall through to tap mode rather than pretending to listen.
    */
   const restartsRef = useRef(0);
-  const RESTART_BUDGET = 40;
+  /** CONSECUTIVE restarts with nothing heard in between. Small on purpose: a
+   *  working mic resets it below the moment any words arrive, so only a mic that
+   *  is genuinely dead burns through it — in about three seconds rather than
+   *  leaving you staring at "Paused". */
+  const RESTART_BUDGET = 8;
+
+  // Any speech at all proves the mic works, so forgive the count. Otherwise a
+  // long piece with several quiet beats would slowly exhaust the budget and
+  // drop a perfectly good voice run into tap mode near the end.
+  useEffect(() => {
+    if (transcript.trim()) restartsRef.current = 0;
+  }, [transcript]);
 
   useEffect(() => {
     if (!started || completed || tapToAdvance || isListening || listenExhausted) return;
@@ -366,15 +400,33 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-6 text-center"
           >
             <div className="flex flex-col items-center gap-4">
-              <GhostLight size="md" className="mb-1" />
-              <span className="text-xs uppercase tracking-[0.3em] text-[#CB4B00]">Off book</span>
+              {/* The drawing states the mode: a mic when I'm listening, pages
+                  when you're driving it yourself. This was a bare orange dot —
+                  the same glyph as the page's loading indicator, so the screen
+                  you land on looked like a screen still loading. */}
+              {tapToAdvance ? (
+                <ScriptPagesSketch size={64} className="text-white/55" />
+              ) : (
+                <MicSketch size={64} className="text-white/55" />
+              )}
+              {/* Was "Off book", which fought the hide-the-lines control below —
+                  two different meanings of off-book on one screen. Say where we
+                  are instead. */}
+              <span className="stage-direction text-xs text-white/45">(places.)</span>
               <p className="max-w-md text-2xl font-medium leading-snug text-white">
                 {tapToAdvance
                   ? "Run it at your own pace. Tap to move through it."
                   : "Say it out loud. I’ll follow along."}
               </p>
               <p className="text-sm text-white/45">
+                {monologue.play_title}
+                {displayableAuthor(monologue.author) ? ` · ${displayableAuthor(monologue.author)}` : ""}
+              </p>
+              <p className="text-xs text-white/35">
                 {lines.length} line{lines.length === 1 ? "" : "s"}
+                {monologue.estimated_duration_seconds
+                  ? ` · about ${Math.max(1, Math.round(monologue.estimated_duration_seconds / 60))} min`
+                  : ""}
                 {tapToAdvance && " · tap anywhere to advance"}
               </p>
               {inTrial && (
@@ -392,11 +444,18 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
               Begin
             </button>
 
+            {/* The only choice on this screen, so it should look like one. It
+                was a tiny all-caps line that read as a footnote. */}
             <button
               onClick={() => setOffBook((v) => !v)}
-              className={`text-xs uppercase tracking-[0.18em] transition-colors ${offBook ? "text-[#CB4B00]" : "text-white/35 hover:text-white/60"}`}
+              aria-pressed={offBook}
+              className={`rounded-full border px-4 py-2 text-xs transition-colors ${
+                offBook
+                  ? "border-[#CB4B00] bg-[#CB4B00]/10 text-[#CB4B00]"
+                  : "border-white/15 text-white/50 hover:border-white/35 hover:text-white/80"
+              }`}
             >
-              {offBook ? "Hidden-line mode: on" : "Hide the lines (harder)"}
+              {offBook ? "Lines hidden — tap to show them" : "Hide the lines · harder"}
             </button>
 
             <MonologuePaywallModal open={paywallOpen} onOpenChange={setPaywallOpen} />
@@ -412,19 +471,49 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             exit={{ opacity: 0 }}
             className="relative z-10 flex flex-1 flex-col items-center justify-center gap-6 overflow-y-auto px-6 py-10 text-center"
           >
+            <GhostLightSketch size={56} className="text-white/40" />
             <span className="text-[0.68rem] uppercase tracking-[0.3em] text-[#CB4B00]">Curtain</span>
             <h2 className="font-brand text-3xl font-medium text-white/90">You made it through.</h2>
             <p className="max-w-xs text-sm leading-relaxed text-white/45">
               Run it again, or take it into the room.
             </p>
 
-            <button
-              onClick={restart}
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-medium text-white/80 transition-colors hover:border-[#CB4B00] hover:text-white"
-            >
-              <IconRefresh className="h-4 w-4" />
-              Run it again
-            </button>
+            {/* This screen used to offer one action — restart — so finishing a
+                run was a dead end. The moment you get through a piece is the
+                moment to claim it, so the off-book mark lives here too. */}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <button
+                onClick={restart}
+                className="inline-flex items-center gap-2 rounded-full border border-white/15 px-6 py-3 text-sm font-medium text-white/80 transition-colors hover:border-[#CB4B00] hover:text-white"
+              >
+                <IconRefresh className="h-4 w-4" />
+                Run it again
+              </button>
+              <button
+                onClick={markOffBook}
+                disabled={markedOffBook}
+                className={`inline-flex items-center gap-2 rounded-full border px-6 py-3 text-sm font-medium transition-colors ${
+                  markedOffBook
+                    ? "border-amber-400/40 text-amber-300"
+                    : "border-white/15 text-white/80 hover:border-amber-400/60 hover:text-white"
+                }`}
+              >
+                {markedOffBook ? (
+                  <IconBulbFilled className="h-4 w-4" />
+                ) : (
+                  <IconBulb className="h-4 w-4" />
+                )}
+                {markedOffBook ? "Marked off book" : "I'm off book"}
+              </button>
+            </div>
+            {onExit && (
+              <button
+                onClick={onExit}
+                className="text-sm text-white/40 underline-offset-4 transition-colors hover:text-white/70 hover:underline"
+              >
+                Back to the piece
+              </button>
+            )}
 
             {monologueOffer.visible && (
               <div className="w-full max-w-sm">
