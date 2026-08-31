@@ -33,7 +33,7 @@ export default function PrivacyPage() {
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-3xl">
       <p className="text-sm text-muted-foreground mb-10">
-        Last updated: August 2026
+        Last updated: August 31, 2026
       </p>
 
       <div className="space-y-8 text-muted-foreground">
@@ -88,7 +88,7 @@ export default function PrivacyPage() {
             <li><strong className="text-foreground">Sign-in providers:</strong> If you sign in with Google or Apple, those providers share with us the information you consent to (e.g., email, name) in accordance with their policies.</li>
             <li><strong className="text-foreground">Payments on the web:</strong> Stripe or another payment processor for subscriptions bought on actorrise.com. Payment data is handled by them; we do not store full payment card details.</li>
             <li><strong className="text-foreground">Payments in our iOS app:</strong> Subscriptions bought inside Ghost Light: Monologues are processed by Apple through in-app purchase. Apple does not share your payment details with us. We use RevenueCat to record which subscription you hold and to keep it in sync across your devices; it receives a pseudonymous identifier for your account, your purchase and receipt history, and basic device and app-version data. We never receive your card number.</li>
-            <li><strong className="text-foreground">AI and analytics:</strong> We may use services (e.g., OpenAI) to power features such as search and recommendations. Data sent to such providers is used only to provide the feature and in accordance with their data terms.</li>
+            <li><strong className="text-foreground">AI providers:</strong> We use OpenAI to power search, recommendations, speech transcription, the scene partner voice, self-tape feedback, and script parsing. Section 6 describes exactly what is sent, and what is kept. Under our provider&rsquo;s API terms, content sent through the API is not used to train their models.</li>
           </ul>
           <p className="mt-3">
             <strong className="text-foreground">Community feed (the callboard).</strong> ActorRise includes a community activity feed visible to other signed-in users. It can show your first name, city, and profile photo alongside activity such as joining, reading, saving, or rehearsing a particular monologue. It never shows the text of your searches: raw search queries are not stored in the feed at all, and a search appears only as a general description (for example, &ldquo;searched for a comedic monologue&rdquo;). You can turn this off at any time using &ldquo;Hide my activity&rdquo; on the callboard, which also hides your past activity, not just future activity. A logged-out preview of the feed shows only a first initial and no photo.
@@ -99,14 +99,38 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">6. Data Retention</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-3">6. Voice, Video, and Script Content</h2>
+          <p className="mb-3">
+            Several features work by sending what you record or upload to our AI provider. This section sets out exactly what leaves your device, where it goes, and what is kept. If you never use these features, none of it applies to you.
+          </p>
+          <ul className="list-disc pl-6 space-y-2">
+            <li>
+              <strong className="text-foreground">Your voice during rehearsal.</strong> When you rehearse a scene or monologue and speak your lines, short audio clips are captured by your browser or app and sent to our transcription provider (OpenAI Whisper) to be turned into text, so the scene partner knows when you have finished a line. The audio file is deleted as soon as the text comes back. We do not store your recordings, we do not keep them in our database, and no one at ActorRise listens to them.
+            </li>
+            <li>
+              <strong className="text-foreground">The scene partner&rsquo;s voice.</strong> The other character&rsquo;s lines are spoken using a synthetic voice generated from the script text by our provider. This is generated audio, not a recording of a person.
+            </li>
+            <li>
+              <strong className="text-foreground">Self-tape video.</strong> In Audition Mode, your video is recorded and stays on your device. Your device extracts a small number of still frames and sends only those frames to our AI provider to generate feedback on framing, lighting, and performance. The video file itself is never uploaded to us. The frames are not stored after the feedback is produced.
+            </li>
+            <li>
+              <strong className="text-foreground">Scripts and sides you upload.</strong> Scripts you upload are stored in your account so you can rehearse them again. To identify characters and split the dialogue, the text is sent to our AI provider for parsing. Your uploaded scripts are private to your account unless you choose to share one, and we do not add them to our public monologue library.
+            </li>
+          </ul>
+          <p className="mt-3">
+            Content sent to our AI provider through their API is not used to train their models. They may retain it briefly for abuse monitoring under their API terms. You can stop all microphone and camera processing at any time by declining or revoking the browser or device permission, or by not using these features; the rest of the Service continues to work without them.
+          </p>
+        </section>
+
+        <section>
+          <h2 className="text-xl font-semibold text-foreground mb-3">7. Data Retention</h2>
           <p>
             We retain your data for as long as your account is active or as needed to provide the Service and fulfill the purposes described in this policy. We may retain certain data longer where required by law (e.g., tax, legal claims) or for legitimate business purposes (e.g., security, dispute resolution). After account deletion, we delete or anonymize your personal data within a reasonable period, except where retention is required by law.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">7. Your Rights</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-3">8. Your Rights</h2>
           <p className="mb-3">Depending on where you live, you may have the right to:</p>
           <ul className="list-disc pl-6 space-y-2">
             <li><strong className="text-foreground">Access</strong> your personal data and receive a copy.</li>
@@ -123,35 +147,35 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">8. International Transfers</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-3">9. International Transfers</h2>
           <p>
             Your data may be processed in countries other than your own. We ensure appropriate safeguards (e.g., standard contractual clauses, adequacy decisions) where required by law so that your data remains protected in line with this policy and applicable regulations.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">9. Security</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-3">10. Security</h2>
           <p>
             We implement technical and organizational measures to protect your data against unauthorized access, loss, or alteration. No method of transmission or storage is 100% secure; we cannot guarantee absolute security and you use the Service at your own risk in that regard.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">10. Children</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-3">11. Children</h2>
           <p>
             The Service is not directed at children under 16 (or higher age where required). We do not knowingly collect personal data from children. If you believe we have collected data from a child, please contact us and we will delete it promptly.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">11. Changes to This Policy</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-3">12. Changes to This Policy</h2>
           <p>
             We may update this Privacy Policy from time to time. We will post the updated policy on this page and, for material changes, we will provide additional notice (e.g., email or in-product notice) where required by law. Your continued use of the Service after the effective date of changes constitutes acceptance of the updated policy.
           </p>
         </section>
 
         <section>
-          <h2 className="text-xl font-semibold text-foreground mb-3">12. Contact</h2>
+          <h2 className="text-xl font-semibold text-foreground mb-3">13. Contact</h2>
           <p>
             For privacy-related questions, requests, or complaints, contact us at:{" "}
             <Link href="/contact" className="text-foreground underline hover:no-underline">
