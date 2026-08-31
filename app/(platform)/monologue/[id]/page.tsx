@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter, notFound } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -20,6 +19,7 @@ import {
   MonologueBody,
   MonologueFooter,
 } from "@/components/monologue/MonologueDetailContent";
+import { GhostLightSketch } from "@/components/brand/sketches";
 import { CutEditor } from "@/components/monologue/CutEditor";
 import { ExportSheet } from "@/components/monologue/ExportSheet";
 import { useSaveNotes } from "@/hooks/useCollectionMeta";
@@ -56,6 +56,8 @@ export default function MonologueDetailPage() {
   const { user } = useAuth();
   const [monologue, setMonologue] = useState<Monologue | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  /** The request came back wrong, as opposed to coming back empty. */
+  const [loadFailed, setLoadFailed] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [notes, setNotes] = useState("");
   const [memorized, setMemorized] = useState(false);
@@ -115,6 +117,7 @@ export default function MonologueDetailPage() {
   }, [params.id]);
 
   const fetchMonologue = async (id: string) => {
+    setLoadFailed(false);
     try {
       const response = await api.get<Monologue>(`/api/monologues/${id}`);
       setMonologue(response.data);
@@ -127,7 +130,11 @@ export default function MonologueDetailPage() {
         notFound();
         return;
       }
+      // A timeout, a 500 and a dropped connection are not "this piece does not
+      // exist". Saying so sends the actor back to search for something that is
+      // sitting right there, and gives them nothing to retry.
       console.error("Error fetching monologue:", error);
+      setLoadFailed(true);
     } finally {
       setIsLoading(false);
     }
@@ -181,15 +188,39 @@ export default function MonologueDetailPage() {
 
   if (!monologue) {
     return (
-      <div className="container mx-auto max-w-4xl px-4 py-8">
-        <Card className="rounded-lg">
-          <CardContent className="pb-12 pt-12 text-center">
-            <h3 className="mb-2 text-lg font-semibold">Monologue not found</h3>
-            <Button onClick={() => router.push("/monologues")} className="mt-4">
-              Back to Monologues
+      <div className="container mx-auto max-w-2xl px-4 py-16">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <GhostLightSketch size={72} className="text-muted-foreground/50" />
+          <p className="stage-direction text-xs text-muted-foreground/70">
+            {loadFailed ? "(the lights went out mid-scene.)" : "(nothing on this hook.)"}
+          </p>
+          <h2 className="font-brand text-2xl font-medium text-foreground">
+            {loadFailed ? "This piece wouldn't load" : "This piece has left the stage"}
+          </h2>
+          <p className="max-w-sm text-sm text-muted-foreground">
+            {loadFailed
+              ? "That's on my end, not yours. The piece is still there."
+              : "It may have been taken down since you saved it."}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-3">
+            {loadFailed && (
+              <Button
+                onClick={() => {
+                  setIsLoading(true);
+                  fetchMonologue(params.id as string);
+                }}
+              >
+                Try again
+              </Button>
+            )}
+            <Button
+              variant={loadFailed ? "outline" : "default"}
+              onClick={() => router.push("/monologues")}
+            >
+              Back to monologues
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     );
   }

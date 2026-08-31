@@ -11,6 +11,10 @@ export type RequestOptions = RequestInit & { timeoutMs?: number };
 
 // In-memory session cache to reduce Supabase Auth egress (one getSession per TTL instead of per request).
 const SESSION_CACHE_TTL_MS = 60_000; // 60 seconds
+/** Generous: this should only ever fire when getSession() is genuinely stuck,
+ *  never on a merely slow connection. The failure is a retryable error, not a
+ *  sign-out, so erring long costs nothing. */
+const AUTH_TOKEN_TIMEOUT_MS = 8_000;
 let cachedSession: { access_token: string; expires_at: number } | null = null;
 // Shared in-flight promise so concurrent queries don't each call supabase.auth.getSession()
 let inflightTokenPromise: Promise<string | undefined> | null = null;
@@ -27,7 +31,20 @@ async function getAuthToken(): Promise<string | undefined> {
   if (inflightTokenPromise) return inflightTokenPromise;
   inflightTokenPromise = (async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // getSession() takes a Web Lock. If another tab or a concurrent refresh
+      // is holding it, this promise can simply never settle — and because every
+      // request awaits it before calling fetch, the whole app hangs with no
+      // request, no error and no timeout. A page that opens on a load (the
+      // monologue detail screen) then sits on its skeleton forever.
+      //
+      // Losing the race is not fatal: an unauthenticated request comes back 401
+      // and the caller can say so and offer a retry. Hanging offers nothing.
+      const { data: { session } } = await Promise.race([
+        supabase.auth.getSession(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Auth session lookup timed out")), AUTH_TOKEN_TIMEOUT_MS),
+        ),
+      ]);
       const token = session?.access_token;
       const expiresAt = session?.expires_at;
       if (token != null && expiresAt != null) {

@@ -40,10 +40,18 @@ function Piece({ m }: { m: Monologue }) {
   );
 
   return (
+    // These were a near-black box with a hairline round it, which read as an
+    // unfinished placeholder rather than the reward for filling the form. A
+    // lit left edge and a surface that actually sits above the page give them
+    // the weight of a thing worth tapping.
     <Link
       href={`/monologue/${m.id}`}
-      className="group flex h-full flex-col border border-border/60 bg-card/40 p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_0_24px_-14px_var(--primary)]"
+      className="group relative flex h-full flex-col overflow-hidden border border-border bg-card p-4 pl-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_6px_28px_-16px_var(--primary)]"
     >
+      <span
+        aria-hidden
+        className="absolute inset-y-0 left-0 w-[3px] bg-primary/45 transition-colors duration-200 group-hover:bg-primary"
+      />
       <h3 className="font-typewriter line-clamp-1 text-[15px] font-semibold leading-snug text-foreground">
         {m.character_name}
       </h3>

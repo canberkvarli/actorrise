@@ -47,10 +47,13 @@ function Blank({
   onJump: Props["onJump"];
 }) {
   return (
+    // Grey at rest, orange on approach. Two orange blanks plus an orange rule,
+    // an orange tab underline and an orange toggle put five competing accents on
+    // one screen, and the eye landed on the gaps instead of the work.
     <button
       type="button"
       onClick={() => onJump(slot.tab, slot.fieldId)}
-      className="border-b border-dashed border-primary/50 pb-0.5 lowercase text-primary/75 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+      className="border-b border-dashed border-muted-foreground/40 pb-0.5 lowercase text-muted-foreground/70 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
     >
       {slot.blank}
     </button>
@@ -106,18 +109,22 @@ export function ProfileCallSheet({
             (the line casting reads.)
           </p>
 
+          {/* The actor's name IS the page title. There was a separate "Your
+              profile" h1 above this saying nothing the name doesn't. */}
           {name?.trim() ? (
-            <h2 className="font-brand text-3xl font-medium leading-tight text-foreground sm:text-4xl">
+            <h1 className="font-brand text-3xl font-medium leading-tight text-foreground sm:text-4xl">
               {name}
-            </h2>
+            </h1>
           ) : (
-            <button
-              type="button"
-              onClick={() => onJump("basic", "name")}
-              className="font-brand text-3xl font-medium leading-tight text-primary/70 underline decoration-dashed underline-offset-8 transition-colors hover:text-primary sm:text-4xl"
-            >
-              your name
-            </button>
+            <h1>
+              <button
+                type="button"
+                onClick={() => onJump("basic", "name")}
+                className="font-brand text-3xl font-medium leading-tight text-muted-foreground/60 underline decoration-dashed underline-offset-8 transition-colors hover:text-primary sm:text-4xl"
+              >
+                your name
+              </button>
+            </h1>
           )}
 
           <Line
