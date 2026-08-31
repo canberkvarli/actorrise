@@ -132,7 +132,7 @@ export function Avatar({ e, size = 44 }: { e: FeedEvent; size?: number }) {
         />
       ) : (
         <span
-          className="relative flex items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-[#B03000] font-semibold text-background ring-1 ring-primary/30"
+          className="relative flex items-center justify-center rounded-full bg-gradient-to-br from-primary/80 to-primary/90 font-semibold text-background ring-1 ring-primary/30"
           style={{ ...dim, fontSize: size * 0.32 }}
         >
           {initial}

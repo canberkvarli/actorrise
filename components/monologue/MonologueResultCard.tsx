@@ -244,7 +244,7 @@ export function MonologueResultCard({
             <Link
               href={`/monologue/${mono.id}/work`}
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1.5 rounded-md bg-[#CB4B00] px-3 py-1.5 text-sm font-semibold text-white transition-colors hover:bg-[#B03000]"
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Rehearse
               <IconArrowRight className="h-3.5 w-3.5" />

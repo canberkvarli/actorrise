@@ -212,7 +212,7 @@ export default function AdminFeedbackPage() {
               type="checkbox"
               checked={unreadOnly}
               onChange={(e) => setUnreadOnly(e.target.checked)}
-              className="accent-[#CB4B00]"
+              className="accent-primary"
             />
             Unread only
           </label>

@@ -110,7 +110,7 @@ export function CutEditor({
               onClick={() => handleLineClick(idx)}
               className={`block w-full text-left transition-colors px-3 py-0.5 border-l-2 ${
                 inCut
-                  ? "border-l-[#CB4B00] bg-primary/[0.06] text-foreground"
+                  ? "border-l-primary bg-primary/[0.06] text-foreground"
                   : "border-l-transparent text-muted-foreground hover:bg-muted/40 hover:text-foreground"
               } ${isEndpoint ? "font-semibold" : ""}`}
               aria-pressed={inCut}

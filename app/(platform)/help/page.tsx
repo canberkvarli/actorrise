@@ -67,7 +67,7 @@ function ReadyCard({
         />
         <div className="absolute inset-0 bg-black/10 transition-colors group-hover:bg-black/0" />
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#CB4B00] text-white shadow-lg transition-transform group-hover:scale-105">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform group-hover:scale-105">
             <IconPlayerPlayFilled className="ml-0.5 h-5 w-5" />
           </div>
         </div>

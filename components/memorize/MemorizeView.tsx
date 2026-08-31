@@ -418,7 +418,7 @@ export function MemorizeView({
               type="button"
               onClick={saveCut}
               disabled={!hasFullSelection || savingCut}
-              className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-colors cursor-pointer hover:bg-[#B03000] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-full bg-primary px-4 py-1.5 text-sm font-semibold text-primary-foreground transition-colors cursor-pointer hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {savingCut ? "Saving…" : "Save cut"}
             </button>

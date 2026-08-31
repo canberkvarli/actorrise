@@ -83,7 +83,7 @@ export function MonologuePaywallModal({
           <ul className="space-y-1.5">
             {PLUS_BENEFITS.map((benefit) => (
               <li key={benefit} className="flex items-center gap-2 text-sm text-muted-foreground">
-                <IconSparkles className="h-3 w-3 flex-shrink-0 text-[#CB4B00]" />
+                <IconSparkles className="h-3 w-3 flex-shrink-0 text-primary" />
                 {benefit}
               </li>
             ))}

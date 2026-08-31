@@ -255,7 +255,7 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
                   onClick={() => setScene(i)}
                   className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                     i === sceneIndex
-                      ? "border-transparent bg-[#CB4B00] text-white"
+                      ? "border-transparent bg-primary text-primary-foreground"
                       : "border-neutral-700 text-neutral-400 hover:text-neutral-100"
                   }`}
                 >
@@ -280,10 +280,10 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
                 disabled={!!takenByOther}
                 className={`flex flex-col items-start border p-3.5 text-left transition-colors ${
                   mine
-                    ? "border-[#CB4B00] bg-[#CB4B00]/10"
+                    ? "border-primary bg-primary/10"
                     : takenByOther
                       ? "cursor-not-allowed border-neutral-800 opacity-60"
-                      : "border-neutral-700 hover:border-[#CB4B00]/50"
+                      : "border-neutral-700 hover:border-primary/50"
                 }`}
               >
                 <span className="font-typewriter text-sm font-semibold uppercase tracking-wider text-neutral-100">
@@ -304,7 +304,7 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
               <span
                 key={p.id}
                 title={`${p.name}${p.role ? ` · ${p.role}` : ""}`}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#CB4B00] to-[#B03000] text-xs font-semibold text-white ring-1 ring-[#CB4B00]/30"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/90 text-xs font-semibold text-white ring-1 ring-primary/30"
               >
                 {(p.name?.[0] || "?").toUpperCase()}
               </span>
@@ -320,7 +320,7 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
             onClick={() => setEditMode((v) => !v)}
             className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
               editMode
-                ? "border-transparent bg-[#CB4B00] text-white"
+                ? "border-transparent bg-primary text-primary-foreground"
                 : "border-neutral-700 text-neutral-400 hover:text-neutral-100"
             }`}
           >
@@ -356,7 +356,7 @@ export function RehearsalRoom({ roomId, scriptId }: { roomId: string; scriptId: 
             type="button"
             onClick={() => setLine(Math.min(lineCount - 1, at + 1))}
             disabled={at >= lineCount - 1}
-            className="inline-flex items-center gap-1 rounded-full bg-[#CB4B00] px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#B03000] disabled:opacity-40"
+            className="inline-flex items-center gap-1 rounded-full bg-primary px-4 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-40"
           >
             Next <IconChevronRight className="h-4 w-4" />
           </button>
@@ -433,7 +433,7 @@ function StageDoor({
           type="button"
           onClick={() => onEnter(true)}
           disabled={entering}
-          className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full bg-[#CB4B00] px-6 py-3.5 text-base font-medium text-white transition-colors hover:bg-[#B03000] disabled:opacity-60"
+          className="mt-8 inline-flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3.5 text-base font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
         >
           {entering ? (
             <IconLoader2 className="h-5 w-5 animate-spin" />
@@ -508,7 +508,7 @@ function InviteButton({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="inline-flex items-center gap-1.5 rounded-full bg-[#CB4B00] px-3.5 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#B03000]"
+        className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
       >
         <IconLink className="h-4 w-4" /> Invite
       </button>
@@ -522,13 +522,13 @@ function InviteButton({
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendInvite()}
               placeholder="friend@email.com"
-              className="min-w-0 flex-1 rounded-md border border-neutral-700 bg-transparent px-2.5 py-1.5 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-[#CB4B00]/60"
+              className="min-w-0 flex-1 rounded-md border border-neutral-700 bg-transparent px-2.5 py-1.5 text-sm text-neutral-100 outline-none placeholder:text-neutral-600 focus:border-primary/60"
             />
             <button
               type="button"
               onClick={sendInvite}
               disabled={sending || !email.trim()}
-              className="shrink-0 rounded-md bg-[#CB4B00] px-3 py-1.5 text-sm font-medium text-white transition-colors hover:bg-[#B03000] disabled:opacity-50"
+              className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
             >
               {sending ? "…" : "Send"}
             </button>
@@ -556,7 +556,7 @@ function VoiceControl({ voice }: { voice: ReturnType<typeof useRoomVoice> }) {
         onClick={join}
         disabled={joining}
         title={error ?? "Rehearse out loud together"}
-        className="inline-flex items-center gap-1.5 rounded-full border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 transition-colors hover:border-[#CB4B00]/50 disabled:opacity-60"
+        className="inline-flex items-center gap-1.5 rounded-full border border-neutral-700 px-3 py-1.5 text-sm text-neutral-200 transition-colors hover:border-primary/50 disabled:opacity-60"
       >
         {joining ? (
           <IconLoader2 className="h-4 w-4 animate-spin" />
@@ -633,7 +633,7 @@ function ScriptView({
             <div key={i} ref={active ? activeRef : undefined}>
               <p
                 className={`font-typewriter text-[11px] font-semibold uppercase tracking-wider ${
-                  mine ? "text-[#CB4B00]" : "text-neutral-400"
+                  mine ? "text-primary" : "text-neutral-400"
                 }`}
               >
                 {ln.character_name}
@@ -700,7 +700,7 @@ function EditableScript({
                   title={r}
                   className={`whitespace-nowrap px-2 py-1 font-typewriter text-[10px] font-semibold uppercase ${
                     ln.character_name.toUpperCase() === r.toUpperCase()
-                      ? "bg-[#CB4B00] text-white"
+                      ? "bg-primary text-primary-foreground"
                       : "bg-white text-neutral-500 hover:text-neutral-800"
                   }`}
                 >
@@ -712,7 +712,7 @@ function EditableScript({
               value={ln.text}
               onChange={(e) => patch(i, { text: e.target.value })}
               rows={1}
-              className="min-w-0 flex-1 resize-none rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 font-typewriter text-sm text-neutral-900 outline-none focus:border-[#CB4B00]"
+              className="min-w-0 flex-1 resize-none rounded-md border border-neutral-300 bg-white px-2.5 py-1.5 font-typewriter text-sm text-neutral-900 outline-none focus:border-primary"
             />
             <button
               type="button"
@@ -728,7 +728,7 @@ function EditableScript({
       <button
         type="button"
         onClick={add}
-        className="mt-3 rounded-full border border-neutral-300 px-3 py-1 font-typewriter text-xs text-neutral-600 hover:border-[#CB4B00] hover:text-[#CB4B00]"
+        className="mt-3 rounded-full border border-neutral-300 px-3 py-1 font-typewriter text-xs text-neutral-600 hover:border-primary hover:text-primary"
       >
         + add line
       </button>
@@ -748,7 +748,7 @@ function LiveLine({ text, transcript }: { text: string; transcript: string }) {
         if (/^\s+$/.test(tok)) return <span key={i}>{tok}</span>;
         const idx = wi++;
         return (
-          <span key={i} className={idx < matched ? "text-[#CB4B00]" : "text-neutral-400"}>
+          <span key={i} className={idx < matched ? "text-primary" : "text-neutral-400"}>
             {tok}
           </span>
         );

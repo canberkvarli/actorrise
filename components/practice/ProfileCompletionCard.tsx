@@ -57,7 +57,7 @@ export function ProfileCompletionCard() {
         </div>
         <Link
           href="/profile"
-          className="group inline-flex items-center gap-1 text-sm font-medium text-[#CB4B00] hover:text-[#B03000] transition-colors self-start sm:self-auto whitespace-nowrap"
+          className="group inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/90 transition-colors self-start sm:self-auto whitespace-nowrap"
         >
           Complete your profile
           <IconArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />

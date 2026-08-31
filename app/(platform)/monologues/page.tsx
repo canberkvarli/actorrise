@@ -2024,7 +2024,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               {sceneGap && <SceneGapBanner />}
               {/* Never relax silently: say which constraint was loosened to fill results. */}
               {broadened && broadened.relaxed.length > 0 && (
-                <div className="border border-border border-l-2 border-l-[#CB4B00] bg-muted/40 px-4 py-3">
+                <div className="border border-border border-l-2 border-l-primary bg-muted/40 px-4 py-3">
                   <p className="text-sm text-foreground">
                     Only a few exact matches, so I broadened the{" "}
                     <span className="font-medium">{formatRelaxed(broadened.relaxed)}</span>.
@@ -2493,7 +2493,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     headerActions={
                       <button
                         onClick={() => router.push(`/monologue/${selectedMonologue.id}/work`)}
-                        className="inline-flex items-center gap-1.5 rounded-md bg-[#CB4B00] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#B03000]"
+                        className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
                       >
                         Rehearse
                       </button>

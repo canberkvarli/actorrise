@@ -223,7 +223,7 @@ function SceneRow({
       className={[
         "rounded-lg border border-l-2 transition-colors",
         accentClass,
-        expanded ? "border-[#CB4B00]/45 bg-muted/20" : "border-border/70 hover:border-border hover:bg-muted/10",
+        expanded ? "border-primary/45 bg-muted/20" : "border-border/70 hover:border-border hover:bg-muted/10",
       ].join(" ")}
     >
       <button
@@ -295,7 +295,7 @@ function SceneRow({
               <button
                 type="button"
                 onClick={onOpen}
-                className="inline-flex items-center gap-1.5 rounded-md px-4 h-10 text-sm font-medium bg-[#CB4B00] text-white hover:bg-[#B03000] transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-md px-4 h-10 text-sm font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
                 Open in editor
                 <IconArrowRight className="h-4 w-4" />

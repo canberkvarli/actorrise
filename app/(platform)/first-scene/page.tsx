@@ -135,7 +135,7 @@ export default function FirstScenePage() {
           <Button
             onClick={handleStart}
             disabled={starting}
-            className="mt-8 h-12 w-full bg-[#CB4B00] text-base font-semibold text-white hover:bg-[#B03000]"
+            className="mt-8 h-12 w-full bg-primary text-base font-semibold text-primary-foreground hover:bg-primary/90"
           >
             {starting ? (
               <IconLoader2 className="h-5 w-5 animate-spin" />

@@ -176,7 +176,7 @@ export default function BillingPage() {
                   </Button>
                   {/* Self-serve free trial: deep-links checkout with the 14-day
                       Plus trial pre-selected (2 weeks free, card on file). */}
-                  <Button asChild size="sm" variant="outline" className="gap-2 w-fit border-[#CB4B00]/40 text-[#CB4B00] hover:bg-[#CB4B00]/5 hover:text-[#CB4B00]">
+                  <Button asChild size="sm" variant="outline" className="gap-2 w-fit border-primary/40 text-primary hover:bg-primary/5 hover:text-primary">
                     <Link href="/checkout?tier=plus&period=monthly&trial=1">
                       <IconGift className="h-4 w-4" />
                       Get 2 weeks of Plus, free

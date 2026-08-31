@@ -158,8 +158,8 @@ export function TrialOfferCard({
     <div
       className={
         dark
-          ? "relative rounded-lg border border-[#CB4B00]/30 bg-[#CB4B00]/10 p-5 text-center space-y-3"
-          : "relative rounded-lg border border-[#CB4B00]/25 bg-[#CB4B00]/5 p-5 text-center space-y-3"
+          ? "relative rounded-lg border border-primary/30 bg-primary/10 p-5 text-center space-y-3"
+          : "relative rounded-lg border border-primary/25 bg-primary/5 p-5 text-center space-y-3"
       }
     >
       <button
@@ -177,7 +177,7 @@ export function TrialOfferCard({
         {headline}
       </p>
       <p className={`text-sm ${dark ? "text-neutral-400" : "text-muted-foreground"}`}>{body}</p>
-      <Button asChild className="bg-[#CB4B00] text-white hover:bg-[#B03000]">
+      <Button asChild className="bg-primary text-primary-foreground hover:bg-primary/90">
         <Link href={href} onClick={onAccept}>
           {cta}
         </Link>
@@ -207,12 +207,12 @@ export function TrialOfferBanner({
 }) {
   return (
     <div className="pointer-events-auto fixed bottom-4 left-1/2 z-[10040] w-[min(92vw,30rem)] -translate-x-1/2">
-      <div className="flex items-center gap-3 rounded-lg border border-[#CB4B00]/40 bg-[#191410]/95 px-4 py-3 shadow-lg backdrop-blur">
+      <div className="flex items-center gap-3 rounded-lg border border-primary/40 bg-[#191410]/95 px-4 py-3 shadow-lg backdrop-blur">
         <p className="flex-1 text-sm text-neutral-300">{body}</p>
         <Button
           asChild
           size="sm"
-          className="shrink-0 bg-[#CB4B00] text-white hover:bg-[#B03000]"
+          className="shrink-0 bg-primary text-primary-foreground hover:bg-primary/90"
         >
           <Link href={href} onClick={onAccept}>
             2 weeks free

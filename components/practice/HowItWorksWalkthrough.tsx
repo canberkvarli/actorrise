@@ -150,7 +150,7 @@ export function HowItWorksWalkthrough({
                   <button
                     type="button"
                     onClick={() => onOpenChange(false)}
-                    className="mt-6 inline-flex h-10 items-center gap-1.5 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-[#B03000]"
+                    className="mt-6 inline-flex h-10 items-center gap-1.5 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                   >
                     Start rehearsing
                     <IconArrowRight className="h-4 w-4" />

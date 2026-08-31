@@ -54,7 +54,7 @@ export function ContentGapBanner({
   if (availableIn && availableIn.length > 0) {
     const target = availableIn[0];
     return (
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-l-2 border-l-[#CB4B00] bg-muted/30 px-3 py-2.5 text-sm">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-l-2 border-l-primary bg-muted/30 px-3 py-2.5 text-sm">
         <span className="text-foreground">
           <span className="font-semibold">{label}</span> lives in {sourceLabel(availableIn)}.
         </span>
@@ -62,7 +62,7 @@ export function ContentGapBanner({
           <button
             type="button"
             onClick={() => onSwitchSource(target)}
-            className="font-medium text-[#CB4B00] underline-offset-4 hover:underline dark:text-[#e56320]"
+            className="font-medium text-primary underline-offset-4 hover:underline dark:text-[#e56320]"
           >
             Take me there →
           </button>
@@ -87,7 +87,7 @@ export function ContentGapBanner({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-l-2 border-l-[#CB4B00] bg-muted/30 px-3 py-2.5 text-sm">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-l-2 border-l-primary bg-muted/30 px-3 py-2.5 text-sm">
       <span className="text-foreground">
         No <span className="font-semibold">{label}</span> yet
         {!requested && <span className="text-muted-foreground"> — closest pieces below.</span>}
@@ -99,7 +99,7 @@ export function ContentGapBanner({
           type="button"
           onClick={handleRequest}
           disabled={loading}
-          className="font-medium text-[#CB4B00] underline-offset-4 hover:underline disabled:opacity-60 dark:text-[#e56320]"
+          className="font-medium text-primary underline-offset-4 hover:underline disabled:opacity-60 dark:text-[#e56320]"
         >
           {loading ? "Requesting…" : "Request it →"}
         </button>

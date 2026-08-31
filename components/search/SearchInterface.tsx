@@ -761,7 +761,7 @@ export function SearchInterface() {
               animate={{ opacity: 1, y: 0 }}
             >
               {weakMatch ? (
-                <div className="border border-border border-l-2 border-l-[#CB4B00] bg-muted/40 px-4 py-3">
+                <div className="border border-border border-l-2 border-l-primary bg-muted/40 px-4 py-3">
                   <p className="text-sm font-medium text-foreground">
                     No strong matches for that.
                   </p>
@@ -775,7 +775,7 @@ export function SearchInterface() {
                   <RequestQueryButton query={searchedQuery} className="mt-3" />
                 </div>
               ) : broadened && broadened.relaxed.length > 0 ? (
-                <div className="border border-border border-l-2 border-l-[#CB4B00] bg-muted/40 px-4 py-3">
+                <div className="border border-border border-l-2 border-l-primary bg-muted/40 px-4 py-3">
                   <p className="text-sm font-medium text-foreground">
                     Only a few exact matches, so I broadened the {broadened.relaxed.join(" and ")}.
                   </p>

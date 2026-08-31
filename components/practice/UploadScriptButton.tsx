@@ -71,8 +71,8 @@ export function UploadScriptButton({
         className={
           className ??
           (isPrimary
-            ? "gap-2 h-11 px-5 font-medium bg-[#CB4B00] hover:bg-[#B03000] text-white border-[#CB4B00] hover:border-[#B03000]"
-            : "gap-1.5 h-9 px-3 font-medium bg-[#CB4B00] hover:bg-[#B03000] text-white border-[#CB4B00] hover:border-[#B03000]")
+            ? "gap-2 h-11 px-5 font-medium bg-primary hover:bg-primary/90 text-primary-foreground border-primary hover:border-primary/90"
+            : "gap-1.5 h-9 px-3 font-medium bg-primary hover:bg-primary/90 text-primary-foreground border-primary hover:border-primary/90")
         }
       >
         {isUploading ? (

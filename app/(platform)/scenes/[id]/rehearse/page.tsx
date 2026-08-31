@@ -2250,7 +2250,7 @@ export default function RehearsalPage() {
               />
             ) : (
               firstRun && (
-                <div className="rounded-lg border border-[#CB4B00]/30 bg-[#CB4B00]/10 p-5 text-center space-y-3">
+                <div className="rounded-lg border border-primary/30 bg-primary/10 p-5 text-center space-y-3">
                   <p className="text-base font-semibold text-neutral-100">
                     That was your first scene.
                   </p>
@@ -2260,7 +2260,7 @@ export default function RehearsalPage() {
                   </p>
                   <Button
                     onClick={() => router.push('/practice')}
-                    className="bg-[#CB4B00] text-white hover:bg-[#B03000]"
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
                   >
                     Bring in your own sides
                   </Button>
@@ -2288,7 +2288,7 @@ export default function RehearsalPage() {
               <button
                 type="button"
                 onClick={sceneReplayIdx !== null ? stopSceneReplay : startSceneReplay}
-                className="inline-flex items-center gap-2 rounded-full border border-[#CB4B00]/40 bg-[#CB4B00]/10 px-5 py-2.5 text-sm font-medium text-[#ff8a4c] hover:bg-[#CB4B00]/20 transition-colors"
+                className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-5 py-2.5 text-sm font-medium text-[#ff8a4c] hover:bg-primary/20 transition-colors"
               >
                 {sceneReplayIdx !== null
                   ? (<><Square className="w-3.5 h-3.5 fill-current" /> Stop replay</>)
@@ -2320,7 +2320,7 @@ export default function RehearsalPage() {
                         id={`review-line-${idx}`}
                         className={cn(
                           "space-y-0.5 pl-2 -ml-2 border-l-2 transition-colors",
-                          sceneReplayIdx === idx ? "border-[#CB4B00] bg-[#CB4B00]/5" : "border-transparent"
+                          sceneReplayIdx === idx ? "border-primary bg-primary/5" : "border-transparent"
                         )}
                       >
                         <div className="flex items-center gap-1.5">
@@ -2347,7 +2347,7 @@ export default function RehearsalPage() {
                       id={`review-line-${idx}`}
                       className={cn(
                         "pl-3 border-l space-y-1 transition-colors",
-                        sceneReplayIdx === idx ? "border-[#CB4B00] bg-[#CB4B00]/5" : "border-neutral-800"
+                        sceneReplayIdx === idx ? "border-primary bg-primary/5" : "border-neutral-800"
                       )}
                     >
                       {/* Character name + accuracy inline */}
@@ -2472,7 +2472,7 @@ export default function RehearsalPage() {
               onClick={handleBegin}
               disabled={checkingMic}
               className="min-h-[52px] px-8 text-base"
-              style={{ backgroundColor: '#CB4B00' }}
+              style={{ backgroundColor: 'var(--primary)' }}
             >
               <Play className="mr-2 h-5 w-5" />
               {checkingMic ? 'Checking your mic…' : 'Begin scene'}
@@ -2547,7 +2547,7 @@ export default function RehearsalPage() {
           <Button
             size="sm"
             className="h-8 rounded-full px-3 text-xs"
-            style={{ backgroundColor: '#CB4B00' }}
+            style={{ backgroundColor: 'var(--primary)' }}
             onClick={requestMic}
           >
             Enable mic

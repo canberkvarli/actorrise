@@ -162,7 +162,7 @@ function CommunityScriptCard({
           {s.title}
         </h3>
         {s.is_demo && (
-          <span className="shrink-0 bg-[#CB4B00] px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-white">
+          <span className="shrink-0 bg-primary px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-primary-foreground">
             Demo
           </span>
         )}
@@ -177,7 +177,7 @@ function CommunityScriptCard({
 
       <div className="mt-auto flex items-end justify-between gap-3 pt-5">
         <span className="text-[11px] text-neutral-400">shared by {s.owner_name}</span>
-        <span className="rounded-full bg-[#CB4B00] px-3.5 py-1.5 text-xs font-medium text-white transition-colors group-hover:bg-[#B03000]">
+        <span className="rounded-full bg-primary px-3.5 py-1.5 text-xs font-medium text-primary-foreground transition-colors group-hover:bg-primary/90">
           Rehearse →
         </span>
       </div>

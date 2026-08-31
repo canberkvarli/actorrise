@@ -460,7 +460,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
                 {doneInfo ? (
                   <IconCheck className="h-4 w-4 shrink-0 text-emerald-500" />
                 ) : (
-                  <IconLoader2 className="h-4 w-4 shrink-0 animate-spin text-[#CB4B00]" />
+                  <IconLoader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
                 )}
 
                 <div className="min-w-0 flex-1">
@@ -488,7 +488,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
                       setDoneInfo(null);
                       router.push(`/practice?script=${id}`);
                     }}
-                    className="shrink-0 inline-flex items-center gap-1 rounded-md bg-[#CB4B00] hover:bg-[#B03000] text-white px-3 h-8 text-xs font-medium transition-colors"
+                    className="shrink-0 inline-flex items-center gap-1 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground px-3 h-8 text-xs font-medium transition-colors"
                   >
                     View
                     <IconArrowRight className="h-3.5 w-3.5" />

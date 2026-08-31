@@ -364,7 +364,7 @@ function CheckoutContent() {
                     <p className="text-sm text-destructive font-medium">{promoError}</p>
                   )}
                   {!isTrial && tier?.name === "plus" && (
-                    <div className="rounded-xl border-2 border-[#CB4B00]/30 bg-[#CB4B00]/5 p-4">
+                    <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4">
                       <p className="text-base font-semibold text-foreground mb-1">
                         First time on Plus? Get 2 weeks free.
                       </p>
@@ -374,7 +374,7 @@ function CheckoutContent() {
                       <Button
                         asChild
                         size="sm"
-                        className="gap-2 bg-[#CB4B00] text-white hover:bg-[#B03000]"
+                        className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
                       >
                         <Link href="/checkout?tier=plus&period=monthly&trial=1">
                           <IconGift className="h-4 w-4" />
