@@ -27,6 +27,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import requests  # noqa: E402
+from bs4 import BeautifulSoup  # noqa: E402
 from sqlalchemy import text as sql  # noqa: E402
 
 from app.core.config import settings  # noqa: E402
@@ -78,6 +79,46 @@ def lookup(key: str, title: str) -> tuple[str, str] | None:
     return None
 
 
+SCRIPTSLUG_HEADERS = {
+    "User-Agent": "ActorRise/1.0 (audition-prep; monologue-curation)",
+}
+
+
+def scriptslug_writers(url: str) -> str:
+    """Read the credit off the ScriptSlug page the script came from.
+
+    OMDb knows these shows but returns Writer "N/A" for them, so the title
+    resolves and the credit does not. ScriptSlug states it outright, and it is
+    where the script came from in the first place.
+
+    Anchored on the "Screenplay by" node rather than the page text, because the
+    text also contains a browse widget listing Ari Aster, Christopher Nolan and
+    friends under the heading "Writers", which a prose match happily returns.
+
+    Note this credits the source novelist alongside the screenwriter where the
+    page does (Ripley gives Zaillian and Highsmith). That is the credit as
+    published, and for an adaptation it is the honest answer.
+    """
+    if not url or "scriptslug" not in url:
+        return ""
+    try:
+        resp = requests.get(url, headers=SCRIPTSLUG_HEADERS, timeout=25)
+    except requests.RequestException:
+        return ""
+    if resp.status_code != 200:
+        return ""
+    soup = BeautifulSoup(resp.text, "html.parser")
+    node = soup.find(string=re.compile(r"Screenplay by"))
+    if not node or not node.parent or not node.parent.parent:
+        return ""
+    names = []
+    for a in node.parent.parent.find_all("a"):
+        name = re.sub(r"\s+", " ", a.get_text(strip=True)).strip()
+        if name and name not in names:
+            names.append(name)
+    return ", ".join(names[:MAX_WRITERS])
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--apply", action="store_true")
@@ -93,7 +134,7 @@ def main() -> int:
         rows = db.execute(
             sql(
                 """
-                SELECT id, title,
+                SELECT id, title, source_url,
                        (SELECT count(*) FROM monologues m
                         WHERE m.play_id = plays.id) AS n
                 FROM plays
@@ -107,10 +148,12 @@ def main() -> int:
         found, missed = [], []
         for i, r in enumerate(rows, 1):
             hit = lookup(key, r.title)
-            if hit:
-                writer, matched = hit
-                found.append({"id": r.id, "title": r.title, "author": writer})
-                print(f"  [{i}/{len(rows)}] {r.title[:34]:<34} -> {writer}")
+            writer = hit[0] if hit else scriptslug_writers(r.source_url)
+            if writer:
+                src = "omdb" if hit else "scriptslug"
+                found.append({"id": r.id, "title": r.title,
+                              "author": writer, "via": src})
+                print(f"  [{i}/{len(rows)}] {r.title[:34]:<34} -> {writer} ({src})")
             else:
                 missed.append({"id": r.id, "title": r.title, "n": r.n})
                 print(f"  [{i}/{len(rows)}] {r.title[:34]:<34} -> no confident match")
