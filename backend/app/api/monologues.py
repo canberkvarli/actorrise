@@ -2,6 +2,7 @@
 
 import html as html_module
 import os
+import re
 import time
 from datetime import datetime
 from typing import List, Literal, Optional, cast
@@ -973,11 +974,43 @@ async def get_trending(
     ]
 
 
+#: Roughly what two lines of verse or a couple of prose sentences come to. The
+#: teaser has to be enough to recognise the piece and not enough to rehearse it.
+_TEASER_MAX_WORDS = 40
+
+_SENTENCE_END = re.compile(r"(?<=[.!?…])\s+")
+
+
 def _teaser(text: str, lines: int = 2) -> str:
-    """The opening lines a walled reader is allowed to see — enough to know it's
-    genuinely their part, no more."""
-    kept = [ln for ln in text.splitlines() if ln.strip()][:lines]
-    return "\n".join(kept)
+    """The opening a walled reader is allowed to see — enough to know it's
+    genuinely their part, no more.
+
+    Slicing lines is not enough on its own. 97% of the corpus is a single prose
+    paragraph with no newline in it at all, so the line slice returned the whole
+    monologue and both callers quietly stopped working: the rights guard served
+    the full text of works we have no basis for, and the Ghost Light wall handed
+    a spent free user the complete piece with `paywalled: true` attached to it.
+
+    So the line slice is kept for verse, where it gives a clean two-line open,
+    and a word budget is applied after it for everything else.
+    """
+    kept = [ln for ln in (text or "").splitlines() if ln.strip()][:lines]
+    out = "\n".join(kept)
+    if len(out.split()) <= _TEASER_MAX_WORDS:
+        return out
+
+    # Prefer a sentence boundary so the teaser ends somewhere a reader would
+    # stop, and fall back to a hard word cut for a run-on with no punctuation.
+    shown: list[str] = []
+    for sentence in _SENTENCE_END.split(out):
+        candidate = shown + [sentence]
+        if shown and len(" ".join(candidate).split()) > _TEASER_MAX_WORDS:
+            break
+        shown = candidate
+    result = " ".join(shown).strip()
+    if len(result.split()) > _TEASER_MAX_WORDS:
+        result = " ".join(result.split()[:_TEASER_MAX_WORDS])
+    return result.rstrip(" .,;:") + "…"
 
 
 @router.get("/{monologue_id:int}", response_model=MonologueResponse)
