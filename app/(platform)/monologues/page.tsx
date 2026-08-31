@@ -27,7 +27,7 @@ import { SearchCurtain } from "@/components/monologue/SearchCurtain";
 // A ticket stub for "nothing on this bill" — the masks were already doing duty
 // as the gibberish/short empty state and as a starting-point tile, so film & TV
 // coming back empty looked identical to two other things.
-import { ScriptPagesSketch, TicketSketch } from "@/components/brand/sketches";
+import { ScriptPagesSketch, SpotlightSketch, TicketSketch } from "@/components/brand/sketches";
 import { SearchFiltersPanel } from "@/components/monologue/SearchFiltersPanel";
 import { NoResultsState } from "@/components/monologue/NoResultsState";
 import { StartingPoints } from "@/components/monologue/StartingPoints";
@@ -1334,6 +1334,30 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     );
   }, [relatedResults, profileMatchMap, isPersonalized]);
 
+  /**
+   * "Joker lives in Film & TV → Take me there" used to do nothing visible.
+   * It called setSearchMode and stopped there — but each tab keeps its OWN query
+   * state, so you landed on the other tab with an empty box and no search ever
+   * ran. The tab buttons had always carried their query into the URL; this path
+   * never did. Same move as those buttons, with the query brought along.
+   */
+  const switchSourceWithQuery = useCallback(
+    (sourceType: string) => {
+      const target = sourceType === "play" ? "plays" : "film_tv";
+      const carried = (searchMode === "plays" ? playsQuery : filmTvQuery).trim();
+      if (target === "plays") setPlaysQuery(carried);
+      else setFilmTvQuery(carried);
+      setSearchMode(target);
+      setSearchError(null);
+      setOutlineFlash(target);
+      const params = new URLSearchParams();
+      params.set("mode", target);
+      if (carried) params.set("q", carried);
+      router.replace(`/monologues?${params.toString()}`, { scroll: false });
+    },
+    [searchMode, playsQuery, filmTvQuery, router],
+  );
+
   // Portal: gentle hue-style highlight around the edges (no hard border), soft bloom
   const outlineOverlay =
     typeof document !== "undefined" &&
@@ -1597,6 +1621,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       <IconX className="h-4 w-4" />
                       {!hasSearched && <span className="hidden md:inline ml-1">Stop</span>}
                     </>
+                  ) : hasSearched ? (
+                    /* The compact state is a 36px circle, so it needs a glyph.
+                       It was still rendering the word "Search", which spilled
+                       out of the circle — hence the button looking broken. */
+                    <IconSearch className="h-4 w-4" />
                   ) : (
                     "Search"
                   )}
@@ -1945,7 +1974,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     play={contentGap.play}
                     author={contentGap.author}
                     availableIn={contentGap.available_in}
-                    onSwitchSource={(st) => setSearchMode(st === "play" ? "plays" : "film_tv")}
+                    onSwitchSource={switchSourceWithQuery}
                   />
                 </div>
               ) : (
@@ -2002,15 +2031,27 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </p>
                 </div>
               )}
-              {/* Weak result set with no named-title gap: offer to request the query. */}
+              {/* Weak result set with no named-title gap: offer to request the
+                  query. Centred, with a drawing, in the same voice as the
+                  nothing-found screen — this was a flat left-aligned box that
+                  read as an error bar rather than part of the app. Compact on
+                  purpose: real results follow directly underneath it, so it
+                  must not look like a full empty state. */}
               {weakMatch && !contentGap && (
-                <div className="border border-border bg-card p-4 space-y-2">
-                  <p className="text-sm text-foreground">
-                    No strong match for{" "}
-                    <span className="font-semibold">{queryUsedForResults}</span>. Here are the
-                    closest ones.
+                <div className="mb-6 flex flex-col items-center border border-dashed border-border bg-muted/20 px-4 py-7 text-center">
+                  <SpotlightSketch size={44} className="text-muted-foreground/45" />
+                  <p className="stage-direction mt-4 text-xs text-muted-foreground/70">
+                    (nothing landed square.)
                   </p>
-                  <RequestQueryButton query={queryUsedForResults} className="flex items-center" />
+                  <p className="mt-2 max-w-sm text-sm text-foreground">
+                    No strong match for{" "}
+                    <span className="font-semibold">{queryUsedForResults}</span>. These are the
+                    closest I have.
+                  </p>
+                  <RequestQueryButton
+                    query={queryUsedForResults}
+                    className="mt-3 flex items-center justify-center"
+                  />
                 </div>
               )}
               {/* One toolbar: how many, what shaped the search, and the
@@ -2105,10 +2146,20 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 const strongRelated = showBookmarkedOnly
                   ? relatedOrBookmarked
                   : relatedOrBookmarked.filter((m) => m.band !== "looser");
-                const showDivider =
-                  !showBookmarkedOnly &&
-                  looserRelated.length > 0 &&
-                  bestMatches.length + strongRelated.length > 0;
+                /**
+                 * Whether anything sits ABOVE the looser tail. This gates the
+                 * divider only — never the cards.
+                 *
+                 * The cards used to be nested inside this condition, and that
+                 * was the empty-results bug: when a query is weak, EVERY result
+                 * comes back band "looser", so strongRelated and bestMatches are
+                 * both empty, the divider is skipped, and all 20 results are
+                 * dropped on the floor. The page then showed a count and a
+                 * banner reading "here are the closest ones" above nothing at
+                 * all. Verified live: "joker" returns 20 results, 20 looser.
+                 */
+                const hasStrongAbove =
+                  !showBookmarkedOnly && bestMatches.length + strongRelated.length > 0;
                 const renderCard = (mono: Monologue, idx: number, variant: "bestMatch" | "default") => (
                   <MonologueResultCard
                     key={mono.id}
@@ -2140,15 +2191,21 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       {!showBookmarkedOnly && bestMatches.map((mono, idx) => renderCard(mono, idx, "bestMatch"))}
                       {strongRelated.map((mono, idx) => renderCard(mono, baseOffset + idx, "default"))}
                     </div>
-                    {showDivider && (
+                    {looserRelated.length > 0 && (
                       <>
-                        {/* "Looser matches" read like a verdict on the actor's
-                            taste. Same meaning, said as a stage direction. */}
-                        <div className="mt-8 mb-4 border-t border-border pt-3">
-                          <span className="stage-direction text-sm text-muted-foreground/70">
-                            (further afield.)
-                          </span>
-                        </div>
+                        {/* The rule only means anything when there are stronger
+                            results above it to divide from. Its absence must not
+                            take the cards with it. */}
+                        {hasStrongAbove && (
+                          <div className="mt-8 mb-4 border-t border-border pt-3">
+                            {/* "Looser matches" read like a verdict on the
+                                actor's taste. Same meaning, said as a stage
+                                direction. */}
+                            <span className="stage-direction text-sm text-muted-foreground/70">
+                              (further afield.)
+                            </span>
+                          </div>
+                        )}
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {looserRelated.map((mono, idx) =>
                             renderCard(mono, baseOffset + strongRelated.length + idx, "default"),
