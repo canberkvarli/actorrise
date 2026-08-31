@@ -230,6 +230,42 @@ class TestFlattenedScene:
                             "A third one, still going.", opener])
         assert has_flattened_scene(text)
 
+    @pytest.mark.parametrize("opener", ["Oh", "I know", "No", "Well", "Yeah"])
+    def test_a_long_paragraph_starting_on_a_reply_word_is_still_a_speech(self, opener):
+        """The opener word alone condemned real monologues.
+
+        "Oh" heads a 97-word paragraph in Confessions of a Dangerous Mind and
+        "I know" heads Holden's 137-word speech in Chasing Amy. Both are the
+        speaker carrying on talking, not an answer left behind by a deleted
+        line, and both sat in the review queue because of this. A leaked reply
+        is short; length is what tells the two apart.
+        """
+        long_para = f"{opener}, " + "and then the whole thing went on like that. " * 12
+        # Every paragraph has to clear the stub floor, or the OTHER half of the
+        # detector fires and the test stops testing what it says it tests.
+        filler = "and it kept going in much the same way for a good while yet. "
+        text = "\n\n".join([f"A real opening line. {filler}",
+                            f"Another substantial thought entirely. {filler}",
+                            f"A third one, still going. {filler}", long_para])
+        assert not has_flattened_scene(text)
+
+    def test_a_run_of_short_turns_is_a_scene_even_with_no_reply_word(self):
+        """Billy in The Departed: [37, 25, 4, 39, 2, 27, 7], no opener word.
+
+        The opener list is a guess at how people answer; the shape of the row is
+        not. Three sub-ten-word paragraphs is a conversation with one side
+        deleted, whatever words it happens to use.
+        """
+        text = "\n\n".join([
+            "I'm having panic attacks and you did not even ask me about that once.",
+            "Two pills.",
+            "Guy comes in in pain, against every instinct of privacy he has.",
+            "If only.",
+            "Why don't you just give me a bottle of scotch instead of this.",
+            "Are we done?",
+        ])
+        assert has_flattened_scene(text)
+
     def test_gate_reports_reason(self):
         r = assess_monologue_quality(JOKER)
         assert "flattened_scene" in r.reasons

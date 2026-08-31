@@ -245,6 +245,27 @@ _REPLY_OPENER = re.compile(
     re.I,
 )
 
+#: A reply that leaked in from the other side of a scene is SHORT — it is the
+#: answer to a question, not a speech. The opener word alone is far too weak a
+#: signal on its own: "Oh" heads a 97-word paragraph in Confessions of a
+#: Dangerous Mind, "I know" heads Holden's 137-word speech in Chasing Amy, and
+#: both were being condemned as scene fragments. Requiring the fragment to be
+#: short is what separates a leaked line from a speaker carrying on talking.
+_MAX_REPLY_WORDS = 20
+
+#: The other half of the signal, and the one that does not depend on guessing at
+#: opener words. A paragraph under ten words is a conversational turn, not a
+#: movement of a speech, and two of them means the row is one side of a scene
+#: with the replies stripped out: Billy in The Departed arrives as
+#: [37, 25, 4, 39, 2, 27, 7].
+#:
+#: Three, not two. Two is where the golden harness objected: Gladiator's Marcus
+#: is [65, 2, 4, 62] and is a real speech, because a monologue is allowed a
+#: couple of short beats between its movements. It is the run of them that means
+#: the replies have been cut out.
+_STUB_WORDS = 10
+_MIN_STUBS_FOR_SCENE = 3
+
 
 def has_flattened_scene(text: str) -> bool:
     """True if ``text`` looks like a dialogue scene flattened into one speech."""
@@ -257,7 +278,13 @@ def has_flattened_scene(text: str) -> bool:
     # was never part of this monologue. Notting Hill's opening voiceover starts
     # "Of course, I've seen her films" and is five clean paragraphs of one man
     # talking; counting the first fragment condemned it.
-    return any(_REPLY_OPENER.match(f) for f in frags[1:])
+    if any(
+        _REPLY_OPENER.match(f) and len(f.split()) <= _MAX_REPLY_WORDS
+        for f in frags[1:]
+    ):
+        return True
+    stubs = sum(1 for f in frags if len(f.split()) <= _STUB_WORDS)
+    return stubs >= _MIN_STUBS_FOR_SCENE
 
 
 def has_stage_direction_residue(text: str, cast: list[str]) -> bool:
