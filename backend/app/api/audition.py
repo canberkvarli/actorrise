@@ -22,6 +22,7 @@ from app.models.billing import UserSubscription
 from app.models.user import User
 from app.models.audition_usage import AuditionFeedbackUsage
 from app.services.ai.langchain.audition_coach import get_audition_coach
+from app.services.licensing import may_serve_text, text_basis
 
 logger = logging.getLogger("uvicorn.error")
 
@@ -151,6 +152,33 @@ async def analyze_audition(
     if request.monologue_id:
         monologue = db.query(Monologue).filter(Monologue.id == request.monologue_id).first()
 
+    # The rights check the rest of the API does in _monologue_to_response was
+    # missing here, so this endpoint shipped the full text of any monologue to
+    # OpenAI regardless of whether we have a basis to serve it at all. Sending it
+    # to a third party is a stronger act than returning it to the actor who asked,
+    # not a weaker one, so it gets the same guard.
+    #
+    # Title and character name still go through: they are facts about the work,
+    # not the work, and without them the coach has no context to speak of.
+    monologue_body = None
+    if monologue is not None:
+        play = monologue.play
+        if may_serve_text(
+            getattr(play, "copyright_status", None),
+            getattr(play, "license_type", None),
+            word_count=monologue.word_count,
+        ):
+            monologue_body = monologue.text
+        else:
+            logger.info(
+                "audition: withholding text for monologue %s (%s)",
+                monologue.id,
+                text_basis(
+                    getattr(play, "copyright_status", None),
+                    getattr(play, "license_type", None),
+                ),
+            )
+
     coach = get_audition_coach()
 
     try:
@@ -158,7 +186,7 @@ async def analyze_audition(
             frames_base64=request.frames,
             duration=request.duration,
             monologue_title=monologue.title if monologue else None,
-            monologue_text=monologue.text if monologue else None,
+            monologue_text=monologue_body,
             character_name=monologue.character_name if monologue else None,
         )
 

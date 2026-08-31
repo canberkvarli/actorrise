@@ -80,6 +80,30 @@ class TestLicensing:
         assert text_basis("public_domain", None) == "public domain"
         assert text_basis(None, None) == "rights unknown"
 
+    def test_no_endpoint_hands_out_monologue_text_unguarded(self):
+        """Every route that emits a whole monologue must consult the guard.
+
+        The guard lived only in `_monologue_to_response`, so /api/audition sent
+        the full text of any monologue to OpenAI without ever asking whether we
+        had a basis to serve it. A module-level check because that is the shape
+        of the bug: not a wrong answer from the guard, a call site that never
+        asked it. Excerpt helpers are exempt — a 220-character teaser is a
+        quotation, not the work.
+        """
+        import pathlib
+        import re
+
+        api_dir = pathlib.Path(__file__).resolve().parents[1] / "app" / "api"
+        emits_text = re.compile(r"=\s*(?:monologue|mono|m)\.text\b")
+        offenders = []
+        for path in api_dir.rglob("*.py"):
+            if "admin" in path.parts:
+                continue  # moderators edit the raw text; that is the job
+            src = path.read_text()
+            if emits_text.search(src) and "may_serve_text" not in src:
+                offenders.append(str(path.relative_to(api_dir)))
+        assert not offenders, f"unguarded monologue text in: {offenders}"
+
 
 # --- cast-aware interleave gate --------------------------------------------
 
