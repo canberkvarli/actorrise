@@ -21,6 +21,7 @@ import {
 } from "@/components/monologue/MonologueDetailContent";
 import { GhostLightSketch } from "@/components/brand/sketches";
 import { CutEditor } from "@/components/monologue/CutEditor";
+import { MonologueWall } from "@/components/monologue/MonologueWall";
 import { ExportSheet } from "@/components/monologue/ExportSheet";
 import { useSaveNotes } from "@/hooks/useCollectionMeta";
 import { useToggleMemorized } from "@/hooks/useMemorized";
@@ -152,6 +153,10 @@ export default function MonologueDetailPage() {
         await api.post(`/api/monologues/${monologue.id}/favorite`);
         setIsFavorited(true);
         setJustSaved(true);
+        // A saved piece is exempt from the wall server-side, so the text we are
+        // holding is stale the moment it lands in the collection. Without this
+        // the actor saves it and keeps staring at the same teaser.
+        if (monologue.paywalled) await fetchMonologue(String(monologue.id));
       }
     } catch (error) {
       console.error("Error toggling favorite:", error);
@@ -255,7 +260,10 @@ export default function MonologueDetailPage() {
               aria-label="How to view this piece"
               className="flex items-center gap-0.5"
             >
-              {MODES.map((m) => (
+              {/* Cut and Copy work on `text`, which is a teaser once the free
+                  reads are spent. Offering them would hand the actor a
+                  forty-word "piece" to trim and export as if it were real. */}
+              {(monologue.paywalled ? MODES.filter((m) => m.id === "read") : MODES).map((m) => (
                 <button
                   key={m.id}
                   role="tab"
@@ -329,13 +337,15 @@ export default function MonologueDetailPage() {
                   point pulled 2026-08-27: 0 uses across 649 users, and it
                   cluttered the core flow we lose people in. The /audition
                   recorder + tapes API stay intact, just unlinked. */}
-              <Button
-                size="sm"
-                onClick={() => router.push(`/monologue/${monologue.id}/work`)}
-                className="ml-1 flex-shrink-0"
-              >
-                Rehearse
-              </Button>
+              {!monologue.paywalled && (
+                <Button
+                  size="sm"
+                  onClick={() => router.push(`/monologue/${monologue.id}/work`)}
+                  className="ml-1 flex-shrink-0"
+                >
+                  Rehearse
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -350,7 +360,12 @@ export default function MonologueDetailPage() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
             >
-              {mode === "read" && <MonologueBody monologue={monologue} measured />}
+              {mode === "read" && (
+                <>
+                  <MonologueBody monologue={monologue} measured />
+                  {monologue.paywalled && <MonologueWall />}
+                </>
+              )}
 
               {/* Cut and Copy hold the same reading measure as Read, so the piece
                   doesn't jump width every time you change what you're doing to it. */}
@@ -444,21 +459,23 @@ export default function MonologueDetailPage() {
 
         {/* The other way to work it, kept as a quiet path rather than a button
             competing with Rehearse. */}
-        <section className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-6">
-          <div>
-            <p className="text-sm font-medium text-foreground">Get it off book</p>
-            <p className="text-sm text-muted-foreground">
-              Line-by-line drill until you don&apos;t need the page.
-            </p>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/monologue/${monologue.id}/memorize`)}
-          >
-            Memorize
-          </Button>
-        </section>
+        {!monologue.paywalled && (
+          <section className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-6">
+            <div>
+              <p className="text-sm font-medium text-foreground">Get it off book</p>
+              <p className="text-sm text-muted-foreground">
+                Line-by-line drill until you don&apos;t need the page.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => router.push(`/monologue/${monologue.id}/memorize`)}
+            >
+              Memorize
+            </Button>
+          </section>
+        )}
 
         <div className="mt-10">
           <MonologueFooter

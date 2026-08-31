@@ -53,6 +53,12 @@ export interface Monologue {
   favorite_count: number;
   is_favorited: boolean;
   memorized?: boolean;
+  /**
+   * The free reads are spent and `text` is a teaser, not the piece. Set by the
+   * detail endpoint only. Anything that cuts, exports or rehearses the text has
+   * to check this first, or it operates on forty words and looks broken.
+   */
+  paywalled?: boolean;
   notes?: string | null;
   last_studied_at?: string | null;
   cut_start_line?: number | null;
