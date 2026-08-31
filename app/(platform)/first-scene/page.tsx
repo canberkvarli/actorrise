@@ -45,9 +45,16 @@ export default function FirstScenePage() {
   }, [refreshUser]);
 
   const leaveTo = useCallback(
-    async (href: string) => {
-      await markSeen();
+    (href: string) => {
+      // Navigate FIRST, mark seen behind it.
+      //
+      // This used to `await markSeen()` before pushing, so the actor sat on a
+      // full-screen spinner until a PATCH round-trip finished — measured at
+      // 15-20s locally on the no-scene path, with nothing on screen to read and
+      // no way out. The flag is a nicety (worst case the gate offers the flow
+      // again); being stranded is not. The two are now independent.
       router.push(href);
+      void markSeen();
     },
     [markSeen, router],
   );
@@ -79,9 +86,23 @@ export default function FirstScenePage() {
       .then(({ data }) => setScene(data))
       .catch(() => {
         // No scene seeded in this environment — don't trap the user.
-        void leaveTo("/practice");
+        leaveTo("/practice");
       });
   }, [loading, user, leaveTo]);
+
+  /**
+   * Backstop: this screen is a full-bleed overlay with no navigation, so if
+   * anything upstream stalls — a slow auth resolve, a request that never
+   * settles — the actor has no way off it at all. Nothing here is worth more
+   * than a few seconds of a brand-new user's patience.
+   */
+  useEffect(() => {
+    if (scene) return;
+    const id = setTimeout(() => {
+      if (!fetchedRef.current || !scene) leaveTo("/practice");
+    }, 6000);
+    return () => clearTimeout(id);
+  }, [scene, leaveTo]);
 
   const handleStart = useCallback(async () => {
     if (!scene || starting) return;
@@ -115,7 +136,15 @@ export default function FirstScenePage() {
   return (
     <div className="fixed inset-0 z-[10040] flex items-center justify-center bg-neutral-950 px-5 text-neutral-100">
       {!ready ? (
-        <IconLoader2 className="h-6 w-6 animate-spin text-neutral-500" />
+        // Say something. A bare spinner on a full-bleed black overlay is
+        // indistinguishable from a broken page, and this is the very first
+        // screen after onboarding — the worst possible place to look dead.
+        <div className="flex flex-col items-center gap-4 text-center">
+          <IconLoader2 className="h-6 w-6 animate-spin text-neutral-500" />
+          <p className="stage-direction text-xs text-neutral-500">
+            (finding you a scene.)
+          </p>
+        </div>
       ) : (
         <div className="w-full max-w-md text-center">
           <p className="text-xs font-medium uppercase tracking-widest text-neutral-500">
