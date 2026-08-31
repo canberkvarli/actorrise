@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
-import { GhostLightSketch } from "@/components/brand/sketches";
+import { ClapperSketch, SpotlightSketch } from "@/components/brand/sketches";
 
 /**
  * The wait, staged.
@@ -15,10 +15,14 @@ import { GhostLightSketch } from "@/components/brand/sketches";
  * while nothing had arrived. And a ticked checklist is the visual language of a
  * build log, not a theatre.
  *
- * A ghost light is the bare bulb left burning on an empty stage overnight, so
- * the theatre is never fully dark. That is exactly this moment: nothing is
- * happening yet, something is about to. One bulb, breathing, and one line of
- * stage direction at a time.
+ * Searching is a follow spot hunting the stage for someone worth lighting: the
+ * lamp is on, the beam is moving, it hasn't found anyone yet. Film and TV get a
+ * clapperboard instead, so the two halves of the library finally look different
+ * from each other while you wait.
+ *
+ * Not the ghost light — that one belongs to the empty state, where the search
+ * came back with nothing and the theatre really is dark. Using it here made
+ * "still looking" and "found nothing" the same picture.
  */
 
 type SearchMode = "plays" | "film_tv";
@@ -46,6 +50,7 @@ const BEAT_MS = 2400;
 
 export function SearchCurtain({ mode = "plays" }: { mode?: SearchMode }) {
   const beats = BEATS[mode];
+  const Sketch = mode === "film_tv" ? ClapperSketch : SpotlightSketch;
   const [beat, setBeat] = useState(0);
   const reduced = useReducedMotion();
 
@@ -68,7 +73,7 @@ export function SearchCurtain({ mode = "plays" }: { mode?: SearchMode }) {
       role="status"
     >
       <div className="relative flex h-28 w-28 items-center justify-center">
-        {/* The bulb's glow, breathing. */}
+        {/* The lamp's glow, breathing. */}
         {!reduced && (
           <motion.span
             aria-hidden
@@ -77,7 +82,7 @@ export function SearchCurtain({ mode = "plays" }: { mode?: SearchMode }) {
             transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
           />
         )}
-        <GhostLightSketch size={88} className="relative text-foreground/70" />
+        <Sketch size={88} className="relative text-foreground/70" />
       </div>
 
       {/* Fixed height so the beam below doesn't jump as lines change length. */}

@@ -24,7 +24,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import { TrendingPreSearch } from "@/components/monologue/TrendingPreSearch";
 import { ForYouShelf } from "@/components/monologue/ForYouShelf";
 import { SearchCurtain } from "@/components/monologue/SearchCurtain";
-import { MasksSketch } from "@/components/brand/sketches";
+// A ticket stub for "nothing on this bill" — the masks were already doing duty
+// as the gibberish/short empty state and as a starting-point tile, so film & TV
+// coming back empty looked identical to two other things.
+import { TicketSketch } from "@/components/brand/sketches";
 import { SearchFiltersPanel } from "@/components/monologue/SearchFiltersPanel";
 import { NoResultsState } from "@/components/monologue/NoResultsState";
 import { StartingPoints } from "@/components/monologue/StartingPoints";
@@ -1822,7 +1825,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 ) : (
                   <Card className="border-dashed bg-muted/20">
                     <CardContent className="flex flex-col items-center pt-12 pb-12 text-center">
-                      <MasksSketch size={56} className="text-muted-foreground/50" />
+                      <TicketSketch size={56} className="text-muted-foreground/50" />
                       <p className="stage-direction mt-5 text-sm text-muted-foreground">
                         (nothing on this bill.)
                       </p>
@@ -1890,7 +1893,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     return (
                       <Card className="border-dashed bg-muted/20">
                         <CardContent className="flex flex-col items-center pt-12 pb-12 text-center">
-                          <MasksSketch size={56} className="text-muted-foreground/50" />
+                          <TicketSketch size={56} className="text-muted-foreground/50" />
                           <p className="stage-direction mt-5 text-sm text-muted-foreground">
                             {showBookmarkedOnly
                               ? "(nothing saved here yet.)"

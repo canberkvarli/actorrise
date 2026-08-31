@@ -34,6 +34,29 @@ function useSketchAnimation(delay: number) {
         };
 }
 
+/**
+ * For strokes that carry their own `strokeDasharray` (a beam of light, a
+ * perforation).
+ *
+ * These can't be a `motion.path` at all: framer-motion's SVG builder writes
+ * strokeDasharray itself to implement `pathLength`, and it stamps "1px 1px"
+ * over any dash pattern you set — verified in the browser, the dashes came out
+ * solid. So the animation goes on a wrapping `motion.g` and the path inside
+ * stays plain, keeping its own dashes.
+ */
+function useSketchFade(delay: number) {
+  const reduce = useReducedMotion();
+  return (order: number): Partial<ComponentProps<typeof motion.g>> =>
+    reduce
+      ? {}
+      : {
+          initial: { opacity: 0 },
+          whileInView: { opacity: 1 },
+          viewport: { once: true, amount: 0.6 },
+          transition: { duration: 0.5, delay: delay + order * 0.18 },
+        };
+}
+
 const strokeProps = {
   fill: "none",
   stroke: "currentColor",
@@ -263,5 +286,91 @@ export function CurtainSketch({
       />
       <motion.path {...strokeProps} {...draw(2)} d="M74 12 L74 26 M76 30 A2.4 2.4 0 1 1 71.4 30 A2.4 2.4 0 1 1 76 30 M146 12 L146 26 M148.3 30 A2.4 2.4 0 1 1 143.7 30 A2.4 2.4 0 1 1 148.3 30" />
     </svg>
+  );
+}
+
+/** A follow spot: the lamp hunting for someone worth lighting. */
+export function SpotlightSketch({ size = 48, className, delay = 0, title }: SketchProps) {
+  const draw = useSketchAnimation(delay);
+  const fade = useSketchFade(delay);
+  return (
+    <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
+      {/* rig */}
+      <motion.path {...strokeProps} {...draw(0)} d="M32 4 L32 1 M27 1 L37 1" />
+      {/* the lamp, small — the beam has to be the big shape */}
+      <motion.path {...strokeProps} {...draw(0)} d="M27 4 L37 4 L40 13 L24 13 Z" />
+      <motion.path {...strokeProps} {...draw(1)} d="M24 13 C28 15.5 36 15.5 40 13" />
+      {/* Dashed and splayed much wider than the lamp, so it reads as light
+          rather than a solid cone — a narrow closed one came out as a bottle. */}
+      <motion.g {...fade(2)}>
+        <path {...strokeProps} strokeDasharray="4 5" d="M25 16 L6 52 M39 16 L58 52" />
+      </motion.g>
+      {/* the pool it throws, in perspective */}
+      <motion.path
+        {...strokeProps}
+        {...draw(3)}
+        d="M6 52 C6 49 17.6 46.5 32 46.5 C46.4 46.5 58 49 58 52 C58 55 46.4 57.5 32 57.5 C17.6 57.5 6 55 6 52 Z"
+      />
+    </Frame>
+  );
+}
+
+/** Clapperboard — scene one, take one. The film and TV half of the library. */
+export function ClapperSketch({ size = 48, className, delay = 0, title }: SketchProps) {
+  const draw = useSketchAnimation(delay);
+  return (
+    <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
+      {/* the stick, hinged at the left and held open */}
+      <motion.path {...strokeProps} {...draw(0)} d="M9 22 L53 11 L55 20 L11 31 Z" />
+      <motion.path {...strokeProps} {...draw(1)} d="M22 18 L25 27 M34 15 L37 24 M46 12 L49 21" />
+      {/* the slate */}
+      <motion.path
+        {...strokeProps}
+        {...draw(2)}
+        d="M8 30 L56 30 L56 54 C56 56 55 57 53 57 L11 57 C9 57 8 56 8 54 Z"
+      />
+      <motion.path {...strokeProps} {...draw(3)} d="M16 39 L48 39 M16 48 L38 48" />
+    </Frame>
+  );
+}
+
+/** A stack of sides, dog-eared. Twelve thousand pages, give or take. */
+export function ScriptPagesSketch({ size = 48, className, delay = 0, title }: SketchProps) {
+  const draw = useSketchAnimation(delay);
+  return (
+    <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
+      {/* the sheet underneath, just showing */}
+      <motion.path {...strokeProps} {...draw(0)} d="M13 14 L13 51 C13 53 14 54 16 54 L43 54" />
+      {/* the top sheet, corner turned */}
+      <motion.path
+        {...strokeProps}
+        {...draw(1)}
+        d="M21 7 L46 7 L52 13 L52 46 C52 47.5 51 48.5 49.5 48.5 L21 48.5 C19.5 48.5 18.5 47.5 18.5 46 L18.5 9.5 C18.5 8 19.5 7 21 7 Z"
+      />
+      <motion.path {...strokeProps} {...draw(2)} d="M46 7 L46 13 L52 13" />
+      {/* the speech on it */}
+      <motion.path {...strokeProps} {...draw(3)} d="M25 22 L45 22 M25 29 L45 29 M25 36 L38 36" />
+    </Frame>
+  );
+}
+
+/** A ticket stub — the house, the seat, the night you kept the corner of. */
+export function TicketSketch({ size = 48, className, delay = 0, title }: SketchProps) {
+  const draw = useSketchAnimation(delay);
+  const fade = useSketchFade(delay);
+  return (
+    <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
+      <motion.path
+        {...strokeProps}
+        {...draw(0)}
+        d="M8 20 L56 20 L56 44 C56 45.5 55 46.5 53.5 46.5 L10.5 46.5 C9 46.5 8 45.5 8 44 Z"
+      />
+      {/* where it tears */}
+      <motion.g {...fade(1)}>
+        <path {...strokeProps} strokeDasharray="3 4" d="M42 20 L42 46.5" />
+      </motion.g>
+      <motion.path {...strokeProps} {...draw(2)} d="M15 28 L34 28 M15 36 L27 36" />
+      <motion.path {...strokeProps} {...draw(3)} d="M47 30 L51 30 M47 36 L51 36" />
+    </Frame>
   );
 }
