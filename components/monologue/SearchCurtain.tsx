@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
-import { ClapperSketch, SpotlightSketch } from "@/components/brand/sketches";
+import {
+  ClapperSketch,
+  FootlightsSketch,
+  MarqueeSketch,
+  ReelSketch,
+  SpotlightSketch,
+} from "@/components/brand/sketches";
 
 /**
  * The wait, staged.
@@ -48,11 +54,32 @@ const BEATS: Record<SearchMode, string[]> = {
 
 const BEAT_MS = 2400;
 
+/**
+ * A different drawing each search, rather than the same one forever.
+ *
+ * Picked once per mount and held for the whole wait — the beats already change
+ * underneath it, and swapping the image every couple of seconds too would turn
+ * a calm screen into a slideshow. Deliberately excludes the sketches that mean
+ * something specific elsewhere in search (ghost light = nothing found, ticket =
+ * empty bill, script pages = nothing to show), so a drawing never means two
+ * things on the same page.
+ */
+const CURTAIN_SKETCHES: Record<SearchMode, typeof SpotlightSketch[]> = {
+  plays: [SpotlightSketch, FootlightsSketch, MarqueeSketch],
+  film_tv: [ClapperSketch, ReelSketch, MarqueeSketch],
+};
+
 export function SearchCurtain({ mode = "plays" }: { mode?: SearchMode }) {
   const beats = BEATS[mode];
-  const Sketch = mode === "film_tv" ? ClapperSketch : SpotlightSketch;
   const [beat, setBeat] = useState(0);
   const reduced = useReducedMotion();
+
+  // Lazy initialiser, so the choice is made once on mount rather than on every
+  // render. This component only ever mounts client-side (it needs a search in
+  // flight), so there is no server render for the random pick to disagree with.
+  const pool = CURTAIN_SKETCHES[mode];
+  const [pick] = useState(() => Math.floor(Math.random() * pool.length));
+  const Sketch = pool[pick % pool.length];
 
   useEffect(() => {
     setBeat(0);

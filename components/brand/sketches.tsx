@@ -374,3 +374,61 @@ export function TicketSketch({ size = 48, className, delay = 0, title }: SketchP
     </Frame>
   );
 }
+
+/** Footlights along the lip of the stage — the house is warming up. */
+export function FootlightsSketch({ size = 48, className, delay = 0, title }: SketchProps) {
+  const draw = useSketchAnimation(delay);
+  return (
+    <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
+      {/* the wash they throw up into the room */}
+      <motion.path {...strokeProps} {...draw(0)} d="M7 27 C20 17 44 17 57 27" />
+      {/* three hoods, sitting on the lip */}
+      <motion.path
+        {...strokeProps}
+        {...draw(1)}
+        d="M11 47 C11 41 20 41 20 47 M25 47 C25 41 34 41 34 47 M39 47 C39 41 48 41 48 47"
+      />
+      {/* what each one throws */}
+      <motion.path {...strokeProps} {...draw(2)} d="M15.5 38 L15.5 33 M29.5 38 L29.5 33 M43.5 38 L43.5 33" />
+      {/* the lip itself */}
+      <motion.path {...strokeProps} {...draw(3)} d="M5 47 L59 47 M5 53 L59 53" />
+    </Frame>
+  );
+}
+
+/** A reel of film. The other half of the library, spinning. */
+export function ReelSketch({ size = 48, className, delay = 0, title }: SketchProps) {
+  const draw = useSketchAnimation(delay);
+  return (
+    <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
+      <motion.path {...strokeProps} {...draw(0)} d="M32 8 A24 24 0 1 1 31.9 8 Z" />
+      <motion.path {...strokeProps} {...draw(1)} d="M32 27 A5 5 0 1 1 31.9 27 Z" />
+      <motion.path {...strokeProps} {...draw(2)} d="M32 13 A6 6 0 1 1 31.9 13 Z" />
+      <motion.path {...strokeProps} {...draw(3)} d="M20.7 32.5 A6 6 0 1 1 20.6 32.5 Z" />
+      <motion.path {...strokeProps} {...draw(3)} d="M43.3 32.5 A6 6 0 1 1 43.2 32.5 Z" />
+    </Frame>
+  );
+}
+
+/** The marquee out front, with the title still going up. */
+export function MarqueeSketch({ size = 48, className, delay = 0, title }: SketchProps) {
+  const draw = useSketchAnimation(delay);
+  return (
+    <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
+      {/* The building it hangs off. The canopy widens toward the bottom and the
+          bulbs sit INSIDE it — an earlier version was narrow-bottomed with the
+          bulbs slung underneath, which read unmistakably as a shopping cart. */}
+      <motion.path {...strokeProps} {...draw(0)} d="M6 7 L58 7 M20 7 L20 15 M44 7 L44 15" />
+      {/* the canopy */}
+      <motion.path {...strokeProps} {...draw(1)} d="M16 15 L48 15 L54 37 L10 37 Z" />
+      {/* tonight's billing */}
+      <motion.path {...strokeProps} {...draw(2)} d="M20 22 L44 22 M24 29 L40 29" />
+      {/* the bulbs, along the lip */}
+      <motion.path
+        {...strokeProps}
+        {...draw(3)}
+        d="M17.8 34 A1.8 1.8 0 1 1 17.7 34 Z M33.8 34 A1.8 1.8 0 1 1 33.7 34 Z M49.8 34 A1.8 1.8 0 1 1 49.7 34 Z"
+      />
+    </Frame>
+  );
+}
