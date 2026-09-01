@@ -79,9 +79,9 @@ class TestGoldenGate:
 # exact numbers matter less than their spacing.
 
 CUE_X, DLG_X, ACTION_X = 300, 222, 100
-# Clears the 40-word floor AND ends on a full stop — the gate rejects anything
+# Clears the 75-word floor AND ends on a full stop — the gate rejects anything
 # whose last character is not terminal punctuation (truncated_end).
-FILLER = " ".join(["word"] * 50) + "."
+FILLER = " ".join(["word"] * 80) + "."
 
 
 def _dialogue(text: str) -> tuple[int, str]:

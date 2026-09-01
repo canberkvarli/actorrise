@@ -10,9 +10,27 @@ truncation into the library.
 import unittest
 
 from app.services.extraction.monologue_quality import (
-    assess_monologue_quality,
+    DEFAULT_MIN_WORDS,
     strip_artifacts,
 )
+from app.services.extraction.monologue_quality import (
+    assess_monologue_quality as _assess,
+)
+
+
+def assess_monologue_quality(text, **kw):
+    """Shadow the gate with a low floor, so these tests test what they name.
+
+    Every fixture below is a hand-written specimen of ONE artifact — a bracket
+    cue, a scene heading, a footnote. They were written around 60 words, which
+    was comfortably over the old 40-word floor and is now under the 75-word one,
+    so raising the floor turned all of them into `too_short` and stopped them
+    exercising the artifact they exist to catch.
+
+    Length is policy and is tested on its own in :class:`LengthTests`.
+    """
+    kw.setdefault("min_words", 40)
+    return _assess(text, **kw)
 
 
 # A clean, audition-length single-speaker monologue (≈70 words, ends on a period).
@@ -81,14 +99,43 @@ class ArtifactTests(unittest.TestCase):
         self.assertFalse(result.ok)
         self.assertIn("bracket_cue", result.reasons)
 
-    def test_parenthetical_stage_direction_is_rejected(self):
+    def test_a_stage_direction_is_kept_not_rejected(self):
+        """Directions annotate the speech; they are not a reason to bin it.
+
+        This gate used to reject on presence, which quietly undid the work of
+        `to_display_text` (which preserves directions so the reader can show
+        them as italic asides). Every play speech carrying a wrylie was thrown
+        away at ingest.
+        """
         text = (
             "You walked out that door and you never looked back. (beat) "
-            "I counted the days. I counted every single one of them until I lost count."
+            "I counted the days. I counted every single one of them until I lost "
+            "count entirely and the counting stopped meaning anything at all. I "
+            "stayed in that house another winter, waiting for a knock that never "
+            "came, and I am only now learning how to stop listening for it."
+        )
+        result = assess_monologue_quality(text)
+        self.assertTrue(result.ok, result.reasons)
+
+    def test_direction_heavy_text_is_rejected(self):
+        """A scene description with a line in it is not a monologue."""
+        text = (
+            "(He crosses to the window and stands there a long while, watching "
+            "the rain come down over the rooftops of the sleeping town below.) "
+            "I suppose that is that. "
+            "(She rises, gathers her coat from the chair, and goes to the door, "
+            "where she pauses with her hand resting on the frame.)"
         )
         result = assess_monologue_quality(text)
         self.assertFalse(result.ok)
-        self.assertIn("parenthetical_direction", result.reasons)
+        self.assertIn("direction_heavy", result.reasons)
+
+    def test_many_small_directions_are_rejected(self):
+        """Under the share, over the count: a transcript, not a speech."""
+        beats = " ".join(f"(beat) Line number {i} of this thing." for i in range(12))
+        result = assess_monologue_quality(beats)
+        self.assertFalse(result.ok)
+        self.assertIn("direction_heavy", result.reasons)
 
     def test_scene_heading_is_rejected(self):
         text = (
@@ -196,6 +243,19 @@ class TruncationTests(unittest.TestCase):
 
 
 class LengthTests(unittest.TestCase):
+    """These call the real gate, not the shadow — length IS what they test."""
+
+    def test_the_floor_is_seventy_five_words(self):
+        """~30s at 150wpm. Below that it is a clip, not a piece you can offer."""
+        self.assertEqual(DEFAULT_MIN_WORDS, 75)
+
+    def test_a_sixty_word_speech_is_now_too_short(self):
+        """The old 40-word floor admitted 6,165 rows no actor could use."""
+        text = " ".join(["word"] * 60) + "."
+        result = _assess(text)
+        self.assertFalse(result.ok)
+        self.assertIn("too_short", result.reasons)
+
     def test_too_short_is_rejected(self):
         result = assess_monologue_quality("I am leaving and I am not coming back.")
         self.assertFalse(result.ok)

@@ -79,7 +79,7 @@ def main() -> None:
                 fh.write(resp.content)
                 fh.flush()
                 cands = extractor.extract_from_source(fh.name, "pdf",
-                                                      min_words=40, max_words=400)
+                                                      min_words=75, max_words=400)
         except Exception as e:  # noqa: BLE001
             print(f"  {show}: error {e}")
             continue

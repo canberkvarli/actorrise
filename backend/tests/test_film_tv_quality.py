@@ -54,14 +54,18 @@ class ClassifyPieceTests(unittest.TestCase):
         self.assertEqual(bucket, "remove")
         self.assertTrue(any(i.startswith("foreign") for i in issues), issues)
 
-    def test_strippable_stage_directions_are_salvaged(self):
-        # Same clean speech with a couple of wrylies; stripping them leaves a
-        # clean >=75-word single-speaker monologue, so it is salvaged, not removed.
+    def test_a_couple_of_wrylies_are_kept_not_stripped(self):
+        """Directions are part of the piece, so a wrylie is not damage.
+
+        This used to route to `salvage`, meaning "strip the parentheticals out".
+        That was the wrong instinct: `(pauses)` is information the actor wants,
+        the reader renders it as an italic aside, and deleting it made the
+        speech poorer, not cleaner. Only direction-DOMINATED text is a problem.
+        """
         with_wrylies = CLEAN.replace("lately.", "lately. (pauses)").replace(
             "am,", "am, (quietly)")
         bucket, issues = classify_piece(with_wrylies, "film")
-        self.assertEqual(bucket, "salvage")
-        self.assertIn("stage_dir", issues)
+        self.assertEqual(bucket, "keep", issues)
 
     def test_stage_direction_that_leaves_a_fragment_is_removed(self):
         # A short line padded only by a parenthetical: stripping leaves < 75 words.

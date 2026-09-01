@@ -121,11 +121,28 @@ TV_CLIP_MIN_SECONDS = 30
 FILM_TV_MIN_WORDS = 50
 
 
+#: Statuses that pull a piece out of search. Two, not one, and they mean
+#: different things:
+#:
+#:   'pending'       — broken, a human must look at it. Feeds
+#:                     /admin/monologues/review.
+#:   'too_short'     — intact but under the 75-word floor. Nobody needs to look
+#:                     at it; it is simply not a piece an actor can offer.
+#:   'not_monologue' — a two-hander stored as a monologue. Found by measuring
+#:                     `text_segments`: when a quarter of the spoken words are
+#:                     another character's `interjection`, it is a scene.
+#:
+#: Kept apart so the retirement of six thousand short rows does not bury the
+#: handful of genuinely broken ones in a review queue no one can then face.
+HIDDEN_REVIEW_STATUSES = frozenset({"pending", "too_short", "not_monologue"})
+
+
 def review_hides_from_search(review_status) -> bool:
-    """True when a piece is awaiting review and must not be served. The repair /
-    quality passes set review_status='pending' to pull a broken piece out of
-    circulation; only that explicit state hides it (None / anything else shows)."""
-    return review_status == "pending"
+    """True when a piece must not be served (see HIDDEN_REVIEW_STATUSES).
+
+    None, or any status outside that set, shows.
+    """
+    return review_status in HIDDEN_REVIEW_STATUSES
 
 
 def film_tv_word_gate_hides(source_type, word_count) -> bool:
@@ -1040,12 +1057,11 @@ class SemanticSearch:
             #
             # Expressed as SQL rather than the helper because this runs before
             # scoring; the helper still guards the title path, where rows are
-            # already in memory. Mirrors it exactly: only 'pending' hides, so a
-            # reviewed row with any other status stays searchable.
+            # already in memory. Mirrors it exactly, so keep the two in step.
             .filter(
                 or_(
                     Monologue.review_status.is_(None),
-                    Monologue.review_status != "pending",
+                    Monologue.review_status.notin_(tuple(HIDDEN_REVIEW_STATUSES)),
                 )
             )
             # Only known-foreign work is excluded, never merely unlabelled.

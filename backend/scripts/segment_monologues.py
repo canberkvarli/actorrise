@@ -33,6 +33,10 @@ from sqlalchemy.orm import Session as DBSession, joinedload, load_only, sessionm
 
 from app.core.config import settings
 from app.models.actor import Monologue, Play
+from app.services.extraction.monologue_quality import (
+    SEGMENT_MIN_FIDELITY,
+    segment_fidelity,
+)
 
 
 # Dedicated engine for this long-running script. pool_pre_ping detects connections
@@ -245,18 +249,24 @@ def _validate_segments(segs, original_text: str | None = None) -> tuple[bool, st
     if not has_dialogue:
         return False, "no dialogue segment found"
 
-    # Soft check: warn if segment text length drifts >10% from original.
+    # HARD check: the segments must be the same words as the text.
+    #
+    # This used to print a warning and write the row anyway, which is how 703
+    # rows ended up rendering something other than their own text — including
+    # 292 where a 39-word excerpt ending in "..." acquired a 509-word
+    # continuation nobody can attribute to the playwright. The reader shows
+    # segments in preference to `text`, so an unfaithful segmentation is not a
+    # cosmetic problem; it is the actor reading invented words.
+    #
+    # Rejecting leaves `text_segments` NULL, and the renderer falls back to
+    # `text` — the copy that came from the source. A row we cannot segment
+    # faithfully is better left unsegmented than segmented wrong.
     if original_text is not None:
-        orig_len = len(original_text.strip())
-        segs_len = len("".join(s["text"] for s in segs).strip())
-        if orig_len > 0 and abs(orig_len - segs_len) / orig_len > 0.10:
-            print(
-                f"  !! WARN len-drift: original={orig_len} chars, "
-                f"segments={segs_len} chars "
-                f"(diff={abs(orig_len - segs_len)}, "
-                f"{abs(orig_len - segs_len) / orig_len * 100:.1f}%)",
-                file=sys.stderr,
-            )
+        ratio = segment_fidelity(
+            original_text, " ".join(s["text"] for s in segs)
+        )
+        if ratio < SEGMENT_MIN_FIDELITY:
+            return False, f"segments drift from text (similarity {ratio:.2f})"
 
     return True, ""
 

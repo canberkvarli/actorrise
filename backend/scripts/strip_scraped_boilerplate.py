@@ -216,7 +216,7 @@ def strip_citation_tail(text: str) -> str:
 
 EXCERPT_MARKERS = re.compile(r"\b(?:Start|End)\s*:", re.IGNORECASE)
 
-MIN_WORDS = 50  # matches semantic_search.FILM_TV_MIN_WORDS / the purge bar
+MIN_WORDS = 75  # matches semantic_search.FILM_TV_MIN_WORDS / the purge bar
 
 
 def words(text: str) -> int:

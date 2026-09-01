@@ -518,7 +518,7 @@ def parse_screenplay_pdf(pdf_bytes: bytes, debug: bool = False) -> list[dict]:
 
 # ── Monologue Identification ─────────────────────────────────────────────────
 
-def merge_consecutive_speeches(blocks: list[dict], min_words: int = 80) -> list[dict]:
+def merge_consecutive_speeches(blocks: list[dict], min_words: int = 75) -> list[dict]:
     """
     Merge consecutive dialogue blocks by the same character into monologues.
     Also merges across short interruptions (brief stage directions or very short
@@ -813,7 +813,7 @@ def main() -> None:
         print(f"    Source: {source_used} | {len(blocks)} dialogue blocks | {working_url}")
 
         # Merge consecutive speeches and filter by length
-        candidates = merge_consecutive_speeches(blocks, min_words=80)
+        candidates = merge_consecutive_speeches(blocks, min_words=75)
         if not candidates:
             print(f"    No monologue-length speeches found (need 80+ words)")
             time.sleep(IMSDB_DELAY)

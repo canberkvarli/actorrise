@@ -62,11 +62,31 @@ def get_public_stats(db: Session = Depends(get_db)) -> dict[str, Any]:
         ).scalar() or 0
     total = int(db_total) + _demo_searches_count
 
-    # Content record counts
-    monologue_count = db.query(sql_count(Monologue.id)).scalar() or 0
-    play_monologue_count = db.query(sql_count(Monologue.id)).join(Play).filter(Play.source_type == "play").scalar() or 0
-    film_tv_monologue_count = db.query(sql_count(Monologue.id)).join(Play).filter(Play.source_type.in_(["film", "tv"])).scalar() or 0
-    play_count = db.query(sql_count(Play.id)).scalar() or 0
+    # Content record counts.
+    #
+    # SEARCHABLE rows only. This number is shown on the landing page as the size
+    # of the library, so it has to mean "pieces an actor can actually find" — a
+    # row retired as too_short or not_monologue is not in any result set, and
+    # counting it makes the headline a claim the product does not honour. An
+    # unfiltered count() here would have advertised 15,016 against 8,597 real.
+    searchable = Monologue.review_status.is_(None)
+
+    monologue_count = db.query(sql_count(Monologue.id)).filter(searchable).scalar() or 0
+    play_monologue_count = (
+        db.query(sql_count(Monologue.id)).join(Play)
+        .filter(Play.source_type == "play", searchable).scalar() or 0
+    )
+    film_tv_monologue_count = (
+        db.query(sql_count(Monologue.id)).join(Play)
+        .filter(Play.source_type.in_(["film", "tv"]), searchable).scalar() or 0
+    )
+    # Titles you can reach, not titles on file: a play whose every monologue was
+    # retired is not something an actor can browse to.
+    play_count = (
+        db.query(sql_count(func.distinct(Play.id)))
+        .join(Monologue, Monologue.play_id == Play.id)
+        .filter(searchable).scalar() or 0
+    )
 
     user_count = db.query(sql_count(User.id)).scalar() or 0
 

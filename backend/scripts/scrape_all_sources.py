@@ -270,7 +270,7 @@ def scrape_wikisource(db, limit: int = 50) -> dict:
 
                 # Extract monologues
                 logger.info(f"  🔍 Extracting monologues...")
-                monologues = parser.extract_monologues(text, min_words=50, max_words=500)
+                monologues = parser.extract_monologues(text, min_words=75, max_words=500)
 
                 logger.info(f"  📝 Found {len(monologues)} potential monologues")
 
@@ -417,7 +417,7 @@ def scrape_perseus(db, limit: int = 50) -> dict:
 
                 # Extract monologues using TEI parser
                 logger.info(f"  🔍 Extracting monologues from TEI XML...")
-                monologues = tei_parser.extract_monologues(xml_content, min_words=50, max_words=500)
+                monologues = tei_parser.extract_monologues(xml_content, min_words=75, max_words=500)
 
                 logger.info(f"  📝 Found {len(monologues)} potential monologues")
 

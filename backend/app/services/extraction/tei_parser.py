@@ -11,7 +11,7 @@ class TEIParser:
     def extract_monologues(
         self,
         tei_xml: str,
-        min_words: int = 50,
+        min_words: int = 75,
         max_words: int = 500
     ) -> List[Dict]:
         """

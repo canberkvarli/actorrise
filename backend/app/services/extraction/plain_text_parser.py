@@ -12,9 +12,32 @@ class PlainTextParser:
     #: italicised sentence cannot be mistaken for a name.
     _ITALIC_CUE = re.compile(r'^_([A-Z][^_\n]{0,44}?)\._[ \t]*', re.MULTILINE)
 
-    #: Italicised spans inside a speech are stage directions ("_Exit._",
-    #: "_She turns away._"), the underscore equivalent of a parenthetical.
-    _ITALIC_SPAN = re.compile(r'_[^_\n]{0,200}?_')
+    #: Italicised spans inside a speech are USUALLY stage directions ("_Exit._",
+    #: "_She turns away._"), the underscore equivalent of a parenthetical — but
+    #: not always. Gutenberg also italicises emphasis, and across a 25-play
+    #: sample 955 of 5,511 spans are one or two lowercase words: "I said _no_".
+    #: Treating every span as a direction and deleting it (which is what this
+    #: parser did) removed those words from the speech entirely.
+    _ITALIC_SPAN = re.compile(r'_([^_\n]{0,200}?)_')
+
+    #: Bracketed spans, on the other hand, are unambiguous: every one of the
+    #: 3,011 in that sample is a direction, typically italicised inside the
+    #: brackets — "[_Exit._]", "[_Aside._]", "[_Sings._]", "[_Dies._]".
+    _BRACKET_SPAN = re.compile(r'\[([^\]\n]{0,200}?)\]')
+
+    _PAREN_SPAN = re.compile(r'\(([^)\n]{0,200}?)\)')
+
+    #: How a stage direction opens, when it is set in italics rather than
+    #: brackets. Anything matching is a direction; anything else italicised is
+    #: emphasis and keeps its words.
+    _DIRECTION_WORD = re.compile(
+        r"^(?:exit|exeunt|enter|re-enter|aside|within|without|alone|aloud|"
+        r"sings?|reads?|dies?|rises?|kneels?|weeps?|laughs?|pauses?|bows?|"
+        r"knocking|music|curtain|embracing|pointing|turning|looking|going|"
+        r"coming|taking|giving|showing|drawing|throwing|falling|starting|"
+        r"crossing|advancing|retiring|seeing|listening|whispering|shouting)\b",
+        re.IGNORECASE,
+    )
 
     #: A Title Case speaker cue: "Dorine.  ", "Mrs. Stockmann. ", "Mme. Pernelle. ".
     #: One optional honorific, then the name. Both other patterns demand ALL CAPS,
@@ -73,7 +96,7 @@ class PlainTextParser:
     def extract_monologues(
         self,
         text: str,
-        min_words: int = 50,
+        min_words: int = 75,
         max_words: int = 500
     ) -> List[Dict]:
         """
@@ -160,29 +183,82 @@ class PlainTextParser:
 
         # Filter and clean speeches
         for character, speech_text in speeches:
-            # Remove stage directions (parentheses, brackets, or italics)
-            clean_text = re.sub(r'\([^)]+\)|\[[^\]]+\]', '', speech_text)
-            clean_text = self._ITALIC_SPAN.sub(' ', clean_text)
-            clean_text = clean_text.replace('_', '')  # stray markup
+            # Two texts, the same pair screenplay_pdf_parser produces:
+            #   display — what the actor reads, directions kept as `(...)` so the
+            #             reader can set them italic and muted
+            #   spoken  — display minus the directions, which is what a word
+            #             floor must measure. A direction is not something the
+            #             actor says, so counting it would let
+            #             "(He crosses to the window and stands a long while)"
+            #             push a thin speech over the bar.
+            display = self._to_display(speech_text)
+            spoken = self._spoken_only(display)
 
-            # Remove extra whitespace
-            clean_text = re.sub(r'\s+', ' ', clean_text).strip()
-
-            # Skip if too short or starts with common non-dialogue indicators
-            if not clean_text or clean_text.lower().startswith(('scene', 'act', 'enter', 'exit')):
+            # Skip if empty or starts with common non-dialogue indicators
+            if not spoken or spoken.lower().startswith(('scene', 'act', 'enter', 'exit')):
                 continue
 
-            word_count = len(clean_text.split())
+            word_count = len(spoken.split())
 
             if min_words <= word_count <= max_words:
                 monologues.append({
                     'character': self._normalize_character_name(character),
-                    'text': clean_text,
+                    'text': display,
+                    'dialogue': spoken,
                     'word_count': word_count,
                     'stage_directions': self._extract_stage_directions(speech_text)
                 })
 
         return monologues
+
+    def _to_display(self, speech_text: str) -> str:
+        """The speech as the actor should read it, directions kept as `(...)`.
+
+        Brackets and parentheses are directions outright. Italic spans are only
+        directions when they read like one (see _DIRECTION_WORD, or a
+        capitalised clause closing on a full stop); everything else italicised
+        is emphasis and keeps its words, minus the underscores.
+        """
+        def _bracket(m: re.Match) -> str:
+            inner = m.group(1).replace('_', '').strip()
+            return f' ({inner}) ' if inner else ' '
+
+        text = self._BRACKET_SPAN.sub(_bracket, speech_text)
+
+        def _italic(m: re.Match) -> str:
+            inner = m.group(1).strip()
+            if not inner:
+                return ' '
+            if self._is_direction(inner):
+                return f' ({inner.rstrip(".")}.) '
+            return f' {inner} '        # emphasis — the words are part of the line
+
+        text = self._ITALIC_SPAN.sub(_italic, text)
+        text = text.replace('_', '')            # stray unmatched markup
+
+        # Tidy the spacing the substitutions created, without touching newlines
+        # that carry paragraph structure.
+        text = re.sub(r'[ \t]+([,.;:!?])', r'\1', text)
+        text = re.sub(r'\(\s+', '(', text)
+        text = re.sub(r'\s+\)', ')', text)
+        return re.sub(r'\s+', ' ', text).strip()
+
+    def _is_direction(self, inner: str) -> bool:
+        """Is this italicised span a stage direction rather than emphasis?"""
+        s = inner.strip()
+        if not s:
+            return False
+        if self._DIRECTION_WORD.match(s):
+            return True
+        # "Laying his hand on Laertes's head." — a capitalised clause that closes
+        # on a full stop. Emphasis is short and rarely punctuated that way.
+        return bool(s[:1].isupper() and s.endswith('.') and len(s.split()) >= 2)
+
+    def _spoken_only(self, display: str) -> str:
+        """``display`` with the directions taken back out."""
+        text = self._PAREN_SPAN.sub(' ', display)
+        text = re.sub(r'[ \t]+([,.;:!?])', r'\1', text)
+        return re.sub(r'\s+', ' ', text).strip()
 
     def _is_plausible_character(self, name: str) -> bool:
         """Reject the things that behave like speakers but are not people.

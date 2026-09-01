@@ -8,18 +8,18 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "Shakespeare Monologues for Auditions",
   description:
-    "Shakespeare monologues for auditions from Hamlet, Macbeth, Midsummer, and more. Filter 12,000+ real pieces by play, length, and character type.",
+    "Shakespeare monologues for auditions from Hamlet, Macbeth, Midsummer, and more. Filter 8,500+ real pieces by play, length, and character type.",
   openGraph: {
     title: "Shakespeare Monologues for Auditions | ActorRise",
     description:
-      "Search Shakespeare monologues by character, play, tone, and length. AI-powered discovery from 12,000+ pieces.",
+      "Search Shakespeare monologues by character, play, tone, and length. AI-powered discovery from 8,500+ pieces.",
     url: `${siteUrl}/shakespeare-monologues`,
   },
   twitter: {
     card: "summary_large_image",
     title: "Shakespeare Monologues for Auditions | ActorRise",
     description:
-      "Search Shakespeare monologues by character, play, tone, and length. AI-powered discovery from 12,000+ pieces.",
+      "Search Shakespeare monologues by character, play, tone, and length. AI-powered discovery from 8,500+ pieces.",
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/shakespeare-monologues` },

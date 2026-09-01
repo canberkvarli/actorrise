@@ -47,7 +47,14 @@ def test_already_clean_text_is_left_untouched():
     assert res.cleaned_text == CLEAN_VO
 
 
-def test_strip_pass_fixes_parenthetical_only_dirt():
+def test_a_lone_wrylie_needs_no_repair_and_is_kept():
+    """A stage direction is not dirt, so there is nothing here to repair.
+
+    This asserted the opposite until the gate stopped treating any parenthetical
+    as a defect: the speech was "repaired" by deleting `(beat)`, which is a
+    direction the actor wants and the reader shows as an italic aside. Repair is
+    for text that is broken; a wrylie is text that is annotated.
+    """
     text = (
         "I have lived a long life and seen many things. (beat) "
         "I have buried friends and outlived enemies, and still I rise each morning "
@@ -61,8 +68,8 @@ def test_strip_pass_fixes_parenthetical_only_dirt():
         use_ai=False,
     )
     assert res.passed_gate is True
-    assert res.method == "strip"
-    assert "(beat)" not in res.cleaned_text
+    assert res.method == "none"
+    assert "(beat)" in res.cleaned_text
 
 
 def test_ai_repair_salvages_interleaved_action_lines():

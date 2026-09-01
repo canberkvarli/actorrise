@@ -98,7 +98,7 @@ SessionLocal = sessionmaker(
 BACKUP_DIR = backend_dir / "backups"
 REPORT = backend_dir.parent / "docs" / "reports" / "2026-08-29-interleaved-dialogue-cleanup.md"
 
-MIN_WORDS = 50            # matches the purge bar; never auto-apply below this
+MIN_WORDS = 75            # matches the purge bar; never auto-apply below this
 MAX_DROP_RATIO = 0.50     # AI dropping more than this looks like eating the speech
 
 # Stage directions welded into the body. Anchored to a leading capital name/word

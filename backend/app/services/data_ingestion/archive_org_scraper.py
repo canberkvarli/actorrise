@@ -242,7 +242,7 @@ class ArchiveOrgScraper:
             # Extract monologues
             monologues = self.parser.extract_monologues(
                 text,
-                min_words=50,
+                min_words=75,
                 max_words=500
             )
 

@@ -14,7 +14,7 @@ class PDFParser:
     def extract_monologues(
         self,
         pdf_path: str,
-        min_words: int = 50,
+        min_words: int = 75,
         max_words: int = 500
     ) -> List[Dict]:
         """Extract monologues from PDF scripts"""

@@ -18,7 +18,7 @@ class MonologueExtractor:
         self,
         content: str,
         format_type: str,
-        min_words: int = 50,
+        min_words: int = 75,
         max_words: int = 500
     ) -> List[Dict]:
         """

@@ -38,6 +38,7 @@ from app.services.data_ingestion.cross_source_dedupe import find_duplicate  # no
 from app.services.extraction.monologue_quality import (  # noqa: E402
     assess_monologue_quality,
     looks_non_english,
+    strip_artifacts,
     to_display_text,
 )
 from app.services.extraction.plain_text_parser import PlainTextParser  # noqa: E402
@@ -53,7 +54,7 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False,
 
 BACKUP_DIR = backend_dir / "backups"
 
-MIN_WORDS = 50
+MIN_WORDS = 75
 MAX_WORDS = 400
 CHUNK = 25
 
@@ -156,9 +157,17 @@ def main() -> int:
                 if looks_non_english(body):
                     totals["gated"] += 1
                     continue
+                # Gate the SPOKEN words, store the display text. A stage
+                # direction is not something the actor says, so it must not be
+                # what a word floor or a cast-cue check measures — otherwise
+                # "(He crosses to the window)" pads a thin speech over the floor
+                # and a direction naming another character reads as an
+                # interleave. This is the pattern screenplay_pdf_parser already
+                # uses; the play ingests were missing it.
+                spoken = strip_artifacts(body)
                 others = [n for n in cast if n != c["character"]]
                 verdict = assess_monologue_quality(
-                    body, min_words=MIN_WORDS, max_words=MAX_WORDS, cast=others
+                    spoken, min_words=MIN_WORDS, max_words=MAX_WORDS, cast=others
                 )
                 if not verdict.ok:
                     totals["gated"] += 1
@@ -213,7 +222,11 @@ def main() -> int:
                         character_age_range=meta.values.get("character_age_range"),
                         tone=meta.values.get("tone"),
                         word_count=len(c["text"].split()),
-                        estimated_duration_seconds=estimate_duration_seconds(c["text"]),
+                        # Timed on the SPOKEN words. A direction is not performed
+                        # aloud, so timing the display text overstates the
+                        # piece and pushes it out of an actor's duration filter.
+                        estimated_duration_seconds=estimate_duration_seconds(
+                            strip_artifacts(c["text"])),
                         difficulty_level=analysis.get("difficulty_level"),
                         primary_emotion=analysis.get("primary_emotion"),
                         emotion_scores=analysis.get("emotion_scores"),

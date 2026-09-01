@@ -19,7 +19,12 @@ from dataclasses import dataclass, field
 
 # Word-count bounds. Floor keeps fragments out; ceiling matches the film
 # pipeline's ~400-word audition excerpt target.
-DEFAULT_MIN_WORDS = 40
+#
+# 75, not 40. At ~150wpm a 40-word speech is sixteen seconds — an actor cannot
+# walk into a room with it. Anything under 75 (~30s) is clip-length: real words
+# by a real character, but not a piece you can offer. The old floor was chosen
+# to maximise yield and it worked: it yielded 6,165 rows nobody could use.
+DEFAULT_MIN_WORDS = 75
 DEFAULT_MAX_WORDS = 400
 
 # A speaker label in transcript form: line begins with an ALL-CAPS name
@@ -61,6 +66,45 @@ _BRACKET_CUE = re.compile(r"\[[^\]]*\]")
 
 # Any parenthetical (routed to a screen-marker reason or a stage-direction reason).
 _PARENTHETICAL = re.compile(r"\([^)]*\)")
+
+# --- how much stage direction is "not many"? --------------------------------
+#
+# Stage directions are KEPT, not deleted. `to_display_text` preserves them as
+# `(...)` and the reader renders them as italic muted asides (`text_segments`
+# type `direction`), so the actor sees a direction as a direction rather than
+# as a line to speak.
+#
+# That intent was defeated for the library's whole life: this gate rejected any
+# candidate containing a parenthetical, and every ingest script runs
+# `to_display_text` and then this gate. So the pipeline carefully preserved the
+# directions and then threw the speech away for having them. Nothing with a
+# wrylie in it could enter the corpus through a play ingest.
+#
+# The real rule is proportion, not presence. A monologue is one person talking;
+# the directions are the margin, not the page.
+
+#: Words inside `(...)` as a share of the whole. Two wrylies on a 200-word
+#: speech is ~5%. A quarter of the words being direction means the extract is a
+#: scene description with some dialogue in it, not a speech.
+MAX_DIRECTION_SHARE = 0.25
+
+#: ...and an absolute cap, so a long speech cannot accumulate twenty separate
+#: directions while staying under the share.
+MAX_DIRECTION_COUNT = 8
+
+
+def is_direction_heavy(directions: list[str], word_count: int) -> bool:
+    """True if stage directions dominate rather than annotate.
+
+    ``directions`` are the non-screen-marker parentheticals; ``word_count`` is
+    the whole extract including them.
+    """
+    if not directions:
+        return False
+    if len(directions) > MAX_DIRECTION_COUNT:
+        return True
+    inside = sum(len(d.split()) for d in directions)
+    return bool(word_count) and inside > word_count * MAX_DIRECTION_SHARE
 
 # HTML tags or entities left in the text.
 _HTML_RESIDUE = re.compile(r"<[^>]+>|&[a-zA-Z]+;|&#\d+;")
@@ -376,6 +420,42 @@ def looks_non_english(text: str) -> bool:
     return english_word_ratio(text) < MIN_ENGLISH_RATIO
 
 
+# --- segment fidelity ------------------------------------------------------
+#
+# `text_segments` is a second copy of the monologue's words, made by an LLM, and
+# the reader renders THAT rather than `text` whenever it exists. So a
+# segmentation that quietly drops a sentence, or continues past the end of a
+# truncated excerpt, becomes what the actor reads.
+#
+# The segmenter only warned on length drift and wrote the row anyway. An audit
+# of 14,914 segmented rows found 703 that disagreed with their own text —
+# including 292 whose `text` was a 39-word teaser and whose segments ran to 509
+# fluent words that cannot be attributed to the playwright.
+#
+# Both the writer and the auditor import this, so they cannot drift apart and
+# start undoing each other's work.
+
+#: Below this, the segments are not the same words as the text. Generous,
+#: because legitimate segmentation normalises whitespace and drops the
+#: separators between segments.
+SEGMENT_MIN_FIDELITY = 0.92
+
+_FIDELITY_NORM = re.compile(r"[^a-z0-9]+")
+
+
+def _fidelity_key(text: str) -> str:
+    return _FIDELITY_NORM.sub(" ", (text or "").lower().replace("’", "'")).strip()
+
+
+def segment_fidelity(text: str, segments_text: str) -> float:
+    """How closely a segmentation reproduces the words of ``text`` (0.0-1.0)."""
+    import difflib
+
+    return difflib.SequenceMatcher(
+        None, _fidelity_key(text), _fidelity_key(segments_text)
+    ).ratio()
+
+
 def strip_revision_marks(text: str) -> str:
     """Remove margin revision marks ONLY, leaving all other formatting alone.
 
@@ -498,8 +578,14 @@ def assess_monologue_quality(
 
     # Parentheticals that are NOT screen markers are stage directions: (beat),
     # (laughs), (sighing). Screen markers already counted as interleaved above.
-    if any(not _SCREEN_MARKER.search(p) for p in parentheticals):
-        reasons.append("parenthetical_direction")
+    #
+    # Presence is fine; dominance is not. See MAX_DIRECTION_* above — this gate
+    # used to reject on presence alone, which silently threw away every speech
+    # that carried a direction even though `to_display_text` had just gone to
+    # the trouble of preserving them for the renderer.
+    directions = [p for p in parentheticals if not _SCREEN_MARKER.search(p)]
+    if directions and is_direction_heavy(directions, word_count):
+        reasons.append("direction_heavy")
 
     if _SCENE_HEADING.search(raw):
         reasons.append("scene_heading")

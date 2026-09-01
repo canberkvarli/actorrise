@@ -155,6 +155,10 @@ export async function getIndexableMonologues(
       .select("id, character_name, plays!inner(title, copyright_status)")
       .neq("plays.copyright_status", "user_uploaded")
       .not("text", "is", null)
+      // Retired rows (review_status 'too_short' / 'not_monologue' / 'pending')
+      // return in no search and are thin pages. Submitting ~6.4k of them was
+      // asking Google to index content the product itself declines to serve.
+      .is("review_status", null)
       .order("id", { ascending: true })
       .range(from, from + pageSize - 1);
     if (error || !data || data.length === 0) break;

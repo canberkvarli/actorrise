@@ -322,7 +322,7 @@ class GutenbergScraper:
 
         # Extract monologues
         print(f"  🔍 Extracting monologues...")
-        monologues = self.parser.extract_monologues(clean_text, min_words=50, max_words=500)
+        monologues = self.parser.extract_monologues(clean_text, min_words=75, max_words=500)
 
         print(f"  📝 Found {len(monologues)} potential monologues")
 

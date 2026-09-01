@@ -839,6 +839,29 @@ async def search_demo(
             return cleaned[:cut].strip() + "…"
         return cleaned.strip() or None
 
+    def _guarded_excerpt(m) -> Optional[str]:
+        """The rights guard, on the one path that was not going through it.
+
+        `DemoSearchResult` is its own model, so it never touched the shared
+        MonologueResponse builder where `may_serve_text` lives — this endpoint
+        is unauthenticated and feeds the public landing page, and it was
+        emitting excerpts of works with no recorded rights basis. The 246
+        scraped previews of copyrighted contemporary plays (Bean, Churchill,
+        Davis) average 32 words, so `_excerpt` was returning the whole stored
+        text of a living writer's monologue to anyone who searched.
+
+        Falls back to the same short teaser the guarded path uses, rather than
+        to nothing: the result still appears, it just stops carrying the words.
+        """
+        play = m.play
+        if not may_serve_text(
+            getattr(play, "copyright_status", None),
+            getattr(play, "license_type", None),
+            word_count=cast(Optional[int], m.word_count),
+        ):
+            return _teaser(cast(str, m.text), lines=1)
+        return _excerpt(m.text)
+
     results = [
         DemoSearchResult(
             id=cast(int, m.id),
@@ -849,7 +872,7 @@ async def search_demo(
             estimated_duration_seconds=cast(int, m.estimated_duration_seconds),
             relevance_score=score if score > 0 else None,
             match_type=quote_match_types.get(cast(int, m.id)),
-            text_excerpt=_excerpt(m.text),
+            text_excerpt=_guarded_excerpt(m),
         )
         for m, score in all_results_with_scores[:5]
     ]

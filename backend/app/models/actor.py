@@ -83,7 +83,7 @@ class ActorLane(Base):
     credits_hash = Column(String, nullable=False)
     line = Column(String, nullable=False)
     blurb = Column(String, nullable=True)
-    tags = Column(JSONB, nullable=False, default=dict)
+    tags = Column(JSONB(none_as_null=True), nullable=False, default=dict)
     # The picks, cached with the lane that produced them. Same credits, same
     # tags, same corpus, same answer: recomputing meant a pgvector scan on
     # every profile load for a result that had not changed.
@@ -149,7 +149,15 @@ class Monologue(Base):
     character_name = Column(String, nullable=False, index=True)
     text = Column(Text, nullable=False)  # The actual monologue text
     stage_directions = Column(Text, nullable=True)  # Extracted stage directions
-    text_segments = Column(JSONB, nullable=True)  # Structured render segments: [{type, speaker?, text}, ...]
+    # Structured render segments: [{type, speaker?, text}, ...]
+    #
+    # none_as_null is load-bearing. SQLAlchemy's default turns a Python None into
+    # the JSON scalar `null`, which is NOT SQL NULL: `text_segments IS NULL` does
+    # not match it. Every backfill and audit selects unsegmented rows with that
+    # predicate, so 2,331 rows that had been assigned None were invisible to
+    # `segment_monologues.py --write` — they read as segmented, were never
+    # re-segmented, and were counted as covered.
+    text_segments = Column(JSONB(none_as_null=True), nullable=True)
 
     # Location in play (for classical works)
     # Deferred so DBs without these columns still load; add columns via add_act_scene_columns.py
@@ -168,7 +176,9 @@ class Monologue(Base):
 
     # AI-Analyzed Content
     primary_emotion = Column(String, nullable=True, index=True)  # joy, sadness, anger, fear, etc.
-    emotion_scores = Column(JSONB, nullable=True)  # {"joy": 0.2, "sadness": 0.7, "anger": 0.1}
+    # none_as_null: see text_segments above. Python None must land as SQL NULL,
+    # or `IS NULL` silently stops matching the rows that were cleared.
+    emotion_scores = Column(JSONB(none_as_null=True), nullable=True)  # {"joy": 0.2, "sadness": 0.7}
     themes = Column(ARRAY(String), nullable=True)  # love, death, betrayal, identity
     tone = Column(String, nullable=True)  # dramatic, comedic, sarcastic, philosophical
 
@@ -240,7 +250,7 @@ class SearchHistory(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     query = Column(String, nullable=False)
-    filters = Column(JSONB, nullable=True)  # Applied filters
+    filters = Column(JSONB(none_as_null=True), nullable=True)  # Applied filters
     result_count = Column(Integer, nullable=False)
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
 

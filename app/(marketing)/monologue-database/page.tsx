@@ -6,20 +6,20 @@ import { StageHero } from "@/components/marketing/StageHero";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
 export const metadata: Metadata = {
-  title: "The Monologue Database for Actors | 12,000+ Real Pieces",
+  title: "The Monologue Database for Actors | 8,500+ Real Pieces",
   description:
-    "One of the largest monologue databases online: 12,000+ real pieces from plays, film, and TV, searchable by tone, length, gender, and type. Free to start.",
+    "One of the largest monologue databases online: 8,500+ real pieces from plays, film, and TV, searchable by tone, length, gender, and type. Free to start.",
   openGraph: {
     title: "The Monologue Database for Actors | ActorRise",
     description:
-      "12,000+ real monologues, searchable by tone, length, and type. Not AI-generated text. Free tier available.",
+      "8,500+ real monologues, searchable by tone, length, and type. Not AI-generated text. Free tier available.",
     url: `${siteUrl}/monologue-database`,
   },
   twitter: {
     card: "summary_large_image",
     title: "The Monologue Database for Actors | ActorRise",
     description:
-      "12,000+ real monologues, searchable by tone, length, and type. Not AI-generated text. Free tier available.",
+      "8,500+ real monologues, searchable by tone, length, and type. Not AI-generated text. Free tier available.",
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/monologue-database` },
@@ -28,7 +28,7 @@ export const metadata: Metadata = {
 const FAQ_ITEMS: { q: string; a: string; link?: { href: string; label: string } }[] = [
   {
     q: "How big is the monologue database?",
-    a: "Over 12,000 real monologues from plays, film, and TV, and it keeps growing. You can search all of it by tone, length, gender, and type.",
+    a: "Over 8,500 real monologues from plays, film, and TV, and it keeps growing. You can search all of it by tone, length, gender, and type.",
   },
   {
     q: "Are the monologues free to search?",
@@ -83,7 +83,7 @@ export default function MonologueDatabasePage() {
             The <em className="italic text-primary">monologue database</em> built for actors
           </>
         }
-        lede="ActorRise is a searchable monologue database with 12,000+ real pieces from plays, film, and TV. Instead of scrolling anthologies or generic lists, you search by what you actually need, tone, length, gender, and type, and read the real text in seconds."
+        lede="ActorRise is a searchable monologue database with 8,500+ real pieces from plays, film, and TV. Instead of scrolling anthologies or generic lists, you search by what you actually need, tone, length, gender, and type, and read the real text in seconds."
       />
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
@@ -95,7 +95,7 @@ export default function MonologueDatabasePage() {
         <ul className="space-y-3 text-muted-foreground mb-10">
           <li className="flex gap-2">
             <span className="text-primary">·</span>
-            <span>12,000+ real monologues from plays, film, and TV, not AI-generated text</span>
+            <span>8,500+ real monologues from plays, film, and TV, not AI-generated text</span>
           </li>
           <li className="flex gap-2">
             <span className="text-primary">·</span>
@@ -123,7 +123,7 @@ export default function MonologueDatabasePage() {
           What is in the database
         </h2>
         <p className="text-muted-foreground mb-12">
-          Over 12,000 real monologues, organized so you can actually find the right one: classical and
+          Over 8,500 real monologues, organized so you can actually find the right one: classical and
           contemporary, comedic and dramatic, for every gender and casting type, from 30 seconds to
           several minutes. Each entry is a real published piece with its source, not something an AI
           wrote.
@@ -185,7 +185,7 @@ export default function MonologueDatabasePage() {
 
         <div className="rounded-2xl border border-border bg-muted/30 p-8 text-center">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">
-            Search 12,000+ monologues now
+            Search 8,500+ monologues now
           </h2>
           <p className="text-muted-foreground mb-6">
             Find the right piece, read the real text, and rehearse it. Free to start, no credit card.

@@ -122,7 +122,7 @@ def _dedouble_lines(lines):
     return [(x, _dedouble(t) if t and _line_is_doubled(t) else t) for x, t in lines]
 
 
-def segment_screenplay(lines, min_words: int = 40, max_words: int = 400):
+def segment_screenplay(lines, min_words: int = 75, max_words: int = 400):
     """Segment indented screenplay lines into single-speaker monologues.
 
     ``lines`` is an ordered list of ``(x0, text)`` tuples; a ``(None, None)``
@@ -175,7 +175,13 @@ def segment_screenplay(lines, min_words: int = 40, max_words: int = 400):
             wc = len(dialogue.split())
             # Validate the SPOKEN dialogue (single-speaker, clean, in range); store
             # the display text with directions preserved for italic rendering.
-            if min_words <= wc <= max_words and assess_monologue_quality(dialogue).ok:
+            # Thread the caller's bounds through. The gate carries its own
+            # DEFAULT_MIN_WORDS, so leaving this bare gave the parser two
+            # disagreeing floors: it accepted at `min_words` and the gate
+            # rejected at its default, silently discarding everything between.
+            if min_words <= wc <= max_words and assess_monologue_quality(
+                dialogue, min_words=min_words, max_words=max_words
+            ).ok:
                 monos.append({
                     "character": cur_char,
                     "text": display,
@@ -242,7 +248,7 @@ def lines_from_pdf(path: str, max_pages: int = 200):
     return out
 
 
-def extract_with_status(path: str, min_words: int = 40, max_words: int = 400):
+def extract_with_status(path: str, min_words: int = 75, max_words: int = 400):
     """Full path, returning ``(monologues, status)``.
 
     Status is the point of this function. Every failure mode below used to
@@ -282,7 +288,7 @@ def extract_with_status(path: str, min_words: int = 40, max_words: int = 400):
     return [], "no_monologues"
 
 
-def extract_screenplay_monologues(path: str, min_words: int = 40, max_words: int = 400):
+def extract_screenplay_monologues(path: str, min_words: int = 75, max_words: int = 400):
     """Full path: PDF -> lines -> (skip if unusable) -> single-speaker monologues.
 
     Kept for existing callers. Prefer extract_with_status() for anything doing

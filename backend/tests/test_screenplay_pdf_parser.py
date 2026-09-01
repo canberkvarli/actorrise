@@ -35,7 +35,7 @@ class SegmentationTests(unittest.TestCase):
         lines = [
             (ACTION, "She enters the room and closes the door behind her."),
             (CUE, "MAEVE"),
-            self._mono(50),
+            self._mono(80),
             (ACTION, "She walks out."),
         ]
         out = segment_screenplay(lines)
@@ -46,8 +46,8 @@ class SegmentationTests(unittest.TestCase):
 
     def test_two_speakers_are_kept_separate_not_merged(self):
         lines = [
-            (CUE, "TOM"), self._mono(50),
-            (CUE, "GREG"), self._mono(50),
+            (CUE, "TOM"), self._mono(80),
+            (CUE, "GREG"), self._mono(80),
         ]
         out = segment_screenplay(lines)
         self.assertEqual(len(out), 2)
@@ -56,7 +56,7 @@ class SegmentationTests(unittest.TestCase):
     def test_wrylies_are_preserved_as_directions_not_split(self):
         lines = [
             (CUE, "RUE"),
-            (DIALOG, "He knew he could do a better job " + "word " * 30),
+            (DIALOG, "He knew he could do a better job " + "word " * 70),
             (PAREN, "(beat)"),
             (DIALOG, "than his dad, and that is the whole point of the story here."),
             (ACTION, "Cut to black."),
@@ -69,7 +69,7 @@ class SegmentationTests(unittest.TestCase):
     def test_bracket_cue_becomes_parenthetical_direction(self):
         lines = [
             (CUE, "RUE"),
-            (DIALOG, "I have waited my whole life to say this " + "word " * 30),
+            (DIALOG, "I have waited my whole life to say this " + "word " * 70),
             (DIALOG, "[LAUGHTER] and here we finally are at the very end of it all."),
         ]
         out = segment_screenplay(lines)
@@ -79,7 +79,7 @@ class SegmentationTests(unittest.TestCase):
 
     def test_action_between_cues_closes_the_block(self):
         lines = [
-            (CUE, "DON"), self._mono(50),
+            (CUE, "DON"), self._mono(80),
             (ACTION, "He lights a cigarette and stares out the window for a while."),
             (DIALOG, "orphan dialogue with no speaker should be dropped entirely here."),
         ]
@@ -186,7 +186,7 @@ class UnusableLayoutTests(unittest.TestCase):
     a quarter hit one of these, so a bulk run would have dropped them silently.
     """
 
-    def _long_line(self, x0, words=60):
+    def _long_line(self, x0, words=90):
         return (x0, " ".join(["word"] * words) + " and that is the whole truth of it.")
 
     def test_unindented_document_yields_nothing(self):
