@@ -34,7 +34,7 @@ import { StartingPoints } from "@/components/monologue/StartingPoints";
 import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
-import { MonologueResultCard } from "@/components/monologue/MonologueResultCard";
+import { MonologueSpeech } from "@/components/monologue/MonologueSpeech";
 import { SearchFiltersSheet, getDurationLabel } from "@/components/search/SearchFiltersSheet";
 import { accentTeal } from "@/components/search/MatchIndicatorTag";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
@@ -1399,7 +1399,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     // tabs, bar, count and cards all start and end together.
     <div
       className={`container mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8 relative ${
-        hasSearched ? "max-w-6xl" : "max-w-[88rem]"
+        hasSearched ? "max-w-3xl" : "max-w-[88rem]"
       }`}
     >
       {outlineOverlay}
@@ -1945,17 +1945,20 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     );
                   }
                   return (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    /* Film & TV reads the same way. Two different result designs
+                       on one page, switched by a tab, would be worse than
+                       either. The poster thumbnail goes with the card; the
+                       speech is the thing being chosen. */
+                    <div>
                       {filmTvDisplay.map((mono, idx) => (
-                        <MonologueResultCard
+                        <MonologueSpeech
                           key={mono.id}
                           mono={mono}
                           index={idx}
                           onSelect={() => openMonologue(mono, idx, "film_tv")}
                           onToggleFavorite={toggleFavorite}
                           isModerator={!!user?.is_moderator}
-                          onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
-                          matchReasons={computeMatchReasons(mono, undefined, filters)}
+                          onEdit={user?.is_moderator ? (id: number) => setEditMonologueId(id) : undefined}
                         />
                       ))}
                     </div>
@@ -2176,23 +2179,20 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                  */
                 const hasStrongAbove =
                   !showBookmarkedOnly && bestMatches.length + strongRelated.length > 0;
-                const renderCard = (mono: Monologue, idx: number, variant: "bestMatch" | "default") => (
-                  <MonologueResultCard
+                /* Results read as a page of speeches now, not a grid of cards.
+                   You judge a monologue by reading it, so the reading is the
+                   result: the words get the measure and the size, and the
+                   metadata that used to crowd them is one line above and one
+                   line below. */
+                const renderCard = (mono: Monologue, idx: number) => (
+                  <MonologueSpeech
                     key={mono.id}
                     mono={mono}
                     onSelect={() => openMonologue(mono, idx, "monologue")}
                     onToggleFavorite={toggleFavorite}
-                    variant={variant}
                     index={idx}
-                    /* The rank label comes from position alone, so a piece below
-                       the divider could read "Great match" while the divider
-                       above it says these are the further-afield ones. The
-                       divider already states the band; drop the badge there. */
-                    showMatchBadge={showBadges && mono.band !== "looser"}
                     isModerator={!!user?.is_moderator}
                     onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
-                    highlightFields={queryHighlights}
-                    matchReasons={computeMatchReasons(mono, queryHighlights, filters, profileMatchMap.get(mono.id))}
                   />
                 );
                 return (
@@ -2203,9 +2203,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                         Best match
                       </p>
                     )}
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {!showBookmarkedOnly && bestMatches.map((mono, idx) => renderCard(mono, idx, "bestMatch"))}
-                      {strongRelated.map((mono, idx) => renderCard(mono, baseOffset + idx, "default"))}
+                    <div>
+                      {!showBookmarkedOnly && bestMatches.map((mono, idx) => renderCard(mono, idx))}
+                      {strongRelated.map((mono, idx) => renderCard(mono, baseOffset + idx))}
                     </div>
                     {looserRelated.length > 0 && (
                       <>
@@ -2222,9 +2222,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                             </span>
                           </div>
                         )}
-                        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div>
                           {looserRelated.map((mono, idx) =>
-                            renderCard(mono, baseOffset + strongRelated.length + idx, "default"),
+                            renderCard(mono, baseOffset + strongRelated.length + idx),
                           )}
                         </div>
                       </>
