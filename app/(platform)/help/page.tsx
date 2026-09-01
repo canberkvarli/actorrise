@@ -9,31 +9,40 @@ import { HelpVideoDialog } from "@/components/help/HelpVideoDialog";
 export default function HelpPage() {
   const [activeSlug, setActiveSlug] = useState<string | null>(null);
   const active = HELP_VIDEOS.find((v) => v.slug === activeSlug) ?? null;
+  const ready = HELP_VIDEOS.filter((v) => v.youtubeId);
+  const unfilmed = HELP_VIDEOS.filter((v) => !v.youtubeId);
 
   return (
     <div className="mx-auto w-full max-w-5xl px-4 sm:px-6 lg:px-8 py-8 sm:py-10 space-y-8">
       <header className="space-y-2">
+        <p className="stage-direction text-xs text-muted-foreground/70">
+          (the prompt book.)
+        </p>
         <h1 className="font-brand text-3xl sm:text-4xl font-semibold">
           Quick guides
         </h1>
-        <p className="text-muted-foreground">
-          Short videos to get you going. More on the way.
-        </p>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {HELP_VIDEOS.map((video) =>
-          video.youtubeId ? (
-            <ReadyCard
-              key={video.slug}
-              video={video}
-              onPlay={() => setActiveSlug(video.slug)}
-            />
-          ) : (
-            <ComingSoonCard key={video.slug} video={video} />
-          ),
-        )}
+        {ready.map((video) => (
+          <ReadyCard
+            key={video.slug}
+            video={video}
+            onPlay={() => setActiveSlug(video.slug)}
+          />
+        ))}
       </div>
+
+      {/* Unfilmed guides used to render as full "COMING SOON" cards, four of
+          them against one real video. A page that is four fifths placeholder
+          reads as abandoned rather than forthcoming. They are one quiet line
+          until they exist, and each one becomes a card the moment its YouTube
+          id is filled in. */}
+      {unfilmed.length > 0 && (
+        <p className="text-sm text-muted-foreground/70">
+          Still filming: {unfilmed.map((v) => v.title.toLowerCase()).join(", ")}.
+        </p>
+      )}
 
       <HelpVideoDialog
         youtubeId={active?.youtubeId}
@@ -84,19 +93,3 @@ function ReadyCard({
   );
 }
 
-function ComingSoonCard({ video }: { video: HelpVideo }) {
-  return (
-    <div className="overflow-hidden rounded-lg border border-border opacity-60">
-      <div className="relative flex aspect-video items-center justify-center bg-muted">
-        {/* Non-interactive status tag: sharp corners */}
-        <span className="bg-muted-foreground/15 px-2 py-0.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          Coming soon
-        </span>
-      </div>
-      <div className="p-4">
-        <h2 className="font-medium">{video.title}</h2>
-        <p className="mt-1 text-sm text-muted-foreground">{video.description}</p>
-      </div>
-    </div>
-  );
-}

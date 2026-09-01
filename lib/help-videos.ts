@@ -49,13 +49,10 @@ export const HELP_VIDEOS: HelpVideo[] = [
       "Choose the role you're reading and set how fast your partner runs the lines.",
     durationLabel: "0:45",
   },
-  {
-    slug: "claim-founding-spot",
-    title: "Claim your founding spot",
-    description:
-      "Where the FOUNDER code goes at checkout, and what actually gets charged.",
-    durationLabel: "0:45",
-  },
+  // "Claim your founding spot" lived here, explaining where the FOUNDER code
+  // goes at checkout. The coupon was retired 2026-07-22 and the founding-actor
+  // programme was removed from the product on 2026-08-29, so the page was
+  // advertising two things that no longer exist.
 ];
 
 /** The demo used by contextual embeds (e.g. the Practice empty state). */

@@ -140,12 +140,19 @@ export default function SubmitMonologuePage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8"
       >
-        <h1 className="font-brand font-semibold text-3xl lg:text-4xl mb-2 flex items-center gap-2">
-          <IconSparkles className="h-8 w-8 text-primary" />
-          Submit a Monologue
+        {/* The sparkles icon beside the title was decorative, and the subtitle
+            said "the ActorRise community" and "copyright compliance" — the app
+            talking about itself in the third person, in a compliance register.
+            The rights requirement is stated twice more below, where it binds. */}
+        <p className="stage-direction mb-2 text-xs text-muted-foreground/70">
+          (found something good?)
+        </p>
+        <h1 className="font-brand mb-2 text-3xl font-semibold lg:text-4xl">
+          Submit a monologue
         </h1>
         <p className="text-muted-foreground">
-          Share a monologue with the ActorRise community. All submissions are reviewed to ensure quality and copyright compliance.
+          Send me a piece other actors should know about. I read every one before
+          it goes in.
         </p>
       </motion.div>
 
