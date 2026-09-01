@@ -14,7 +14,7 @@ export default function ActorsPage() {
         direction="(the company.)"
         title={
           <>
-            The <em className="italic text-primary">actors</em>
+            The founding <em className="italic text-primary">actors</em>
           </>
         }
         lede={
@@ -61,16 +61,18 @@ export default function ActorsPage() {
           </p>
         )}
 
-        {/* Open invitation. Canberk's voice: first person, no dashes, no
-            corporate phrasing, and a real conversation rather than a form. */}
+        {/* The founding-actor title belongs to these five, who were here from
+            the beginning. The programme itself closed on 2026-08-29, so this
+            no longer invites people to be considered for it. The open door
+            stays: a real conversation, not a form. */}
         <div className="mt-14 border-t border-border/60 pt-10 text-center">
           <p className="mx-auto max-w-xl text-base leading-relaxed text-muted-foreground">
-            Want to be considered as a founding actor? Send me an email and
-            let&apos;s talk. I&apos;d rather have a real conversation than take
-            applications.
+            Using ActorRise and want to tell me what&apos;s broken, or what you
+            wish it did? Send me an email. I read every one, and it is how most
+            of this got built.
           </p>
           <a
-            href="mailto:canberk@actorrise.com?subject=Founding%20actor"
+            href="mailto:canberk@actorrise.com?subject=ActorRise"
             className="mt-4 inline-block text-base font-medium text-primary underline underline-offset-4"
           >
             canberk@actorrise.com
