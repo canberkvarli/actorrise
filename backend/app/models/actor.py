@@ -84,6 +84,10 @@ class ActorLane(Base):
     line = Column(String, nullable=False)
     blurb = Column(String, nullable=True)
     tags = Column(JSONB, nullable=False, default=dict)
+    # The picks, cached with the lane that produced them. Same credits, same
+    # tags, same corpus, same answer: recomputing meant a pgvector scan on
+    # every profile load for a result that had not changed.
+    piece_ids = Column(ARRAY(Integer), nullable=True)
 
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
     updated_at = Column(DateTime(timezone=True), onupdate=sql_text('now()'))

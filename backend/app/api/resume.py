@@ -11,7 +11,7 @@ from app.api.auth import get_current_user
 from app.core.database import get_db
 from app.models.actor import ActorCredit, ActorProfile
 from app.models.user import User
-from app.services.actor_lane import MIN_CREDITS, get_or_build_lane, pick_in_lane
+from app.services.actor_lane import MIN_CREDITS, get_or_build_lane, lane_pieces
 from app.services.resume.pdf import render_resume_pdf
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
@@ -115,7 +115,7 @@ def get_lane(
             needed=max(0, MIN_CREDITS - counted),
         )
 
-    pieces = pick_in_lane(db, lane.tags or {}, limit=3, user_id=current_user.id)
+    pieces = lane_pieces(db, lane)
     return LaneResponse(
         line=lane.line,
         blurb=lane.blurb,

@@ -22,6 +22,8 @@ from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.actor import ActorCredit, ActorLane, Monologue, Play
+from app.services.ai.langchain.embeddings import generate_embedding
+from app.services.search.cache_manager import cache_manager
 
 LANE_MODEL = "gpt-4o-mini"
 
@@ -201,6 +203,36 @@ def _clean_tags(raw: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _lane_embedding(tags: dict[str, Any]) -> Optional[list[float]]:
+    """Embed the lane's own words, cached.
+
+    Cheap on paper and ruinous in practice if uncached: pick_in_lane runs on
+    every profile load while the lane row itself is cached, so this would bill
+    an embedding per page view. The search cache already keeps query embeddings
+    for seven days and is keyed by the string, which is stable for a given lane.
+    """
+    words = [w for w in (tags.get("keywords") or []) if w]
+    archetype = tags.get("archetype")
+    if archetype:
+        words = [archetype, *words]
+    if not words:
+        return None
+
+    query = ", ".join(words)
+    try:
+        cached = cache_manager.get_embedding(query)
+        if cached:
+            return cached
+        vec = generate_embedding(query)
+        if vec:
+            cache_manager.set_embedding(query, vec)
+        return vec
+    except Exception:
+        # No embedding is a worse lane, not a broken one: the caller falls back
+        # to the tag filters and still returns three pieces.
+        return None
+
+
 def pick_in_lane(
     db: Session, tags: dict[str, Any], limit: int = 3, user_id: int = 0
 ) -> list[Monologue]:
@@ -272,24 +304,45 @@ def pick_in_lane(
     # three pieces, and over-fetch so deduping by character still fills the row.
     # Ordering by id alone put everyone on the lowest ids, which are all Romeo
     # and Juliet.
-    # DISTINCT ON (play_id) rather than over-fetching and deduping in Python.
-    # Consecutive ids are consecutive rows of one script, so a Python dedupe
-    # needed a window of hundreds to find three plays: it took 6.3s and still
-    # returned two. Postgres does it in one indexed pass.
+    # The keywords the model returned are the only part of the lane that says
+    # anything a filter cannot: "grief", "verse", "class". Embedding them and
+    # ordering by cosine distance is what makes these picks the lane rather
+    # than simply the right tone and age bracket.
+    vec = _lane_embedding(tags)
+
     spread = 40
     best: list[Monologue] = []
     for q in attempts:
-        rows = (
-            q.distinct(Monologue.play_id)
-            .order_by(Monologue.play_id, Monologue.id)
-            .offset(user_id % spread)
-            .limit(limit)
-            .all()
-        )
-        if len(rows) >= limit:
-            return rows
-        if len(rows) > len(best):
-            best = list(rows)
+        if vec is not None:
+            # Ordered by meaning, then deduped by play in Python. DISTINCT ON
+            # cannot be combined with this ordering (Postgres requires the
+            # distinct column to lead the ORDER BY), and the earlier reason for
+            # DISTINCT ON does not apply: ordering by id clustered rows by play,
+            # ordering by distance does not, so a 40 row window is plenty.
+            rows = q.order_by(
+                Monologue.embedding_vector.cosine_distance(vec)
+            ).limit(limit * 14).all()
+            picked: list[Monologue] = []
+            seen: set[int] = set()
+            for m in rows:
+                if m.play_id in seen:
+                    continue
+                seen.add(m.play_id)
+                picked.append(m)
+                if len(picked) >= limit:
+                    break
+        else:
+            picked = (
+                q.distinct(Monologue.play_id)
+                .order_by(Monologue.play_id, Monologue.id)
+                .offset(user_id % spread)
+                .limit(limit)
+                .all()
+            )
+        if len(picked) >= limit:
+            return picked
+        if len(picked) > len(best):
+            best = list(picked)
     return best
 
 
@@ -315,11 +368,17 @@ def get_or_build_lane(db: Session, user_id: int) -> Optional[ActorLane]:
         # model call. It is stale, not wrong.
         return existing
 
+    # Resolve the picks once, here, while the credits are already being read.
+    # Doing it per request cost a pgvector scan (2 to 6 seconds) for an answer
+    # that cannot change until the credits do.
+    piece_ids = [m.id for m in pick_in_lane(db, read["tags"], limit=3, user_id=user_id)]
+
     if existing:
         existing.credits_hash = digest
         existing.line = read["line"]
         existing.blurb = read["blurb"]
         existing.tags = read["tags"]
+        existing.piece_ids = piece_ids
     else:
         existing = ActorLane(
             user_id=user_id,
@@ -327,8 +386,26 @@ def get_or_build_lane(db: Session, user_id: int) -> Optional[ActorLane]:
             line=read["line"],
             blurb=read["blurb"],
             tags=read["tags"],
+            piece_ids=piece_ids,
         )
         db.add(existing)
     db.commit()
     db.refresh(existing)
     return existing
+
+
+def lane_pieces(db: Session, lane: ActorLane) -> list[Monologue]:
+    """The cached picks, in their stored order.
+
+    Falls back to a live query if the row predates the cache or a piece has
+    since been deleted from the corpus, so an old row degrades rather than
+    showing a short list.
+    """
+    ids = list(lane.piece_ids or [])
+    if ids:
+        rows = db.query(Monologue).filter(Monologue.id.in_(ids)).all()
+        by_id = {m.id: m for m in rows}
+        found = [by_id[i] for i in ids if i in by_id]
+        if len(found) == len(ids):
+            return found
+    return pick_in_lane(db, lane.tags or {}, limit=3, user_id=lane.user_id)
