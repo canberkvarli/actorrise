@@ -1,7 +1,10 @@
 """Tests for the global app_settings helpers backing admin toggles.
 
-Covers the founder-offer-on-signup flag: default when unset, set/get round
-trip, and single-row upsert.
+The founder-offer-on-signup tests lived here until 2026-09-01. f1585d85 retired
+the founder coupon and deleted app_settings.FOUNDER_OFFER_ON_SIGNUP, but left
+these behind erroring on the missing attribute. The bool helpers they exercised
+(get_bool/set_bool) are still covered below against a live key, so nothing goes
+untested by their removal.
 """
 
 import unittest
@@ -13,7 +16,11 @@ from app.models.app_setting import AppSetting
 from app.services import app_settings
 
 
-class FounderOfferSettingTests(unittest.TestCase):
+class BoolSettingTests(unittest.TestCase):
+    """get_bool/set_bool, against a key that is not tied to a retired feature."""
+
+    KEY = app_settings.SAVED_PIECE_REMINDER_ENABLED
+
     def setUp(self):
         self.engine = create_engine("sqlite:///:memory:")
 
@@ -30,35 +37,23 @@ class FounderOfferSettingTests(unittest.TestCase):
         self.db.close()
 
     def test_default_when_unset(self):
-        self.assertTrue(
-            app_settings.get_bool(
-                self.db, app_settings.FOUNDER_OFFER_ON_SIGNUP, default=True
-            )
-        )
+        self.assertTrue(app_settings.get_bool(self.db, self.KEY, default=True))
         self.assertFalse(
             app_settings.get_bool(self.db, "missing_key", default=False)
         )
 
     def test_set_then_get_round_trip(self):
-        app_settings.set_bool(self.db, app_settings.FOUNDER_OFFER_ON_SIGNUP, False)
-        self.assertFalse(
-            app_settings.get_bool(
-                self.db, app_settings.FOUNDER_OFFER_ON_SIGNUP, default=True
-            )
-        )
-        app_settings.set_bool(self.db, app_settings.FOUNDER_OFFER_ON_SIGNUP, True)
-        self.assertTrue(
-            app_settings.get_bool(
-                self.db, app_settings.FOUNDER_OFFER_ON_SIGNUP, default=False
-            )
-        )
+        app_settings.set_bool(self.db, self.KEY, False)
+        self.assertFalse(app_settings.get_bool(self.db, self.KEY, default=True))
+        app_settings.set_bool(self.db, self.KEY, True)
+        self.assertTrue(app_settings.get_bool(self.db, self.KEY, default=False))
 
     def test_upsert_keeps_single_row(self):
-        app_settings.set_bool(self.db, app_settings.FOUNDER_OFFER_ON_SIGNUP, True)
-        app_settings.set_bool(self.db, app_settings.FOUNDER_OFFER_ON_SIGNUP, False)
+        app_settings.set_bool(self.db, self.KEY, True)
+        app_settings.set_bool(self.db, self.KEY, False)
         rows = (
             self.db.query(AppSetting)
-            .filter(AppSetting.key == app_settings.FOUNDER_OFFER_ON_SIGNUP)
+            .filter(AppSetting.key == self.KEY)
             .all()
         )
         self.assertEqual(len(rows), 1)
