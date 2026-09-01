@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 
@@ -26,6 +27,33 @@ import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 function clock(seconds?: number): string | null {
   if (!seconds || seconds <= 0) return null;
   return `${Math.floor(seconds / 60)}:${(seconds % 60).toString().padStart(2, "0")}`;
+}
+
+/**
+ * Cut at the end of a sentence, not mid-phrase.
+ *
+ * A hard substring left rows ending "You, who wanted my…", which reads as
+ * broken rather than continued. Prefers the last sentence terminator in the
+ * back half of the window, falls back to a word boundary, and only then to a
+ * hard cut.
+ */
+function excerpt(text: string, limit = 185): { text: string; endsClean: boolean } {
+  const clean = text.replace(/\s+/g, " ").trim();
+  if (clean.length <= limit) return { text: clean, endsClean: true };
+  const window = clean.slice(0, limit);
+  const sentence = Math.max(
+    window.lastIndexOf(". "),
+    window.lastIndexOf("! "),
+    window.lastIndexOf("? "),
+  );
+  // Only honour it if it is not so early that the excerpt becomes a stub.
+  if (sentence > limit * 0.5) {
+    // A full stop already says the sentence finished. Appending an ellipsis on
+    // top of it gave rows ending "dress!…", which reads as a stutter.
+    return { text: window.slice(0, sentence + 1), endsClean: true };
+  }
+  const word = window.lastIndexOf(" ");
+  return { text: word > 0 ? window.slice(0, word) : window, endsClean: false };
 }
 
 /**
@@ -73,6 +101,17 @@ export function MonologueSpeech({
       ? mono.character_age_range
       : null;
   const match = meaningfulMatch(mono);
+  const [open, setOpen] = useState(false);
+
+  /** One word of what it sounds like. Stored on every piece and previously
+   *  thrown away with the badges; as plain text next to the length it is
+   *  information, not decoration. */
+  const character = (mono.tone || mono.primary_emotion || "").trim().toLowerCase();
+  const colour = character && character !== "unknown" ? character : null;
+
+  const body = mono.text.replace(/\s+/g, " ").trim();
+  const shown = excerpt(body);
+  const truncated = shown.text.length < body.length;
 
   return (
     <motion.article
@@ -95,7 +134,7 @@ export function MonologueSpeech({
             result, so they sit together rather than one of them drifting down
             into the row of things you can do. */}
         <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-          {[length, age, match].filter(Boolean).join(" · ")}
+          {[length, age, colour, match].filter(Boolean).join(" · ")}
         </span>
       </div>
 
@@ -107,34 +146,44 @@ export function MonologueSpeech({
 
       {/* The piece. This is the whole reason the row exists, so it gets the
           measure and the size of something meant to be read, not scanned. */}
-      {/* Three lines, not seven.
-          Seven put rows at 340px, which is 2.6 results per screen and eight
-          screens to reach the twentieth; the grid this replaced showed nine at
-          once. Three lines is still enough to hear the voice and decide, and
-          the whole speech is one tap away. The excerpt was never meant to be
-          the piece, only enough of it to choose by. */}
+      {/* Three lines collapsed, the whole speech on click.
+          The full text already ships in the search payload, so expanding costs
+          no request and no navigation: you can read a piece end to end, decide
+          against it, and carry on down the list without losing your place.
+          That is the point of a book layout, and the reason the excerpt can
+          stay short. Three lines keeps rows at ~230px, so roughly four results
+          a screen instead of the 2.6 that seven lines gave. */}
       <button
         type="button"
-        onClick={onSelect}
-        className="mt-3 block w-full text-left"
+        onClick={() => truncated && setOpen((v) => !v)}
+        aria-expanded={open}
+        className={`mt-3 block w-full text-left ${truncated ? "cursor-pointer" : "cursor-default"}`}
       >
-        <p className="font-typewriter line-clamp-3 max-w-[64ch] text-[15px] leading-[1.8] text-foreground/85">
-          &ldquo;{mono.text.substring(0, 260)}&hellip;&rdquo;
-        </p>
+        <motion.p
+          layout
+          className="font-typewriter max-w-[64ch] text-[15px] leading-[1.8] text-foreground/85"
+        >
+          &ldquo;{open ? body : shown.text}
+          {!open && truncated && !shown.endsClean && (
+            <span className="text-muted-foreground">…</span>
+          )}
+          &rdquo;
+        </motion.p>
+        {truncated && (
+          <span className="mt-1.5 inline-block text-xs text-muted-foreground/70 group-hover:text-muted-foreground">
+            {open ? "less" : "read it all"}
+          </span>
+        )}
       </button>
 
       <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
-        <button
-          type="button"
-          onClick={onSelect}
-          className="text-primary underline-offset-4 hover:underline"
-        >
-          Read
-        </button>
+        {/* "Read" is gone: the character name opens the piece, and the speech
+            itself now expands in place, so a third control for the same two
+            jobs was just a link to argue with. */}
         <Link
           href={`/monologue/${mono.id}/work`}
           onClick={(e) => e.stopPropagation()}
-          className="text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
+          className="font-medium text-primary underline-offset-4 hover:underline"
         >
           Rehearse
         </Link>
