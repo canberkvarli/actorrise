@@ -1390,7 +1390,18 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     );
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8 max-w-[88rem] relative">
+    // One measure for the whole page, narrower once results exist.
+    //
+    // At 88rem the results ran 1360px wide while the search bar above them was
+    // 672. Both were centred, but the disparity meant the bar floated in the
+    // middle of a much wider block and no two things shared an edge. Pulling
+    // the page in after a search keeps everything centred AND on one width:
+    // tabs, bar, count and cards all start and end together.
+    <div
+      className={`container mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8 relative ${
+        hasSearched ? "max-w-6xl" : "max-w-[88rem]"
+      }`}
+    >
       {outlineOverlay}
 
       {/* Hero Search Section. Once a search has run the title gets out of the
@@ -1429,12 +1440,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           )}
         </AnimatePresence>
 
-        {/* Plays vs Film & TV toggle: spacious on mobile, 44px touch targets.
-            Centred while it is the hero, flush left once results exist, so it
-            shares an edge with the search bar, the count and the cards. */}
+        {/* Plays vs Film & TV toggle: spacious on mobile, 44px touch targets. */}
         <div
-          className={`flex items-center gap-2 px-1 ${
-            hasSearched ? "mb-1.5 justify-start" : "justify-center mb-3 sm:mb-4"
+          className={`flex items-center justify-center gap-2 px-1 ${
+            hasSearched ? "mb-1.5" : "mb-3 sm:mb-4"
           }`}
         >
           {/* Boxed segmented control while it's the hero; once you've searched
@@ -1514,14 +1523,10 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </div>
           )}
         </div>
-        {/* Search bar. Stacked on mobile for easier tap targets.
-            It used to stay centred after searching too, "on the same axis as
-            the hero". On a wide screen that put the bar 350px inboard of the
-            results, with Filters hanging off its right edge, so the page had
-            three different measures stacked and nothing shared a line. Once
-            results exist the bar is a tool, not a hero: same width, but flush
-            with the left edge of the cards it filters. */}
-        <div className={hasSearched ? "w-full max-w-2xl" : "max-w-3xl mx-auto"}>
+        {/* Search bar. Stacked on mobile for easier tap targets. Centred, and
+            after a search it widens to the same measure as the results, so the
+            bar, the count and the cards all share one edge and one centre. */}
+        <div className={hasSearched ? "mx-auto w-full" : "max-w-3xl mx-auto"}>
           <div className={hasSearched ? "flex items-center gap-2" : ""}>
           <div className="relative group flex-1 min-w-0">
             {/* Ambient glow effect - subtle background */}
