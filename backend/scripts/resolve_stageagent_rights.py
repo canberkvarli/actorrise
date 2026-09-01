@@ -168,11 +168,27 @@ def main() -> int:
         # Duration moves too. It is what the length filters read, and an actor
         # searching for a two-minute piece should not be handed a row that can
         # only ever show them forty words.
+        # text_segments MUST go with the body, and this line is the whole reason
+        # the first run of this script did not achieve anything.
+        #
+        # `text_segments` is a second copy of the same words, and the reader
+        # renders IT in preference to `text`. Truncating the body to a teaser and
+        # leaving the segments behind therefore removed nothing: 261 of these
+        # rows kept the complete copyrighted monologue in the JSON column and
+        # went on serving it, teaser or no teaser. Verified after the fact by
+        # diffing the segments against this script's own backup — similarity
+        # 1.000, word for word.
+        #
+        # NULL, so the renderer falls back to the teaser. Do not re-segment these
+        # rows: segmentation reads `text`, so it would only ever regenerate the
+        # teaser, but there is nothing to gain and a later change to the source
+        # of that text could quietly refill the column.
         for r, teaser in strip:
             db.execute(
                 sql(
                     "UPDATE monologues SET text = :t, word_count = :wc, "
-                    "estimated_duration_seconds = :d WHERE id = :mid"
+                    "estimated_duration_seconds = :d, text_segments = NULL "
+                    "WHERE id = :mid"
                 ),
                 {
                     "t": teaser,
