@@ -11,6 +11,7 @@ from app.api.auth import get_current_user
 from app.core.database import get_db
 from app.models.actor import ActorCredit, ActorProfile
 from app.models.user import User
+from app.services.actor_lane import MIN_CREDITS, get_or_build_lane, pick_in_lane
 from app.services.resume.pdf import render_resume_pdf
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from pydantic import BaseModel
@@ -48,6 +49,23 @@ class ReorderRequest(BaseModel):
     ordered_ids: List[int]
 
 
+class LanePiece(BaseModel):
+    id: int
+    character_name: str
+    play_title: Optional[str] = None
+    tone: Optional[str] = None
+    estimated_duration_seconds: Optional[int] = None
+
+
+class LaneResponse(BaseModel):
+    """Null `line` means "not enough to read yet" — show the recruiting state."""
+    line: Optional[str] = None
+    blurb: Optional[str] = None
+    credits_counted: int = 0
+    needed: int = 0
+    pieces: List[LanePiece] = []
+
+
 def _normalize_category(category: str) -> str:
     c = (category or "").strip().lower()
     return c if c in VALID_CATEGORIES else "other"
@@ -73,6 +91,46 @@ def list_credits(
         .filter(ActorCredit.user_id == current_user.id)
         .order_by(ActorCredit.sort_order, ActorCredit.id)
         .all()
+    )
+
+
+@router.get("/lane", response_model=LaneResponse)
+def get_lane(
+    current_user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """The actor's casting lane, read off their credits, plus picks in it.
+
+    Never errors and never 404s. Below the credit threshold, or if the model
+    declines or is unreachable, it returns `line: null` and the caller keeps
+    showing what it showed before. The point of this block is to reward filling
+    the résumé in, so it must not punish a half-filled one.
+    """
+    counted = (
+        db.query(ActorCredit).filter(ActorCredit.user_id == current_user.id).count()
+    )
+    lane = get_or_build_lane(db, current_user.id)
+    if lane is None:
+        return LaneResponse(
+            credits_counted=counted,
+            needed=max(0, MIN_CREDITS - counted),
+        )
+
+    pieces = pick_in_lane(db, lane.tags or {}, limit=3, user_id=current_user.id)
+    return LaneResponse(
+        line=lane.line,
+        blurb=lane.blurb,
+        credits_counted=counted,
+        needed=0,
+        pieces=[
+            LanePiece(
+                id=m.id,
+                character_name=m.character_name,
+                play_title=(m.play.title if getattr(m, "play", None) else None),
+                tone=m.tone,
+                estimated_duration_seconds=m.estimated_duration_seconds,
+            )
+            for m in pieces
+        ],
     )
 
 

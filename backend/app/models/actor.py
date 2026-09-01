@@ -68,6 +68,27 @@ class ActorCredit(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=sql_text('now()'))
 
 
+class ActorLane(Base):
+    """The casting lane read off an actor's credits.
+
+    One row per actor. `credits_hash` is a digest of the credit set that
+    produced it, so an edit invalidates the row and a revisit costs nothing.
+    `tags` drives the monologue search; `line` and `blurb` are the prose shown
+    to the actor and are never used to select anything.
+    """
+
+    __tablename__ = "actor_lane"
+
+    user_id = Column(Integer, ForeignKey("users.id"), primary_key=True)
+    credits_hash = Column(String, nullable=False)
+    line = Column(String, nullable=False)
+    blurb = Column(String, nullable=True)
+    tags = Column(JSONB, nullable=False, default=dict)
+
+    created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
+    updated_at = Column(DateTime(timezone=True), onupdate=sql_text('now()'))
+
+
 class Play(Base):
     """Source play/script metadata — also used for film & TV screenplays."""
     __tablename__ = "plays"
