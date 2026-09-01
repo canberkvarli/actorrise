@@ -147,11 +147,13 @@ export default function FirstScenePage() {
               {scene!.author ? `, by ${scene!.author}` : ""}
             </p>
           )}
-          <p className="mt-5 text-sm leading-relaxed text-neutral-400">
-            {mins ? `About ${mins} minute${mins === 1 ? "" : "s"}. ` : ""}
-            You read it out loud, I keep your place and follow along. Nothing to
-            set up.
-          </p>
+          {/* Just the length. "You read it out loud, I keep your place" was
+              narrating what the Start button is about to demonstrate. */}
+          {mins > 0 && (
+            <p className="mt-5 text-sm text-neutral-400">
+              About {mins} minute{mins === 1 ? "" : "s"}.
+            </p>
+          )}
 
           <Button
             onClick={handleStart}

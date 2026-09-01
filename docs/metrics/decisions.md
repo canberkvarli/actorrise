@@ -930,3 +930,43 @@ secondary index instead — consulted only after every spaced form has failed,
 floored at 5 characters, and a key that two different titles squash onto is
 dropped rather than resolved arbitrarily. `find_catalogue_source_types` learned
 the same comparison, which is what made `Pen 15` report no content gap at all.
+
+## 2026-09-01 — Nine plays recovered from one collapsed anthology
+
+Gutenberg 36984 is *Fifty Contemporary One-Act Plays*, and 51 play rows share
+its single `source_url`. The ingest read each play's **subtitle or byline** as
+the title, so nine rows were wrong and their monologues were unfindable by name.
+
+Fixed from the anthology's own table of contents and section headings, never
+inferred:
+
+| id | was | now |
+|----|-----|-----|
+| 90 | "A Play in VerseBy Hugo Von HofmannsthalTranslated from the German" | Madonna Dianora |
+| 92 | "By Federico MoreTranslated from the Spanish" | Interlude |
+| 124 | Literature (author only) | Literature, + translator Pierre Loving |
+| 135 | "A Dramatic Fantasy" | The Pierrot of the Minute |
+| 137 | "A Comedy of Youth" | The Constant Lover |
+| 149 | "A Sardonic Comedy" | Brothers |
+| 158 | "A Pantomime" | The Shepherd in the Distance |
+| 164 | "A Miracle Play" | The Nursery Maid of Heaven |
+| 166 | "A Social Satire" | Sham |
+
+In every wrong case the **translator had been stored as the author**. Harriet
+Betty Boas was credited for Hofmannsthal, Audrey Alden for Federico More. The
+`translator` column existed and was NULL throughout; it now holds them.
+
+Two rows were the same play twice, split by the collapse:
+- 123 merged into 90 (Madonna Dianora). 6 + 1 = 7 monologues.
+- 91 merged into 124 (Literature). 13 + 3 = 16 monologues. Same characters,
+  zero overlapping speeches, so nothing was dropped.
+
+Play count 2022 -> 2020. No monologue was deleted and no text was edited, so
+`word_count` needs no resync.
+
+Also routed to the review queue rather than guessed at: 4 monologues whose
+`character_name` is a stage direction (`Pause` x2, `Music`, `Epilogue`) —
+"[Pause]" parsed as a speaker. Only 4 corpus-wide, so this is not systemic.
+
+Note: the title catalogue is warmed at backend startup (~1921 titles), so these
+titles only become searchable by name after the next prod restart/deploy.
