@@ -25,7 +25,7 @@ from app.models.billing import PricingTier, UsageMetrics, UserSubscription
 from app.models.user import User
 from app.services.benefits import get_effective_benefits
 from fastapi import Depends, HTTPException, Request
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 
@@ -369,23 +369,58 @@ def record_total_search(user_id: int, db: Session) -> None:
     db.commit()
 
 
-# Free monologue reads: 3. Server-side so the wall survives a reinstall; the
+# Free monologue reads. Server-side so the wall survives a reinstall; the
 # client reads the count and paints the paywall.
 #
-# Was 5. Ghost Light says "three reads were the trial" on the wall itself and
-# falls back to 3 everywhere the API is unreachable, so the server was the only
-# thing claiming otherwise, and the server is the one users believe.
+# The two clients run SEPARATE trials, because they are selling different
+# things (2026-09-01, Canberk):
 #
-# The monthly-vs-lifetime argument below is UNRESOLVED and this constant does not
-# settle it. The reset is still monthly, which is the opposite of what
-# ghostlight/docs/DESIGN.md §93 specifies ("3 free reads, lifetime, not
-# monthly. A monthly reset teaches people to wait"). The case for monthly, kept
-# because it is a real argument and not an oversight: a lifetime cap gives you
-# exactly one conversion moment per actor, and once it is spent they either pay
-# that day or the library is shut to them permanently. A monthly cap is the same
-# wall twelve times a year. Whoever settles this should change _period_start too,
-# not just the number.
-FREE_MONOLOGUE_READ_LIMIT = 3
+#   web         5 distinct pieces per calendar month
+#   Ghost Light 3 distinct pieces, for life, then the paywall
+#
+# This is what settles the monthly-vs-lifetime disagreement that
+# ghostlight/docs/DESIGN.md §93 and this file used to argue about from opposite
+# sides. Both were right, about different products. Ghost Light is a trial: it
+# says "three reads were the trial" on the wall, past tense, and a trial that
+# refills every month is not a trial. The web is a free tier: a lifetime cap
+# there gives you exactly one conversion moment per actor, and once it is spent
+# the library is shut to them permanently, which is the common outcome. A
+# monthly cap is the same wall twelve times a year and keeps them coming back
+# to hit it.
+#
+# Separate means separate: the counts do not pool. Reading five pieces on the
+# web must not arrive in the app as a spent trial, so the wall counts only the
+# views belonging to the client that is asking (MonologueView.client).
+CLIENT_WEB = "web"
+CLIENT_GHOSTLIGHT = "ghostlight"
+
+FREE_MONOLOGUE_READ_LIMIT = 5
+FREE_MONOLOGUE_READ_LIMIT_GHOSTLIGHT = 3
+
+
+def normalise_client(value: str | None) -> str:
+    """The client name to store and count against. Anything unknown is web.
+
+    Web is the safe default on purpose. An unrecognised or missing header is
+    far more likely to be a browser than the app — the app is one codebase we
+    control and can make send the header — and guessing "web" errs toward the
+    LARGER allowance. Guessing "ghostlight" would spend a stranger's lifetime
+    trial on a request that was never theirs.
+    """
+    return (
+        CLIENT_GHOSTLIGHT
+        if (value or "").strip().lower() == CLIENT_GHOSTLIGHT
+        else CLIENT_WEB
+    )
+
+
+def free_read_limit(client: str | None) -> int:
+    """The free-read allowance for this client."""
+    return (
+        FREE_MONOLOGUE_READ_LIMIT_GHOSTLIGHT
+        if normalise_client(client) == CLIENT_GHOSTLIGHT
+        else FREE_MONOLOGUE_READ_LIMIT
+    )
 
 
 def _period_start() -> date:
@@ -422,6 +457,47 @@ def monthly_monologue_reads(user_id: int, db: Session) -> int:
     )
 
 
+def distinct_reads(
+    user_id: int,
+    db: Session,
+    *,
+    client: str | None = None,
+    exclude_monologue_id: int | None = None,
+) -> int:
+    """Distinct pieces this user has spent against `client`'s own allowance.
+
+    Two clients, two trials, two windows (see FREE_MONOLOGUE_READ_LIMIT):
+
+    - web counts the CURRENT MONTH, and counts rows written by the web as well
+      as rows with no client at all. Every view recorded before 2026-09-01
+      predates the column and came from the web detail page, so NULL is web.
+    - Ghost Light counts FOR LIFE, and only rows it wrote itself. It therefore
+      starts at zero for everyone, which is correct for a trial that has never
+      been offered before.
+
+    ``exclude_monologue_id`` leaves the piece being opened out of its own
+    count, so the last free piece is free rather than the first walled one.
+    """
+    from app.models.search_log import MonologueView
+
+    query = db.query(func.count(func.distinct(MonologueView.monologue_id))).filter(
+        MonologueView.user_id == user_id,
+    )
+    if normalise_client(client) == CLIENT_GHOSTLIGHT:
+        query = query.filter(MonologueView.client == CLIENT_GHOSTLIGHT)
+    else:
+        query = query.filter(
+            or_(
+                MonologueView.client == CLIENT_WEB,
+                MonologueView.client.is_(None),
+            ),
+            MonologueView.created_at >= _period_start_utc(),
+        )
+    if exclude_monologue_id is not None:
+        query = query.filter(MonologueView.monologue_id != exclude_monologue_id)
+    return int(query.scalar() or 0)
+
+
 def monthly_distinct_reads(
     user_id: int, db: Session, *, exclude_monologue_id: int | None = None
 ) -> int:
@@ -436,16 +512,16 @@ def monthly_distinct_reads(
 
     ``exclude_monologue_id`` leaves the piece being opened out of its own count,
     so the fifth new piece is the fifth free one rather than the first walled.
-    """
-    from app.models.search_log import MonologueView
 
-    query = db.query(func.count(func.distinct(MonologueView.monologue_id))).filter(
-        MonologueView.user_id == user_id,
-        MonologueView.created_at >= _period_start_utc(),
+    Kept as the web-shaped name for the web-shaped question; `distinct_reads`
+    is the one that takes a client.
+    """
+    return distinct_reads(
+        user_id,
+        db,
+        client=CLIENT_WEB,
+        exclude_monologue_id=exclude_monologue_id,
     )
-    if exclude_monologue_id is not None:
-        query = query.filter(MonologueView.monologue_id != exclude_monologue_id)
-    return int(query.scalar() or 0)
 
 
 def record_monologue_read(user_id: int, db: Session) -> int:

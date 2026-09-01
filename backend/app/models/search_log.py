@@ -98,10 +98,26 @@ class MonologueView(Base):
     monologue_id = Column(Integer, ForeignKey("monologues.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     search_log_id = Column(Integer, ForeignKey("search_logs.id", ondelete="SET NULL"), nullable=True)
+    # Which client opened the piece: "web" or "ghostlight". The free-read wall
+    # is a SEPARATE trial per client (web 5 a month, Ghost Light 3 for life), so
+    # the count has to know where the read happened or the two allowances pool
+    # and an actor who read on the web arrives in the app already walled.
+    #
+    # Nullable, and NULL reads as web. Every row written before 2026-09-01 came
+    # from the web detail page — the app's own path is POST /{id}/read — so
+    # backfilling them to "web" would be guesswork dressed as data, while
+    # treating NULL as web is the same answer without the pretence. It also
+    # means Ghost Light's lifetime trial starts at zero for everyone, which is
+    # what a trial that has never been offered before should do.
+    client = Column(String(16), nullable=True)
     created_at = Column(DateTime, server_default=sql_text("now()"), nullable=False)
 
     __table_args__ = (
         Index("ix_monologue_views_created_at", "created_at"),
         Index("ix_monologue_views_user_id", "user_id"),
         Index("ix_monologue_views_monologue_id", "monologue_id"),
+        # The wall's query is "distinct pieces for this user on this client",
+        # and it runs on every detail open, so it must not scan the user's
+        # whole history to answer.
+        Index("ix_monologue_views_user_client", "user_id", "client"),
     )

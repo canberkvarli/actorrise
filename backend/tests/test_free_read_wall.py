@@ -18,10 +18,15 @@ from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 
 from app.middleware.rate_limiting import (
+    CLIENT_GHOSTLIGHT,
+    CLIENT_WEB,
     FREE_MONOLOGUE_READ_LIMIT,
     _period_start,
     _period_start_utc,
+    distinct_reads,
+    free_read_limit,
     monthly_distinct_reads,
+    normalise_client,
 )
 from app.models.search_log import MonologueView
 
@@ -48,12 +53,19 @@ def db():
         created_at.server_default = original_default
 
 
-def _view(db, user_id: int, monologue_id: int, when: datetime | None = None):
+def _view(
+    db,
+    user_id: int,
+    monologue_id: int,
+    when: datetime | None = None,
+    client: str | None = None,
+):
     # Naive UTC, matching what the database's now() writes into the column.
     db.add(
         MonologueView(
             user_id=user_id,
             monologue_id=monologue_id,
+            client=client,
             created_at=when or datetime.now(timezone.utc).replace(tzinfo=None),
         )
     )
@@ -144,3 +156,78 @@ class TestWallArithmetic:
     def test_a_fresh_user_is_not_walled(self, db):
         _view(db, user_id=1, monologue_id=1)
         assert not self._walled(db, 1, 1)
+
+
+class TestSeparateTrialsPerClient:
+    """Web and Ghost Light run separate trials that must not pool.
+
+    Web is a free tier: 5 distinct pieces per calendar month, the same wall
+    twelve times a year. Ghost Light is a trial: 3 distinct pieces for life,
+    then the paywall — its own wall says "three reads were the trial", past
+    tense, and a trial that refills monthly is not a trial.
+
+    Pooling the counts is the failure this guards: reading on the web must not
+    arrive in the app as a spent trial, in either direction.
+    """
+
+    def test_the_two_limits_differ(self):
+        assert free_read_limit(CLIENT_WEB) == 5
+        assert free_read_limit(CLIENT_GHOSTLIGHT) == 3
+
+    def test_web_reads_do_not_spend_the_app_trial(self, db):
+        for i in range(1, 6):
+            _view(db, user_id=1, monologue_id=i, client=CLIENT_WEB)
+        assert distinct_reads(1, db, client=CLIENT_WEB) == 5
+        assert distinct_reads(1, db, client=CLIENT_GHOSTLIGHT) == 0
+
+    def test_app_reads_do_not_spend_the_web_allowance(self, db):
+        for i in range(1, 4):
+            _view(db, user_id=1, monologue_id=i, client=CLIENT_GHOSTLIGHT)
+        assert distinct_reads(1, db, client=CLIENT_GHOSTLIGHT) == 3
+        assert distinct_reads(1, db, client=CLIENT_WEB) == 0
+
+    def test_null_client_counts_as_web(self, db):
+        # Every row written before the column existed came from the web detail
+        # page. Treating NULL as web keeps those users' history; treating it as
+        # the app would spend a lifetime trial nobody had opened.
+        _view(db, user_id=1, monologue_id=1, client=None)
+        assert distinct_reads(1, db, client=CLIENT_WEB) == 1
+        assert distinct_reads(1, db, client=CLIENT_GHOSTLIGHT) == 0
+
+    def test_the_app_trial_is_lifetime_not_monthly(self, db):
+        # Two months ago. The web would have forgotten this; the app must not.
+        long_ago = _period_start_utc() - timedelta(days=45)
+        _view(db, user_id=1, monologue_id=1, client=CLIENT_GHOSTLIGHT, when=long_ago)
+        _view(db, user_id=1, monologue_id=2, client=CLIENT_WEB, when=long_ago)
+        assert distinct_reads(1, db, client=CLIENT_GHOSTLIGHT) == 1
+        assert distinct_reads(1, db, client=CLIENT_WEB) == 0
+
+    def test_reopening_a_piece_is_free_on_both(self, db):
+        for _ in range(4):
+            _view(db, user_id=1, monologue_id=7, client=CLIENT_GHOSTLIGHT)
+        assert distinct_reads(1, db, client=CLIENT_GHOSTLIGHT) == 1
+
+    def test_exclusion_applies_per_client(self, db):
+        _view(db, user_id=1, monologue_id=1, client=CLIENT_GHOSTLIGHT)
+        _view(db, user_id=1, monologue_id=2, client=CLIENT_GHOSTLIGHT)
+        # The piece being opened does not count against its own read.
+        assert distinct_reads(
+            1, db, client=CLIENT_GHOSTLIGHT, exclude_monologue_id=2
+        ) == 1
+
+
+class TestNormaliseClient:
+    def test_the_app_names_itself(self):
+        assert normalise_client("ghostlight") == CLIENT_GHOSTLIGHT
+        assert normalise_client("  GhostLight ") == CLIENT_GHOSTLIGHT
+
+    @pytest.mark.parametrize("value", [None, "", "web", "curl/8.4", "ios", "unknown"])
+    def test_everything_else_is_web(self, value):
+        # Web is the safe default: it is the likelier caller and the LARGER
+        # allowance, so a missing header cannot spend a stranger's trial.
+        assert normalise_client(value) == CLIENT_WEB
+
+    def test_monthly_distinct_reads_still_means_web(self, db):
+        _view(db, user_id=1, monologue_id=1, client=CLIENT_GHOSTLIGHT)
+        _view(db, user_id=1, monologue_id=2, client=CLIENT_WEB)
+        assert monthly_distinct_reads(1, db) == 1

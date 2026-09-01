@@ -22,7 +22,7 @@ from app.models.billing import (
 )
 from app.models.actor import UserScript
 from app.models.user import User
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -432,7 +432,7 @@ async def create_portal_session(current_user: User = Depends(get_current_user), 
 
 
 @router.get("/usage", response_model=UsageLimitsResponse)
-async def get_usage_limits(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def get_usage_limits(request: Request, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     """
     Get current usage and limits for the user.
 
@@ -497,15 +497,19 @@ async def get_usage_limits(current_user: User = Depends(get_current_user), db: S
     else:
         scripts_used = current_user.total_scripts_uploaded or 0
 
-    # Monologue reads are lifetime (spec §4) — sum across ALL rows, not the
-    # month. Paid tiers read unlimited (-1); free gets the fixed free allowance.
+    # Reads are counted against the asking client's own allowance: the web gets
+    # 5 a month, Ghost Light 3 for life. Reporting one client's number to the
+    # other is how a Ghost Light user would see "5 of 5 used" against a trial
+    # they had never opened. Paid tiers read unlimited (-1).
     from app.middleware.rate_limiting import (
-        FREE_MONOLOGUE_READ_LIMIT,
-        monthly_distinct_reads,
+        distinct_reads,
+        free_read_limit,
+        normalise_client,
     )
 
-    monologue_reads_used = monthly_distinct_reads(int(current_user.id), db)
-    monologue_reads_limit = -1 if is_paid else FREE_MONOLOGUE_READ_LIMIT
+    client = normalise_client(request.headers.get("x-client"))
+    monologue_reads_used = distinct_reads(int(current_user.id), db, client=client)
+    monologue_reads_limit = -1 if is_paid else free_read_limit(client)
 
     return UsageLimitsResponse(
         ai_searches_used=ai_searches_used,

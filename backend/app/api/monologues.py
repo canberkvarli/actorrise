@@ -10,8 +10,10 @@ from typing import List, Literal, Optional, cast
 from app.api.auth import get_current_user, get_current_user_optional
 from app.api.public import record_demo_search
 from app.middleware.rate_limiting import (
-    FREE_MONOLOGUE_READ_LIMIT,
-    monthly_distinct_reads,
+    CLIENT_GHOSTLIGHT,
+    distinct_reads,
+    free_read_limit,
+    normalise_client,
     record_monologue_read,
     record_total_search,
 )
@@ -1131,16 +1133,24 @@ def _teaser(text: str, lines: int = 2) -> str:
 @router.get("/{monologue_id:int}", response_model=MonologueResponse)
 async def get_monologue(
     monologue_id: int,
+    request: Request,
     slid: Optional[int] = Query(None, description="search_logs id that led to this open (funnel analytics)"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Get detailed monologue information.
 
-    Enforces the Ghost Light wall server-side (spec §4/§7): a free user who has
-    spent their three lifetime reads receives only the opening lines and a
-    `paywalled` flag — the full text never leaves the server, so bypassing the
-    client can't unlock it. Pieces the user has already saved stay readable."""
+    Enforces the free-read wall server-side (spec §4/§7): a free user who has
+    spent the allowance receives only the opening lines and a `paywalled` flag
+    — the full text never leaves the server, so bypassing the client can't
+    unlock it. Pieces the user has already saved stay readable.
+
+    The allowance depends on who is asking: the web gets 5 a month, Ghost Light
+    gets 3 for life, and the two are counted separately. The client says which
+    it is via `X-Client`; anything else is treated as the web, which is both the
+    likelier caller and the larger allowance."""
+
+    view_client = normalise_client(request.headers.get("x-client"))
 
     monologue = (
         db.query(Monologue)
@@ -1165,6 +1175,7 @@ async def get_monologue(
             monologue_id=monologue_id,
             user_id=int(current_user.id),
             search_log_id=slid,
+            client=view_client,
         ))
         db.commit()
     except Exception:
@@ -1199,10 +1210,13 @@ async def get_monologue(
     # pieces also makes re-opening something you are already working on free,
     # which a per-open counter would punish.
     if fav is None and not _user_has_unlimited_reads(int(current_user.id), db):
-        already_read = monthly_distinct_reads(
-            int(current_user.id), db, exclude_monologue_id=monologue_id
+        already_read = distinct_reads(
+            int(current_user.id),
+            db,
+            client=view_client,
+            exclude_monologue_id=monologue_id,
         )
-        if already_read >= FREE_MONOLOGUE_READ_LIMIT:
+        if already_read >= free_read_limit(view_client):
             resp.text = _teaser(resp.text)
             resp.text_segments = None
             resp.paywalled = True
@@ -1538,6 +1552,7 @@ def _user_has_unlimited_reads(user_id: int, db: Session) -> bool:
 @router.post("/{monologue_id:int}/read")
 async def record_read(
     monologue_id: int,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -1547,27 +1562,49 @@ async def record_read(
     count is server-side on purpose so it survives a reinstall — a device-local
     tally would be trivially reset, and the whole business model is where the
     wall sits. This records the read and reports the running lifetime total plus
-    the wall state; the client paints the paywall, the server owns the count."""
+    the wall state; the client paints the paywall, the server owns the count.
+
+    Unlike the detail endpoint, this one defaults to `ghostlight` when `X-Client`
+    is absent. Nothing on the web has ever called it — it is the app's path, by
+    spec and in the logs — so treating an unlabelled call as web would file the
+    app's own reads under the web's allowance and leave the lifetime trial stuck
+    at zero. The header still wins if it says otherwise."""
     monologue = db.query(Monologue).filter(Monologue.id == monologue_id).first()
     if not monologue:
         raise HTTPException(status_code=404, detail="Monologue not found")
 
+    client = normalise_client(request.headers.get("x-client") or CLIENT_GHOSTLIGHT)
     unlimited = _user_has_unlimited_reads(int(current_user.id), db)
     # Still recorded, because the daily counter is what the usage dashboards
     # read. It is no longer what the wall consults: the gate counts distinct
-    # pieces opened this month, so both clients agree on the number even though
-    # only one of them calls this endpoint.
+    # pieces against this client's own allowance.
     record_monologue_read(int(current_user.id), db)
-    reads_used = monthly_distinct_reads(int(current_user.id), db)
+
+    # The app spends a read by calling this, but the count lives in
+    # monologue_views — so write the row here too, or the lifetime trial never
+    # moves for a client that opens pieces this way.
+    try:
+        from app.models.search_log import MonologueView
+        db.add(MonologueView(
+            monologue_id=monologue_id,
+            user_id=int(current_user.id),
+            client=client,
+        ))
+        db.commit()
+    except Exception:
+        db.rollback()
+
+    limit = free_read_limit(client)
+    reads_used = distinct_reads(int(current_user.id), db, client=client)
 
     return {
         "monologue_id": monologue_id,
         "reads_used": reads_used,
-        "reads_limit": -1 if unlimited else FREE_MONOLOGUE_READ_LIMIT,
+        "reads_limit": -1 if unlimited else limit,
         "is_paid": unlimited,
         # Whether the NEXT new piece will be walled. Paid users are always
-        # allowed; free users until they have opened the month's allowance.
-        "paywalled": (not unlimited) and reads_used >= FREE_MONOLOGUE_READ_LIMIT,
+        # allowed; free users until they have spent this client's allowance.
+        "paywalled": (not unlimited) and reads_used >= limit,
     }
 
 
