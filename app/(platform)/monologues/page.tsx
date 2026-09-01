@@ -1429,10 +1429,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           )}
         </AnimatePresence>
 
-        {/* Plays vs Film & TV toggle: spacious on mobile, 44px touch targets */}
+        {/* Plays vs Film & TV toggle: spacious on mobile, 44px touch targets.
+            Centred while it is the hero, flush left once results exist, so it
+            shares an edge with the search bar, the count and the cards. */}
         <div
-          className={`flex items-center justify-center gap-2 px-1 ${
-            hasSearched ? "mb-1.5" : "mb-3 sm:mb-4"
+          className={`flex items-center gap-2 px-1 ${
+            hasSearched ? "mb-1.5 justify-start" : "justify-center mb-3 sm:mb-4"
           }`}
         >
           {/* Boxed segmented control while it's the hero; once you've searched
@@ -1512,10 +1514,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
             </div>
           )}
         </div>
-        {/* Search Bar - stacked on mobile for easier tap targets. Searched or
-            not, it stays a centred column on the same axis as the hero rather
-            than stretching across the viewport. */}
-        <div className={hasSearched ? "mx-auto w-full max-w-2xl" : "max-w-3xl mx-auto"}>
+        {/* Search bar. Stacked on mobile for easier tap targets.
+            It used to stay centred after searching too, "on the same axis as
+            the hero". On a wide screen that put the bar 350px inboard of the
+            results, with Filters hanging off its right edge, so the page had
+            three different measures stacked and nothing shared a line. Once
+            results exist the bar is a tool, not a hero: same width, but flush
+            with the left edge of the cards it filters. */}
+        <div className={hasSearched ? "w-full max-w-2xl" : "max-w-3xl mx-auto"}>
           <div className={hasSearched ? "flex items-center gap-2" : ""}>
           <div className="relative group flex-1 min-w-0">
             {/* Ambient glow effect - subtle background */}
