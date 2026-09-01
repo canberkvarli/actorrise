@@ -2081,7 +2081,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 {/* basis-full drops the chips onto their own line on a phone,
                     where squeezing them between the count and the button
                     interleaved everything; inline from sm up. */}
-                <div className="order-last flex min-w-0 basis-full flex-wrap items-center gap-2 sm:order-none sm:basis-auto sm:flex-1">
+                {/* No flex-1 here and no ml-auto on the button below. Together
+                    they threw the count to the far left and the collection
+                    toggle to the far right with ~800px of nothing between, on a
+                    row whose three items belong to each other. They read as one
+                    group now, left aligned with the cards underneath. */}
+                <div className="order-last flex min-w-0 basis-full flex-wrap items-center gap-2 sm:order-none sm:basis-auto">
                   <ActiveFilterChips
                     filters={filters}
                     labels={{ gender: "Gender", age_range: "Age", emotion: "Emotion", theme: "Theme", category: "Category", tone: "Tone", difficulty: "Difficulty", author: "Author", max_duration: "Max Duration" }}
@@ -2095,7 +2100,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   variant={showBookmarkedOnly ? "secondary" : "outline"}
                   size="sm"
                   onClick={() => setShowBookmarkedOnly(!showBookmarkedOnly)}
-                  className={`ml-auto gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
+                  className={`gap-2 rounded-full shrink-0 ${!showBookmarkedOnly ? "hover:bg-teal-500/15 hover:text-teal-600 hover:border-teal-500/30 dark:hover:text-teal-400 dark:hover:border-teal-400/30" : ""}`}
                 >
                   <IconBookmark className={`h-4 w-4 ${showBookmarkedOnly ? "fill-current" : ""}`} />
                   <span className="hidden sm:inline">In your collection</span>
