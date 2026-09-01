@@ -2073,7 +2073,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   filter chips, "Understood:" chips, a profile nudge and the
                   count row — which pushed the results down and read as noise. */}
               <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border/50 pb-4">
-                <div className="flex items-baseline gap-2 shrink-0">
+                {/* items-center, not items-baseline. The row around this is
+                    centre-aligned, so baseline-aligning the pair inside it hung
+                    "monologues" 4px below everything else on the line: measured
+                    mid 258 against 254 for the count, the chip and the button. */}
+                <div className="flex items-center gap-2 shrink-0">
                   <span className="text-2xl font-semibold tabular-nums text-foreground">
                     {/* `total` is the server's full count for paging, but it was
                         shown even when we held no results — a page reading
