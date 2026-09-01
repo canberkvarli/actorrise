@@ -227,3 +227,61 @@ class TestSafety:
 
         # A catalogue that will not load must not take the search down with it.
         assert detect_catalogue_title(BrokenDB(), "hamlet monologue") is None
+
+
+class TestCuratedShortLabelDoesNotDenyACarriedTitle:
+    """compute_content_gap must resolve the title the way the SEARCH does.
+
+    The curated dictionary holds a short label ("Sweeney Todd"); the library
+    stores the canonical name ("Sweeney Todd: The Demon Barber of Fleet
+    Street"). find_catalogue_source_types only matches a stored title that is a
+    substring of the queried one, never the reverse, so asking it about the
+    short label returned [] and the actor was told "we don't have Sweeney Todd
+    yet, want to request it?" over 5 monologues we hold (2026-09-01 log read).
+
+    Fix: consult the catalogue before the dictionary, as monologues.py already
+    does. The dictionary stays as the fallback, so titles we genuinely lack are
+    still reported as gaps.
+    """
+
+    CANONICAL = "Sweeney Todd: The Demon Barber of Fleet Street"
+
+    def _patch(self, monkeypatch, catalogue_hit):
+        from app.services.search import title_lookup as tl
+
+        monkeypatch.setattr(
+            tl, "detect_catalogue_title", lambda *_: catalogue_hit
+        )
+        monkeypatch.setattr(
+            tl, "detect_title_lookup",
+            lambda *_: {"title": "Sweeney Todd", "medium": "film"},
+        )
+        monkeypatch.setattr(
+            tl, "find_catalogue_source_types",
+            lambda _db, title: ["film"] if title == self.CANONICAL else [],
+        )
+        return tl
+
+    def test_carried_title_reports_available_in_not_a_gap(self, monkeypatch):
+        tl = self._patch(
+            monkeypatch, {"title": self.CANONICAL, "medium": "film"}
+        )
+        gap = tl.compute_content_gap(
+            "sweeney todd", None, None, ["Some Other Play"], [],
+            db=object(), applied_source_type="play",
+        )
+        assert gap is not None
+        assert gap["play"] == self.CANONICAL
+        assert gap["available_in"] == ["film"]
+
+    def test_uncarried_title_still_reports_a_real_gap(self, monkeypatch):
+        # Nothing in the catalogue: the curated dictionary is still the only
+        # thing that can name a title we do not hold, and must keep doing so.
+        tl = self._patch(monkeypatch, None)
+        gap = tl.compute_content_gap(
+            "sweeney todd", None, None, ["Some Other Play"], [],
+            db=object(), applied_source_type=None,
+        )
+        assert gap is not None
+        assert gap["play"] == "Sweeney Todd"
+        assert "available_in" not in gap

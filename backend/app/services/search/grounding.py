@@ -193,11 +193,22 @@ def query_is_unservable(query: str, db) -> bool:
         # Table absent or not built yet — do not accuse every query.
         return False
 
+    # A term absent from `corpus_terms` can still name something we carry.
+    # corpus_terms is built from monologue TEXT, and a title is not text:
+    # "dollshouse" appears in no monologue, so "Nora a dollshouse" was called
+    # unservable while A Doll's House sits there with 72 pieces. Ask the
+    # catalogue before accusing. This can only ever turn a True into a False —
+    # it removes a reason to say we failed, never adds one.
+    from app.services.search.title_lookup import term_is_in_catalogue
+
+    def _is_known(term: str) -> bool:
+        return term in known or term_is_in_catalogue(db, term)
+
     # EVERY distinctive word must be known for a form to be servable. "Any one
     # is enough" was tried and let "Erin Gruwell" through, because "erin"
     # appears somewhere in the corpus while "gruwell" appears nowhere — and it
     # is the surname that decides whether we hold the film.
-    return not any(all(t in known for t in terms) for _f, terms in per_form)
+    return not any(all(_is_known(t) for t in terms) for _f, terms in per_form)
 
 
 def _corpus_terms_populated(db) -> bool:

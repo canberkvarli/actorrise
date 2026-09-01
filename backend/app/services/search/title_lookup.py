@@ -989,6 +989,42 @@ def detect_catalogue_title(db, query: str) -> Optional[Dict[str, str]]:
     return None
 
 
+def term_is_in_catalogue(db, term: str) -> bool:
+    """True when `term` names a title or character the library actually holds.
+
+    grounding.query_is_unservable() judges a query against `corpus_terms`,
+    which is built from monologue TEXT. A title is not text: "dollshouse"
+    appears in no monologue, so "Nora a dollshouse" was called unservable and
+    flagged weak at a best_cosine of 0.748 while A Doll's House sits in the
+    library with 72 pieces (2026-09-01 log read).
+
+    Deliberately narrow — exact on the normalised form, plus the squashed
+    fallback that already exists for "Pen 15"/"Pen15". No fuzzy match here: a
+    loose one would start excusing the genuinely unservable searches
+    ("gruwell") that grounding exists to catch.
+
+    Never raises: a failed catalogue load degrades to False, i.e. the old
+    behaviour, never to "everything is servable".
+    """
+    if db is None or not term:
+        return False
+    norm = _normalise_title(term)
+    if len(norm) < _MIN_TITLE_CHARS:
+        return False
+    try:
+        catalogue = _load_catalogue(db)
+        characters = _load_character_catalogue(db)
+    except Exception:
+        return False
+    if norm in catalogue or _normalise_name(term) in characters:
+        return True
+    squashed = norm.replace(" ", "")
+    return (
+        len(squashed) >= _MIN_SQUASHED_CHARS
+        and squashed in _catalogue_squashed_cache
+    )
+
+
 def compute_content_gap(
     query: str,
     intended_play: Optional[str],
@@ -1044,12 +1080,18 @@ def compute_content_gap(
             return None
         return _resolve(intended_play, intended_author)
 
-    # Curated dictionary first (it covers titles we do NOT carry, which is the
-    # only way a real gap gets reported), then the catalogue. The catalogue arm
-    # lets a carried title that a tab filter hid report `available_in` — e.g.
-    # "queen's gambit" on the Plays tab now offers Film & TV instead of 20
-    # unrelated plays.
-    hit = detect_title_lookup(query) or detect_catalogue_title(db, query)
+    # Catalogue FIRST, curated dictionary as the fallback. The dictionary holds
+    # short labels ("Sweeney Todd") while the library stores the canonical name
+    # ("Sweeney Todd: The Demon Barber of Fleet Street"), and
+    # find_catalogue_source_types() only matches a stored title that is a
+    # substring of the queried one, never the reverse. So the dictionary arm
+    # answered "we don't have Sweeney Todd yet, want to request it?" on top of 5
+    # monologues we hold — the exact falsehood this function's docstring forbids
+    # (2026-09-01 log read). The catalogue resolves to the stored title, which
+    # matches. Nothing is lost by the reorder: a title we do NOT carry returns
+    # None here and falls through to the dictionary, still the only way a real
+    # gap gets reported. Same order the search path itself uses (monologues.py).
+    hit = detect_catalogue_title(db, query) or detect_title_lookup(query)
     if hit and not any(hit["title"].lower() in t for t in titles_lower):
         return _resolve(hit["title"], None)
     return None

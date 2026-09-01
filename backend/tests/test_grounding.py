@@ -175,3 +175,73 @@ class TestDegradesSafely:
                 raise RuntimeError("connection reset")
 
         assert query_is_unservable("Erin Gruwell", Boom()) is False
+
+
+class TestATitleIsNotText:
+    """corpus_terms is built from monologue TEXT, so it cannot see titles.
+
+    "Nora a dollshouse" was flagged unservable at a best_cosine of 0.748 while
+    A Doll's House sits in the library with 72 pieces: "dollshouse" appears in
+    no monologue, because a play's name is rarely spoken inside it. The
+    catalogue is asked before we accuse (2026-09-01 log read).
+
+    The catalogue check can only ever turn an unservable verdict INTO a
+    servable one, so the tests that matter are the ones proving it does not
+    excuse a genuine miss.
+    """
+
+    def _patch(self, monkeypatch, carried):
+        from app.services.search import title_lookup as tl
+
+        monkeypatch.setattr(
+            tl, "term_is_in_catalogue",
+            lambda _db, term: term in carried,
+        )
+
+    def test_title_word_absent_from_text_is_still_servable(self, monkeypatch):
+        self._patch(monkeypatch, {"dollshouse"})
+        # "nora" is in the corpus, "dollshouse" only in the catalogue.
+        vocab = FakeDB(CORPUS.vocab | {"nora"})
+        assert query_is_unservable("Nora a dollshouse", vocab) is False
+
+    def test_a_name_we_do_not_carry_stays_unservable(self, monkeypatch):
+        # The whole point of H-13 must survive the rescue.
+        self._patch(monkeypatch, set())
+        assert query_is_unservable("Erin Gruwell", CORPUS) is True
+
+    def test_catalogue_cannot_excuse_a_partly_unknown_query(self, monkeypatch):
+        # "hamlet" is carried, "gruwell" is not — and it is the unknown word
+        # that decides. Every distinctive term must clear, catalogue included.
+        self._patch(monkeypatch, {"hamlet"})
+        assert query_is_unservable("hamlet gruwell", CORPUS) is True
+
+
+class TestTermIsInCatalogue:
+    def test_matches_a_stored_title(self, monkeypatch):
+        from app.services.search import title_lookup as tl
+
+        monkeypatch.setattr(tl, "_load_catalogue", lambda _db: {"dolls house": ("A Doll's House", "play")})
+        monkeypatch.setattr(tl, "_load_character_catalogue", lambda _db: {})
+        monkeypatch.setattr(tl, "_catalogue_squashed_cache", {"dollshouse": ("A Doll's House", "play")})
+        assert tl.term_is_in_catalogue(object(), "dollshouse") is True
+        assert tl.term_is_in_catalogue(object(), "gruwell") is False
+
+    def test_matches_a_character_name(self, monkeypatch):
+        from app.services.search import title_lookup as tl
+
+        monkeypatch.setattr(tl, "_load_catalogue", lambda _db: {})
+        monkeypatch.setattr(tl, "_load_character_catalogue", lambda _db: {"crowley": (("Crowley",), 4)})
+        monkeypatch.setattr(tl, "_catalogue_squashed_cache", {})
+        assert tl.term_is_in_catalogue(object(), "crowley") is True
+
+    def test_degrades_to_false(self, monkeypatch):
+        from app.services.search import title_lookup as tl
+
+        def boom(_db):
+            raise RuntimeError("connection lost")
+
+        monkeypatch.setattr(tl, "_load_catalogue", boom)
+        # A catalogue that will not load must not silently declare every
+        # query servable, which would disable H-13 entirely.
+        assert tl.term_is_in_catalogue(object(), "dollshouse") is False
+        assert tl.term_is_in_catalogue(None, "dollshouse") is False
