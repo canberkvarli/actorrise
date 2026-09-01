@@ -20,8 +20,24 @@ class PlainTextParser:
     #: One optional honorific, then the name. Both other patterns demand ALL CAPS,
     #: which is why Tartuffe, Rosmersholm and An Enemy of the People sat in the
     #: library with zero monologues each despite their full text being stored.
+    #: The optional trailing surname is load-bearing. Without it "Peter
+    #: Stockmann." is not a cue, so every speech of his is swallowed by whoever
+    #: spoke last: An Enemy of the People came out with Billing delivering three
+    #: people's lines at once. Molière's single-word names hid the gap, because
+    #: "Dorine." matches either way.
+    #: A cue may carry its own stage direction before the full stop:
+    #: "Rebecca (going to the door and calling through it). Mrs. Helseth, ...".
+    #: Ibsen does this constantly, and without it every such speech is swallowed
+    #: by the previous speaker. Length-capped, and it may wrap across lines.
+    #: Brackets as well as parentheses: this translation of Tartuffe writes
+    #: "Dorine [aside]." and Ibsen writes "Rebecca (going to the door).".
+    #: Allowing only one of the two leaves half the speeches glued to whoever
+    #: spoke before them.
+    _CUE_DIRECTION = r"(?:[ ]?[\(\[][^)\]]{0,160}[\)\]])?"
+
     _TITLE_CUE = re.compile(
-        r"^[ \t]{0,8}((?:[A-Z][a-z']{0,11}\.[ ]?)?[A-Z][A-Za-z'’]{1,15})\.[ \t]+"
+        r"^[ \t]{0,8}((?:[A-Z][a-z']{0,11}\.[ ]?)?[A-Z][A-Za-z'’]{1,15}"
+        r"(?:[ ][A-Z][A-Za-z'’]{1,15})?)" + _CUE_DIRECTION + r"\.[ \t\n]+"
         r"(?=[A-Z\"'“(])",
         re.MULTILINE,
     )
@@ -216,7 +232,21 @@ class PlainTextParser:
         alternation = "|".join(
             re.escape(name) for name in sorted(cast, key=len, reverse=True)
         )
-        pattern = re.compile(r"^[ \t]{0,8}(" + alternation + r")\.[ \t]+", re.MULTILINE)
+        # Two ways in. At the start of a line is the ordinary case. Mid-line
+        # after a sentence ends is Molière in verse, where the next speaker's
+        # cue follows the previous speaker's closing line on the same line:
+        # "...His other traits... Dorine. And they're a sorry lot!"
+        #
+        # Mid-line is only safe because `cast` is already confirmed and the
+        # lookbehind demands a finished sentence. Direct address does not
+        # qualify: "Thank you, Dorine." has a comma before the name, and
+        # "I never trusted Dorine." has a verb, so neither can split a speech.
+        pattern = re.compile(
+            r"(?:^[ \t]{0,8}|(?<=[.!?…])[ \t\n]+)"
+            r"(" + alternation + r")" + self._CUE_DIRECTION + r"\.[ \t\n]+"
+            r"(?=[A-Z\"'“(])",
+            re.MULTILINE,
+        )
         hits = [(m.start(), m.end(), m.group(1)) for m in pattern.finditer(text)]
         speeches = []
         for i, (_, end, name) in enumerate(hits):
