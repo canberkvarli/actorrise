@@ -369,15 +369,23 @@ def record_total_search(user_id: int, db: Session) -> None:
     db.commit()
 
 
-# Free monologue reads: 5 a month. Server-side so the wall survives a reinstall;
-# the client reads the count and paints the paywall.
+# Free monologue reads: 3. Server-side so the wall survives a reinstall; the
+# client reads the count and paints the paywall.
 #
-# Monthly, not lifetime. A lifetime cap gives you exactly one conversion moment
-# per actor — once it is spent they either pay that day or the library is shut
-# to them permanently, and the second outcome is the common one. A monthly cap
-# is the same wall twelve times a year, and a free tier that keeps working is
-# what brings them back to hit it again.
-FREE_MONOLOGUE_READ_LIMIT = 5
+# Was 5. Ghost Light says "three reads were the trial" on the wall itself and
+# falls back to 3 everywhere the API is unreachable, so the server was the only
+# thing claiming otherwise, and the server is the one users believe.
+#
+# The monthly-vs-lifetime argument below is UNRESOLVED and this constant does not
+# settle it. The reset is still monthly, which is the opposite of what
+# ghostlight/docs/DESIGN.md §93 specifies ("3 free reads, lifetime, not
+# monthly. A monthly reset teaches people to wait"). The case for monthly, kept
+# because it is a real argument and not an oversight: a lifetime cap gives you
+# exactly one conversion moment per actor, and once it is spent they either pay
+# that day or the library is shut to them permanently. A monthly cap is the same
+# wall twelve times a year. Whoever settles this should change _period_start too,
+# not just the number.
+FREE_MONOLOGUE_READ_LIMIT = 3
 
 
 def _period_start() -> date:
