@@ -140,14 +140,17 @@ def main() -> None:
             m = db.query(Monologue).filter(Monologue.id == d["drop"]["id"]).first()
             if not m:
                 continue
+            row = {c.name: getattr(m, c.name) for c in Monologue.__table__.columns}
+            # pgvector hands back a numpy array, which json cannot serialise.
+            # Keep it as a plain list rather than dropping it: a restore that
+            # brings rows back with no embedding returns them unsearchable,
+            # which is a silent downgrade masquerading as an undo.
+            vec = row.get("embedding_vector")
+            row["embedding_vector"] = list(map(float, vec)) if vec is not None else None
             saved_rows.append({
                 "id": m.id,
                 "kept_instead": d["keep"]["id"],
-                "row": {
-                    c.name: getattr(m, c.name)
-                    for c in Monologue.__table__.columns
-                    if c.name != "embedding_vector"  # not JSON-serialisable
-                },
+                "row": row,
             })
         backup.write_text(json.dumps(saved_rows, indent=2, default=str))
         print(f"\nbackup written: {backup}")

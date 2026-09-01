@@ -86,7 +86,7 @@ def _get_marketing_recipients(
         "all"     — every (subscribed) user
         "free"    — only free-tier users
         "paid"    — only users with an active paid subscription
-        "leads"   — free-tier users who never used the founder code:
+        "leads"   — free-tier users:
                     no active paid subscription AND total_scripts_uploaded == 0
     """
     query = db.query(User)
@@ -185,7 +185,6 @@ def send_campaign(
     subject_map = {
         "upgrade_nudge": "Unlock more with ActorRise Plus",
         "feature_announcement": template_kwargs.get("feature_title", "What's new on ActorRise"),
-        "founder_offer": "your 2 weeks of Plus, free",
         "actor_page": "Your actor page on ActorRise",
         "cold_outreach": "hey from ActorRise",
         "weekly_engagement": "Your weekly pick from ActorRise",
@@ -198,7 +197,6 @@ def send_campaign(
     render_method_names = {
         "upgrade_nudge": "render_upgrade_nudge",
         "feature_announcement": "render_feature_announcement",
-        "founder_offer": "render_founder_offer",
         "actor_page": "render_actor_page",
         "cold_outreach": "render_cold_outreach",
         "weekly_engagement": "render_weekly_engagement",

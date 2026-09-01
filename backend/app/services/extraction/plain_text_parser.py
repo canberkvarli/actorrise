@@ -1,7 +1,7 @@
 """Extract monologues from plain text plays using pattern matching."""
 
 import re
-from typing import List, Dict, Optional
+from typing import Dict, List, Optional
 
 
 class PlainTextParser:
@@ -15,6 +15,41 @@ class PlainTextParser:
     #: Italicised spans inside a speech are stage directions ("_Exit._",
     #: "_She turns away._"), the underscore equivalent of a parenthetical.
     _ITALIC_SPAN = re.compile(r'_[^_\n]{0,200}?_')
+
+    #: A Title Case speaker cue: "Dorine.  ", "Mrs. Stockmann. ", "Mme. Pernelle. ".
+    #: One optional honorific, then the name. Both other patterns demand ALL CAPS,
+    #: which is why Tartuffe, Rosmersholm and An Enemy of the People sat in the
+    #: library with zero monologues each despite their full text being stored.
+    _TITLE_CUE = re.compile(
+        r"^[ \t]{0,8}((?:[A-Z][a-z']{0,11}\.[ ]?)?[A-Z][A-Za-z'’]{1,15})\.[ \t]+"
+        r"(?=[A-Z\"'“(])",
+        re.MULTILINE,
+    )
+
+    #: An honorific on its own is not a character. Without this, "Mr." and "Mrs."
+    #: become the two most talkative people in the play.
+    _HONORIFICS = frozenset({
+        "mr", "mrs", "ms", "dr", "mme", "mlle", "m", "sir", "lady", "lord",
+        "st", "capt", "gen", "rev", "prof", "col", "maj", "sgt",
+    })
+
+    #: How many times a cue must recur before it counts as a character. A speaker
+    #: comes back; a sentence that merely opens on a capitalised word and a full
+    #: stop does not. This is the whole defence against turning narration into a
+    #: cast list, so it is deliberately not 1 or 2.
+    _MIN_CUE_REPEATS = 5
+
+    #: Words that head a section, not a person. "ACT IV" and "SCENE I" recur as
+    #: faithfully as any character and read as cues to every pattern here.
+    _STRUCTURAL = frozenset({
+        "act", "scene", "prologue", "epilogue", "preface", "note", "notes",
+        "characters", "persons", "dramatis", "personae", "contents", "index",
+        "introduction", "appendix", "footnote", "curtain", "end", "chapter",
+    })
+
+    #: Roman numerals, which is what an act number looks like once it has been
+    #: title-cased: "Iv", "Ix", "Xlix".
+    _ROMAN = re.compile(r"^[IVXLCDM]+$", re.IGNORECASE)
 
     def __init__(self):
         pass
@@ -82,6 +117,31 @@ class PlainTextParser:
                 end = cues[i + 1].start() if i + 1 < len(cues) else len(text)
                 speeches.append((m.group(1).strip(), text[m.end():end].strip()))
 
+        # Pattern 4: Title Case cues — "Dorine.  He passes for a saint..."
+        #
+        # Gutenberg's Ibsen, Molière, Chekhov and Pinero transcriptions name
+        # their speakers in Title Case, which neither ALL-CAPS pattern can see.
+        # Measure for Measure parses and Tartuffe does not, for no better reason
+        # than the case of the cue.
+        #
+        # Two passes, because a single regex cannot tell "Dorine." from any
+        # sentence beginning with a capitalised word and a full stop. The first
+        # pass proposes names, the second keeps only those that recur, and the
+        # speech then runs from one confirmed cue to the next.
+        if len(speeches) < 5:
+            cast = self._title_case_cast(text)
+            if cast:
+                speeches = self._split_on_cast(text, cast)
+
+        # Every pattern feeds through the same sanity check on the name. A cue
+        # that turns out to be an act heading takes its whole "speech" with it,
+        # which is the act's entire text.
+        speeches = [
+            (character, body)
+            for character, body in speeches
+            if self._is_plausible_character(character)
+        ]
+
         # Filter and clean speeches
         for character, speech_text in speeches:
             # Remove stage directions (parentheses, brackets, or italics)
@@ -107,6 +167,62 @@ class PlainTextParser:
                 })
 
         return monologues
+
+    def _is_plausible_character(self, name: str) -> bool:
+        """Reject the things that behave like speakers but are not people.
+
+        Applied to every pattern, not just the Title Case one, because the two
+        ALL-CAPS patterns match ``[A-Z\\s]`` and ``\\s`` includes newlines — so
+        "ACT IV\\n\\nSCENE I" arrives as one character called
+        "Act Iv Scene I". That predates the Title Case cue and is why
+        Measure for Measure's names were unusable even where its text parsed.
+        """
+        cleaned = " ".join(name.split())
+        if not cleaned or len(cleaned) > 40:
+            return False
+        if "\n" in name or "\r" in name:
+            return False
+        if self._ROMAN.match(cleaned.replace(".", "")):
+            return False
+        words = [w.strip(".,;:").lower() for w in cleaned.split()]
+        if not words:
+            return False
+        if words[0] in self._STRUCTURAL:
+            return False
+        # "Dramatis Personae", "Characters of the Tragedy" — a heading that
+        # happens to run long enough to escape the first-word check.
+        if any(w in self._STRUCTURAL for w in words) and len(words) > 2:
+            return False
+        return True
+
+    def _title_case_cast(self, text: str) -> List[str]:
+        """Names that behave like speakers: Title Case cues that recur."""
+        counts: Dict[str, int] = {}
+        for match in self._TITLE_CUE.finditer(text):
+            name = match.group(1).strip()
+            counts[name] = counts.get(name, 0) + 1
+        return [
+            name
+            for name, hits in counts.items()
+            if hits >= self._MIN_CUE_REPEATS
+            and name.lower().rstrip(".") not in self._HONORIFICS
+            and self._is_plausible_character(name)
+        ]
+
+    def _split_on_cast(self, text: str, cast: List[str]) -> List[tuple]:
+        """Cut the text at confirmed cues; each speech runs to the next one."""
+        # Longest first, or "Stockmann" matches inside "Dr. Stockmann" and the
+        # split lands in the middle of the cue it was supposed to sit before.
+        alternation = "|".join(
+            re.escape(name) for name in sorted(cast, key=len, reverse=True)
+        )
+        pattern = re.compile(r"^[ \t]{0,8}(" + alternation + r")\.[ \t]+", re.MULTILINE)
+        hits = [(m.start(), m.end(), m.group(1)) for m in pattern.finditer(text)]
+        speeches = []
+        for i, (_, end, name) in enumerate(hits):
+            stop = hits[i + 1][0] if i + 1 < len(hits) else len(text)
+            speeches.append((name, text[end:stop].strip()))
+        return speeches
 
     def _normalize_character_name(self, name: str) -> str:
         """Convert 'HAMLET' to 'Hamlet', handle edge cases"""

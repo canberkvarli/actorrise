@@ -245,9 +245,6 @@ export default function AdminEmailsPage() {
   const [selectedLeadIds, setSelectedLeadIds] = useState<Set<number>>(new Set());
   const [leadFiltersOpen, setLeadFiltersOpen] = useState(false);
 
-  // Founder-offer-on-signup toggle
-  const [founderOfferOn, setFounderOfferOn] = useState<boolean | null>(null);
-  const [founderOfferSaving, setFounderOfferSaving] = useState(false);
 
   // Day-1 saved-piece reminder toggle
   const [savedReminderOn, setSavedReminderOn] = useState<boolean | null>(null);
@@ -273,7 +270,6 @@ export default function AdminEmailsPage() {
       api.get<BatchHistoryItem[]>("/api/admin/emails/batches").then(({ data }) => setBatchHistory(data)).catch(() => {}),
       api.get<DncEntry[]>("/api/admin/emails/do-not-contact").then(({ data }) => setDncEntries(data)).catch(() => {}),
       api.get<Lead[]>("/api/admin/emails/leads").then(({ data }) => setLeads(data)).catch(() => {}),
-      api.get<{ enabled: boolean }>("/api/admin/emails/founder-offer-on-signup").then(({ data }) => setFounderOfferOn(data.enabled)).catch(() => {}),
       api.get<{ enabled: boolean }>("/api/admin/emails/saved-piece-reminder").then(({ data }) => setSavedReminderOn(data.enabled)).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
@@ -298,29 +294,6 @@ export default function AdminEmailsPage() {
       toast.error("Failed to update the saved-piece reminder setting");
     } finally {
       setSavedReminderSaving(false);
-    }
-  }
-
-  async function updateFounderOfferOnSignup(enabled: boolean) {
-    const prev = founderOfferOn;
-    setFounderOfferOn(enabled); // optimistic
-    setFounderOfferSaving(true);
-    try {
-      const { data } = await api.put<{ enabled: boolean }>(
-        "/api/admin/emails/founder-offer-on-signup",
-        { enabled },
-      );
-      setFounderOfferOn(data.enabled);
-      toast.success(
-        data.enabled
-          ? "New signups will get the FOUNDER3 offer email"
-          : "Founder offer email off. New signups get the plain welcome only.",
-      );
-    } catch {
-      setFounderOfferOn(prev); // revert
-      toast.error("Failed to update the founder offer setting");
-    } finally {
-      setFounderOfferSaving(false);
     }
   }
 
@@ -466,13 +439,7 @@ export default function AdminEmailsPage() {
     const recipients = picked.map((l) => ({ email: l.email, name: l.name || "" }));
     setBulkRecipients(recipients);
     setMode("bulk");
-    // Founder offer is the natural template for converting signed-up users
-    const founderTmpl = templates.find((t) => t.id === "founder_offer");
-    if (founderTmpl) {
-      setSelectedId("founder_offer");
-      _initVars(founderTmpl);
-    }
-    setCampaignKey(`founder-leads-${new Date().toISOString().slice(0, 10)}`);
+    setCampaignKey(`leads-${new Date().toISOString().slice(0, 10)}`);
     setComposeOpen(true);
     setLeadsOpen(false);
     toast.success(`Loaded ${recipients.length} lead${recipients.length !== 1 ? "s" : ""} into composer`);
@@ -500,14 +467,6 @@ export default function AdminEmailsPage() {
       audience === "openers" ? `followup-openers-${new Date().toISOString().slice(0, 10)}` : `followup-nonopeners-${new Date().toISOString().slice(0, 10)}`,
     );
 
-    // Auto-select follow-up template based on original template
-    if (audience === "non_openers" && originalTemplateId === "founder_offer") {
-      const followupTmpl = templates.find((t) => t.id === "founder_followup");
-      if (followupTmpl) {
-        setSelectedId("founder_followup");
-        _initVars(followupTmpl);
-      }
-    }
 
     toast.success(
       `Loaded ${recipients.length} ${audience === "openers" ? "opener" : "non-opener"}${recipients.length !== 1 ? "s" : ""}` +
@@ -872,29 +831,6 @@ export default function AdminEmailsPage() {
           </Button>
         </div>
       </div>
-
-      {/* ── Founder offer on signup ── */}
-      {canSend && founderOfferOn !== null && (
-        <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-3 sm:p-4">
-          <div className="flex items-start gap-2.5">
-            <IconCrown className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-            <div>
-              <p className="text-sm font-medium">Free-trial offer on signup</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {founderOfferOn
-                  ? "New signups get a personal email with a 2-week Plus free-trial button."
-                  : "Off. New signups get the plain welcome email only."}
-              </p>
-            </div>
-          </div>
-          <Switch
-            checked={founderOfferOn}
-            disabled={founderOfferSaving}
-            onCheckedChange={updateFounderOfferOnSignup}
-            aria-label="Toggle founder offer email on signup"
-          />
-        </div>
-      )}
 
       {canSend && savedReminderOn !== null && (
         <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-3 sm:p-4">
@@ -1331,11 +1267,11 @@ export default function AdminEmailsPage() {
                 <IconTarget className="h-4 w-4 text-muted-foreground" />
                 Leads
                 <span className="text-[11px] font-normal text-muted-foreground">
-                  signed up but never used the founder code
+                  signed up, still on the free tier
                 </span>
               </h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Filter, select, and load straight into the composer with the founder offer template.
+                Filter, select, and load straight into the composer.
               </p>
             </div>
             <div className="flex items-center gap-2 self-end sm:self-auto">
@@ -1884,7 +1820,7 @@ export default function AdminEmailsPage() {
                               <option value="all">All users (opt-in)</option>
                               <option value="free">Free tier (opt-in)</option>
                               <option value="paid">Paid tier (opt-in)</option>
-                              <option value="leads">Leads, never used founder code</option>
+                              <option value="leads">Leads, still on free</option>
                             </select>
                           </div>
                           <div className="flex-1 min-w-[200px]">

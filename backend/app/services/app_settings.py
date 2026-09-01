@@ -7,9 +7,6 @@ from sqlalchemy.orm import Session
 
 from app.models.app_setting import AppSetting
 
-# When true, new signups receive the founding-actor offer email (FOUNDER3).
-# Flip off from the admin console once founding spots close.
-FOUNDER_OFFER_ON_SIGNUP = "founder_offer_on_signup"
 
 # Cosine-similarity floor below which a search returns no results (see
 # semantic_search.WEAK_MATCH_FLOOR). Tunable from the admin console so the

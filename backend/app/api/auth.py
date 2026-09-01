@@ -6,7 +6,6 @@ from app.models.founding_actor import FoundingActor
 from app.models.user import User
 from app.services.email.marketing import verify_unsubscribe_token
 from app.services.email.notifications import (
-    send_founder_offer_email,
     send_welcome_email,
 )
 from app.services import app_settings
@@ -135,17 +134,11 @@ def get_current_user(
                 send_welcome_email(user_email=user.email, user_name=user.name)
             except Exception:
                 pass  # Logged inside send_welcome_email
-            # While founding spots are open, also send the FOUNDER3 offer as a
-            # separate personal email. Admin-toggleable via the console.
-            try:
-                if app_settings.get_bool(
-                    db, app_settings.FOUNDER_OFFER_ON_SIGNUP, default=True
-                ):
-                    send_founder_offer_email(user_email=user.email, user_name=user.name)
-            except Exception as e:
-                # Fire-and-forget; never block auth. Log so a misconfig (e.g. missing
-                # app_settings table) isn't completely silent.
-                print(f"Error sending founder offer on signup to {user.email}: {e}")
+            # The FOUNDER3 offer email used to go out here alongside the welcome,
+            # gated on an admin setting that defaulted to True. That row was never
+            # written in prod, so the default applied and every new signup was
+            # emailed a coupon retired on 2026-07-22. Removed rather than
+            # defaulted off: there is no code to offer.
             # Green Room: "Someone from <city> just joined". Fire-and-forget, safe.
             record_event(user.id, "joined")
     else:

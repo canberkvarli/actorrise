@@ -90,33 +90,9 @@ def require_approval_permission(current_user: User = Depends(get_current_user)) 
 # Founder-offer-on-signup toggle
 # ========================================
 
-class FounderOfferToggle(BaseModel):
-    enabled: bool
-
-
-@router.get("/founder-offer-on-signup", response_model=FounderOfferToggle)
-def get_founder_offer_on_signup(
-    _: User = Depends(require_approval_permission),
-    db: Session = Depends(get_db),
-) -> FounderOfferToggle:
-    """Whether new signups currently receive the FOUNDER3 offer email."""
-    enabled = app_settings.get_bool(
-        db, app_settings.FOUNDER_OFFER_ON_SIGNUP, default=True
-    )
-    return FounderOfferToggle(enabled=enabled)
-
-
-@router.put("/founder-offer-on-signup", response_model=FounderOfferToggle)
-def set_founder_offer_on_signup(
-    payload: FounderOfferToggle,
-    _: User = Depends(require_approval_permission),
-    db: Session = Depends(get_db),
-) -> FounderOfferToggle:
-    """Turn the FOUNDER3-on-signup email on/off (e.g. when founding spots close)."""
-    enabled = app_settings.set_bool(
-        db, app_settings.FOUNDER_OFFER_ON_SIGNUP, payload.enabled
-    )
-    return FounderOfferToggle(enabled=enabled)
+# The founder-offer-on-signup toggle lived here. The coupon it advertised was
+# retired 2026-07-22, so there is nothing left to switch on and the endpoints
+# went with the email itself.
 
 
 class SavedPieceReminderToggle(BaseModel):
@@ -178,35 +154,6 @@ TEMPLATES = [
         "subject": "Welcome to ActorRise!",
         "variables": [
             {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
-        ],
-    },
-    {
-        "id": "founder_offer",
-        "name": "Founder Offer",
-        "description": "2 weeks of Plus free trial",
-        "subject": "A personal note from me",
-        "variables": [
-            {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
-            {"name": "intro_text", "label": "Main message", "type": "text", "default": "I wanted to reach out personally. I'm an actor too, and I built ActorRise because I couldn't find the tools I needed. You signed up early and that means a lot to me.", "required": True},
-            {"name": "body_text", "label": "Extra paragraph (optional)", "type": "text", "default": "", "required": False},
-            {"name": "promo_code", "label": "Promo code", "type": "text", "default": "FOUNDER", "required": True},
-            {"name": "upgrade_url", "label": "Upgrade URL", "type": "url", "default": "https://actorrise.com/pricing", "required": True},
-            {"name": "sender_name", "label": "Sender name", "type": "text", "default": "Canberk", "required": True},
-            {"name": "sender_title", "label": "Sender title", "type": "text", "default": "Founder, ActorRise", "required": True},
-        ],
-    },
-    {
-        "id": "founder_followup",
-        "name": "Founder Follow-up",
-        "description": "Follow-up for users who didn't open/click the founder offer",
-        "subject": "following up",
-        "variables": [
-            {"name": "user_name", "label": "User name", "type": "text", "default": "there", "required": True},
-            {"name": "intro_text", "label": "Main message", "type": "text", "default": "Just wanted to follow up on my last email. The founder code is still active if you want to use it.", "required": True},
-            {"name": "promo_code", "label": "Promo code", "type": "text", "default": "FOUNDER", "required": True},
-            {"name": "upgrade_url", "label": "Upgrade URL", "type": "url", "default": "https://actorrise.com/pricing", "required": True},
-            {"name": "sender_name", "label": "Sender name", "type": "text", "default": "Canberk", "required": True},
-            {"name": "sender_title", "label": "Sender title", "type": "text", "default": "Founder, ActorRise", "required": True},
         ],
     },
     {
@@ -342,8 +289,6 @@ def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, 
     render_map = {
         "custom": templates.render_custom,
         "welcome": templates.render_welcome,
-        "founder_offer": templates.render_founder_offer,
-        "founder_followup": templates.render_founder_followup,
         "weekly_engagement": templates.render_weekly_engagement,
     }
 
@@ -351,8 +296,6 @@ def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, 
     plain_text_map = {
         "custom": templates.render_custom_plain,
         "welcome": templates.render_welcome_plain,
-        "founder_offer": templates.render_founder_offer_plain,
-        "founder_followup": templates.render_founder_followup_plain,
         "weekly_engagement": templates.render_weekly_engagement_plain,
     }
 
@@ -714,15 +657,11 @@ def resume_batch(
             render_map = {
                 "custom": templates_svc.render_custom,
                 "welcome": templates_svc.render_welcome,
-                "founder_offer": templates_svc.render_founder_offer,
-                "founder_followup": templates_svc.render_founder_followup,
                 "weekly_engagement": templates_svc.render_weekly_engagement,
             }
             plain_text_map = {
                 "custom": templates_svc.render_custom_plain,
                 "welcome": templates_svc.render_welcome_plain,
-                "founder_offer": templates_svc.render_founder_offer_plain,
-                "founder_followup": templates_svc.render_founder_followup_plain,
                 "weekly_engagement": templates_svc.render_weekly_engagement_plain,
             }
 
@@ -882,7 +821,7 @@ def send_campaign_endpoint(
         )
 
     # Get recipients. The "leads" segment is for cold-converting signed-up
-    # users who never used the founder code, so opt-in is not required there.
+    # free-tier users, so opt-in is not required there.
     recipients = _get_marketing_recipients(
         db,
         body.target,
@@ -994,16 +933,12 @@ def send_campaign_endpoint(
 
             render_map = {
                 "custom": templates_svc.render_custom,
-                "founder_offer": templates_svc.render_founder_offer,
-                "founder_followup": templates_svc.render_founder_followup,
                 "weekly_engagement": templates_svc.render_weekly_engagement,
             }
             # All marketing templates send as plain text for better inbox placement
             plain_text_map = {
                 "custom": templates_svc.render_custom_plain,
                 "welcome": templates_svc.render_welcome_plain,
-                "founder_offer": templates_svc.render_founder_offer_plain,
-                "founder_followup": templates_svc.render_founder_followup_plain,
                 "weekly_engagement": templates_svc.render_weekly_engagement_plain,
             }
             render_fn = render_map.get(template_id)

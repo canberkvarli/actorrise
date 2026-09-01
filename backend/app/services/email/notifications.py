@@ -38,33 +38,6 @@ def send_welcome_email(user_email: str, user_name: Optional[str] = None) -> dict
         raise
 
 
-def send_founder_offer_email(user_email: str, user_name: Optional[str] = None) -> dict:
-    """
-    Send the self-serve Plus free-trial offer (2 weeks, $0 today) to a new
-    signup. Personal, plain-text style. Fire-and-forget; raises on failure so
-    the caller can swallow it the same way as the welcome email.
-
-    Gated upstream by the `founder_offer_on_signup` admin toggle.
-    """
-    if not os.getenv("RESEND_API_KEY"):
-        print("Warning: RESEND_API_KEY not set. Founder offer email disabled.")
-        return {"id": "mock_founder_offer_id", "status": "disabled"}
-
-    try:
-        client = ResendEmailClient()
-        templates = EmailTemplates()
-        subject = "your 2 weeks of Plus, free"
-        # Copy lives in the founder_offer template (self-serve 2-week trial CTA).
-        html = templates.render_founder_offer(
-            user_name=user_name or "there",
-            sender_name="Canberk",
-            sender_title="Founder, ActorRise",
-        )
-        return client.send_email(to=user_email, subject=subject, html=html)
-    except Exception as e:
-        print(f"Error sending founder offer email to {user_email}: {e}")
-        raise
-
 
 def send_submission_notification(
     user_email: str,

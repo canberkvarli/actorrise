@@ -86,17 +86,6 @@ def _send_test(args):
             video_url=args.video_url,
             unsubscribe_url=unsub_url,
         ),
-        "founder-offer": lambda: templates.render_founder_offer(
-            user_name="Test User",
-            promo_code=getattr(args, "promo_code", None) or "FOUNDER",
-            discount_description=getattr(args, "discount_description", None) or "Enter this at checkout",
-            upgrade_url=getattr(args, "upgrade_url", None) or "https://actorrise.com/pricing",
-            sender_name=getattr(args, "sender_name", None) or "Canberk",
-            sender_title=getattr(args, "sender_title", None) or "Founder, ActorRise",
-            share_text=getattr(args, "share_text", None),
-            share_url=getattr(args, "share_url", None),
-            unsubscribe_url=unsub_url,
-        ),
         "weekly-engagement": lambda: templates.render_weekly_engagement(
             user_name="Test User",
             monologue_title=args.monologue_title or "To be, or not to be",
@@ -116,7 +105,6 @@ def _send_test(args):
     subject_map = {
         "upgrade-nudge": "Unlock more with ActorRise Plus",
         "feature-announcement": args.title or "What's new on ActorRise",
-        "founder-offer": "A special offer just for you",
         "weekly-engagement": "Your weekly pick from ActorRise",
     }
 
@@ -148,16 +136,6 @@ def _send_campaign(args):
                     "cta_text": args.cta_text,
                     "cta_url": args.cta_url,
                     "video_url": getattr(args, "video_url", None),
-                }
-            elif campaign_type == "founder_offer":
-                kwargs = {
-                    "promo_code": getattr(args, "promo_code", None) or "FOUNDER",
-                    "discount_description": getattr(args, "discount_description", None) or "Use at checkout for your exclusive discount",
-                    "upgrade_url": getattr(args, "upgrade_url", None) or "https://actorrise.com/pricing",
-                    "sender_name": getattr(args, "sender_name", None) or "Canberk",
-                    "sender_title": getattr(args, "sender_title", None) or "Founder, ActorRise",
-                    "share_text": getattr(args, "share_text", None),
-                    "share_url": getattr(args, "share_url", None),
                 }
             elif campaign_type == "weekly_engagement":
                 kwargs = {
@@ -204,13 +182,12 @@ def main():
     # --- test command ---
     test_parser = subparsers.add_parser("test", help="Send a single test email to yourself")
     test_parser.add_argument("--to", required=True, help="Your email address")
-    test_parser.add_argument("--campaign", required=True, choices=["upgrade-nudge", "feature-announcement", "founder-offer", "weekly-engagement"])
+    test_parser.add_argument("--campaign", required=True, choices=["upgrade-nudge", "feature-announcement", "weekly-engagement"])
 
     # --- shared campaign args ---
     for name, help_text in [
         ("upgrade-nudge", "Send upgrade nudge to free-tier users"),
         ("feature-announcement", "Send feature announcement"),
-        ("founder-offer", "Send founder offer with promo code"),
         ("weekly-engagement", "Send weekly engagement digest"),
     ]:
         p = subparsers.add_parser(name, help=help_text)
@@ -226,9 +203,6 @@ def main():
         p.add_argument("--cta-url", help="CTA button URL")
         p.add_argument("--video-url", help="Optional video URL")
 
-    # Founder offer args
-    for p in [test_parser, subparsers.choices["founder-offer"]]:
-        p.add_argument("--promo-code", help="Promo code (default: FOUNDER)")
         p.add_argument("--discount-description", help="Discount details text")
         p.add_argument("--upgrade-url", help="Upgrade URL")
         p.add_argument("--sender-name", help="Sender name (default: Canberk)")

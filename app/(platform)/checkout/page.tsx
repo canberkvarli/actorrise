@@ -93,11 +93,11 @@ function CheckoutContent() {
       });
   }, [tierName, router]);
 
-  // Deep-linked promo (e.g. the "get your founder coupon" button on /billing
-  // sends ?promo=FOUNDER3) — auto-apply it once the tier has loaded.
+  // A ?promo= on the URL is auto-applied once the tier has loaded. FOUNDER3 is
+  // skipped here on purpose: it is retired, and an old link carrying it is
+  // routed to the free trial above rather than failing as a bad coupon.
   useEffect(() => {
     const p = searchParams.get("promo");
-    // FOUNDER3 is retired → handled as the free trial (isTrial), not a coupon.
     if (p && p.toUpperCase() !== "FOUNDER3" && tier && !promoApplied) {
       applyPromo(p);
     }
@@ -114,9 +114,15 @@ function CheckoutContent() {
       setTimeout(() => setPromoShake(false), 500);
     };
 
-    // Founder coupons are retired — the free trial replaces them (no code).
+    // These codes are retired. The list stays so an old link or a remembered
+    // code gets a straight answer instead of "invalid coupon", but nothing in
+    // the product offers them any more.
+    //
+    // The message used to promise a 3-month trial. The trial has been 14 days
+    // since the founder-era link was retired, so it was quoting an offer that
+    // no longer exists to someone already holding a dead code.
     if (["FOUNDER", "FOUNDER3", "FOUNDER6", "FOUNDER12"].includes(code)) {
-      triggerShake("That code has retired. Just start the 3-month free trial instead.");
+      triggerShake("That code has retired. Start the 2-week free trial instead.");
     } else if (code === "STARTUPS" || code === "STARTUPS24") {
       setPromoApplied("STARTUPS");
       setPromoError(null);
