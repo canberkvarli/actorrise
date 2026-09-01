@@ -67,6 +67,94 @@ function Piece({ m }: { m: Monologue }) {
   );
 }
 
+type LanePiece = {
+  id: number;
+  character_name: string;
+  play_title?: string | null;
+  tone?: string | null;
+  estimated_duration_seconds?: number | null;
+};
+
+type Lane = {
+  line?: string | null;
+  blurb?: string | null;
+  credits_counted: number;
+  needed: number;
+  pieces: LanePiece[];
+};
+
+/**
+ * The lane read, when the credits can carry one.
+ *
+ * This is the whole argument for filling in a résumé that currently feeds
+ * nothing: three credits in, the app names the kind of actor they describe and
+ * picks in that lane. Below the threshold, or if the model declines, `line` is
+ * null and the block falls back to the profile picks it showed before, which is
+ * why this never renders an error.
+ */
+function LaneRead({ lane }: { lane: Lane }) {
+  return (
+    <>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 className="font-brand text-xl font-medium text-foreground">
+          Your lane
+        </h2>
+        <span className="text-xs text-muted-foreground/60">
+          from {lane.credits_counted} credit{lane.credits_counted === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      <motion.p
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        className="stage-direction mt-3 text-base text-primary sm:text-lg"
+      >
+        {lane.line}
+      </motion.p>
+      {lane.blurb && (
+        <p className="mt-2 max-w-prose text-sm leading-relaxed text-muted-foreground">
+          {lane.blurb}
+        </p>
+      )}
+
+      {lane.pieces.length > 0 && (
+        <>
+          <p className="mt-6 text-xs uppercase tracking-[0.14em] text-muted-foreground/60">
+            Speeches in that lane
+          </p>
+          <motion.div
+            initial="hidden"
+            animate="show"
+            variants={{ show: { transition: { staggerChildren: 0.06 } } }}
+            className="mt-3 grid gap-3 sm:grid-cols-3"
+          >
+            {lane.pieces.map((p) => (
+              <motion.div
+                key={p.id}
+                variants={{ hidden: { opacity: 0, y: 10 }, show: { opacity: 1, y: 0 } }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <Piece
+                  m={
+                    {
+                      id: p.id,
+                      character_name: p.character_name,
+                      play_title: p.play_title ?? "",
+                      tone: p.tone ?? undefined,
+                      estimated_duration_seconds: p.estimated_duration_seconds ?? 0,
+                    } as Monologue
+                  }
+                />
+              </motion.div>
+            ))}
+          </motion.div>
+        </>
+      )}
+    </>
+  );
+}
+
 export function ProfilePayoff({ signature, ready, because }: Props) {
   // Hold the signature still for a beat. Every select fires a save AND would
   // otherwise fire a recommendation request; the actor is usually mid-thought.
@@ -93,6 +181,24 @@ export function ProfilePayoff({ signature, ready, because }: Props) {
   // Array.isArray, not `?? []` — a non-array payload would throw in .map and
   // take the whole profile route down through the error boundary.
   const items = Array.isArray(data) ? data.slice(0, 3) : [];
+
+  // The lane supersedes the profile picks when the credits can carry it.
+  // Deliberately not `enabled: ready` — an actor can have credits without a
+  // finished profile, and the credits are the better signal of the two.
+  const { data: lane } = useQuery({
+    queryKey: ["actor-lane"],
+    queryFn: async () => (await api.get<Lane>("/api/resume/lane")).data,
+    retry: false,
+    staleTime: 60_000,
+  });
+
+  if (lane?.line) {
+    return (
+      <section className="mt-10 border-t border-border/70 pt-8">
+        <LaneRead lane={lane} />
+      </section>
+    );
+  }
 
   return (
     <section className="mt-10 border-t border-border/70 pt-8">

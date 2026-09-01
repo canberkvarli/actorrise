@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from typing import Any, Iterable, Optional
 
 from openai import OpenAI
@@ -34,6 +35,8 @@ MIN_CREDITS = 3
 # directly matches nothing, silently, which is a bug this codebase has shipped
 # more than once.
 AGE_VALUES = {"child", "teens", "20s", "30s", "40s", "50s", "60+", "any"}
+# Corpus stores male / female / any / "either gender".
+GENDER_VALUES = {"male", "female", "any"}
 # Verified against prod, not guessed. My first pass used comedic/dramatic/
 # serio-comic, which would have matched two of these twelve and silently
 # dropped the rest.
@@ -66,11 +69,14 @@ Return ONLY JSON with these keys:
   line    a lower case parenthetical aside naming the lane, e.g.
           "(you get cast as the young man who won't sit down.)"
   blurb   one or two short sentences on what connects the roles.
-  tags    {"age_skew": <age>, "tones": [<tone>...], "eras": [<era>...],
-           "archetype": "<3-5 words>", "keywords": [<4-8 single words>]}
+  tags    {"age_skew": <age>, "gender": <gender>, "tones": [<tone>...],
+           "eras": [<era>...], "archetype": "<3-5 words>",
+           "keywords": [<4-8 single words>]}
 
 Vocabulary you MUST use, exactly. Pick only from these lists:
   age_skew: child, teens, 20s, 30s, 40s, 50s, 60+, any
+  gender:   male, female, any   (the gender of the roles listed, not the
+            actor's. Use "any" unless the roles clearly skew one way.)
   tones:    defiant, anguished, contemplative, dark, dramatic, comedic,
             philosophical, inspirational, sarcastic, melancholic, romantic,
             joyful   (choose one to three)
@@ -87,7 +93,16 @@ Rules:
   not contain a proper noun, a play title or a character name.
 - Invent nothing. Describe only the credits given.
 - If the credits are too few or too scattered to read honestly, return
-  {"line": null} and nothing else."""
+  {"line": null} and nothing else.
+
+Write like an actor talking to another actor in a bar, not like a bio.
+Concrete and plain. The line should be something a person would actually say
+out loud, e.g. "(you get cast as the young man who won't sit down.)" or
+"(you get cast as the woman everyone else is afraid of.)"
+The blurb is ONE short sentence about what the roles have in common.
+BANNED words, they read as filler: showcase, showcasing, reflect, reflects,
+embody, embodies, journey, dynamic, nuanced, multifaceted, compelling,
+resonate, explore, exploration, depth, range, versatile."""
 
 
 def _client() -> Optional[OpenAI]:
@@ -131,9 +146,33 @@ def read_lane(credits: list[ActorCredit]) -> Optional[dict[str, Any]]:
 
     return {
         "line": line,
-        "blurb": (data.get("blurb") or "").strip() or None,
+        "blurb": _clean_blurb(data.get("blurb")),
         "tags": _clean_tags(data.get("tags") or {}),
     }
+
+
+# Asking the prompt not to use these got most of the way there; "showcase" still
+# came back. Enforced here instead, because a prompt is a request and this is a
+# rule. The blurb is dropped rather than rewritten: the line carries the value,
+# and inventing a replacement sentence would be putting words in the actor's
+# mouth about their own career.
+_FILLER = (
+    "showcase", "showcasing", "reflect", "embody", "journey", "dynamic",
+    "nuanced", "multifaceted", "compelling", "resonate", "explore",
+    "exploration", "versatile", "tapestry", "testament",
+)
+
+
+def _clean_blurb(raw: Any) -> Optional[str]:
+    text = (str(raw or "")).strip()
+    if not text:
+        return None
+    lowered = text.lower()
+    if any(word in lowered for word in _FILLER):
+        return None
+    # An em dash would show up verbatim on the profile. Swallow the surrounding
+    # spaces too, or " — " becomes " , ".
+    return re.sub(r"\s*[—–]\s*", ", ", text)
 
 
 def _clean_tags(raw: dict[str, Any]) -> dict[str, Any]:
@@ -147,12 +186,14 @@ def _clean_tags(raw: dict[str, Any]) -> dict[str, Any]:
         return [v for v in (str(x).strip().lower() for x in values) if v in allowed]
 
     age = str(raw.get("age_skew", "")).strip().lower()
+    gender = str(raw.get("gender", "")).strip().lower()
     keywords = raw.get("keywords") or []
     if not isinstance(keywords, list):
         keywords = []
 
     return {
         "age_skew": age if age in AGE_VALUES else None,
+        "gender": gender if gender in GENDER_VALUES else None,
         "tones": keep(raw.get("tones"), TONE_VALUES),
         "eras": keep(raw.get("eras"), ERA_VALUES),
         "archetype": (str(raw.get("archetype") or "").strip() or None),
@@ -182,8 +223,21 @@ def pick_in_lane(
     )
 
     age = tags.get("age_skew")
+    gender = tags.get("gender")
     tones = tags.get("tones") or []
     eras = tags.get("eras") or []
+
+    def with_gender(q):
+        """An actor cast as matriarchs should not be handed Neil from Heat.
+        Without this the picks crossed gender freely."""
+        if gender and gender != "any":
+            return q.filter(
+                or_(
+                    Monologue.character_gender == gender,
+                    Monologue.character_gender.in_(("any", "either gender")),
+                )
+            )
+        return q
 
     def with_age(q):
         if age and age != "any":
@@ -195,17 +249,23 @@ def pick_in_lane(
             )
         return q
 
+    def narrow(q):
+        return with_gender(with_age(q))
+
     # Era is a column on plays, not monologues, and the join is already in base.
     attempts = []
     if tones and eras:
         attempts.append(
-            with_age(base.filter(Monologue.tone.in_(tones), Play.category.in_(eras)))
+            narrow(base.filter(Monologue.tone.in_(tones), Play.category.in_(eras)))
         )
     if tones:
-        attempts.append(with_age(base.filter(Monologue.tone.in_(tones))))
+        attempts.append(narrow(base.filter(Monologue.tone.in_(tones))))
     if eras:
-        attempts.append(with_age(base.filter(Play.category.in_(eras))))
-    attempts.append(with_age(base))
+        attempts.append(narrow(base.filter(Play.category.in_(eras))))
+    attempts.append(narrow(base))
+    # Gender survives one step longer than tone/era: it is the constraint an
+    # actor would notice being ignored.
+    attempts.append(with_gender(base))
     attempts.append(base)
 
     # Offset by user id so two actors in the same lane are not handed the same

@@ -19,6 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { IconLoader2, IconPhoto, IconEdit, IconX, IconTrash, IconUpload } from "@tabler/icons-react";
 import { PhotoEditor } from "./PhotoEditor";
 import { FieldLabel } from "./FieldHint";
+import { CreditsInline } from "./CreditsInline";
 import { ProfileCallSheet, type CallSheetSlot } from "./ProfileCallSheet";
 import { ProfilePayoff } from "./ProfilePayoff";
 import { MasksSketch, SpotlightSketch, StageDoorSketch } from "@/components/brand/sketches";
@@ -1280,6 +1281,22 @@ export function ActorProfileForm() {
                             {errors.union_status.message}
                           </motion.p>
                         )}
+                      </Field>
+
+                      {/* Credits sit with the career questions, not on a page
+                          of their own. Three of them and the payoff block below
+                          stops guessing from dropdowns and reads the lane off
+                          what you have actually been cast in. */}
+                      <Field>
+                        <FieldLabel hint="Three is enough to see a pattern. The full résumé, with company, director and a PDF, lives on the résumé page.">
+                          What you&apos;ve been cast in
+                        </FieldLabel>
+                        <p className="text-xs text-muted-foreground">
+                          Three and I can tell you what lane you read as.
+                        </p>
+                        <div className="pt-1">
+                          <CreditsInline />
+                        </div>
                       </Field>
 
                       <GroupRule>Optional, sharpens the picks</GroupRule>
