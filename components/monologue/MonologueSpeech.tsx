@@ -79,7 +79,7 @@ export function MonologueSpeech({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.04, 0.3), duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      className="group border-t border-border/60 py-8 first:border-t-0 first:pt-2"
+      className="group border-t border-border/60 py-6 first:border-t-0 first:pt-2"
     >
       <div className="flex items-baseline justify-between gap-4">
         <h3 className="min-w-0">
@@ -107,13 +107,19 @@ export function MonologueSpeech({
 
       {/* The piece. This is the whole reason the row exists, so it gets the
           measure and the size of something meant to be read, not scanned. */}
+      {/* Three lines, not seven.
+          Seven put rows at 340px, which is 2.6 results per screen and eight
+          screens to reach the twentieth; the grid this replaced showed nine at
+          once. Three lines is still enough to hear the voice and decide, and
+          the whole speech is one tap away. The excerpt was never meant to be
+          the piece, only enough of it to choose by. */}
       <button
         type="button"
         onClick={onSelect}
-        className="mt-4 block w-full text-left"
+        className="mt-3 block w-full text-left"
       >
-        <p className="font-typewriter line-clamp-[7] max-w-[64ch] text-[15px] leading-[1.85] text-foreground/85 sm:text-base">
-          &ldquo;{mono.text.substring(0, 460)}&hellip;&rdquo;
+        <p className="font-typewriter line-clamp-3 max-w-[64ch] text-[15px] leading-[1.8] text-foreground/85">
+          &ldquo;{mono.text.substring(0, 260)}&hellip;&rdquo;
         </p>
       </button>
 
