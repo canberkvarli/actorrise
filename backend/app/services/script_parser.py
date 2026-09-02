@@ -18,6 +18,16 @@ from openai import OpenAI
 from app.core.config import settings
 
 
+# Bump whenever extraction changes what a script comes out as. The cache is
+# keyed on it, so a deploy that fixes the parser retires its own stale results
+# instead of quietly serving them for another six months.
+#
+#   1  original
+#   2  angled watermarks, fake bold, revision marks, sides keep short exchanges,
+#      no more titles named after a slug line  (2026-09-02)
+PARSER_VERSION = 2
+
+
 # ---------------------------------------------------------------------------
 # Regex patterns for dialogue parsing
 # ---------------------------------------------------------------------------
@@ -606,15 +616,14 @@ def filter_two_person_scenes(
     return scenes
 
 
-# A scene wants four lines to be worth rehearsing. In a feature-length script
-# that costs nothing — there is always plenty else to pick. Sides are a handful
-# of short exchanges and the floor eats them: a two-page side came back with one
-# of the four scenes on the page, the other three thrown away.
+# A scene wants four lines to be worth rehearsing. Two people trading one line
+# each is a beat, not something you can work.
 REHEARSAL_MIN_LINES = 4
-# Below the floor, a scene still counts if it is a real two-way exchange.
+# Below the floor, a scene still counts if it is a real two-way exchange — but
+# only when the floor would otherwise leave the actor with nothing at all. Sides
+# are short by nature and a strict floor can empty them; a side that does hold
+# one real scene should hand over that scene, not it plus a two-line scrap.
 EXCHANGE_MIN_LINES = 2
-# How many full-length scenes make the short ones surplus rather than the script.
-ENOUGH_FULL_SCENES = 3
 
 
 def _is_exchange(scene: Dict) -> bool:
@@ -633,13 +642,12 @@ def rehearsable_scenes(scenes: List[Dict]) -> List[Dict]:
         return len(scene.get("lines", [])) >= floor
 
     full = [s for s in scenes if at_least(s, REHEARSAL_MIN_LINES)]
-    if len(full) >= ENOUGH_FULL_SCENES:
+    if full:
         return full
 
     return [
         s for s in scenes
-        if at_least(s, REHEARSAL_MIN_LINES)
-        or (at_least(s, EXCHANGE_MIN_LINES) and _is_exchange(s))
+        if at_least(s, EXCHANGE_MIN_LINES) and _is_exchange(s)
     ]
 
 

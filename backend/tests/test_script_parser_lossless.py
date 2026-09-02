@@ -166,36 +166,37 @@ class RehearsableScenesTests(unittest.TestCase):
     """
 
     SIDE = [
-        _scene("Clerk", "FERGUSON", "CLERK", "FERGUSON"),
         _scene("Henry", "FERGUSON", "HENRY", "FERGUSON", "HENRY", "FERGUSON"),
         _scene("Bruebecker", "SHARON", "ALI"),
         _scene("Court order", "KATHLEEN", "JASON"),
     ]
 
-    def test_a_side_keeps_all_of_its_exchanges(self):
+    def test_a_two_line_beat_is_not_a_scene_when_a_real_one_exists(self):
+        # Handing an actor "Why only twenty? / Court order." as a rehearsal
+        # scene is worse than not handing it over at all.
         kept = rehearsable_scenes(self.SIDE)
-        self.assertEqual([s["title"] for s in kept],
-                         ["Clerk", "Henry", "Bruebecker", "Court order"])
 
-    def test_a_full_script_still_drops_fragments(self):
+        self.assertEqual([s["title"] for s in kept], ["Henry"])
+
+    def test_a_side_of_only_short_beats_keeps_them(self):
+        # The floor may leave the actor with nothing; then the beats are it.
+        kept = rehearsable_scenes(self.SIDE[1:])
+
+        self.assertEqual([s["title"] for s in kept], ["Bruebecker", "Court order"])
+
+    def test_a_full_script_drops_fragments(self):
         script = [_scene(f"Scene {i}", *["A", "B"] * 3) for i in range(5)]
-        fragment = _scene("Fragment", "A", "B")
 
-        kept = rehearsable_scenes(script + [fragment])
+        kept = rehearsable_scenes(script + [_scene("Fragment", "A", "B")])
 
         self.assertNotIn("Fragment", [s["title"] for s in kept])
         self.assertEqual(len(kept), 5)
 
-    def test_one_sided_fragment_is_not_an_exchange(self):
+    def test_one_sided_fragment_is_never_an_exchange(self):
         # A stray pair of lines from a single speaker is a leftover, not a scene.
         kept = rehearsable_scenes([_scene("Solo", "A", "A"), _scene("Duet", "A", "B")])
-        self.assertEqual([s["title"] for s in kept], ["Duet"])
 
-    def test_a_long_scene_survives_the_short_script_path(self):
-        # Falling back must not start dropping scenes the floor would have kept.
-        monologue = _scene("Monologue", "A", "A", "A", "A", "A")
-        kept = rehearsable_scenes([monologue, _scene("Duet", "A", "B")])
-        self.assertEqual([s["title"] for s in kept], ["Monologue", "Duet"])
+        self.assertEqual([s["title"] for s in kept], ["Duet"])
 
 
 if __name__ == "__main__":
