@@ -17,6 +17,7 @@ from typing import Dict, List, Optional
 import pdfplumber
 from openai import OpenAI
 from app.core.config import settings
+from app.services.character_names import normalize_name
 
 
 # Bump whenever extraction changes what a script comes out as. The cache is
@@ -30,7 +31,9 @@ from app.core.config import settings
 #      speech attributed to its own cue  (2026-09-02)
 #   4  short beats fold into the scene beside them instead of being dropped, so
 #      no uploaded dialogue is ever lost  (2026-09-02)
-PARSER_VERSION = 4
+#   5  attribution and order taken from the source rather than the AI's retyping
+#      of it  (2026-09-02)
+PARSER_VERSION = 5
 
 
 # ---------------------------------------------------------------------------
@@ -816,6 +819,82 @@ def _reseat_leads(scene: Dict) -> None:
         scene["character_1"] = ranked[0]
     if len(ranked) > 1:
         scene["character_2"] = ranked[1]
+
+
+def _spoken_key(text: str) -> str:
+    """A line's text reduced to what survives being re-typed by an LLM."""
+    return re.sub(r"[^a-z0-9]+", "", (text or "").casefold())
+
+
+def _locate_line(keys: List[str], needle: str, start: int) -> Optional[int]:
+    """Index of the source line a piece of extracted text came from."""
+    if not needle:
+        return None
+    for i in range(start, len(keys)):
+        if keys[i].startswith(needle[:40]) or needle.startswith(keys[i][:40]):
+            return i
+    return None
+
+
+def _align_to_source(scenes: List[Dict], raw_text: str) -> List[Dict]:
+    """Let the parser own who says what; the AI keeps the framing.
+
+    The deterministic pass reads a screenplay's columns and never invents a
+    speaker. The AI re-types the line list while assembling scenes and renames,
+    reorders and merges as it goes — on Heidi Marshall's side it handed SHARON's
+    line to "Ali Bruebecker", the character being spoken *to*. Where a scene's
+    dialogue can be found in the source, its lines are taken from the source
+    instead; title, description, tone and setting stay the AI's.
+    """
+    if not raw_text or not scenes:
+        return scenes
+
+    source = [ln for sec in parse_dialogue(raw_text) for ln in sec["lines"]]
+    if not source:
+        return scenes
+    keys = [_spoken_key(ln["text"]) for ln in source]
+
+    for scene in scenes:
+        ai_lines = scene.get("lines") or []
+        if not ai_lines:
+            continue
+
+        first = _locate_line(keys, _spoken_key(ai_lines[0].get("text")), 0)
+        if first is None:
+            continue
+        last = _locate_line(keys, _spoken_key(ai_lines[-1].get("text")), first)
+        if last is None:
+            continue
+
+        span = source[first:last + 1]
+        # A span that dwarfs the scene means the ends matched the wrong lines
+        # somewhere else in a long script. Leave that scene to the AI.
+        if not span or len(span) > len(ai_lines) * 3 + 5:
+            continue
+
+        # Keep the AI's spelling of a name — "Anita Ferguson" reads better than
+        # the cue "FERGUSON" and is what the character list uses — but only where
+        # it is plainly the same person. A name it invented finds no match and
+        # the cue stands.
+        display = {}
+        for name in ([line.get("character") for line in ai_lines]
+                     + [scene.get("character_1"), scene.get("character_2")]):
+            if name:
+                display.setdefault(normalize_name(name), name)
+
+        def as_named(cue: str) -> str:
+            key = normalize_name(cue)
+            if key in display:
+                return display[key]
+            for known, spelling in display.items():
+                if known and (known in key or key in known):
+                    return spelling
+            return cue
+
+        scene["lines"] = [dict(line, character=as_named(line["character"])) for line in span]
+        _reseat_leads(scene)
+
+    return scenes
 
 
 def _recover_dropped_dialogue(scenes: List[Dict], raw_text: str) -> List[Dict]:
@@ -1957,6 +2036,8 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         # Lossless guard: repair any dialogue the LLM dropped/merged, using the
         # deterministic parser as the source of truth (before the length filter, so
         # recovered lines count toward the 4-line minimum).
+        # Attribution and order come from the source; the AI keeps the framing.
+        scenes = _align_to_source(scenes, raw_text)
         scenes = _recover_dropped_dialogue(scenes, raw_text)
 
         if not _has_title_page(raw_text) or not _is_usable_title(metadata.get("title")):

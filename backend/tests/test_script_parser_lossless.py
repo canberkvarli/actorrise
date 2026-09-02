@@ -18,6 +18,7 @@ from app.services.script_parser import (
     parse_dialogue,
     filter_two_person_scenes,
     rehearsable_scenes,
+    _align_to_source,
     _recover_dropped_dialogue,
 )
 
@@ -151,6 +152,71 @@ class LosslessGuardTests(unittest.TestCase):
         before = len(good_scene["lines"])
         recovered = _recover_dropped_dialogue([dict(good_scene)], SCREENPLAY)
         self.assertEqual(len(recovered[0]["lines"]), before)
+
+
+SIDE_COLUMNS = "\n".join([
+    "               A COURTHOUSE CLERK, clipboard in hand, handling check-in.",
+    "                                   FERGUSON",
+    "                         I've just been told...",
+    "                                   COURTHOUSE CLERK",
+    "                         I'm really sorry. You need to be",
+    "                         part of the lawsuit to testify.",
+    "                                   HENRY",
+    "                         Can I help you?",
+    "                                   SHARON",
+    "                         Ms. Bruebecker, how can I help you?",
+])
+
+
+class AlignToSourceTests(unittest.TestCase):
+    """The parser owns who says what; the AI only frames it.
+
+    Assembling scenes, the AI re-types the line list and renames, reorders and
+    merges as it goes. On Heidi Marshall's side it handed SHARON's line to "Ali
+    Bruebecker" — the character being spoken *to*.
+    """
+
+    def _aligned(self, ai_lines):
+        scene = {"title": "X", "character_1": "Anita Ferguson", "character_2": "Henry",
+                 "lines": ai_lines}
+        return _align_to_source([scene], SIDE_COLUMNS)[0]["lines"]
+
+    def test_a_misattributed_line_is_given_back_to_its_cue(self):
+        aligned = self._aligned([
+            {"character": "Anita Ferguson", "text": "I've just been told..."},
+            {"character": "Ali Bruebecker", "text": "Ms. Bruebecker, how can I help you?"},
+        ])
+
+        self.assertEqual(aligned[-1]["character"], "SHARON")
+
+    def test_lines_the_ai_skipped_come_back_in_order(self):
+        aligned = self._aligned([
+            {"character": "Anita Ferguson", "text": "I've just been told..."},
+            {"character": "Sharon", "text": "Ms. Bruebecker, how can I help you?"},
+        ])
+
+        self.assertEqual([l["text"] for l in aligned], [
+            "I've just been told...",
+            "I'm really sorry. You need to be part of the lawsuit to testify.",
+            "Can I help you?",
+            "Ms. Bruebecker, how can I help you?",
+        ])
+
+    def test_the_ai_spelling_of_a_name_is_kept(self):
+        # "Anita Ferguson" reads better than the cue and matches the character
+        # list; it is plainly the same person, so it stands.
+        aligned = self._aligned([
+            {"character": "Anita Ferguson", "text": "I've just been told..."},
+            {"character": "Henry", "text": "Can I help you?"},
+        ])
+
+        self.assertEqual(aligned[0]["character"], "Anita Ferguson")
+        self.assertEqual(aligned[-1]["character"], "Henry")
+
+    def test_a_scene_that_cannot_be_found_is_left_alone(self):
+        ai_lines = [{"character": "A", "text": "Nothing here matches the source."}]
+
+        self.assertEqual(self._aligned(ai_lines), ai_lines)
 
 
 def _scene(title, *speakers):
