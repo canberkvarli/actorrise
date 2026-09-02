@@ -26,7 +26,9 @@ from app.core.config import settings
 #   1  original
 #   2  angled watermarks, fake bold, revision marks, sides keep short exchanges,
 #      no more titles named after a slug line  (2026-09-02)
-PARSER_VERSION = 2
+#   3  screenplays read by their columns: action kept as stage direction, every
+#      speech attributed to its own cue  (2026-09-02)
+PARSER_VERSION = 3
 
 
 # ---------------------------------------------------------------------------
