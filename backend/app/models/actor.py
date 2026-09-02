@@ -437,6 +437,10 @@ class ExtractionCache(Base):
     id = Column(Integer, primary_key=True, index=True)
     file_hash = Column(String, nullable=False, unique=True, index=True)  # SHA256 of file content
     extraction_result = Column(JSON, nullable=False)  # Full extraction result (metadata + scenes)
+    # Which parser produced this. A row from an older parser is a miss, so a
+    # deploy that fixes extraction retires its own stale results instead of
+    # serving them until someone notices months later.
+    parser_version = Column(Integer, nullable=False, server_default=sql_text('1'))
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
 
 

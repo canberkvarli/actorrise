@@ -31,7 +31,7 @@ from app.models.actor import (
 from app.services.script_tags import normalize_tag_list
 from app.models.user import User
 from app.services.character_names import canonicalize_scene_characters
-from app.services.script_parser import ScriptParser
+from app.services.script_parser import PARSER_VERSION, ScriptParser
 
 router = APIRouter(prefix="/api/scripts", tags=["scripts"])
 
@@ -534,11 +534,14 @@ async def upload_script_stream(
     cancel_event = threading.Event()
     extraction_completed = [False]  # flag to suppress false-positive disconnect log after success
 
-    # Check extraction cache before releasing DB
+    # Check extraction cache before releasing DB. A row from an older parser is
+    # a miss — otherwise a deploy that fixes extraction keeps handing back the
+    # results of the parser it replaced.
     cached_result = None
     try:
         cache_entry = db.query(ExtractionCache).filter(
-            ExtractionCache.file_hash == file_hash
+            ExtractionCache.file_hash == file_hash,
+            ExtractionCache.parser_version == PARSER_VERSION,
         ).first()
         if cache_entry:
             cached_result = cache_entry.extraction_result
@@ -637,12 +640,18 @@ async def upload_script_stream(
 
             result = extraction_result["data"]
 
-            # Store in extraction cache for future re-uploads
+            # Store in extraction cache for future re-uploads. file_hash is
+            # unique, so a stale row from an older parser is replaced rather
+            # than left to collide.
             try:
                 cache_db = SessionLocal()
+                cache_db.query(ExtractionCache).filter(
+                    ExtractionCache.file_hash == file_hash
+                ).delete()
                 cache_db.add(ExtractionCache(
                     file_hash=file_hash,
                     extraction_result=result,
+                    parser_version=PARSER_VERSION,
                 ))
                 cache_db.commit()
                 cache_db.close()
@@ -2074,6 +2083,173 @@ async def add_scene_to_script(
     db.refresh(scene)
 
     return SceneInScriptResponse.model_validate(scene)
+
+
+def _build_scenes(db: Session, user_script, play_id: int, scenes_data: list) -> list:
+    """Turn extracted scene dicts into Scene + SceneLine rows.
+
+    Same shape as the block in the upload paths; those predate this helper and
+    still carry their own copy.
+    """
+    from app.utils.duration import estimate_duration_seconds
+
+    created = []
+    for scene_data in scenes_data:
+        # One person can be cued two ways in a script, and the declared name may
+        # never appear as a cue at all. Reconcile before the scene is stored.
+        scene_data = canonicalize_scene_characters(scene_data)
+        lines = scene_data.get("lines", [])
+        characters = user_script.characters or []
+
+        def info(name):
+            return next((c for c in characters if c.get("name") == name), {})
+
+        char1 = info(scene_data.get("character_1"))
+        char2 = info(scene_data.get("character_2"))
+        raw_setting = scene_data.get("setting")
+        clean_setting = (
+            None if not raw_setting or raw_setting.strip().lower() == "unknown" else raw_setting
+        )
+
+        scene = Scene(
+            play_id=play_id,
+            user_script_id=user_script.id,
+            title=scene_data.get("title", "Untitled Scene"),
+            description=scene_data.get("description"),
+            act=scene_data.get("act"),
+            scene_number=scene_data.get("scene_number"),
+            character_1_name=scene_data.get("character_1", "Character 1"),
+            character_2_name=scene_data.get("character_2", "Character 2"),
+            character_1_gender=char1.get("gender"),
+            character_2_gender=char2.get("gender"),
+            character_1_age_range=char1.get("age_range"),
+            character_2_age_range=char2.get("age_range"),
+            line_count=len(lines),
+            estimated_duration_seconds=estimate_duration_seconds(
+                "\n".join(l.get("text", "") for l in lines)
+            ),
+            setting=clean_setting,
+            difficulty_level="intermediate",
+            tone=scene_data.get("tone"),
+            primary_emotions=scene_data.get("primary_emotions", []),
+            relationship_dynamic=scene_data.get("relationship_dynamic"),
+            is_verified=False,
+        )
+        db.add(scene)
+        db.flush()
+
+        snapshot = []
+        for idx, line_data in enumerate(lines):
+            db.add(SceneLine(
+                scene_id=scene.id,
+                line_order=idx,
+                character_name=line_data.get("character", "Unknown"),
+                text=line_data.get("text", ""),
+                stage_direction=line_data.get("stage_direction"),
+                word_count=len(line_data.get("text", "").split()),
+            ))
+            snapshot.append({
+                "line_order": idx,
+                "character_name": line_data.get("character", "Unknown"),
+                "text": line_data.get("text", ""),
+                "stage_direction": line_data.get("stage_direction"),
+            })
+
+        scene.original_snapshot = {
+            "character_1_name": scene_data.get("character_1", "Character 1"),
+            "character_2_name": scene_data.get("character_2", "Character 2"),
+            "description": scene.description,
+            "lines": snapshot,
+        }
+        created.append(scene)
+
+    return created
+
+
+@router.post("/{script_id}/reextract", response_model=UserScriptDetailResponse)
+async def reextract_script(
+    script_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Have another go at the scenes.
+
+    Scene division is the part of extraction that varies run to run, so an actor
+    who gets a bad split has somewhere to go other than emailing us. This works
+    from the stored text — the original upload isn't kept — so it re-cuts the
+    scenes but can't re-read the PDF. A file that came out wrong at the page
+    level needs re-uploading, which the parser-versioned cache now allows.
+
+    Deliberately free: charging an upload for our bad extraction is the wrong
+    signal, and the scenes it replaces were already paid for.
+    """
+    user_script = db.query(UserScript).filter(
+        UserScript.id == script_id,
+        UserScript.user_id == current_user.id,
+    ).first()
+    if not user_script:
+        raise HTTPException(status_code=404, detail="Script not found")
+    if not user_script.raw_text or len(user_script.raw_text) < 100:
+        raise HTTPException(
+            status_code=400,
+            detail="There's no stored text for this script. Upload the file again instead.",
+        )
+
+    try:
+        parser = ScriptParser()
+        result = parser.parse_script(
+            user_script.raw_text.encode("utf-8"),
+            "txt",
+            user_script.original_filename or f"script-{script_id}",
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Re-extraction failed: {e}")
+
+    old_scenes = db.query(Scene).filter(Scene.user_script_id == script_id).all()
+    if not result.get("scenes"):
+        raise HTTPException(
+            status_code=422,
+            detail="That pass found no rehearsable scenes, so the old ones were kept.",
+        )
+
+    play_id = old_scenes[0].play_id if old_scenes else None
+    if play_id is None:
+        play = Play(
+            title=user_script.title,
+            author=user_script.author or "Unknown",
+            genre=user_script.genre or "Drama",
+            category="contemporary",
+            copyright_status="user_uploaded",
+            license_type="user_content",
+            full_text=user_script.raw_text,
+            text_format="plain",
+        )
+        db.add(play)
+        db.flush()
+        play_id = play.id
+
+    scene_ids = [s.id for s in old_scenes]
+    if scene_ids:
+        db.query(SceneLine).filter(SceneLine.scene_id.in_(scene_ids)).delete(
+            synchronize_session=False
+        )
+        db.query(Scene).filter(Scene.id.in_(scene_ids)).delete(
+            synchronize_session=False
+        )
+
+    metadata = result.get("metadata", {})
+    user_script.characters = metadata.get("characters", user_script.characters)
+    user_script.num_characters = len(user_script.characters or [])
+    created = _build_scenes(db, user_script, play_id, result["scenes"])
+    user_script.num_scenes_extracted = len(created)
+    db.commit()
+    db.refresh(user_script)
+
+    scenes = db.query(Scene).filter(Scene.user_script_id == script_id).all()
+    return UserScriptDetailResponse(
+        **UserScriptResponse.model_validate(user_script).model_dump(),
+        scenes=[SceneInScriptResponse.model_validate(s) for s in scenes],
+    )
 
 
 @router.delete("/dev/clear-extraction-cache")

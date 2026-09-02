@@ -10,8 +10,11 @@ import {
   IconLoader2,
   IconPlus,
   IconPencil,
+  IconRefresh,
 } from "@tabler/icons-react";
+import { toast } from "sonner";
 
+import api from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   getGenreBadgeClassName,
@@ -47,6 +50,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
   const [expandedSceneId, setExpandedSceneId] = useState<number | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [redoing, setRedoing] = useState(false);
 
   const scenes = data?.scenes ?? [];
   const groups = groupScenesByAct(scenes);
@@ -58,6 +62,30 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
 
   const refreshScenes = () =>
     queryClient.invalidateQueries({ queryKey: ["scripts", script.id] });
+
+  /**
+   * Scene division is the part of extraction that varies run to run, so an
+   * actor who gets a bad split can ask for another pass instead of writing in.
+   * It re-cuts from the stored text; a file misread at the page level needs
+   * uploading again.
+   */
+  const redoScenes = async () => {
+    setRedoing(true);
+    try {
+      await api.post(`/api/scripts/${script.id}/reextract`, undefined, {
+        timeoutMs: 5 * 60 * 1000,
+      });
+      setExpandedSceneId(null);
+      await refreshScenes();
+      toast.success("Fresh cut of the scenes");
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : "That pass didn't work. Your scenes are untouched.",
+      );
+    } finally {
+      setRedoing(false);
+    }
+  };
 
   const metaParts: string[] = [];
   if (script.author) metaParts.push(script.author);
@@ -118,6 +146,21 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
               <IconPlus className="h-3.5 w-3.5" />
               Add scene
             </button>
+            {scenes.length > 0 && (
+              <button
+                type="button"
+                onClick={redoScenes}
+                disabled={redoing}
+                className="inline-flex items-center gap-1.5 rounded-md px-2.5 h-8 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-60"
+              >
+                {redoing ? (
+                  <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <IconRefresh className="h-3.5 w-3.5" />
+                )}
+                {redoing ? "Cutting again…" : "Redo scenes"}
+              </button>
+            )}
           </div>
         )}
       </div>
