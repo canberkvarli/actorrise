@@ -192,20 +192,36 @@ class TestFilterGuard:
     @pytest.mark.parametrize(
         "key,value",
         [
-            ("category", "classical"),
             ("theme", "love"),
             ("themes", ["love"]),
-            ("author", "Chekhov"),
             ("exclude_author", "Shakespeare"),
             ("exclude_play", "Hamlet"),
             ("character_name", "Nora"),
         ],
     )
     def test_unimplemented_filters_stand_the_prepass_down(self, key, value):
-        # These are not plain column predicates (era spans Play.category plus a
-        # year clause; themes are array containment). Rather than approximate
-        # them and quietly return the wrong pieces, decline.
+        # Not plain column predicates (themes are array containment). Rather
+        # than approximate them and quietly return the wrong pieces, decline.
         assert prepass_can_honour({key: value}, "The Night Manager") is False
+
+    @pytest.mark.parametrize("key,value", [("category", "classical"),
+                                           ("author", "Chekhov")])
+    def test_category_and_author_are_now_implemented(self, key, value):
+        """Both are plays columns and the pre-pass filters on them directly.
+
+        They used to stand the pre-pass down, and the stated reason for
+        `category` was real: era is the label PLUS a year_written correction,
+        because the labels are dirty. The pre-pass now applies
+        `era_year_clause` exactly as SemanticSearch does, so it is no longer an
+        approximation and there is nothing left to decline over.
+
+        The cost of declining was not neutral. The guard is fail-closed, so ONE
+        unsupported key stood the whole title path down: "mean girls" with a
+        classical/contemporary toggle abandoned the 8 pieces we hold and asked
+        the vector index what a bare show name resembles — which comes back
+        weak every time, because a show's name rarely appears in its dialogue.
+        """
+        assert prepass_can_honour({key: value}, "The Night Manager") is True
 
     def test_ambiguous_single_word_title_with_an_attribute_filter_is_refused(self):
         # "Awkward" is a real title with 4 monologues AND an ordinary word an
@@ -235,8 +251,10 @@ class TestFilterGuard:
         # The guard is enforced inside find_title_monologues, not just advisory.
         db = FakeDB([1], [mono(1, 0.9)])
         assert find_title_monologues(db, "Awkward", filters={"gender": "female"}) == []
+        # `theme` is array containment and still unimplemented — category moved
+        # to the honoured set once the era year clause was applied here too.
         assert find_title_monologues(
-            db, "The Night Manager", filters={"category": "classical"}
+            db, "The Night Manager", filters={"theme": "love"}
         ) == []
 
     def test_distinctive_single_word_title_runs_the_prepass_under_filters(self):

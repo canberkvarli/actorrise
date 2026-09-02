@@ -326,9 +326,16 @@ def find_catalogue_source_types(db, title: str) -> list[str]:
 # category/era (Play.category plus era_year_clause, not a plain predicate),
 # theme/themes (array containment), author/exclude_author/exclude_play and
 # character_name (ilike against a column the title match already pins down).
+#: Filters the pre-pass implements. The guard is fail-closed — one unsupported
+#: key and the whole title path stands down — so anything the API can set and
+#: this set omits silently costs an actor the show they asked for by name.
+#: `category` and `author` were omitted and are both plays columns; `theme` is
+#: still absent because it is an array column on monologues and standing down
+#: is the honest answer until it is implemented.
 _PREPASS_SUPPORTED_FILTERS = {
     "source_type", "gender", "age_range", "emotion", "tone", "difficulty",
     "max_duration", "min_duration", "act", "scene", "max_overdone_score",
+    "category", "author",
 }
 
 
@@ -422,6 +429,7 @@ def find_title_monologues(db, title: str, filters: Optional[dict] = None,
 
     from app.models.actor import Monologue
     from app.services.search.semantic_search import (_age_hard_values,
+                                                     era_year_clause,
                                                      review_hides_from_search)
 
     expr = "regexp_replace(lower(p.title), '[^\\w\\s]', '', 'g')"
@@ -437,6 +445,37 @@ def find_title_monologues(db, title: str, filters: Optional[dict] = None,
         if st:
             sql += " AND COALESCE(p.source_type, 'play') = ANY(:st)"
             params["st"] = st
+
+    # category and author are `plays` columns too, so they belong in this same
+    # query. They were missing from _PREPASS_SUPPORTED_FILTERS, and since that
+    # guard is fail-closed, EITHER of them set anywhere on the page stood the
+    # whole pre-pass down: "mean girls" with a classical/contemporary toggle on
+    # abandoned the 8 pieces we hold and asked the vector index what a bare show
+    # name is semantically similar to. Mirrors SemanticSearch's ilike matching
+    # so both paths answer the same filter the same way.
+    category = filters.get("category")
+    if category:
+        cats = category if isinstance(category, list) else [category]
+        cats = [c for c in cats if c]
+        if cats:
+            sql += " AND (" + " OR ".join(
+                f"p.category ILIKE :cat{i}" for i in range(len(cats))
+            ) + ")"
+            params.update({f"cat{i}": f"%{c}%" for i, c in enumerate(cats)})
+            # The label alone is not enough: `category` is dirty, so the vector
+            # path corrects it with year_written and this must do the same or
+            # the two paths disagree about what "contemporary" means. Single
+            # value only — a list is ambiguous — which is exactly the rule
+            # SemanticSearch applies.
+            if not isinstance(category, list):
+                era_sql = era_year_clause(cats[0])
+                if era_sql:
+                    sql += f" AND {era_sql}"
+
+    author = filters.get("author")
+    if author:
+        sql += " AND p.author ILIKE :author"
+        params["author"] = f"%{author}%"
 
     try:
         play_ids = [r[0] for r in db.execute(sa_text(sql), params).fetchall()]
