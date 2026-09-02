@@ -34,6 +34,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.models.actor import Monologue
+from app.models.rejected_extraction import RejectedExtraction
 
 #: Cosine distance at or below which two monologues are the same speech.
 #: See the module docstring for how this was calibrated.
@@ -114,3 +115,67 @@ def find_duplicate(
             return mono_id, f"near_identical:{dist:.4f}"
 
     return None
+
+# --- the skip list --------------------------------------------------------
+#
+# `find_duplicate` answers "do we already HAVE this?". These answer "have we
+# already TURNED THIS DOWN?", which is a different and previously unasked
+# question. Without it, re-reading a source re-parses, re-language-checks and
+# sometimes re-LLMs its way to a verdict we reached last time, and a short piece
+# that was deleted to reclaim space looks brand new on every pass.
+
+
+def was_rejected(db: Session, text: str) -> Optional[str]:
+    """Return the reason this exact candidate was refused before, or None."""
+    fp = text_fingerprint(text)
+    if fp == text_fingerprint(""):
+        return None
+    row = (
+        db.query(RejectedExtraction.reason)
+        .filter(RejectedExtraction.fingerprint == fp)
+        .first()
+    )
+    return row[0] if row else None
+
+
+def record_rejection(
+    db: Session,
+    text: str,
+    reason: str,
+    *,
+    word_count: Optional[int] = None,
+    character_name: Optional[str] = None,
+    play_title: Optional[str] = None,
+    source_url: Optional[str] = None,
+) -> None:
+    """Remember that this candidate was refused, without keeping its text.
+
+    Seeing the same one again bumps `times_seen` rather than inserting a second
+    row — a climbing count is the signal that a scraper keeps re-reading a
+    document it should be skipping.
+
+    Does NOT commit. The caller owns the transaction, so a rejection recorded
+    beside an insert lands or rolls back with it.
+    """
+    fp = text_fingerprint(text)
+    if fp == text_fingerprint(""):
+        return
+    existing = (
+        db.query(RejectedExtraction)
+        .filter(RejectedExtraction.fingerprint == fp)
+        .first()
+    )
+    if existing is not None:
+        existing.times_seen = (existing.times_seen or 1) + 1
+        existing.last_seen_at = func.now()
+        return
+    db.add(
+        RejectedExtraction(
+            fingerprint=fp,
+            reason=reason,
+            word_count=word_count if word_count is not None else len(text.split()),
+            character_name=(character_name or None),
+            play_title=(play_title or None),
+            source_url=(source_url or None),
+        )
+    )

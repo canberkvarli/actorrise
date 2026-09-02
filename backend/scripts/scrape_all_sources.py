@@ -44,9 +44,22 @@ from app.services.data_ingestion.archive_org_scraper import ArchiveOrgScraper
 from app.services.data_ingestion.wikisource_scraper import WikisourceScraper
 from app.services.data_ingestion.perseus_scraper import PerseusScraper
 from app.services.data_ingestion.deduplicator import MonologueDeduplicator
+from app.services.data_ingestion.pipeline import ingest_play
 from app.services.extraction.plain_text_parser import PlainTextParser
 from app.services.extraction.tei_xml_parser import TEIXMLParser
 from app.models.actor import Play, Monologue
+
+
+def _pipeline_deps():
+    """The analyser and embedder, built once and only when actually scraping.
+
+    Imported lazily so `--help`, a dry run, or a source that ends up fetching
+    nothing never needs an OpenAI key.
+    """
+    from app.services.ai.content_analyzer import ContentAnalyzer
+    from app.services.ai.langchain.embeddings import generate_embeddings_batch
+
+    return ContentAnalyzer(), generate_embeddings_batch
 
 # Configure logging
 logging.basicConfig(
@@ -208,6 +221,8 @@ def scrape_wikisource(db, limit: int = 50) -> dict:
     logger.info("PHASE 3: Wikisource")
     logger.info("=" * 60)
 
+    analyzer, embed_batch = _pipeline_deps()
+
     scraper = WikisourceScraper()
     dedup = MonologueDeduplicator(db)
     parser = PlainTextParser()
@@ -248,53 +263,42 @@ def scrape_wikisource(db, limit: int = 50) -> dict:
                     stats['failed'] += 1
                     continue
 
-                # Create Play record
-                play = Play(
+                # Everything the corpus needs happens in ingest_play: the
+                # quality gate, the skip list, the duplicate check, the metadata
+                # and the embedding. The loop that used to live here did none of
+                # it, so its rows had no vector (invisible to semantic search)
+                # and no gender/age/tone (invisible to every filter).
+                report = ingest_play(
+                    db,
                     title=title,
                     author=author,
-                    year_written=year,
-                    genre='drama',
-                    category='classical',
-                    copyright_status='public_domain',
-                    source_url=play_data.get('url'),
                     full_text=text,
-                    text_format='plain',
-                    language='en'
+                    copyright_status='public_domain',
+                    license_type='public_domain',
+                    source_url=play_data.get('url'),
+                    category='classical',
+                    genre='drama',
+                    apply=True,
+                    analyzer=analyzer,
+                    embed=embed_batch,
                 )
+                if report.refused:
+                    logger.info(f"  ✗ {title}: {report.refused}")
+                    stats['failed'] += 1
+                    continue
 
-                db.add(play)
-                db.commit()
+                if report.play_created:
+                    stats['plays_added'] += 1
+                    # full_text is kept on the row so the play can be
+                    # re-extracted later without re-fetching it.
+                    db.query(Play).filter(Play.id == report.play_id).update(
+                        {Play.full_text: text, Play.text_format: 'plain',
+                         Play.year_written: year},
+                        synchronize_session=False)
+                    db.commit()
 
-                logger.info(f"  ✅ Created play record (ID: {play.id})")
-                stats['plays_added'] += 1
-
-                # Extract monologues
-                logger.info(f"  🔍 Extracting monologues...")
-                monologues = parser.extract_monologues(text, min_words=75, max_words=500)
-
-                logger.info(f"  📝 Found {len(monologues)} potential monologues")
-
-                # Save monologues
-                for mono in monologues:
-                    try:
-                        monologue = Monologue(
-                            play_id=play.id,
-                            title=f"{mono['character']}'s speech from {title}",
-                            character_name=mono['character'],
-                            text=mono['text'],
-                            stage_directions=mono.get('stage_directions'),
-                            word_count=mono['word_count'],
-                            estimated_duration_seconds=int(mono['word_count'] / 150 * 60)  # 150 wpm
-                        )
-                        db.add(monologue)
-                        stats['monologues_added'] += 1
-
-                    except Exception as e:
-                        logger.error(f"  ⚠️  Error creating monologue: {e}")
-                        continue
-
-                db.commit()
-                logger.info(f"  ✓ Added {len(monologues)} monologues")
+                stats['monologues_added'] += report.inserted
+                logger.info(f"  ✓ {title}: {report.summary()}")
 
                 time.sleep(1)  # Rate limit
 

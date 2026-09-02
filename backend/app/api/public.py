@@ -50,16 +50,24 @@ def get_public_stats(db: Session = Depends(get_db)) -> dict[str, Any]:
     if cached is not None and cached[1] > now:
         return cached[0]
 
+    # Staff accounts are excluded from every number on this endpoint. The
+    # founder's own testing had produced 1,144 of 3,853 searches — 30% of the
+    # "monologues found by actors" figure on the landing page was him.
+    #
+    # `exclude_from_stats`, not `is_moderator`: moderating is a permission a
+    # real community member could hold, and they should still count.
+    staff_ids = db.query(User.id).filter(User.exclude_from_stats.is_(True))
+
     # All search types (monologue + film/TV + etc.) for the big "live" number.
     # Fall back to ai_searches_count if total_searches_count not yet migrated.
     try:
         db_total = db.query(
             func.coalesce(func.sum(UsageMetrics.total_searches_count), 0)
-        ).scalar() or 0
+        ).filter(UsageMetrics.user_id.notin_(staff_ids)).scalar() or 0
     except Exception:
         db_total = db.query(
             func.coalesce(func.sum(UsageMetrics.ai_searches_count), 0)
-        ).scalar() or 0
+        ).filter(UsageMetrics.user_id.notin_(staff_ids)).scalar() or 0
     total = int(db_total) + _demo_searches_count
 
     # Content record counts.
@@ -88,7 +96,11 @@ def get_public_stats(db: Session = Depends(get_db)) -> dict[str, Any]:
         .filter(searchable).scalar() or 0
     )
 
-    user_count = db.query(sql_count(User.id)).scalar() or 0
+    user_count = (
+        db.query(sql_count(User.id))
+        .filter(User.exclude_from_stats.is_(False))
+        .scalar() or 0
+    )
 
     payload = {
         "total_searches": total,

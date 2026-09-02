@@ -15,6 +15,14 @@ class User(Base):
 
     # Moderation permissions
     is_moderator = Column(Boolean, default=False, nullable=False)  # Can review submissions
+
+    #: Staff / testing account — keep it out of user-facing numbers.
+    #:
+    #: Deliberately NOT the same thing as `is_moderator`, which is a permission a
+    #: genuine community member could hold and who should still count as a user.
+    #: The founder's own accounts had produced 1,144 of 3,853 searches — 30% of
+    #: the "monologues found" figure on the landing page was him testing.
+    exclude_from_stats = Column(Boolean, default=False, nullable=False)
     can_approve_submissions = Column(Boolean, default=False, nullable=False)  # Can approve (subset of moderators)
 
     # Email verification (for notifications)
