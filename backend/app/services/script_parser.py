@@ -28,7 +28,9 @@ from app.core.config import settings
 #      no more titles named after a slug line  (2026-09-02)
 #   3  screenplays read by their columns: action kept as stage direction, every
 #      speech attributed to its own cue  (2026-09-02)
-PARSER_VERSION = 3
+#   4  short beats fold into the scene beside them instead of being dropped, so
+#      no uploaded dialogue is ever lost  (2026-09-02)
+PARSER_VERSION = 4
 
 
 # ---------------------------------------------------------------------------
@@ -764,39 +766,56 @@ def filter_two_person_scenes(
     return scenes
 
 
-# A scene wants four lines to be worth rehearsing. Two people trading one line
-# each is a beat, not something you can work.
+# A scene wants four lines to stand on its own. Two people trading one line each
+# is a beat, not something anyone can work.
 REHEARSAL_MIN_LINES = 4
-# Below the floor, a scene still counts if it is a real two-way exchange — but
-# only when the floor would otherwise leave the actor with nothing at all. Sides
-# are short by nature and a strict floor can empty them; a side that does hold
-# one real scene should hand over that scene, not it plus a two-line scrap.
-EXCHANGE_MIN_LINES = 2
-
-
-def _is_exchange(scene: Dict) -> bool:
-    """Two characters who both actually speak."""
-    speakers = {
-        line.get("character")
-        for line in scene.get("lines", [])
-        if line.get("character")
-    }
-    return len(speakers) >= 2
 
 
 def rehearsable_scenes(scenes: List[Dict]) -> List[Dict]:
-    """Drop scenes too short to rehearse, unless short is all the script has."""
-    def at_least(scene: Dict, floor: int) -> bool:
-        return len(scene.get("lines", [])) >= floor
+    """Group what is too short to stand alone. Never throw any of it away.
 
-    full = [s for s in scenes if at_least(s, REHEARSAL_MIN_LINES)]
-    if full:
-        return full
+    Uploaded dialogue is the actor's own material — often the only coverage a
+    character gets on the page — so a beat that misses the floor folds into the
+    scene beside it rather than being dropped. Two pages of sides come back as
+    one piece, which is what they were when they were sent. Twenty pages come
+    back as their real scenes, with the orphan beats attached to a neighbour
+    instead of littering the shelf as two-line scraps.
+    """
+    kept: List[Dict] = []
+    pending: List[Dict] = []  # beats waiting for a scene to belong to
 
-    return [
-        s for s in scenes
-        if at_least(s, EXCHANGE_MIN_LINES) and _is_exchange(s)
-    ]
+    for scene in scenes:
+        lines = list(scene.get("lines", []))
+        if len(lines) >= REHEARSAL_MIN_LINES:
+            kept.append(dict(scene, lines=pending + lines))
+            pending = []
+        elif kept:
+            kept[-1]["lines"].extend(lines)
+        else:
+            pending.extend(lines)  # nothing to fold back into yet
+
+    if pending:
+        if kept:
+            kept[-1]["lines"].extend(pending)
+        elif scenes:
+            # Nothing on the page reached the floor, so the beats are the script.
+            kept = [dict(scenes[0], lines=pending)]
+
+    for scene in kept:
+        _reseat_leads(scene)
+    return kept
+
+
+def _reseat_leads(scene: Dict) -> None:
+    """Point character_1/2 at whoever actually speaks most, after folding."""
+    speakers = Counter(
+        line.get("character") for line in scene.get("lines", []) if line.get("character")
+    )
+    ranked = [name for name, _ in speakers.most_common()]
+    if ranked:
+        scene["character_1"] = ranked[0]
+    if len(ranked) > 1:
+        scene["character_2"] = ranked[1]
 
 
 def _recover_dropped_dialogue(scenes: List[Dict], raw_text: str) -> List[Dict]:
@@ -1947,7 +1966,7 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         before = len(scenes)
         scenes = rehearsable_scenes(scenes)
         if before > len(scenes):
-            progress(f"Set aside {before - len(scenes)} scenes too short to rehearse")
+            progress(f"Folded {before - len(scenes)} short beats into the scene beside them")
 
         progress(f"Extracted {len(scenes)} rehearsal-ready scenes")
 

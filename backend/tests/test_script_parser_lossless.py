@@ -159,10 +159,12 @@ def _scene(title, *speakers):
 
 
 class RehearsableScenesTests(unittest.TestCase):
-    """Sides are short by nature and the four-line floor was eating them.
+    """Uploaded dialogue is the actor's own material, so none of it is dropped.
 
     Heidi Marshall Studio sent a two-page side (2026-09-01) holding four
-    exchanges. Three were under four lines, so the actor got one scene back.
+    exchanges. Three were under the four-line floor. Dropping them lost the only
+    coverage three characters got; promoting them handed back a two-line scrap
+    nobody can rehearse. They fold into the scene beside them instead.
     """
 
     SIDE = [
@@ -171,32 +173,48 @@ class RehearsableScenesTests(unittest.TestCase):
         _scene("Court order", "KATHLEEN", "JASON"),
     ]
 
-    def test_a_two_line_beat_is_not_a_scene_when_a_real_one_exists(self):
-        # Handing an actor "Why only twenty? / Court order." as a rehearsal
-        # scene is worse than not handing it over at all.
+    def test_a_side_comes_back_whole(self):
         kept = rehearsable_scenes(self.SIDE)
 
         self.assertEqual([s["title"] for s in kept], ["Henry"])
+        self.assertEqual(len(kept[0]["lines"]), 9)  # 5 + 2 + 2, none left behind
 
-    def test_a_side_of_only_short_beats_keeps_them(self):
-        # The floor may leave the actor with nothing; then the beats are it.
+    def test_no_line_of_dialogue_is_ever_lost(self):
+        for scenes in (self.SIDE, self.SIDE[1:], list(reversed(self.SIDE))):
+            before = sum(len(s["lines"]) for s in scenes)
+            after = sum(len(s["lines"]) for s in rehearsable_scenes(scenes))
+            self.assertEqual(before, after)
+
+    def test_a_side_of_only_short_beats_becomes_one_scene(self):
         kept = rehearsable_scenes(self.SIDE[1:])
 
-        self.assertEqual([s["title"] for s in kept], ["Bruebecker", "Court order"])
+        self.assertEqual(len(kept), 1)
+        self.assertEqual(len(kept[0]["lines"]), 4)
 
-    def test_a_full_script_drops_fragments(self):
+    def test_a_long_script_keeps_its_real_scenes(self):
         script = [_scene(f"Scene {i}", *["A", "B"] * 3) for i in range(5)]
 
         kept = rehearsable_scenes(script + [_scene("Fragment", "A", "B")])
 
-        self.assertNotIn("Fragment", [s["title"] for s in kept])
         self.assertEqual(len(kept), 5)
+        # The fragment isn't dropped — it rides along with the scene before it.
+        self.assertEqual(len(kept[-1]["lines"]), 8)
 
-    def test_one_sided_fragment_is_never_an_exchange(self):
-        # A stray pair of lines from a single speaker is a leftover, not a scene.
-        kept = rehearsable_scenes([_scene("Solo", "A", "A"), _scene("Duet", "A", "B")])
+    def test_a_leading_beat_waits_for_the_scene_it_belongs_to(self):
+        kept = rehearsable_scenes(
+            [_scene("Beat", "A", "B"), _scene("Scene", *["A", "B"] * 2)]
+        )
 
-        self.assertEqual([s["title"] for s in kept], ["Duet"])
+        self.assertEqual(len(kept), 1)
+        self.assertEqual(len(kept[0]["lines"]), 6)
+
+    def test_the_leads_follow_who_actually_speaks(self):
+        kept = rehearsable_scenes(
+            [_scene("Scene", "A", "B", "A", "B"), _scene("Beat", "C", "C")]
+        )
+
+        self.assertEqual(kept[0]["character_1"], "A")
+        self.assertEqual(kept[0]["character_2"], "B")
 
 
 if __name__ == "__main__":

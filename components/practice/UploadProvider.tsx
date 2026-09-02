@@ -52,6 +52,7 @@ const STEP_GROUPS: { match: string; label: string }[] = [
   { match: "No scenes", label: "Pulling every line of dialogue" },
   { match: "Filtered", label: "Assembling your rehearsal scenes" },
   { match: "Set aside", label: "Assembling your rehearsal scenes" },
+  { match: "Folded", label: "Assembling your rehearsal scenes" },
   { match: "No title page", label: "Naming the script" },
   { match: "Figuring", label: "Figuring out the tone, emotions, dynamics" },
   { match: "Analyzed", label: "Figuring out the tone, emotions, dynamics" },
