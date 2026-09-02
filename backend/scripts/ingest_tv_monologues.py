@@ -361,9 +361,17 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=None, help="max episodes")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--slugs", default=None,
+                    help="comma-separated episode slugs; skips the sitemap. "
+                         "Mirrors ingest_film_monologues, and is what makes a "
+                         "targeted re-fetch possible — re-walking 473 sitemap "
+                         "entries to reach 77 known titles is all cost.")
     args = ap.parse_args()
 
-    slugs = tv_episode_slugs()
+    if args.slugs:
+        slugs = [s.strip() for s in args.slugs.split(",") if s.strip()]
+    else:
+        slugs = tv_episode_slugs()
     if args.limit:
         slugs = slugs[:args.limit]
     print(f"TV episodes to process: {len(slugs)}{' (dry run)' if args.dry_run else ''}\n")
