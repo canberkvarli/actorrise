@@ -69,15 +69,32 @@ type Mark = { key: string; label: string; className: string; title?: string };
  * otherwise look arbitrary, e.g. why "a woman confronting her mother" returns a
  * character called Mother.
  */
+const MATCH_LABELS: Record<string, string> = {
+  exact_quote: "quote match",
+  fuzzy_quote: "quote match",
+  title_match: "play match",
+  play_match: "play match",
+  character_match: "name match",
+};
+
+/**
+ * Whether the match mark tells the reader anything on this particular set of
+ * results.
+ *
+ * Searching "a woman confronting her mother" returned twenty rows all marked
+ * `name match`, at which point the mark distinguishes nothing and is just a
+ * word repeated twenty times down the page. Same for a title lookup, where
+ * every row obviously belongs to the play you named. The mark earns its place
+ * only when it separates some rows from others.
+ */
+export function matchMarkIsUseful(list: Monologue[]): boolean {
+  if (list.length < 2) return list.length === 1 && !!MATCH_LABELS[list[0].match_type ?? ""];
+  const marked = list.filter((m) => MATCH_LABELS[m.match_type ?? ""]).length;
+  return marked > 0 && marked <= list.length * 0.7;
+}
+
 function matchMark(m: Monologue): Mark | null {
-  const label =
-    m.match_type === "exact_quote" || m.match_type === "fuzzy_quote"
-      ? "quote match"
-      : m.match_type === "title_match" || m.match_type === "play_match"
-        ? "play match"
-        : m.match_type === "character_match"
-          ? "name match"
-          : null;
+  const label = MATCH_LABELS[m.match_type ?? ""];
   if (!label) return null;
   return {
     key: "match",
@@ -97,9 +114,10 @@ function marksFor(
   index: number,
   mode: "plays" | "film_tv",
   profileMatch?: ProfileMatch,
+  showMatchMark = true,
 ): Mark[] {
   const marks: Mark[] = [];
-  const match = matchMark(mono);
+  const match = showMatchMark ? matchMark(mono) : null;
   if (match) marks.push(match);
 
   // A literal match already explains the row better than its rank does, so the
@@ -152,6 +170,9 @@ export interface MonologueSpeechProps {
   mode?: "plays" | "film_tv";
   /** From the page's existing profileMatchMap. Drives the `your lane` mark. */
   profileMatch?: ProfileMatch;
+  /** False when every row in the result set carries the same match type — see
+   *  matchMarkIsUseful. */
+  showMatchMark?: boolean;
 }
 
 export function MonologueSpeech({
@@ -163,6 +184,7 @@ export function MonologueSpeech({
   onEdit,
   mode = "plays",
   profileMatch,
+  showMatchMark = true,
 }: MonologueSpeechProps) {
   const author = displayableAuthor(mono.author);
   const source = [mono.play_title, author].filter(Boolean).join(", ");
@@ -183,13 +205,22 @@ export function MonologueSpeech({
   const shown = excerpt(body);
   const truncated = shown.text.length < body.length;
 
-  const marks = marksFor(mono, index, mode, profileMatch);
+  const marks = marksFor(mono, index, mode, profileMatch, showMatchMark);
   const poster = mode === "film_tv" ? mono.poster_url : null;
 
+  /* Typed, not set in the UI face. These are notes in the margin of a page of
+     sides, and at 11px sans they read as debug output someone forgot to
+     remove — the same size and colour as every other label in the app. In the
+     typewriter face at 10px with the letters opened up they belong to the
+     page the speech is printed on. */
   const markList = (
     <>
       {marks.map((m) => (
-        <span key={m.key} title={m.title} className={`text-[11px] leading-snug ${m.className}`}>
+        <span
+          key={m.key}
+          title={m.title}
+          className={`font-typewriter text-[10px] uppercase leading-relaxed tracking-[0.12em] ${m.className}`}
+        >
           {m.label}
         </span>
       ))}
@@ -201,10 +232,14 @@ export function MonologueSpeech({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.04, 0.3), duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-      /* Three explicit rows so the margin lines up with the speech by
-         construction. Offsetting a single absolute column by a guessed height
-         breaks the moment a character name wraps. */
-      className="group border-t border-border/60 py-6 first:border-t-0 first:pt-2 sm:grid sm:grid-cols-[6.5rem_1fr] sm:gap-x-5"
+      /* Two cells: the margin, and everything else.
+         An earlier version split the right side into three grid rows so a mark
+         could line up with the first line of the speech. The poster then set
+         row one's height to 144px and stranded the title at the top of a
+         100px hole. Nothing needed that alignment badly enough to pay for it —
+         a mark annotates the whole entry, and sitting beside the character
+         name is where it belongs anyway. */
+      className="group border-t border-border/60 py-6 first:border-t-0 first:pt-2 sm:grid sm:grid-cols-[8rem_1fr]"
     >
       {/* Below sm the margin has nowhere to go, so the marks run as one line
           above the name rather than stealing width from the speech. */}
@@ -214,21 +249,25 @@ export function MonologueSpeech({
         </div>
       )}
 
-      {/* Row 1: the margin holds the poster, which costs no vertical space
-          here — it was dropped entirely when the cards became rows. */}
-      <div className="hidden sm:flex sm:justify-end">
+      {/* The margin. The poster was dropped entirely when the cards became
+          rows, and at 52px wide when it came back you could not tell one film
+          from another. */}
+      <div className="hidden sm:flex sm:flex-col sm:items-end sm:gap-3 sm:pr-4 sm:pt-1 sm:text-right">
         {poster && (
           <Image
             src={poster}
             alt=""
-            width={52}
-            height={78}
-            className="h-[78px] w-[52px] rounded-sm object-cover opacity-90 transition-opacity group-hover:opacity-100"
+            width={96}
+            height={144}
+            className="h-[144px] w-[96px] rounded-sm object-cover shadow-sm ring-1 ring-border/40 transition-transform duration-300 group-hover:scale-[1.03]"
             unoptimized
           />
         )}
+        {markList}
       </div>
-      <div>
+      {/* The rule is what makes the empty column read as a margin rather than a
+          hole. It runs the height of the entry because this is one cell. */}
+      <div className="sm:border-l sm:border-border/40 sm:pl-6">
         <div className="flex items-baseline justify-between gap-4">
           <h3 className="min-w-0">
             <button
@@ -250,13 +289,7 @@ export function MonologueSpeech({
             {source}
           </p>
         )}
-      </div>
 
-      {/* Row 2: the notes, against the first line of the speech they annotate.
-          pt-3 matches the paragraph's mt-3. */}
-      <div className="hidden sm:flex sm:flex-col sm:items-end sm:gap-1 sm:pt-3 sm:text-right">
-        {markList}
-      </div>
       {/* The piece. This is the whole reason the row exists, so it gets the
           measure and the size of something meant to be read, not scanned.
           Three lines collapsed, the whole speech on click: the full text already
@@ -286,8 +319,6 @@ export function MonologueSpeech({
         )}
       </button>
 
-      {/* Row 3 */}
-      <div className="hidden sm:block" aria-hidden />
       <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm">
         {/* "Read" is gone: the character name opens the piece, and the speech
             itself now expands in place, so a third control for the same two
@@ -317,6 +348,7 @@ export function MonologueSpeech({
             Edit
           </button>
         )}
+      </div>
       </div>
     </motion.article>
   );

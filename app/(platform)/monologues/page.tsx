@@ -34,7 +34,7 @@ import { StartingPoints } from "@/components/monologue/StartingPoints";
 import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
-import { MonologueSpeech } from "@/components/monologue/MonologueSpeech";
+import { MonologueSpeech, matchMarkIsUseful } from "@/components/monologue/MonologueSpeech";
 import { SearchFiltersSheet, getDurationLabel } from "@/components/search/SearchFiltersSheet";
 import { accentTeal } from "@/components/search/MatchIndicatorTag";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
@@ -1337,6 +1337,12 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
    */
   const chromeCompact = hasSearched || filmTvHasSearched;
 
+  /* "a woman confronting her mother" returned twenty rows every one of which
+     said `name match`, which distinguishes nothing and just repeats a word down
+     the page. Worked out per result set, not per row. */
+  const playsMatchMark = useMemo(() => matchMarkIsUseful(results), [results]);
+  const filmTvMatchMark = useMemo(() => matchMarkIsUseful(filmTvResults), [filmTvResults]);
+
   const isPersonalized = !!(
     profileData?.profile_bias_enabled &&
     ((profileData.preferred_genres?.length ?? 0) > 0 || profileData.experience_level || profileData.training_background)
@@ -1362,42 +1368,25 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   }, [relatedResults, profileMatchMap, isPersonalized]);
 
   /**
-   * Tapping the other tab asks the same question of the other library.
-   *
-   * Each tab keeps its own query, so switching used to drop you on an empty
-   * shelf: you had typed a search, and the answer to "is there a film version
-   * of this?" was a blank screen and a second trip to the search box. Now the
-   * query comes along and runs.
-   *
-   * The guard reads the destination's *existing* query before it is
-   * overwritten, which is what that tab last searched. Land on results that
-   * already answer the carried question and nothing is re-requested.
+   * Change shelves. Each tab keeps its own query and its own results, and
+   * tapping one never fires a search — you get that tab as you left it, or its
+   * starting shelf if you have not been there yet. Carrying the query across
+   * and re-running it was tried and pulled: a tab tap is a look around, not a
+   * search, and spending a request on it turned a glance into a wait.
    */
-  const runAfterSwitchRef = useRef(false);
-
   const switchMode = (target: "plays" | "film_tv") => {
     if (target === searchMode) return;
-    const carried = (searchMode === "plays" ? playsQuery : filmTvQuery).trim();
-    const priorQuery = (target === "plays" ? playsQuery : filmTvQuery).trim();
-    const priorResults = target === "plays" ? results.length : filmTvResults.length;
+    const query = target === "plays" ? playsQuery : filmTvQuery;
+    if (target === "plays") playsActionAtRef.current = Date.now();
+    else filmTvActionAtRef.current = Date.now();
 
-    runAfterSwitchRef.current =
-      carried !== "" && !(priorResults > 0 && priorQuery === carried);
-
-    if (target === "plays") {
-      playsActionAtRef.current = Date.now();
-      setPlaysQuery(carried);
-    } else {
-      filmTvActionAtRef.current = Date.now();
-      setFilmTvQuery(carried);
-    }
     setSearchMode(target);
     setSearchError(null);
     setOutlineFlash(target);
 
     const params = new URLSearchParams();
     params.set("mode", target);
-    if (carried) params.set("q", carried);
+    if (query) params.set("q", query);
     if (target === "plays") {
       Object.keys(filters).forEach((key) => {
         const value = filters[key as keyof typeof filters];
@@ -1407,15 +1396,6 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     }
     router.replace(`/monologues?${params.toString()}`, { scroll: false });
   };
-
-  /* Runs after the mode and query states have both landed, so handleSearch
-     reads the tab you actually switched to rather than the one you left. */
-  useEffect(() => {
-    if (!runAfterSwitchRef.current) return;
-    runAfterSwitchRef.current = false;
-    handleSearch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchMode]);
 
   /**
    * "Joker lives in Film & TV → Take me there" used to do nothing visible.
@@ -1471,6 +1451,32 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       </AnimatePresence>,
       document.body
     );
+
+  /**
+   * The starting shelf, shared by both tabs.
+   *
+   * One key for both, so moving between tabs updates the contents in place
+   * instead of exiting and re-entering the whole block — the switch should read
+   * as the same shelf restocked.
+   */
+  const preSearchView = (
+    <motion.div
+      key="presearch"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+    >
+      {/* Personalization, surfaced by default (not hidden behind "Find for
+          me"): profile-havers rehearse ~1.6x more. Recruits a profile when
+          there isn't one. Plays only — film/TV recs are separate. */}
+      {searchMode === "plays" && <ForYouShelf />}
+      <TrendingPreSearch />
+      {/* Last, not first: the shelves are personal and current, these are the
+          fallback for when nothing there catches you. */}
+      <StartingPoints mode={searchMode} />
+    </motion.div>
+  );
 
   return (
     // One measure for the whole page, narrower once results exist.
@@ -1911,7 +1917,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 <SearchCurtain mode="film_tv" />
               </motion.div>
             ) : filmTvResults.length === 0 && !filmTvHasSearched ? (
-              <div />
+              /* Was an empty <div />. Switching to a tab you had not searched
+                 gave you a search bar above nothing at all — the page looked
+                 broken rather than waiting. It gets the same starting shelf
+                 Plays has always had. */
+              preSearchView
             ) : filmTvResults.length === 0 ? (
               <div className="pt-12 pb-12 text-center max-w-md mx-auto">
                 {queryInvalidReason === "gibberish" ? (
@@ -1955,7 +1965,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
                 className="space-y-4"
               >
-                <div className="sm:pl-[7.75rem]">
+                <div className="sm:pl-[9.5rem]">
                 <ActiveFilterChips
                   filters={filters}
                   labels={{ gender: "Gender", age_range: "Age", emotion: "Emotion", theme: "Theme", category: "Category", tone: "Tone", difficulty: "Difficulty", author: "Author", max_duration: "Max Duration" }}
@@ -1966,7 +1976,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 {/* Results header */}
                 {/* Same 7.75rem indent as Plays, so both shelves put their
                     toolbar on the speeches' left edge. */}
-                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 mb-8 sm:pl-[7.75rem]">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 mb-8 sm:pl-[9.5rem]">
                   <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-0 min-w-0">
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <div className="flex items-baseline gap-2 flex-wrap">
@@ -2046,6 +2056,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           index={idx}
                           mode="film_tv"
                           profileMatch={profileMatchMap.get(mono.id)}
+                          showMatchMark={filmTvMatchMark}
                           onSelect={() => openMonologue(mono, idx, "film_tv")}
                           onToggleFavorite={toggleFavorite}
                           isModerator={!!user?.is_moderator}
@@ -2175,7 +2186,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   toolbar starts exactly where the speeches do. Left at the
                   container edge it sat 124px to the left of every character
                   name, and the gutter read as a hole rather than a margin. */}
-              <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border/50 pb-4 sm:pl-[7.75rem]">
+              <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border/50 pb-4 sm:pl-[9.5rem]">
                 {/* items-center, not items-baseline. The row around this is
                     centre-aligned, so baseline-aligning the pair inside it hung
                     "monologues" 4px below everything else on the line: measured
@@ -2300,6 +2311,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     index={idx}
                     mode="plays"
                     profileMatch={profileMatchMap.get(mono.id)}
+                    showMatchMark={playsMatchMark}
                     isModerator={!!user?.is_moderator}
                     onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
                   />
@@ -2381,25 +2393,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               )}
             </motion.div>
           ) : (
-            // Pre-search: fill the space with something that helps them start —
-            // the pieces actors are working on right now. On search this exits
-            // (mode="wait") and results take the stage.
-            <motion.div
-              key="trending-presearch"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-            >
-              {/* Personalization, surfaced by default (not hidden behind "Find
-                  for me"): profile-havers rehearse ~1.6x more. Recruits a profile
-                  when there isn't one. Plays only — film/TV recs are separate. */}
-              {searchMode === "plays" && <ForYouShelf />}
-              <TrendingPreSearch />
-              {/* Last, not first: the shelves are personal and current, these
-                  are the fallback for when nothing there catches you. */}
-              <StartingPoints mode={searchMode} />
-            </motion.div>
+            preSearchView
           )}
         </AnimatePresence>
       </div>
