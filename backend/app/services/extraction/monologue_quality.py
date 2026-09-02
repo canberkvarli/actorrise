@@ -332,9 +332,18 @@ def has_flattened_scene(text: str) -> bool:
 
 
 def has_stage_direction_residue(text: str, cast: list[str]) -> bool:
-    """True if an ``Enter/Exit/Exeunt`` direction is welded into ``text``."""
+    """True if an ``Enter/Exit/Exeunt`` direction is WELDED into ``text``.
+
+    Welded is the whole point: a direction already marked as `(Exit.)` is doing
+    its job and the reader will set it in italics. Only a bare one, sitting in
+    the middle of the spoken line where an actor would read it aloud, is residue.
+    Parenthesised spans are therefore removed before looking — without this the
+    parser's own correct output ("...my blessing with you. (Laying his hand on
+    Laertes's head.) And these few precepts...") fails the gate that is supposed
+    to be protecting it.
+    """
     cast_l = {c.lower() for c in (cast or [])}
-    for m in _STAGE_DIRECTION.finditer(text or ""):
+    for m in _STAGE_DIRECTION.finditer(_PARENTHETICAL.sub(" ", text or "")):
         span = m.group(0)
         if _FIRST_PERSON.search(span) or len(span.split()) > 7:
             continue  # reads as speech, not a cue
@@ -529,6 +538,7 @@ def _has_weird_chars(text: str) -> bool:
 def assess_monologue_quality(
     text: str,
     *,
+    spoken: str | None = None,
     min_words: int = DEFAULT_MIN_WORDS,
     max_words: int = DEFAULT_MAX_WORDS,
     check_narration: bool = False,
@@ -550,7 +560,15 @@ def assess_monologue_quality(
     raw = text or ""
     stripped = raw.strip()
 
-    word_count = len(stripped.split())
+    # Two texts, deliberately. Artifact checks need the DISPLAY text — a
+    # parenthetical that has already been stripped out cannot be counted against
+    # the direction share, which is how `direction_heavy` ended up dead in the
+    # ingest path: every caller was handing this function `strip_artifacts(...)`,
+    # so `parentheticals` was always empty. The word floor needs the SPOKEN text,
+    # because a stage direction is not something the actor says.
+    #
+    # Defaults to `text` when not supplied, which is every pre-existing caller.
+    word_count = len((spoken if spoken is not None else stripped).split())
 
     if not stripped:
         return QualityResult(ok=False, word_count=0, reasons=["empty"])

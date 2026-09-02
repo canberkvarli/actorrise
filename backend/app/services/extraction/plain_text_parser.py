@@ -23,7 +23,20 @@ class PlainTextParser:
     #: Bracketed spans, on the other hand, are unambiguous: every one of the
     #: 3,011 in that sample is a direction, typically italicised inside the
     #: brackets — "[_Exit._]", "[_Aside._]", "[_Sings._]", "[_Dies._]".
-    _BRACKET_SPAN = re.compile(r'\[([^\]\n]{0,200}?)\]')
+    #:
+    #: Newlines allowed inside. Typesetting wraps a long direction across two
+    #: lines — "[She goes to the glass door and\nthrows it open.]" — and
+    #: excluding \n meant those never converted to `(...)`, so they reached the
+    #: gate as raw brackets and were rejected as `bracket_cue`. Our own output,
+    #: failing our own check. Still length-bounded and still requires the
+    #: closing bracket, so a stray `[` cannot run away with the speech.
+    #:
+    #: 600, not 200. A wrylie is short but a SCENE description is not — Ibsen
+    #: opens with 208 characters of drawing room, glass door and autumn leaves,
+    #: which sailed past a 200-char bound, stayed a raw bracket, and was
+    #: rejected as `bracket_cue` instead of being recognised as the scene
+    #: setting it is and cut by _strip_leading_narrative.
+    _BRACKET_SPAN = re.compile(r'\[([^\]]{0,600}?)\]', re.S)
 
     _PAREN_SPAN = re.compile(r'\(([^)\n]{0,200}?)\)')
 
@@ -181,6 +194,9 @@ class PlainTextParser:
             if self._is_plausible_character(character)
         ]
 
+        # A speech that someone briefly interrupted is still one speech.
+        speeches = self._merge_interrupted_speeches(speeches)
+
         # Filter and clean speeches
         for character, speech_text in speeches:
             # Two texts, the same pair screenplay_pdf_parser produces:
@@ -191,7 +207,7 @@ class PlainTextParser:
             #             actor says, so counting it would let
             #             "(He crosses to the window and stands a long while)"
             #             push a thin speech over the bar.
-            display = self._to_display(speech_text)
+            display = self._strip_leading_narrative(self._to_display(speech_text))
             spoken = self._spoken_only(display)
 
             # Skip if empty or starts with common non-dialogue indicators
@@ -210,6 +226,140 @@ class PlainTextParser:
                 })
 
         return monologues
+
+    #: What a speech can absorb and still be one speech. A character answering
+    #: "Ay, my lord" does not end Hamlet's thought; a character delivering forty
+    #: words has started a scene.
+    MAX_INTERRUPTION_WORDS = 15
+
+    #: ...and how many times. One or two beats is a speech with interjections in
+    #: it; five is a duologue wearing a monologue's name.
+    MAX_INTERRUPTIONS = 2
+
+    #: Share of the merged speech that may belong to anyone else. The per-line
+    #: caps above are not enough on their own: two 15-word replies inside a
+    #: 70-word exchange is still a conversation, and the first cut of this merge
+    #: turned 61 of Hamlet's 91 speeches into stitched-together dialogue.
+    MAX_INTERJECTION_SHARE = 0.20
+
+    #: A monologue interrupted is still mostly ONE speech, so at least one of
+    #: the character's own parts has to be a real run of talking. Without this,
+    #: three one-line replies merge into a "monologue" that was never one —
+    #: which is exactly what Miss Tesman and Berta looked like.
+    MIN_ANCHOR_WORDS = 40
+
+    #: A leading parenthetical this long is not a wrylie, it is the scene being
+    #: described before anybody speaks. "(aside)" and "(drinks coffee and looks
+    #: away)" are the actor's business and stay; twenty words of furniture and
+    #: weather are the story being explained and go.
+    SCENE_SETTING_WORDS = 20
+
+    def _merge_interrupted_speeches(
+        self, speeches: List[tuple]
+    ) -> List[tuple]:
+        """Rejoin a speech that a short interruption split in two.
+
+        The cue splitter cuts at every cue, so
+
+            HAMLET  Speak, I am bound to hear.
+            GHOST   So art thou to revenge, when thou shalt hear.
+            HAMLET  What?
+
+        arrives as two Hamlet fragments with someone else between them, and both
+        can fall under the 75-word floor and disappear. That is how a real
+        monologue becomes no monologue at all, and it is the single most likely
+        reason a play we hold the full text of extracts almost nothing.
+
+        The interrupting line is KEPT, inline, as `(NAME: ...)`. Dropping it
+        would leave the speech answering a question the reader cannot see. As a
+        parenthetical it does three things at once: `_spoken_only` strips it so
+        it cannot pad the word floor, `assess_monologue_quality` counts it
+        against the direction share — which is what bounds "too much dialogue" —
+        and the segmenter can tag it as an `interjection` for the reader.
+        """
+        merged: List[tuple] = []
+        i, n = 0, len(speeches)
+        while i < n:
+            character, body = speeches[i]
+            parts = [body]                       # this character's own words
+            interjections: List[str] = []        # everybody else's
+            j = i + 1
+            while j + 1 < n and len(interjections) < self.MAX_INTERRUPTIONS:
+                other_name, other_body = speeches[j]
+                next_name, next_body = speeches[j + 1]
+                # The speech has to resume with the SAME speaker, and the thing
+                # in between has to be somebody else being brief.
+                if next_name != character or other_name == character:
+                    break
+                interjection = self._spoken_only(self._to_display(other_body))
+                # Brackets that never closed survive _to_display, and nesting
+                # one inside the "(NAME: ...)" wrapper corrupts both.
+                interjection = re.sub(r"[()\[\]]", "", interjection).strip()
+                if not interjection:
+                    break
+                if len(interjection.split()) > self.MAX_INTERRUPTION_WORDS:
+                    break
+                interjections.append(f"({other_name}: {interjection})")
+                parts.append(interjections[-1])
+                parts.append(next_body)
+                j += 2
+
+            if len(parts) > 1 and not self._merge_is_a_monologue(parts, interjections):
+                # It read as a conversation, so leave the pieces alone and let
+                # the word floor decide each on its own merits.
+                merged.append((character, body))
+                i += 1
+                continue
+
+            merged.append((character, " ".join(parts)))
+            i = j if j > i + 1 else i + 1
+        return merged
+
+    def _merge_is_a_monologue(
+        self, parts: List[str], interjections: List[str]
+    ) -> bool:
+        """Is this merge one speech with interruptions, or a scene?"""
+        own = [
+            self._spoken_only(self._to_display(p))
+            for p in parts if p not in interjections
+        ]
+        own_words = sum(len(p.split()) for p in own)
+        other_words = sum(
+            max(0, len(s.split()) - 1) for s in interjections  # minus "(NAME:"
+        )
+        total = own_words + other_words
+        if not total:
+            return False
+        if other_words / total > self.MAX_INTERJECTION_SHARE:
+            return False
+        # Somewhere in here there has to be an actual run of talking.
+        return max((len(p.split()) for p in own), default=0) >= self.MIN_ANCHOR_WORDS
+
+    def _strip_leading_narrative(self, display: str) -> str:
+        """Drop scene-setting prose sitting in front of the speech.
+
+        Gutenberg sets a scene description in the same italics or brackets it
+        uses for stage directions, so once `_to_display` has normalised it the
+        difference between "the story so far" and "what this character does" is
+        length. A speech that opens with twenty-plus words of parenthetical is
+        opening with the set, not with a line.
+
+        Only the LEADING block, and only if a speech survives it — the point is
+        to recover the monologue underneath, not to trim speeches generally.
+        """
+        text = (display or "").lstrip()
+        while text.startswith("("):
+            end = text.find(")")
+            if end == -1:
+                break
+            inner = text[1:end]
+            if len(inner.split()) < self.SCENE_SETTING_WORDS:
+                break                       # a wrylie — the actor wants it
+            remainder = text[end + 1:].lstrip()
+            if not remainder:
+                break                       # nothing underneath; leave it alone
+            text = remainder
+        return text
 
     def _to_display(self, speech_text: str) -> str:
         """The speech as the actor should read it, directions kept as `(...)`.

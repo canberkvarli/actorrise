@@ -164,7 +164,8 @@ def main() -> int:
             spoken = strip_artifacts(body)
             others = [n for n in cast if n != c["character"]]
             if not assess_monologue_quality(
-                spoken, min_words=MIN_WORDS, max_words=MAX_WORDS, cast=others
+                body, spoken=spoken, min_words=MIN_WORDS, max_words=MAX_WORDS,
+                cast=others
             ).ok:
                 totals["gated"] += 1
                 continue
