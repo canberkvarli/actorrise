@@ -63,7 +63,7 @@ export function LandingGhostLight() {
         }`}
       >
         <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-3.5">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
             <Link
               href="/"
               className="flex items-center shrink-0 min-w-0 hover:opacity-85 transition-opacity"
