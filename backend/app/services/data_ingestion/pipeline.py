@@ -32,6 +32,7 @@ already gone wrong in production:
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Optional
 
@@ -68,6 +69,32 @@ GROUP_CUES = frozenset({
 #: the ids are available to the caller for an undo list.
 CHUNK = 25
 
+#: How much of the opening has to match before two rows are the same speech.
+#: Normalised characters, so roughly twenty words.
+#:
+#: Re-extracting a source we already hold does not produce NEW speeches, it
+#: produces BETTER ones — the same monologue with the halves rejoined. Hamlet
+#: yields 112 candidates against 91 stored rows, and `find_duplicate` catches
+#: only 28 of them, because the merged text is longer: a different fingerprint,
+#: and a cosine distance past the 0.02 duplicate bar. Inserting the other 54
+#: would list the same monologue twice at two lengths.
+#:
+#: Only rows at least this long are considered, so a short stored fragment
+#: cannot match by coincidence inside an unrelated longer speech. Roughly twenty
+#: words of exact agreement.
+SUPERSEDE_PREFIX_CHARS = 120
+
+_ALNUM = re.compile(r"[^a-z0-9]+")
+
+
+def _supersede_key(text: str) -> str:
+    """Comparable form: spoken words only, letters and digits, lowercased.
+
+    Directions are stripped so a merge that inserts "(HORATIO: ...)" mid-speech
+    still contains the stored text verbatim.
+    """
+    return _ALNUM.sub("", strip_artifacts(text or "").lower())
+
 
 @dataclass
 class IngestReport:
@@ -80,6 +107,11 @@ class IngestReport:
     #: reason -> count, straight from QualityResult.reasons
     rejected: dict[str, int] = field(default_factory=dict)
     duplicates: int = 0
+    superseded: int = 0
+    #: Before-state of every row whose text was REPLACED, so an in-place upgrade
+    #: is as reversible as an insert. `--purge` deletes what was added; without
+    #: this there would be nothing to restore what was overwritten.
+    superseded_before: list[dict] = field(default_factory=list)
     already_rejected: int = 0
     refused: Optional[str] = None
 
@@ -94,9 +126,41 @@ class IngestReport:
         worst = sorted(self.rejected.items(), key=lambda kv: -kv[1])[:4]
         return (
             f"candidates={self.candidates} inserted={self.inserted} "
-            f"dupes={self.duplicates} seen-before={self.already_rejected} "
+            f"replaced={self.superseded} dupes={self.duplicates} "
+            f"seen-before={self.already_rejected} "
             + " ".join(f"{k}={v}" for k, v in worst)
         )
+
+
+def _find_superseded(db: Session, play_id: int, character: str, display: str):
+    """An existing row that is the SAME speech as ``display``, but shorter.
+
+    Same play, same character, and the stored text's opening is the opening of
+    the candidate. Returns None when the candidate is not longer — a re-run that
+    produces the identical speech has nothing to upgrade.
+    """
+    key = _supersede_key(display)
+    if len(key) < SUPERSEDE_PREFIX_CHARS:
+        return None
+    rows = (
+        db.query(Monologue)
+        .filter(Monologue.play_id == play_id,
+                Monologue.character_name == character)
+        .all()
+    )
+    for row in rows:
+        existing = _supersede_key(row.text)
+        if len(existing) < SUPERSEDE_PREFIX_CHARS:
+            continue
+        # CONTAINMENT, not prefix. The merge extends a speech at the FRONT as
+        # often as the back, because the stored row was a fragment that began
+        # mid-speech: "There's letters seal'd" is now "I must to England, you
+        # know that? There's letters seal'd". A prefix test misses every one of
+        # those, and measured on Hamlet it found 9 matches where containment
+        # finds 24.
+        if existing in key and len(key) > len(existing):
+            return row
+    return None
 
 
 def ingest_play(
@@ -115,6 +179,7 @@ def ingest_play(
     min_words: int = DEFAULT_MIN_WORDS,
     max_words: int = DEFAULT_MAX_WORDS,
     apply: bool = False,
+    supersede: bool = False,
     analyzer: Any = None,
     embed: Optional[Callable] = None,
     parser: Optional[PlainTextParser] = None,
@@ -225,14 +290,51 @@ def ingest_play(
     for start in range(0, len(keep), CHUNK):
         batch = keep[start:start + CHUNK]
         prepared = []
+        upgraded: list = []          # rows whose text we replaced in place
         for cand in batch:
             if find_duplicate(db, cand["text"]):
                 report.duplicates += 1
                 continue
+            # Re-ingesting a source we already hold: this candidate is usually
+            # not a new speech but a better copy of one already stored, because
+            # the parser now rejoins the halves an interruption split. Upgrade
+            # the row rather than listing the same monologue twice.
+            if supersede:
+                older = _find_superseded(
+                    db, play.id, cand["character"], cand["text"])
+                if older is not None:
+                    report.superseded_before.append({
+                        "id": older.id,
+                        "text": older.text,
+                        "word_count": older.word_count,
+                        "estimated_duration_seconds": older.estimated_duration_seconds,
+                        "text_segments": older.text_segments,
+                    })
+                    older.text = cand["text"]
+                    older.word_count = len(cand["text"].split())
+                    older.estimated_duration_seconds = estimate_duration_seconds(
+                        cand["dialogue"])
+                    # The stored segments describe the SHORTER text. Leaving
+                    # them means the reader keeps serving the old words.
+                    older.text_segments = None
+                    upgraded.append(older)
+                    report.superseded += 1
+                    continue
             prepared.append((cand, analyzer.analyze_monologue(
                 text=cand["text"], character=cand["character"],
                 play_title=title, author=author,
             )))
+        # The vector was built from the SHORTER text. A speech going from 83
+        # words to 374 is a different point in the space, and leaving the old
+        # embedding would keep it findable only by what it used to say.
+        if upgraded:
+            vectors = embed([r.text for r in upgraded],
+                            model="text-embedding-3-large", dimensions=1536)
+            for row, vector in zip(upgraded, vectors):
+                if vector:
+                    row.embedding_vector = vector
+            db.commit()
+
         if not prepared:
             continue
 
