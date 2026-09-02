@@ -49,13 +49,14 @@ _EXCLUDE_PATTERNS = [
         r'^ENTER\b', r'^EXIT\b', r'^EXEUNT\b',
         r'^INT\.', r'^EXT\.', r'^COLD\s+OPEN', r'^TEASER', r'^TAG\b',
         r'^FADE\s+(IN|OUT|TO)', r'^CUT\s+TO', r'^DISSOLVE',
-        r'^CONTINUED', r'^END\s+OF',
+        r'^CONTINUED', r'^END\s+OF', r'^(A\s+)?MONTAGE\b',
     ]
 ]
 
 
 def _is_excluded(name: str) -> bool:
-    return any(p.match(name) for p in _EXCLUDE_PATTERNS)
+    # A shooting script numbers its slug lines ("18 INT/EXT. COURTHOUSE").
+    return any(p.match(re.sub(r'^\d+\s+', '', name)) for p in _EXCLUDE_PATTERNS)
 
 
 # Lines that look like stage directions even when not in brackets
@@ -153,8 +154,90 @@ _LINE_NUMBER_PREFIX = re.compile(r'^(?:FTLN|TLN)\s+\d+\s*', re.MULTILINE)
 _LEADING_LINE_NUM = re.compile(r'^\d{1,5}\s+', re.MULTILINE)
 
 
+# Furniture a shooting script carries that the scene does not: the revision
+# banner at the top of a reissued page, the CONTINUED headers a page break
+# leaves behind, and the asterisk marking a revised line. The asterisk is the
+# damaging one — it rides on the speaker cue ("HENRY *"), so the cue stops
+# reading as a cue and the whole speech is swallowed by the line above it.
+_REVISION_BANNER = re.compile(
+    r"^\d+\s+[A-Z]+\s+REVISED\s+PAGES?\s*\([^)]*\)\s*[\d.]*$", re.IGNORECASE
+)
+_CONTINUED_HEADER = re.compile(
+    r"^\(?\s*(?:\d+\s+)?CONTINUED\s*[:.]?\s*\)?\s*\d*$", re.IGNORECASE
+)
+_REVISION_MARK = re.compile(r"\s+\*+\s*$")
+
+
+_PLACEHOLDER_TITLES = {"untitled script", "untitled", "unknown", "n/a", "none"}
+
+# Slug lines, transitions and continuation cues: the shape of a screenplay.
+_SCREENPLAY_MARKERS = re.compile(
+    r"^(?:\d+\s+)?(?:INT|EXT)[\./ ]|^\s*[A-Z ]*CUT TO:|^\s*DISSOLVE TO:|\(CONT'?[’']?D\)",
+    re.IGNORECASE | re.MULTILINE,
+)
+# What a title page says under the title.
+_TITLE_PAGE_MARKER = re.compile(
+    r"^\s*(?:written|screenplay|teleplay|story|adapted)\s+by\b",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
+def _has_title_page(text: str) -> bool:
+    """Whether the document opens with a title page rather than mid-script.
+
+    A screenplay keeps its title on a page of its own. Sides are cut out of the
+    middle and never include it, so page one starts on a slug line. Three passes
+    at teaching a regex which prominent line is "really" the title all failed the
+    same way — it named the script after "A MONTAGE:", then "FERGUSON (CONT'D)",
+    then "COURTHOUSE CLERK". There is no title on the page to find.
+    """
+    head = text[:3000]
+    if _TITLE_PAGE_MARKER.search(head):
+        return True
+    return not _SCREENPLAY_MARKERS.search(head)
+
+
+def _is_usable_title(title: Optional[str]) -> bool:
+    """Whether a detected title actually names the work."""
+    candidate = (title or "").strip()
+    if len(candidate) < 2 or candidate.lower() in _PLACEHOLDER_TITLES:
+        return False
+    # A slug line, a transition, or a speaker cue. None of them name the work.
+    if candidate.endswith(":") or _is_excluded(candidate):
+        return False
+    return not (_CHAR_CONTD.match(candidate) or _MORE_MARKER.match(candidate))
+
+
+def _title_from_filename(filename: str) -> str:
+    """Fall back to what the actor called the file.
+
+    Sides have no title page. Left to guess, the parser reaches for whatever is
+    at the top of page one and the shelf fills up with "EXT. GARDEN - NIGHT".
+    The file name is the one place someone actually wrote down what this is.
+    """
+    stem = re.sub(r"\.[A-Za-z0-9]{1,5}$", "", filename or "")
+    stem = re.sub(r"[_\-]+", " ", stem)
+    stem = re.sub(r"\s+", " ", stem).strip()
+    if not stem:
+        return "Untitled Script"
+    # ALL_CAPS_FILE_NAMES read as shouting; anything else the actor typed stands.
+    return stem.title() if stem.isupper() else stem
+
+
+def _strip_production_marks(text: str) -> str:
+    """Drop shooting-script page furniture and revision marks."""
+    kept = []
+    for line in text.split("\n"):
+        stripped = line.strip()
+        if _REVISION_BANNER.match(stripped) or _CONTINUED_HEADER.match(stripped):
+            continue
+        kept.append(_REVISION_MARK.sub("", line))
+    return "\n".join(kept)
+
+
 def _preprocess_text(text: str) -> str:
     """Strip publisher line-number prefixes (Folger FTLN, etc.) so regex can parse dialogue."""
+    text = _strip_production_marks(text)
     # Only strip if we detect the pattern appears frequently (not just stray numbers)
     ftln_count = len(_LINE_NUMBER_PREFIX.findall(text[:5000]))
     if ftln_count >= 5:
@@ -518,6 +601,43 @@ def filter_two_person_scenes(
     return scenes
 
 
+# A scene wants four lines to be worth rehearsing. In a feature-length script
+# that costs nothing — there is always plenty else to pick. Sides are a handful
+# of short exchanges and the floor eats them: a two-page side came back with one
+# of the four scenes on the page, the other three thrown away.
+REHEARSAL_MIN_LINES = 4
+# Below the floor, a scene still counts if it is a real two-way exchange.
+EXCHANGE_MIN_LINES = 2
+# How many full-length scenes make the short ones surplus rather than the script.
+ENOUGH_FULL_SCENES = 3
+
+
+def _is_exchange(scene: Dict) -> bool:
+    """Two characters who both actually speak."""
+    speakers = {
+        line.get("character")
+        for line in scene.get("lines", [])
+        if line.get("character")
+    }
+    return len(speakers) >= 2
+
+
+def rehearsable_scenes(scenes: List[Dict]) -> List[Dict]:
+    """Drop scenes too short to rehearse, unless short is all the script has."""
+    def at_least(scene: Dict, floor: int) -> bool:
+        return len(scene.get("lines", [])) >= floor
+
+    full = [s for s in scenes if at_least(s, REHEARSAL_MIN_LINES)]
+    if len(full) >= ENOUGH_FULL_SCENES:
+        return full
+
+    return [
+        s for s in scenes
+        if at_least(s, REHEARSAL_MIN_LINES)
+        or (at_least(s, EXCHANGE_MIN_LINES) and _is_exchange(s))
+    ]
+
+
 def _recover_dropped_dialogue(scenes: List[Dict], raw_text: str) -> List[Dict]:
     """Lossless guard against LLM line-dropping.
 
@@ -571,6 +691,56 @@ def _recover_dropped_dialogue(scenes: List[Dict], raw_text: str) -> List[Dict]:
 
 
 # ---------------------------------------------------------------------------
+# PDF text
+# ---------------------------------------------------------------------------
+
+def _is_upright_glyph(obj) -> bool:
+    """True for a character drawn without rotation."""
+    if obj.get("object_type") != "char":
+        return True
+    matrix = obj.get("matrix")
+    if not matrix:
+        return True
+    return abs(matrix[1]) < 1e-6 and abs(matrix[2]) < 1e-6
+
+
+def pdf_page_text(page) -> str:
+    """Page text with the watermark dropped and fake bold collapsed.
+
+    Casting sites stamp sides with the recipient's name and a timestamp set
+    at an angle across the type. pdfplumber lays those glyphs out by
+    y-position like any other character, so each one lands on its own line:
+    a two-page side came back as 2,672 lines of single letters, with stray
+    watermark characters glued into the dialogue that survived. Script type
+    is always upright, so the angled glyphs can go.
+
+    Revision headers are bolded by drawing the same string twice in the same
+    place, which reads back doubled — "CCOONNTTIINNUUEEDD". The copies sit at
+    identical coordinates, so folding them costs nothing and a genuine double
+    letter, a character apart, is untouched.
+    """
+    chars = page.chars
+    upright = [c for c in chars if _is_upright_glyph(c)]
+
+    # A page that is angled end to end is a rotated scan, not a watermark.
+    # Filtering it would hand back nothing, so leave it alone.
+    if upright and len(upright) < len(chars):
+        page = page.filter(_is_upright_glyph)
+
+    return page.dedupe_chars().extract_text() or ""
+
+
+def extract_pdf_text(file_content: bytes) -> str:
+    """Text of every page in a PDF, watermarks removed."""
+    try:
+        with pdfplumber.open(io.BytesIO(file_content)) as pdf:
+            pages = [pdf_page_text(page) for page in pdf.pages]
+        return "\n\n".join(p for p in pages if p).strip()
+    except Exception as e:
+        raise ValueError(f"Failed to parse PDF: {str(e)}")
+
+
+# ---------------------------------------------------------------------------
 # ScriptParser class
 # ---------------------------------------------------------------------------
 
@@ -587,19 +757,7 @@ class ScriptParser:
 
     def extract_text_from_pdf(self, file_content: bytes) -> str:
         """Extract text from PDF file using pdfplumber"""
-        try:
-            pdf_file = io.BytesIO(file_content)
-            text = ""
-
-            with pdfplumber.open(pdf_file) as pdf:
-                for page in pdf.pages:
-                    page_text = page.extract_text()
-                    if page_text:
-                        text += page_text + "\n\n"
-
-            return text.strip()
-        except Exception as e:
-            raise ValueError(f"Failed to parse PDF: {str(e)}")
+        return extract_pdf_text(file_content)
 
     def extract_text_from_txt(self, file_content: bytes) -> str:
         """Extract text from TXT file"""
@@ -621,6 +779,9 @@ class ScriptParser:
         Looks for short, prominent lines (title case or all caps) near the top,
         skipping publisher boilerplate like 'Folger', 'Project Gutenberg', etc.
         """
+        if not _has_title_page(text):
+            return None
+
         skip_words = {
             'folger', 'gutenberg', 'copyright', 'license', 'published',
             'edition', 'library', 'press', 'printing', 'isbn',
@@ -640,6 +801,11 @@ class ScriptParser:
                 continue
             # Skip lines that are clearly not titles (page numbers, dates, etc.)
             if re.match(r'^[\d\s\-/.:]+$', stripped):
+                continue
+            # Sides carry no title page, so the top of the first page is a slug
+            # line, a transition or a cue. A shelf full of "EXT. GARDEN - NIGHT"
+            # is where believing them leads.
+            if not _is_usable_title(stripped):
                 continue
             # Title-like: all caps, or title case, and short
             if (stripped.isupper() or stripped.istitle()) and len(stripped) < 60:
@@ -1490,6 +1656,10 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         if not raw_text or len(raw_text) < 100:
             raise ValueError("File appears to be empty or too short")
 
+        # Clear the page furniture once, here, so the AI and the deterministic
+        # parser are both reading the same clean script.
+        raw_text = _strip_production_marks(raw_text)
+
         pages_est = max(1, len(raw_text) // 3000)
         progress(f"Read ~{pages_est} pages of text")
 
@@ -1554,11 +1724,14 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         # recovered lines count toward the 4-line minimum).
         scenes = _recover_dropped_dialogue(scenes, raw_text)
 
-        # Filter out scenes with fewer than 4 lines — too short for rehearsal
+        if not _has_title_page(raw_text) or not _is_usable_title(metadata.get("title")):
+            metadata["title"] = _title_from_filename(filename)
+            progress(f"No title page, going with \"{metadata['title']}\"")
+
         before = len(scenes)
-        scenes = [s for s in scenes if len(s.get("lines", [])) >= 4]
+        scenes = rehearsable_scenes(scenes)
         if before > len(scenes):
-            progress(f"Filtered out {before - len(scenes)} scenes with fewer than 4 lines")
+            progress(f"Set aside {before - len(scenes)} scenes too short to rehearse")
 
         progress(f"Extracted {len(scenes)} rehearsal-ready scenes")
 

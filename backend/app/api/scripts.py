@@ -209,6 +209,8 @@ async def scan_script(
     import io
     import pdfplumber as _pdfplumber
 
+    from app.services.script_parser import pdf_page_text
+
     actual_pdf_pages = 0
     try:
         if file_ext == "pdf":
@@ -217,7 +219,7 @@ async def scan_script(
             with _pdfplumber.open(pdf_file) as pdf:
                 actual_pdf_pages = len(pdf.pages)
                 for page in pdf.pages:
-                    page_text = page.extract_text()
+                    page_text = pdf_page_text(page)
                     if page_text:
                         raw_text += page_text + "\n\n"
             raw_text = raw_text.strip()

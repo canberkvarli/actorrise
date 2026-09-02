@@ -17,6 +17,7 @@ import unittest
 from app.services.script_parser import (
     parse_dialogue,
     filter_two_person_scenes,
+    rehearsable_scenes,
     _recover_dropped_dialogue,
 )
 
@@ -150,6 +151,51 @@ class LosslessGuardTests(unittest.TestCase):
         before = len(good_scene["lines"])
         recovered = _recover_dropped_dialogue([dict(good_scene)], SCREENPLAY)
         self.assertEqual(len(recovered[0]["lines"]), before)
+
+
+def _scene(title, *speakers):
+    """A scene of one line per speaker named."""
+    return {"title": title, "lines": [{"character": s, "text": "..."} for s in speakers]}
+
+
+class RehearsableScenesTests(unittest.TestCase):
+    """Sides are short by nature and the four-line floor was eating them.
+
+    Heidi Marshall Studio sent a two-page side (2026-09-01) holding four
+    exchanges. Three were under four lines, so the actor got one scene back.
+    """
+
+    SIDE = [
+        _scene("Clerk", "FERGUSON", "CLERK", "FERGUSON"),
+        _scene("Henry", "FERGUSON", "HENRY", "FERGUSON", "HENRY", "FERGUSON"),
+        _scene("Bruebecker", "SHARON", "ALI"),
+        _scene("Court order", "KATHLEEN", "JASON"),
+    ]
+
+    def test_a_side_keeps_all_of_its_exchanges(self):
+        kept = rehearsable_scenes(self.SIDE)
+        self.assertEqual([s["title"] for s in kept],
+                         ["Clerk", "Henry", "Bruebecker", "Court order"])
+
+    def test_a_full_script_still_drops_fragments(self):
+        script = [_scene(f"Scene {i}", *["A", "B"] * 3) for i in range(5)]
+        fragment = _scene("Fragment", "A", "B")
+
+        kept = rehearsable_scenes(script + [fragment])
+
+        self.assertNotIn("Fragment", [s["title"] for s in kept])
+        self.assertEqual(len(kept), 5)
+
+    def test_one_sided_fragment_is_not_an_exchange(self):
+        # A stray pair of lines from a single speaker is a leftover, not a scene.
+        kept = rehearsable_scenes([_scene("Solo", "A", "A"), _scene("Duet", "A", "B")])
+        self.assertEqual([s["title"] for s in kept], ["Duet"])
+
+    def test_a_long_scene_survives_the_short_script_path(self):
+        # Falling back must not start dropping scenes the floor would have kept.
+        monologue = _scene("Monologue", "A", "A", "A", "A", "A")
+        kept = rehearsable_scenes([monologue, _scene("Duet", "A", "B")])
+        self.assertEqual([s["title"] for s in kept], ["Monologue", "Duet"])
 
 
 if __name__ == "__main__":

@@ -30,6 +30,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { UpgradeModal } from "@/components/billing/UpgradeModal";
+import { UploadStage } from "@/components/practice/UploadStage";
 import { API_URL } from "@/lib/api";
 import { SCRIPTS_QUERY_KEY, useScripts } from "@/hooks/useScripts";
 import { useUsageLimits } from "@/hooks/useSubscription";
@@ -50,6 +51,8 @@ const STEP_GROUPS: { match: string; label: string }[] = [
   { match: "Skipped", label: "Pulling every line of dialogue" },
   { match: "No scenes", label: "Pulling every line of dialogue" },
   { match: "Filtered", label: "Assembling your rehearsal scenes" },
+  { match: "Set aside", label: "Assembling your rehearsal scenes" },
+  { match: "No title page", label: "Naming the script" },
   { match: "Figuring", label: "Figuring out the tone, emotions, dynamics" },
   { match: "Analyzed", label: "Figuring out the tone, emotions, dynamics" },
   { match: "Extracting", label: "Pulling every line of dialogue" },
@@ -134,6 +137,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const [progressSteps, setProgressSteps] = useState<{ group: string; detail: string }[]>([]);
   const [extractionDone, setExtractionDone] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  // The stage holds the screen; minimising drops it to the bottom bar so a long
+  // extraction never blocks the app.
+  const [minimized, setMinimized] = useState(false);
   const [doneInfo, setDoneInfo] = useState<{ id: number; scenes: number } | null>(null);
 
   const isBusy = scanning || uploadingFile || scanResult !== null;
@@ -157,12 +163,23 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("beforeunload", handler);
   }, [scanning, uploadingFile]);
 
-  // Auto-clear the "done" banner after a few seconds.
+  // Auto-clear the "done" banner after a few seconds. The stage holds longer —
+  // it is the payoff, and dismissing it out from under someone reads as a bug.
   useEffect(() => {
     if (!doneInfo) return;
-    const t = setTimeout(() => setDoneInfo(null), 6000);
+    const t = setTimeout(() => setDoneInfo(null), minimized ? 6000 : 12000);
     return () => clearTimeout(t);
-  }, [doneInfo]);
+  }, [doneInfo, minimized]);
+
+  // Escape drops the stage without cancelling the extraction behind it.
+  useEffect(() => {
+    if (minimized) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMinimized(true);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [minimized]);
 
   // Auto-scroll the expanded step list as new steps arrive.
   useEffect(() => {
@@ -190,6 +207,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       setProgressSteps([{ group: "Uploading file", detail: "Uploading file" }]);
       setExtractionDone(false);
       setDoneInfo(null);
+      setMinimized(false);
 
       const controller = new AbortController();
       abortControllerRef.current = controller;
@@ -394,9 +412,32 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     <UploadContext.Provider value={{ isUploading: isBusy, phaseLabel, canUpload, start, openUpgrade }}>
       {children}
 
-      {/* Persistent progress banner */}
+      {/* Centre stage while the script is being read */}
       <AnimatePresence>
-        {showBanner && (
+        {showBanner && !minimized && (
+          <UploadStage
+            key="upload-stage"
+            scanning={scanning}
+            fileName={fileName}
+            steps={progressSteps}
+            extractionDone={extractionDone}
+            doneInfo={doneInfo}
+            expanded={expanded}
+            onToggleExpanded={() => setExpanded((v) => !v)}
+            onCancel={() => abortControllerRef.current?.abort()}
+            onView={() => {
+              const id = doneInfo!.id;
+              setDoneInfo(null);
+              router.push(`/practice?script=${id}`);
+            }}
+            onMinimize={() => setMinimized(true)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Minimised: the same job, out of the way */}
+      <AnimatePresence>
+        {showBanner && minimized && (
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -463,7 +504,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
                   <IconLoader2 className="h-4 w-4 shrink-0 animate-spin text-primary" />
                 )}
 
-                <div className="min-w-0 flex-1">
+                <button
+                  type="button"
+                  onClick={() => setMinimized(false)}
+                  aria-label="Back to the full view"
+                  className="min-w-0 flex-1 text-left"
+                >
                   <p className="text-sm font-medium text-foreground truncate">
                     {doneInfo
                       ? "Script ready"
@@ -478,7 +524,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
                         ? "Checking length and structure"
                         : latestStep}
                   </p>
-                </div>
+                </button>
 
                 {doneInfo ? (
                   <button
