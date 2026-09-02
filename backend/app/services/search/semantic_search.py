@@ -145,6 +145,27 @@ def review_hides_from_search(review_status) -> bool:
     return review_status in HIDDEN_REVIEW_STATUSES
 
 
+def exclude_hidden(query):
+    """Apply the review-status gate to a query selecting Monologue rows.
+
+    A helper rather than an inline `.filter()`, because inline is exactly how
+    this went wrong. This module builds FIVE separate Monologue queries and the
+    gate was written on one of them — the pgvector path. The keyword-match
+    fallback, the cache-hit path, the semantic candidate load and browse all
+    went on serving retired rows, so a query like "funny and for women", which
+    routes to the keyword fallback, returned 35-word pieces that had been
+    retired as too_short days earlier.
+
+    Anything selecting monologues for a user to see goes through here.
+    """
+    return query.filter(
+        or_(
+            Monologue.review_status.is_(None),
+            Monologue.review_status.notin_(tuple(HIDDEN_REVIEW_STATUSES)),
+        )
+    )
+
+
 def film_tv_word_gate_hides(source_type, word_count) -> bool:
     """True when a film/TV piece is too short to surface (see FILM_TV_MIN_WORDS).
     Stage plays are governed by other gates, so they are never hidden here.
@@ -952,9 +973,13 @@ class SemanticSearch:
                 cached_ids = list(rows)
                 cached_scores = {}
             mons = (
-                self.db.query(Monologue)
-                .join(Play)
-                .filter(Monologue.id.in_(cached_ids))
+                exclude_hidden(
+                    self.db.query(Monologue)
+                    .join(Play)
+                    # A cached id list predates the retirement that hid these
+                    # rows, so the gate has to be re-applied on the way out.
+                    .filter(Monologue.id.in_(cached_ids))
+                )
                 .all()
             )
             mon_by_id: Dict[Any, Monologue] = {m.id: m for m in mons}
@@ -1042,7 +1067,7 @@ class SemanticSearch:
 
         # Build base query (eager-load Play to avoid N+1 during scoring/response)
         # CRITICAL: Defer embedding_vector to avoid loading 1536 floats per row over network
-        base_query = (
+        base_query = exclude_hidden(
             self.db.query(Monologue)
             .join(Play)
             .options(joinedload(Monologue.play), defer(Monologue.embedding_vector))
@@ -1055,15 +1080,7 @@ class SemanticSearch:
             # lines in front) had been queued for review and was still turning
             # up in the library.
             #
-            # Expressed as SQL rather than the helper because this runs before
-            # scoring; the helper still guards the title path, where rows are
-            # already in memory. Mirrors it exactly, so keep the two in step.
-            .filter(
-                or_(
-                    Monologue.review_status.is_(None),
-                    Monologue.review_status.notin_(tuple(HIDDEN_REVIEW_STATUSES)),
-                )
-            )
+
             # Only known-foreign work is excluded, never merely unlabelled.
             # `language` defaults to 'en' and is right for all but three plays
             # (a Dutch Ibsen volume that became Peer Gynt + Brand, and the Hindi
@@ -1386,13 +1403,15 @@ class SemanticSearch:
             if candidate_ids:
                 from sqlalchemy.orm import Load
                 semantic_candidates = (
-                    self.db.query(Monologue)
-                    .join(Play)
-                    .options(
-                        joinedload(Monologue.play).defer(Play.full_text),  # Defer play's full_text
-                        defer(Monologue.embedding_vector),  # 1536 floats per row
+                    exclude_hidden(
+                        self.db.query(Monologue)
+                        .join(Play)
+                        .options(
+                            joinedload(Monologue.play).defer(Play.full_text),
+                            defer(Monologue.embedding_vector),  # 1536 floats/row
+                        )
+                        .filter(Monologue.id.in_(candidate_ids))
                     )
-                    .filter(Monologue.id.in_(candidate_ids))
                     .all()
                 )
                 # Re-order to match pgvector ranking
@@ -1756,7 +1775,7 @@ class SemanticSearch:
         # Gender is always a hard filter — "for women" is unambiguous intent
         apply_gender_filter = filters and filters.get("gender")
 
-        base_query = self.db.query(Monologue).join(Play)
+        base_query = exclude_hidden(self.db.query(Monologue).join(Play))
 
         # Apply filters (same as semantic search)
         if filters:
@@ -2026,7 +2045,7 @@ class SemanticSearch:
         fetching all IDs to Python and doing a second IN query.
         """
 
-        query = self.db.query(Monologue).join(Play)
+        query = exclude_hidden(self.db.query(Monologue).join(Play))
 
         # Apply filters — same set as semantic search so UI toggles work in browse mode
         if filters:

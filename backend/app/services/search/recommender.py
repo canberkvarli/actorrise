@@ -8,7 +8,7 @@ from app.models.actor import ActorProfile, Monologue, MonologueFavorite, Play
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
-from .semantic_search import SemanticSearch
+from .semantic_search import SemanticSearch, exclude_hidden
 
 # Profile age → DB age range mapping
 AGE_MAPPING = {
@@ -335,7 +335,7 @@ class Recommender:
         filters = filters or {}
         preferred_genres = _preferred_genres_list(actor_profile)
 
-        query = self.db.query(Monologue).join(Play)
+        query = exclude_hidden(self.db.query(Monologue).join(Play))
         query = self._apply_casting_filters(query, filters)
 
         if preferred_genres:
@@ -420,7 +420,7 @@ class Recommender:
         }
         all_exclude = exclude_ids | fav_ids
 
-        query = (
+        query = exclude_hidden(
             self.db.query(Monologue)
             .join(Play)
             .filter(Monologue.embedding_vector.isnot(None))
@@ -472,7 +472,7 @@ class Recommender:
             emotion_counts = Counter(r[0] for r in fav_emotions if r[0])
             comfort_emotions = {e for e, _ in emotion_counts.most_common(2)}
 
-        query = self.db.query(Monologue).join(Play)
+        query = exclude_hidden(self.db.query(Monologue).join(Play))
 
         if exclude_ids:
             query = query.filter(Monologue.id.notin_(exclude_ids))
@@ -539,6 +539,8 @@ class Recommender:
     ) -> List[Monologue]:
         """Find similar monologues using pgvector cosine distance (fast, DB-side)."""
 
+        # Not gated: this is the seed the caller already has open, not a
+        # result being offered. The neighbours it returns ARE gated below.
         monologue = self.db.query(Monologue).filter(Monologue.id == monologue_id).first()
 
         if not monologue or monologue.embedding_vector is None:
@@ -546,8 +548,7 @@ class Recommender:
 
         try:
             return (
-                self.db.query(Monologue)
-                .join(Play)
+                exclude_hidden(self.db.query(Monologue).join(Play))
                 .filter(
                     Monologue.id != monologue_id,
                     Monologue.embedding_vector.isnot(None),
@@ -559,7 +560,7 @@ class Recommender:
         except Exception as e:
             print(f"Error finding similar monologues: {e}")
             # Fallback: same author or same primary emotion
-            return self.db.query(Monologue).join(Play).filter(
+            return exclude_hidden(self.db.query(Monologue).join(Play)).filter(
                 Monologue.id != monologue_id,
                 or_(
                     Play.author == monologue.play.author,
@@ -572,7 +573,7 @@ class Recommender:
 
         # Simple trending algorithm: sort by favorite_count + view_count/10
         # This gives more weight to favorites than views
-        return self.db.query(Monologue).order_by(
+        return exclude_hidden(self.db.query(Monologue)).order_by(
             (Monologue.favorite_count + Monologue.view_count / 10).desc()
         ).limit(limit).all()
 
@@ -591,4 +592,6 @@ class Recommender:
         if not all_ids:
             return []
         selected_ids = _random.sample(all_ids, min(limit, len(all_ids)))
-        return self.db.query(Monologue).filter(Monologue.id.in_(selected_ids)).all()
+        return exclude_hidden(
+            self.db.query(Monologue).filter(Monologue.id.in_(selected_ids))
+        ).all()
