@@ -1,5 +1,9 @@
 /* ActorRise service worker — installable + offline shell. Dependency-free. */
-const CACHE_NAME = "actorrise-v1";
+/* Bump on any change to what is cached or how. The activate handler deletes
+   every cache whose key is not this one, so a new name is the only thing that
+   clears what a previous worker stored — and the name had never changed since
+   the worker shipped, which meant the purge could never fire. */
+const CACHE_NAME = "actorrise-v2";
 const OFFLINE_URL = "/offline.html";
 
 // App shell assets to precache. Keep this list to things we know exist in /public.
@@ -94,20 +98,43 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Other same-origin GET assets: stale-while-revalidate.
+  // Never cache anything that carries the app itself.
+  //
+  // This used to stale-while-revalidate every same-origin GET, which sounds
+  // harmless for hashed build assets but is not: Next fetches an RSC payload on
+  // every client-side navigation, at a plain page URL with `?_rsc=<buildId>`.
+  // That is same-origin, GET, not /api/, and its mode is "cors" rather than
+  // "navigate" — so it fell through to the branch below and came back from a
+  // cache written by an older deploy. The document was fresh and the component
+  // tree behind it was months old. On phones, where the worker sticks around
+  // between visits, that showed up as the app simply not updating: a search
+  // screen still running a loading checklist that no longer exists in the
+  // codebase at all.
+  //
+  // Nothing about the running app is cached now. Only the offline shell and the
+  // icons are, which is all the worker was ever installed for.
+  if (
+    url.pathname.startsWith("/_next/") ||
+    url.searchParams.has("_rsc") ||
+    request.headers.get("RSC") === "1" ||
+    request.destination === "document" ||
+    request.destination === "script"
+  ) {
+    return;
+  }
+
+  // Everything else same-origin: cache-first for the precached shell, straight
+  // to the network otherwise.
   event.respondWith(
     (async () => {
       const cache = await caches.open(CACHE_NAME);
       const cached = await cache.match(request);
-      const fetchPromise = fetch(request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            cache.put(request, networkResponse.clone()).catch(() => {});
-          }
-          return networkResponse;
-        })
-        .catch(() => undefined);
-      return cached || (await fetchPromise) || Response.error();
+      if (cached) return cached;
+      try {
+        return await fetch(request);
+      } catch (_) {
+        return Response.error();
+      }
     })()
   );
 });

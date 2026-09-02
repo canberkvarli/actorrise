@@ -99,15 +99,15 @@ function RehearsalLoadingOverlay() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[9999] bg-neutral-950 flex items-center justify-center"
+      className="fixed inset-0 z-[9999] bg-background flex items-center justify-center"
     >
       <div className="text-center space-y-4">
-        <div className="h-8 w-8 rounded-full border-2 border-neutral-700 border-t-primary animate-spin mx-auto" />
+        <div className="h-8 w-8 rounded-full border-2 border-border border-t-primary animate-spin mx-auto" />
         <motion.p
           key={idx}
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-neutral-400 text-sm"
+          className="text-muted-foreground text-sm"
         >
           {REHEARSAL_LOADING_TEXTS[idx]}
         </motion.p>
@@ -135,7 +135,7 @@ function SceneEditLoadingScreen() {
     return () => clearInterval(t);
   }, []);
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center">
+    <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="text-center space-y-4">
         <motion.div
           className="relative mx-auto"
@@ -143,13 +143,13 @@ function SceneEditLoadingScreen() {
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
         >
-          <div className="h-8 w-8 rounded-full border-2 border-neutral-700 border-t-primary animate-spin mx-auto" />
+          <div className="h-8 w-8 rounded-full border-2 border-border border-t-primary animate-spin mx-auto" />
         </motion.div>
         <motion.p
           key={idx}
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-neutral-400 text-sm"
+          className="text-muted-foreground text-sm"
         >
           {SCENE_EDIT_LOADING_TEXTS[idx]}
         </motion.p>
@@ -395,6 +395,8 @@ export default function SceneEditPage() {
   // Cold-read: a timed read-through before a single-take performance.
   // Read mode by default — the script reads clean; editing power is one tap away.
   const [editMode, setEditMode] = useState(false);
+  /** The casting panel starts closed — the scene casts you on arrival. */
+  const [castOpen, setCastOpen] = useState(false);
   const [showRehearsalModal, setShowRehearsalModal] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [generatingSynopsis, setGeneratingSynopsis] = useState(false);
@@ -772,9 +774,18 @@ export default function SceneEditPage() {
     // vs "STEVE"), and selecting it would highlight no lines and start a rehearsal
     // with nothing to say.
     const declared = swrScene.character_1_name;
+    /* Falling back to uniqueChars[0] cast you as whoever happens to speak
+       first, which in a scene that opens on a clerk or a waiter is a one-line
+       part. Fall back to the biggest part instead — if the scene does not say
+       who you are, the person with the most to say is the better guess. */
+    const biggest = [...uniqueChars].sort(
+      (a, b) =>
+        swrScene.lines.filter(l => l.character_name === b).length -
+        swrScene.lines.filter(l => l.character_name === a).length,
+    )[0];
     const defaultRole =
       uniqueChars.find(c => c.trim().toLowerCase() === (declared ?? "").trim().toLowerCase())
-      ?? uniqueChars[0]
+      ?? biggest
       ?? declared;
     setSelectedCharacter(defaultRole);
     const updated = { ...saved };
@@ -1655,14 +1666,14 @@ export default function SceneEditPage() {
     return (
       <div className="space-y-1">
         <div className="flex items-center gap-1.5">
-          <div className="text-xs uppercase tracking-wider text-neutral-400 font-medium">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
             {label}
           </div>
           {iconNextToLabel && !isEditing && (
             <button
               type="button"
               onClick={() => startEditScene(field, str)}
-              className="text-neutral-400 hover:text-neutral-200 transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <Edit2 className="w-3 h-3" />
             </button>
@@ -1676,14 +1687,14 @@ export default function SceneEditPage() {
                 onChange={(e) => setSceneEditValue(maxLength ? e.target.value.slice(0, maxLength) : e.target.value)}
                 rows={Math.min(8, Math.max(3, Math.ceil(sceneEditValue.length / 40)))}
                 maxLength={maxLength}
-                className="resize-none bg-transparent border-neutral-700 text-sm text-neutral-200 px-2 py-1.5 -mx-2 focus-visible:ring-1 focus-visible:ring-primary/50"
+                className="resize-none bg-transparent border-border text-sm text-foreground px-2 py-1.5 -mx-2 focus-visible:ring-1 focus-visible:ring-primary/50"
                 autoFocus
                 disabled={saving !== null}
                 onKeyDown={handleKeyDown}
                 onBlur={handleBlur}
               />
               {maxLength && (
-                <p className="text-[10px] text-neutral-400 text-right tabular-nums">
+                <p className="text-[10px] text-muted-foreground text-right tabular-nums">
                   {sceneEditValue.length}/{maxLength}
                 </p>
               )}
@@ -1693,7 +1704,7 @@ export default function SceneEditPage() {
               value={sceneEditValue}
               onChange={(e) => setSceneEditValue(maxLength ? e.target.value.slice(0, maxLength) : e.target.value)}
               maxLength={maxLength}
-              className="bg-transparent border-neutral-700 text-sm text-neutral-200 h-auto px-2 py-1.5 -mx-2 focus-visible:ring-1 focus-visible:ring-primary/50"
+              className="bg-transparent border-border text-sm text-foreground h-auto px-2 py-1.5 -mx-2 focus-visible:ring-1 focus-visible:ring-primary/50"
               autoFocus
               disabled={saving !== null}
               onKeyDown={handleKeyDown}
@@ -1704,13 +1715,13 @@ export default function SceneEditPage() {
           <button
             type="button"
             onClick={() => startEditScene(field, str)}
-            className="group flex items-start gap-2 text-left w-full rounded-md px-2 py-1.5 -mx-2 hover:bg-neutral-800/60 transition-colors border border-transparent"
+            className="group flex items-start gap-2 text-left w-full rounded-md px-2 py-1.5 -mx-2 hover:bg-muted/60 transition-colors border border-transparent"
           >
-            <p className={cn("text-sm flex-1 break-words line-clamp-4", str ? "text-neutral-200" : "text-neutral-400 italic")}>
+            <p className={cn("text-sm flex-1 break-words line-clamp-4", str ? "text-foreground" : "text-muted-foreground italic")}>
               {str || `Add ${label.toLowerCase()}...`}
             </p>
             {!iconNextToLabel && (
-              <Edit2 className="w-3 h-3 text-neutral-400 group-hover:text-neutral-200 transition-colors flex-shrink-0 mt-0.5" />
+              <Edit2 className="w-3 h-3 text-muted-foreground group-hover:text-foreground transition-colors flex-shrink-0 mt-0.5" />
             )}
           </button>
         )}
@@ -1730,13 +1741,13 @@ export default function SceneEditPage() {
     <div className="space-y-5">
       {/* Header — title + attribution */}
       <div className="rounded-xl bg-gradient-to-br from-card to-card/60 border border-border p-4 space-y-3 overflow-hidden">
-        <div className="text-sm text-neutral-300 tracking-wide break-words">
+        <div className="text-sm text-muted-foreground tracking-wide break-words">
           {editingSceneField === "play_title" && editingLocation === "left" ? (
             <Input
               value={sceneEditValue}
               onChange={(e) => setSceneEditValue(e.target.value)}
               maxLength={120}
-              className="inline-block h-7 w-auto bg-transparent border-neutral-700 text-sm text-neutral-200 px-1.5 py-0.5 focus-visible:ring-1 focus-visible:ring-primary/50"
+              className="inline-block h-7 w-auto bg-transparent border-border text-sm text-foreground px-1.5 py-0.5 focus-visible:ring-1 focus-visible:ring-primary/50"
               autoFocus
               disabled={saving !== null}
               onKeyDown={(e) => {
@@ -1756,8 +1767,8 @@ export default function SceneEditPage() {
                 onClick={() => startEditScene("play_title", scene.play_title, "left")}
                 className="group/pt inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
               >
-                <span className="text-neutral-300 font-medium break-words">{scene.play_title}</span>
-                <Edit2 className="w-2.5 h-2.5 text-neutral-500 opacity-60 sm:opacity-0 sm:group-hover/pt:opacity-100 transition-opacity shrink-0" />
+                <span className="text-muted-foreground font-medium break-words">{scene.play_title}</span>
+                <Edit2 className="w-2.5 h-2.5 text-muted-foreground opacity-60 sm:opacity-0 sm:group-hover/pt:opacity-100 transition-opacity shrink-0" />
               </button>
             </>
           )}
@@ -1768,7 +1779,7 @@ export default function SceneEditPage() {
                 value={sceneEditValue}
                 onChange={(e) => setSceneEditValue(e.target.value)}
                 maxLength={80}
-                className="inline-block h-7 w-auto bg-transparent border-neutral-700 text-sm text-neutral-200 px-1.5 py-0.5 focus-visible:ring-1 focus-visible:ring-primary/50"
+                className="inline-block h-7 w-auto bg-transparent border-border text-sm text-foreground px-1.5 py-0.5 focus-visible:ring-1 focus-visible:ring-primary/50"
                 autoFocus
                 disabled={saving !== null}
                 onKeyDown={(e) => {
@@ -1789,18 +1800,18 @@ export default function SceneEditPage() {
                 onClick={() => startEditScene("play_author", scene.play_author, "left")}
                 className="group/pa inline-flex items-center gap-1 hover:opacity-80 transition-opacity"
               >
-                <span className="text-neutral-300 font-medium break-words">{scene.play_author}</span>
-                <Edit2 className="w-2.5 h-2.5 text-neutral-500 opacity-60 sm:opacity-0 sm:group-hover/pa:opacity-100 transition-opacity shrink-0" />
+                <span className="text-muted-foreground font-medium break-words">{scene.play_author}</span>
+                <Edit2 className="w-2.5 h-2.5 text-muted-foreground opacity-60 sm:opacity-0 sm:group-hover/pa:opacity-100 transition-opacity shrink-0" />
               </button>
             </>
           ) : (
             <>
               {" by "}
-              <span className="text-neutral-300 font-medium break-words">{scene.play_author}</span>
+              <span className="text-muted-foreground font-medium break-words">{scene.play_author}</span>
             </>
           )}
           {(scene.act || scene.scene_number) && (
-            <span className="text-neutral-400 ml-1">
+            <span className="text-muted-foreground ml-1">
               {" \u00B7 "}
               {[scene.act, scene.scene_number].filter(Boolean).join(", ")}
             </span>
@@ -1812,14 +1823,14 @@ export default function SceneEditPage() {
         ) : (
           <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <span className="text-xs uppercase tracking-wider text-neutral-400 font-medium">
-                Description <span className="normal-case text-neutral-400">(optional)</span>
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Description <span className="normal-case text-muted-foreground">(optional)</span>
               </span>
               <button
                 type="button"
                 onClick={suggestSynopsis}
                 disabled={generatingSynopsis}
-                className="text-neutral-400 hover:text-primary transition-colors"
+                className="text-muted-foreground hover:text-primary transition-colors"
                 title="Let AI create a description"
               >
                 {generatingSynopsis ? (
@@ -1831,7 +1842,7 @@ export default function SceneEditPage() {
               <button
                 type="button"
                 onClick={() => startEditScene("description", scene.description ?? "")}
-                className="text-neutral-400 hover:text-neutral-200 transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
                 title="Write manually"
               >
                 <Edit2 className="w-3 h-3" />
@@ -1839,7 +1850,7 @@ export default function SceneEditPage() {
             </div>
             {scene.description && (
               <p
-                className="text-sm font-semibold text-neutral-200 break-words px-2 py-1.5 -mx-2 cursor-pointer hover:opacity-70 transition-opacity"
+                className="text-sm font-semibold text-foreground break-words px-2 py-1.5 -mx-2 cursor-pointer hover:opacity-70 transition-opacity"
                 onClick={() => startEditScene("description", scene.description ?? "")}
               >
                 {scene.description}
@@ -1847,7 +1858,7 @@ export default function SceneEditPage() {
             )}
             {!scene.description && (
               <p
-                className="text-sm text-neutral-400 italic px-2 py-1.5 -mx-2 cursor-pointer hover:text-neutral-300 transition-colors"
+                className="text-sm text-muted-foreground italic px-2 py-1.5 -mx-2 cursor-pointer hover:text-muted-foreground transition-colors"
                 onClick={() => startEditScene("description", "")}
               >
                 No description yet
@@ -1861,22 +1872,22 @@ export default function SceneEditPage() {
       <div className="flex flex-wrap items-center justify-center gap-2">
         <div className="flex items-center gap-1.5 bg-card/60 border border-border px-3.5 py-2">
           <FileText className="w-3.5 h-3.5 text-primary/70" />
-          <span className="text-sm font-medium text-neutral-100 tabular-nums">{scene.line_count}</span>
-          <span className="text-xs text-neutral-400">line{scene.line_count !== 1 ? "s" : ""}</span>
+          <span className="text-sm font-medium text-foreground tabular-nums">{scene.line_count}</span>
+          <span className="text-xs text-muted-foreground">line{scene.line_count !== 1 ? "s" : ""}</span>
         </div>
         <Tooltip>
           <TooltipTrigger asChild>
             <div className="flex items-center gap-1.5 bg-card/60 border border-border px-3.5 py-2 cursor-default">
               <Clock className="w-3.5 h-3.5 text-primary/70" />
-              <span className="text-sm font-medium text-neutral-100 tabular-nums">{formatDuration(computedDuration)}</span>
+              <span className="text-sm font-medium text-foreground tabular-nums">{formatDuration(computedDuration)}</span>
             </div>
           </TooltipTrigger>
           <TooltipContent><p>Estimated at ~150 words per minute</p></TooltipContent>
         </Tooltip>
         <div className="flex items-center gap-1.5 bg-card/60 border border-border px-3.5 py-2">
           <Users className="w-3.5 h-3.5 text-primary/70" />
-          <span className="text-sm font-medium text-neutral-100 tabular-nums">{scene.rehearsal_count}</span>
-          <span className="text-xs text-neutral-400">rehearsal{scene.rehearsal_count !== 1 ? "s" : ""}</span>
+          <span className="text-sm font-medium text-foreground tabular-nums">{scene.rehearsal_count}</span>
+          <span className="text-xs text-muted-foreground">rehearsal{scene.rehearsal_count !== 1 ? "s" : ""}</span>
         </div>
       </div>
 
@@ -1884,9 +1895,9 @@ export default function SceneEditPage() {
       <div className="rounded-xl bg-card/40 border border-border p-4 space-y-3">
         <div className="flex items-center gap-2">
           <Theater className="w-4 h-4 text-primary" />
-          <h3 className="text-xl font-semibold text-neutral-100">Characters</h3>
+          <h3 className="text-xl font-semibold text-foreground">Characters</h3>
         </div>
-        <p className="text-[11px] text-neutral-400 -mt-1">Select who you&apos;ll play. Tap more than one to cover several parts.</p>
+        <p className="text-[11px] text-muted-foreground -mt-1">Select who you&apos;ll play. Tap more than one to cover several parts.</p>
         <div className="space-y-2">
           {allSceneCharacters.map((charName) => {
             const isMe = isMyRole(charName);
@@ -1908,8 +1919,8 @@ export default function SceneEditPage() {
                 className={cn(
                   "rounded-lg border p-3 transition-all cursor-pointer",
                   isMe
-                    ? "border-neutral-600 bg-neutral-800/60"
-                    : "border-neutral-700/50 bg-transparent hover:border-neutral-600"
+                    ? "border-border bg-muted/60"
+                    : "border-border/50 bg-transparent hover:border-border"
                 )}
               >
                 {/* Character name row */}
@@ -1917,10 +1928,10 @@ export default function SceneEditPage() {
                   <div
                     className={cn(
                       "w-3 h-3 rounded-full border-2 flex-shrink-0 transition-colors",
-                      isMe ? "border-primary bg-primary" : "border-neutral-600"
+                      isMe ? "border-primary bg-primary" : "border-border"
                     )}
                   />
-                  <span className="text-sm font-medium text-neutral-100">
+                  <span className="text-sm font-medium text-foreground">
                     {charName}
                   </span>
                   {isMe && (
@@ -1935,7 +1946,7 @@ export default function SceneEditPage() {
                         <button
                           type="button"
                           onClick={() => setVoiceDropdownOpen(voiceDropdownOpen === dropKey ? null : dropKey)}
-                          className="w-full flex items-center gap-2 rounded-md bg-neutral-800 border border-neutral-700 text-sm text-neutral-200 px-2.5 py-1.5 hover:border-neutral-500 transition-colors text-left"
+                          className="w-full flex items-center gap-2 rounded-md bg-muted border border-border text-sm text-foreground px-2.5 py-1.5 hover:border-border transition-colors text-left"
                         >
                           {voiceData ? (
                             <>
@@ -1946,22 +1957,22 @@ export default function SceneEditPage() {
                             </>
                           ) : (
                             <>
-                              <div className="w-5 h-5 rounded-full bg-neutral-700 flex items-center justify-center text-[10px] text-neutral-500 shrink-0">?</div>
-                              <span className="flex-1 text-neutral-500">Select a voice...</span>
+                              <div className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] text-muted-foreground shrink-0">?</div>
+                              <span className="flex-1 text-muted-foreground">Select a voice...</span>
                             </>
                           )}
-                          <ChevronDown className={cn("w-3.5 h-3.5 text-neutral-500 shrink-0 transition-transform", voiceDropdownOpen === dropKey && "rotate-180")} />
+                          <ChevronDown className={cn("w-3.5 h-3.5 text-muted-foreground shrink-0 transition-transform", voiceDropdownOpen === dropKey && "rotate-180")} />
                         </button>
                         {voiceDropdownOpen === dropKey && (
-                          <div className="absolute z-20 mt-1 w-full rounded-md bg-neutral-800 border border-neutral-700 shadow-lg py-1 max-h-[40vh] sm:max-h-48 overflow-y-auto">
+                          <div className="absolute z-20 mt-1 w-full rounded-md bg-muted border border-border shadow-lg py-1 max-h-[40vh] sm:max-h-48 overflow-y-auto">
                             {AI_VOICES.map((v) => (
                               <button
                                 key={v.id}
                                 type="button"
                                 onClick={() => { handleVoiceChange(charName, v.id); setVoiceDropdownOpen(null); }}
                                 className={cn(
-                                  "w-full flex items-center gap-2 px-2.5 py-1.5 text-sm hover:bg-neutral-700/60 transition-colors text-left",
-                                  voiceId === v.id && "bg-neutral-700/40"
+                                  "w-full flex items-center gap-2 px-2.5 py-1.5 text-sm hover:bg-muted/60 transition-colors text-left",
+                                  voiceId === v.id && "bg-muted/40"
                                 )}
                               >
                                 <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0", v.color)}>
@@ -1969,7 +1980,7 @@ export default function SceneEditPage() {
                                 </div>
                                 <div className="flex flex-col min-w-0">
                                   <span className="font-medium truncate">{v.label}</span>
-                                  <span className="text-[11px] text-neutral-400 truncate">{v.desc}</span>
+                                  <span className="text-[11px] text-muted-foreground truncate">{v.desc}</span>
                                 </div>
                               </button>
                             ))}
@@ -1984,7 +1995,7 @@ export default function SceneEditPage() {
                           "p-1.5 rounded-md border transition-colors",
                           isPreviewing
                             ? "bg-primary/20 border-primary/40 text-primary"
-                            : "bg-neutral-800 border-neutral-700 hover:border-neutral-500 text-neutral-300 hover:text-neutral-100"
+                            : "bg-muted border-border hover:border-border text-muted-foreground hover:text-foreground"
                         )}
                         title="Preview voice"
                       >
@@ -2003,8 +2014,8 @@ export default function SceneEditPage() {
       <div className="rounded-lg bg-card/50 border border-border overflow-hidden">
         <div className="flex items-center justify-between px-3 py-2.5">
           <div className="flex items-center gap-2">
-            <Highlighter className="w-3.5 h-3.5 text-amber-500" />
-            <span className="text-sm text-neutral-200">Highlight my lines</span>
+            <Highlighter className="w-3.5 h-3.5 text-primary" />
+            <span className="text-sm text-foreground">Highlight my lines</span>
           </div>
           <Switch
             checked={highlightMyLines}
@@ -2020,7 +2031,7 @@ export default function SceneEditPage() {
               transition={{ duration: 0.2, ease: 'easeInOut' }}
               className="overflow-hidden"
             >
-              <p className="text-xs text-amber-500/80 text-center pb-2.5">
+              <p className="text-xs text-primary/80 text-center pb-2.5">
                 {scene.lines.filter(l => isMyRole(l.character_name)).length} lines as {myRoles.join(" + ")}
               </p>
             </motion.div>
@@ -2033,13 +2044,13 @@ export default function SceneEditPage() {
         <button
           type="button"
           onClick={() => setSettingsExpanded((v) => !v)}
-          className="flex items-center justify-between w-full px-4 py-3 hover:bg-neutral-800/40 transition-colors"
+          className="flex items-center justify-between w-full px-4 py-3 hover:bg-muted/40 transition-colors"
         >
-          <h3 className="text-xl font-semibold text-neutral-100">Rehearsal settings</h3>
+          <h3 className="text-xl font-semibold text-foreground">Rehearsal settings</h3>
           {settingsExpanded ? (
-            <ChevronUp className="w-4 h-4 text-neutral-500" />
+            <ChevronUp className="w-4 h-4 text-muted-foreground" />
           ) : (
-            <ChevronDown className="w-4 h-4 text-neutral-500" />
+            <ChevronDown className="w-4 h-4 text-muted-foreground" />
           )}
         </button>
         <AnimatePresence>
@@ -2054,7 +2065,7 @@ export default function SceneEditPage() {
               <div className="px-4 pb-4 pt-4 space-y-4 border-t border-border">
                 {/* Countdown */}
                 <div className="flex items-center justify-between gap-3">
-                  <Label className="text-sm font-normal text-neutral-300">Pre-scene countdown</Label>
+                  <Label className="text-sm font-normal text-muted-foreground">Pre-scene countdown</Label>
                   <Switch
                     checked={rehearsalSettings.countdownSeconds > 0}
                     onCheckedChange={(on) => updateRehearsalSetting({ countdownSeconds: on ? 3 : 0 })}
@@ -2068,13 +2079,13 @@ export default function SceneEditPage() {
                       min={1} max={10} step={1}
                       className="flex-1"
                     />
-                    <span className="text-xs tabular-nums text-neutral-400 w-6">{rehearsalSettings.countdownSeconds}s</span>
+                    <span className="text-xs tabular-nums text-muted-foreground w-6">{rehearsalSettings.countdownSeconds}s</span>
                   </div>
                 )}
 
                 {/* Auto-advance */}
                 <div className="flex items-center justify-between gap-3">
-                  <Label className="text-sm font-normal text-neutral-300">Continue after my line</Label>
+                  <Label className="text-sm font-normal text-muted-foreground">Continue after my line</Label>
                   <Switch
                     checked={rehearsalSettings.autoAdvanceOnFinish}
                     onCheckedChange={(v) => updateRehearsalSetting({ autoAdvanceOnFinish: v })}
@@ -2083,7 +2094,7 @@ export default function SceneEditPage() {
 
                 {/* Breathing room */}
                 <div className="space-y-1.5">
-                  <Label className="text-sm font-normal text-neutral-300">Pause between lines</Label>
+                  <Label className="text-sm font-normal text-muted-foreground">Pause between lines</Label>
                   <div className="flex items-center gap-2">
                     <Slider
                       value={rehearsalSettings.pauseBetweenLinesSeconds}
@@ -2091,13 +2102,13 @@ export default function SceneEditPage() {
                       min={0} max={5} step={0.5}
                       className="flex-1"
                     />
-                    <span className="text-xs tabular-nums text-neutral-400 w-8">{rehearsalSettings.pauseBetweenLinesSeconds}s</span>
+                    <span className="text-xs tabular-nums text-muted-foreground w-8">{rehearsalSettings.pauseBetweenLinesSeconds}s</span>
                   </div>
                 </div>
 
                 {/* Auto-skip silence */}
                 <div className="flex items-center justify-between gap-3">
-                  <Label className="text-sm font-normal text-neutral-300">Auto-skip when silent</Label>
+                  <Label className="text-sm font-normal text-muted-foreground">Auto-skip when silent</Label>
                   <Switch
                     checked={rehearsalSettings.skipMyLineIfSilent}
                     onCheckedChange={(v) => updateRehearsalSetting({ skipMyLineIfSilent: v })}
@@ -2111,7 +2122,7 @@ export default function SceneEditPage() {
                       min={3} max={30} step={1}
                       className="flex-1"
                     />
-                    <span className="text-xs tabular-nums text-neutral-400 w-6">{rehearsalSettings.skipAfterSeconds}s</span>
+                    <span className="text-xs tabular-nums text-muted-foreground w-6">{rehearsalSettings.skipAfterSeconds}s</span>
                   </div>
                 )}
               </div>
@@ -2125,14 +2136,14 @@ export default function SceneEditPage() {
         <div className="rounded-xl bg-card/40 border border-border p-4 space-y-4">
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
-            <h3 className="text-lg font-semibold text-neutral-100">Scene Info</h3>
+            <h3 className="text-lg font-semibold text-foreground">Scene Info</h3>
           </div>
 
           {/* Tone */}
           {scene.tone && (
             <div className="space-y-1.5">
-              <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-medium">Tone</p>
-              <Badge className="text-xs bg-amber-500/15 text-amber-400 border-amber-500/30 capitalize hover:bg-amber-500/20">
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Tone</p>
+              <Badge className="text-xs bg-primary/15 text-primary border-primary/30 capitalize hover:bg-primary/20">
                 {scene.tone}
               </Badge>
             </div>
@@ -2141,7 +2152,7 @@ export default function SceneEditPage() {
           {/* Emotions */}
           {scene.primary_emotions && scene.primary_emotions.length > 0 && (
             <div className="space-y-1.5">
-              <p className="text-[11px] uppercase tracking-wider text-neutral-500 font-medium">Emotions</p>
+              <p className="text-[11px] uppercase tracking-wider text-muted-foreground font-medium">Emotions</p>
               <div className="flex flex-wrap gap-1.5">
                 {scene.primary_emotions.map((emotion) => (
                   <Badge
@@ -2167,13 +2178,13 @@ export default function SceneEditPage() {
           <button
             type="button"
             onClick={() => setContextExpanded(!contextExpanded)}
-            className="flex items-center justify-between w-full px-4 py-3 hover:bg-neutral-800/40 transition-colors"
+            className="flex items-center justify-between w-full px-4 py-3 hover:bg-muted/40 transition-colors"
           >
-            <span className="text-sm font-medium text-neutral-300">Context</span>
+            <span className="text-sm font-medium text-muted-foreground">Context</span>
             {contextExpanded ? (
-              <ChevronUp className="w-4 h-4 text-neutral-500" />
+              <ChevronUp className="w-4 h-4 text-muted-foreground" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-neutral-500" />
+              <ChevronDown className="w-4 h-4 text-muted-foreground" />
             )}
           </button>
           <AnimatePresence>
@@ -2201,7 +2212,7 @@ export default function SceneEditPage() {
           type="button"
           onClick={() => setShowResetConfirm(true)}
           disabled={resetting}
-          className="flex items-center gap-2 text-xs text-neutral-500 hover:text-orange-400 transition-colors mt-4 mx-auto disabled:opacity-50"
+          className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors mt-4 mx-auto disabled:opacity-50"
         >
           {resetting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RotateCcw className="w-3.5 h-3.5" />}
           Reset to original
@@ -2212,7 +2223,7 @@ export default function SceneEditPage() {
       <button
         type="button"
         onClick={() => setShowFeedbackModal(true)}
-        className="flex items-center gap-2 text-xs text-neutral-500 hover:text-neutral-300 transition-colors mt-2 mx-auto"
+        className="flex items-center gap-2 text-xs text-muted-foreground hover:text-muted-foreground transition-colors mt-2 mx-auto"
       >
         <MessageSquare className="w-3.5 h-3.5" />
         Feedback or report a bug
@@ -2226,18 +2237,47 @@ export default function SceneEditPage() {
 
   const isMyLine = (charName: string) => isMyRole(charName);
 
+  /* Screenplay geometry, in percentages rather than the literal inches a page
+     of sides uses, so it holds at any width. The cue sits well right of the
+     dialogue block, and the block is inset from both margins — that shape is
+     what makes a page read as a script at a glance, before you have read a
+     word of it.
+     Below sm there is not enough measure for indents of this size: at 390px a
+     34% cue indent leaves ~14 characters for the name. On a phone the cue drops
+     to a small indent and the dialogue runs full width, which is what printed
+     sides do on a narrow page too. */
+  const CUE_INDENT = "pl-2 sm:pl-[32%]";
+  const DIALOGUE_INDENT = "pl-2 pr-1 sm:pl-[16%] sm:pr-[10%]";
+
+  /** Everyone you are not reading. These are the parts the app reads back. */
+  const readerNames = allSceneCharacters.filter((c) => !isMyRole(c));
+  const readerVoiceLabel =
+    AI_VOICES.find((v) => v.id === (charVoices[readerNames[0]] ?? null))?.label ?? "a reader";
+
+  /* "by Unknown" is not information, and it was printed on the title page of
+     every uploaded scene — most of which are the actor's own sides and have no
+     author to name. Hidden while reading, still there to fill in while editing. */
+  const showAuthor =
+    editMode ||
+    (!!scene.play_author && scene.play_author.trim().toLowerCase() !== "unknown");
+
   const rightPanelContent = (
-    <div
-      className="mx-auto max-w-[760px] bg-[#faf7f1] text-neutral-900 rounded-xl border border-black/5 px-4 sm:px-12 py-6 sm:py-10 overflow-hidden shadow-[0_24px_70px_-24px_rgba(203,75,0,0.28),0_10px_34px_-14px_rgba(0,0,0,0.55)]"
-      style={{ fontFamily: '"Courier New", Courier, monospace' }}
-    >
+    /* The paper.
+       Was bg-[#faf7f1] with text-paper-ink, which is why the page had to pin
+       itself to dark: a hardcoded light card only reads as paper against an
+       unlit room. Tokens now, so it holds either way round.
+       The font was inline "Courier New" — the system fallback — while every
+       other script surface in the app is Courier Prime via --font-typewriter.
+       The two do not match, and this is the one screen where the type IS the
+       design. */
+    <div className="font-typewriter mx-auto max-w-[46rem] bg-paper text-paper-ink rounded-xl border border-black/5 px-5 sm:px-14 py-6 sm:py-10 overflow-hidden shadow-[0_24px_70px_-24px_rgba(203,75,0,0.20),0_10px_34px_-14px_rgba(0,0,0,0.28)] dark:shadow-[0_24px_70px_-24px_rgba(203,75,0,0.28),0_10px_34px_-14px_rgba(0,0,0,0.55)]">
       {/* Title inside parchment — editable */}
-      <div className="text-center mb-6 pb-5 border-b border-neutral-200">
+      <div className="text-center mb-6 pb-5 border-b border-paper-rule">
         {editingSceneField === "title" ? (
           <Input
             value={sceneEditValue}
             onChange={(e) => setSceneEditValue(e.target.value)}
-            className="text-2xl font-bold uppercase tracking-wider text-center bg-transparent border-b-2 border-dashed border-neutral-400 border-x-0 border-t-0 rounded-none shadow-none focus-visible:ring-0 h-auto py-1"
+            className="text-2xl font-bold uppercase tracking-wider text-center bg-transparent border-b-2 border-dashed border-paper-ink/40 border-x-0 border-t-0 rounded-none shadow-none focus-visible:ring-0 h-auto py-1"
             maxLength={120}
             autoFocus
             disabled={saving !== null}
@@ -2257,16 +2297,16 @@ export default function SceneEditPage() {
             className="group inline-flex items-center gap-2 hover:opacity-80 transition-opacity"
           >
             <h2 className="text-2xl font-bold uppercase tracking-wider break-words">{scene.title}</h2>
-            <Edit2 className="w-3.5 h-3.5 text-neutral-300 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
+            <Edit2 className="w-3.5 h-3.5 text-paper-muted/50 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
           </button>
         )}
-        <div className="text-lg font-semibold text-neutral-700 mt-2 break-words">
+        <div className="text-lg font-semibold text-paper-ink/85 mt-2 break-words">
           {editingSceneField === "play_title" && editingLocation === "parchment" ? (
             <Input
               value={sceneEditValue}
               onChange={(e) => setSceneEditValue(e.target.value)}
               maxLength={120}
-              className="inline-block h-7 w-auto bg-transparent border-b-2 border-dashed border-neutral-400 border-x-0 border-t-0 rounded-none shadow-none text-lg text-neutral-700 px-1.5 py-0.5 focus-visible:ring-0 text-center"
+              className="inline-block h-7 w-auto bg-transparent border-b-2 border-dashed border-paper-ink/40 border-x-0 border-t-0 rounded-none shadow-none text-lg text-paper-ink/85 px-1.5 py-0.5 focus-visible:ring-0 text-center"
               autoFocus
               disabled={saving !== null}
               onKeyDown={(e) => {
@@ -2286,7 +2326,7 @@ export default function SceneEditPage() {
                 onClick={() => startEditScene("play_title", scene.play_title, "parchment")}
                 className="hover:opacity-70 transition-opacity"
               >
-                <span className="text-neutral-900 font-semibold break-words">{scene.play_title}</span>
+                <span className="text-paper-ink font-semibold break-words">{scene.play_title}</span>
               </button>
               {"\u201D"}
               <button
@@ -2294,7 +2334,7 @@ export default function SceneEditPage() {
                 onClick={() => startEditScene("play_title", scene.play_title, "parchment")}
                 className="inline-flex ml-0.5 opacity-60 sm:opacity-0 sm:group-hover/ppt:opacity-100 transition-opacity align-middle"
               >
-                <Edit2 className="w-3 h-3 text-neutral-400 shrink-0" />
+                <Edit2 className="w-3 h-3 text-paper-muted/70 shrink-0" />
               </button>
             </span>
           )}
@@ -2305,7 +2345,7 @@ export default function SceneEditPage() {
                 value={sceneEditValue}
                 onChange={(e) => setSceneEditValue(e.target.value)}
                 maxLength={80}
-                className="inline-block h-7 w-auto bg-transparent border-b-2 border-dashed border-neutral-400 border-x-0 border-t-0 rounded-none shadow-none text-lg text-neutral-700 px-1.5 py-0.5 focus-visible:ring-0 text-center"
+                className="inline-block h-7 w-auto bg-transparent border-b-2 border-dashed border-paper-ink/40 border-x-0 border-t-0 rounded-none shadow-none text-lg text-paper-ink/85 px-1.5 py-0.5 focus-visible:ring-0 text-center"
                 autoFocus
                 disabled={saving !== null}
                 onKeyDown={(e) => {
@@ -2318,7 +2358,7 @@ export default function SceneEditPage() {
                 }}
               />
             </>
-          ) : (editingSceneField !== "play_title" || editingLocation !== "parchment") ? (
+          ) : (editingSceneField !== "play_title" || editingLocation !== "parchment") && showAuthor ? (
             <span className="group/ppa">
               {" by "}
               <button
@@ -2326,25 +2366,25 @@ export default function SceneEditPage() {
                 onClick={() => startEditScene("play_author", scene.play_author, "parchment")}
                 className="hover:opacity-70 transition-opacity"
               >
-                <span className="text-neutral-900 font-semibold break-words">{scene.play_author}</span>
+                <span className="text-paper-ink font-semibold break-words">{scene.play_author}</span>
               </button>
               <button
                 type="button"
                 onClick={() => startEditScene("play_author", scene.play_author, "parchment")}
                 className="inline-flex ml-0.5 opacity-60 sm:opacity-0 sm:group-hover/ppa:opacity-100 transition-opacity align-middle"
               >
-                <Edit2 className="w-3 h-3 text-neutral-400 shrink-0" />
+                <Edit2 className="w-3 h-3 text-paper-muted/70 shrink-0" />
               </button>
             </span>
-          ) : (
+          ) : showAuthor ? (
             <>
               {" by "}
-              <span className="text-neutral-900 font-semibold break-words">{scene.play_author}</span>
+              <span className="text-paper-ink font-semibold break-words">{scene.play_author}</span>
             </>
-          )}
+          ) : null}
         </div>
         {(scene.act || scene.scene_number) && (
-          <div className="text-sm text-neutral-500 mt-1">
+          <div className="text-sm text-paper-muted mt-1">
             {[scene.act, scene.scene_number].filter(Boolean).join(", ")}
           </div>
         )}
@@ -2363,7 +2403,7 @@ export default function SceneEditPage() {
             <textarea
               value={sceneEditValue}
               onChange={(e) => setSceneEditValue(e.target.value)}
-              className="w-full text-sm font-medium italic text-neutral-500 bg-transparent border-b-2 border-dashed border-neutral-300 outline-none text-center py-1 px-2 resize-none leading-relaxed focus:border-neutral-400"
+              className="w-full text-sm font-medium italic text-paper-muted bg-transparent border-b-2 border-dashed border-paper-rule outline-none text-center py-1 px-2 resize-none leading-relaxed focus:border-paper-ink/40"
               rows={2}
               maxLength={500}
               autoFocus
@@ -2383,7 +2423,7 @@ export default function SceneEditPage() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="text-sm font-semibold italic text-neutral-500 text-center mb-4 mt-1 leading-relaxed px-2 cursor-pointer hover:opacity-70 transition-opacity"
+            className="text-sm font-semibold italic text-paper-muted text-center mb-4 mt-1 leading-relaxed px-2 cursor-pointer hover:opacity-70 transition-opacity"
             onClick={() => startEditScene("description", scene.description ?? "", "parchment")}
           >
             {scene.description}
@@ -2392,7 +2432,7 @@ export default function SceneEditPage() {
           <button
             type="button"
             onClick={() => startEditScene("description", "", "parchment")}
-            className="text-xs italic text-neutral-400 hover:text-neutral-500 transition-colors mb-4 mt-1 block mx-auto"
+            className="text-xs italic text-paper-muted/70 hover:text-paper-muted transition-colors mb-4 mt-1 block mx-auto"
           >
             + Add description
           </button>
@@ -2443,18 +2483,36 @@ export default function SceneEditPage() {
             return (
               <ReorderLineItem key={lineId} lineId={lineId} onDragEnd={persistLineOrder} onDragStart={() => { setIsDragging(true); setDraggingLineId(pendingDragLineRef.current); }}>
                 {(startDrag) => (
-                <div className={cn("relative group/linerow transition-all px-2 py-1", isDragging && draggingLineId !== lineId && "opacity-50")}>
-                  {/* Inner content — narrower, centered */}
+                <div className={cn("relative group/linerow transition-all pl-4 pr-1 py-0.5", isDragging && draggingLineId !== lineId && "opacity-50")}>
+                  {/* Your lines are marked in the margin instead of highlighted.
+                      A yellow band behind the words is a marker pen on the words
+                      themselves — it says "study this text", which is the
+                      opposite of what a cue mark means. A rule down the margin is
+                      how an actor marks their own lines on real sides, and it
+                      leaves the type alone. */}
+                  {isMine && (
+                    <span
+                      aria-hidden
+                      className="absolute left-0 top-1 bottom-1 w-[3px] rounded-full bg-primary/70"
+                    />
+                  )}
+                  {/* Left-aligned, one measure.
+                      This was `max-w-[600px] mx-auto items-center` inside a
+                      760px paper inside a full-width shell: three nested
+                      measures, and every cue and line centred. Centring is what
+                      produced the ragged voids between speeches — a short line
+                      and a long one share no edge, so the eye has nothing to
+                      run down. Sides are left-aligned at fixed indents. */}
                   <div className={cn(
-                    "max-w-full sm:max-w-[600px] mx-auto flex flex-col items-center rounded-lg px-3 sm:px-4 py-3 border relative",
+                    "w-full flex flex-col items-stretch rounded-lg px-2 py-1.5 border relative transition-colors",
                     draggingLineId === lineId
-                      ? "border-amber-400 bg-amber-50 shadow-md ring-2 ring-amber-300/50"
-                      : "border-transparent group-hover/linerow:bg-neutral-50 group-hover/linerow:border-neutral-200"
+                      ? "border-primary/50 bg-primary/5 shadow-md ring-2 ring-primary/25"
+                      : "border-transparent group-hover/linerow:bg-paper-ink/[0.035] group-hover/linerow:border-paper-rule"
                   )}>
                   {/* Drag handle — inside container, left edge */}
                   {editMode && !isEditing && (
                     <div
-                      className="absolute left-0.5 sm:left-1 top-1/2 -translate-y-1/2 opacity-60 sm:opacity-0 sm:group-hover/linerow:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none select-none p-1 rounded hover:bg-neutral-200/60 text-neutral-400 hover:text-neutral-600"
+                      className="absolute left-0.5 sm:left-1 top-1/2 -translate-y-1/2 opacity-60 sm:opacity-0 sm:group-hover/linerow:opacity-100 transition-opacity cursor-grab active:cursor-grabbing touch-none select-none p-1 rounded hover:bg-paper-ink/12/60 text-paper-muted/70 hover:text-paper-muted"
                       onPointerDown={(e) => {
                         isDraggingRef.current = true;
                         pendingDragLineRef.current = lineId;
@@ -2474,13 +2532,13 @@ export default function SceneEditPage() {
                         handleDeleteLine(line.id);
                       }}
                       disabled={deletingLineId === line.id}
-                      className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 opacity-60 sm:opacity-0 sm:group-hover/linerow:opacity-100 transition-opacity p-1 rounded-full bg-white border border-neutral-200 shadow-sm hover:bg-red-50 hover:border-red-300 z-10"
+                      className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 opacity-60 sm:opacity-0 sm:group-hover/linerow:opacity-100 transition-opacity p-1 rounded-full bg-paper border border-paper-rule shadow-sm hover:bg-red-50 hover:border-red-300 z-10"
                       title="Delete line"
                     >
                       {deletingLineId === line.id ? (
-                        <Loader2 className="w-3 h-3 animate-spin text-neutral-400" />
+                        <Loader2 className="w-3 h-3 animate-spin text-paper-muted/70" />
                       ) : (
-                        <Trash2 className="w-3 h-3 text-neutral-400 hover:text-red-500" />
+                        <Trash2 className="w-3 h-3 text-paper-muted/70 hover:text-red-500" />
                       )}
                     </button>
                   )}
@@ -2517,8 +2575,8 @@ export default function SceneEditPage() {
                           className={cn(
                             "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
                             isPlayingThisLine
-                              ? "bg-orange-100 text-orange-700 hover:bg-orange-200"
-                              : "text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100"
+                              ? "bg-primary/15 text-primary hover:bg-primary/25"
+                              : "text-paper-muted hover:text-paper-ink/85 hover:bg-paper-ink/[0.07]"
                           )}
                           title={isPlayingThisLine ? "Stop playback" : "Listen to this line"}
                           onMouseEnter={() => {
@@ -2571,12 +2629,12 @@ export default function SceneEditPage() {
                                 {editVoice.label[0]}
                               </div>
                             ) : (
-                              <div className="w-5 h-5 rounded-full bg-neutral-400 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                              <div className="w-5 h-5 rounded-full bg-paper-muted flex items-center justify-center text-[9px] font-bold text-white shrink-0">
                                 {line.character_name[0]?.toUpperCase()}
                               </div>
                             ))}
-                            <span className="text-base font-bold uppercase tracking-widest text-neutral-700">{line.character_name}</span>
-                            <ChevronDown className="w-3 h-3 text-neutral-400" />
+                            <span className="text-base font-bold uppercase tracking-widest text-paper-ink/85">{line.character_name}</span>
+                            <ChevronDown className="w-3 h-3 text-paper-muted/70" />
                           </button>
                           {/* Dropdown reuses same pattern as parchment dropdown */}
                           {voiceDropdownOpen === editDropdownKey && (() => {
@@ -2584,18 +2642,18 @@ export default function SceneEditPage() {
                             const rect = btn?.getBoundingClientRect();
                             return (
                               <div
-                                className="fixed z-50 w-[calc(100vw-16px)] sm:w-64 rounded-xl bg-white border border-neutral-200 shadow-xl py-2 max-h-[50vh] sm:max-h-[400px] overflow-y-auto"
+                                className="fixed z-50 w-[calc(100vw-16px)] sm:w-64 rounded-xl bg-paper border border-paper-rule shadow-xl py-2 max-h-[50vh] sm:max-h-[400px] overflow-y-auto"
                                 style={rect ? { top: Math.min(rect.bottom + 8, window.innerHeight - 300), left: Math.max(8, Math.min(rect.left + rect.width / 2 - 128, window.innerWidth - 264)) } : {}}
                               >
                                 {/* Character name */}
-                                <div className="px-3 pb-2 border-b border-neutral-100">
-                                  <label className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1.5 block">Character name</label>
+                                <div className="px-3 pb-2 border-b border-paper-rule/60">
+                                  <label className="text-[10px] uppercase tracking-wider text-paper-muted/70 mb-1.5 block">Character name</label>
                                   <input
                                     key={line.character_name}
                                     type="text"
                                     defaultValue={line.character_name}
                                     maxLength={30}
-                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-md px-2.5 py-1.5 text-sm text-neutral-800 focus:outline-none focus:border-neutral-400"
+                                    className="w-full bg-paper-ink/[0.04] border border-paper-rule rounded-md px-2.5 py-1.5 text-sm text-paper-ink focus:outline-none focus:border-paper-ink/40"
                                     onClick={(e) => e.stopPropagation()}
                                     onKeyDown={(e) => {
                                       if (e.key === "Enter") {
@@ -2611,13 +2669,13 @@ export default function SceneEditPage() {
                                   />
                                 </div>
                                 {/* Role selector */}
-                                <div className="px-3 py-2 border-b border-neutral-100">
-                                  <label className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1.5 block">Role</label>
+                                <div className="px-3 py-2 border-b border-paper-rule/60">
+                                  <label className="text-[10px] uppercase tracking-wider text-paper-muted/70 mb-1.5 block">Role</label>
                                   <div className="flex gap-1.5">
                                     <button
                                       type="button"
                                       onClick={(e) => { e.stopPropagation(); if (!isMine) { pushUndo({ type: "selected_character", old: selectedCharacter, cur: line.character_name }); } setSelectedCharacter(line.character_name); }}
-                                      className={cn("flex-1 py-1.5 rounded-md text-xs font-medium transition-colors", isMine ? "bg-orange-500 text-white" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200")}
+                                      className={cn("flex-1 py-1.5 rounded-md text-xs font-medium transition-colors", isMine ? "bg-primary text-white" : "bg-paper-ink/[0.07] text-paper-muted hover:bg-paper-ink/12")}
                                     >You</button>
                                     <button
                                       type="button"
@@ -2627,7 +2685,7 @@ export default function SceneEditPage() {
                                         if (isMine) { pushUndo({ type: "selected_character", old: selectedCharacter, cur: otherChar }); }
                                         setSelectedCharacter(otherChar);
                                       }}
-                                      className={cn("flex-1 py-1.5 rounded-md text-xs font-medium transition-colors", !isMine ? "bg-blue-600 text-white" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200")}
+                                      className={cn("flex-1 py-1.5 rounded-md text-xs font-medium transition-colors", !isMine ? "bg-blue-600 text-white" : "bg-paper-ink/[0.07] text-paper-muted hover:bg-paper-ink/12")}
                                     >Scene partner</button>
                                   </div>
                                 </div>
@@ -2635,18 +2693,18 @@ export default function SceneEditPage() {
                                 {!isMine && (
                                   <>
                                     <div className="px-3 pt-2 pb-1">
-                                      <label className="text-[10px] uppercase tracking-wider text-neutral-400 block">Voice</label>
+                                      <label className="text-[10px] uppercase tracking-wider text-paper-muted/70 block">Voice</label>
                                     </div>
                                     {AI_VOICES.map((v) => (
                                       <button
                                         key={v.id}
                                         type="button"
                                         onClick={(e) => { e.stopPropagation(); handleVoiceChange(line.character_name, v.id); setVoiceDropdownOpen(null); }}
-                                        className={cn("w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-neutral-50 transition-colors text-left", editVid === v.id && "bg-neutral-100")}
+                                        className={cn("w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-paper-ink/[0.04] transition-colors text-left", editVid === v.id && "bg-paper-ink/[0.07]")}
                                       >
                                         <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0", v.color)}>{v.label[0]}</div>
-                                        <span className="text-neutral-700 text-sm">{v.label}</span>
-                                        <span className="text-neutral-400 text-xs">— {v.desc}</span>
+                                        <span className="text-paper-ink/85 text-sm">{v.label}</span>
+                                        <span className="text-paper-muted/70 text-xs">— {v.desc}</span>
                                         {editVid === v.id && <Check className="w-3.5 h-3.5 text-primary shrink-0 ml-auto" />}
                                       </button>
                                     ))}
@@ -2667,13 +2725,13 @@ export default function SceneEditPage() {
                               [line.id]: { ...values, stage_direction: e.target.value },
                             }))
                           }
-                          className="text-sm font-medium italic text-neutral-500 bg-transparent border-b border-dashed border-neutral-300 outline-none text-center py-0.5 px-2 w-full sm:max-w-[300px] placeholder:italic placeholder:font-medium placeholder:text-neutral-400"
+                          className="text-sm font-medium italic text-paper-muted bg-transparent border-b border-dashed border-paper-rule outline-none text-center py-0.5 px-2 w-full sm:max-w-[300px] placeholder:italic placeholder:font-medium placeholder:text-paper-muted/70"
                           disabled={saving !== null}
                           onBlur={handleLineBlur}
                           onKeyDown={handleLineKeyDown}
                         />
                         {values.stage_direction && (
-                          <span className="text-[10px] text-neutral-400">{values.stage_direction.length}/120</span>
+                          <span className="text-[10px] text-paper-muted/70">{values.stage_direction.length}/120</span>
                         )}
                       </div>
 
@@ -2755,10 +2813,10 @@ export default function SceneEditPage() {
                                       className={cn(
                                         "transition-colors duration-75 ease-out",
                                         isHighlighted
-                                          ? "text-orange-600 font-semibold"
+                                          ? "text-primary font-semibold"
                                           : isCurrent
-                                          ? "text-orange-500 font-semibold"
-                                          : "text-neutral-300"
+                                          ? "text-primary font-semibold"
+                                          : "text-paper-muted/50"
                                       )}
                                     >{token}</span>
                                   );
@@ -2783,7 +2841,7 @@ export default function SceneEditPage() {
                                   }));
                                 }}
                                 rows={Math.max(2, Math.ceil(values.text.length / 60))}
-                                className="text-[17px] font-semibold leading-relaxed w-full bg-transparent border-b-2 border-dashed border-neutral-300 outline-none py-1 resize-none text-neutral-800 break-words text-center"
+                                className="text-[17px] font-semibold leading-relaxed w-full bg-transparent border-b-2 border-dashed border-paper-rule outline-none py-1 resize-none text-paper-ink break-words text-center"
                                 disabled={saving !== null}
                                 onBlur={handleLineBlur}
                                 onKeyDown={handleLineKeyDown}
@@ -2793,9 +2851,9 @@ export default function SceneEditPage() {
                         </AnimatePresence>
                       </div>
 
-                      <p className="text-[10px] text-neutral-400 text-center">
+                      <p className="text-[10px] text-paper-muted/70 text-center">
                         <span className="hidden sm:inline">
-                          <kbd className="px-1 py-0.5 rounded bg-neutral-100 text-neutral-500 font-sans">&#8984;Enter</kbd> save &middot; <kbd className="px-1 py-0.5 rounded bg-neutral-100 text-neutral-500 font-sans">Esc</kbd> cancel
+                          <kbd className="px-1 py-0.5 rounded bg-paper-ink/[0.07] text-paper-muted font-sans">&#8984;Enter</kbd> save &middot; <kbd className="px-1 py-0.5 rounded bg-paper-ink/[0.07] text-paper-muted font-sans">Esc</kbd> cancel
                         </span>
                         <span className="sm:hidden">
                           Tap outside to save
@@ -2812,9 +2870,11 @@ export default function SceneEditPage() {
                       onClick={() => editMode && !isDragging && startEditLine(line)}
                       onKeyDown={(e) => { if (editMode && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); !isDragging && startEditLine(line); } }}
                       className={cn(
-                        "group/line-btn inline-flex flex-col items-center w-full max-w-full overflow-hidden rounded-md px-3 sm:px-4 py-2.5 sm:py-2 transition-colors",
-                        editMode ? "cursor-pointer" : "cursor-default",
-                        isMine && "bg-orange-50/50"
+                        /* items-stretch, not items-center: the children carry
+                           their own screenplay indents now, and centring them
+                           inside this box fought those indents. */
+                        "group/line-btn flex flex-col items-stretch w-full max-w-full overflow-hidden rounded-md py-1.5 transition-colors",
+                        editMode ? "cursor-pointer" : "cursor-default"
                       )}
                     >
                       {/* Listen / waveform — above character name (partner lines only) */}
@@ -2822,7 +2882,18 @@ export default function SceneEditPage() {
                         const lineVid = charVoices[line.character_name] ?? null;
                         const isPlayingThisLine = (isSpeakingAI || isLoadingAI) && ttsLineIdRef.current === line.id;
                         return (
-                          <div className="h-7 mb-1 flex items-center justify-center w-full">
+                          /* Height only while it is actually playing. This row
+                             was a fixed h-7 whether or not anything was in it,
+                             so every partner speech carried 28px of reserved
+                             air above its cue — the second half of the void
+                             between speeches. The idle "Listen" button sits on
+                             the cue line itself now, next to the name it
+                             belongs to. */
+                          <div className={cn(
+                            "flex items-center justify-start w-full overflow-hidden transition-[height] duration-200",
+                            isPlayingThisLine ? "h-7 mb-0.5" : "h-0",
+                            CUE_INDENT,
+                          )}>
                             {isPlayingThisLine ? (
                               <motion.div
                                 key="wave"
@@ -2839,29 +2910,7 @@ export default function SceneEditPage() {
                                   className="mx-auto"
                                 />
                               </motion.div>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  cancelAI();
-                                  const stageDir = line.stage_direction || "";
-                                  const instructions = buildActorInstructions(line.character_name, stageDir || undefined);
-                                  ttsLineIdRef.current = line.id;
-                                  setTtsProgress(0);
-                                  speakAI(line.text, lineVid || "coral", instructions);
-                                }}
-                                onMouseEnter={() => {
-                                  const stageDir = line.stage_direction || "";
-                                  const preloadInstructions = buildActorInstructions(line.character_name, stageDir || undefined);
-                                  preloadAI(line.text, lineVid || "coral", preloadInstructions);
-                                }}
-                                className="opacity-0 sm:group-hover/linerow:opacity-100 transition-opacity duration-200 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100"
-                              >
-                                <Volume2 className="w-3 h-3" />
-                                Listen
-                              </button>
-                            )}
+                            ) : null}
                           </div>
                         );
                       })()}
@@ -2871,7 +2920,7 @@ export default function SceneEditPage() {
                         const voice = AI_VOICES.find(v => v.id === vid);
                         const dropdownKey = `parchment-${lineId}`;
                         return (
-                      <div className="flex items-center justify-center gap-2 mb-1">
+                      <div className={cn("flex items-center justify-start gap-2 mb-0.5", CUE_INDENT)}>
                         <div className="relative" data-voice-dropdown onClick={(e) => e.stopPropagation()}>
                           <button
                             ref={(el) => { if (el) el.dataset.voiceBtnId = dropdownKey; }}
@@ -2885,14 +2934,14 @@ export default function SceneEditPage() {
                                 {voice.label[0]}
                               </div>
                             ) : (
-                              <div className="w-6 h-6 rounded-full bg-neutral-400 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                              <div className="w-6 h-6 rounded-full bg-paper-muted flex items-center justify-center text-[10px] font-bold text-white shrink-0">
                                 {line.character_name[0]?.toUpperCase()}
                               </div>
                             ))}
-                            <span className="text-base font-bold uppercase tracking-widest text-neutral-900">
+                            <span className="text-sm sm:text-base font-bold uppercase tracking-[0.18em] text-paper-ink">
                               {line.character_name}
                             </span>
-                            {isMine && <span className="text-xs font-sans font-bold text-primary">(You)</span>}
+                            {isMine && <span className="text-[11px] font-sans font-semibold uppercase tracking-wider text-primary">(you)</span>}
                           </button>
                           {/* Combined character settings dropdown */}
                           {voiceDropdownOpen === dropdownKey && (() => {
@@ -2900,18 +2949,18 @@ export default function SceneEditPage() {
                             const rect = btn?.getBoundingClientRect();
                             return (
                               <div
-                                className="fixed z-50 w-[calc(100vw-16px)] sm:w-64 rounded-xl bg-white border border-neutral-200 shadow-xl py-2 max-h-[50vh] sm:max-h-[400px] overflow-y-auto"
+                                className="fixed z-50 w-[calc(100vw-16px)] sm:w-64 rounded-xl bg-paper border border-paper-rule shadow-xl py-2 max-h-[50vh] sm:max-h-[400px] overflow-y-auto"
                                 style={rect ? { top: Math.min(rect.bottom + 8, window.innerHeight - 300), left: Math.max(8, Math.min(rect.left + rect.width / 2 - 128, window.innerWidth - 264)) } : {}}
                               >
                                 {/* Character name */}
-                                <div className="px-3 pb-2 border-b border-neutral-100">
-                                  <label className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1.5 block">Character name</label>
+                                <div className="px-3 pb-2 border-b border-paper-rule/60">
+                                  <label className="text-[10px] uppercase tracking-wider text-paper-muted/70 mb-1.5 block">Character name</label>
                                   <input
                                     key={line.character_name}
                                     type="text"
                                     defaultValue={line.character_name}
                                     maxLength={30}
-                                    className="w-full bg-neutral-50 border border-neutral-200 rounded-md px-2.5 py-1.5 text-sm text-neutral-800 focus:outline-none focus:border-neutral-400"
+                                    className="w-full bg-paper-ink/[0.04] border border-paper-rule rounded-md px-2.5 py-1.5 text-sm text-paper-ink focus:outline-none focus:border-paper-ink/40"
                                     onClick={(e) => e.stopPropagation()}
                                     onKeyDown={(e) => {
                                       if (e.key === "Enter") {
@@ -2927,15 +2976,15 @@ export default function SceneEditPage() {
                                   />
                                 </div>
                                 {/* Role selector */}
-                                <div className="px-3 py-2 border-b border-neutral-100">
-                                  <label className="text-[10px] uppercase tracking-wider text-neutral-400 mb-1.5 block">Role</label>
+                                <div className="px-3 py-2 border-b border-paper-rule/60">
+                                  <label className="text-[10px] uppercase tracking-wider text-paper-muted/70 mb-1.5 block">Role</label>
                                   <div className="flex gap-1.5">
                                     <button
                                       type="button"
                                       onClick={(e) => { e.stopPropagation(); if (!isMine) { pushUndo({ type: "selected_character", old: selectedCharacter, cur: line.character_name }); } setSelectedCharacter(line.character_name); }}
                                       className={cn(
                                         "flex-1 py-1.5 rounded-md text-xs font-medium transition-colors",
-                                        isMine ? "bg-orange-500 text-white" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
+                                        isMine ? "bg-primary text-white" : "bg-paper-ink/[0.07] text-paper-muted hover:bg-paper-ink/12"
                                       )}
                                     >
                                       You
@@ -2950,7 +2999,7 @@ export default function SceneEditPage() {
                                       }}
                                       className={cn(
                                         "flex-1 py-1.5 rounded-md text-xs font-medium transition-colors",
-                                        !isMine ? "bg-blue-600 text-white" : "bg-neutral-100 text-neutral-500 hover:bg-neutral-200"
+                                        !isMine ? "bg-blue-600 text-white" : "bg-paper-ink/[0.07] text-paper-muted hover:bg-paper-ink/12"
                                       )}
                                     >
                                       Scene partner
@@ -2961,18 +3010,18 @@ export default function SceneEditPage() {
                                 {!isMine && (
                                   <>
                                     <div className="px-3 pt-2 pb-1">
-                                      <label className="text-[10px] uppercase tracking-wider text-neutral-400 block">Voice</label>
+                                      <label className="text-[10px] uppercase tracking-wider text-paper-muted/70 block">Voice</label>
                                     </div>
                                     {AI_VOICES.map((v) => (
                                       <button
                                         key={v.id}
                                         type="button"
                                         onClick={(e) => { e.stopPropagation(); handleVoiceChange(line.character_name, v.id); setVoiceDropdownOpen(null); }}
-                                        className={cn("w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-neutral-50 transition-colors text-left", vid === v.id && "bg-neutral-100")}
+                                        className={cn("w-full flex items-center gap-2.5 px-3 py-2 text-sm hover:bg-paper-ink/[0.04] transition-colors text-left", vid === v.id && "bg-paper-ink/[0.07]")}
                                       >
                                         <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold text-white shrink-0", v.color)}>{v.label[0]}</div>
-                                        <span className="text-neutral-700 text-sm">{v.label}</span>
-                                        <span className="text-neutral-400 text-xs">— {v.desc}</span>
+                                        <span className="text-paper-ink/85 text-sm">{v.label}</span>
+                                        <span className="text-paper-muted/70 text-xs">— {v.desc}</span>
                                         {vid === v.id && <Check className="w-3.5 h-3.5 text-primary shrink-0 ml-auto" />}
                                       </button>
                                     ))}
@@ -2982,13 +3031,38 @@ export default function SceneEditPage() {
                             );
                           })()}
                         </div>
+                        {/* Hear it. On the cue line, beside the name of the
+                            character it belongs to, rather than in a reserved
+                            strip above it. Shown on hover on desktop; always on
+                            touch, where there is no hover to reveal it. */}
+                        {!isMine && !isDragging && !((isSpeakingAI || isLoadingAI) && ttsLineIdRef.current === line.id) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              cancelAI();
+                              const v = charVoices[line.character_name] ?? null;
+                              ttsLineIdRef.current = line.id;
+                              setTtsProgress(0);
+                              speakAI(line.text, v || "coral", buildActorInstructions(line.character_name, line.stage_direction || undefined));
+                            }}
+                            onMouseEnter={() => {
+                              const v = charVoices[line.character_name] ?? null;
+                              preloadAI(line.text, v || "coral", buildActorInstructions(line.character_name, line.stage_direction || undefined));
+                            }}
+                            aria-label={`Hear ${line.character_name}`}
+                            className="shrink-0 inline-flex items-center justify-center rounded-full p-1 text-paper-muted/70 transition-opacity hover:text-paper-ink sm:opacity-0 sm:group-hover/linerow:opacity-100"
+                          >
+                            <Volume2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         {line.stage_direction?.trim() && !isDragging && (
-                          <span className="text-xs italic text-neutral-600 normal-case truncate max-w-[200px]">
+                          <span className="text-xs italic text-paper-muted normal-case truncate max-w-[200px]">
                             {line.stage_direction.trim()}
                           </span>
                         )}
                         {editMode && !isDragging && (
-                          <Edit2 className="w-3 h-3 text-neutral-400 opacity-60 sm:opacity-0 sm:group-hover/line-btn:opacity-100 transition-opacity shrink-0" />
+                          <Edit2 className="w-3 h-3 text-paper-muted/70 opacity-60 sm:opacity-0 sm:group-hover/line-btn:opacity-100 transition-opacity shrink-0" />
                         )}
                       </div>
                         );
@@ -2996,30 +3070,45 @@ export default function SceneEditPage() {
                       {/* Line text */}
                       <motion.p
                         layout="position"
-                        className="text-[17px] font-semibold leading-relaxed text-neutral-900 break-words whitespace-pre-wrap text-center w-full transition-colors duration-300"
+                        className={cn(
+                          /* Left-aligned in an inset block, which is the shape
+                             of dialogue on a page of sides. It was centred, and
+                             centring is what left those ragged voids between
+                             speeches: a short line and a long one share no edge,
+                             so the eye has nothing to run down. */
+                          "text-[16px] sm:text-[17px] font-medium leading-[1.75] text-paper-ink break-words whitespace-pre-wrap w-full transition-colors duration-300",
+                          DIALOGUE_INDENT,
+                        )}
                         style={{ overflowWrap: "anywhere" }}
                         animate={highlightMyLines && isMine ? { scale: [1, 1.01, 1] } : { scale: 1 }}
                         transition={{ duration: 0.3 }}
                       >
-                        <span className={cn(
-                          highlightMyLines && isMine && "bg-amber-200/45 rounded px-1 py-0.5 box-decoration-clone"
-                        )}>
-                          {renderTextWithStageDirections(line.text)}
-                        </span>
+                        {/* The band behind your own lines is gone. A highlighter
+                            stripe running under every line of your longest
+                            speech broke the block into ragged strips and said
+                            "study this text", when the thing being marked is
+                            "this one is yours" — which the margin rule now says
+                            without touching the type. */}
+                        <span>{renderTextWithStageDirections(line.text)}</span>
                       </motion.p>
                     </div>
                     </div>
                   )}
                   {/* Bottom toolbar — always visible on mobile, hover on desktop */}
                   {!isEditing && !isDragging && (
-                    <div className="flex items-center gap-3 mt-1 pt-1 opacity-100 sm:opacity-0 sm:group-hover/linerow:opacity-100 transition-opacity">
+                    /* Absolute from sm up. opacity-0 hides it but still reserves
+                       its height, so every speech carried an invisible toolbar's
+                       worth of air beneath it — measured ~40px, which is most of
+                       the void that used to sit between one line and the next.
+                       On phones there is no hover, so it stays in the flow. */
+                    <div className="flex items-center gap-3 mt-1 pt-1 opacity-100 sm:absolute sm:right-1 sm:top-1 sm:mt-0 sm:pt-0 sm:opacity-0 sm:group-hover/linerow:opacity-100 transition-opacity">
                       {editMode && (
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <button
                               type="button"
                               onClick={() => openAddLineModal(line.id)}
-                              className="p-1.5 sm:p-1 rounded hover:bg-neutral-200/60 transition-colors text-neutral-400 sm:text-neutral-500 hover:text-neutral-700"
+                              className="p-1.5 sm:p-1 rounded hover:bg-paper-ink/12/60 transition-colors text-paper-muted/70 sm:text-paper-muted hover:text-paper-ink/85"
                             >
                               <Plus className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                             </button>
@@ -3035,7 +3124,7 @@ export default function SceneEditPage() {
                               setRehearsalStartLineIndex(lineIdx);
                               setShowRehearsalModal(true);
                             }}
-                            className="p-1.5 sm:p-1 rounded hover:bg-neutral-200/60 transition-colors text-neutral-400 sm:text-neutral-500 hover:text-neutral-700"
+                            className="p-1.5 sm:p-1 rounded hover:bg-paper-ink/12/60 transition-colors text-paper-muted/70 sm:text-paper-muted hover:text-paper-ink/85"
                           >
                             <Play className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                           </button>
@@ -3056,8 +3145,8 @@ export default function SceneEditPage() {
       <div className="h-3" />
 
       {/* Footer */}
-      <div className="mt-4 pt-4 border-t border-neutral-200 text-center">
-        <p className="text-sm text-neutral-500">
+      <div className="mt-4 pt-4 border-t border-paper-rule text-center">
+        <p className="text-sm text-paper-muted">
           {scene.line_count} lines
         </p>
       </div>
@@ -3068,8 +3157,46 @@ export default function SceneEditPage() {
   // Read-mode setup bar — pick your character + reader voice, then rehearse
   // ---------------------------------------------------------------------------
 
-  const readModeSetup = (
-    <div className="mx-auto w-full max-w-[720px] mb-5 rounded-xl border border-border bg-card/50 backdrop-blur-sm px-3 sm:px-4 py-3">
+  /**
+   * The casting summary, and the panel behind it.
+   *
+   * This was always open: a bar above the script carrying three jobs at once —
+   * pick your parts, count them, choose the reader's voice — in a row narrow
+   * enough that "Courthouse Clerk" truncated to "Courthouse Cl…". You had to
+   * deal with a form before you could read a page.
+   *
+   * The scene casts you on arrival now (see the auto-cast effect), so the bar
+   * collapses to one sentence stating what it did, and opens on a tap if that
+   * is wrong. Nothing to do to start reading.
+   */
+  const castSummary = (
+    <button
+      type="button"
+      onClick={() => setCastOpen((v) => !v)}
+      aria-expanded={castOpen}
+      className="mx-auto mb-3 flex w-full max-w-[46rem] items-center justify-center gap-x-2 gap-y-1 flex-wrap rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+    >
+      <span>
+        You&apos;re reading{" "}
+        <span className="font-medium text-primary">{myRoles.join(" and ") || "nobody yet"}</span>
+      </span>
+      {readerNames.length > 0 && (
+        <>
+          <span aria-hidden className="opacity-40">·</span>
+          <span className="min-w-0">
+            {readerNames.length === 1 ? readerNames[0] : `${readerNames.length} parts`} read by{" "}
+            <span className="font-medium text-foreground">{readerVoiceLabel}</span>
+          </span>
+        </>
+      )}
+      <ChevronDown
+        className={cn("w-3.5 h-3.5 shrink-0 transition-transform", castOpen && "rotate-180")}
+      />
+    </button>
+  );
+
+  const castPanel = (
+    <div className="mx-auto w-full max-w-[46rem] mb-5 rounded-xl border border-border bg-card/50 backdrop-blur-sm px-3 sm:px-4 py-3">
       <div className="flex flex-col lg:flex-row lg:items-start gap-3">
         {/* You're playing */}
         <div className="flex items-start gap-2 min-w-0">
@@ -3217,7 +3344,14 @@ export default function SceneEditPage() {
   if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
 
   return (
-    <div className="dark min-h-screen bg-background text-foreground flex flex-col">
+    /* The `dark` class used to be pinned here, which is the whole of the "light
+       theme is broken" report: the page forced its own theme and the toggle was
+       never in play. It was pinned because the script is paper — light card,
+       dark ink — and paper only looks like paper against an unlit room, so the
+       room was nailed shut. The paper is a token pair now (--paper / --paper-ink,
+       see globals.css) that holds in both themes, and the room is free to be
+       whichever one you picked. */
+    <div className="min-h-screen bg-muted/70 dark:bg-background text-foreground flex flex-col">
       {/* Top bar — warm ghost-light chrome */}
       <motion.header
         initial={{ opacity: 0, y: -16 }}
@@ -3381,7 +3515,25 @@ export default function SceneEditPage() {
             editMode && mobileTab !== "script" ? "hidden lg:block" : "block"
           )}
         >
-          {!editMode && readModeSetup}
+          {!editMode && (
+            <>
+              {castSummary}
+              <AnimatePresence initial={false}>
+                {castOpen && (
+                  <motion.div
+                    key="cast-panel"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
+                    className="overflow-hidden"
+                  >
+                    {castPanel}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </>
+          )}
           {rightPanelContent}
         </motion.main>
       </div>
@@ -3460,11 +3612,11 @@ export default function SceneEditPage() {
                   {/* Characters — compact row */}
                   <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-2">
                     <div className="flex items-center gap-2.5">
-                      <span className="w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center text-[10px] font-bold text-white shrink-0">
+                      <span className="w-6 h-6 rounded-full bg-primary flex items-center justify-center text-[10px] font-bold text-white shrink-0">
                         {selectedCharacter?.[0]?.toUpperCase()}
                       </span>
                       <span className="text-sm font-medium text-foreground truncate flex-1">{myRoles.join(" + ")}</span>
-                      <span className="text-[10px] text-orange-500 font-medium shrink-0">(You)</span>
+                      <span className="text-[10px] text-primary font-medium shrink-0">(You)</span>
                     </div>
                     <div className="flex items-center gap-2.5">
                       <span className={cn("w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0", voice?.color ?? "bg-neutral-400")}>
@@ -3548,8 +3700,8 @@ export default function SceneEditPage() {
               <DialogDescription className="sr-only">Grant microphone access to start rehearsal</DialogDescription>
             </DialogHeader>
             <div className="flex flex-col items-center gap-3 py-2">
-              <div className="w-12 h-12 rounded-full bg-orange-500/10 flex items-center justify-center">
-                <Mic className="w-6 h-6 text-orange-500" />
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <Mic className="w-6 h-6 text-primary" />
               </div>
               <p className="text-sm text-muted-foreground text-center leading-relaxed">
                 {micStatus === "unavailable"
@@ -3647,7 +3799,7 @@ export default function SceneEditPage() {
                         )}
                       >
                         {isUser ? (
-                          <span className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                          <span className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[9px] font-bold text-white shrink-0">
                             {charName[0]?.toUpperCase()}
                           </span>
                         ) : voice ? (
@@ -3655,13 +3807,13 @@ export default function SceneEditPage() {
                             {voice.label[0]}
                           </span>
                         ) : (
-                          <span className="w-5 h-5 rounded-full bg-neutral-300 flex items-center justify-center text-[9px] font-bold text-white shrink-0">
+                          <span className="w-5 h-5 rounded-full bg-muted-foreground flex items-center justify-center text-[9px] font-bold text-white shrink-0">
                             {charName[0]?.toUpperCase()}
                           </span>
                         )}
                         <span className="flex flex-col min-w-0">
                           <span className="truncate text-xs font-medium">{charName}</span>
-                          {isUser && <span className="text-[10px] leading-tight text-orange-500">(You)</span>}
+                          {isUser && <span className="text-[10px] leading-tight text-primary">(You)</span>}
                         </span>
                       </button>
                     );
