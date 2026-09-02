@@ -201,6 +201,12 @@ export function MonologueSpeech({
   const character = (mono.tone || mono.primary_emotion || "").trim().toLowerCase();
   const colour = character && character !== "unknown" ? character : null;
 
+  /** `category` is the play's era. Whitelisted rather than printed as-is: film
+   *  and TV rows carry other things in the same column, and "drama piece" next
+   *  to a play title would read as a genre claim the data cannot back. */
+  const rawEra = (mono.category || "").trim().toLowerCase();
+  const era = rawEra === "classical" || rawEra === "contemporary" ? rawEra : null;
+
   const body = mono.text.replace(/\s+/g, " ").trim();
   const shown = excerpt(body);
   const truncated = shown.text.length < body.length;
@@ -284,9 +290,17 @@ export function MonologueSpeech({
             {[length, age, colour].filter(Boolean).join(" · ")}
           </span>
         </div>
-        {source && (
-          <p className="font-typewriter mt-1 truncate text-sm text-muted-foreground">
-            {source}
+        {(source || era) && (
+          /* Era rides with the play, not with the piece: it says what the
+             writing is, which is the first thing an actor screens on and was
+             nowhere on the row. Its own flex child and shrink-0, so a long
+             title truncates and the era survives — the other way round it was
+             the first thing to disappear. */
+          <p className="mt-1 flex items-baseline gap-2 text-sm text-muted-foreground">
+            <span className="font-typewriter truncate">{source}</span>
+            {era && (
+              <span className="shrink-0 text-xs text-muted-foreground/70">{era}</span>
+            )}
           </p>
         )}
 

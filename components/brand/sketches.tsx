@@ -380,18 +380,25 @@ export function FootlightsSketch({ size = 48, className, delay = 0, title }: Ske
   const draw = useSketchAnimation(delay);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
-      {/* the wash they throw up into the room */}
-      <motion.path {...strokeProps} {...draw(0)} d="M7 27 C20 17 44 17 57 27" />
-      {/* three hoods, sitting on the lip */}
+      {/* Redrawn: the old version put a wide arc across the top with three
+          bumps and two horizontal rules under it, which at 88px in a dark room
+          read unmistakably as a bridge over water. The arc is gone. What says
+          "lights" is the beams, so they do the work — each lamp throws a pair
+          of them, fanning up and off the top of the frame. */}
+      {/* the lip of the stage */}
+      <motion.path {...strokeProps} {...draw(0)} d="M4 50 L60 50 M4 55 L60 55" />
+      {/* three hoods, sitting on it */}
       <motion.path
         {...strokeProps}
         {...draw(1)}
-        d="M11 47 C11 41 20 41 20 47 M25 47 C25 41 34 41 34 47 M39 47 C39 41 48 41 48 47"
+        d="M9 50 A5 5 0 0 1 19 50 Z M27 50 A5 5 0 0 1 37 50 Z M45 50 A5 5 0 0 1 55 50 Z"
       />
       {/* what each one throws */}
-      <motion.path {...strokeProps} {...draw(2)} d="M15.5 38 L15.5 33 M29.5 38 L29.5 33 M43.5 38 L43.5 33" />
-      {/* the lip itself */}
-      <motion.path {...strokeProps} {...draw(3)} d="M5 47 L59 47 M5 53 L59 53" />
+      <motion.path
+        {...strokeProps}
+        {...draw(2)}
+        d="M14 43 L7 21 M14 43 L21 21 M32 43 L25 21 M32 43 L39 21 M50 43 L43 21 M50 43 L57 21"
+      />
     </Frame>
   );
 }

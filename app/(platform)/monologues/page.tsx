@@ -1323,19 +1323,21 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   }, [results]);
 
   /**
-   * Whether the page has stopped being a hero and become a results screen.
+   * Whether the tab you are looking at has stopped being a hero and become a
+   * results screen. Per-tab: switch to a shelf you have not searched and you
+   * get its opening view, title and all.
    *
-   * Every layout decision above the results used to read `hasSearched`, which
-   * is the *Plays* flag — Film & TV keeps its own. So tapping Film & TV with
-   * Plays results on screen flipped it to false and moved six things at once:
-   * the container went 3xl → 88rem, the bar unstuck and grew, the hero title
-   * animated back in, the tabs became a boxed segmented control, and the
-   * filters row reappeared. It read as changing rooms rather than shelves.
+   * This used to be `hasSearched || filmTvHasSearched` — held compact once
+   * *either* side had searched — because the change was so violent. The page
+   * went from max-w-3xl to max-w-[88rem] on a tab tap, so everything re-centred
+   * and reflowed 640px sideways while the title animated back in underneath it.
+   * The width is what made it read as a page load rather than a transition.
    *
-   * Once either side has searched, the chrome stays put and only the results
-   * change.
+   * The page now keeps one measure at all times (see the container below), so
+   * nothing moves horizontally and the only changes left are vertical ones that
+   * can be animated.
    */
-  const chromeCompact = hasSearched || filmTvHasSearched;
+  const chromeCompact = searchMode === "film_tv" ? filmTvHasSearched : hasSearched;
 
   /* "a woman confronting her mother" returned twenty rows every one of which
      said `name match`, which distinguishes nothing and just repeats a word down
@@ -1479,18 +1481,19 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   );
 
   return (
-    // One measure for the whole page, narrower once results exist.
+    // One measure for the whole page, always.
     //
     // At 88rem the results ran 1360px wide while the search bar above them was
     // 672. Both were centred, but the disparity meant the bar floated in the
-    // middle of a much wider block and no two things shared an edge. Pulling
-    // the page in after a search keeps everything centred AND on one width:
-    // tabs, bar, count and cards all start and end together.
-    <div
-      className={`container mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8 relative ${
-        chromeCompact ? "max-w-3xl" : "max-w-[88rem]"
-      }`}
-    >
+    // middle of a much wider block and no two things shared an edge. At one
+    // width, tabs, bar, count and speeches all start and end together.
+    //
+    // It used to widen back to 88rem before a search, which is what made
+    // switching to an unsearched tab feel like a page load: the whole column
+    // sprang 640px wider and re-centred while the title faded in underneath.
+    // Holding the measure means a tab tap changes nothing horizontally, and the
+    // opening view can arrive as a transition instead of a reload.
+    <div className="container mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8 relative max-w-3xl">
       {outlineOverlay}
 
       {/* Hero Search Section. Once a search has run the title gets out of the

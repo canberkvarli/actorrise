@@ -5,9 +5,12 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import {
   ClapperSketch,
-  FootlightsSketch,
-  MarqueeSketch,
+  CrownSketch,
+  DaggerSketch,
+  MasksSketch,
   ReelSketch,
+  RoseSketch,
+  SkullSketch,
   SpotlightSketch,
 } from "@/components/brand/sketches";
 
@@ -53,20 +56,46 @@ const BEATS: Record<SearchMode, string[]> = {
 };
 
 const BEAT_MS = 2400;
+/** Deliberately not a multiple of BEAT_MS — see the sketch clock below. */
+const SKETCH_MS = 3600;
 
 /**
- * A different drawing each search, rather than the same one forever.
+ * The drawing changes with the beat, and where in the pool it starts changes
+ * with the search.
  *
- * Picked once per mount and held for the whole wait — the beats already change
- * underneath it, and swapping the image every couple of seconds too would turn
- * a calm screen into a slideshow. Deliberately excludes the sketches that mean
- * something specific elsewhere in search (ghost light = nothing found, ticket =
- * empty bill, script pages = nothing to show), so a drawing never means two
- * things on the same page.
+ * It used to pick one and hold it for the whole wait, on the theory that
+ * swapping the image would turn a calm screen into a slideshow. In practice a
+ * search runs long enough that one line drawing has nothing left to give by the
+ * second beat, and each one draws itself in — so a change is a small event
+ * rather than a flicker. One drawing per beat, cross-faded.
+ *
+ * Objects, not scenery. The first pass at this pool reached for stage furniture
+ * — footlights, a stage door, a jester — and none of it survived being the only
+ * thing on screen at 88px. They were drawn as small accents beside landing-page
+ * copy, which tells you what you are looking at; alone they are ambiguous
+ * shapes. The jester read as a rabbit, the stage door as an unfinished
+ * rectangle, and the footlights as three V's over three bumps.
+ *
+ * What holds at that size is a thing you can name in one word. These are the
+ * playbill sketches, so leafing through them while a search runs reads as
+ * flipping past plays rather than watching a spinner.
+ *
+ * Still excludes the sketches that mean something specific elsewhere in search
+ * (ghost light = nothing found, ticket = empty bill, script pages = nothing to
+ * show), so a drawing never means two things on the same page.
+ *
+ * Everything here must be square and take `size`. CurtainSketch is neither — it
+ * takes width/height and defaults to 220x44 — and this array's type erases the
+ * real signatures, so putting it in compiled cleanly and rendered a swag of
+ * curtain twice the width of the slot.
  */
 const CURTAIN_SKETCHES: Record<SearchMode, typeof SpotlightSketch[]> = {
-  plays: [SpotlightSketch, FootlightsSketch, MarqueeSketch],
-  film_tv: [ClapperSketch, ReelSketch, MarqueeSketch],
+  plays: [SpotlightSketch, MasksSketch, SkullSketch, CrownSketch, DaggerSketch, RoseSketch],
+  /* Three, not four: the marquee went the way of the footlights. Its canopy
+     over a row of bulbs reads as a table on castors once you take the building
+     away from it, and three drawings that land beat four with a dud in the
+     rotation. */
+  film_tv: [ClapperSketch, ReelSketch, SpotlightSketch],
 };
 
 export function SearchCurtain({ mode = "plays" }: { mode?: SearchMode }) {
@@ -79,7 +108,9 @@ export function SearchCurtain({ mode = "plays" }: { mode?: SearchMode }) {
   // flight), so there is no server render for the random pick to disagree with.
   const pool = CURTAIN_SKETCHES[mode];
   const [pick] = useState(() => Math.floor(Math.random() * pool.length));
-  const Sketch = pool[pick % pool.length];
+  const [frame, setFrame] = useState(0);
+  const sketchIndex = (pick + frame) % pool.length;
+  const Sketch = pool[sketchIndex];
 
   useEffect(() => {
     setBeat(0);
@@ -91,6 +122,19 @@ export function SearchCurtain({ mode = "plays" }: { mode?: SearchMode }) {
     );
     return () => clearInterval(id);
   }, [beats]);
+
+  /* Its own clock, and it never stops.
+     Tying the drawing to the beat looked right until a search ran past the last
+     line: the beats hold on "(almost.)" rather than looping, so the picture
+     froze with them — which on the slow searches, the only ones long enough to
+     be worth watching, is exactly when it needs to still be alive. The odd
+     interval also keeps it off the beat, so the text and the drawing never
+     change in the same instant. */
+  useEffect(() => {
+    setFrame(0);
+    const id = setInterval(() => setFrame((f) => f + 1), SKETCH_MS);
+    return () => clearInterval(id);
+  }, [mode]);
 
   return (
     // Centred in the space the results will fill, so the bulb sits where the
@@ -109,7 +153,20 @@ export function SearchCurtain({ mode = "plays" }: { mode?: SearchMode }) {
             transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
           />
         )}
-        <Sketch size={88} className="relative text-foreground/70" />
+        {/* Keyed on which drawing it is, so each one mounts fresh and draws
+            itself in rather than morphing paths into the next shape. */}
+        <AnimatePresence mode="wait">
+          <motion.span
+            key={sketchIndex}
+            initial={{ opacity: 0, scale: 0.94 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.04 }}
+            transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            className="relative"
+          >
+            <Sketch size={88} className="text-foreground/70" />
+          </motion.span>
+        </AnimatePresence>
       </div>
 
       {/* Fixed height so the beam below doesn't jump as lines change length. */}
