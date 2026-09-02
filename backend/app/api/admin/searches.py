@@ -9,9 +9,10 @@ from app.models.actor import Monologue, Play
 from app.models.content_request import ContentRequest
 from app.models.search_log import SearchLog
 from app.models.user import User
+from app.services.admin_filters import test_user_filter
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import desc, func, text as sa_text
+from sqlalchemy import desc, func, or_, text as sa_text
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/admin", tags=["admin", "searches"])
@@ -28,13 +29,48 @@ def _date_range(from_date: Optional[str], to_date: Optional[str]) -> tuple[datet
     return start_dt, end_dt
 
 
+#: Staff, demo and testing accounts, kept out of every number on this page.
+#:
+#: The founder's own testing was the busiest "actor" in the library — 49
+#: searches, more than twice the next person — so he sat at the top of every
+#: table and moved every average. Anonymous rows (user_id IS NULL) are real
+#: visitors and stay.
+#:
+#: Resolved ONCE into a list of ids and passed as a bind parameter, rather than
+#: written twice — as a SQLAlchemy expression for the ORM paths and by hand in
+#: SQL for the raw ones. Two copies of one rule is how the search review gate
+#: ended up applied to a single query path out of five.
+#:
+#: The rule itself lives in `admin_filters.test_user_filter`, so this page and
+#: /admin/stats cannot disagree about who counts.
+
+
+def _staff_ids(db: Session) -> list[int]:
+    """Ids whose activity must not appear in analytics."""
+    return [r[0] for r in db.query(User.id).filter(test_user_filter()).all()]
+
+
+#: Raw-SQL predicate. Pair it with `{"staff_ids": _staff_ids(db)}`.
+_NOT_STAFF = "(user_id IS NULL OR NOT (user_id = ANY(:staff_ids)))"
+
+
+def _exclude_staff(query, db: Session):
+    """The ORM twin of :data:`_NOT_STAFF`."""
+    return query.filter(
+        or_(SearchLog.user_id.is_(None), SearchLog.user_id.notin_(_staff_ids(db)))
+    )
+
+
 def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[str, Any]:
     """Run the four summary aggregates over the date range. Date filter
     uses raw ``created_at`` comparisons so any (created_at) index can be
     used by the planner."""
-    summary_base = db.query(SearchLog).filter(
-        SearchLog.created_at >= start_dt,
-        SearchLog.created_at < end_dt,
+    summary_base = _exclude_staff(
+        db.query(SearchLog).filter(
+            SearchLog.created_at >= start_dt,
+            SearchLog.created_at < end_dt,
+        ),
+        db,
     )
 
     # The five headline aggregates in ONE index scan / ONE round trip instead of
@@ -60,9 +96,10 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
             # Silent-retry signal: the stored is_repeat flag (same user re-ran an
             # identical query within 10 min). Set at write time, backfilled once.
             "count(*) FILTER (WHERE is_repeat IS TRUE) AS repeats "
-            "FROM search_logs WHERE created_at >= :start AND created_at < :end"
+            "FROM search_logs WHERE created_at >= :start AND created_at < :end "
+            "AND " + _NOT_STAFF
         ),
-        {"start": start_dt, "end": end_dt},
+        {"start": start_dt, "end": end_dt, "staff_ids": _staff_ids(db)},
     ).fetchone()
     total_searches = int(totals[0] or 0)
     zero_results = int(totals[1] or 0)
@@ -95,11 +132,12 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
             "SELECT count(*) AS events, count(DISTINCT user_id) AS users FROM ("
             "  SELECT user_id FROM search_logs"
             "  WHERE created_at >= :start AND created_at < :end AND user_id IS NOT NULL"
+            "  AND " + _NOT_STAFF + " "
             "  GROUP BY user_id, lower(btrim(query)), floor(extract(epoch from created_at)/1800)"
             "  HAVING count(*) >= 3"
             ") r"
         ),
-        {"start": start_dt, "end": end_dt},
+        {"start": start_dt, "end": end_dt, "staff_ids": _staff_ids(db)},
     ).fetchone()
     retry_events = int(retry[0] or 0) if retry else 0
     retry_users = int(retry[1] or 0) if retry else 0
@@ -202,6 +240,11 @@ def get_search_logs(
         SearchLog.created_at >= start_dt,
         SearchLog.created_at < end_dt,
     )
+    # The raw feed too. An explicit `user=` search is the one exception: asking
+    # for a specific address by name should find it, staff or not, or the filter
+    # becomes a thing you cannot debug your way past.
+    if not user:
+        base = _exclude_staff(base, db)
 
     if zero_only:
         base = base.filter(SearchLog.results_count == 0)
@@ -325,16 +368,21 @@ def get_searches_by_user(
             "count(*) FILTER (WHERE weak_match IS TRUE) AS weak, "
             "count(*) FILTER (WHERE is_repeat IS TRUE) AS repeats, "
             "count(DISTINCT lower(btrim(query))) AS distinct_queries, "
+            # One count, not zero+weak added together: 15 rows are BOTH, so
+            # summing them double-counts and the UI showed 120% "went badly".
+            "count(*) FILTER (WHERE results_count = 0 OR weak_match IS TRUE) AS bad, "
             "avg(best_cosine) FILTER (WHERE best_cosine IS NOT NULL) AS avg_cos, "
             "max(created_at) AS last_seen, min(created_at) AS first_seen "
             "FROM search_logs "
             "WHERE created_at >= :start AND created_at < :end AND user_id IS NOT NULL "
+            "AND " + _NOT_STAFF + " "
             "GROUP BY user_id ORDER BY searches DESC LIMIT :limit"
         ),
-        {"start": start_dt, "end": end_dt, "limit": limit},
-    ).fetchall()
+        {"start": start_dt, "end": end_dt, "limit": limit,
+         "staff_ids": _staff_ids(db)},
+    ).mappings().all()   # by name: adding a column must not renumber the rest
 
-    user_ids = [r[0] for r in rows]
+    user_ids = [r["user_id"] for r in rows]
     user_map: dict = {}
     if user_ids:
         users = db.query(User.id, User.email).filter(User.id.in_(user_ids)).all()
@@ -347,22 +395,27 @@ def get_searches_by_user(
             "SELECT count(*) FROM search_logs WHERE created_at >= :start "
             "AND created_at < :end AND user_id IS NULL"
         ),
-        {"start": start_dt, "end": end_dt},
+        {"start": start_dt, "end": end_dt, "staff_ids": _staff_ids(db)},
     ).scalar()
 
     return {
         "users": [
             {
-                "user_id": r[0],
-                "email": user_map.get(r[0]),
-                "searches": int(r[1] or 0),
-                "zero_results": int(r[2] or 0),
-                "weak_matches": int(r[3] or 0),
-                "repeats": int(r[4] or 0),
-                "distinct_queries": int(r[5] or 0),
-                "avg_best_cosine": round(float(r[6]), 3) if r[6] is not None else None,
-                "last_seen": r[7].isoformat() if r[7] else None,
-                "first_seen": r[8].isoformat() if r[8] else None,
+                "user_id": r["user_id"],
+                "email": user_map.get(r["user_id"]),
+                "searches": int(r["searches"] or 0),
+                "zero_results": int(r["zero"] or 0),
+                "weak_matches": int(r["weak"] or 0),
+                "repeats": int(r["repeats"] or 0),
+                "distinct_queries": int(r["distinct_queries"] or 0),
+                # zero OR weak, counted once. The UI used to add
+                # zero_results + weak_matches and could exceed 100%.
+                "bad_searches": int(r["bad"] or 0),
+                "avg_best_cosine": (
+                    round(float(r["avg_cos"]), 3) if r["avg_cos"] is not None else None
+                ),
+                "last_seen": r["last_seen"].isoformat() if r["last_seen"] else None,
+                "first_seen": r["first_seen"].isoformat() if r["first_seen"] else None,
             }
             for r in rows
         ],

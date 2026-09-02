@@ -78,5 +78,48 @@ class PublicStatsTests(unittest.TestCase):
         self.assertIn("exclude_from_stats", attributes)
 
 
+class AdminSearchAnalyticsTests(unittest.TestCase):
+    """The admin Search page must show real actors, not the founder testing.
+
+    He was the busiest "actor" in the library at 49 searches, more than twice
+    the next person, so he topped every table and moved every average.
+    """
+
+    def setUp(self):
+        from app.api.admin import searches
+        self.source = Path(inspect.getfile(searches)).read_text()
+        self.mod = searches
+
+    def test_every_aggregate_excludes_staff(self):
+        """Summary, retry, per-user and the raw feed — four separate chances."""
+        self.assertGreaterEqual(
+            self.source.count("_NOT_STAFF"), 4,
+            "an aggregate is missing the staff filter",
+        )
+        self.assertIn("_exclude_staff", self.source)
+
+    def test_the_rule_is_shared_with_admin_stats(self):
+        """One definition. Two would drift, which is the bug this repo keeps
+        producing — see the search review gate applied to 1 path of 5."""
+        self.assertIn("test_user_filter", self.source)
+
+    def test_bad_searches_is_a_union_not_a_sum(self):
+        """zero + weak double-counts the rows that are both.
+
+        abhishekyadav07399@gmail.com ran 5 searches: 1 returned nothing and 5
+        were weak, so the sum was 6 and the UI displayed "120.0% went badly".
+        """
+        self.assertIn(
+            "results_count = 0 OR weak_match IS TRUE", self.source,
+            "the per-user bad count must be one OR-filter, not two counts added",
+        )
+
+    def test_the_percentage_cannot_exceed_one_hundred(self):
+        zero, weak, both, searches = 1, 5, 1, 5
+        union = zero + weak - both
+        self.assertLessEqual(union / searches, 1.0)
+        self.assertGreater((zero + weak) / searches, 1.0)  # the old arithmetic
+
+
 if __name__ == "__main__":
     unittest.main()

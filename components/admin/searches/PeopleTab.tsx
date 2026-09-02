@@ -28,7 +28,7 @@ export function PeopleTab({ onDrillIntoUser }: { onDrillIntoUser: (email: string
     const withRate = filtered.map((u) => ({
       ...u,
       // A "bad" search is one that found nothing or found the wrong thing.
-      badRate: u.searches ? (u.zero_results + u.weak_matches) / u.searches : 0,
+      badRate: u.searches ? u.bad_searches / u.searches : 0,
     }));
     return withRate.sort((a, b) =>
       sort === "searches" ? b.searches - a.searches : b.badRate - a.badRate
@@ -154,7 +154,7 @@ export function PeopleTab({ onDrillIntoUser }: { onDrillIntoUser: (email: string
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums">
                       <span style={{ color: u.badRate >= 0.5 ? BRAND : undefined }}>
-                        {share(u.zero_results + u.weak_matches, u.searches)}
+                        {share(u.bad_searches, u.searches)}
                       </span>
                       {u.repeats > 0 && (
                         <span className="ml-1 text-[11px] text-muted-foreground">

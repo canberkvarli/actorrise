@@ -22,9 +22,20 @@ EXTRA_TEST_EMAILS = {
 
 
 def test_user_filter():
-    """SQLAlchemy boolean expression — True for test/dev/internal accounts."""
+    """SQLAlchemy boolean expression — True for test/dev/internal accounts.
+
+    `exclude_from_stats` is the authoritative answer and comes first: it is a
+    column an admin can set, so a new staff or testing account no longer needs a
+    code change to disappear from the dashboards. The email patterns stay as a
+    safety net for accounts predating the flag.
+
+    Deliberately NOT `is_moderator` — moderating is a permission a genuine
+    community member could be given, and the day they were, they would silently
+    vanish from every number.
+    """
     email = func.lower(User.email)
     return or_(
+        User.exclude_from_stats.is_(True),
         email.like("%@actorrise.com"),
         email.like("test%"),
         email.in_({e.lower() for e in EXTRA_TEST_EMAILS}),

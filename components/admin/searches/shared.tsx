@@ -82,6 +82,9 @@ export interface SearchUserRow {
   searches: number;
   zero_results: number;
   weak_matches: number;
+  /** zero OR weak, counted once. zero_results + weak_matches double-counts
+   *  the rows that are both, which showed as "120.0% went badly". */
+  bad_searches: number;
   repeats: number;
   distinct_queries: number;
   avg_best_cosine: number | null;
