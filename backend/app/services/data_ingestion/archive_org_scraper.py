@@ -218,55 +218,47 @@ class ArchiveOrgScraper:
                 except:
                     year = None
 
-            # Create Play record
-            play = Play(
+            # The shared pipeline, not a bespoke insert loop: quality gate, skip
+            # list, duplicate check, metadata and embedding. Archive.org text is
+            # OCR of scanned books, so it is the noisiest source we have and the
+            # one that most needs the gate it was skipping.
+            from app.services.ai.content_analyzer import ContentAnalyzer
+            from app.services.ai.langchain.embeddings import generate_embeddings_batch
+            from app.services.data_ingestion.pipeline import ingest_play
+
+            report = ingest_play(
+                self.db,
                 title=title,
                 author=author,
-                year_written=int(year) if year else None,
-                genre='Drama',
-                category='classical',
+                full_text=text,
                 copyright_status='public_domain',
                 license_type='public_domain',
                 source_url=f"https://archive.org/details/{identifier}",
-                full_text=text,
-                text_format='plain',
-                publisher=metadata.get('publisher')
+                category='classical',
+                genre='drama',
+                apply=True,
+                analyzer=ContentAnalyzer(),
+                embed=generate_embeddings_batch,
             )
 
-            self.db.add(play)
-            self.db.commit()
-            self.db.refresh(play)
+            if report.refused:
+                logger.info("✗ %s: %s", title, report.refused)
+                return 0
 
-            logger.info(f"Created play record: {play.id}")
-
-            # Extract monologues
-            monologues = self.parser.extract_monologues(
-                text,
-                min_words=75,
-                max_words=500
-            )
-
-            # Filter out garbage (catalog listings, bibliographic data, etc.)
-            monologues = filter_monologues(monologues, text_key="text")
-
-            count = 0
-            for mono_data in monologues:
-                monologue = Monologue(
-                    play_id=play.id,
-                    title=f"{mono_data['character']}'s speech from {title}",
-                    character_name=mono_data['character'],
-                    text=mono_data['text'],
-                    word_count=mono_data['word_count'],
-                    estimated_duration_seconds=estimate_duration_seconds(mono_data['text']),
-                    is_verified=False  # Will be enriched later
+            if report.play_id:
+                self.db.query(Play).filter(Play.id == report.play_id).update(
+                    {
+                        Play.full_text: text,
+                        Play.text_format: 'plain',
+                        Play.year_written: int(year) if year else None,
+                        Play.publisher: metadata.get('publisher'),
+                    },
+                    synchronize_session=False,
                 )
-                self.db.add(monologue)
-                count += 1
+                self.db.commit()
 
-            self.db.commit()
-            logger.info(f"✓ Extracted {count} monologues from {title}")
-
-            return count
+            logger.info("✓ %s: %s", title, report.summary())
+            return report.inserted
 
         except Exception as e:
             logger.error(f"Failed to ingest {identifier}: {e}")

@@ -122,7 +122,11 @@ def scrape_gutenberg(db, limit_per_author: int = 5) -> dict:
                 logger.info(f"  → Found: {play_title} (ID: {book['id']})")
 
                 # Download and ingest
-                count = scraper.ingest_play(book['id'], author, play_title)
+                # (book_id, play_title, author) — the arguments were swapped
+                # here, so Gutenberg plays were stored with the author in the
+                # title field and the title in the author field. Play 238 is
+                # "John Dryden" by "All for Love".
+                count = scraper.ingest_play(book['id'], play_title, author)
 
                 if count:
                     stats['plays_added'] += 1
@@ -341,6 +345,8 @@ def scrape_perseus(db, limit: int = 50) -> dict:
     logger.info("PHASE 4: Perseus Digital Library")
     logger.info("=" * 60)
 
+    analyzer, embed_batch = _pipeline_deps()
+
     scraper = PerseusScraper()
     dedup = MonologueDeduplicator(db)
     tei_parser = TEIXMLParser()
@@ -399,53 +405,41 @@ def scrape_perseus(db, limit: int = 50) -> dict:
 
                 logger.info(f"  → {author} - {title} ({tradition})")
 
-                # Create play record
-                play = Play(
+                # Same pipeline as every other source, with the TEI parser
+                # injected — it exposes the same extract_monologues(text,
+                # min_words, max_words) interface, so the only thing that
+                # differs between a Gutenberg .txt and a Perseus .xml is which
+                # parser reads it.
+                report = ingest_play(
+                    db,
                     title=title,
                     author=author,
-                    year_written=year,
-                    genre='tragedy',  # Most classical plays are tragedies
-                    category='classical',
-                    copyright_status='public_domain',
-                    source_url=f"https://github.com/PerseusDL/canonical-{tradition}Lit",
                     full_text=xml_content,
-                    text_format='tei_xml',
-                    language='en'
+                    copyright_status='public_domain',
+                    license_type='public_domain',
+                    source_url=f"https://github.com/PerseusDL/canonical-{tradition}Lit",
+                    category='classical',
+                    genre='tragedy',
+                    apply=True,
+                    analyzer=analyzer,
+                    embed=embed_batch,
+                    parser=tei_parser,
                 )
+                if report.refused:
+                    logger.info(f"  ✗ {title}: {report.refused}")
+                    stats['failed'] += 1
+                    continue
 
-                db.add(play)
-                db.commit()
+                if report.play_created:
+                    stats['plays_added'] += 1
+                    db.query(Play).filter(Play.id == report.play_id).update(
+                        {Play.full_text: xml_content, Play.text_format: 'tei_xml',
+                         Play.year_written: year},
+                        synchronize_session=False)
+                    db.commit()
 
-                logger.info(f"  ✅ Created play record (ID: {play.id})")
-                stats['plays_added'] += 1
-
-                # Extract monologues using TEI parser
-                logger.info(f"  🔍 Extracting monologues from TEI XML...")
-                monologues = tei_parser.extract_monologues(xml_content, min_words=75, max_words=500)
-
-                logger.info(f"  📝 Found {len(monologues)} potential monologues")
-
-                # Save monologues
-                for mono in monologues:
-                    try:
-                        monologue = Monologue(
-                            play_id=play.id,
-                            title=f"{mono['character']}'s speech from {title}",
-                            character_name=mono['character'],
-                            text=mono['text'],
-                            stage_directions=mono.get('stage_directions'),
-                            word_count=mono['word_count'],
-                            estimated_duration_seconds=int(mono['word_count'] / 150 * 60)  # 150 wpm
-                        )
-                        db.add(monologue)
-                        stats['monologues_added'] += 1
-
-                    except Exception as e:
-                        logger.error(f"  ⚠️  Error creating monologue: {e}")
-                        continue
-
-                db.commit()
-                logger.info(f"  ✓ Added {len(monologues)} monologues")
+                stats['monologues_added'] += report.inserted
+                logger.info(f"  ✓ {title}: {report.summary()}")
 
             except Exception as e:
                 logger.error(f"  ✗ Error processing {file_data.get('file_path', 'Unknown')}: {e}")

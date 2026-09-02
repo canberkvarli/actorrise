@@ -301,59 +301,47 @@ class GutenbergScraper:
         # Clean text
         clean_text = self.clean_gutenberg_text(text)
 
-        # Create Play record
-        play = Play(
+        # Everything from here is the shared pipeline: quality gate, skip list,
+        # duplicate check, metadata and embedding. The loop that used to live
+        # here did none of it, so a Gutenberg play arrived with no vector
+        # (invisible to semantic search) and no gender/age/tone (invisible to
+        # every filter) — the count went up and the library did not.
+        from app.services.ai.content_analyzer import ContentAnalyzer
+        from app.services.ai.langchain.embeddings import generate_embeddings_batch
+        from app.services.data_ingestion.pipeline import ingest_play as _ingest
+
+        report = _ingest(
+            self.db,
             title=play_title,
             author=author,
-            year_written=year_written,
-            genre=genre,
-            category='classical',
-            copyright_status='public_domain',
-            source_url=f"https://www.gutenberg.org/ebooks/{book_id}",
             full_text=clean_text,
-            text_format='plain',
-            language='en'
+            copyright_status='public_domain',
+            license_type='public_domain',
+            source_url=f"https://www.gutenberg.org/ebooks/{book_id}",
+            category='classical',
+            genre=genre,
+            apply=True,
+            analyzer=ContentAnalyzer(),
+            embed=generate_embeddings_batch,
         )
 
-        self.db.add(play)
-        self.db.commit()
+        if report.refused:
+            print(f"  ❌ {play_title}: {report.refused}")
+            return None
 
-        print(f"  ✅ Created play record (ID: {play.id})")
+        # Keep the source text on the row so the play can be re-extracted later
+        # without re-fetching it — that is what made today's re-extraction of
+        # 172 stored plays possible at all.
+        if report.play_id:
+            self.db.query(Play).filter(Play.id == report.play_id).update(
+                {Play.full_text: clean_text, Play.text_format: 'plain',
+                 Play.year_written: year_written},
+                synchronize_session=False,
+            )
+            self.db.commit()
 
-        # Extract monologues
-        print(f"  🔍 Extracting monologues...")
-        monologues = self.parser.extract_monologues(clean_text, min_words=75, max_words=500)
-
-        print(f"  📝 Found {len(monologues)} potential monologues")
-
-        # Filter out garbage (catalog listings, bibliographic data, etc.)
-        monologues = filter_monologues(monologues, text_key="text")
-        print(f"  ✅ {len(monologues)} passed quality check")
-
-        # Save monologues
-        count = 0
-        for mono in monologues:
-            try:
-                monologue = Monologue(
-                    play_id=play.id,
-                    title=f"{mono['character']}'s speech from {play_title}",
-                    character_name=mono['character'],
-                    text=mono['text'],
-                    stage_directions=mono.get('stage_directions'),
-                    word_count=mono['word_count'],
-                    estimated_duration_seconds=estimate_duration_seconds(mono['text'])
-                )
-                self.db.add(monologue)
-                count += 1
-
-            except Exception as e:
-                print(f"  ⚠️  Error creating monologue: {e}")
-                continue
-
-        self.db.commit()
-        print(f"  ✨ Saved {count} monologues to database\n")
-
-        return count
+        print(f"  ✨ {play_title}: {report.summary()}\n")
+        return report.inserted
 
     def ingest_author_plays(
         self,
