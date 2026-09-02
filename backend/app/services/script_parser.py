@@ -12,6 +12,7 @@ Extraction strategy:
 import io
 import json
 import re
+from collections import Counter
 from typing import Dict, List, Optional
 import pdfplumber
 from openai import OpenAI
@@ -430,6 +431,145 @@ def _strip_embedded_stage_directions(text: str) -> str:
 # Dialogue parser (deterministic, lossless)
 # ---------------------------------------------------------------------------
 
+def _indent_of(line: str) -> int:
+    return len(line) - len(line.lstrip())
+
+
+def _screenplay_columns(text: str) -> Optional[Dict[str, int]]:
+    """The columns this script is typed in, or None if it isn't typed in any.
+
+    A screenplay says what a line *is* by where it sits, and it is the only
+    signal that doesn't lie: action at the left margin, dialogue indented, the
+    character cue indented further. Everything else — case, sentence shape, a
+    name followed by a verb — is a guess that fails on the first side that
+    opens with "A young woman in her 20s, ANITA FERGUSON, in front of --".
+    """
+    rows = [(_indent_of(l), l.strip()) for l in text.split("\n") if l.strip()]
+    if len(rows) < 8:
+        return None
+
+    counts = Counter(indent for indent, _ in rows)
+    if len(counts) < 3:
+        return None
+
+    # The cue column is the deepest one holding short shouted names. Transitions
+    # ("CUT TO:") are shouted too and sit deeper still, so they are skipped.
+    cue = None
+    for indent in sorted(counts, reverse=True):
+        names = [t for i, t in rows if i == indent and not _is_excluded(t)]
+        if len(names) < 2:
+            continue
+        if sum(1 for n in names if n == n.upper() and len(n) <= 40) / len(names) >= 0.8:
+            cue = indent
+            break
+    if cue is None:
+        return None
+
+    # Dialogue is the last well-populated column before the cue; a lone
+    # parenthetical sits between the two and rides along with it.
+    body = [i for i in counts if i < cue and counts[i] >= 3]
+    if not body:
+        return None
+    dialogue = max(body)
+    if dialogue >= cue:
+        return None
+
+    return {"dialogue": dialogue, "cue": cue}
+
+
+def _parse_screenplay(text: str, columns: Dict[str, int]) -> List[Dict]:
+    """Read a screenplay by its columns rather than by guesswork.
+
+    Action is kept, not discarded: it becomes the stage direction on the speech
+    it introduces, which is how the actor knows what is happening in the room.
+    """
+    tolerance = 2
+    cue_col = columns["cue"] - tolerance
+    dialogue_col = columns["dialogue"] - tolerance
+
+    sections: List[Dict] = []
+    current = {"characters": set(), "lines": []}
+    character = None
+    # Action interrupts a speech; a parenthetical only colours the next breath.
+    pending_action: List[str] = []
+    pending_beat: List[str] = []
+
+    def flush_section():
+        nonlocal current
+        if current["lines"]:
+            sections.append(current)
+        current = {"characters": set(), "lines": []}
+
+    for raw in text.split("\n"):
+        stripped = raw.strip()
+        if not stripped or _PAGE_NUM_ONLY.match(stripped) or _MORE_MARKER.match(stripped):
+            continue
+        indent = _indent_of(raw)
+
+        if indent >= cue_col:
+            # A cue, unless it's a transition sitting even deeper.
+            if _is_excluded(stripped):
+                character = None
+                continue
+            name = stripped
+            contd = _CHAR_CONTD.match(name)
+            if contd:
+                name = contd.group(1)
+            name = re.sub(r"\s*\([^)]*\)\s*$", "", name).strip()  # (V.O.), (O.S.)
+            if not name or _is_excluded(name):
+                character = None
+                continue
+            # A third voice starts a new section, same as the prose parser.
+            if (name not in current["characters"] and current["lines"]
+                    and len(current["characters"]) >= 2):
+                flush_section()
+            current["characters"].add(name)
+            character = name
+            continue
+
+        if indent < dialogue_col:
+            # Action. Hold it for the speech it introduces.
+            if _is_excluded(stripped):
+                character = None
+                pending_action = []
+            else:
+                pending_action.append(stripped)
+            continue
+
+        if not character:
+            continue
+
+        spoken, parenthetical = _extract_stage_direction(stripped)
+        if not spoken:
+            # A parenthetical on its own line ("(beat)") belongs to what follows.
+            if parenthetical:
+                pending_beat.append(parenthetical)
+            continue
+
+        action = " ".join(pending_action) or None
+        beat = " ".join(pending_beat + ([parenthetical] if parenthetical else [])) or None
+        pending_action, pending_beat = [], []
+        direction = " ".join(d for d in (action, beat) if d) or None
+
+        previous = current["lines"][-1] if current["lines"] else None
+        # Dialogue wraps across rows, and a beat doesn't end a speech — both are
+        # still one line. Action between two speeches does end it, even when the
+        # same character picks straight back up.
+        if previous and previous["character"] == character and action is None:
+            previous["text"] += " " + spoken
+            if direction and not previous["stage_direction"]:
+                previous["stage_direction"] = direction
+        else:
+            current["lines"].append({
+                "character": character,
+                "text": spoken,
+                "stage_direction": direction,
+            })
+
+    flush_section()
+    return sections
+
+
 def parse_dialogue(text: str, character_names=None) -> List[Dict]:
     text = _preprocess_text(text)
     """
@@ -443,6 +583,12 @@ def parse_dialogue(text: str, character_names=None) -> List[Dict]:
       - characters: set of character names
       - lines: list of {character, text, stage_direction}
     """
+    # A screenplay tells us what each line is by where it sits. When the columns
+    # are there, read them; the guesswork below is for everything else.
+    columns = _screenplay_columns(text)
+    if columns:
+        return _parse_screenplay(text, columns)
+
     sections = []
     current_section = {"characters": set(), "lines": []}
     current_character = None
@@ -717,8 +863,12 @@ def _is_upright_glyph(obj) -> bool:
     return abs(matrix[1]) < 1e-6 and abs(matrix[2]) < 1e-6
 
 
-def pdf_page_text(page) -> str:
-    """Page text with the watermark dropped and fake bold collapsed.
+# 12pt Courier, the unit a screenplay is typed in.
+_COURIER_CHAR_WIDTH = 7.2
+
+
+def _clean_page(page):
+    """The page with the watermark dropped and fake bold folded.
 
     Casting sites stamp sides with the recipient's name and a timestamp set
     at an angle across the type. pdfplumber lays those glyphs out by
@@ -740,15 +890,47 @@ def pdf_page_text(page) -> str:
     if upright and len(upright) < len(chars):
         page = page.filter(_is_upright_glyph)
 
-    return page.dedupe_chars().extract_text() or ""
+    return page.dedupe_chars()
+
+
+def pdf_page_text(page) -> str:
+    """Cleaned page text, laid out the way pdfplumber lays anything out."""
+    return _clean_page(page).extract_text() or ""
+
+
+def _indented_page_text(page) -> str:
+    """Cleaned page text with each line put back in its own column.
+
+    A screenplay says what a line *is* by where it sits: action at the left
+    margin, dialogue indented, the character cue indented further still.
+    `extract_text` throws leading whitespace away, which is why every attempt
+    to tell action from dialogue downstream was guessing at prose patterns
+    after the evidence had been deleted.
+    """
+    lines = _clean_page(page).extract_text_lines()
+    return "\n".join(
+        " " * max(0, round(line["x0"] / _COURIER_CHAR_WIDTH)) + line["text"]
+        for line in lines
+    )
 
 
 def extract_pdf_text(file_content: bytes) -> str:
     """Text of every page in a PDF, watermarks removed."""
     try:
         with pdfplumber.open(io.BytesIO(file_content)) as pdf:
-            pages = [pdf_page_text(page) for page in pdf.pages]
-        return "\n\n".join(p for p in pages if p).strip()
+            pages = [_clean_page(page) for page in pdf.pages]
+            plain = "\n\n".join(
+                t for t in ((p.extract_text() or "") for p in pages) if t
+            ).strip()
+
+            # Only a screenplay is typed in columns. Plays, prose and everything
+            # else come back exactly as they always have.
+            if not _SCREENPLAY_MARKERS.search(plain[:4000]):
+                return plain
+
+            return "\n\n".join(
+                t for t in (_indented_page_text(p) for p in pages) if t.strip()
+            ).strip()
     except Exception as e:
         raise ValueError(f"Failed to parse PDF: {str(e)}")
 
@@ -1183,6 +1365,13 @@ IMPORTANT RULES:
 - Every line of dialogue must be captured — do NOT skip or summarize lines.
 - If a character speaks multiple consecutive paragraphs, keep them as separate lines.
 - Stage directions in parentheses or brackets should go in "stage_direction", not in "text".
+- Screenplay action is unbracketed prose sitting between speeches ("One can tell
+  from her eyes and skin. The illness.", "This hitting Henry harder than they
+  expected."). It is not dialogue, but it is not noise: put the action that comes
+  immediately before a speech into that speech's "stage_direction". It is how the
+  actor knows what is happening, so never drop it.
+- Two speeches by the same character separated by action, a page break or a
+  (CONT'D) cue stay TWO lines. Never join them into one.
 - For character_1 and character_2, pick the two characters who speak the most lines.
 
 Script:
@@ -1314,7 +1503,13 @@ RULES for scenes:
 - Extract every stretch of dialogue between 2+ characters.
 - Include ALL spoken dialogue lines — do NOT skip, summarize, or paraphrase.
 - Do NOT include stage directions as dialogue text.
-- Merge consecutive lines by the same character into one entry.
+- Join lines only when they are one speech the PDF broke across rows. Two
+  speeches by the same character separated by action, a page break or a (CONT'D)
+  cue are TWO entries. Never join those.
+- Screenplay action is unbracketed prose between speeches ("One can tell from her
+  eyes and skin. The illness."). Put the action immediately before a speech into
+  that speech's "stage_direction" — it is how the actor knows what is happening,
+  so never drop it.
 - Only extract scenes with at least 4 lines of dialogue.
 
 Return ONLY valid JSON."""
@@ -1418,7 +1613,13 @@ RULES:
 - Do NOT include stage directions as dialogue (e.g. "Enter Oberon", "They exit", "He kneels").
 - Stage directions in brackets/parentheses go in the "stage_direction" field.
 - If one character gives a long speech (multiple sentences/verses), keep it as ONE line entry.
-- Merge consecutive lines by the same character into one entry.
+- Join lines only when they are one speech the PDF broke across rows. Two speeches
+  by the same character separated by action, a page break or a (CONT'D) cue are
+  TWO entries. Never join those.
+- Screenplay action is unbracketed prose between speeches ("This hitting Henry
+  harder than they expected."). Put the action immediately before a speech into
+  that speech's "stage_direction" — it is how the actor knows what is happening,
+  so never drop it.
 - If the entire chunk is one character's monologue with no second speaker, skip it.
 - Only extract scenes with at least 4 lines of dialogue. Skip very short exchanges (2-3 lines).
 - For "character_1" and "character_2", pick the two characters who speak the most lines in the scene.

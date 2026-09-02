@@ -21,6 +21,7 @@ import pdfplumber
 from app.services.script_parser import (
     ScriptParser,
     _has_title_page,
+    _screenplay_columns,
     _is_usable_title,
     _strip_production_marks,
     _title_from_filename,
@@ -172,6 +173,93 @@ class TestProductionMarks:
         play = "HAMLET\nTo be, or not to be.\nHORATIO\nMy lord?\n"
 
         assert _strip_production_marks(play) == play
+
+
+class TestScreenplayColumns:
+    """A screenplay says what a line is by where it sits.
+
+    Everything else — case, sentence shape, a name followed by a verb — is a
+    guess, and every guess failed on a side that opens "A young woman in her
+    20s, ANITA FERGUSON, in front of --". `extract_text` was dropping the
+    leading whitespace before anything got to look at it.
+    """
+
+    SIDE = "\n".join([
+        "               A COURTHOUSE CLERK, clipboard in hand, handling check-in.",
+        "               One can tell from her eyes and skin. The illness.",
+        "                                   FERGUSON",
+        "                         I've just been told...",
+        "                                   COURTHOUSE CLERK",
+        "                         I'm really sorry. You need to be",
+        "                         part of the lawsuit to testify.",
+        "               When an Associate, HENRY from Jason's firm steps in.",
+        "                                   HENRY",
+        "                         Can I help you?",
+        "                                   FERGUSON",
+        "                         I was at Stuyvesant High.",
+        "                             (beat)",
+        "                         Now I have cancer.",
+    ])
+
+    def _lines(self):
+        return [l for section in parse_dialogue(self.SIDE) for l in section["lines"]]
+
+    def test_columns_are_found(self):
+        assert _screenplay_columns(self.SIDE) == {"dialogue": 25, "cue": 35}
+
+    def test_every_speech_is_attributed_to_its_own_cue(self):
+        assert [(l["character"], l["text"]) for l in self._lines()][:3] == [
+            ("FERGUSON", "I've just been told..."),
+            ("COURTHOUSE CLERK",
+             "I'm really sorry. You need to be part of the lawsuit to testify."),
+            ("HENRY", "Can I help you?"),
+        ]
+
+    def test_action_is_kept_as_the_stage_direction_it_introduces(self):
+        # The actor needs to know she is ill and desperate before she speaks.
+        first = self._lines()[0]
+        assert "One can tell from her eyes and skin" in first["stage_direction"]
+
+    def test_action_is_never_read_as_dialogue(self):
+        spoken = " ".join(l["text"] for l in self._lines())
+        assert "clipboard in hand" not in spoken
+        assert "steps in" not in spoken
+
+    def test_a_beat_does_not_split_a_speech(self):
+        ferguson = [l for l in self._lines() if l["character"] == "FERGUSON"]
+        assert ferguson[-1]["text"] == "I was at Stuyvesant High. Now I have cancer."
+
+    def test_action_between_two_speeches_does_split_them(self):
+        # FERGUSON speaks, action lands, FERGUSON speaks again: two speeches.
+        script = "\n".join([
+            "                                   FERGUSON",
+            "                         Why can't I speak?",
+            "               A young woman in her 20s, in front of --",
+            "                                   FERGUSON",
+            "                         I've just been told...",
+            "                                   HENRY",
+            "                         Can I help you?",
+            "                                   FERGUSON",
+            "                         Twenty-four.",
+        ])
+
+        texts = [l["text"] for section in parse_dialogue(script) for l in section["lines"]]
+
+        assert texts == [
+            "Why can't I speak?",
+            "I've just been told...",
+            "Can I help you?",
+            "Twenty-four.",
+        ]
+
+    def test_a_play_is_not_read_as_columns(self):
+        play = "\n".join([
+            "HAMLET", "To be, or not to be, that is the question.",
+            "HORATIO", "My lord?", "HAMLET", "Whether 'tis nobler in the mind.",
+            "HORATIO", "I know not.", "HAMLET", "Then let us go.",
+        ])
+
+        assert _screenplay_columns(play) is None
 
 
 class TestTitle:
