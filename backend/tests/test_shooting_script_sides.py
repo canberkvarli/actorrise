@@ -207,6 +207,15 @@ class TestTitle:
         assert _title_from_filename("Ryan - Side 1.pdf") == "Ryan Side 1"
         assert _title_from_filename("") == "Untitled Script"
 
+    def test_a_storage_key_is_not_a_title(self):
+        # Some uploads arrive named after their own UUID.
+        assert (
+            _title_from_filename("d7e46d88-a322-4a9f-a040-85b3ee8457a3.pdf")
+            == "Untitled Script"
+        )
+        # A hex-ish real name must survive: "Ada Cafe" is not a storage key.
+        assert _title_from_filename("Ada Cafe.pdf") == "Ada Cafe.pdf".removesuffix(".pdf")
+
     def test_furniture_is_never_a_usable_title(self):
         for furniture in ("EXT. GARDEN - NIGHT", "A MONTAGE:", "18 INT. BAR - DAY",
                           "FERGUSON (CONT'D)", "Untitled Script", "2 : A 2 :"):

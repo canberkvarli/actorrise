@@ -220,6 +220,11 @@ def _title_from_filename(filename: str) -> str:
     stem = re.sub(r"\s+", " ", stem).strip()
     if not stem:
         return "Untitled Script"
+    # A file named after its own storage key says nothing. "Untitled Script" is
+    # a worse title than a slug line but an honest one, and it invites a rename.
+    compact = stem.replace(" ", "")
+    if len(compact) >= 16 and re.fullmatch(r"[0-9a-fA-F]+", compact):
+        return "Untitled Script"
     # ALL_CAPS_FILE_NAMES read as shouting; anything else the actor typed stands.
     return stem.title() if stem.isupper() else stem
 
