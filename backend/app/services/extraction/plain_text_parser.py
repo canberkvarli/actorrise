@@ -3,6 +3,9 @@
 import re
 from typing import Dict, List, Optional
 
+from app.services.extraction import speech_merge as _merge
+from app.services.extraction.speech_merge import merge_interrupted_speeches
+
 
 class PlainTextParser:
     """Extract monologues from plain text plays using NLP"""
@@ -227,26 +230,16 @@ class PlainTextParser:
 
         return monologues
 
-    #: What a speech can absorb and still be one speech. A character answering
-    #: "Ay, my lord" does not end Hamlet's thought; a character delivering forty
-    #: words has started a scene.
-    MAX_INTERRUPTION_WORDS = 15
+    #: The merge bounds live in `speech_merge` and are shared with the
+    #: screenplay parser; re-exported here because tests and callers refer to
+    #: them through the parser.
+    MAX_INTERRUPTION_WORDS = _merge.MAX_INTERRUPTION_WORDS
 
-    #: ...and how many times. One or two beats is a speech with interjections in
-    #: it; five is a duologue wearing a monologue's name.
-    MAX_INTERRUPTIONS = 2
+    MAX_INTERRUPTIONS = _merge.MAX_INTERRUPTIONS
 
-    #: Share of the merged speech that may belong to anyone else. The per-line
-    #: caps above are not enough on their own: two 15-word replies inside a
-    #: 70-word exchange is still a conversation, and the first cut of this merge
-    #: turned 61 of Hamlet's 91 speeches into stitched-together dialogue.
-    MAX_INTERJECTION_SHARE = 0.20
+    MAX_INTERJECTION_SHARE = _merge.MAX_INTERJECTION_SHARE
 
-    #: A monologue interrupted is still mostly ONE speech, so at least one of
-    #: the character's own parts has to be a real run of talking. Without this,
-    #: three one-line replies merge into a "monologue" that was never one —
-    #: which is exactly what Miss Tesman and Berta looked like.
-    MIN_ANCHOR_WORDS = 40
+    MIN_ANCHOR_WORDS = _merge.MIN_ANCHOR_WORDS
 
     #: A leading parenthetical this long is not a wrylie, it is the scene being
     #: described before anybody speaks. "(aside)" and "(drinks coffee and looks
@@ -254,86 +247,21 @@ class PlainTextParser:
     #: weather are the story being explained and go.
     SCENE_SETTING_WORDS = 20
 
-    def _merge_interrupted_speeches(
-        self, speeches: List[tuple]
-    ) -> List[tuple]:
+    def _merge_interrupted_speeches(self, speeches: List[tuple]) -> List[tuple]:
         """Rejoin a speech that a short interruption split in two.
 
-        The cue splitter cuts at every cue, so
+        The rule and its bounds live in `speech_merge`, shared with
+        `screenplay_pdf_parser`: plays and screenplays lose speeches the same
+        way, and two copies of the rule would drift.
 
-            HAMLET  Speak, I am bound to hear.
-            GHOST   So art thou to revenge, when thou shalt hear.
-            HAMLET  What?
-
-        arrives as two Hamlet fragments with someone else between them, and both
-        can fall under the 75-word floor and disappear. That is how a real
-        monologue becomes no monologue at all, and it is the single most likely
-        reason a play we hold the full text of extracts almost nothing.
-
-        The interrupting line is KEPT, inline, as `(NAME: ...)`. Dropping it
-        would leave the speech answering a question the reader cannot see. As a
-        parenthetical it does three things at once: `_spoken_only` strips it so
-        it cannot pad the word floor, `assess_monologue_quality` counts it
-        against the direction share — which is what bounds "too much dialogue" —
-        and the segmenter can tag it as an `interjection` for the reader.
+        What differs is only how a body is reduced to the words said aloud —
+        Gutenberg marks directions with italics and brackets, a screenplay with
+        wrylies — so that is what gets passed in.
         """
-        merged: List[tuple] = []
-        i, n = 0, len(speeches)
-        while i < n:
-            character, body = speeches[i]
-            parts = [body]                       # this character's own words
-            interjections: List[str] = []        # everybody else's
-            j = i + 1
-            while j + 1 < n and len(interjections) < self.MAX_INTERRUPTIONS:
-                other_name, other_body = speeches[j]
-                next_name, next_body = speeches[j + 1]
-                # The speech has to resume with the SAME speaker, and the thing
-                # in between has to be somebody else being brief.
-                if next_name != character or other_name == character:
-                    break
-                interjection = self._spoken_only(self._to_display(other_body))
-                # Brackets that never closed survive _to_display, and nesting
-                # one inside the "(NAME: ...)" wrapper corrupts both.
-                interjection = re.sub(r"[()\[\]]", "", interjection).strip()
-                if not interjection:
-                    break
-                if len(interjection.split()) > self.MAX_INTERRUPTION_WORDS:
-                    break
-                interjections.append(f"({other_name}: {interjection})")
-                parts.append(interjections[-1])
-                parts.append(next_body)
-                j += 2
-
-            if len(parts) > 1 and not self._merge_is_a_monologue(parts, interjections):
-                # It read as a conversation, so leave the pieces alone and let
-                # the word floor decide each on its own merits.
-                merged.append((character, body))
-                i += 1
-                continue
-
-            merged.append((character, " ".join(parts)))
-            i = j if j > i + 1 else i + 1
-        return merged
-
-    def _merge_is_a_monologue(
-        self, parts: List[str], interjections: List[str]
-    ) -> bool:
-        """Is this merge one speech with interruptions, or a scene?"""
-        own = [
-            self._spoken_only(self._to_display(p))
-            for p in parts if p not in interjections
-        ]
-        own_words = sum(len(p.split()) for p in own)
-        other_words = sum(
-            max(0, len(s.split()) - 1) for s in interjections  # minus "(NAME:"
+        return merge_interrupted_speeches(
+            speeches,
+            spoken_of=lambda body: self._spoken_only(self._to_display(body)),
         )
-        total = own_words + other_words
-        if not total:
-            return False
-        if other_words / total > self.MAX_INTERJECTION_SHARE:
-            return False
-        # Somewhere in here there has to be an actual run of talking.
-        return max((len(p.split()) for p in own), default=0) >= self.MIN_ANCHOR_WORDS
 
     def _strip_leading_narrative(self, display: str) -> str:
         """Drop scene-setting prose sitting in front of the speech.
