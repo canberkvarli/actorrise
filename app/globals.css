@@ -32,6 +32,10 @@
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
+  /* Film & TV's violet. Was hardcoded as rgb(167,139,250) in three places, which
+     silently opted every one of them out of dark mode — the same trap the 67
+     hardcoded #CB4B00 fell into. */
+  --color-accent-screen: var(--accent-screen);
   --color-muted-foreground: var(--muted-foreground);
   --color-muted: var(--muted);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -77,6 +81,12 @@
 
   --accent: oklch(0.94 0.03 215);
   --accent-foreground: oklch(0.3 0.06 215);
+
+  /* Screen accent: Film & TV is to Plays what violet is to orange. The literal
+     rgb(167,139,250) it replaces is violet-400, which is a dark-mode value —
+     on white it measured 2.7:1 against the page and was unreadable as text.
+     This is the same hue pulled down to carry on a light background. */
+  --accent-screen: oklch(0.52 0.19 293);
 
   --destructive: oklch(0.62 0.22 27);
 
@@ -138,6 +148,9 @@
 
   --accent: oklch(0.26 0.02 52);
   --accent-foreground: oklch(0.95 0.012 78);
+
+  /* The original violet-400, which was always a dark-theme colour. */
+  --accent-screen: oklch(0.72 0.155 293);
 
   --destructive: oklch(0.66 0.22 27);
 

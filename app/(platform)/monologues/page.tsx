@@ -45,7 +45,6 @@ import { ContactModal } from "@/components/contact/ContactModal";
 import { ResultsFeedbackPrompt } from "@/components/feedback/ResultsFeedbackPrompt";
 import { extractQueryHighlights } from "@/lib/queryMatchHighlight";
 import { ActiveFilterChips } from "@/components/search/ActiveFilterChips";
-import { computeMatchReasons } from "@/lib/matchReasons";
 import { QuickFilterChips } from "@/components/search/QuickFilterChips";
 import { ContentGapBanner } from "@/components/search/ContentGapBanner";
 import { RequestQueryButton } from "@/components/search/RequestQueryButton";
@@ -63,6 +62,14 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
+
+/** The two shelves. `accent` is the CSS custom property the tab tints itself
+ *  with — Film & TV's violet used to be the literal rgb(167,139,250) in three
+ *  places, which silently opted every one of them out of dark mode. */
+const MODE_TABS = [
+  { mode: "plays" as const, label: "Plays", accent: "--primary" },
+  { mode: "film_tv" as const, label: "Film & TV", accent: "--accent-screen" },
+];
 
 export default function MonologuesPage() {
   return (
@@ -1315,17 +1322,37 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     };
   }, [results]);
 
+  /**
+   * Whether the page has stopped being a hero and become a results screen.
+   *
+   * Every layout decision above the results used to read `hasSearched`, which
+   * is the *Plays* flag — Film & TV keeps its own. So tapping Film & TV with
+   * Plays results on screen flipped it to false and moved six things at once:
+   * the container went 3xl → 88rem, the bar unstuck and grew, the hero title
+   * animated back in, the tabs became a boxed segmented control, and the
+   * filters row reappeared. It read as changing rooms rather than shelves.
+   *
+   * Once either side has searched, the chrome stays put and only the results
+   * change.
+   */
+  const chromeCompact = hasSearched || filmTvHasSearched;
+
   const isPersonalized = !!(
     profileData?.profile_bias_enabled &&
     ((profileData.preferred_genres?.length ?? 0) > 0 || profileData.experience_level || profileData.training_background)
   );
 
+  /* Film & TV is in here too now. The map used to cover Plays only, which was
+     invisible while it merely re-sorted a list, but the `your lane` mark reads
+     from it — leaving Film & TV out would have meant the mark silently never
+     appearing on that tab. */
   const profileMatchMap = useMemo(() => {
     if (!isPersonalized) return new Map<number, ProfileMatch>();
     const map = new Map<number, ProfileMatch>();
     results.forEach((mono) => map.set(mono.id, computeProfileMatch(mono, profileData)));
+    filmTvResults.forEach((mono) => map.set(mono.id, computeProfileMatch(mono, profileData)));
     return map;
-  }, [results, profileData, isPersonalized]);
+  }, [results, filmTvResults, profileData, isPersonalized]);
 
   const sortedRelated = useMemo(() => {
     if (!isPersonalized) return relatedResults;
@@ -1333,6 +1360,62 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       (a, b) => (profileMatchMap.get(b.id)?.score ?? 0) - (profileMatchMap.get(a.id)?.score ?? 0),
     );
   }, [relatedResults, profileMatchMap, isPersonalized]);
+
+  /**
+   * Tapping the other tab asks the same question of the other library.
+   *
+   * Each tab keeps its own query, so switching used to drop you on an empty
+   * shelf: you had typed a search, and the answer to "is there a film version
+   * of this?" was a blank screen and a second trip to the search box. Now the
+   * query comes along and runs.
+   *
+   * The guard reads the destination's *existing* query before it is
+   * overwritten, which is what that tab last searched. Land on results that
+   * already answer the carried question and nothing is re-requested.
+   */
+  const runAfterSwitchRef = useRef(false);
+
+  const switchMode = (target: "plays" | "film_tv") => {
+    if (target === searchMode) return;
+    const carried = (searchMode === "plays" ? playsQuery : filmTvQuery).trim();
+    const priorQuery = (target === "plays" ? playsQuery : filmTvQuery).trim();
+    const priorResults = target === "plays" ? results.length : filmTvResults.length;
+
+    runAfterSwitchRef.current =
+      carried !== "" && !(priorResults > 0 && priorQuery === carried);
+
+    if (target === "plays") {
+      playsActionAtRef.current = Date.now();
+      setPlaysQuery(carried);
+    } else {
+      filmTvActionAtRef.current = Date.now();
+      setFilmTvQuery(carried);
+    }
+    setSearchMode(target);
+    setSearchError(null);
+    setOutlineFlash(target);
+
+    const params = new URLSearchParams();
+    params.set("mode", target);
+    if (carried) params.set("q", carried);
+    if (target === "plays") {
+      Object.keys(filters).forEach((key) => {
+        const value = filters[key as keyof typeof filters];
+        if (value) params.set(key, value);
+      });
+      if (maxOverdoneScore < 1) params.set("max_overdone_score", String(maxOverdoneScore));
+    }
+    router.replace(`/monologues?${params.toString()}`, { scroll: false });
+  };
+
+  /* Runs after the mode and query states have both landed, so handleSearch
+     reads the tab you actually switched to rather than the one you left. */
+  useEffect(() => {
+    if (!runAfterSwitchRef.current) return;
+    runAfterSwitchRef.current = false;
+    handleSearch();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchMode]);
 
   /**
    * "Joker lives in Film & TV → Take me there" used to do nothing visible.
@@ -1399,7 +1482,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
     // tabs, bar, count and cards all start and end together.
     <div
       className={`container mx-auto px-4 sm:px-6 py-4 sm:py-6 md:py-8 relative ${
-        hasSearched ? "max-w-3xl" : "max-w-[88rem]"
+        chromeCompact ? "max-w-3xl" : "max-w-[88rem]"
       }`}
     >
       {outlineOverlay}
@@ -1409,7 +1492,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           below the fold and every search costs a scroll. */}
       <div
         className={
-          hasSearched
+          chromeCompact
             /* top offsets clear the sticky nav, which measures 65px on mobile
                and 81px from sm up — any less and the mode toggle tucks under it.
                From sm up the mode toggle and the search bar sit on one line;
@@ -1419,7 +1502,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         }
       >
         <AnimatePresence initial={false}>
-          {!hasSearched && (
+          {!chromeCompact && (
             <motion.div
               key="hero-title"
               initial={{ height: 0, opacity: 0 }}
@@ -1443,81 +1526,65 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         {/* Plays vs Film & TV toggle: spacious on mobile, 44px touch targets. */}
         <div
           className={`flex items-center justify-center gap-2 px-1 ${
-            hasSearched ? "mb-1.5" : "mb-3 sm:mb-4"
+            chromeCompact ? "mb-1.5" : "mb-3 sm:mb-4"
           }`}
         >
           {/* Boxed segmented control while it's the hero; once you've searched
-              it drops to quiet text tabs so the bar reads as one thing. */}
+              it drops to quiet text tabs so the bar reads as one thing.
+
+              Both states share one indicator that slides between the tabs
+              instead of two independently-styled buttons swapping colour. The
+              tab you left and the tab you arrive at are now visibly the same
+              object moving, which is the smallest possible statement that these
+              are two shelves and not two rooms. */}
           <div
             className={
-              hasSearched
+              chromeCompact
                 ? "inline-flex shrink-0 gap-1 sm:gap-0.5"
                 : "w-full max-w-sm sm:max-w-none sm:w-auto inline-flex rounded-xl border border-border bg-muted/40 p-2 gap-2 sm:p-1 sm:gap-0"
             }
           >
-            <button
-              type="button"
-              className={
-                hasSearched
-                  ? `shrink-0 rounded-md px-2.5 py-1.5 text-sm transition-colors ${
-                      searchMode === "plays"
-                        ? "font-medium text-primary"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`
-                  : `flex-1 sm:flex-none min-h-[44px] sm:min-w-0 sm:px-4 sm:py-2 rounded-lg sm:rounded-md text-sm font-medium transition-colors touch-manipulation ${
-                      searchMode === "plays"
-                        ? "bg-primary/15 text-primary shadow-sm ring-1 ring-primary/30 ring-inset"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                    }`
-              }
-              onClick={() => {
-                playsActionAtRef.current = Date.now();
-                setSearchMode("plays");
-                setSearchError(null);
-                setOutlineFlash("plays");
-                const params = new URLSearchParams();
-                params.set("mode", "plays");
-                if (playsQuery) params.set("q", playsQuery);
-                Object.keys(filters).forEach((key) => {
-                  const value = filters[key as keyof typeof filters];
-                  if (value) params.set(key, value);
-                });
-                if (maxOverdoneScore < 1) params.set("max_overdone_score", String(maxOverdoneScore));
-                router.replace(`/monologues?${params.toString()}`, { scroll: false });
-              }}
-            >
-              Plays
-            </button>
-            <button
-              type="button"
-              className={
-                hasSearched
-                  ? `shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm transition-colors ${
-                      searchMode === "film_tv"
-                        ? "font-medium text-[rgb(167,139,250)]"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`
-                  : `flex-1 sm:flex-none min-h-[44px] sm:min-w-0 sm:px-4 sm:py-2 rounded-lg sm:rounded-md text-sm font-medium transition-colors touch-manipulation ${
-                      searchMode === "film_tv"
-                        ? "bg-[rgba(167,139,250,0.12)] shadow text-foreground ring-1 ring-[rgba(167,139,250,0.45)] ring-inset"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                    }`
-              }
-              onClick={() => {
-                filmTvActionAtRef.current = Date.now();
-                setSearchMode("film_tv");
-                setSearchError(null);
-                setOutlineFlash("film_tv");
-                const params = new URLSearchParams();
-                params.set("mode", "film_tv");
-                if (filmTvQuery) params.set("q", filmTvQuery);
-                router.replace(`/monologues?${params.toString()}`, { scroll: false });
-              }}
-            >
-              Film &amp; TV
-            </button>
+            {MODE_TABS.map((tab) => {
+              const active = searchMode === tab.mode;
+              return (
+                <button
+                  key={tab.mode}
+                  type="button"
+                  aria-pressed={active}
+                  className={`relative ${
+                    chromeCompact
+                      ? `shrink-0 whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm transition-colors ${
+                          active ? "font-medium" : "text-muted-foreground hover:text-foreground"
+                        }`
+                      : `flex-1 sm:flex-none min-h-[44px] sm:min-w-0 sm:px-4 sm:py-2 rounded-lg sm:rounded-md text-sm font-medium transition-colors touch-manipulation ${
+                          active ? "" : "text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                        }`
+                  }`}
+                  style={active ? { color: `var(${tab.accent})` } : undefined}
+                  onClick={() => switchMode(tab.mode)}
+                >
+                  {active && (
+                    <motion.span
+                      layoutId="mode-indicator"
+                      aria-hidden
+                      transition={{ type: "spring", stiffness: 420, damping: 34 }}
+                      className={`absolute inset-0 -z-10 ${
+                        chromeCompact ? "rounded-md" : "rounded-lg sm:rounded-md ring-1 ring-inset"
+                      }`}
+                      style={{
+                        backgroundColor: `color-mix(in oklch, var(${tab.accent}) 14%, transparent)`,
+                        ...(chromeCompact
+                          ? {}
+                          : { boxShadow: `inset 0 0 0 1px color-mix(in oklch, var(${tab.accent}) 35%, transparent)` }),
+                      }}
+                    />
+                  )}
+                  {tab.label}
+                </button>
+              );
+            })}
           </div>
-          {!hasSearched && (
+          {!chromeCompact && (
             <div className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center shrink-0">
               <span className="w-10 h-10" aria-hidden />
             </div>
@@ -1526,8 +1593,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
         {/* Search bar. Stacked on mobile for easier tap targets. Centred, and
             after a search it widens to the same measure as the results, so the
             bar, the count and the cards all share one edge and one centre. */}
-        <div className={hasSearched ? "mx-auto w-full" : "max-w-3xl mx-auto"}>
-          <div className={hasSearched ? "flex items-center gap-2" : ""}>
+        <div className={chromeCompact ? "mx-auto w-full" : "max-w-3xl mx-auto"}>
+          <div className={chromeCompact ? "flex items-center gap-2" : ""}>
           <div className="relative group flex-1 min-w-0">
             {/* Ambient glow effect - subtle background */}
             <div
@@ -1549,7 +1616,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               className={`relative flex ${
                 /* stacked is roomier for a first search, but inside the sticky
                    bar it costs a button's height of results on every phone */
-                hasSearched
+                chromeCompact
                   ? "flex-row items-center gap-1 rounded-full border bg-muted/30 p-1 pl-1.5"
                   : "flex-col gap-2 rounded-xl border bg-card p-2 shadow-sm"
               } md:flex-row md:items-center transition-all duration-300 ${
@@ -1594,7 +1661,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   /* pr clears the absolutely-positioned clear button (44px wide
                      at right-3); pr-10 let long queries run underneath it. */
                   className={`pl-11 pr-14 text-base border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 ${
-                    hasSearched ? "min-h-[40px] h-10" : "min-h-[48px] md:h-12"
+                    chromeCompact ? "min-h-[40px] h-10" : "min-h-[48px] md:h-12"
                   }`}
                 />
                 {!isLoading && (searchMode === "plays" ? playsQuery : filmTvQuery) && (
@@ -1609,7 +1676,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 )}
               </div>
               {/* Always present. It shrinks to a round icon button once results
-                  are up (see the `hasSearched` branch below) but it must not
+                  are up (see the `chromeCompact` branch below) but it must not
                   disappear: hiding it left Enter as the only way to re-run a
                   search, which on a phone keyboard is not a discoverable path
                   and on desktop reads as the search box having gone dead. */}
@@ -1620,7 +1687,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   variant={isLoading ? "outline" : "default"}
                   aria-label={isLoading ? "Stop search" : "Search"}
                   className={`shrink-0 transition-all duration-300 ${
-                    hasSearched
+                    chromeCompact
                       ? "h-9 w-9 min-h-0 min-w-0 rounded-full p-0"
                       : `min-h-[44px] min-w-[44px] md:min-h-[2.5rem] md:min-w-0 px-4 md:px-6 rounded-lg ${
                           isLoading ? "" : isTyping ? (searchMode === "film_tv" ? "shadow-md shadow-violet-400/20" : "shadow-md shadow-primary/20") : ""
@@ -1630,9 +1697,9 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   {isLoading ? (
                     <>
                       <IconX className="h-4 w-4" />
-                      {!hasSearched && <span className="hidden md:inline ml-1">Stop</span>}
+                      {!chromeCompact && <span className="hidden md:inline ml-1">Stop</span>}
                     </>
-                  ) : hasSearched ? (
+                  ) : chromeCompact ? (
                     /* The compact state is a 36px circle, so it needs a glyph.
                        It was still rendering the word "Search", which spilled
                        out of the circle — hence the button looking broken. */
@@ -1646,7 +1713,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           </div>
 
           {/* Filters sits beside the field, not crammed inside it */}
-          {hasSearched && (
+          {chromeCompact && (
             <>
               <Button
                 variant="ghost"
@@ -1686,7 +1753,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
           <div
             id="search-filters"
             className={`flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
-              hasSearched ? "hidden" : "flex mt-3 sm:mt-4"
+              chromeCompact ? "hidden" : "flex mt-3 sm:mt-4"
             }`}
           >
             <div className="flex items-center gap-2 flex-wrap">
@@ -1730,7 +1797,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 /* a way in before you've searched; on a phone afterwards it's
                    just another row between the actor and the results */
                 className={`gap-2 min-h-[44px] md:min-h-0 border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary ${
-                  hasSearched ? "hidden md:inline-flex" : ""
+                  chromeCompact ? "hidden md:inline-flex" : ""
                 }`}
               >
                 <IconSparkles className="h-4 w-4" />
@@ -1743,7 +1810,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               the first search; after that the parsed-constraint chips and the
               filter panel do this job, and keeping them would fatten the
               sticky bar. */}
-          {!hasSearched && (
+          {!chromeCompact && (
             <div className="mt-3">
               <QuickFilterChips
                 filters={filters}
@@ -1875,15 +1942,31 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                 )}
               </div>
             ) : (
-              <div id="search-results" className="space-y-4">
+              /* Keyed and animated so switching shelves cross-fades. This was a
+                 bare <div> inside an AnimatePresence, so it had no exit and no
+                 enter: the Plays list faded out and the Film & TV list simply
+                 appeared, which is most of why the switch felt like a jolt. */
+              <motion.div
+                key="film-tv-results"
+                id="search-results"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+                className="space-y-4"
+              >
+                <div className="sm:pl-[7.75rem]">
                 <ActiveFilterChips
                   filters={filters}
                   labels={{ gender: "Gender", age_range: "Age", emotion: "Emotion", theme: "Theme", category: "Category", tone: "Tone", difficulty: "Difficulty", author: "Author", max_duration: "Max Duration" }}
                   onRemove={(key) => setFilters((f) => ({ ...f, [key]: "" }))}
                   onClearAll={() => setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" })}
                 />
+                </div>
                 {/* Results header */}
-                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 mb-8">
+                {/* Same 7.75rem indent as Plays, so both shelves put their
+                    toolbar on the speeches' left edge. */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4 mb-8 sm:pl-[7.75rem]">
                   <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-0 min-w-0">
                     <div className="flex flex-col gap-0.5 min-w-0">
                       <div className="flex items-baseline gap-2 flex-wrap">
@@ -1910,7 +1993,13 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                       Collection
                     </Button>
                   </div>
-                  <div className="flex-1 flex justify-center min-w-0">
+                  {/* Not flex-1: with the toolbar indented to the speeches'
+                      edge, stretching this to fill the row squeezed "Did this
+                      find what you needed?" into three wrapped lines. The three
+                      items no longer fit on one line at this measure, so this
+                      one takes the second line deliberately rather than
+                      bumping the collection button onto it. */}
+                  <div className="order-last flex basis-full justify-start">
                     <ResultsFeedbackPrompt
                       context="film_tv_search"
                       resultsViewCount={filmTvResultsViewCount}
@@ -1955,6 +2044,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           key={mono.id}
                           mono={mono}
                           index={idx}
+                          mode="film_tv"
+                          profileMatch={profileMatchMap.get(mono.id)}
                           onSelect={() => openMonologue(mono, idx, "film_tv")}
                           onToggleFavorite={toggleFavorite}
                           isModerator={!!user?.is_moderator}
@@ -1964,7 +2055,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     </div>
                   );
                 })()}
-              </div>
+              </motion.div>
             )
           ) : isPlaysLoading ? (
             <motion.div
@@ -2013,7 +2104,15 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               )}
             </motion.div>
           ) : results.length > 0 ? (
-            <div id="search-results" className="space-y-4">
+            <motion.div
+              key="plays-results"
+              id="search-results"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
+              className="space-y-4"
+            >
               {searchParams.get("ai") === "true" && (
                 <div className="flex items-center gap-2 p-4 bg-secondary/10 border border-secondary/30 rounded-lg">
                   <IconSparkles className="h-5 w-5 text-foreground flex-shrink-0" />
@@ -2072,7 +2171,11 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   collection toggle. These used to be four stacked strips —
                   filter chips, "Understood:" chips, a profile nudge and the
                   count row — which pushed the results down and read as noise. */}
-              <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border/50 pb-4">
+              {/* Indented to 7.75rem — the margin column plus its gap — so the
+                  toolbar starts exactly where the speeches do. Left at the
+                  container edge it sat 124px to the left of every character
+                  name, and the gutter read as a hole rather than a margin. */}
+              <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3 border-b border-border/50 pb-4 sm:pl-[7.75rem]">
                 {/* items-center, not items-baseline. The row around this is
                     centre-aligned, so baseline-aligning the pair inside it hung
                     "monologues" 4px below everything else on the line: measured
@@ -2195,6 +2298,8 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     onSelect={() => openMonologue(mono, idx, "monologue")}
                     onToggleFavorite={toggleFavorite}
                     index={idx}
+                    mode="plays"
+                    profileMatch={profileMatchMap.get(mono.id)}
                     isModerator={!!user?.is_moderator}
                     onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
                   />
@@ -2274,7 +2379,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   </Link>
                 </p>
               )}
-            </div>
+            </motion.div>
           ) : (
             // Pre-search: fill the space with something that helps them start —
             // the pieces actors are working on right now. On search this exits
