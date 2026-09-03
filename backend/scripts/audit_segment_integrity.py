@@ -118,7 +118,12 @@ def main() -> int:
             if not isinstance(segs, list) or not segs:
                 continue
 
-            joined = " ".join(str(s.get("text") or "") for s in segs)
+            # Speaker included, matching segment_monologues — see
+            # segment_fidelity. Without it every interjection reads as drift.
+            joined = " ".join(
+                f"{s.get('speaker') or ''} {s.get('text') or ''}".strip()
+                for s in segs
+            )
             ratio = segment_fidelity(m.text, joined)
             if ratio < MIN_FIDELITY:
                 infidel.append(m)

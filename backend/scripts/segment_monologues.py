@@ -262,8 +262,16 @@ def _validate_segments(segs, original_text: str | None = None) -> tuple[bool, st
     # `text` — the copy that came from the source. A row we cannot segment
     # faithfully is better left unsegmented than segmented wrong.
     if original_text is not None:
+        # Speaker included: an interjection carries the name in its own field
+        # while the monologue reads "(HORATIO: Ay, my lord.)". Joining only the
+        # text fields drops the name, and a correct segmentation then looks like
+        # drift — it rejected 352 of 838 rows, exactly the share containing an
+        # interjection.
         ratio = segment_fidelity(
-            original_text, " ".join(s["text"] for s in segs)
+            original_text,
+            " ".join(
+                f"{s.get('speaker') or ''} {s['text']}".strip() for s in segs
+            ),
         )
         if ratio < SEGMENT_MIN_FIDELITY:
             return False, f"segments drift from text (similarity {ratio:.2f})"
