@@ -69,6 +69,9 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
   const lines = useMemo(() => linesFromMonologue(monologue), [monologue]);
 
   const [started, setStarted] = useState(false);
+  /** False until the permission probe has answered, so the gate never flashes
+   *  up for the half second before we auto-begin. */
+  const [gateChecked, setGateChecked] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const [revealCurrent, setRevealCurrent] = useState(false);
   const [offBook, setOffBook] = useState(false);
@@ -321,6 +324,11 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
       const code = (error as Error & { response?: { status?: number } })?.response?.status;
       if (code === 403) {
         setPaywallOpen(true);
+        /* Reveal the gate behind the modal. begin() returns here without
+           setting started, so on the auto-begin path there would be nothing
+           underneath the paywall: dismiss it and you are looking at an empty
+           room with no way back into the piece. */
+        setGateChecked(true);
         return;
       }
     }
@@ -333,6 +341,67 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
     resetRun();
     if (isSupported && !isListening) startListening();
   }, [resetRun, isSupported, isListening, startListening]);
+
+  /**
+   * Walk straight on stage when we are allowed to.
+   *
+   * "Rehearse" already said what you wanted. Landing on a second screen that
+   * asks again is a door held shut in front of a room you asked to enter, and
+   * the piece is short enough that the interstitial can outlast the rehearsal.
+   *
+   * It could not simply be deleted, though. That screen is doing two jobs
+   * besides the pep talk: it fires the usage check that opens the paywall, and
+   * it is the user gesture that unlocks the microphone. getUserMedia needs a
+   * gesture the first time; after the grant is remembered for the origin it
+   * does not. So: ask the browser whether the mic is already granted, and only
+   * hold the door when the answer is no.
+   *
+   * In practice that means one tap the first time and none after, except on
+   * iOS Safari, which does not implement the microphone permission query and
+   * re-prompts per page anyway. There we keep the screen, because the
+   * alternative is a run that silently never hears you.
+   */
+  const autoBeganRef = useRef(false);
+
+  useEffect(() => {
+    if (autoBeganRef.current || started) return;
+    autoBeganRef.current = true;
+
+    /* Show the gate rather than returning early. An early return here leaves
+       gateChecked false forever, and since the stage only renders once started
+       is true, the room would be a permanently blank screen on any browser
+       without MediaRecorder. The gate is also where tap-to-advance is offered,
+       which is exactly what someone without a usable mic needs. */
+    if (!isSupported) {
+      setGateChecked(true);
+      return;
+    }
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const perms = navigator.permissions;
+        if (!perms?.query) {
+          setGateChecked(true);
+          return;
+        }
+        // Not in every browser's PermissionName union, hence the cast.
+        const status = await perms.query({ name: "microphone" as PermissionName });
+        if (cancelled) return;
+        if (status.state === "granted") {
+          await begin();
+          return;
+        }
+      } catch {
+        /* Safari throws on the microphone descriptor. Fall through to the gate. */
+      }
+      if (!cancelled) setGateChecked(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [started, isSupported, begin]);
 
   // Live per-word progress for the current line.
   const currentLine = lines[activeIndex] ?? "";
@@ -408,13 +477,18 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
       </header>
 
       <AnimatePresence mode="wait">
-        {/* ---------- Start ---------- */}
-        {!started && (
+        {/* ---------- Start ----------
+            Gated on gateChecked as well as !started: without it the room
+            painted the "(places.)" screen, then replaced it a few hundred
+            milliseconds later when the permission probe came back granted. A
+            flash of a screen you are about to skip is worse than the screen. */}
+        {!started && gateChecked && (
           <motion.div
             key="start"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            exit={{ opacity: 0, scale: 0.98 }}
+            transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
             className="relative z-10 flex flex-1 flex-col items-center justify-center gap-8 px-6 text-center"
           >
             <div className="flex flex-col items-center gap-4">
@@ -549,13 +623,17 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
           </motion.div>
         )}
 
-        {/* ---------- Running (the continuous stage) ---------- */}
+        {/* ---------- Running (the continuous stage) ----------
+            Rises rather than fades. Coming straight off a tap, a plain opacity
+            swap reads as a page load; a short lift reads as the lights coming
+            up on something that was already there. */}
         {started && !completed && (
           <motion.div
             key="stage"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
             className="relative z-10 mx-auto flex w-full min-h-0 max-w-3xl flex-1 flex-col overflow-hidden px-5 pb-4"
           >
             {/* The whole piece flows here. A spotlight rides the active line, the
@@ -670,8 +748,16 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                   {isListening ? "Listening" : "Paused"}
                 </span>
               )}
+              {/* "Hide the lines" used to live only on the screen you now walk
+                  straight past, so it needed somewhere to go. Mid-run is a
+                  better home for it anyway: you read it through once, then hide
+                  the lines when you feel ready, rather than guessing before you
+                  have said a word. */}
               <div className="pointer-events-auto flex items-center justify-center gap-2">
                 {offBook && <DockButton onClick={() => setRevealCurrent(true)}>Reveal</DockButton>}
+                <DockButton onClick={() => { setOffBook((v) => !v); setRevealCurrent(false); }}>
+                  {offBook ? "Show lines" : "Hide lines"}
+                </DockButton>
                 {!tapToAdvance && (
                   <DockButton onClick={() => goToLineAndReset(activeIndex + 1)}>Skip</DockButton>
                 )}
