@@ -67,6 +67,7 @@ from app.core.config import settings
 from app.models.actor import FilmTvReference, Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
 from app.services.data_ingestion.cross_source_dedupe import find_duplicate
+from app.services.data_ingestion.pipeline import _find_superseded
 from app.services.extraction.screenplay_pdf_parser import extract_with_status
 from scripts.extract_film_tv_monologues import select_best_monologues
 # pylint: enable=wrong-import-position
@@ -301,13 +302,19 @@ def fetch_pdf(slug: str):
 
 
 def ingest_film(db, analyzer, selector, slug, refs, apply, min_words,
-                delay: float = REQUEST_DELAY_SECONDS) -> tuple[int, str]:
+                delay: float = REQUEST_DELAY_SECONDS,
+                refresh: bool = False) -> tuple[int, str]:
     meta = parse_film_slug(slug)
     if not meta:
         return 0, "unparsable_slug"
 
     source_url = SCRIPT_URL.format(slug=slug)
-    if apply:
+    # `refresh` re-runs a script we have already ingested. Every film and TV
+    # title in the library was extracted BEFORE the parser learned that an
+    # interrupted speech is still one speech, so each one is missing the
+    # speeches that were cut in half. Measured over ten populated titles: 30
+    # stored rows, 80 candidates, 53 of them genuinely new.
+    if apply and not refresh:
         done = (db.query(Play.id)
                   .join(Monologue, Monologue.play_id == Play.id)
                   .filter(Play.source_url == source_url).first())
@@ -373,15 +380,24 @@ def ingest_film(db, analyzer, selector, slug, refs, apply, min_words,
     # see the module docstring.
     play = db.query(Play).filter(Play.source_url == source_url).first()
     inserted = 0
+    upgraded = 0
     for c in clean:
         char, text, dialogue, wc = c["character"], c["text"], c["dialogue"], c["word_count"]
         sel_title, sel_scene = c.get("sel_title"), c.get("sel_scene")
+        # Is this a BETTER copy of a speech we already hold? Re-running a script
+        # through the merge-aware parser mostly yields speeches whose halves are
+        # now rejoined, and the first-80-characters guard below cannot see that:
+        # the merge extends a speech at the FRONT as often as the back, because
+        # the stored row was a fragment that began mid-speech.
+        superseded_row = None
         if play is not None:
-            existing = [t for (t,) in db.query(Monologue.text)
-                        .filter(Monologue.play_id == play.id,
-                                Monologue.character_name == char).all()]
-            if any(et[:80] == text[:80] for et in existing):
-                continue
+            superseded_row = _find_superseded(db, int(play.id), char, text)
+            if superseded_row is None:
+                existing = [t for (t,) in db.query(Monologue.text)
+                            .filter(Monologue.play_id == play.id,
+                                    Monologue.character_name == char).all()]
+                if any(et[:80] == text[:80] for et in existing):
+                    continue
         try:
             with time_limit(90):  # guard against a hung OpenAI call
                 analysis = analyzer.analyze_monologue(
@@ -390,6 +406,25 @@ def ingest_film(db, analyzer, selector, slug, refs, apply, min_words,
                 embedding = analyzer.generate_embedding(dialogue)
             if not embedding:  # unsearchable without it
                 print(f"      skip (no embedding): {char}")
+                continue
+
+            # Upgrade in place, BEFORE the duplicate check: this candidate is
+            # the stored speech plus the part that was cut off, so it is not a
+            # duplicate of anything — it is what the row should have said.
+            # Inserting it instead would list the same monologue twice at two
+            # lengths, which is exactly what happened on the play corpus.
+            if superseded_row is not None:
+                superseded_row.text = text
+                superseded_row.word_count = len(text.split())
+                superseded_row.estimated_duration_seconds = round(
+                    len(dialogue.split()) / 2.5)
+                superseded_row.embedding_vector = embedding
+                # The stored segments describe the SHORTER text; the reader
+                # prefers them to `text`, so a stale set is what the actor reads.
+                superseded_row.text_segments = None
+                upgraded += 1
+                print(f"      upgraded #{superseded_row.id}: {char} "
+                      f"-> {superseded_row.word_count}w")
                 continue
 
             # Corpus-wide duplicate check. The guard above only looks inside
@@ -447,6 +482,8 @@ def ingest_film(db, analyzer, selector, slug, refs, apply, min_words,
             db.rollback()
             play = db.query(Play).filter(Play.source_url == source_url).first()
             print(f"      error on {char}: {e}")
+    if upgraded:
+        status = f"{status}+{upgraded}upgraded"
     return inserted, status
 
 
@@ -460,6 +497,9 @@ def main() -> None:
                     help="skip audition-worthiness selection, keep the longest")
     ap.add_argument("--delay", type=float, default=REQUEST_DELAY_SECONDS,
                     help="seconds between fetches; raise it if 403s climb")
+    ap.add_argument("--refresh", action="store_true",
+                    help="re-run scripts already ingested, upgrading stored "
+                         "speeches the old parser had cut in half")
     ap.add_argument("--slugs", default=None,
                     help="comma-separated slugs to ingest instead of the full "
                          "sitemap (targeted re-runs, retrying 403s)")
@@ -487,7 +527,8 @@ def main() -> None:
         for slug in slugs:
             try:
                 n, status = ingest_film(db, analyzer, selector, slug, refs,
-                                        args.apply, args.min_words, args.delay)
+                                        args.apply, args.min_words, args.delay,
+                                        refresh=args.refresh)
             except Exception as e:  # noqa: BLE001
                 db.rollback()
                 print(f"    {slug[:34]:34s} ERROR {e}")
