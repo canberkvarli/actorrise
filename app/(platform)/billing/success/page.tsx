@@ -125,9 +125,11 @@ export default function SuccessPage() {
                     </li>
                     <li className="flex items-start gap-2">
                       <IconCheck className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
-                      <span>
-                        Get early access to ScenePartner AI (coming soon!)
-                      </span>
+                      {/* ScenePartner shipped a long time ago — it has its own
+                          tab in the nav. Promising it as "coming soon" on the
+                          page someone lands on straight after paying is the
+                          worst possible place to be out of date. */}
+                      <span>Upload your own scripts and run them with ScenePartner</span>
                     </li>
                   </>
                 )}

@@ -17,6 +17,10 @@ import {
  * final CTA so the page ends on the dark with the app as the closer.
  */
 
+/** Live since 2026-09-03. Verified: returns 200, "Ghost Light: Monologues App". */
+export const APP_STORE_URL =
+  "https://apps.apple.com/us/app/ghost-light-monologues/id6804278673";
+
 const PHONES = [
   {
     src: "/ghostlight/read.png",
@@ -77,7 +81,7 @@ export function GhostLightAppTeaser() {
     <section
       ref={ref}
       className="relative isolate overflow-hidden stage-grain"
-      aria-label="Ghost Light iOS app, coming soon"
+      aria-label="Ghost Light iOS app on the App Store"
     >
       <div className="container mx-auto px-4 sm:px-6 pt-16 sm:pt-24 pb-8 sm:pb-10 text-center">
         <p className="stage-direction text-xs sm:text-sm text-[var(--stage-muted)]">
@@ -94,15 +98,22 @@ export function GhostLightAppTeaser() {
           rides. Your saved pieces come with you, offline.
         </p>
 
-        <p className="mt-7 inline-flex items-center gap-2.5 border border-[var(--stage-line)] bg-[var(--stage-raised)]/60 px-4 py-2 text-xs sm:text-sm text-[var(--stage-fg)]">
-          <span aria-hidden className="relative flex h-2 w-2">
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60 motion-reduce:animate-none" />
-            <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-          </span>
-          In review at the App Store
-          <span className="text-[var(--stage-faint)]">·</span>
-          <span className="stage-direction text-[var(--stage-muted)]">(launching soon.)</span>
-        </p>
+        {/* It is out. This was a status line — "In review at the App Store"
+            beside a pinging dot — which was true until it shipped and then
+            quietly became a lie on the live site. A pulsing dot means waiting;
+            a released app should not be wearing one. It is a link now, and the
+            only thing on this section you can click. */}
+        <a
+          href={APP_STORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-7 inline-flex items-center gap-2.5 rounded-full bg-primary-solid px-5 py-2.5 text-sm font-semibold text-primary-solid-foreground shadow-lg shadow-black/20 transition-transform hover:scale-[1.03] active:scale-95"
+        >
+          <svg aria-hidden viewBox="0 0 384 512" className="h-4 w-4" fill="currentColor">
+            <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+          </svg>
+          Download on the App Store
+        </a>
       </div>
 
       {/* The three screens, drifting over the glow */}
