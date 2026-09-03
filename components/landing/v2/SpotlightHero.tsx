@@ -58,19 +58,23 @@ export function SpotlightHero() {
               a strange place to put the free thing. This is deliberately weightless:
               the hero converts on "start rehearsing", and an iOS link that
               competed with it would trade the main conversion for a smaller one. */}
-          <div className="flex items-center gap-2.5 stage-direction text-xs sm:text-sm text-[var(--stage-faint)]">
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm text-[var(--stage-faint)]">
             <a
               href="#watch"
-              className="transition-colors hover:text-[var(--stage-muted)]"
+              className="stage-direction transition-colors hover:text-[var(--stage-muted)]"
             >
               (or watch how it works)
             </a>
             <span aria-hidden className="opacity-50">·</span>
+            {/* The styling is spelled out rather than borrowing .stage-direction,
+                which force-lowercases: it rendered "(on ios)". That class is for
+                invented asides, and it mangles anything with a proper noun in
+                it — the same way it would mangle "The Seagull". */}
             <a
               href={APP_STORE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="transition-colors hover:text-[var(--stage-muted)]"
+              className="font-typewriter italic tracking-wide transition-colors hover:text-[var(--stage-muted)]"
             >
               (on iOS)
             </a>
