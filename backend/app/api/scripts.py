@@ -111,7 +111,10 @@ class SceneLineUpdate(BaseModel):
     """Update a scene line"""
     character_name: Optional[str] = Field(None, max_length=80)
     text: Optional[str] = Field(None, max_length=2000)
-    stage_direction: Optional[str] = Field(None, max_length=120)
+    # Screenplay action lands in this field now, and action runs long: the
+    # montage opening Heidi Marshall's side is ~350 characters. At 120 an edit
+    # to any such line was rejected outright.
+    stage_direction: Optional[str] = Field(None, max_length=600)
 
 
 class LineReorderRequest(BaseModel):
@@ -136,7 +139,10 @@ class CreateSceneLineRequest(BaseModel):
     """Create a new scene line"""
     character_name: str = Field(..., max_length=80)
     text: str = Field(..., max_length=2000)
-    stage_direction: Optional[str] = Field(None, max_length=120)
+    # Screenplay action lands in this field now, and action runs long: the
+    # montage opening Heidi Marshall's side is ~350 characters. At 120 an edit
+    # to any such line was rejected outright.
+    stage_direction: Optional[str] = Field(None, max_length=600)
     insert_after_line_id: Optional[int] = None
 
 

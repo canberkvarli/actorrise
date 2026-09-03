@@ -2714,25 +2714,37 @@ export default function SceneEditPage() {
                             );
                           })()}
                         </div>
-                        <input
-                          type="text"
+                        {/* Screenplay action lands here now, and action runs long
+                            ("We make our way through the unexpectedly LARGE CROWD
+                            here for the FAIRNESS HEARING…"). A one-line input
+                            clipped it at 120 characters on the first edit, and set
+                            in the same weight as dialogue it read as something the
+                            character says out loud. It is the room, not the line:
+                            lighter, smaller, italic, and set off by a rule. */}
+                        <textarea
+                          ref={(el) => {
+                            if (el) {
+                              el.style.height = "auto";
+                              el.style.height = `${el.scrollHeight}px`;
+                            }
+                          }}
+                          rows={1}
                           value={values.stage_direction}
-                          maxLength={120}
+                          maxLength={600}
                           placeholder="Stage directions"
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            e.target.style.height = "auto";
+                            e.target.style.height = `${e.target.scrollHeight}px`;
                             setLineEditValues((prev) => ({
                               ...prev,
                               [line.id]: { ...values, stage_direction: e.target.value },
-                            }))
-                          }
-                          className="text-sm font-medium italic text-paper-muted bg-transparent border-b border-dashed border-paper-rule outline-none text-center py-0.5 px-2 w-full sm:max-w-[300px] placeholder:italic placeholder:font-medium placeholder:text-paper-muted/70"
+                            }));
+                          }}
+                          className="w-full sm:max-w-[34rem] resize-none overflow-hidden border-l-2 border-paper-rule/60 bg-transparent px-3 py-0.5 text-center text-[13px] font-normal italic leading-relaxed text-paper-muted/80 outline-none placeholder:not-italic placeholder:text-paper-muted/50 focus:border-paper-ink/30"
                           disabled={saving !== null}
                           onBlur={handleLineBlur}
                           onKeyDown={handleLineKeyDown}
                         />
-                        {values.stage_direction && (
-                          <span className="text-[10px] text-paper-muted/70">{values.stage_direction.length}/120</span>
-                        )}
                       </div>
 
                       {/* Line text — animated swap between word highlight and textarea */}
