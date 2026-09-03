@@ -4,7 +4,7 @@ API endpoints for user script management - upload, edit, manage scripts
 
 import asyncio
 import json as _json
-from datetime import datetime
+from datetime import datetime, timedelta
 from queue import Queue, Empty
 from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
@@ -1169,6 +1169,33 @@ async def ensure_example_script(
     )
 
 
+# A background extraction runs on a thread in the web process, so a deploy or a
+# restart kills it and leaves the script reading itself forever. Nothing sweeps
+# up after that, so the shelf does it on the way past. The row keeps its
+# raw_text, which means "Redo scenes" finishes the job — no new machinery.
+ABANDONED_EXTRACTION_MINUTES = 20
+
+
+def _fail_abandoned_extractions(db: Session, user_id: int) -> None:
+    stale = datetime.utcnow() - timedelta(minutes=ABANDONED_EXTRACTION_MINUTES)
+    abandoned = db.query(UserScript).filter(
+        UserScript.user_id == user_id,
+        UserScript.processing_status == "processing",
+        UserScript.created_at < stale,
+    ).all()
+    if not abandoned:
+        return
+    for script in abandoned:
+        script.processing_status = "failed"
+        script.processing_error = (
+            "Reading this script stopped before it finished. Hit Redo scenes to pick it back up."
+        )
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+
+
 @router.get("/", response_model=List[UserScriptResponse])
 async def list_user_scripts(
     db: Session = Depends(get_db),
@@ -1176,6 +1203,7 @@ async def list_user_scripts(
 ):
     """Get all scripts uploaded by the current user, plus sample scripts"""
     from sqlalchemy import or_
+    _fail_abandoned_extractions(db, current_user.id)
     scripts = db.query(UserScript).filter(
         or_(
             UserScript.user_id == current_user.id,
@@ -2170,6 +2198,148 @@ def _build_scenes(db: Session, user_script, play_id: int, scenes_data: list) -> 
         created.append(scene)
 
     return created
+
+
+def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
+                           file_ext: str, filename: str, mode: str, file_hash: str) -> None:
+    """Finish reading a script after the request that uploaded it has gone."""
+    db = SessionLocal()
+    try:
+        parser = ScriptParser()
+        result = parser.parse_script(file_content, file_ext, filename, mode=mode)
+
+        script = db.query(UserScript).filter(UserScript.id == script_id).first()
+        if not script:
+            return  # deleted while we were reading it
+
+        metadata = result.get("metadata", {})
+        script.raw_text = result.get("raw_text") or script.raw_text
+        script.characters = metadata.get("characters", [])
+        script.num_characters = len(script.characters or [])
+        script.genre = metadata.get("genre") or script.genre
+        script.estimated_length_minutes = metadata.get("estimated_length_minutes")
+        if not script.description:
+            script.description = metadata.get("synopsis")
+
+        play = Play(
+            title=script.title,
+            author=script.author or "Unknown",
+            genre=script.genre or "Drama",
+            category="contemporary",
+            copyright_status="user_uploaded",
+            license_type="user_content",
+            full_text=script.raw_text,
+            text_format="plain",
+        )
+        db.add(play)
+        db.flush()
+
+        created = _build_scenes(db, script, play.id, result.get("scenes", []))
+        script.num_scenes_extracted = len(created)
+        script.ai_extraction_completed = True
+        script.processing_status = "completed"
+        db.commit()
+
+        try:
+            db.query(ExtractionCache).filter(ExtractionCache.file_hash == file_hash).delete()
+            db.add(ExtractionCache(
+                file_hash=file_hash,
+                extraction_result=result,
+                parser_version=PARSER_VERSION,
+            ))
+            db.commit()
+        except Exception:
+            db.rollback()  # the script is safe; only the cache missed out
+    except Exception as e:
+        db.rollback()
+        try:
+            script = db.query(UserScript).filter(UserScript.id == script_id).first()
+            if script:
+                script.processing_status = "failed"
+                script.processing_error = str(e)[:500]
+                db.commit()
+        except Exception:
+            pass
+    finally:
+        db.close()
+
+
+@router.post("/upload-background", response_model=UserScriptDetailResponse)
+async def upload_script_background(
+    file: UploadFile = File(...),
+    title: Optional[str] = Form(None),
+    author: Optional[str] = Form(None),
+    description: Optional[str] = Form(None),
+    mode: Optional[str] = Form("full"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    _gate: bool = Depends(require_script_upload()),
+):
+    """Take the script now, read it after.
+
+    A feature-length script takes minutes, and the streaming upload dies with
+    the connection — refresh the tab and the work is gone. This stores the
+    script's text, hands back a row that is visibly still being read, and
+    finishes on a worker thread while the actor gets on with something else.
+    """
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No filename provided")
+    file_ext = file.filename.split(".")[-1].lower()
+    if file_ext not in ["pdf", "txt", "text"]:
+        raise HTTPException(status_code=400, detail="Only PDF and TXT files are supported")
+
+    file_content = await file.read()
+    file_size = len(file_content)
+    if file_size > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 10MB)")
+
+    import hashlib
+    import threading
+
+    parser = ScriptParser()
+    try:
+        raw_text = (
+            parser.extract_text_from_pdf(file_content)
+            if file_ext == "pdf"
+            else parser.extract_text_from_txt(file_content)
+        )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
+    if not raw_text or len(raw_text) < 100:
+        raise HTTPException(status_code=400, detail="File appears to be empty or too short")
+
+    from app.services.script_parser import _title_from_filename
+
+    user_script = UserScript(
+        user_id=current_user.id,
+        title=title or _title_from_filename(file.filename),
+        author=author or "Unknown",
+        description=description,
+        original_filename=file.filename,
+        file_type=file_ext,
+        file_size_bytes=file_size,
+        processing_status="processing",
+        raw_text=raw_text,
+        characters=[],
+        num_characters=0,
+    )
+    db.add(user_script)
+    current_user.total_scripts_uploaded = (current_user.total_scripts_uploaded or 0) + 1
+    db.commit()
+    db.refresh(user_script)
+
+    threading.Thread(
+        target=_extract_in_background,
+        args=(user_script.id, current_user.id, file_content, file_ext, file.filename,
+              mode if mode in ("quick", "full") else "full",
+              hashlib.sha256(file_content).hexdigest()),
+        daemon=True,
+    ).start()
+
+    return UserScriptDetailResponse(
+        **UserScriptResponse.model_validate(user_script).model_dump(),
+        scenes=[],
+    )
 
 
 @router.post("/{script_id}/reextract", response_model=UserScriptDetailResponse)

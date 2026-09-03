@@ -63,6 +63,13 @@ const STEP_GROUPS: { match: string; label: string }[] = [
   { match: "rehearsal-ready", label: "Assembling your rehearsal scenes" },
 ];
 
+/**
+ * Past this, waiting on the screen is the wrong shape. Hand the script over and
+ * let it be read on the server: the streaming upload dies with the connection,
+ * so a refresh used to throw minutes of work away.
+ */
+const BACKGROUND_AFTER_SECONDS = 45;
+
 function groupLabel(raw: string): string {
   for (const g of STEP_GROUPS) {
     if (raw.startsWith(g.match)) return g.label;
@@ -319,6 +326,49 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     [getToken, mutateScripts, queryClient, router],
   );
 
+  const startBackground = useCallback(
+    async (file: File, mode: "quick" | "full") => {
+      setUploadingFile(true);
+      setFileName(file.name);
+      setProgressSteps([{ group: "Taking your script", detail: "Taking your script" }]);
+      setExtractionDone(false);
+      setDoneInfo(null);
+      setMinimized(false);
+      try {
+        const token = await getToken();
+        if (!token) throw new Error("Please sign in again to upload.");
+
+        const form = new FormData();
+        form.append("file", file);
+        form.append("mode", mode);
+        const res = await fetch(`${API_URL}/api/scripts/upload-background`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
+          body: form,
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          if (err.detail?.error === "feature_not_available") {
+            setShowUpgradeModal(true);
+            return;
+          }
+          throw new Error(typeof err.detail === "string" ? err.detail : "Upload failed");
+        }
+
+        const script = await res.json();
+        await queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY });
+        toast.success("Reading your script. Carry on — it'll be waiting on your shelf.");
+        router.push(`/practice?script=${script.id}`);
+      } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : "Upload failed");
+      } finally {
+        setUploadingFile(false);
+        setProgressSteps([]);
+      }
+    },
+    [getToken, queryClient, router],
+  );
+
   const start = useCallback(
     async (file: File) => {
       if (isBusy) return;
@@ -382,6 +432,10 @@ export function UploadProvider({ children }: { children: ReactNode }) {
           setScanResult(scan);
           return;
         }
+        if (scan.estimated_full_seconds > BACKGROUND_AFTER_SECONDS) {
+          await startBackground(file, "full");
+          return;
+        }
         await startExtraction(file, "full");
       } catch (err: unknown) {
         setScanning(false);
@@ -390,14 +444,21 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         toast.error(message);
       }
     },
-    [isBusy, scripts, getToken, startExtraction],
+    [isBusy, scripts, getToken, startExtraction, startBackground],
   );
 
   const handleModeChoice = async (mode: "quick" | "full") => {
     const file = pendingFile;
+    const scan = scanResult;
     setScanResult(null);
     setPendingFile(null);
     if (!file) return;
+    const estimate =
+      mode === "quick" ? scan?.estimated_quick_seconds : scan?.estimated_full_seconds;
+    if ((estimate ?? 0) > BACKGROUND_AFTER_SECONDS) {
+      await startBackground(file, mode);
+      return;
+    }
     await startExtraction(file, mode);
   };
 

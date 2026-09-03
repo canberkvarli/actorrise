@@ -35,6 +35,16 @@ export interface UserScript {
 
 export const SCRIPTS_QUERY_KEY = ["scripts"] as const;
 
+/**
+ * A long script is read on the server after the upload returns, so the row
+ * arrives as "processing" and finishes on its own time. Poll while that is
+ * true and stop the moment it isn't — there is nothing to watch otherwise.
+ */
+const POLL_WHILE_READING = 5 * 1000;
+
+const stillReading = (script?: Pick<UserScript, "processing_status">) =>
+  script?.processing_status === "processing" || script?.processing_status === "pending";
+
 export function useScripts() {
   return useQuery<UserScript[]>({
     queryKey: SCRIPTS_QUERY_KEY,
@@ -47,6 +57,8 @@ export function useScripts() {
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 1,
+    refetchInterval: (query) =>
+      (query.state.data ?? []).some(stillReading) ? POLL_WHILE_READING : false,
   });
 }
 
@@ -61,6 +73,8 @@ export function useScript(id: number | null) {
     staleTime: 30 * 1000,
     gcTime: 10 * 60 * 1000,
     retry: 1,
+    refetchInterval: (query) =>
+      stillReading(query.state.data) ? POLL_WHILE_READING : false,
   });
 }
 
