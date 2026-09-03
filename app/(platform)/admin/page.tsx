@@ -94,6 +94,10 @@ interface StripeRevenue {
   reason?: string;
   /** What active subscriptions really bill today, after discounts. */
   mrr_now_usd?: number;
+  /** Monthly subscriptions only — what actually recurs into the bank. */
+  cash_monthly_usd?: number;
+  /** Annual subs' price/12. Real MRR, but the money already arrived as a lump. */
+  annual_amortised_usd?: number;
   /** The same, once the current trials convert. */
   mrr_after_trials_usd?: number;
   paying_count?: number;
@@ -323,6 +327,8 @@ function MoneyPanel({ stripe }: { stripe: StripeRevenue | undefined }) {
   }
 
   const now = stripe.mrr_now_usd;
+  const cash = stripe.cash_monthly_usd;
+  const amortised = stripe.annual_amortised_usd;
   const after = stripe.mrr_after_trials_usd;
   const uplift = now != null && after != null ? after - now : null;
   const givenAway = stripe.discounted_away_usd ?? 0;
@@ -354,9 +360,13 @@ function MoneyPanel({ stripe }: { stripe: StripeRevenue | undefined }) {
         <div className="grid gap-2 sm:grid-cols-2">
           <MoneyFigure
             accent
-            label="Earning now"
-            value={now != null ? `${moneyExact(now)}/mo` : "—"}
-            explain={`${stripe.paying_count ?? 0} subscription${stripe.paying_count === 1 ? "" : "s"} actually being charged. Yearly plans counted as their price ÷ 12.`}
+            label="Cash every month"
+            value={cash != null ? `${moneyExact(cash)}/mo` : "—"}
+            explain={
+              amortised && amortised > 0
+                ? `Monthly subscriptions only — this is what recurs into the bank. MRR is ${moneyExact(now ?? 0)}/mo; the extra ${moneyExact(amortised)} is yearly plans counted as price ÷ 12, and that money already arrived as a lump.`
+                : `${stripe.paying_count ?? 0} subscription${stripe.paying_count === 1 ? "" : "s"} actually being charged.`
+            }
           />
           <MoneyFigure
             label="Once trials convert"
@@ -573,8 +583,11 @@ export default function AdminOverviewPage() {
       // The honest one: only card-on-file payers. Comps and trials are $0 and
       // shown separately so this number can never be mistaken for revenue.
       title: "Paying",
-      value: stats.subscribers.paid_active ?? 0,
-      hint: `${stats.subscribers.comped ?? 0} comped · ${stats.subscribers.trialing ?? 0} trial`,
+      // Stripe, not the tier table. Our user_subscriptions rows go stale —
+      // some still say "active" with a current_period_end months in the past —
+      // so counting them overstates who is actually being charged.
+      value: stripeRevenue?.paying_count ?? stats.subscribers.paid_active ?? 0,
+      hint: `${stripeRevenue?.free_count ?? stats.subscribers.comped ?? 0} on $0 · ${stripeRevenue?.trialing_count ?? stats.subscribers.trialing ?? 0} trial`,
       icon: IconRocket,
     },
   ];
@@ -667,11 +680,11 @@ export default function AdminOverviewPage() {
         <>
           <div className="grid gap-2 grid-cols-2 sm:grid-cols-3 lg:grid-cols-6">
             <MiniStat
-              label="Earning now"
-              value={stripeRevenue?.mrr_now_usd != null ? moneyExact(stripeRevenue.mrr_now_usd) : "—"}
+              label="Cash / month"
+              value={stripeRevenue?.cash_monthly_usd != null ? moneyExact(stripeRevenue.cash_monthly_usd) : "—"}
               hint={
-                stripeRevenue?.mrr_after_trials_usd != null
-                  ? `${moneyExact(stripeRevenue.mrr_after_trials_usd)} once trials convert`
+                stripeRevenue?.mrr_now_usd != null
+                  ? `${moneyExact(stripeRevenue.mrr_now_usd)} MRR incl. annuals`
                   : "from Stripe"
               }
               accent
@@ -679,7 +692,11 @@ export default function AdminOverviewPage() {
             <MiniStat label="Active (7d)" value={growth.active_users.wau.toLocaleString()} hint="WAU" />
             <MiniStat label="Active (30d)" value={growth.active_users.mau.toLocaleString()} hint="MAU" />
             <MiniStat label="Stickiness" value={growth.active_users.stickiness_percent != null ? `${growth.active_users.stickiness_percent}%` : "-"} hint="DAU÷MAU" />
-            <MiniStat label="Paid" value={growth.revenue.paid_active.toLocaleString()} hint={`${growth.revenue.trialing} trialing`} />
+            <MiniStat
+              label="Paying"
+              value={(stripeRevenue?.paying_count ?? growth.revenue.paid_active).toLocaleString()}
+              hint={`${stripeRevenue?.free_count ?? 0} on $0 coupons · ${stripeRevenue?.trialing_count ?? growth.revenue.trialing} trialing`}
+            />
             <MiniStat label="Dormant" value={growth.retention.dormant.toLocaleString()} hint="14d+ silent" />
           </div>
 

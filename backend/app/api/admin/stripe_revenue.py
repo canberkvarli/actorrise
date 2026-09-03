@@ -131,6 +131,12 @@ def _compute() -> dict:
         return (_list_monthly(sub), None) if estimated else _real_monthly(sub)
 
     now_cents = 0.0
+    # Cash is not MRR. An annual subscription contributes price/12 to MRR every
+    # month, but the money arrived once as a lump and will not arrive again
+    # until it renews. Reporting only MRR made "Earning now $60.75/mo" read as
+    # $60.75 landing in the bank each month, when the recurring cash was $36 —
+    # 3 monthly subs — and the other $24.75 was three annuals amortised.
+    cash_cents = 0.0
     paying = free = 0
     # Money currently held down by a coupon that has an end date, and when the
     # first of those dates arrives.
@@ -140,6 +146,9 @@ def _compute() -> dict:
     for sub in active:
         m, discount_end = amount_of(sub)
         now_cents += m
+        interval, _count = _cadence(sub)
+        if m > 0 and interval == "month":
+            cash_cents += m           # bills again next month
         if m > 0:
             paying += 1
             continue
@@ -156,6 +165,10 @@ def _compute() -> dict:
         "estimated": estimated,
         # The two numbers that matter.
         "mrr_now_usd": round(now_cents / 100, 2),
+        # What actually recurs into the bank each month: monthly subscriptions
+        # only. Annual renewals arrive as lumps and are listed separately.
+        "cash_monthly_usd": round(cash_cents / 100, 2),
+        "annual_amortised_usd": round((now_cents - cash_cents) / 100, 2),
         "mrr_after_trials_usd": round((now_cents + trial_cents) / 100, 2),
         # Who makes them up.
         "paying_count": paying,
