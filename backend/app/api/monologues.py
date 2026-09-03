@@ -98,6 +98,12 @@ class MonologueResponse(BaseModel):
     imdb_rating: Optional[float] = None
     imdb_id: Optional[str] = None
     director: Optional[str] = None
+    # Release year, from film_tv_references.year. Ghost Light shows it where a
+    # stage piece would show its playwright, and it was the single field keeping
+    # the iOS Film & TV grid on a direct Supabase query instead of this endpoint.
+    # That query selected `text` for sixty rows with no entitlement check, using
+    # a publishable key that ships inside the app.
+    year: Optional[int] = None
     # Ghost Light iOS: true when the full text was withheld because a free user
     # has spent their lifetime reads. `text` then carries only the opening lines
     # (the teaser the paywall shows); the rest never leaves the server.
@@ -277,6 +283,7 @@ def _monologue_to_response(
         source_type=cast(Optional[str], getattr(play, "source_type", "play")),
         poster_url=getattr(play.film_tv_reference, "poster_url", None) if getattr(play, "film_tv_reference", None) else None,
         imdb_rating=getattr(play.film_tv_reference, "imdb_rating", None) if getattr(play, "film_tv_reference", None) else None,
+        year=getattr(play.film_tv_reference, "year", None) if getattr(play, "film_tv_reference", None) else None,
         imdb_id=getattr(play.film_tv_reference, "imdb_id", None) if getattr(play, "film_tv_reference", None) else None,
         director=getattr(play.film_tv_reference, "director", None) if getattr(play, "film_tv_reference", None) else None,
     )
