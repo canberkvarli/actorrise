@@ -23,6 +23,7 @@ import { InkStatement } from "@/components/landing/v2/InkStatement";
 import { SpotlightHero } from "@/components/landing/v2/SpotlightHero";
 import { ThreeActs } from "@/components/landing/v2/ThreeActs";
 import { TitleMarquee } from "@/components/landing/v2/TitleMarquee";
+import { AppLaunchBar } from "@/components/landing/AppLaunchBar";
 
 /** Courier "stage direction" eyebrow above the light sections */
 function SceneMark({ children }: { children: string }) {
@@ -49,6 +50,12 @@ export function LandingGhostLight() {
 
   return (
     <div className="min-h-screen bg-background overflow-x-clip">
+      {/* Above the sticky header, in normal flow, so it scrolls away and leaves
+          the header to stick at top-0 on its own. Anchoring it to the viewport
+          instead would mean every sticky offset on the page had to know its
+          height. */}
+      <AppLaunchBar />
+
       {/* Header lives on the stage: always dark, floats over every scene.
           The cursor spotlight tracks across it like the hero. wash + overflow
           off so the glow stays subtle and the mobile-nav dropdown isn't clipped. */}

@@ -8,11 +8,14 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { MarketingFooter } from "@/components/contact/MarketingFooter";
 import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions";
+import { AppLaunchBar } from "@/components/landing/AppLaunchBar";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { PageTransitionWithKey } from "@/components/transition/PageTransition";
 export default function MarketingLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex flex-col bg-background">
+      <AppLaunchBar />
+
       {/* Header */}
       <header className="dark sticky top-0 z-20 border-b border-[var(--stage-line)] bg-[color-mix(in_oklab,var(--stage)_84%,transparent)] backdrop-blur-md text-[var(--stage-fg)]">
         <div className="container mx-auto px-4 sm:px-6 py-3">
