@@ -19,16 +19,20 @@ export default function RehearsalLoading() {
     return () => clearInterval(t);
   }, []);
 
+  // Same warm near-black the stage itself uses, and forced dark the same way.
+  // This was bg-neutral-950 — a colder, flatter black — so arriving at a scene
+  // went light page, one dark, then a second slightly different dark. Matching
+  // it makes that a single clean change of light.
   return (
-    <div className="fixed inset-0 bg-neutral-950 flex items-center justify-center z-[10050]">
-      <div className="text-center space-y-4">
-        <div className="h-8 w-8 rounded-full border-2 border-neutral-700 border-t-primary animate-spin mx-auto" />
+    <div className="dark fixed inset-0 z-[10050] flex items-center justify-center bg-[#191410]">
+      <div className="space-y-4 text-center">
+        <div className="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-white/15 border-t-primary" />
         <motion.p
           key={idx}
           initial={{ opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -4 }}
-          className="text-neutral-500 text-sm"
+          className="text-sm text-white/45"
         >
           {LOADING_TEXTS[idx]}
         </motion.p>

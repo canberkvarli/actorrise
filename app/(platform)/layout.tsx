@@ -87,6 +87,9 @@ export default function PlatformLayout({
 }) {
   const { user, loading, isLoggingOut, isDemoUser, logout, refreshUser } = useAuth();
   const pathname = usePathname();
+  // Screens someone opened in order to work: rehearsing a scene, running a
+  // monologue, taping. Nothing volunteers itself over the top of these.
+  const IS_A_WORKING_SCREEN = /\/(rehearse|memorize|work|tape)(\/|$)/;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
@@ -172,6 +175,10 @@ export default function PlatformLayout({
   // server-side column existed.
   useEffect(() => {
     if (loading || !user || showWelcome) return;
+    // Not on a working screen. Tapping Rehearse and being handed a note about
+    // sign-in and Film & TV browsing is an interruption at the exact moment
+    // someone came here to act. It keeps until they're back on the shelf.
+    if (IS_A_WORKING_SCREEN.test(pathname ?? "")) return;
 
     let cancelled = false;
     const timeoutId = setTimeout(() => {
@@ -194,7 +201,7 @@ export default function PlatformLayout({
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [loading, user, showWelcome]);
+  }, [loading, user, showWelcome, pathname]);
 
 
   // Green Room is deliberately not here. community_events records 2 "rehearsing"

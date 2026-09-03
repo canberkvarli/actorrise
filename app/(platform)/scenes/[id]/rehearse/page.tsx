@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Fragment, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
 import { SCRIPTS_FEATURE_ENABLED } from '@/lib/featureFlags';
@@ -28,6 +28,8 @@ import {
   Volume2,
   X,
   Mic,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import {
   Dialog,
@@ -54,6 +56,10 @@ import { parseUpgradeError } from '@/lib/upgradeError';
 import { UpgradeModal } from '@/components/billing/UpgradeModal';
 import { cn } from '@/lib/utils';
 import { ownsLine, sessionRoles } from '@/lib/character-roles';
+import { tokenize, alignWords, wordMatchScore } from '@/lib/word-match';
+import { shouldAdvance, MIN_QUIET_MS } from '@/lib/advance-rule';
+import { buildWordTimings, spokenWordIndex } from '@/lib/speech-timing';
+import { useTheme } from 'next-themes';
 
 /** Pure dialogue for TTS — strips both [bracket] and (paren) stage directions. */
 function ttsText(line: { text: string; stage_direction?: string | null }): string {
@@ -355,83 +361,82 @@ function LineWaveformPlayer({
   );
 }
 
+/**
+ * How often to check whether the actor has stopped speaking.
+ *
+ * Comfortably finer than MIN_QUIET_MS, so the quiet window is what decides the
+ * timing rather than the polling rate.
+ */
+const WATCHER_INTERVAL_MS = Math.floor(MIN_QUIET_MS / 3);
+
+/**
+ * The room the scene is rehearsed in.
+ *
+ * Dark keeps the original house-lights-down feel. Light is warm rather than
+ * white, because a page of dialogue on a pure-white field is glary to read from
+ * for as long as a scene takes.
+ *
+ * This used to be a bare `bg-[#191410]` under a hardcoded `dark` class on the
+ * rehearsal root, which pinned the whole screen to dark whatever the actor had
+ * chosen — the toggle in the platform header simply did nothing in here.
+ */
+const STAGE_SURFACE = 'bg-[#f2ece2] text-neutral-900 dark:bg-[#191410] dark:text-neutral-100';
+
+/** Same room, used where only the background is being painted. */
+const STAGE_BG = 'bg-[#f2ece2] dark:bg-[#191410]';
+
+/**
+ * The page the script is printed on — always lighter than the room around it,
+ * in both themes, so the eye goes to the words.
+ */
+const SCRIPT_SURFACE = 'bg-white dark:bg-[#faf7f1] text-neutral-900';
+
+/**
+ * Floating chrome — the control pill and the full-screen overlays.
+ *
+ * Kept dark in both themes on purpose. These sit *over* the scene the way a
+ * video player's controls sit over a film, and re-theming them would mean
+ * re-tuning every muted grey inside for a light background, for no gain.
+ */
+const CHROME_DARK = 'dark';
+
+/**
+ * How much of the AI's line may remain when the microphone starts.
+ *
+ * The mic used to arm only after the voice finished, so the actor's first word
+ * landed in the gap while it was still opening. Arming early means it is already
+ * hot on the cue — everything heard before the voice ends is discarded, so the
+ * scene partner never hears itself.
+ */
+const MIC_PREARM_MS = 600;
+
 /* ─── Word match scoring ─────────────────────────────────────────────── */
-
-/** Normalize text for word matching: add space after sentence punctuation
- *  (fixes "talk.We" → "talk we") but preserve contractions ("I've" → "ive"). */
-const normWords = (s: string) =>
-  s.toLowerCase()
-    .replace(/([.!?;:])([a-z])/gi, '$1 $2')  // space after sentence punct if missing
-    .replace(/[^a-z0-9\s]/g, '')               // strip remaining non-alpha
-    .replace(/\s{2,}/g, ' ')
-    .trim();
-
-/** Soundex encoder — phonetically groups homophones (soles↔souls, their↔there, etc.) */
-function soundex(s: string): string {
-  const map: Record<string, string> = {
-    b:'1',f:'1',p:'1',v:'1',
-    c:'2',g:'2',j:'2',k:'2',q:'2',s:'2',x:'2',z:'2',
-    d:'3',t:'3', l:'4', m:'5',n:'5', r:'6',
-  };
-  let code = s[0].toUpperCase();
-  let prev = map[s[0]] ?? '0';
-  for (let i = 1; i < s.length && code.length < 4; i++) {
-    const c = map[s[i]] ?? '0';
-    if (c !== '0' && c !== prev) code += c;
-    if (c !== '0') prev = c;
-  }
-  return code.padEnd(4, '0');
-}
-
-/** True if two normalized words are equivalent: exact match, or phonetically identical
- *  for words of 3+ chars (guards against "be"↔"by" false positives on short words). */
-function wordsMatch(a: string, b: string): boolean {
-  return a === b || (a.length >= 3 && b.length >= 3 && soundex(a) === soundex(b));
-}
-
-/** Fuzzy indexOf — finds first position in haystack where wordsMatch(needle, haystack[i]). */
-function fuzzyIndexOf(haystack: string[], needle: string, from: number): number {
-  for (let i = from; i < haystack.length; i++) {
-    if (wordsMatch(needle, haystack[i])) return i;
-  }
-  return -1;
-}
-
-/** Returns fraction of expected words found in transcript (0–1). */
-function wordMatchScore(expected: string, transcript: string): number {
-  const expectedWords = normWords(expected).split(/\s+/).filter(Boolean);
-  if (!expectedWords.length) return 1;
-  const transcriptWords = normWords(transcript).split(/\s+/).filter(Boolean);
-  const matched = expectedWords.filter(w => transcriptWords.some(tw => wordsMatch(w, tw))).length;
-  return matched / expectedWords.length;
-}
 
 interface WordMatchResult {
   words: { word: string; matched: boolean }[];
   willAdvance: boolean;
 }
 
-/** Renders line text with per-word highlight coloring based on word match result.
- *  Uses position-based indexing (not word-text keys) so duplicate words are
- *  highlighted independently. Stage directions ([bracket]) are italic and don't
- *  consume word positions. */
-function renderLineWithWordHighlights(text: string, result: WordMatchResult) {
-  // wordPos tracks which result.words[i] we're consuming — positional, not text-keyed
+/**
+ * Renders a line token by token, letting the caller colour each word.
+ *
+ * `classForWord` receives every word position a display token covers — usually
+ * one, but "talk.We" normalizes to two — and returns the class for that token.
+ * Stage directions are italic and consume no word positions, since nobody says
+ * them out loud.
+ *
+ * Positions are counted, not keyed by text, so a word appearing twice in a line
+ * is coloured independently at each place it appears.
+ */
+function renderLineTokens(text: string, classForWord: (indices: number[]) => string) {
   let wordPos = 0;
 
-  const highlightToken = (token: string, key: string) => {
-    // Count how many normalized words this display token produces (e.g. "talk.We" → 2)
-    const normed = normWords(token).split(/\s+/).filter(Boolean);
-    if (normed.length === 0) return <span key={key}>{token}</span>; // punctuation-only, no position consumed
-    // Highlight if ANY of the sub-words are matched
-    let anyMatched = false;
-    for (let i = 0; i < normed.length; i++) {
-      const entry = result.words[wordPos + i];
-      if (entry?.matched) anyMatched = true;
-    }
+  const renderToken = (token: string, key: string) => {
+    const normed = tokenize(token);
+    if (normed.length === 0) return <span key={key}>{token}</span>; // punctuation only
+    const indices = normed.map((_, i) => wordPos + i);
     wordPos += normed.length;
-    if (anyMatched) return <span key={key} className="text-primary">{token}</span>;
-    return <span key={key} className="opacity-40">{token}</span>;
+    return <span key={key} className={classForWord(indices)}>{token}</span>;
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -443,15 +448,14 @@ function renderLineWithWordHighlights(text: string, result: WordMatchResult) {
   const processSegment = (segment: string, baseKey: string) => {
     segment.split(/(\s+)/).forEach((token, i) => {
       if (/^\s*$/.test(token)) { parts.push(token); return; }
-      parts.push(highlightToken(token, `${baseKey}-${i}`));
+      parts.push(renderToken(token, `${baseKey}-${i}`));
     });
   };
 
   while ((match = regex.exec(text)) !== null) {
     if (match.index > lastIndex) processSegment(text.slice(lastIndex, match.index), `t${lastIndex}`);
-    // Stage directions are NOT part of result.words — render italic, skip wordPos
     parts.push(
-      <em key={`d${match.index}`} className="italic text-neutral-500 text-[0.85em]">
+      <em key={`d${match.index}`} className="italic text-muted-foreground text-[0.85em]">
         ({match[1]})
       </em>
     );
@@ -459,6 +463,43 @@ function renderLineWithWordHighlights(text: string, result: WordMatchResult) {
   }
   if (lastIndex < text.length) processSegment(text.slice(lastIndex), `t${lastIndex}`);
   return <>{parts}</>;
+}
+
+/**
+ * The actor's own line, coloured by what the microphone caught.
+ *
+ * Three states, not two. A word that was passed over gets a dotted underline
+ * rather than staying dim: with only "matched" and "not yet", a word the mic
+ * missed looks exactly like a word you haven't reached, and there's no way to
+ * tell whether the app is behind you or lost.
+ */
+function renderLineWithWordHighlights(text: string, result: WordMatchResult) {
+  const lastMatched = result.words.reduce((acc, w, i) => (w.matched ? i : acc), -1);
+
+  return renderLineTokens(text, (indices) => {
+    if (indices.some(i => result.words[i]?.matched)) return 'text-primary';
+    // Behind the furthest word heard, so the actor has already moved past it.
+    if (indices.every(i => i < lastMatched)) {
+      return 'text-foreground/60 underline decoration-dotted underline-offset-4';
+    }
+    return 'opacity-40';
+  });
+}
+
+/**
+ * The scene partner's line, swept as the voice speaks it.
+ *
+ * `spokenIndex` is the word being said right now; -1 means the sweep isn't
+ * running, in which case the line simply sits at full weight.
+ */
+function renderLineWithSpokenSweep(text: string, spokenIndex: number) {
+  if (spokenIndex < 0) return renderLineTokens(text, () => '');
+
+  return renderLineTokens(text, (indices) => {
+    if (indices.some(i => i === spokenIndex)) return 'text-primary transition-colors duration-150';
+    if (indices.every(i => i < spokenIndex)) return 'opacity-50 transition-opacity duration-500';
+    return 'opacity-75';
+  });
 }
 
 /* ─── Types ──────────────────────────────────────────────────────────── */
@@ -629,6 +670,18 @@ export default function RehearsalPage() {
   sessionRef.current = session;
   const advanceScriptRef = useRef<(idx: number) => void>(() => {});
 
+  /* ── Theme ──────────────────────────────────────────────────────── */
+
+  const { setTheme, resolvedTheme } = useTheme();
+  const isDarkTheme = resolvedTheme === 'dark';
+  const toggleTheme = useCallback(() => {
+    const next = resolvedTheme === 'dark' ? 'light' : 'dark';
+    // The wipe is nice on a settings page and wrong here — a full-screen
+    // transition over a scene in progress reads as the app doing something to
+    // the rehearsal. Swap it plainly.
+    setTheme(next);
+  }, [resolvedTheme, setTheme]);
+
   /* ── Settings ───────────────────────────────────────────────────── */
 
   const [rehearsalSettings] = useState<RehearsalSettings>(() =>
@@ -715,6 +768,12 @@ export default function RehearsalPage() {
   const srAdvancedRef = useRef(false);
   // Gate for Whisper: only allow transcription when SR has matched words from the line
   const whisperGateRef = useRef(false);
+  // Latest read of the current line, written by recognition and read by the
+  // advance watcher. A ref because it updates far faster than it needs rendering.
+  const liveReadRef = useRef<{ transcript: string; matched: Set<number> }>({
+    transcript: '',
+    matched: new Set(),
+  });
 
   const {
     startListening,
@@ -727,6 +786,8 @@ export default function RehearsalPage() {
     isSupported: isSpeechRecognitionSupported,
     liveTranscript,
     resetTranscript,
+    msSinceVoice,
+    heardAnySpeech,
     analyserRef,
     streamRef: whisperStreamRef,
     audioCtxRef: whisperAudioCtxRef,
@@ -760,19 +821,9 @@ export default function RehearsalPage() {
       // until the reader actually reaches it. Set-based matching used to light up
       // every occurrence at once, highlighting words further down the line before
       // you got there.
-      const transcriptWordArr = normWords(text).split(/\s+/).filter(Boolean);
-      const expectedWordArr = expected ? normWords(expected).split(/\s+/).filter(Boolean) : [];
-      const words: { word: string; matched: boolean }[] = [];
-      let matchCursor = 0;
-      for (const w of expectedWordArr) {
-        const found = fuzzyIndexOf(transcriptWordArr, w, matchCursor);
-        if (found !== -1) {
-          words.push({ word: w, matched: true });
-          matchCursor = found + 1;
-        } else {
-          words.push({ word: w, matched: false });
-        }
-      }
+      const expectedWordArr = expected ? tokenize(expected) : [];
+      const matchedIdx = alignWords(expectedWordArr, tokenize(text));
+      const words = expectedWordArr.map((word, i) => ({ word, matched: matchedIdx.has(i) }));
 
       setWordMatchResult({ words, willAdvance });
 
@@ -831,9 +882,15 @@ export default function RehearsalPage() {
     const lines = orderedLinesRef.current;
     const sess = sessionRef.current;
     const nextIsAlsoAI = sess && nextIdx < lines.length && !isMyLine(sess, lines[nextIdx].character_name, cueNamesRef.current);
-    // AI→AI: brief 200ms gap. AI→User: minimal 150ms beat (just enough to feel natural),
-    // or user's configured pause if they set it higher than the minimum.
-    const pauseMs = nextIsAlsoAI ? 200 : Math.max(150, rehearsalSettings.pauseBetweenLinesSeconds * 1000);
+    // AI→AI keeps a beat so two partners don't run together.
+    //
+    // AI→user is zero. A real scene partner finishes their line and the next one
+    // is already yours; any pause the app inserts on top of the actor's own
+    // reaction time is felt as the app being slow to hand over. The configured
+    // pause still applies everywhere else.
+    const pauseMs = nextIsAlsoAI
+      ? Math.max(200, rehearsalSettings.pauseBetweenLinesSeconds * 1000)
+      : 0;
     pauseTimerRef.current = setTimeout(() => {
       pauseTimerRef.current = null;
       doAdvance();
@@ -893,31 +950,49 @@ export default function RehearsalPage() {
 
   const anySpeaking = isSpeakingBrowser || isSpeakingAI || isLoadingAI;
 
-  /* ── AI word-by-word highlight (estimated from audio progress) ── */
-  const [aiHighlightedWords, setAiHighlightedWords] = useState(0);
+  /* ── AI word sweep, and arming the mic before the cue lands ────── */
+
+  /** Index of the word the scene partner is speaking; -1 when not speaking. */
+  const [aiSpokenIndex, setAiSpokenIndex] = useState(-1);
   const aiHighlightRafRef = useRef<number | null>(null);
+  const prewarmStreamRef = useRef(prewarmStream);
+  prewarmStreamRef.current = prewarmStream;
 
   useEffect(() => {
     if (!isSpeakingAI) {
-      // When speaking ends, highlight all words briefly then clear
-      if (aiHighlightedWords > 0) setAiHighlightedWords(0);
+      setAiSpokenIndex(-1);
       if (aiHighlightRafRef.current) cancelAnimationFrame(aiHighlightRafRef.current);
       return;
     }
+
+    // Once per line — acquiring a live stream twice is wasted work.
+    let armed = false;
+
     const tick = () => {
       const audio = aiAudioRef.current;
-      if (!audio || !audio.duration || audio.paused) {
+      const lineText = lastAiLineRef.current;
+      if (!audio || !audio.duration || audio.paused || !lineText) {
         aiHighlightRafRef.current = requestAnimationFrame(tick);
         return;
       }
-      const progress = audio.currentTime / audio.duration;
-      // Get word count from the current AI line text (strip stage dirs)
-      const lineText = lastAiLineRef.current;
-      if (!lineText) { aiHighlightRafRef.current = requestAnimationFrame(tick); return; }
+
+      const durationMs = audio.duration * 1000;
+      const elapsedMs = audio.currentTime * 1000;
+
+      // Syllables, not characters or an even split: "through" and "away" are the
+      // same length written down and nothing like it spoken.
       const words = stripStageDirections(lineText).split(/\s+/).filter(Boolean);
-      // Use slightly ahead progress so highlight leads the audio naturally
-      const count = Math.min(words.length, Math.ceil(progress * words.length * 1.05));
-      setAiHighlightedWords(count);
+      setAiSpokenIndex(spokenWordIndex(buildWordTimings(words, durationMs), elapsedMs));
+
+      // Open the microphone while the partner is still talking, so the actor's
+      // first word doesn't land in the gap where it used to be opening. Nothing
+      // is recorded yet — this only acquires the stream and resumes the audio
+      // context, which is where the delay actually was.
+      if (!armed && durationMs - elapsedMs <= MIC_PREARM_MS) {
+        armed = true;
+        prewarmStreamRef.current();
+      }
+
       aiHighlightRafRef.current = requestAnimationFrame(tick);
     };
     aiHighlightRafRef.current = requestAnimationFrame(tick);
@@ -985,10 +1060,26 @@ export default function RehearsalPage() {
       // reads showFeedbackRef, which only flips 900ms later, so without this a
       // finished scene would also report itself abandoned on the way out.
       rehearsalCompletedRef.current = true;
+
+      // How much of each line the mic actually caught. This used to be shown to
+      // the actor as "% accuracy" and it is now analytics only — it tracks the
+      // health of the speech pipeline, and an actor reading it as a grade on
+      // their own delivery is reading it wrong.
+      let matchTotal = 0;
+      let delivered = 0;
+      lines.forEach((l, i) => {
+        if (!isMyLine(sess, l.character_name, cueNamesRef.current)) return;
+        const transcript = lineTranscriptsRef.current.get(i);
+        if (!transcript) return;
+        matchTotal += wordMatchScore(stripStageDirections(l.text), transcript);
+        delivered++;
+      });
+
       trackRehearsalCompleted({
         mode: 'scene',
         duration_seconds: elapsed,
         lines_total: lines.length,
+        ...(delivered > 0 && { transcript_match_pct: Math.round((matchTotal / delivered) * 100) }),
       });
       // Brief pause so last line highlights are visible, then fade to black
       setTimeout(() => setFadeToReview(true), 400);
@@ -1496,8 +1587,7 @@ export default function RehearsalPage() {
     if (!SR) return;
 
     const expected = stripStageDirections(currentUserLineText);
-    const norm = normWords;
-    const expectedWords = norm(expected).split(/\s+/).filter(Boolean);
+    const expectedWords = tokenize(expected);
 
     // Kill any lingering SR instance from a previous line
     if (liveRecognitionRef.current) {
@@ -1512,27 +1602,18 @@ export default function RehearsalPage() {
       recognition.interimResults = true;
       recognition.lang = 'en-US';
       recognition.onresult = (event: any) => {
-        // Separate confirmed-final words from current interim prediction
-        let finalTranscript = '';
+        // Interim results, deliberately. Waiting for `isFinal` costs 500–800ms,
+        // which is most of the gap an actor feels between their last syllable
+        // and the next line.
         let fullTranscript = '';
-        let hasFinal = false;
         for (let i = 0; i < event.results.length; i++) {
-          const t = event.results[i][0].transcript;
-          fullTranscript += t + ' ';
-          if (event.results[i].isFinal) { finalTranscript += t + ' '; hasFinal = true; }
+          fullTranscript += event.results[i][0].transcript + ' ';
         }
 
-        // DISPLAY: match against full transcript (includes interim) for real-time word-by-word highlighting
-        const displayWords = norm(fullTranscript).split(/\s+/).filter(Boolean);
-        const displayMatched = new Set<number>();
-        let dc = 0;
-        for (let ei = 0; ei < expectedWords.length; ei++) {
-          const f = fuzzyIndexOf(displayWords, expectedWords[ei], dc);
-          if (f !== -1) { displayMatched.add(ei); dc = f + 1; }
-          // no break — skip misheard words so later words can still match
-        }
+        const matched = alignWords(expectedWords, tokenize(fullTranscript));
+
         // Merge into best-seen set — prevents SR regressions from un-highlighting words
-        displayMatched.forEach(i => bestMatchedRef.current.add(i));
+        matched.forEach(i => bestMatchedRef.current.add(i));
         setLiveMatchedIndices(new Set(bestMatchedRef.current));
 
         // Words are landing, so whatever failed earlier has recovered. Clear the
@@ -1540,44 +1621,14 @@ export default function RehearsalPage() {
         // session that is plainly working.
         setSpeechError(prev => (prev ? null : prev));
 
-        // ADVANCE: match against full transcript (including current interim)
-        const spokenWords = norm(fullTranscript).split(/\s+/).filter(Boolean);
-        const matched = new Set<number>();
-        let spokenCursor = 0;
-        for (let ei = 0; ei < expectedWords.length; ei++) {
-          const found = fuzzyIndexOf(spokenWords, expectedWords[ei], spokenCursor);
-          if (found !== -1) { matched.add(ei); spokenCursor = found + 1; }
-          // no break — allow matching past misheard words
-        }
-
         // Open Whisper gate once SR has matched enough sequential words
         const gateThreshold = Math.min(3, expectedWords.length);
-        if (matched.size >= gateThreshold) whisperGateRef.current = true;
+        if (bestMatchedRef.current.size >= gateThreshold) whisperGateRef.current = true;
 
-        // Instant advance: SR final result — advance if score ≥70%, or the line's
-        // last word landed after a substantially complete read.
-        //
-        // "last word matched" alone used to be enough, but it matches the word
-        // ANYWHERE in the transcript. Lines ending on a common word ("you", "me",
-        // "it") advanced the moment the actor said that word, sometimes one word
-        // into a thirty-word speech. Pairing it with a half-line score keeps the
-        // "SR dropped some words but they clearly finished" case working.
-        if (hasFinal && !srAdvancedRef.current) {
-          const score = expectedWords.length > 0 ? matched.size / expectedWords.length : 1;
-          const lastWordMatched = expectedWords.length > 0 && matched.has(expectedWords.length - 1);
-          if (score >= 0.70 || (lastWordMatched && score >= 0.5)) {
-            srAdvancedRef.current = true;
-            try { recognition.stop(); liveRecognitionRef.current = null; } catch {}
-            cancelTranscriptionRef.current();
-            const wordResult = expectedWords.map((w, i) => ({ word: w, matched: matched.has(i) }));
-            setLiveMatchedIndices(new Set()); // wordMatchResult takes over
-            setWordMatchResult({ words: wordResult, willAdvance: true });
-            srAdvanceTimerRef.current = setTimeout(() => {
-              srAdvanceTimerRef.current = null;
-              handleDeliverLineRef.current(fullTranscript.trim());
-            }, 400);
-          }
-        }
+        // Hand the current read to the advance watcher below. Nothing advances
+        // from inside onresult any more — that fired on word count alone, which
+        // is how an actor got cut off two words into a thirty-word speech.
+        liveReadRef.current = { transcript: fullTranscript.trim(), matched: new Set(bestMatchedRef.current) };
       };
       let alive = true; // flipped in cleanup to prevent restarts after unmount
       recognition.onerror = (ev: any) => {
@@ -1606,7 +1657,41 @@ export default function RehearsalPage() {
     } catch {
       // SpeechRecognition unavailable or conflicted — graceful degradation
     }
+
+    // The advance watcher.
+    //
+    // Polls rather than reacting to recognition events, because the thing being
+    // waited on is the actor *stopping*, and silence produces no events. The
+    // microphone knows within a frame; recognition takes the better part of a
+    // second. See lib/advance-rule.ts for the rule itself.
+    const watcher = setInterval(() => {
+      if (srAdvancedRef.current) return;
+      const read = liveReadRef.current;
+      const score = expectedWords.length > 0 ? read.matched.size / expectedWords.length : 1;
+      const lastWordMatched = expectedWords.length > 0 && read.matched.has(expectedWords.length - 1);
+
+      if (!shouldAdvance({
+        msSinceVoice: msSinceVoice(),
+        score,
+        lastWordMatched,
+        heardAnySpeech: heardAnySpeech(),
+      })) return;
+
+      srAdvancedRef.current = true;
+      try { recognition?.stop(); liveRecognitionRef.current = null; } catch {}
+      cancelTranscriptionRef.current();
+
+      const wordResult = expectedWords.map((w, i) => ({ word: w, matched: read.matched.has(i) }));
+      setLiveMatchedIndices(new Set()); // wordMatchResult takes over
+      setWordMatchResult({ words: wordResult, willAdvance: true });
+
+      // One frame, so the completed line paints before it moves. Not a delay —
+      // the old 400ms timer here was a third of the perceived lag.
+      requestAnimationFrame(() => handleDeliverLineRef.current(read.transcript));
+    }, WATCHER_INTERVAL_MS);
+
     return () => {
+      clearInterval(watcher);
       try {
         // eslint-disable-next-line react-hooks/exhaustive-deps
         if (liveRecognitionRef.current) {
@@ -1636,6 +1721,7 @@ export default function RehearsalPage() {
     }
     srAdvancedRef.current = false;
     whisperGateRef.current = false;
+    liveReadRef.current = { transcript: '', matched: new Set() };
     lastDeliveredIndexRef.current = null;
     setWordMatchResult(null);
     setSpeechError(null);
@@ -1954,7 +2040,7 @@ export default function RehearsalPage() {
   const liveWordResult: WordMatchResult | null = (() => {
     if (!isListening || liveMatchedIndices.size === 0 || !currentUserLineText) return null;
     const expected = stripStageDirections(currentUserLineText);
-    const words = normWords(expected).split(/\s+/).filter(Boolean)
+    const words = tokenize(expected)
       .map((word, i) => ({ word, matched: liveMatchedIndices.has(i) }));
     return { words, willAdvance: true };
   })();
@@ -1976,23 +2062,6 @@ export default function RehearsalPage() {
     const s = seconds % 60;
     return m > 0 ? `${m}m ${s}s` : `${s}s`;
   };
-
-  const overallAccuracy = useMemo(() => {
-    if (!showFeedback || !orderedLines.length || !session) return null;
-    const userLines = orderedLines.filter(l => isMyLine(session, l.character_name, cueNamesRef.current));
-    let totalScore = 0;
-    let delivered = 0;
-    userLines.forEach(line => {
-      const idx = orderedLines.indexOf(line);
-      const transcript = lineTranscriptsRef.current.get(idx);
-      if (transcript) {
-        totalScore += wordMatchScore(stripStageDirections(line.text), transcript);
-        delivered++;
-      }
-    });
-    return delivered > 0 ? Math.round((totalScore / delivered) * 100) : null;
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showFeedback]);
 
   const playLineAudio = useCallback((lineIdx: number, speechStartRatio = 0, speechEndRatio = 1) => {
     const blob = lineAudioBlobsRef.current.get(lineIdx);
@@ -2184,7 +2253,7 @@ export default function RehearsalPage() {
       );
     }
     return (
-      <div className="fixed inset-0 bg-[#191410] flex items-center justify-center">
+      <div className={cn(CHROME_DARK, "fixed inset-0 flex items-center justify-center", STAGE_BG)}>
         <div className="text-center space-y-4">
           {error ? (
             <>
@@ -2221,7 +2290,7 @@ export default function RehearsalPage() {
     const showPlayTitle = playTitle && playTitle.toLowerCase() !== sceneTitle.toLowerCase();
 
     return (
-      <div className="fixed inset-0 bg-[#191410] text-neutral-100 flex flex-col z-[10050]">
+      <div className={cn(CHROME_DARK, "fixed inset-0 text-neutral-100 flex flex-col z-[10050]", STAGE_BG)}>
         <div className="flex-1 overflow-auto flex justify-center px-4 pt-10 pb-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -2268,19 +2337,13 @@ export default function RehearsalPage() {
               )
             )}
 
-            {/* Stats bar */}
-            <div className="flex items-center justify-center gap-2 text-sm text-neutral-400 flex-wrap">
-              <span>{session.total_lines_delivered} lines delivered</span>
-              <span className="text-neutral-700">&middot;</span>
-              <span>{Math.round(session.completion_percentage)}% complete</span>
-              <span className="text-neutral-700">&middot;</span>
+            {/* How long the run took, and nothing else.
+                There used to be a completion and an accuracy percentage here.
+                Both were word-match scores against a speech-to-text transcript,
+                which measures the microphone, not the performance — an actor who
+                delivered a line beautifully and got misheard was shown 40%. */}
+            <div className="flex items-center justify-center text-sm text-muted-foreground">
               <span>{formatDuration(sessionDuration)}</span>
-              {overallAccuracy !== null && (
-                <>
-                  <span className="text-neutral-700">&middot;</span>
-                  <span>{overallAccuracy}% accuracy</span>
-                </>
-              )}
             </div>
 
             {/* Play the whole scene back as one continuous take */}
@@ -2309,7 +2372,6 @@ export default function RehearsalPage() {
                   const userTranscript = lineTranscriptsRef.current.get(idx);
                   const audioBlob = lineAudioBlobsRef.current.get(idx);
                   const wasDelivered = isUserLine && userTranscript;
-                  const wasSkipped = isUserLine && !userTranscript && idx <= (activeLineIndex ?? 0);
 
                   if (!isUserLine) {
                     // AI lines: compact, muted
@@ -2338,9 +2400,6 @@ export default function RehearsalPage() {
                     );
                   }
 
-                  const score = wasDelivered ? wordMatchScore(stripStageDirections(line.text), userTranscript!) : null;
-                  const pct = score !== null ? Math.round(score * 100) : null;
-
                   return (
                     <div
                       key={line.id}
@@ -2350,18 +2409,13 @@ export default function RehearsalPage() {
                         sceneReplayIdx === idx ? "border-primary bg-primary/5" : "border-neutral-800"
                       )}
                     >
-                      {/* Character name + accuracy inline */}
+                      {/* Character name. No per-line score and no "skipped" label:
+                          a red 40% on a line you delivered well is the app
+                          confidently reporting its own hearing as your work. */}
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
                           {line.character_name}
                         </span>
-                        {pct !== null && (
-                          <span className={cn(
-                            "text-[10px] tabular-nums font-medium",
-                            pct >= 85 ? "text-emerald-500" : pct >= 60 ? "text-amber-500" : "text-red-500"
-                          )}>{pct}%</span>
-                        )}
-                        {wasSkipped && <span className="text-[10px] text-neutral-700 italic">skipped</span>}
                       </div>
 
                       {/* Expected text */}
@@ -2429,19 +2483,19 @@ export default function RehearsalPage() {
   /* ── Render: main rehearsal view ───────────────────────────────── */
 
   return (
-    <div className={cn('dark fixed inset-0 bg-[#191410] text-neutral-100 flex flex-col z-[10050] transition-opacity duration-150', exiting && 'opacity-0')}>
+    <div className={cn('fixed inset-0 flex flex-col z-[10050] transition-opacity duration-150', STAGE_SURFACE, exiting && 'opacity-0')}>
       {/* Fade-to-review overlay */}
       {fadeToReview && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5, ease: 'easeInOut' }}
-          className="absolute inset-0 z-40 bg-[#191410]"
+          className={cn("absolute inset-0 z-40", STAGE_BG)}
         />
       )}
       {/* Loading cover */}
       {(!focusInitialized || (countdown !== null && countdown > 0)) && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#191410]">
+        <div className={cn("absolute inset-0 z-20 flex items-center justify-center", STAGE_BG)}>
           {!focusInitialized && (
             <div className="h-8 w-8 rounded-full border-2 border-neutral-700 border-t-primary animate-spin" />
           )}
@@ -2455,7 +2509,7 @@ export default function RehearsalPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.25 } }}
-            className="fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 bg-[#191410] px-6 text-center"
+            className={cn(CHROME_DARK, "fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 px-6 text-center", STAGE_BG)}
           >
             {sceneWithLines && (
               <div className="max-w-md">
@@ -2515,7 +2569,7 @@ export default function RehearsalPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.25 } }}
-            className="fixed inset-0 flex items-center justify-center bg-[#191410] z-30"
+            className={cn(CHROME_DARK, "fixed inset-0 flex items-center justify-center z-30", STAGE_BG)}
           >
             <motion.span
               key={countdown}
@@ -2569,7 +2623,7 @@ export default function RehearsalPage() {
       {/* Script parchment */}
       <div ref={scrollContainerRef} className="flex-1 overflow-y-auto p-3 sm:p-6">
         <div
-          className="max-w-4xl mx-auto bg-[#faf7f1] text-neutral-900 rounded-xl border border-black/5 px-4 sm:px-8 py-5 sm:py-7 shadow-[0_24px_70px_-24px_rgba(203,75,0,0.28),0_10px_34px_-14px_rgba(0,0,0,0.55)]"
+          className={cn("max-w-4xl mx-auto rounded-xl border border-black/5 px-4 sm:px-8 py-5 sm:py-7 shadow-[0_24px_70px_-24px_rgba(203,75,0,0.28),0_10px_34px_-14px_rgba(0,0,0,0.55)]", SCRIPT_SURFACE)}
           style={{ fontFamily: '"Courier New", Courier, monospace' }}
         >
           {sceneWithLines ? (
@@ -2599,8 +2653,17 @@ export default function RehearsalPage() {
                   const isCurrentAiLine = isCurrent && !isUser;
 
                   return (
+                    <Fragment key={line.id}>
+                    {/* Action sits between speeches on the page, not under a cue.
+                        Inside the character's block it read as something they say
+                        out loud — Anita appeared to deliver a paragraph about a
+                        crowd at a hearing. It stands on its own now. */}
+                    {line.stage_direction?.trim() && (
+                      <p className="px-6 py-3 text-center text-[13px] italic leading-relaxed text-neutral-500 sm:px-12">
+                        {line.stage_direction.trim()}
+                      </p>
+                    )}
                     <motion.div
-                      key={line.id}
                       data-line-index={lineIdx}
                       ref={isCurrent ? currentLineRef : undefined}
                       initial={false}
@@ -2688,39 +2751,14 @@ export default function RehearsalPage() {
                         )}
                       </div>
 
-                      {/* Stage direction */}
-                      {line.stage_direction?.trim() && (
-                        <p className="text-xs italic text-neutral-800 mb-1 text-center">
-                          ({line.stage_direction.trim()})
-                        </p>
-                      )}
-
                       {/* Line text — live highlights while listening, post-result highlights after */}
                       <p className="text-[17px] font-semibold leading-relaxed text-black text-center break-words whitespace-pre-wrap">
                         {isCurrentUserLine && wordMatchResult
                           ? renderLineWithWordHighlights(line.text, wordMatchResult)
                           : isCurrentUserLine && liveWordResult
                           ? renderLineWithWordHighlights(line.text, liveWordResult)
-                          : isCurrentAiLine && isSpeakingAI && aiHighlightedWords > 0
-                          ? (() => {
-                              // Progressive word highlight synced to TTS playback
-                              const parts = line.text.split(/(\s+|\[[^\]]*\]|\([^)]*\))/);
-                              let wordIdx = 0;
-                              return parts.map((part, i) => {
-                                // Stage directions and whitespace are not "words"
-                                if (/^\s+$/.test(part) || /^\[.*\]$/.test(part) || /^\(.*\)$/.test(part)) {
-                                  const highlighted = wordIdx <= aiHighlightedWords;
-                                  return <span key={i} className={highlighted ? 'opacity-100' : 'opacity-25'} style={{ transition: 'opacity 0.15s ease' }}>{
-                                    /^\[.*\]$/.test(part) || /^\(.*\)$/.test(part)
-                                      ? <em className="text-neutral-500 font-normal">{part}</em>
-                                      : part
-                                  }</span>;
-                                }
-                                const isHighlighted = wordIdx < aiHighlightedWords;
-                                wordIdx++;
-                                return <span key={i} className={isHighlighted ? 'opacity-100' : 'opacity-25'} style={{ transition: 'opacity 0.15s ease' }}>{part}</span>;
-                              });
-                            })()
+                          : isCurrentAiLine && isSpeakingAI && aiSpokenIndex >= 0
+                          ? renderLineWithSpokenSweep(line.text, aiSpokenIndex)
                           : renderTextWithStageDirections(line.text)
                         }
                       </p>
@@ -2752,6 +2790,7 @@ export default function RehearsalPage() {
                         </p>
                       )}
                     </motion.div>
+                    </Fragment>
                   );
                 })}
               </div>
@@ -2858,7 +2897,7 @@ export default function RehearsalPage() {
 
       {/* Floating control pill */}
       <div className="shrink-0 flex justify-center px-4 pb-4 safe-area-bottom">
-        <div className="flex items-center gap-2 sm:gap-3 bg-neutral-900/90 backdrop-blur-sm border border-neutral-800 rounded-full shadow-2xl px-3 sm:px-5 py-3 min-h-[52px] max-w-[calc(100vw-1.5rem)]">
+        <div className={cn(CHROME_DARK, "flex items-center gap-2 sm:gap-3 bg-neutral-900/90 backdrop-blur-sm border border-neutral-800 rounded-full shadow-2xl px-3 sm:px-5 py-3 min-h-[52px] max-w-[calc(100vw-1.5rem)]")}>
           {/* Pause / Play */}
           <button
             type="button"
@@ -2941,6 +2980,22 @@ export default function RehearsalPage() {
               </div>
             )}
           </div>
+
+          {/* Theme — mid-rehearsal, because the right brightness for a room is
+              not something you know before you start reading in it. Swapping the
+              theme is a class change on <html>; it touches no audio state, so a
+              run in progress carries straight on. */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            className="w-9 h-9 rounded-full bg-neutral-800 hover:bg-neutral-700 flex items-center justify-center transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50"
+            aria-label={isDarkTheme ? 'Switch to light theme' : 'Switch to dark theme'}
+            title={isDarkTheme ? 'Switch to light theme' : 'Switch to dark theme'}
+          >
+            {isDarkTheme
+              ? <Sun className="w-4 h-4 text-neutral-400" aria-hidden />
+              : <Moon className="w-4 h-4 text-neutral-400" aria-hidden />}
+          </button>
 
           {/* Shortcuts */}
           <button

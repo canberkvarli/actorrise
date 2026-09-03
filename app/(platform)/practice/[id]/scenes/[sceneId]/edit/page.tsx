@@ -3419,7 +3419,7 @@ export default function SceneEditPage() {
         initial={{ opacity: 0, y: -16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: [0.25, 0.1, 0.25, 1] }}
-        className="relative flex items-center justify-between gap-2 px-4 sm:px-6 py-3 border-b border-border shrink-0 bg-background/80 backdrop-blur-sm">
+        className="relative border-b border-border shrink-0 bg-background/80 backdrop-blur-sm">
         {/* faint orange stage-glow along the top edge */}
         <div
           aria-hidden
@@ -3427,6 +3427,10 @@ export default function SceneEditPage() {
           style={{ background: "linear-gradient(90deg, transparent, var(--glow, #CB4B00) 50%, transparent)", opacity: 0.5 }}
         />
 
+        {/* The bar spans the window, its contents don't. Pinned to the viewport
+            edges, Back and Edit ended up a screen apart from the scene they act
+            on. They sit on the same rails as the cast and the page below. */}
+        <div className="mx-auto flex w-full max-w-[46rem] items-center justify-between gap-2 px-4 py-3 sm:px-6">
         {/* Left: Back */}
         <Button
           variant="ghost"
@@ -3517,6 +3521,7 @@ export default function SceneEditPage() {
           >
             {editMode ? <><Check className="w-4 h-4" /> Done</> : <><Edit2 className="w-3.5 h-3.5" /> Edit</>}
           </Button>
+        </div>
         </div>
       </motion.header>
 
