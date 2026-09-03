@@ -66,6 +66,12 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
   const skipNextTranscriptionRef = useRef(false); // set by cancelTranscription to skip the next blob
   const transcribeAbortRef = useRef<AbortController | null>(null); // abort in-flight Whisper request
 
+  // Voice activity, sampled every animation frame. This is how the advance rule
+  // knows the actor has actually stopped talking — speech recognition takes
+  // 500–800ms to finalize an utterance, which is far too slow to pick up a cue on.
+  const lastVoiceAtRef = useRef<number>(0);
+  const heardAnySpeechRef = useRef(false);
+
   // Keep callbacks and options in refs so closures inside RAF loops stay fresh
   const onResultRef = useRef(onResult);
   const onEndRef = useRef(onEnd);
@@ -188,6 +194,8 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     stoppedRef.current = false;
     chunksRef.current = [];
     skipNextTranscriptionRef.current = false; // clear any pending skip from a previous cancelTranscription
+    lastVoiceAtRef.current = 0;
+    heardAnySpeechRef.current = false;
 
     // Reuse existing stream if tracks are still live — avoids getUserMedia latency (~500ms)
     let stream = streamRef.current;
@@ -245,6 +253,13 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
       let peak = 0;
       for (let i = 0; i < freqData.length; i++) {
         if (freqData[i] > peak) peak = freqData[i];
+      }
+
+      // Sound right now means the actor is mid-word. Advancing here is exactly
+      // the interruption this tracking exists to prevent.
+      if (peak >= silenceThreshold) {
+        lastVoiceAtRef.current = Date.now();
+        heardAnySpeechRef.current = true;
       }
 
       // The minimum-recording guard stays: a take shorter than this is a misfire.
@@ -341,9 +356,27 @@ export function useWhisperSTT(options: UseWhisperSTTOptions = {}) {
     }
   }, [releaseStream]);
 
+  /**
+   * Milliseconds since the mic last heard voiced audio.
+   *
+   * `Infinity` before the first sound of a take, so a caller checking "has it
+   * been quiet long enough" is never told yes on a take that hasn't started.
+   * Read through a function rather than state — this changes every frame, and
+   * re-rendering the rehearsal at 60fps to carry it would be absurd.
+   */
+  const msSinceVoice = useCallback((): number => {
+    if (!lastVoiceAtRef.current) return Infinity;
+    return Date.now() - lastVoiceAtRef.current;
+  }, []);
+
+  /** Has the mic heard any speech at all during this take? */
+  const heardAnySpeech = useCallback((): boolean => heardAnySpeechRef.current, []);
+
   return {
     startListening: startRecording,   // drop-in replacement API
     stopListening: stopRecording,
+    msSinceVoice,                     // voice activity, for the advance rule
+    heardAnySpeech,
     cancelTranscription,              // abort pending Whisper so auto-listen isn't blocked
     getRecordedBlob,                  // snapshot audio for playback in session review
     prewarmStream,                    // pre-acquire mic stream before first recording

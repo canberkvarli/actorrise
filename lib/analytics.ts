@@ -74,6 +74,13 @@ type RehearsalCompletedParams = {
   mode: RehearsalMode;
   duration_seconds: number;
   lines_total: number;
+  /**
+   * 0-100, how much of each line the microphone caught, averaged over delivered
+   * lines. Deliberately not shown to the actor: it measures recognition quality,
+   * not performance, and reads as a grade when it is really a health metric for
+   * the speech pipeline. Watch it to catch matching regressions.
+   */
+  transcript_match_pct?: number;
 };
 
 type RehearsalAbandonedParams = {
