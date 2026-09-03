@@ -2248,6 +2248,8 @@ export default function SceneEditPage() {
      sides do on a narrow page too. */
   const CUE_INDENT = "pl-2 sm:pl-[32%]";
   const DIALOGUE_INDENT = "pl-2 pr-1 sm:pl-[16%] sm:pr-[10%]";
+  /** Action runs wider than dialogue, the way it does on a script page. */
+  const ACTION_INDENT = "pl-2 pr-1 sm:pl-[8%] sm:pr-[8%]";
 
   /** Everyone you are not reading. These are the parts the app reads back. */
   const readerNames = allSceneCharacters.filter((c) => !isMyRole(c));
@@ -2300,7 +2302,11 @@ export default function SceneEditPage() {
             <Edit2 className="w-3.5 h-3.5 text-paper-muted/50 opacity-60 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" />
           </button>
         )}
-        <div className="text-lg font-semibold text-paper-ink/85 mt-2 break-words">
+        {/* font-sans explicitly: the card sets font-typewriter for the script
+            itself, and the h2 above escapes it via the global heading rule, so
+            without this the source line is the only Courier text in the header
+            and reads as a mistake. */}
+        <div className="font-sans text-lg font-semibold text-paper-ink/85 mt-2 break-words">
           {editingSceneField === "play_title" && editingLocation === "parchment" ? (
             <Input
               value={sceneEditValue}
@@ -2403,7 +2409,7 @@ export default function SceneEditPage() {
             <textarea
               value={sceneEditValue}
               onChange={(e) => setSceneEditValue(e.target.value)}
-              className="w-full text-sm font-medium italic text-paper-muted bg-transparent border-b-2 border-dashed border-paper-rule outline-none text-center py-1 px-2 resize-none leading-relaxed focus:border-paper-ink/40"
+              className="w-full font-sans text-sm italic text-paper-muted bg-transparent border-b-2 border-dashed border-paper-rule outline-none text-center py-1 px-2 resize-none leading-relaxed focus:border-paper-ink/40"
               rows={2}
               maxLength={500}
               autoFocus
@@ -2423,7 +2429,7 @@ export default function SceneEditPage() {
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.3 }}
-            className="text-sm font-semibold italic text-paper-muted text-center mb-4 mt-1 leading-relaxed px-2 cursor-pointer hover:opacity-70 transition-opacity"
+            className="font-sans text-sm italic text-paper-muted text-center mb-4 mt-1 leading-relaxed px-2 max-w-prose mx-auto cursor-pointer hover:opacity-70 transition-opacity"
             onClick={() => startEditScene("description", scene.description ?? "", "parchment")}
           >
             {scene.description}
@@ -2926,13 +2932,29 @@ export default function SceneEditPage() {
                           </div>
                         );
                       })()}
-                      {/* Character name + avatar + stage direction */}
+                      {/* Action. It used to sit on the cue line beside the
+                          character name, where it had nowhere to go: these come
+                          out of real sides and run 200–460 characters, so it was
+                          either clipped to a stub you cannot read or it shoved
+                          the name around. Action is not a label on the name, it
+                          is the paragraph before the speech, so it is set the way
+                          a script sets it: full measure, its own block, above the
+                          cue. */}
+                      {line.stage_direction?.trim() && !isDragging && (
+                        <p className={cn(
+                          "text-[13px] sm:text-sm italic leading-relaxed text-paper-muted normal-case break-words whitespace-pre-wrap mb-1.5",
+                          ACTION_INDENT,
+                        )}>
+                          {line.stage_direction.trim()}
+                        </p>
+                      )}
+                      {/* Character name + avatar */}
                       {(() => {
                         const vid = charVoices[line.character_name] ?? null;
                         const voice = AI_VOICES.find(v => v.id === vid);
                         const dropdownKey = `parchment-${lineId}`;
                         return (
-                      <div className={cn("flex items-center justify-start gap-2 mb-0.5", CUE_INDENT)}>
+                      <div className={cn("flex flex-wrap items-center justify-start gap-x-2 gap-y-0.5 mb-0.5", CUE_INDENT)}>
                         <div className="relative" data-voice-dropdown onClick={(e) => e.stopPropagation()}>
                           <button
                             ref={(el) => { if (el) el.dataset.voiceBtnId = dropdownKey; }}
@@ -3067,11 +3089,6 @@ export default function SceneEditPage() {
                           >
                             <Volume2 className="w-3.5 h-3.5" />
                           </button>
-                        )}
-                        {line.stage_direction?.trim() && !isDragging && (
-                          <span className="text-xs italic text-paper-muted normal-case truncate max-w-[200px]">
-                            {line.stage_direction.trim()}
-                          </span>
                         )}
                         {editMode && !isDragging && (
                           <Edit2 className="w-3 h-3 text-paper-muted/70 opacity-60 sm:opacity-0 sm:group-hover/line-btn:opacity-100 transition-opacity shrink-0" />
