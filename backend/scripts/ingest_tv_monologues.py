@@ -55,6 +55,7 @@ from app.core.config import settings
 from app.models.actor import FilmTvReference, Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
 from app.services.data_ingestion.cross_source_dedupe import find_duplicate
+from app.services.data_ingestion.pipeline import _find_superseded
 from app.services.extraction.screenplay_pdf_parser import extract_screenplay_monologues
 # pylint: enable=wrong-import-position
 
@@ -238,12 +239,15 @@ def get_or_create_play(db, meta, slug, ref) -> Play:
     return play
 
 
-def ingest_episode(db, analyzer, slug, refs, dry_run) -> int:
+def ingest_episode(db, analyzer, slug, refs, dry_run, refresh: bool = False) -> int:
     meta = parse_slug(slug)
     if not meta:
         return 0
-    # fast resume: skip episodes already ingested (Play exists with monologues)
-    if not dry_run:
+    # fast resume: skip episodes already ingested (Play exists with monologues).
+    # `refresh` turns it off, to re-run episodes extracted before the parser
+    # learned that an interrupted speech is still one speech — which is all of
+    # them. See ingest_film_monologues for the measurement.
+    if not dry_run and not refresh:
         done = (db.query(Play.id)
                 .join(Monologue, Monologue.play_id == Play.id)
                 .filter(Play.source_url == SCRIPT_URL.format(slug=slug)).first())
@@ -279,17 +283,24 @@ def ingest_episode(db, analyzer, slug, refs, dry_run) -> int:
     # banner and request CTA.
     play = db.query(Play).filter(Play.source_url == SCRIPT_URL.format(slug=slug)).first()
     inserted = 0
+    upgraded = 0
     for c in clean:
         char, text, dialogue, wc = c["character"], c["text"], c["dialogue"], c["word_count"]
         title = f"{char}, {meta['show']}"
         # content-based dedup (idempotent resume) so a character can have more than
         # one monologue per episode without the second being dropped
+        # A better copy of a speech we already hold? The first-80-characters
+        # guard below cannot see that: a merge extends a speech at the FRONT as
+        # often as the back, because the stored row began mid-speech.
+        superseded_row = None
         if play is not None:
-            existing = [t for (t,) in db.query(Monologue.text)
-                        .filter(Monologue.play_id == play.id,
-                                Monologue.character_name == char).all()]
-            if any(et[:80] == text[:80] for et in existing):
-                continue
+            superseded_row = _find_superseded(db, int(play.id), char, text)
+            if superseded_row is None:
+                existing = [t for (t,) in db.query(Monologue.text)
+                            .filter(Monologue.play_id == play.id,
+                                    Monologue.character_name == char).all()]
+                if any(et[:80] == text[:80] for et in existing):
+                    continue
         try:
             # analyse / embed the SPOKEN dialogue (cleaner signal); store the
             # display text with stage directions preserved as (italic) parentheticals.
@@ -299,6 +310,20 @@ def ingest_episode(db, analyzer, slug, refs, dry_run) -> int:
                 embedding = analyzer.generate_embedding(dialogue)
             if not embedding:  # unsearchable without it — skip
                 print(f"      skip (no embedding): {char}")
+                continue
+
+            # Upgrade in place, BEFORE the duplicate check: this is the stored
+            # speech plus the part that was cut off, not a duplicate of it.
+            if superseded_row is not None:
+                superseded_row.text = text
+                superseded_row.word_count = len(text.split())
+                superseded_row.estimated_duration_seconds = round(
+                    len(dialogue.split()) / 2.5)
+                superseded_row.embedding_vector = embedding
+                superseded_row.text_segments = None   # described the shorter text
+                upgraded += 1
+                print(f"      upgraded #{superseded_row.id}: {char} "
+                      f"-> {superseded_row.word_count}w")
                 continue
 
             # Corpus-wide duplicate check — see ingest_film_monologues.py. TV is
@@ -361,6 +386,9 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--limit", type=int, default=None, help="max episodes")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--refresh", action="store_true",
+                    help="re-run episodes already ingested, upgrading stored "
+                         "speeches the old parser had cut in half")
     ap.add_argument("--slugs", default=None,
                     help="comma-separated episode slugs; skips the sitemap. "
                          "Mirrors ingest_film_monologues, and is what makes a "
@@ -382,7 +410,8 @@ def main() -> None:
     total_mono = 0
     for i, slug in enumerate(slugs, 1):
         try:
-            total_mono += ingest_episode(db, analyzer, slug, refs, args.dry_run)
+            total_mono += ingest_episode(db, analyzer, slug, refs, args.dry_run,
+                                         refresh=args.refresh)
         except Exception as e:  # noqa: BLE001
             db.rollback()
             print(f"  [{i}] episode error: {e}")
