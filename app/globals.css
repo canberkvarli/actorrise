@@ -366,6 +366,32 @@
   color: var(--stage-fg);
 }
 
+/**
+ * House lights up.
+ *
+ * The stage tokens are deliberately theme-independent — the landing IS a dark
+ * theatre, and thirty-odd places on it read these names inside subtrees that pin
+ * `.dark` themselves. Fine there. But the rehearsal room at /monologue/:id/work
+ * paints itself from the same names, so it stayed dark while the rest of the app
+ * went light: a dark slab with the light page showing wherever it fell short,
+ * which is where that band of white along the bottom came from.
+ *
+ * Rather than repoint --stage globally and audit every marketing surface, this
+ * overrides the names for one subtree. Anything carrying .stage-surface follows
+ * the theme; the landing is untouched.
+ */
+:root:not(.dark) .stage-surface {
+  --stage: oklch(0.975 0.008 80);
+  --stage-deep: oklch(0.945 0.010 80);
+  --stage-raised: oklch(0.995 0.004 80);
+  --stage-fg: oklch(0.22 0.015 60);
+  --stage-muted: oklch(0.48 0.020 60);
+  --stage-faint: oklch(0.64 0.018 58);
+  --stage-line: oklch(0.87 0.012 75);
+  --stage-glow: oklch(0.58 0.180 45);
+  --glow: var(--stage-glow);
+}
+
 /* Courier stage directions — "(lights up.)" eyebrows */
 .stage-direction {
   font-family: var(--font-typewriter);
@@ -403,6 +429,12 @@
   opacity: 0.05;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Grain exists to stop dark gradients banding. On a lit stage there is nothing
+   to band and overlay noise just reads as dirt on the page, so it goes quiet. */
+:root:not(.dark) .stage-surface .stage-grain::after {
+  opacity: 0.018;
 }
 
 /* Ghost-light flicker for the hero bulb accent */

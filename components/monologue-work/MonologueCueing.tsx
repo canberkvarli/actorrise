@@ -348,7 +348,13 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
        surface — the stage was painting itself with hardcoded #CB4B00 instead of
        the brightened orange the rest of the dark shell uses. Same move the
        landing header makes. */
-    <div className="dark stage-grain relative flex h-full w-full flex-col overflow-hidden bg-[var(--stage)] text-[var(--stage-fg)]">
+    /* The `dark` class is gone from here. It was pinning every shadcn token in
+       this subtree — background, foreground, primary, border — to their dark
+       values, so the rehearsal room stayed a dark room no matter which theme
+       you had chosen. The stage tokens follow the theme now (.stage-surface on
+       the page wrapper, see globals.css), and this subtree should follow with
+       them. */
+    <div className="stage-grain relative flex h-full w-full flex-col overflow-hidden bg-[var(--stage)] text-[var(--stage-fg)]">
       {/* Ambient stage — the landing's own vocabulary: warm overhead wash, then a
           soft shadow pooling at the foot so the stage never reads as flat black. */}
       <div aria-hidden className="stage-wash pointer-events-none absolute inset-0" />
@@ -356,8 +362,13 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
         aria-hidden
         className="pointer-events-none absolute inset-0"
         style={{
+          /* Both ends pool --stage-deep now. The foot used to be literal
+             `black 45%`, which is a shadow only if the floor is already dark —
+             on a lit stage it came out as a grey smear washing up from the
+             bottom of the screen. --stage-deep is a shade of whatever the floor
+             is, so it reads as depth in either theme. */
           background:
-            "linear-gradient(180deg, color-mix(in oklab, var(--stage-deep) 55%, transparent) 0%, transparent 30%, transparent 68%, color-mix(in oklab, black 45%, transparent) 100%)",
+            "linear-gradient(180deg, color-mix(in oklab, var(--stage-deep) 55%, transparent) 0%, transparent 30%, transparent 68%, color-mix(in oklab, var(--stage-deep) 85%, transparent) 100%)",
         }}
       />
 
@@ -547,25 +558,6 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
             exit={{ opacity: 0 }}
             className="relative z-10 mx-auto flex w-full min-h-0 max-w-3xl flex-1 flex-col overflow-hidden px-5 pb-4"
           >
-            {/* Listening indicator, top-center — the live waveform reacts to your
-                voice so you can see you're being heard while you run the piece. */}
-            <div className="flex items-center justify-center gap-2 pt-1 pb-2">
-              {tapToAdvance ? (
-                <span className="pointer-events-none flex select-none items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--stage-fg)]/45">
-                  <StatusDot state="tap" />
-                  {/* If the mic dropped out mid-run, say so. Switching the rules
-                      of the screen without a word is how the old silent failure
-                      read as the app being broken. */}
-                  {micDead || listenExhausted ? "Mic dropped · tap to advance" : "Tap to advance"}
-                </span>
-              ) : (
-                <span className="pointer-events-none flex select-none items-center gap-2.5 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--stage-fg)]/55">
-                  <MicWaveform active={isListening} className="w-24" />
-                  {isListening ? "Listening" : "Paused"}
-                </span>
-              )}
-            </div>
-
             {/* The whole piece flows here. A spotlight rides the active line, the
                 lines behind recede, the ones ahead wait quietly. It auto-scrolls
                 so you never wait for a line to "come in". */}
@@ -603,8 +595,20 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                           <span
                             key={wi}
                             className="transition-all duration-300"
+                            /* The unspoken words were a literal
+                               rgba(246,240,229,0.96) — near-white, which is
+                               "lit" only against a dark stage. With the house
+                               lights up it made the active line the palest thing
+                               on the screen, fainter than the lines behind it,
+                               so the one line you are actually saying vanished.
+                               --stage-fg is ink or light depending on the room.
+                               The spoken colour stays orange: it reads on both. */
                             style={{
-                              color: spoken ? "#FF9147" : masked ? "transparent" : "rgba(246,240,229,0.96)",
+                              color: spoken
+                                ? "#FF9147"
+                                : masked
+                                  ? "transparent"
+                                  : "color-mix(in oklab, var(--stage-fg) 96%, transparent)",
                               textShadow: spoken ? "0 0 26px rgba(255,130,50,0.5)" : "none",
                             }}
                           >
@@ -634,8 +638,15 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
               })}
             </div>
 
-            {/* Control dock — just the actions; the listening status lives up top
-                so you always know you're being heard.
+            {/* Control dock — the actions, and the listening status above them.
+
+                The status used to sit at the very top, wedged under the title,
+                which is the one part of this screen you never look at while you
+                are running a piece: your eyes are on the line, and the line
+                stays low as the text scrolls up to meet the dock. Down here it
+                is in the same glance as Skip and Restart, and the waveform is
+                next to the thing it is reporting on rather than a screen away
+                from it.
 
                 Pinned to the foot of the stage rather than sitting in the flex
                 column. In flow it lost the shrink race against the scrolling
@@ -644,7 +655,21 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                 so Skip and Restart were invisible AND unreachable (the piece
                 scrolls, not the page). Pinned, it also stops moving about as
                 lines change length. */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center bg-gradient-to-t from-[var(--stage)] via-[var(--stage)]/85 to-transparent pb-4 pt-12">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex flex-col items-center gap-2.5 bg-gradient-to-t from-[var(--stage)] via-[var(--stage)]/85 to-transparent pb-4 pt-14">
+              {tapToAdvance ? (
+                <span className="pointer-events-none flex select-none items-center gap-2 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--stage-fg)]/45">
+                  <StatusDot state="tap" />
+                  {/* If the mic dropped out mid-run, say so. Switching the rules
+                      of the screen without a word is how the old silent failure
+                      read as the app being broken. */}
+                  {micDead || listenExhausted ? "Mic dropped · tap to advance" : "Tap to advance"}
+                </span>
+              ) : (
+                <span className="pointer-events-none flex select-none items-center gap-2.5 text-[0.7rem] uppercase tracking-[0.18em] text-[var(--stage-fg)]/55">
+                  <MicWaveform active={isListening} className="w-20" />
+                  {isListening ? "Listening" : "Paused"}
+                </span>
+              )}
               <div className="pointer-events-auto flex items-center justify-center gap-2">
                 {offBook && <DockButton onClick={() => setRevealCurrent(true)}>Reveal</DockButton>}
                 {!tapToAdvance && (

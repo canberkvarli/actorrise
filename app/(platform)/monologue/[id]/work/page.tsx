@@ -72,7 +72,21 @@ export default function MonologueWorkPage() {
   }, [id]);
 
   return (
-    <div ref={ref} style={{ height }} className="bg-[var(--stage)] text-[var(--stage-fg)]">
+    /* The height stays definite — children use h-full and would collapse
+       against a min-height — but it is no longer the only thing painting the
+       screen. A height computed from 100dvh is a promise the browser does not
+       keep: iOS Safari changes dvh as the URL bar collapses, so the slab ended
+       up shorter than the window and the page underneath showed through along
+       the bottom as a band of cream under a dark stage. The backdrop below
+       covers the viewport whatever the arithmetic does, so a shortfall has
+       nothing to reveal. .stage-surface makes the whole thing follow the theme
+       (see globals.css), which is the other half of the same bug. */
+    <div
+      ref={ref}
+      style={{ height }}
+      className="stage-surface relative bg-[var(--stage)] text-[var(--stage-fg)]"
+    >
+      <div aria-hidden className="fixed inset-0 -z-10 bg-[var(--stage)]" />
       {status === "loading" && (
         <div className="flex h-full items-center justify-center">
           <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
