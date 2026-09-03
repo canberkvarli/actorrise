@@ -7,6 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   IconBookmark,
   IconArrowLeft,
+  IconPlayerPlay,
   IconEdit,
   IconBulb,
   IconBulbFilled,
@@ -231,7 +232,9 @@ export default function MonologueDetailPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-3xl px-4 py-8 sm:py-10">
+    /* Bottom padding clears the floating Rehearse pill. Without it the pill
+       parked on top of the notes panel, which is the last thing on the page. */
+    <div className="container mx-auto max-w-3xl px-4 py-8 pb-40 sm:py-10 lg:pb-28">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -314,8 +317,17 @@ export default function MonologueDetailPage() {
                 aria-pressed={isFavorited}
                 aria-label={isFavorited ? "In your collection" : "Add to collection"}
                 title={isFavorited ? "In your collection" : "Add to collection"}
+                /* Was text-accent, which is a *surface* token — the pale blue a
+                   panel is painted with in light, and a near-black warm grey in
+                   dark. So a saved bookmark was invisible in both themes for the
+                   same reason: it was drawing an icon in a background colour.
+                   Teal is what Collection already means everywhere else (the
+                   collection toggle on /monologues, the "your lane" mark), and
+                   it leaves orange to the one primary action. */
                 className={`rounded-full p-2 transition-colors hover:bg-muted ${
-                  isFavorited ? "text-accent" : "text-muted-foreground"
+                  isFavorited
+                    ? "text-teal-600 dark:text-teal-400"
+                    : "text-muted-foreground"
                 }`}
               >
                 <IconBookmark className={`h-5 w-5 ${isFavorited ? "fill-current" : ""}`} />
@@ -337,15 +349,12 @@ export default function MonologueDetailPage() {
                   point pulled 2026-08-27: 0 uses across 649 users, and it
                   cluttered the core flow we lose people in. The /audition
                   recorder + tapes API stay intact, just unlinked. */}
-              {!monologue.paywalled && (
-                <Button
-                  size="sm"
-                  onClick={() => router.push(`/monologue/${monologue.id}/work`)}
-                  className="ml-1 flex-shrink-0"
-                >
-                  Rehearse
-                </Button>
-              )}
+              {/* Rehearse has left this strip — see the floating pill at the
+                  foot of the page. The bar was carrying three different kinds
+                  of thing at once: ways to *view* the piece (tabs), things that
+                  are *true* of it (off book, saved), and the one thing to *do*
+                  with it. Three grammars in one row, and on a phone the action
+                  was the part that got pushed off the right edge. */}
             </div>
           </div>
         </div>
@@ -544,6 +553,32 @@ export default function MonologueDetailPage() {
           isSaving={editMonologueSaving}
         />
       </motion.div>
+
+      {/* The one thing you came here to do, always in reach.
+          It sits above the platform's bottom nav rather than becoming a second
+          bar beside it — 88px on a phone clears the 65px tab strip, 24px on
+          desktop where there is no strip. Its own token pair: --primary stays
+          bright so orange *text* carries on a dark page, while a filled button
+          keeps the brand orange and a white label, because a large block does
+          not need the lift and a black word stamped in an orange pill is what
+          the brightened fill forces. */}
+      {!monologue.paywalled && (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
+          className="pointer-events-none fixed inset-x-0 bottom-[88px] z-40 flex justify-center px-4 lg:bottom-6"
+        >
+          <button
+            type="button"
+            onClick={() => router.push(`/monologue/${monologue.id}/work`)}
+            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-primary-solid px-6 py-3 text-sm font-semibold text-primary-solid-foreground shadow-lg shadow-black/20 transition-transform hover:scale-[1.03] active:scale-95"
+          >
+            <IconPlayerPlay className="h-4 w-4" />
+            Rehearse
+          </button>
+        </motion.div>
+      )}
     </div>
   );
 }

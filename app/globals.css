@@ -38,6 +38,8 @@
   --color-accent-screen: var(--accent-screen);
   /* Sides. See the --paper block below for why these barely move between
      themes. */
+  --color-primary-solid: var(--primary-solid);
+  --color-primary-solid-foreground: var(--primary-solid-foreground);
   --color-paper: var(--paper);
   --color-paper-ink: var(--paper-ink);
   --color-paper-rule: var(--paper-rule);
@@ -93,6 +95,12 @@
      on white it measured 2.7:1 against the page and was unreadable as text.
      This is the same hue pulled down to carry on a light background. */
   --accent-screen: oklch(0.52 0.19 293);
+
+  /* A filled orange button, as distinct from orange text.
+     In light these are just --primary and its foreground. See .dark for why
+     they need to part company there. */
+  --primary-solid: oklch(0.58 0.18 45);
+  --primary-solid-foreground: oklch(0.99 0 0);
 
   /* Sides.
      A script is paper in both themes — reading a scene off a dark surface is
@@ -169,6 +177,18 @@
 
   /* The original violet-400, which was always a dark-theme colour. */
   --accent-screen: oklch(0.72 0.155 293);
+
+  /* Orange text and an orange button want opposite things in the dark.
+     --primary is brightened here so links and labels carry on a near-black
+     page. Fill a button with that brightness and no light label survives on it:
+     white measures 2.3:1 against it, so the label has to go near-black — which
+     is legible (6.41:1, measured) but reads as a black word stamped in an orange
+     pill. A filled button does not need the lift, because it is a large block
+     rather than 14px type: the brand orange sits at 4.21:1 against the dark page,
+     comfortably past the 3:1 a UI component needs, and carries white at 4.5:1.
+     So the button keeps the brand colour in both themes and the text does not. */
+  --primary-solid: oklch(0.58 0.18 45);
+  --primary-solid-foreground: oklch(0.99 0 0);
 
   /* Paper, one shade warmer and a hair dimmer than in daylight, so a lit page
      on an unlit stage does not glare. The ink stays ink. */

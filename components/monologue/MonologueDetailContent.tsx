@@ -39,7 +39,11 @@ function metaFor(monologue: Monologue): string[] {
     monologue.estimated_duration_seconds
       ? `${minutes}:${seconds.toString().padStart(2, "0")}`
       : null,
-    monologue.word_count ? `${monologue.word_count} words` : null,
+    /* Word count is gone. It sat next to the running time saying the same thing
+       twice, and of the two only one is the answer to a real question — an
+       actor is given "under two minutes", never "under 300 words". Six facts
+       wrapped to two lines on a phone and pushed the piece itself below the
+       fold; five fit on one. */
   ].filter((x): x is string => Boolean(x));
 }
 
@@ -59,10 +63,14 @@ export function MonologueHeader({
   const author = displayableAuthor(monologue.author);
 
   return (
-    <header className="space-y-5">
-      <div className="flex items-start gap-5">
+    /* Tighter than it was (space-y-5, a 4xl/5xl name and a 5-line stack), so
+       the monologue starts near the top of the screen instead of below it. On a
+       390px phone the old header ran 268px before a word of the piece — you
+       scrolled to reach the thing you opened the page for. */
+    <header className="space-y-3">
+      <div className="flex items-start gap-4 sm:gap-5">
         {monologue.poster_url && (
-          <div className="h-36 w-24 shrink-0 overflow-hidden rounded-md border border-border bg-muted shadow-sm sm:h-48 sm:w-32">
+          <div className="h-28 w-[74px] shrink-0 overflow-hidden rounded-md border border-border bg-muted shadow-sm sm:h-40 sm:w-[106px]">
             <Image
               src={monologue.poster_url}
               alt={monologue.play_title || "Poster"}
@@ -85,7 +93,7 @@ export function MonologueHeader({
             {author ? `, by ${author}` : ""}
           </p>
 
-          <h1 className="mt-1.5 font-brand text-4xl font-medium leading-[1.05] text-foreground sm:text-5xl">
+          <h1 className="mt-1 font-brand text-3xl font-medium leading-[1.05] text-foreground sm:text-5xl">
             {monologue.character_name}
           </h1>
 
@@ -113,7 +121,7 @@ export function MonologueHeader({
       )}
 
       {monologue.scene_description && (
-        <p className="border-l-2 border-primary/30 pl-3 text-sm italic leading-relaxed text-muted-foreground">
+        <p className="border-l-2 border-primary/30 pl-3 text-[13px] italic leading-relaxed text-muted-foreground">
           {monologue.scene_description}
         </p>
       )}
