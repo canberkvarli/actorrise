@@ -75,6 +75,7 @@ import {
   type ChangelogEntry,
 } from "@/lib/changelog";
 import { LastAuthProviderSync } from "@/components/auth/LastAuthProviderSync";
+import { AppLaunchBar } from "@/components/landing/AppLaunchBar";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -247,6 +248,14 @@ export default function PlatformLayout({
         makes this a scroll container and silently breaks `position: sticky` for
         everything inside it. `clip` contains the same overflow without that. */}
     <div className="min-h-screen bg-background overflow-x-clip relative">
+      {/* Existing users never see the landing page, so without this the only way
+          they learn the app shipped is an email. Above the sticky nav and in
+          normal flow, so it scrolls away and the nav still pins at top-0 — the
+          64/80px offsets the rest of the app measures against are unchanged.
+          Shares one dismissal key with the marketing bar: dismiss it anywhere,
+          it is gone everywhere. */}
+      <AppLaunchBar />
+
       {/* Logout transition overlay */}
       <AnimatePresence>
         {isLoggingOut && (

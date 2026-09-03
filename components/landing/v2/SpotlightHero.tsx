@@ -3,6 +3,7 @@ import { HeroCta } from "@/components/landing/HeroCta";
 import { LandingLiveCount } from "@/components/landing/LandingLiveCount";
 import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
 import { StageMotes } from "@/components/landing/v2/StageMotes";
+import { APP_STORE_URL } from "@/components/landing/v2/GhostLightAppTeaser";
 
 /**
  * Ghost Light hero: a dark stage, one spotlight that follows the cursor,
@@ -50,12 +51,30 @@ export function SpotlightHero() {
           style={{ animationDelay: "0.6s" }}
         >
           <HeroCta />
-          <a
-            href="#watch"
-            className="stage-direction text-xs sm:text-sm text-[var(--stage-faint)] hover:text-[var(--stage-muted)] transition-colors"
-          >
-            (or watch how it works)
-          </a>
+          {/* A second, smaller yes.
+              The app is free, which makes it the lowest-commitment way into any
+              of this — no signup, no card. It only lived in section 11 of 13,
+              eight screens down and one screen after the pricing table, which is
+              a strange place to put the free thing. This is deliberately weightless:
+              the hero converts on "start rehearsing", and an iOS link that
+              competed with it would trade the main conversion for a smaller one. */}
+          <div className="flex items-center gap-2.5 stage-direction text-xs sm:text-sm text-[var(--stage-faint)]">
+            <a
+              href="#watch"
+              className="transition-colors hover:text-[var(--stage-muted)]"
+            >
+              (or watch how it works)
+            </a>
+            <span aria-hidden className="opacity-50">·</span>
+            <a
+              href={APP_STORE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="transition-colors hover:text-[var(--stage-muted)]"
+            >
+              (on iOS)
+            </a>
+          </div>
         </div>
 
         <div
