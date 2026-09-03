@@ -3208,114 +3208,164 @@ export default function SceneEditPage() {
   );
 
   const castPanel = (
-    <div className="mx-auto w-full max-w-[46rem] mb-5 rounded-xl border border-border bg-card/50 backdrop-blur-sm px-3 sm:px-4 py-3">
-      <div className="flex flex-col lg:flex-row lg:items-start gap-3">
-        {/* You're playing */}
-        <div className="flex items-start gap-2 min-w-0">
-          <span className="text-[11px] uppercase tracking-wider text-muted-foreground shrink-0 pt-2">You&apos;re playing</span>
-          {/* Wraps instead of overflowing: with min-w-0 above, a non-wrapping row
-              spilled out of its shrunken box and painted over the Reader column. */}
-          <div className="flex flex-wrap items-center gap-1 rounded-lg bg-muted/50 p-0.5 min-w-0">
-            {allSceneCharacters.map((charName) => {
-              const isMe = isMyRole(charName);
-              return (
-                <button
-                  key={charName}
-                  type="button"
-                  // Tap to add a part, tap again to drop it — an actor can read for
-                  // several roles. Deselecting the last one would leave nothing to
-                  // rehearse, so that tap is ignored.
-                  onClick={() => {
-                    if (isMe && myRoles.length === 1) return;
-                    toggleRole(charName);
-                  }}
-                  aria-pressed={isMe}
-                  title={
-                    isMe
-                      ? (myRoles.length === 1 ? `You're playing ${charName}` : `Stop playing ${charName}`)
-                      : `Also play ${charName}`
-                  }
-                  className={cn(
-                    "px-3 py-1.5 rounded-md text-sm font-medium transition-colors truncate max-w-[140px]",
-                    isMe ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {charName}
-                </button>
-              );
-            })}
-          </div>
-          {myRoles.length > 1 && (
-            <span className="text-[11px] text-muted-foreground shrink-0 pt-2 hidden sm:inline">
-              {myRoles.length} parts
-            </span>
-          )}
-        </div>
+    <div className="mx-auto w-full max-w-[46rem] mb-5 border border-border bg-card/50 backdrop-blur-sm px-3 sm:px-4 py-3">
+      {/* One row per character, every row on the same grid, so names, toggles and
+          voices sit on shared rails. The two-column version put "you're playing"
+          on the left and "reader" on the right, which spread six characters over
+          half a screen, truncated their names and left both edges ragged. */}
+      <div className="mb-1.5 flex items-baseline justify-between">
+        <span className="text-[11px] uppercase tracking-wider text-muted-foreground">Cast</span>
+        <span className="text-[11px] text-muted-foreground">
+          {myRoles.length} yours · {Math.max(0, allSceneCharacters.length - myRoles.length)} read aloud
+        </span>
+      </div>
 
-        {/* Reader voice(s) — for the character(s) you're not playing */}
-        <div className="flex items-start gap-2 lg:ml-auto min-w-0">
-          <span className="text-[11px] uppercase tracking-wider text-muted-foreground shrink-0 pt-1.5">Reader</span>
-          <div className="flex flex-wrap items-center gap-1.5 min-w-0">
-            {allSceneCharacters.filter((c) => !isMyRole(c)).map((charName) => {
-              const voiceId = charVoices[charName] ?? null;
-              const voiceData = AI_VOICES.find((v) => v.id === voiceId);
-              const dropKey = `setup-voice-${charName}`;
-              const isPreviewing = (isSpeakingAI || isLoadingAI) && previewingVoice === charName;
-              return (
-                <div key={charName} className="relative flex items-center gap-1" data-voice-dropdown>
-                  <span className="text-[11px] font-medium text-muted-foreground shrink-0">{charName}</span>
-                  <button
-                    type="button"
-                    onClick={() => setVoiceDropdownOpen(voiceDropdownOpen === dropKey ? null : dropKey)}
-                    className="flex items-center gap-1.5 rounded-full border border-border bg-background px-2.5 py-1 text-xs text-foreground hover:border-muted-foreground/50 transition-colors"
-                  >
-                    {voiceData ? (
-                      <>
-                        <div className={cn("w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold text-white shrink-0", voiceData.color)}>{voiceData.label[0]}</div>
-                        <span className="truncate max-w-[72px]">{voiceData.label}</span>
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">Pick voice</span>
-                    )}
-                    <ChevronDown className={cn("w-3 h-3 text-muted-foreground shrink-0 transition-transform", voiceDropdownOpen === dropKey && "rotate-180")} />
-                  </button>
-                  {voiceDropdownOpen === dropKey && (
-                    <div className="absolute z-30 top-full right-0 mt-1 w-56 rounded-md bg-popover border border-border shadow-lg py-1 max-h-[45vh] overflow-y-auto">
-                      {AI_VOICES.map((v) => (
-                        <button
-                          key={v.id}
-                          type="button"
-                          onClick={() => { handleVoiceChange(charName, v.id); setVoiceDropdownOpen(null); }}
-                          className={cn("w-full flex items-center gap-2 px-2.5 py-1.5 text-sm hover:bg-accent transition-colors text-left", voiceId === v.id && "bg-accent/60")}
-                        >
-                          <div className={cn("w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white shrink-0", v.color)}>{v.label[0]}</div>
-                          <div className="flex flex-col min-w-0">
-                            <span className="font-medium truncate">{v.label}</span>
-                            <span className="text-[11px] text-muted-foreground truncate">{v.desc}</span>
+      <div className="divide-y divide-border/50">
+        {allSceneCharacters.map((charName) => {
+          const isMe = isMyRole(charName);
+          const voiceId = charVoices[charName] ?? null;
+          const voiceData = AI_VOICES.find((v) => v.id === voiceId);
+          const dropKey = `setup-voice-${charName}`;
+          const isPreviewing = (isSpeakingAI || isLoadingAI) && previewingVoice === charName;
+          return (
+            <div
+              key={charName}
+              data-voice-dropdown
+              className="grid grid-cols-[minmax(0,1fr)_4rem] sm:grid-cols-[minmax(0,1fr)_4rem_8.5rem_1.75rem] items-center gap-x-2 gap-y-1 py-1.5"
+            >
+              <span
+                title={charName}
+                className={cn(
+                  "truncate text-sm",
+                  isMe ? "font-medium text-foreground" : "text-muted-foreground",
+                )}
+              >
+                {charName}
+              </span>
+
+              {/* Tap to take a part, tap again to give it back — an actor can read
+                  several. Dropping the last one would leave nothing to rehearse,
+                  so that tap is ignored. */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (isMe && myRoles.length === 1) return;
+                  toggleRole(charName);
+                }}
+                aria-pressed={isMe}
+                title={
+                  isMe
+                    ? myRoles.length === 1
+                      ? `You're reading ${charName}`
+                      : `Stop reading ${charName}`
+                    : `Also read ${charName}`
+                }
+                className={cn(
+                  "h-7 rounded-md px-2 text-xs font-medium transition-colors",
+                  isMe
+                    ? "bg-primary text-primary-foreground"
+                    : "border border-border text-muted-foreground hover:text-foreground",
+                )}
+              >
+                {isMe ? "You" : "Read"}
+              </button>
+
+              {/* Left empty for your own parts rather than collapsed, so every row
+                  keeps the same rails. */}
+              <div className="relative col-span-2 sm:col-span-1">
+                {!isMe && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setVoiceDropdownOpen(voiceDropdownOpen === dropKey ? null : dropKey)
+                      }
+                      className="flex h-7 w-full items-center gap-1.5 rounded-md border border-border bg-background px-2 text-xs text-foreground transition-colors hover:border-muted-foreground/50"
+                    >
+                      {voiceData ? (
+                        <>
+                          <div
+                            className={cn(
+                              "flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white",
+                              voiceData.color,
+                            )}
+                          >
+                            {voiceData.label[0]}
                           </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                  {/* Plays a sample. It is not a mute/enable switch — the speaker
-                      icon read as one, so this says what it does. */}
+                          <span className="truncate">{voiceData.label}</span>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">Pick voice</span>
+                      )}
+                      <ChevronDown
+                        className={cn(
+                          "ml-auto h-3 w-3 shrink-0 text-muted-foreground transition-transform",
+                          voiceDropdownOpen === dropKey && "rotate-180",
+                        )}
+                      />
+                    </button>
+                    {voiceDropdownOpen === dropKey && (
+                      <div className="absolute right-0 top-full z-30 mt-1 max-h-[45vh] w-56 overflow-y-auto rounded-md border border-border bg-popover py-1 shadow-lg">
+                        {AI_VOICES.map((v) => (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => {
+                              handleVoiceChange(charName, v.id);
+                              setVoiceDropdownOpen(null);
+                            }}
+                            className={cn(
+                              "flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm transition-colors hover:bg-accent",
+                              voiceId === v.id && "bg-accent/60",
+                            )}
+                          >
+                            <div
+                              className={cn(
+                                "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-bold text-white",
+                                v.color,
+                              )}
+                            >
+                              {v.label[0]}
+                            </div>
+                            <div className="flex min-w-0 flex-col">
+                              <span className="truncate font-medium">{v.label}</span>
+                              <span className="truncate text-[11px] text-muted-foreground">
+                                {v.desc}
+                              </span>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+
+              <div className="hidden justify-self-end sm:block">
+                {/* Plays a sample. It is not a mute/enable switch — the speaker
+                    icon read as one, so this says what it does. */}
+                {!isMe && (
                   <button
                     type="button"
                     onClick={() => previewVoice(charName)}
                     className={cn(
-                      "p-1 rounded-full border transition-colors",
-                      isPreviewing ? "bg-primary/20 border-primary/40 text-primary" : "border-border text-muted-foreground hover:text-foreground"
+                      "rounded-md border p-1.5 transition-colors",
+                      isPreviewing
+                        ? "border-primary/40 bg-primary/20 text-primary"
+                        : "border-border text-muted-foreground hover:text-foreground",
                     )}
                     title={isPreviewing ? `Stop ${charName}'s sample` : `Hear ${charName}'s voice`}
-                    aria-label={isPreviewing ? `Stop ${charName}'s sample` : `Hear ${charName}'s voice`}
+                    aria-label={
+                      isPreviewing ? `Stop ${charName}'s sample` : `Hear ${charName}'s voice`
+                    }
                   >
-                    {isPreviewing ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                    {isPreviewing ? <Square className="h-3 w-3" /> : <Play className="h-3 w-3" />}
                   </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {roleMergeSuggestions.map(([keep, drop]) => (
