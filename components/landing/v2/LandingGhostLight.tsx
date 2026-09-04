@@ -10,6 +10,7 @@ import { LandingFaq } from "@/components/landing/LandingFaq";
 import { LandingFooterAuthLink } from "@/components/landing/LandingFooterAuthLink";
 import { LandingHeaderActions } from "@/components/landing/LandingHeaderActions";
 import { LandingMobileNav } from "@/components/landing/LandingMobileNav";
+import { LandingPartners } from "@/components/landing/LandingPartners";
 import { LandingPricing } from "@/components/landing/LandingPricing";
 import { LandingSearchShowcase } from "@/components/landing/LandingSearchShowcase";
 import { LandingStickyCta } from "@/components/landing/LandingStickyCta";
@@ -25,6 +26,7 @@ import { ThreeActs } from "@/components/landing/v2/ThreeActs";
 import { TitleMarquee } from "@/components/landing/v2/TitleMarquee";
 import { AppLaunchBar } from "@/components/landing/AppLaunchBar";
 import { GhostLightModal } from "@/components/landing/GhostLightModal";
+import { APPROVED_PARTNERS } from "@/data/partners";
 
 /** Courier "stage direction" eyebrow above the light sections */
 function SceneMark({ children }: { children: string }) {
@@ -146,6 +148,11 @@ export function LandingGhostLight() {
           <LandingTestimonials />
         </RevealSection>
 
+        {/* Renders nothing until three partners have approved their logo. */}
+        <RevealSection as="div">
+          <LandingPartners />
+        </RevealSection>
+
         <RevealSection as="div">
           <SceneMark>(the ticket.)</SceneMark>
           <LandingPricing />
@@ -199,6 +206,9 @@ export function LandingGhostLight() {
             <Link href="/sources" className="hover:text-[var(--stage-muted)] transition-colors">Sources & copyright</Link>
             <Link href="/for-students" className="hover:text-[var(--stage-muted)] transition-colors">For students</Link>
             <Link href="/for-teachers" className="hover:text-[var(--stage-muted)] transition-colors">For teachers</Link>
+            {APPROVED_PARTNERS.length > 0 && (
+              <Link href="/partners" className="hover:text-[var(--stage-muted)] transition-colors">Partners</Link>
+            )}
           </div>
         </div>
       </footer>

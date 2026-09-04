@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ContactModal } from "./ContactModal";
+import { APPROVED_PARTNERS } from "@/data/partners";
 import { getLatestModalEntry, getLastSeenId } from "@/lib/changelog";
 import type { ChangelogEntry } from "@/lib/changelog";
 
@@ -90,6 +91,13 @@ export function MarketingFooter() {
               <Link href="/actors" className="hover:text-foreground transition-colors shrink-0">
                 Actors
               </Link>
+              {/* Hidden until an organization has approved a listing, so this never
+                  points at an empty page. */}
+              {APPROVED_PARTNERS.length > 0 && (
+                <Link href="/partners" className="hover:text-foreground transition-colors shrink-0">
+                  Partners
+                </Link>
+              )}
               <Link href="/for-students" className="hover:text-foreground transition-colors shrink-0">
                 Students & educators
               </Link>

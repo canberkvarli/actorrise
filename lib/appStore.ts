@@ -12,7 +12,11 @@
  * to learn that, say, the monologue pages install five times better than the
  * landing modal. Without it every placement is a guess forever.
  *
- * `mt=8` marks the link as software, which is what Apple's own campaign links use.
+ * NO `mt=8`. Apple's campaign-link docs still show it, but it is an iTunes-era
+ * parameter that adds nothing for an App Store app, and it went onto these links
+ * in the same change where taps stopped opening the store on a phone. `ct` is the
+ * part that carries value, so the legacy parameter goes rather than being left in
+ * as an untested variable on the one journey that has to work.
  */
 
 export const APP_STORE_URL =
@@ -27,5 +31,5 @@ export type AppStorePlacement =
   | "hero";
 
 export function appStoreUrl(placement: AppStorePlacement): string {
-  return `${APP_STORE_URL}?ct=${placement}&mt=8`;
+  return `${APP_STORE_URL}?ct=${placement}`;
 }

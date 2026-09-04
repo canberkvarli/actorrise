@@ -177,6 +177,25 @@ export function GhostLightModal() {
     };
   }, []);
 
+  /**
+   * Taking the offer. Shared by the button and the phone, and the deferred close
+   * is the whole point of it.
+   *
+   * Closing the dialog synchronously inside the click unmounts this anchor while
+   * the browser is still deciding what to do with it, and iOS Safari responds by
+   * cancelling the navigation outright. Tapping "Get it free" did nothing at all
+   * on a phone. `AppLaunchBar`'s identical link always worked precisely because
+   * nothing removes it mid-tap.
+   *
+   * `remember()` and the event still run immediately, so the offer is recorded
+   * even if the person never comes back to this tab.
+   */
+  const accept = useCallback(() => {
+    remember();
+    track("ghostlight_modal_accepted");
+    setTimeout(() => setOpen(false), 250);
+  }, [remember]);
+
   // Closing by any route — the X, Escape, the overlay — counts as an answer.
   const onOpenChange = (next: boolean) => {
     setOpen(next);
@@ -241,11 +260,7 @@ export function GhostLightModal() {
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Get Ghost Light on the App Store"
-            onClick={() => {
-              remember();
-              track("ghostlight_modal_accepted");
-              setOpen(false);
-            }}
+            onClick={accept}
             className="absolute left-1/2 top-[62px] w-[176px] -translate-x-1/2 rotate-[-3deg] transition-transform duration-200 hover:scale-[1.02]"
           >
             {/* Tall enough to read as a phone. At 120px of surviving height this
@@ -311,13 +326,7 @@ export function GhostLightModal() {
               href={appStoreUrl("landing_modal")}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => {
-                // Remembered on the way out too. Someone who took the offer must
-                // never be asked again on their next visit.
-                remember();
-                track("ghostlight_modal_accepted");
-                setOpen(false);
-              }}
+              onClick={accept}
               className="mt-5 inline-flex w-full items-center justify-center gap-2.5 rounded-full bg-primary-solid px-5 py-3 text-[14px] font-semibold text-primary-solid-foreground shadow-[0_10px_30px_-8px_color-mix(in_oklab,var(--stage-glow)_60%,transparent)] transition-transform duration-200 hover:scale-[1.02] active:scale-[0.98]"
             >
               <svg aria-hidden viewBox="0 0 384 512" className="h-4 w-4" fill="currentColor">
