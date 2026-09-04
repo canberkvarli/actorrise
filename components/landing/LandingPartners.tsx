@@ -78,7 +78,7 @@ export function LandingPartners() {
               Where you&rsquo;ll find us
             </motion.p>
             <Link
-              href="/partners"
+              href="/thanks"
               className="text-sm text-primary hover:underline font-medium shrink-0"
             >
               See all &rarr;

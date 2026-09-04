@@ -94,8 +94,8 @@ export function MarketingFooter() {
               {/* Hidden until an organization has approved a listing, so this never
                   points at an empty page. */}
               {APPROVED_PARTNERS.length > 0 && (
-                <Link href="/partners" className="hover:text-foreground transition-colors shrink-0">
-                  Partners
+                <Link href="/thanks" className="hover:text-foreground transition-colors shrink-0">
+                  With thanks
                 </Link>
               )}
               <Link href="/for-students" className="hover:text-foreground transition-colors shrink-0">

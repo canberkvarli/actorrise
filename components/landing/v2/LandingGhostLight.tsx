@@ -207,7 +207,7 @@ export function LandingGhostLight() {
             <Link href="/for-students" className="hover:text-[var(--stage-muted)] transition-colors">For students</Link>
             <Link href="/for-teachers" className="hover:text-[var(--stage-muted)] transition-colors">For teachers</Link>
             {APPROVED_PARTNERS.length > 0 && (
-              <Link href="/partners" className="hover:text-[var(--stage-muted)] transition-colors">Partners</Link>
+              <Link href="/thanks" className="hover:text-[var(--stage-muted)] transition-colors">With thanks</Link>
             )}
           </div>
         </div>

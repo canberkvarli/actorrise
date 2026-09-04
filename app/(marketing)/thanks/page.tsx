@@ -11,23 +11,23 @@ import {
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
 export const metadata: Metadata = {
-  title: "Partners",
+  title: "With thanks",
   description:
     "The theatre chapters, companies, studios, schools and newsletters that list ActorRise for their actors.",
   openGraph: {
-    title: "Partners | ActorRise",
+    title: "With thanks | ActorRise",
     description:
       "The theatre chapters, companies, studios, schools and newsletters that list ActorRise for their actors.",
-    url: `${siteUrl}/partners`,
+    url: `${siteUrl}/thanks`,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Partners | ActorRise",
+    title: "With thanks | ActorRise",
     description:
       "The theatre chapters, companies, studios, schools and newsletters that list ActorRise for their actors.",
     images: ["/opengraph-image"],
   },
-  alternates: { canonical: `${siteUrl}/partners` },
+  alternates: { canonical: `${siteUrl}/thanks` },
 };
 
 /** Known categories in their listed order, then anything unrecognised, alphabetically. */
@@ -92,7 +92,7 @@ function PartnerCard({ partner }: { partner: PartnerItem }) {
   );
 }
 
-export default function PartnersPage() {
+export default function ThanksPage() {
   const partners = APPROVED_PARTNERS;
   const categories = orderedCategories(partners);
 
