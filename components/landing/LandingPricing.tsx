@@ -9,6 +9,7 @@
 
 import { usePricingTiers, DEFAULT_PRICING_TIERS, type PricingTier } from "@/hooks/usePricingTiers";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
@@ -186,7 +187,20 @@ export function LandingPricing() {
           </p>
         </div>
 
-        <div className="mt-12 sm:mt-16 grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5 items-start lg:items-stretch">
+        {/* Columns follow however many plans there are. This was a hard
+            lg:grid-cols-4, and retiring Solo left three cards in a four-column
+            track: an empty slot on the right pushed the row off-centre under a
+            heading that is centred, which reads as a layout bug rather than as
+            one fewer plan. Three cards also centre on their own measure, so they
+            do not stretch to fill a width meant for four. */}
+        <div
+          className={cn(
+            "mt-12 sm:mt-16 grid gap-4 sm:gap-5 items-start lg:items-stretch",
+            tiers.length === 3
+              ? "grid-cols-1 sm:grid-cols-3 max-w-4xl mx-auto"
+              : "grid-cols-2 lg:grid-cols-4",
+          )}
+        >
           {tiers.map((tier, i) => (
             <PricingCard
               key={tier.id}

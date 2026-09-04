@@ -237,10 +237,19 @@ async def create_checkout_session(
         404: If pricing tier not found
         400: If invalid billing period
     """
-    # Validate tier exists
+    # Validate tier exists and is still sold.
+    #
+    # is_active was only ever a display flag: the pricing page stopped listing a
+    # retired tier, and checkout kept accepting its id. Solo was retired on
+    # 2026-09-04 with its Stripe prices still live, so a request naming that id
+    # would have opened a real subscription to a plan we no longer offer, and
+    # Stripe would have taken the money. Retiring a tier has to close the door,
+    # not just take down the sign.
     tier = db.query(PricingTier).get(request.tier_id)
     if not tier:
         raise HTTPException(status_code=404, detail="Pricing tier not found")
+    if not tier.is_active:
+        raise HTTPException(status_code=400, detail="That plan is no longer available")
 
     # Validate billing period
     if request.billing_period not in ["monthly", "annual"]:

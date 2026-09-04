@@ -154,8 +154,13 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
   // Unknown tier reads as free: offering a picker that promises more than the
   // server will build is worse than offering less and being right.
+  /* `null` in this table means unlimited, and `??` treats it as absent — so
+     `SCENE_ALLOWANCE["plus"] ?? SCENE_ALLOWANCE.free` collapsed Plus and Pro to
+     one scene and showed paying subscribers the upgrade line. Look the key up,
+     do not coalesce on its value. */
+  const tierName = subscription?.tier_name ?? "free";
   const sceneLimit =
-    SCENE_ALLOWANCE[subscription?.tier_name ?? "free"] ?? SCENE_ALLOWANCE.free;
+    tierName in SCENE_ALLOWANCE ? SCENE_ALLOWANCE[tierName] : SCENE_ALLOWANCE.free;
 
   // Can the user upload another script? Unknown (still loading) defaults to true
   // so we never block on a slow request — the backend gate is the backstop.
