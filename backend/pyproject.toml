@@ -27,7 +27,13 @@ dependencies = [
     "lxml>=4.9.0",
     "beautifulsoup4>=4.12.0",
     "pdfplumber>=0.10.0",
-    "spacy>=3.7.0",
+    # spacy removed 2026-09-04: declared but never imported anywhere in app/ or
+    # scripts/, and it costs 32.8 MB of a 512 MB Render instance at import time.
+    # langdetect is imported by the quality scripts but was never declared, so it
+    # lived in one laptop's venv and nowhere else. _detect_foreign catches the
+    # ImportError and returns None, so a clean checkout silently passed every
+    # foreign monologue as English instead of failing loudly. Declared 2026-09-04.
+    "langdetect>=1.0.9",
     # Data Fetching
     "requests>=2.31.0",
     "aiohttp>=3.9.0",

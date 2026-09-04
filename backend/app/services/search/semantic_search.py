@@ -1349,13 +1349,19 @@ class SemanticSearch:
                     f" AND m.id NOT IN ({','.join(str(int(i)) for i in exclude)})"
                     if exclude else ""
                 )
+                # The query vector is BOUND, never interpolated. Inlining it made
+                # every search a unique 65 KB SQL string, and SQLAlchemy keys its
+                # compiled-statement cache on that string: ~134 KB retained per
+                # distinct search, ~98 MB steady-state, released only on deploy.
+                # That is a fifth of a 512 MB Render instance spent on cache keys.
+                # Bound, all searches share one cache entry.
                 q = text(
-                    f"SELECT m.id, m.embedding_vector <=> '{vec_str}'::vector AS dist "
-                    f"FROM monologues m JOIN plays p ON p.id = m.play_id "
+                    "SELECT m.id, m.embedding_vector <=> CAST(:qvec AS vector) AS dist "
+                    "FROM monologues m JOIN plays p ON p.id = m.play_id "
                     f"WHERE {build_where(hf)}{excl} "
-                    f"ORDER BY m.embedding_vector <=> '{vec_str}'::vector LIMIT :limit"
+                    "ORDER BY m.embedding_vector <=> CAST(:qvec AS vector) LIMIT :limit"
                 )
-                rows = self.db.execute(q, {"limit": n}).fetchall()
+                rows = self.db.execute(q, {"qvec": vec_str, "limit": n}).fetchall()
                 for row in rows:
                     if row[1] is not None:
                         dist_by_id[row[0]] = float(row[1])
