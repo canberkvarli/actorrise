@@ -895,6 +895,8 @@ export function ActorProfileForm() {
               completion={completionPercentage}
               saveStatus={saveStatus}
               onJump={jumpToField}
+              accountType={user?.account_type}
+              organization={organization}
             />
           </div>
         </div>

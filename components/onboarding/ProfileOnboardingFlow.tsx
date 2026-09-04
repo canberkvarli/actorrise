@@ -129,10 +129,14 @@ export default function ProfileOnboardingFlow({
   const router = useRouter();
 
   const questions = useMemo(
+    // Backfill gets the account-type question too, unlike referral. How you
+    // found me decays from memory; whether you teach does not, and the 800
+    // accounts that predate this question are exactly where the educators are
+    // hiding.
     () =>
       variant === "new"
         ? [REFERRAL_QUESTION, ACCOUNT_TYPE_QUESTION, ...PROFILE_QUESTIONS]
-        : [...PROFILE_QUESTIONS],
+        : [ACCOUNT_TYPE_QUESTION, ...PROFILE_QUESTIONS],
     [variant]
   );
   const totalSteps = questions.length;
@@ -364,17 +368,39 @@ export default function ProfileOnboardingFlow({
                     ACCOUNT_TYPES.map((a) => (
                       <Tile key={a.id} label={a.label} selected={accountType === a.id} onClick={() => chooseAccountType(a.id)} />
                     ))}
+                  {/* The offer, at the only moment someone volunteers that they
+                      teach. A rule in the brand orange rather than a boxed
+                      callout: this is an aside in their own flow, not an ad
+                      interrupting it. */}
                   {questions[step].key === "accountType" && (accountType === "educator" || accountType === "student") && (
-                    <input
-                      type="text"
-                      value={organization}
-                      onChange={(e) => setOrganization(e.target.value)}
-                      onBlur={saveOrganization}
-                      maxLength={280}
-                      autoFocus
-                      placeholder="School or studio (optional)"
-                      className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary"
-                    />
+                    <div className="space-y-3 border-l-2 border-primary bg-primary/5 py-3 pl-4 pr-3">
+                      <p className="text-sm leading-relaxed text-foreground">
+                        {accountType === "educator" ? (
+                          <>
+                            Then it&apos;s on me. Plus is free for you and for your students.
+                            Email me at{" "}
+                            <span className="font-medium text-primary">canberk@actorrise.com</span>{" "}
+                            with their addresses and I&apos;ll set the whole class up at once.
+                          </>
+                        ) : (
+                          <>
+                            Plus is free for students. Get your teacher to email me at{" "}
+                            <span className="font-medium text-primary">canberk@actorrise.com</span>{" "}
+                            and I&apos;ll do your whole class together.
+                          </>
+                        )}
+                      </p>
+                      <input
+                        type="text"
+                        value={organization}
+                        onChange={(e) => setOrganization(e.target.value)}
+                        onBlur={saveOrganization}
+                        maxLength={280}
+                        autoFocus
+                        placeholder={accountType === "educator" ? "School or studio (optional)" : "Your school (optional)"}
+                        className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary"
+                      />
+                    </div>
                   )}
                   {questions[step].key === "casting" &&
                     CASTING.map((c) => (

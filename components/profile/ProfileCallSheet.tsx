@@ -37,6 +37,17 @@ type Props = {
   completion: number;
   saveStatus: "saving" | "saved" | null;
   onJump: (tab: string, fieldId: string) => void;
+  /** 'educator' | 'student' | 'actor' | null. Null for most accounts. */
+  accountType?: string | null;
+  /** School, studio or company. Shown beside the mark when present. */
+  organization?: string | null;
+};
+
+/** Stored value -> the word on the mark. Actors get nothing: on a page built
+ *  for actors, "ACTOR" is a label on the room you are standing in. */
+const CREDIT_MARK: Record<string, string> = {
+  educator: "Teaching",
+  student: "Studying",
 };
 
 function Blank({
@@ -95,9 +106,12 @@ export function ProfileCallSheet({
   completion,
   saveStatus,
   onJump,
+  accountType,
+  organization,
 }: Props) {
   const reduce = useReducedMotion();
   const pct = Math.round(completion);
+  const mark = accountType ? CREDIT_MARK[accountType] : null;
 
   return (
     <div id="profile-progress" className="border-b border-border/70 pb-6">
@@ -105,8 +119,10 @@ export function ProfileCallSheet({
         <div className="min-w-0">
           {/* Not .stage-direction — that class force-lowercases, and this line
               carries the actor's own name. */}
+          {/* "the line casting reads" is an actor's frame. A drama teacher is
+              not waiting on a casting office, so she gets her own. */}
           <p className="mb-2 text-xs italic tracking-[0.08em] text-muted-foreground/70">
-            (the line casting reads.)
+            {accountType === "educator" ? "(who you are, and where you teach.)" : "(the line casting reads.)"}
           </p>
 
           {/* The actor's name IS the page title. There was a separate "Your
@@ -125,6 +141,20 @@ export function ProfileCallSheet({
                 your name
               </button>
             </h1>
+          )}
+
+          {/* Sharp corners, because it is a mark and not a button. Sits under
+              the name at the weight of a programme credit: present if you look,
+              never competing with the name above it. */}
+          {mark && (
+            <p className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+              <span className="border border-primary/40 bg-primary/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.18em] text-primary">
+                {mark}
+              </span>
+              {organization?.trim() && (
+                <span className="text-sm text-muted-foreground">{organization}</span>
+              )}
+            </p>
           )}
 
           <Line
