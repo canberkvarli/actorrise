@@ -31,6 +31,7 @@ import re
 from typing import Optional
 
 from sqlalchemy import func
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from app.models.actor import Monologue
@@ -160,22 +161,34 @@ def record_rejection(
     fp = text_fingerprint(text)
     if fp == text_fingerprint(""):
         return
-    existing = (
-        db.query(RejectedExtraction)
-        .filter(RejectedExtraction.fingerprint == fp)
-        .first()
-    )
-    if existing is not None:
-        existing.times_seen = (existing.times_seen or 1) + 1
-        existing.last_seen_at = func.now()
-        return
-    db.add(
-        RejectedExtraction(
+
+    # One statement, so the check and the write cannot come apart.
+    #
+    # This was a SELECT followed by db.add, and both halves of that failed. The
+    # ingest sessions run with autoflush=False, so a pending add earlier in the
+    # SAME transaction is invisible to the query -- a speech rejected twice in
+    # one book queued two inserts and the commit died on the primary key. Four
+    # parallel sweep workers raced the same way across books. Either one takes
+    # the whole worker down mid-run, which is how shard 0 stopped after 43
+    # books with an IntegrityError on `rejected_extractions_pkey`.
+    table = RejectedExtraction.__table__
+    db.execute(
+        pg_insert(table)
+        .values(
             fingerprint=fp,
             reason=reason,
             word_count=word_count if word_count is not None else len(text.split()),
             character_name=(character_name or None),
             play_title=(play_title or None),
             source_url=(source_url or None),
+        )
+        .on_conflict_do_update(
+            index_elements=["fingerprint"],
+            # Keep the ORIGINAL reason and provenance: the first sighting is the
+            # one that explains why this text is on the skip list.
+            set_={
+                "times_seen": func.coalesce(table.c.times_seen, 1) + 1,
+                "last_seen_at": func.now(),
+            },
         )
     )
