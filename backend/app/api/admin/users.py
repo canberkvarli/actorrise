@@ -12,7 +12,7 @@ from sqlalchemy import desc, func, or_
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
-from app.core.account_types import normalize_account_type
+from app.core.account_types import account_type_filter, normalize_account_type
 from app.core.database import get_db
 from app.models.actor import (
     ActorProfile,
@@ -81,6 +81,8 @@ class AdminUserListItem(BaseModel):
     subscription_status: str
     billing_period: str
     profile_exists: bool
+    account_type: str | None
+    organization: str | None
 
 
 class AdminUsersListResponse(BaseModel):
@@ -269,6 +271,11 @@ def list_admin_users(
     is_moderator: bool | None = Query(None),
     subscription_status: str | None = Query(None),
     tier_name: str | None = Query(None),
+    account_type: str | None = Query(
+        None,
+        pattern="^(actor|educator|student|unknown)$",
+        description="'unknown' selects the untagged (NULL) bulk",
+    ),
     created_from: date | None = Query(None),
     created_to: date | None = Query(None),
     sort_by: str = Query("created_at", pattern="^(created_at|email|name|tier_name|subscription_status)$"),
@@ -294,6 +301,8 @@ def list_admin_users(
         query = query.filter(UserSubscription.status == subscription_status)
     if tier_name:
         query = query.filter(PricingTier.name == tier_name.lower())
+    if account_type:
+        query = query.filter(account_type_filter(User.account_type, account_type))
     # Raw datetime range comparisons so any index on User.created_at is
     # usable by the planner (cast(..., Date) forced a sequential scan).
     if created_from:
@@ -336,6 +345,8 @@ def list_admin_users(
                 subscription_status=subscription.status if subscription else "active",
                 billing_period=subscription.billing_period if subscription else "monthly",
                 profile_exists=profile is not None,
+                account_type=user.account_type,
+                organization=user.organization,
             )
         )
 

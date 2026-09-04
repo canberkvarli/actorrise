@@ -12,6 +12,9 @@ export interface AdminUserListItem {
   subscription_status: string;
   billing_period: string;
   profile_exists: boolean;
+  /** 'actor' | 'educator' | 'student'. Null = untagged, most accounts. */
+  account_type: string | null;
+  organization: string | null;
 }
 
 export interface AdminUsersListResponse {

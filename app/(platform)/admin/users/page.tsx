@@ -14,6 +14,13 @@ import { Badge } from "@/components/ui/badge";
 
 const PAGE_SIZE = 25;
 
+/** Stored value -> column label. */
+const ACCOUNT_TYPE_LABELS: Record<string, string> = {
+  actor: "Actor",
+  educator: "Educator",
+  student: "Student",
+};
+
 function getTierBadgeClass(tierName: string): string {
   const name = tierName.toLowerCase();
   if (name === "free") return "bg-slate-100 text-slate-700 border-slate-300 rounded-none";
@@ -26,6 +33,7 @@ export default function AdminUsersPage() {
   const [q, setQ] = useState("");
   const [roleFilter, setRoleFilter] = useState<"all" | "moderator" | "member">("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [accountTypeFilter, setAccountTypeFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState("created_at");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [offset, setOffset] = useState(0);
@@ -36,12 +44,14 @@ export default function AdminUsersPage() {
     if (roleFilter === "moderator") params.set("is_moderator", "true");
     if (roleFilter === "member") params.set("is_moderator", "false");
     if (statusFilter !== "all") params.set("subscription_status", statusFilter);
+    // "unknown" is a real token, not a missing filter: it selects the untagged bulk.
+    if (accountTypeFilter !== "all") params.set("account_type", accountTypeFilter);
     params.set("sort_by", sortBy);
     params.set("sort_order", sortOrder);
     params.set("limit", String(PAGE_SIZE));
     params.set("offset", String(offset));
     return params.toString();
-  }, [offset, q, roleFilter, sortBy, sortOrder, statusFilter]);
+  }, [accountTypeFilter, offset, q, roleFilter, sortBy, sortOrder, statusFilter]);
 
   const { data, isLoading, isError, error, refetch, isFetching } = useQuery({
     queryKey: ["admin-users-list", queryParams],
@@ -116,6 +126,20 @@ export default function AdminUsersPage() {
               <option value="unpaid">unpaid</option>
               <option value="incomplete">incomplete</option>
             </select>
+            <select
+              value={accountTypeFilter}
+              onChange={(e) => {
+                setOffset(0);
+                setAccountTypeFilter(e.target.value);
+              }}
+              className="rounded-md border border-input bg-background px-3 py-2 text-sm w-full sm:w-auto"
+            >
+              <option value="all">All account types</option>
+              <option value="actor">Actors</option>
+              <option value="educator">Educators</option>
+              <option value="student">Students</option>
+              <option value="unknown">Untagged</option>
+            </select>
             <div className="flex gap-2 w-full sm:w-auto">
               <select
                 value={sortBy}
@@ -171,6 +195,12 @@ export default function AdminUsersPage() {
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-1">
+                      {item.account_type && (
+                        <Badge variant="outline" className="rounded-none">
+                          {ACCOUNT_TYPE_LABELS[item.account_type] ?? item.account_type}
+                          {item.organization ? ` · ${item.organization}` : ""}
+                        </Badge>
+                      )}
                       <Badge variant="outline" className={getTierBadgeClass(item.tier_name)}>
                         {item.tier_display_name}
                       </Badge>
@@ -201,6 +231,7 @@ export default function AdminUsersPage() {
                   <thead>
                     <tr className="border-b border-border">
                       <th className="py-2 text-left font-medium">User</th>
+                      <th className="py-2 text-left font-medium">Type</th>
                       <th className="py-2 text-left font-medium">Tier</th>
                       <th className="py-2 text-left font-medium">Subscription</th>
                       <th className="py-2 text-left font-medium">Roles</th>
@@ -214,6 +245,20 @@ export default function AdminUsersPage() {
                         <td className="py-2">
                           <p className="font-medium">{item.name || item.profile_name || "Unnamed user"}</p>
                           <p className="text-xs text-muted-foreground">{item.email}</p>
+                        </td>
+                        <td className="py-2">
+                          {/* Untagged is the overwhelming majority and looks
+                              like a gap, not a value, so it stays a dash. */}
+                          {item.account_type ? (
+                            <>
+                              <p>{ACCOUNT_TYPE_LABELS[item.account_type] ?? item.account_type}</p>
+                              {item.organization && (
+                                <p className="text-xs text-muted-foreground">{item.organization}</p>
+                              )}
+                            </>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
                         </td>
                         <td className="py-2">
                           <Badge variant="outline" className={getTierBadgeClass(item.tier_name)}>

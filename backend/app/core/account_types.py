@@ -13,6 +13,11 @@ count of real actors becomes a count of everyone who never answered.
 
 ACCOUNT_TYPES: tuple[str, ...] = ("actor", "educator", "student")
 
+# What the /admin/users list filter accepts. "unknown" is not a stored value —
+# it is the NULL bulk, and it has to be selectable or there is no way to see who
+# still needs tagging.
+ACCOUNT_TYPE_FILTERS: tuple[str, ...] = ACCOUNT_TYPES + ("unknown",)
+
 
 def normalize_account_type(value: str | None) -> str | None:
     """Trim, lowercase and validate an account_type.
@@ -32,3 +37,15 @@ def normalize_account_type(value: str | None) -> str | None:
             f"account_type must be one of {', '.join(ACCOUNT_TYPES)} (got {value!r})"
         )
     return cleaned
+
+
+def account_type_filter(column, value: str):
+    """WHERE clause for one ACCOUNT_TYPE_FILTERS token.
+
+    "unknown" must become IS NULL. `column == "unknown"` compiles perfectly well
+    and then matches zero rows forever, which reads as "I have no untagged
+    users" rather than as a bug.
+    """
+    if value == "unknown":
+        return column.is_(None)
+    return column == value

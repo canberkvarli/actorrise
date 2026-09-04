@@ -15,7 +15,12 @@ from pydantic import ValidationError
 
 from app.api.admin.users import AdminProfilePatchRequest
 from app.api.auth import UpdateOnboardingRequest, update_onboarding
-from app.core.account_types import ACCOUNT_TYPES, normalize_account_type
+from app.core.account_types import (
+    ACCOUNT_TYPE_FILTERS,
+    ACCOUNT_TYPES,
+    account_type_filter,
+    normalize_account_type,
+)
 from app.models.user import User
 
 
@@ -82,6 +87,35 @@ class OnboardingAccountTypeTests(unittest.TestCase):
         )
         self.assertEqual(len(self._patch(organization="x" * 400).organization), 280)
         self.assertIsNone(self._patch(organization="   ").organization)
+
+
+class AccountTypeFilterTests(unittest.TestCase):
+    """The /admin/users list filter."""
+
+    def _sql(self, value):
+        return str(
+            account_type_filter(User.account_type, value).compile(
+                compile_kwargs={"literal_binds": True}
+            )
+        )
+
+    def test_unknown_means_is_null_not_the_string_unknown(self):
+        # The trap: `== "unknown"` compiles fine and matches zero rows forever,
+        # so the filter looks like "I have no legacy users" instead of erroring.
+        sql = self._sql("unknown")
+        self.assertIn("IS NULL", sql)
+        self.assertNotIn("unknown", sql)
+
+    def test_a_real_type_compares_by_equality(self):
+        sql = self._sql("educator")
+        self.assertIn("= 'educator'", sql)
+
+    def test_every_filter_token_is_accepted(self):
+        for value in ACCOUNT_TYPE_FILTERS:
+            self.assertIsNotNone(account_type_filter(User.account_type, value))
+
+    def test_filter_tokens_are_the_three_types_plus_unknown(self):
+        self.assertEqual(set(ACCOUNT_TYPE_FILTERS), {"actor", "educator", "student", "unknown"})
 
 
 class AdminAccountTypeValidationTests(unittest.TestCase):
