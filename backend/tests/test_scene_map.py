@@ -98,6 +98,56 @@ class TestSpans:
         assert spans[0].scene_label == "INT. COURTHOUSE - DAY"
 
 
+class TestContentsPage:
+    """A printed table of contents is not nineteen scenes.
+
+    Real Hamlet, 144 pages: the first nineteen rows of the map were the book's
+    own contents page. `ACT 1 SCENE 1` printed on page 2 matches the same regex
+    as the real heading on page 8, so the map opened with a run of empty scenes
+    carrying no cast and no dialogue, and repeated Acts 1 to 5 before the play
+    had started.
+    """
+
+    CONTENTS = """THE TRAGEDY OF HAMLET
+
+Contents
+
+ACT 1
+SCENE 1
+SCENE 2
+SCENE 3
+
+ACT 2
+SCENE 1
+
+ACT 1
+
+SCENE 1. Elsinore. A platform before the castle.
+
+BARNARDO
+Who's there?
+
+FRANCISCO
+Nay, answer me: stand, and unfold yourself.
+"""
+
+    def test_the_contents_page_does_not_become_scenes(self):
+        spans = detect_scene_spans(self.CONTENTS)
+        # Only the real scene survives: the listed ones have no dialogue in them.
+        assert len(spans) == 1
+        assert set(spans[0].characters) == {"BARNARDO", "FRANCISCO"}
+
+    def test_a_scene_with_a_cast_is_never_dropped(self):
+        spans = detect_scene_spans(HAMLET_ISH)
+        assert len(spans) == 3
+
+    def test_a_file_that_is_all_front_matter_still_returns_something(self):
+        # Dropping every span would leave nothing to pick and look like a failed
+        # parse. One unpickable row beats an empty screen.
+        spans = detect_scene_spans("Contents\n\nACT 1\nSCENE 1\nSCENE 2\n")
+        assert len(spans) >= 1
+
+
 class TestUnderSegmentation:
     """Deciding when regex probably missed something and AI should look."""
 
@@ -274,6 +324,41 @@ class TestAIEnrichment:
         out = enrich_with_ai(spans, client)
         assert out[0].title == "The guard on the platform"
         assert len(out) == len(spans) + 1
+
+    @pytest.mark.parametrize(
+        "filler",
+        [
+            "Beginning of Act 1",
+            "Continuation of Act 3",
+            "Front Matter and Introduction",
+            "Act 2",
+            "Scene 4",
+            "Start of the play",
+            "Contents",
+        ],
+    )
+    def test_titles_that_only_restate_the_position_are_rejected(self, filler):
+        # Real Hamlet came back with "Continuation of Act 1" on four rows in a
+        # row. The act and scene are already on the row; a title that repeats
+        # them costs a line of space and tells you nothing about the scene.
+        import json
+
+        from app.services.scene_map import enrich_with_ai
+
+        spans = detect_scene_spans(HAMLET_ISH)
+        client = _StubClient(json.dumps({"scenes": [{"index": 0, "title": filler}]}))
+        assert enrich_with_ai(spans, client)[0].title is None
+
+    def test_a_real_title_survives(self):
+        import json
+
+        from app.services.scene_map import enrich_with_ai
+
+        spans = detect_scene_spans(HAMLET_ISH)
+        client = _StubClient(
+            json.dumps({"scenes": [{"index": 0, "title": "The guard on the platform"}]})
+        )
+        assert enrich_with_ai(spans, client)[0].title == "The guard on the platform"
 
     @pytest.mark.parametrize(
         "payload",

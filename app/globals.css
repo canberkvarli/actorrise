@@ -280,6 +280,57 @@
     cursor: pointer;
   }
 
+  /* A scrollbar drawn on paper.
+     `scrollbar-thin` was being used in a few places without ever being defined,
+     so those panes shipped the browser's own bar: a grey slab that belongs to no
+     theme and looks wrong on a light script page in a dark app. Tinted from the
+     paper tokens, so it moves with the theme like everything else on the sheet. */
+  .scrollbar-paper {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--paper-ink) 22%, transparent) transparent;
+  }
+  .scrollbar-paper::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .scrollbar-paper::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-paper::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklch, var(--paper-ink) 18%, transparent);
+    border-radius: 999px;
+    /* Inset the thumb so it reads as a mark on the page, not a rail bolted to
+       the edge of it. */
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  .scrollbar-paper:hover::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklch, var(--paper-ink) 32%, transparent);
+  }
+
+  /* The same bar on app chrome rather than paper. Two components already asked
+     for `scrollbar-thin` and got nothing, since it was never defined. */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--foreground) 22%, transparent) transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklch, var(--foreground) 18%, transparent);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklch, var(--foreground) 30%, transparent);
+  }
+
   /* Typewriter font for monologue content */
   .font-typewriter {
     font-family: var(--font-typewriter);

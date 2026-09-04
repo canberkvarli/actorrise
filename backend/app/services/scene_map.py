@@ -164,12 +164,53 @@ def _absorb_bare_act_headers(spans: List[SceneSpan]) -> List[SceneSpan]:
 
 
 def _finalize(spans: List[SceneSpan]) -> List[SceneSpan]:
-    """Attach cast and line counts once the boundaries have settled."""
+    """Attach cast and line counts, then drop what is not a scene.
+
+    A printed table of contents lists `ACT 1` and `SCENE 1` in exactly the form
+    the regex is looking for, so a book that has one produces a run of scenes
+    before the play has started. Real Hamlet opened the picker with nineteen of
+    them: no cast, no dialogue, all on page 2, Acts 1 to 5 listed twice.
+
+    Nobody speaks in a contents page, and that is the test. Cast is derived from
+    the text rather than the headings, so it does not care how the file is laid
+    out. A span nobody speaks in cannot be rehearsed, which makes it not a scene
+    however convincingly it is labelled.
+    """
     out = []
     for span in spans:
         names, lines = _speakers(span.text)
         out.append(replace(span, characters=names, line_count=lines))
-    return out
+
+    # Both signals, because each has a false positive on its own. A title page
+    # is a run of capitals, so the parser reads "THE TRAGEDY OF HAMLET" as a
+    # character cue and the span looks cast. Requiring somebody to actually say
+    # something is what separates a scene from a page that merely looks like one.
+    spoken = [s for s in out if s.characters and s.line_count > 0]
+    # Everything dropped means we misread the file, not that it has no scenes.
+    # An unpickable row beats an empty screen that looks like a failed parse.
+    return spoken or out
+
+
+def _drop_front_matter(spans: List[SceneSpan], had_preamble: bool) -> List[SceneSpan]:
+    """Remove the title page, if that is what the first span is.
+
+    The contents listing dies in `_finalize` because nobody speaks in it. A
+    title page is different: it is a run of capitals, so the parser reads
+    "THE TRAGEDY OF HAMLET" as a character cue and "Contents" as their line, and
+    the span arrives looking cast and spoken.
+
+    Only the preamble is judged this way — the text before the first heading,
+    which is the only place a title page can be. A real scene with one speaker
+    is a soliloquy and stays.
+    """
+    if not had_preamble or len(spans) < 2:
+        return spans
+    first = spans[0]
+    if first.act_label or first.scene_label:
+        return spans
+    if len(first.characters) >= 2:
+        return spans
+    return spans[1:]
 
 
 def detect_scene_spans(text: str) -> List[SceneSpan]:
@@ -198,7 +239,8 @@ def detect_scene_spans(text: str) -> List[SceneSpan]:
 
     # Anything before the first header — a title page, a dramatis personae.
     first_offset = line_starts[bounds[0][0]]
-    if first_offset > 0 and text[:first_offset].strip():
+    had_preamble = first_offset > 0 and bool(text[:first_offset].strip())
+    if had_preamble:
         spans.append(
             SceneSpan(
                 act_label=None,
@@ -227,7 +269,9 @@ def detect_scene_spans(text: str) -> List[SceneSpan]:
             )
         )
 
-    return _finalize(_absorb_bare_act_headers(spans))
+    return _drop_front_matter(
+        _finalize(_absorb_bare_act_headers(spans)), had_preamble
+    )
 
 
 def looks_under_segmented(spans: Iterable[SceneSpan]) -> bool:
@@ -459,8 +503,12 @@ For each sample, answer two things:
 offset in the ORIGINAL text where the new scene begins. Offsets must be inside \
 the sample you were shown. Only report a break you are confident about.
 2. A short title an actor would recognise, six words or fewer, naming what \
-happens ("The guard on the platform", "Ophelia returns the letters"). No \
-invented plot.
+happens IN the scene: who is there and what they do ("The guard on the \
+platform", "Ophelia returns the letters"). Name it from the dialogue you can \
+see. If you cannot tell what happens, return null for the title. Never describe \
+the scene's position in the play — "Beginning of Act 1", "Continuation of Act \
+2", "Front matter" and anything like them are worse than no title, because the \
+label is already on the row. No invented plot.
 
 Return JSON only:
 {{"scenes": [{{"index": 0, "title": "...", "breaks": [{{"char_start": 1234, \
@@ -468,6 +516,30 @@ Return JSON only:
 
 Samples:
 {samples}"""
+
+
+# Titles that only restate where the scene sits. The act and scene are already
+# printed on the row, so these cost a line and say nothing. Real Hamlet came back
+# with "Continuation of Act 1" four rows running.
+_FILLER_TITLE = re.compile(
+    r"^\s*(beginning|continuation|start|end|opening|closing|conclusion|"
+    r"front\s*matter|contents|introduction|prologue\s*$|"
+    r"act\s|scene\s|part\s|section\s|chapter\s)",
+    re.IGNORECASE,
+)
+
+
+def _useful_title(raw) -> Optional[str]:
+    """A title worth showing, or None."""
+    if not raw:
+        return None
+    title = str(raw).strip()
+    if not title or _FILLER_TITLE.match(title):
+        return None
+    # A bare "Act 2" or "Scene 4" with nothing after it.
+    if re.fullmatch(r"(act|scene|part)\s*[\dIVXivx]*", title, re.IGNORECASE):
+        return None
+    return title[:80]
 
 
 def _samples_for(spans: Sequence[SceneSpan]) -> str:
@@ -524,9 +596,9 @@ def enrich_with_ai(spans: List[SceneSpan], client) -> List[SceneSpan]:
             idx = int(item.get("index"))
         except (TypeError, ValueError):
             continue
-        title = item.get("title")
+        title = _useful_title(item.get("title"))
         if title and 0 <= idx < len(spans):
-            titles[idx] = str(title)[:80]
+            titles[idx] = title
         for brk in item.get("breaks") or []:
             if isinstance(brk, dict):
                 breaks.append(brk)

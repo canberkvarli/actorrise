@@ -443,7 +443,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         };
 
         await queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY });
-        toast.success("Reading your script. Carry on — it'll be waiting on your shelf.");
+        toast.success("Reading your script. Carry on, it'll be waiting on your shelf.");
         router.push(`/practice?script=${script.id}`);
       } catch (e: unknown) {
         if (e instanceof Error && e.name === "AbortError") {

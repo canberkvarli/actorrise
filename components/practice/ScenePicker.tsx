@@ -53,12 +53,27 @@ function sceneName(scene: ScannedScene, positionInAct: number): string {
   return scene.scene_label ?? `Scene ${positionInAct + 1}`;
 }
 
+/**
+ * How big is this scene?
+ *
+ * Pages, not lines. The line count comes from the dialogue parser, and on a real
+ * Hamlet it read 19 for Act 2 Scene 2, which is the longest scene in the play.
+ * The page span was right on the same file, because it comes from the PDF rather
+ * than from parsing. Better to say one true thing than two things where you
+ * cannot tell which is which.
+ */
+function sceneSize(scene: ScannedScene): string | null {
+  if (scene.page_start == null) return null;
+  const end = scene.page_end ?? scene.page_start;
+  const pages = Math.max(1, end - scene.page_start + 1);
+  return `${pages} ${pages === 1 ? "page" : "pages"}`;
+}
+
 function pageRange(scene: ScannedScene): string | null {
   if (scene.page_start == null) return null;
-  if (scene.page_end == null || scene.page_end === scene.page_start) {
-    return `p. ${scene.page_start}`;
-  }
-  return `pp. ${scene.page_start}–${scene.page_end}`;
+  const end = scene.page_end ?? scene.page_start;
+  // Plain hyphen, not an en dash. Long dashes are out across this product.
+  return end === scene.page_start ? `p. ${scene.page_start}` : `pp. ${scene.page_start}-${end}`;
 }
 
 /** Strip the extension. The filename is the only title we have at this point. */
@@ -74,13 +89,12 @@ function scriptName(fileName: string): string {
  * they want the nunnery scene.
  *
  * Set on paper, in the script's own type, because that is what it is: the
- * contents page of the thing they just handed us. The rest of the app already
- * reads a script on `--paper`; a picker in generic dialog chrome would be the
- * one screen in the flow that forgot what it was looking at.
+ * contents page of the thing they just handed us.
  *
- * The whole map is always shown, including scenes this plan cannot build. Hiding
- * the rest of the play to avoid mentioning a limit is how you get an actor who
- * never learns their script has twenty scenes in it.
+ * Nothing is chosen for you. An earlier version pre-ticked everything the plan
+ * allowed, which reads as helpful and is not: it makes the first act of using
+ * the screen *undoing* a choice somebody else made, and on a plan with a small
+ * allowance it silently spends it on whatever happened to be first in the file.
  */
 export function ScenePicker({
   scenes,
@@ -91,13 +105,7 @@ export function ScenePicker({
   onCancel,
   onUpgrade,
 }: ScenePickerProps) {
-  // Default to everything the plan allows, in order. "I don't want to miss a
-  // scene" is the common intent; the limit shapes it rather than the actor
-  // having to tick twenty boxes to say so.
-  const [picked, setPicked] = useState<Set<number>>(() => {
-    const allowed = limit == null ? scenes.length : limit;
-    return new Set(scenes.slice(0, allowed).map((s) => s.index));
-  });
+  const [picked, setPicked] = useState<Set<number>>(() => new Set());
 
   const groups = useMemo(() => byAct(scenes), [scenes]);
   const atLimit = limit != null && picked.size >= limit;
@@ -112,7 +120,7 @@ export function ScenePicker({
     });
   };
 
-  const selectAll = () => {
+  const takeAllowance = () => {
     const allowed = limit == null ? scenes.length : limit;
     setPicked(new Set(scenes.slice(0, allowed).map((s) => s.index)));
   };
@@ -120,43 +128,60 @@ export function ScenePicker({
   return (
     <div className="flex max-h-[min(84vh,46rem)] flex-col bg-paper text-paper-ink">
       {/* Title page. The script names itself before it lists itself. */}
-      <header className="shrink-0 px-7 pb-5 pt-7 text-center sm:px-10">
+      <header className="shrink-0 px-6 pb-4 pt-7 text-center sm:px-10">
         <h2 className="font-typewriter text-lg font-bold uppercase tracking-[0.2em] text-paper-ink sm:text-xl">
           {scriptName(fileName)}
         </h2>
-        <p className="mx-auto mt-2 max-w-sm text-[13px] leading-relaxed text-paper-muted">
-          {scenes.length} {scenes.length === 1 ? "scene" : "scenes"} across {pageCount}{" "}
-          {pageCount === 1 ? "page" : "pages"}. Choose what to build now — the rest
-          keep, and you can come back for them.
+
+        {/* The two numbers that describe the file, set as a line of type rather
+            than as stat cards. They are one sentence long; a grid of boxes would
+            be three times the furniture for the same two facts. */}
+        <p className="mt-2.5 font-typewriter text-[12.5px] tracking-wide text-paper-muted">
+          <span className="text-paper-ink">{scenes.length}</span>{" "}
+          {scenes.length === 1 ? "scene" : "scenes"}
+          <span aria-hidden className="px-2 text-paper-rule">
+            ·
+          </span>
+          <span className="text-paper-ink">{pageCount}</span>{" "}
+          {pageCount === 1 ? "page" : "pages"}
         </p>
-        <div
-          aria-hidden
-          className="mx-auto mt-5 h-px w-16 bg-paper-rule"
-        />
+        <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed text-paper-muted">
+          Choose what to build now. The rest keep, and you can come back for them.
+        </p>
+        <div aria-hidden className="mx-auto mt-5 h-px w-16 bg-paper-rule" />
       </header>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-2 sm:px-8">
+      <div className="scrollbar-paper min-h-0 flex-1 overflow-y-auto px-3 pb-2 sm:px-7">
         {groups.map(([act, actScenes], groupIndex) => (
-          <section key={`${act}-${groupIndex}`} className={cn(groupIndex > 0 && "mt-8")}>
+          <section key={`${act}-${groupIndex}`} className={cn(groupIndex > 0 && "mt-7")}>
             {act && (
-              <div className="mb-3 flex items-center gap-3">
+              <div className="mb-2 flex items-center gap-3 px-2">
                 <h3 className="font-typewriter text-[11px] font-bold uppercase tracking-[0.25em] text-paper-muted">
                   {act}
                 </h3>
                 <span aria-hidden className="h-px flex-1 bg-paper-rule" />
               </div>
             )}
-            <ul>
+            <ul className="space-y-0.5">
               {actScenes.map((scene, i) => {
                 const isPicked = picked.has(scene.index);
                 const blocked = !isPicked && atLimit;
+                const size = sceneSize(scene);
                 const pages = pageRange(scene);
                 return (
                   <li key={scene.index}>
                     <label
                       className={cn(
-                        "group relative flex cursor-pointer items-baseline gap-3 py-2.5 pl-3 pr-2 transition-colors sm:gap-4",
-                        blocked && "cursor-not-allowed",
+                        "group relative flex cursor-pointer items-start gap-3 rounded-md py-2.5 pl-3 pr-3 transition-colors duration-150",
+                        // Chosen scenes are unmistakable: the sheet is tinted,
+                        // the type darkens, and a rule runs down the margin. The
+                        // old version changed one small glyph, which meant you
+                        // had to hunt for what you had already picked.
+                        isPicked
+                          ? "bg-primary/[0.10]"
+                          : blocked
+                            ? "cursor-not-allowed"
+                            : "hover:bg-paper-ink/[0.045]",
                       )}
                     >
                       <input
@@ -167,41 +192,49 @@ export function ScenePicker({
                         className="peer sr-only"
                       />
 
-                      {/* The mark in the margin, the way you would tick a
-                          contents page with a pencil. */}
                       <span
                         aria-hidden
                         className={cn(
-                          "absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full transition-all duration-200",
+                          "absolute inset-y-1 left-0 w-[3px] rounded-full transition-all duration-150",
                           isPicked ? "bg-primary" : "bg-transparent",
                         )}
                       />
 
+                      {/* A real box, so "chosen" is legible at a glance and from
+                          across the room, not a change of glyph. */}
                       <span
                         aria-hidden
                         className={cn(
-                          "mt-0.5 shrink-0 self-start font-typewriter text-[13px] leading-6 transition-colors",
+                          "mt-[3px] flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-[3px] border transition-all duration-150",
+                          "peer-focus-visible:ring-2 peer-focus-visible:ring-primary/50 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-paper",
                           isPicked
-                            ? "text-primary"
+                            ? "border-primary bg-primary"
                             : blocked
-                              ? "text-paper-muted/35"
-                              : "text-paper-muted/50 group-hover:text-paper-muted",
+                              ? "border-paper-rule"
+                              : "border-paper-ink/30 group-hover:border-paper-ink/55",
                         )}
                       >
-                        {isPicked ? "×" : "○"}
+                        {isPicked && (
+                          <svg
+                            viewBox="0 0 12 12"
+                            className="h-[11px] w-[11px] text-primary-foreground"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          >
+                            <path d="M2.5 6.4 4.8 8.7 9.5 3.6" />
+                          </svg>
+                        )}
                       </span>
 
-                      <span
-                        className={cn(
-                          "min-w-0 flex-1 transition-opacity",
-                          blocked && "opacity-40",
-                        )}
-                      >
+                      <span className={cn("min-w-0 flex-1", blocked && "opacity-40")}>
                         <span className="flex flex-wrap items-baseline gap-x-2">
                           <span
                             className={cn(
-                              "font-typewriter text-[15px] leading-6 transition-colors",
-                              isPicked ? "text-paper-ink" : "text-paper-ink/75",
+                              "font-typewriter text-[15px] leading-6 transition-colors duration-150",
+                              isPicked ? "font-bold text-paper-ink" : "text-paper-ink/80",
                             )}
                           >
                             {sceneName(scene, i)}
@@ -224,15 +257,15 @@ export function ScenePicker({
 
                       <span
                         className={cn(
-                          "shrink-0 self-start text-right font-typewriter text-[11.5px] leading-5 tabular-nums text-paper-muted/70 transition-opacity",
+                          "shrink-0 self-start pt-0.5 text-right font-typewriter text-[11.5px] leading-[1.45] tabular-nums transition-colors duration-150",
+                          isPicked ? "text-paper-ink/70" : "text-paper-muted/65",
                           blocked && "opacity-40",
                         )}
                       >
-                        <span className="block">{scene.line_count} lines</span>
-                        {pages && <span className="block opacity-75">{pages}</span>}
+                        {size && <span className="block">{size}</span>}
+                        {pages && <span className="block opacity-70">{pages}</span>}
                       </span>
                     </label>
-                    <span aria-hidden className="block h-px bg-paper-rule/45 last:hidden" />
                   </li>
                 );
               })}
@@ -251,22 +284,31 @@ export function ScenePicker({
               className="font-medium text-primary underline decoration-primary/40 underline-offset-4 transition-colors hover:decoration-primary"
             >
               Build the whole play
-            </button>{" "}
-            — you&apos;ll come straight back here.
+            </button>
+            , and you come straight back here.
           </p>
         )}
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className="font-typewriter text-[12.5px] tabular-nums text-paper-muted">
-            {picked.size} of {scenes.length} chosen
-            {limit != null && picked.size < scenes.length && (
+            {picked.size === 0 ? (
+              <>Nothing chosen yet</>
+            ) : (
               <>
-                {" · "}
+                <span className="text-paper-ink">{picked.size}</span> of {scenes.length}{" "}
+                chosen
+              </>
+            )}
+            {limit != null && picked.size < Math.min(limit, scenes.length) && (
+              <>
+                <span aria-hidden className="px-2 text-paper-rule">
+                  ·
+                </span>
                 <button
                   type="button"
-                  onClick={selectAll}
+                  onClick={takeAllowance}
                   className="underline decoration-dotted underline-offset-4 transition-colors hover:text-paper-ink"
                 >
-                  take {limit}
+                  take {Math.min(limit, scenes.length)}
                 </button>
               </>
             )}
