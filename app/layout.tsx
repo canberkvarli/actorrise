@@ -63,6 +63,28 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "ActorRise", url: siteUrl }],
   creator: "ActorRise",
+  /**
+   * Apple's Smart App Banner, on every page of the site.
+   *
+   * The launch bar and the landing-page teaser only reach someone who came to
+   * the homepage, and almost nobody does: the traffic is 1,281 distinct SEO
+   * landing pages, mostly individual monologues. An actor reading Nora's speech
+   * on their phone is the single most qualified person we will ever have, and
+   * until now that page said nothing about the app at all.
+   *
+   * This is deliberately NOT a modal. Google penalises intrusive interstitials
+   * on mobile and app-download popups are the textbook case, which would put the
+   * one channel that feeds this site at risk. Apple's own banner is explicitly
+   * exempt, is drawn by Safari rather than by us, is dismissible, and never
+   * appears anywhere it cannot convert — no Android, no desktop, no wasted view.
+   *
+   * `appArgument` is the URL the app receives if it is already installed, which
+   * turns the banner from "Get" into "Open" for people who already have it.
+   */
+  itunes: {
+    appId: "6804278673",
+    appArgument: siteUrl,
+  },
   icons: {
     icon: [
       { url: "/favicon.ico?v=5", sizes: "any" },
