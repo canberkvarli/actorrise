@@ -1,5 +1,7 @@
 "use client";
 
+import { useLibraryStats } from "@/lib/useLibraryStats";
+
 /**
  * Value props (Speed, Odds, Scale). Editorial strip with light structure.
  */
@@ -38,6 +40,11 @@ function OddsBlock() {
 }
 
 function ScaleBlock() {
+  // Asked, not remembered. This block is literally titled "Scale" and it spent
+  // months understating the library by five thousand pieces, because 8,500 was
+  // true once and then quietly stopped being true. Falls back to the rounded
+  // figure until the count lands, so it never renders a gap.
+  const { monologues } = useLibraryStats();
   return (
     <div className="flex flex-col gap-3 pl-5 md:pl-6 border-l-2 border-primary/25">
       <p className={labelClass}>
@@ -45,8 +52,10 @@ function ScaleBlock() {
         Scale
       </p>
       <p className="text-lg text-foreground/95 leading-snug">
-        <span className="font-semibold tabular-nums text-foreground">13,000+</span> monologues. AI
-        search, no keyword frustration.
+        <span className="font-semibold tabular-nums text-foreground">
+          {monologues ? monologues.toLocaleString() : "13,000+"}
+        </span>{" "}
+        monologues. AI search, no keyword frustration.
       </p>
     </div>
   );

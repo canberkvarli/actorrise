@@ -13,6 +13,7 @@ import { API_URL } from "@/lib/api";
 import type { DemoSearchResultItem } from "./LandingDemoResultCard";
 import { LandingDemoResultCard } from "./LandingDemoResultCard";
 import { useAuthModal } from "@/components/auth/AuthModalContext";
+import { useLibraryStats } from "@/lib/useLibraryStats";
 
 const AUTO_DEMO_QUERY = "funny piece for drama school, male";
 
@@ -54,6 +55,12 @@ const LOADING_MESSAGES = [
 ];
 
 export function LandingDemoSearch() {
+  // One label, three buttons. Asked rather than remembered: this said 8,500 for
+  // long enough to be wrong by five thousand pieces, and a CTA that undersells
+  // the library is the worst place to carry a stale number.
+  const { monologues } = useLibraryStats();
+  const searchLabel = `Search ${monologues ? monologues.toLocaleString() : "13,000+"} monologues`;
+
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<DemoSearchResultItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -382,7 +389,7 @@ export function LandingDemoSearch() {
                   We didn&apos;t find any monologues for that search. Try different words or browse the full library.
                 </p>
                 <Button asChild size="lg" variant="outline" className="rounded-full mt-4">
-                  <Link href="/signup">Search 13,000+ monologues</Link>
+                  <Link href="/signup">{searchLabel}</Link>
                 </Button>
               </CardContent>
             </Card>
@@ -451,7 +458,7 @@ export function LandingDemoSearch() {
               >
                 <Button asChild size="lg" className="rounded-full px-8 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground hover:border-muted-foreground/30">
                   <Link href={`/signup?redirect=${encodeURIComponent(`/search?q=${encodeURIComponent(query.trim())}`)}`}>
-                    Search 13,000+ monologues
+                    {searchLabel}
                   </Link>
                 </Button>
               </motion.div>
@@ -509,7 +516,7 @@ export function LandingDemoSearch() {
                 transition={{ delay: 0.45, duration: 0.35 }}
               >
                 <Button asChild size="lg" className="rounded-full px-8 bg-background text-foreground border border-border hover:bg-muted hover:text-foreground hover:border-muted-foreground/30">
-                  <Link href="/signup">Search 13,000+ monologues</Link>
+                  <Link href="/signup">{searchLabel}</Link>
                 </Button>
               </motion.div>
             </div>

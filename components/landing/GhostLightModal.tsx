@@ -233,7 +233,21 @@ export function GhostLightModal() {
               starts at the phone's own top edge, which is also where the cream
               reading page begins — the one genuinely bright thing in the picture,
               and the reason the bulb above it has something to light. */}
-          <div className="absolute left-1/2 top-[62px] w-[176px] -translate-x-1/2 rotate-[-3deg]">
+          {/* Clickable for the same reason the teaser's phones now are: it is the
+              most tappable-looking thing on the panel, and a picture of an app
+              that does nothing when you touch it reads as broken. */}
+          <a
+            href={APP_STORE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Get Ghost Light on the App Store"
+            onClick={() => {
+              remember();
+              track("ghostlight_modal_accepted");
+              setOpen(false);
+            }}
+            className="absolute left-1/2 top-[62px] w-[176px] -translate-x-1/2 rotate-[-3deg] transition-transform duration-200 hover:scale-[1.02]"
+          >
             {/* Tall enough to read as a phone. At 120px of surviving height this
                 was a card, and a card is not a thing anyone downloads. The page
                 is now legible down to the second paragraph of the speech, which
@@ -250,7 +264,7 @@ export function GhostLightModal() {
                 priority={false}
               />
             </div>
-          </div>
+          </a>
 
           {/* Dark rising from the floor, so the phone dissolves into the stage
               instead of being guillotined by the panel edge. */}

@@ -66,7 +66,10 @@ export function GhostLightAppTeaser() {
   const springX = useSpring(tiltX, { stiffness: 120, damping: 18 });
   const springY = useSpring(tiltY, { stiffness: 120, damping: 18 });
 
-  const handleTilt = (e: React.MouseEvent<HTMLDivElement>) => {
+  // HTMLElement, not HTMLDivElement: the row that carries this is an anchor now
+  // that the phones are clickable, and the handler only ever reads the bounding
+  // rect, so it has no business caring which tag it is attached to.
+  const handleTilt = (e: React.MouseEvent<HTMLElement>) => {
     if (reduceMotion) return;
     const r = e.currentTarget.getBoundingClientRect();
     tiltY.set(((e.clientX - r.left) / r.width - 0.5) * 7);
@@ -127,10 +130,23 @@ export function GhostLightAppTeaser() {
           }}
         />
 
-        <div
+        {/* The phones are the most clickable-looking thing in the section and,
+            until now, the only part of it that did nothing. Three big lit
+            screenshots of an app, and the only working link was the button
+            underneath. Anyone who reached for a phone got no response at all,
+            which reads as a broken page rather than as a picture.
+
+            The whole row is one link rather than three, so the tilt handlers and
+            the parallax keep working on a single element and there is one target
+            instead of three adjacent ones announcing the same destination. */}
+        <a
+          href={APP_STORE_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="Get Ghost Light on the App Store"
           onMouseMove={handleTilt}
           onMouseLeave={resetTilt}
-          className="container mx-auto px-4 sm:px-6 flex items-start justify-center gap-4 sm:gap-8 [perspective:1200px]"
+          className="container mx-auto flex cursor-pointer items-start justify-center gap-4 px-4 [perspective:1200px] sm:gap-8 sm:px-6"
         >
           {PHONES.map((phone, i) => {
             const isCenter = i === 1;
@@ -176,7 +192,7 @@ export function GhostLightAppTeaser() {
               </motion.div>
             );
           })}
-        </div>
+        </a>
       </div>
     </section>
   );

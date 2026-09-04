@@ -42,8 +42,15 @@ export function SpotlightHero() {
           className="mt-6 sm:mt-8 max-w-2xl mx-auto text-sm sm:text-base md:text-lg text-[var(--stage-muted)] leading-relaxed animate-stage-rise"
           style={{ animationDelay: "0.45s" }}
         >
-          AI search across 13,000+ monologues from plays, film, and TV. Then run
-          your lines with a scene partner that never cancels on you.
+          {/* Was "AI search across N monologues from plays, film, and TV." That
+              repeated the promise the H1 had already made, led with the mechanism
+              instead of the experience, and spent its best words on a number.
+              What nobody else does is let you say it the way you'd say it to a
+              friend, so that goes first. The count now lives where it can be
+              live, rather than being hardcoded here and drifting five thousand
+              pieces out of date. */}
+          Say what you need the way you&rsquo;d say it out loud. Then run your
+          lines with a partner who never cancels.
         </p>
 
         <div
