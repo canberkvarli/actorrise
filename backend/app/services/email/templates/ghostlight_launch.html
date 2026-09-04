@@ -1,0 +1,75 @@
+{# Ghost Light iOS launch. Branded, so it extends base.html (not base_personal).
+
+   Variables:
+     user_name         — recipient's name
+     monologue_count   — MUST be the count the APP actually ships, not the web
+                         library. Web DB had 17,730 rows on 2026-09-04; the iOS
+                         build spec said 10,863. Those disagree, so confirm the
+                         real shipped number in the app before sending. If you
+                         can't confirm it, leave it unset and the sentence below
+                         gracefully drops the number.
+     unsubscribe_url   — injected by the sender
+
+   App Store link carries ?ct=launch_email so installs from this send show up in
+   App Store Connect under App Analytics, Acquisition, Campaigns. Do not strip it.
+#}
+{% extends "base.html" %}
+
+{% block title %}Ghost Light is out{% endblock %}
+
+{% block extra_styles %}
+        .gl-banner { background-color: #242424; }
+        .gl-lore {
+            margin: 0 0 24px; padding: 18px 22px; border-left: 3px solid #CB4B00;
+            background: #fafafa; border-radius: 4px;
+            font-size: 15px; line-height: 1.6; color: #374151;
+        }
+        .gl-note { font-size: 13px; color: #616161; text-align: center; margin: 0; }
+{% endblock %}
+
+{% block sub_header %}
+            <div class="sub-header gl-banner">
+                <h1>Ghost Light is out</h1>
+            </div>
+{% endblock %}
+
+{% block content %}
+        <p class="greeting">Hey {{ user_name.split()[0] if user_name else 'there' }},</p>
+
+        <p>I built an iPhone app. It's called Ghost Light, and it's in the App Store as of today.</p>
+
+        <div class="gl-lore">
+            A ghost light is the single bulb left burning centre stage after everyone goes home, so the theater is never completely dark. That felt like the right name for the thing you reach for at 11pm when you have an audition on Thursday and still no piece.
+        </div>
+
+        <p>It does one job: help you find a monologue, on your phone, without opening a laptop. Search {% if monologue_count %}{{ monologue_count }}{% else %}the full{% endif %} monologues in plain English, read them properly, save the ones worth keeping.</p>
+
+        <ul class="steps">
+            <li><span class="bullet">&#9679;</span> Search is free and unlimited. No account wall to get past.</li>
+            <li><span class="bullet">&#9679;</span> Three full monologue reads free, for good, so you can see whether it's any use before you decide.</li>
+            <li><span class="bullet">&#9679;</span> After that it's $4.99 a month or $29.99 a year, and that's the whole pricing page.</li>
+        </ul>
+
+        <p>Your ActorRise account and the app are separate for now. This isn't an upsell on what you already have, it's a different tool for the moment you're standing on a train with no monologue.</p>
+
+        <div class="cta-wrap">
+            <a class="cta" href="https://apps.apple.com/us/app/ghost-light-monologues/id6804278673?ct=launch_email">Get it on the App Store</a>
+        </div>
+
+        <p class="gl-note">iPhone only for now. Android is on the list, not the calendar.</p>
+
+        <div class="accent-box accent-box-orange">
+            <p class="accent-title">One favour</p>
+            <p>If you download it and it's good, a rating in the App Store genuinely moves the needle for something this small. If you download it and it's not good, reply to this email and tell me why. I'd rather have the second one.</p>
+        </div>
+
+        <div class="signature">
+            <strong>Canberk</strong><br>
+            Founder, ActorRise<br>
+            <a href="https://actorrise.com">actorrise.com</a>
+        </div>
+
+        <p style="margin-top: 24px; color: #616161; font-size: 14px;">
+            reply UNSUBSCRIBE and I'll take you off the list, no hard feelings.
+        </p>
+{% endblock %}

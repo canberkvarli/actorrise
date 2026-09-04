@@ -10,8 +10,13 @@ a permission a real community member could be given, and when that happens they
 are still a user and still count. Conflating the two would quietly delete a real
 person from the numbers the day they were made a moderator.
 
-Admin dashboards are untouched on purpose: there the founder's own activity is
-real activity and hiding it would make the tool lie to the person using it.
+The admin dashboards apply the same rule, and that reverses what this file
+originally said. The old reasoning was that on /admin the founder's own activity
+is real activity. In practice it is test activity: a day spent checking that
+rehearsal works is a day of sessions that never belonged in a completion funnel,
+and reading the dashboard afterwards means mentally subtracting a number nobody
+can see. /admin/stats and /admin/searches were fixed first; /admin/sessions kept
+counting it until 2026-09-04.
 """
 
 import ast
@@ -119,6 +124,52 @@ class AdminSearchAnalyticsTests(unittest.TestCase):
         union = zero + weak - both
         self.assertLessEqual(union / searches, 1.0)
         self.assertGreater((zero + weak) / searches, 1.0)  # the old arithmetic
+
+
+class AdminSessionAnalyticsTests(unittest.TestCase):
+    """The rehearsal dashboard had no staff filter at all.
+
+    Every session started to check that ScenePartner still worked counted as an
+    actor rehearsing: in the funnel, in the drop-off buckets, in per-scene, and
+    at the top of the per-user table. A test run abandoned at 0% because the
+    point was to see the first line render is indistinguishable, once it is a
+    row, from an actor who gave up.
+    """
+
+    def setUp(self):
+        from app.api.admin import sessions
+        self.source = Path(inspect.getfile(sessions)).read_text()
+
+    def test_the_rule_is_shared_not_re_derived(self):
+        """One definition across /admin/stats, /searches and /sessions. Two
+        copies drift, which is the failure this file keeps documenting."""
+        self.assertIn("from app.services.admin_filters import test_user_filter", self.source)
+
+    def test_every_aggregate_applies_it(self):
+        """Four separate chances to forget: the feed, the page-1 summary, the
+        top-scenes list, and the analytics window that all of /sessions/analytics
+        is built on."""
+        self.assertGreaterEqual(
+            self.source.count("not_staff"), 5,  # 1 def + 4 uses
+            "an aggregate on /admin/sessions is missing the staff filter",
+        )
+
+    def test_the_analytics_window_carries_it(self):
+        """`window` is spread into the funnel, drop-off, per-scene and per-user
+        queries, so putting the filter there covers all four at once — and means
+        a new query that uses `window` is filtered by default."""
+        window = self.source.split("window = (", 1)[1].split("\n    )", 1)[0]
+        self.assertIn("_not_staff(db)", window)
+
+    def test_an_explicit_search_can_still_find_staff(self):
+        """A filter you cannot see past is a filter you cannot debug past, so
+        typing an address or scene title into `q` overrides it. The summary
+        numbers below it never do."""
+        self.assertIn("if not q:", self.source)
+
+    def test_anonymous_sessions_still_count(self):
+        """No user_id means nobody claims it, not that it isn't real use."""
+        self.assertIn("RehearsalSession.user_id.is_(None)", self.source)
 
 
 if __name__ == "__main__":

@@ -7,9 +7,10 @@ from app.api.admin.stats import require_moderator
 from app.core.database import get_db
 from app.models.actor import Play, RehearsalLineDelivery, RehearsalSession, Scene
 from app.models.user import User
+from app.services.admin_filters import test_user_filter
 from app.services.rehearsal_cleanup import TIMED_OUT_STATUS, UNFINISHED_STATUSES
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import desc, func
+from sqlalchemy import desc, func, or_
 from sqlalchemy.orm import Session
 
 router = APIRouter(prefix="/api/admin", tags=["admin", "sessions"])
@@ -29,6 +30,23 @@ def _rate(completed: int, unfinished: int) -> Optional[float]:
     because they haven't had the chance to succeed or fail yet."""
     ended = completed + unfinished
     return round(completed / ended * 100, 1) if ended else None
+
+
+def _not_staff(db: Session):
+    """Filter expression that keeps test/dev/internal rehearsals out of the numbers.
+
+    Same rule as /admin/stats and /admin/searches — it lives in
+    services/admin_filters so the three pages cannot disagree about who counts.
+    This page had no such filter, so every session run while testing the app
+    landed in the completion funnel, the drop-off buckets and the per-user table
+    as if it were an actor's. Anonymous rows (no user_id) still count: nobody
+    claims them, but they are real use.
+    """
+    staff_ids = [r[0] for r in db.query(User.id).filter(test_user_filter()).all()]
+    return or_(
+        RehearsalSession.user_id.is_(None),
+        RehearsalSession.user_id.notin_(staff_ids),
+    )
 
 
 def _date_range(from_date: Optional[str], to_date: Optional[str]) -> tuple[datetime, datetime]:
@@ -57,6 +75,7 @@ def get_rehearsal_sessions(
     """Paginated rehearsal sessions with summary stats."""
 
     start_dt, end_dt = _date_range(from_date, to_date)
+    not_staff = _not_staff(db)
 
     base = (
         db.query(RehearsalSession)
@@ -65,6 +84,11 @@ def get_rehearsal_sessions(
             RehearsalSession.started_at < end_dt,
         )
     )
+    # The raw feed too. An explicit `q` is the one exception: typing an address
+    # or a scene title should find it, staff or not, or the filter becomes a
+    # thing you cannot debug your way past. The summary below always excludes.
+    if not q:
+        base = base.filter(not_staff)
 
     if status == "unfinished":
         base = base.filter(RehearsalSession.status.in_(UNFINISHED_STATUSES))
@@ -164,6 +188,7 @@ def get_rehearsal_sessions(
             .filter(
                 RehearsalSession.started_at >= start_dt,
                 RehearsalSession.started_at < end_dt,
+                not_staff,
             )
             .first()
         )
@@ -177,6 +202,7 @@ def get_rehearsal_sessions(
             .filter(
                 RehearsalSession.started_at >= start_dt,
                 RehearsalSession.started_at < end_dt,
+                not_staff,
             )
             .group_by(Scene.title)
             .order_by(desc("cnt"))
@@ -217,6 +243,7 @@ def get_session_analytics(
     window = (
         RehearsalSession.started_at >= start_dt,
         RehearsalSession.started_at < end_dt,
+        _not_staff(db),
     )
 
     # --- Funnel + completion rate ---

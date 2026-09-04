@@ -257,21 +257,18 @@ def _serialize_user(user: User) -> dict[str, Any]:
     }
 
 
-def _duration_label(duration_days: int | None) -> str | None:
-    """Days -> the words a person would use. None for a permanent comp, which
-    drops the expiry sentence from the email rather than printing '0 days'."""
-    if duration_days is None:
+def _expires_label(trial_end: datetime | None) -> str | None:
+    """The end of a comp, as a date the reader can check.
+
+    Deliberately NOT a duration. Comps run to many different end dates and some
+    never expire, so "free for a month" is wrong for most of them and wrong in a
+    way the recipient can verify against their own account. None = permanent,
+    which drops the expiry sentence entirely.
+    """
+    if trial_end is None:
         return None
-    if duration_days % 365 == 0 and duration_days >= 365:
-        n = duration_days // 365
-        return "1 year" if n == 1 else f"{n} years"
-    if duration_days % 30 == 0 and duration_days >= 30:
-        n = duration_days // 30
-        return "1 month" if n == 1 else f"{n} months"
-    if duration_days % 7 == 0 and duration_days >= 7:
-        n = duration_days // 7
-        return "1 week" if n == 1 else f"{n} weeks"
-    return "1 day" if duration_days == 1 else f"{duration_days} days"
+    # No zero-padding on the day: "03 December" reads like a form field.
+    return f"{trial_end.day} {trial_end.strftime('%B %Y')}"
 
 
 def _create_audit_log(
@@ -731,7 +728,7 @@ def grant_admin_user_membership(
                 "user_email": target.email,
                 "user_name": target.name,
                 "tier_display_name": tier.display_name,
-                "duration_label": _duration_label(body.duration_days),
+                "expires_label": _expires_label(subscription.trial_end),
                 "account_type": target.account_type,
             },
             daemon=True,

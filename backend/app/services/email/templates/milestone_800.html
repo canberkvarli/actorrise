@@ -1,0 +1,31 @@
+{# 800-actor thank-you. Plain and personal on purpose: this one is not selling
+   anything, so it extends base_personal.html rather than the branded base.
+
+   Variables: user_name, unsubscribe_url
+   Verified 2026-09-04: 820 counted users, 408 created in the last 30 days.
+   Re-check both numbers before sending if this sits for more than a few days. #}
+{% extends "base_personal.html" %}
+
+{% block title %}800 actors{% endblock %}
+
+{% block content %}
+        <p>hey {{ user_name.split()[0] if user_name else 'there' }},</p>
+
+        <p>ActorRise passed 800 actors this week. A little over 400 of those signed up in the last month alone, which still hasn't quite landed for me.</p>
+
+        <p>I'm not selling you anything in this one. I just wanted to say thank you. You signed up when this was one actor in Berkeley with a monologue database and a hunch, and nobody made you do that.</p>
+
+        <p>I built the first version because I was tired of running lines with a roommate who read every character in the same flat voice. The fact that a few hundred other actors turned out to have the same problem is the best part of this year.</p>
+
+        <p>If you've been meaning to tell me something about it, what's clunky, what's missing, what made you stop opening it, just hit reply. It comes straight to me and I read all of them.</p>
+
+        <p style="margin-top: 28px;">
+            Canberk<br>
+            <span style="color: #666;">Founder, ActorRise</span><br>
+            <a href="https://actorrise.com" style="color: #666;">actorrise.com</a>
+        </p>
+
+        <p style="margin-top: 24px; color: #666; font-size: 14px;">
+            reply UNSUBSCRIBE and I'll take you off the list, no hard feelings.
+        </p>
+{% endblock %}

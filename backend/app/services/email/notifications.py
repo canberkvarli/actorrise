@@ -43,7 +43,7 @@ def send_membership_granted_email(
     user_email: str,
     user_name: Optional[str] = None,
     tier_display_name: str = "Plus",
-    duration_label: Optional[str] = None,
+    expires_label: Optional[str] = None,
     account_type: Optional[str] = None,
 ) -> dict:
     """Tell someone Canberk just comped their account.
@@ -69,7 +69,7 @@ def send_membership_granted_email(
         html = templates.render_membership_granted(
             user_name=user_name or "there",
             tier_display_name=tier_display_name,
-            duration_label=duration_label,
+            expires_label=expires_label,
             account_type=account_type,
         )
         return client.send_email(to=user_email, subject=subject, html=html)

@@ -1,0 +1,114 @@
+{
+  "proposals": [
+    {
+      "play_id": 1277,
+      "title": "Andor",
+      "monologues": 8,
+      "creator": "Tony Gilroy",
+      "confidence": 1.0,
+      "note": "Tony Gilroy is credited as the creator of the series 'Andor'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1278,
+      "title": "Heartbreak High",
+      "monologues": 4,
+      "creator": "Michael Jenkins",
+      "confidence": 0.9,
+      "note": "Michael Jenkins is commonly credited as the creator of the original Australian series 'Heartbreak High'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1281,
+      "title": "Life On Mars",
+      "monologues": 8,
+      "creator": "Matthew Graham",
+      "confidence": 0.9,
+      "note": "Matthew Graham is credited as the creator of the UK series 'Life On Mars'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1283,
+      "title": "Severance",
+      "monologues": 7,
+      "creator": "Dan Erickson",
+      "confidence": 1.0,
+      "note": "Dan Erickson is credited as the creator of the series 'Severance'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1284,
+      "title": "True Detective",
+      "monologues": 5,
+      "creator": "Nic Pizzolatto",
+      "confidence": 1.0,
+      "note": "Nic Pizzolatto is the creator of the series 'True Detective'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1285,
+      "title": "Fargo",
+      "monologues": 7,
+      "creator": "Noah Hawley",
+      "confidence": 1.0,
+      "note": "Noah Hawley is the creator of the television series 'Fargo'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1286,
+      "title": "Fargo",
+      "monologues": 8,
+      "creator": "Noah Hawley",
+      "confidence": 1.0,
+      "note": "Noah Hawley is the creator of the television series 'Fargo'.",
+      "original_author": "Unknown"
+    }
+  ],
+  "needs_human": [
+    {
+      "play_id": 1279,
+      "title": "Elsbeth",
+      "monologues": 4,
+      "creator": "unsure",
+      "confidence": 0.0,
+      "note": "I cannot find information on a series titled 'Elsbeth'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1280,
+      "title": "High Potential",
+      "monologues": 6,
+      "creator": "unsure",
+      "confidence": 0.0,
+      "note": "I cannot find a television series titled 'High Potential'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1282,
+      "title": "Nobody Wants This",
+      "monologues": 6,
+      "creator": "unsure",
+      "confidence": 0.0,
+      "note": "There is no widely recognized series titled 'Nobody Wants This'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1287,
+      "title": "Ripley",
+      "monologues": 5,
+      "creator": "unsure",
+      "confidence": 0.0,
+      "note": "There is no widely recognized television series titled 'Ripley' as of my last knowledge update.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1288,
+      "title": "Baby Reindeer",
+      "monologues": 1,
+      "creator": "unsure",
+      "confidence": 0.0,
+      "note": "I cannot find any information on a series titled 'Baby Reindeer'.",
+      "original_author": "Unknown"
+    }
+  ]
+}

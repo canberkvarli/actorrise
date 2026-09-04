@@ -1,0 +1,3192 @@
+{
+  "proposals": [
+    {
+      "play_id": 1277,
+      "title": "Andor",
+      "monologues": 8,
+      "creator": "Tony Gilroy",
+      "confidence": 1.0,
+      "note": "Tony Gilroy is credited as the creator of the series 'Andor'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1278,
+      "title": "Heartbreak High",
+      "monologues": 4,
+      "creator": "Michael Jenkins",
+      "confidence": 0.9,
+      "note": "Michael Jenkins is commonly credited as the creator of the original Australian series 'Heartbreak High'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1281,
+      "title": "Life On Mars",
+      "monologues": 8,
+      "creator": "Matthew Graham",
+      "confidence": 0.9,
+      "note": "Matthew Graham is credited as the creator of the UK series 'Life On Mars'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1283,
+      "title": "Severance",
+      "monologues": 7,
+      "creator": "Dan Erickson",
+      "confidence": 1.0,
+      "note": "Dan Erickson is credited as the creator of the series 'Severance'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1284,
+      "title": "True Detective",
+      "monologues": 5,
+      "creator": "Nic Pizzolatto",
+      "confidence": 1.0,
+      "note": "Nic Pizzolatto is the creator of the series 'True Detective'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1285,
+      "title": "Fargo",
+      "monologues": 7,
+      "creator": "Noah Hawley",
+      "confidence": 1.0,
+      "note": "Noah Hawley is the creator of the television series 'Fargo'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1286,
+      "title": "Fargo",
+      "monologues": 8,
+      "creator": "Noah Hawley",
+      "confidence": 1.0,
+      "note": "Noah Hawley is the creator of the television series 'Fargo'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1289,
+      "title": "Hacks",
+      "monologues": 6,
+      "creator": "Lucia Aniello",
+      "confidence": 1.0,
+      "note": "Lucia Aniello is commonly credited as the creator of the series 'Hacks'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1290,
+      "title": "Murder She Wrote",
+      "monologues": 8,
+      "creator": "Peter S. Fischer",
+      "confidence": 1.0,
+      "note": "Peter S. Fischer is commonly credited as the creator of 'Murder She Wrote'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1291,
+      "title": "Shogun",
+      "monologues": 2,
+      "creator": "Franklin J. Schaffner",
+      "confidence": 0.9,
+      "note": "Franklin J. Schaffner is commonly credited as the creator of the miniseries 'Shogun'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1292,
+      "title": "Deadwood",
+      "monologues": 8,
+      "creator": "David Milch",
+      "confidence": 1.0,
+      "note": "David Milch is widely recognized as the creator of the series 'Deadwood'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1293,
+      "title": "Parks And Recreation",
+      "monologues": 6,
+      "creator": "Greg Daniels",
+      "confidence": 0.9,
+      "note": "Greg Daniels is commonly credited as the creator of 'Parks and Recreation'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1294,
+      "title": "Futurama",
+      "monologues": 1,
+      "creator": "Matt Groening",
+      "confidence": 1.0,
+      "note": "Matt Groening is widely recognized as the creator of Futurama.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1295,
+      "title": "The Handmaids Tale",
+      "monologues": 6,
+      "creator": "Bruce Miller",
+      "confidence": 1.0,
+      "note": "Bruce Miller is credited as the creator of 'The Handmaid's Tale' series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1296,
+      "title": "Fargo",
+      "monologues": 8,
+      "creator": "Noah Hawley",
+      "confidence": 1.0,
+      "note": "Noah Hawley is the creator of the television series 'Fargo'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1297,
+      "title": "Fargo",
+      "monologues": 8,
+      "creator": "Noah Hawley",
+      "confidence": 1.0,
+      "note": "Noah Hawley is the creator of the television series 'Fargo'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1298,
+      "title": "Our Flag Means Death",
+      "monologues": 4,
+      "creator": "David Jenkins",
+      "confidence": 1.0,
+      "note": "David Jenkins is credited as the creator of 'Our Flag Means Death'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1299,
+      "title": "Yellowstone",
+      "monologues": 8,
+      "creator": "Taylor Sheridan",
+      "confidence": 1.0,
+      "note": "Taylor Sheridan is widely recognized as the creator of 'Yellowstone'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1300,
+      "title": "Bridgerton",
+      "monologues": 8,
+      "creator": "Chris Van Dusen",
+      "confidence": 1.0,
+      "note": "Chris Van Dusen is credited as the creator of the series 'Bridgerton'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1301,
+      "title": "The Morning Show",
+      "monologues": 6,
+      "creator": "Jay Carson",
+      "confidence": 0.9,
+      "note": "Jay Carson is commonly credited as the creator of 'The Morning Show'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1302,
+      "title": "Only Murders In The Building",
+      "monologues": 7,
+      "creator": "Steve Martin",
+      "confidence": 0.9,
+      "note": "Steve Martin is one of the co-creators of the series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1303,
+      "title": "Poker Face",
+      "monologues": 8,
+      "creator": "Rian Johnson",
+      "confidence": 1.0,
+      "note": "Rian Johnson is credited as the creator of the series 'Poker Face'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1304,
+      "title": "Hannibal",
+      "monologues": 8,
+      "creator": "Bryan Fuller",
+      "confidence": 1.0,
+      "note": "Bryan Fuller is widely recognized as the creator of the television series 'Hannibal'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1305,
+      "title": "Cowboy Bebop",
+      "monologues": 3,
+      "creator": "Shinichir\u014d Watanabe",
+      "confidence": 1.0,
+      "note": "Shinichir\u014d Watanabe is widely recognized as the creator of Cowboy Bebop.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1306,
+      "title": "The X Files",
+      "monologues": 8,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1307,
+      "title": "Stargate Sg 1",
+      "monologues": 7,
+      "creator": "Brad Wright",
+      "confidence": 1.0,
+      "note": "Brad Wright is commonly credited as the creator of 'Stargate SG-1'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1308,
+      "title": "Succession",
+      "monologues": 8,
+      "creator": "Jesse Armstrong",
+      "confidence": 1.0,
+      "note": "Jesse Armstrong is widely credited as the creator of the series 'Succession'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1309,
+      "title": "Queen Charlotte A Bridgerton Story",
+      "monologues": 8,
+      "creator": "Shonda Rhimes",
+      "confidence": 1.0,
+      "note": "Shonda Rhimes is credited as the creator of 'Queen Charlotte: A Bridgerton Story'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1310,
+      "title": "The White Lotus",
+      "monologues": 8,
+      "creator": "Mike White",
+      "confidence": 1.0,
+      "note": "Mike White is credited as the creator of 'The White Lotus'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1311,
+      "title": "The Good Fight",
+      "monologues": 7,
+      "creator": "Michelle King",
+      "confidence": 1.0,
+      "note": "Michelle King is commonly credited as the creator of 'The Good Fight'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1312,
+      "title": "Stranger Things",
+      "monologues": 8,
+      "creator": "The Duffer Brothers",
+      "confidence": 1.0,
+      "note": "The Duffer Brothers are credited as the creators of 'Stranger Things'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1313,
+      "title": "Bad Sisters",
+      "monologues": 8,
+      "creator": "Sharon Horgan",
+      "confidence": 1.0,
+      "note": "Sharon Horgan is credited as the creator of the series 'Bad Sisters'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1314,
+      "title": "Russian Doll",
+      "monologues": 8,
+      "creator": "Natasha Lyonne",
+      "confidence": 1.0,
+      "note": "Natasha Lyonne is credited as one of the creators of 'Russian Doll'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1315,
+      "title": "Russian Doll",
+      "monologues": 7,
+      "creator": "Natasha Lyonne",
+      "confidence": 1.0,
+      "note": "Natasha Lyonne is credited as one of the creators of 'Russian Doll'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1316,
+      "title": "Better Call Saul",
+      "monologues": 5,
+      "creator": "Vince Gilligan",
+      "confidence": 1.0,
+      "note": "Vince Gilligan is widely recognized as the creator of 'Better Call Saul'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1317,
+      "title": "My So Called Life",
+      "monologues": 4,
+      "creator": "Winnie Holzman",
+      "confidence": 1.0,
+      "note": "Winnie Holzman is widely recognized as the creator of 'My So Called Life'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1318,
+      "title": "Beef",
+      "monologues": 4,
+      "creator": "Lee Sung Jin",
+      "confidence": 1.0,
+      "note": "Lee Sung Jin is credited as the creator of the series 'Beef'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1319,
+      "title": "Yellowjackets",
+      "monologues": 8,
+      "creator": "Ashley Lyle",
+      "confidence": 1.0,
+      "note": "Ashley Lyle is credited as the creator of 'Yellowjackets'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1320,
+      "title": "Mo",
+      "monologues": 2,
+      "creator": "Mo Amer",
+      "confidence": 1.0,
+      "note": "Mo Amer is credited as the creator of the series 'Mo'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1321,
+      "title": "Ted Lasso",
+      "monologues": 8,
+      "creator": "Bill Lawrence",
+      "confidence": 0.9,
+      "note": "Bill Lawrence is widely credited as the creator of 'Ted Lasso'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1322,
+      "title": "Russian Doll",
+      "monologues": 5,
+      "creator": "Natasha Lyonne",
+      "confidence": 1.0,
+      "note": "Natasha Lyonne is credited as one of the creators of 'Russian Doll'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1323,
+      "title": "Ted Lasso",
+      "monologues": 7,
+      "creator": "Bill Lawrence",
+      "confidence": 0.9,
+      "note": "Bill Lawrence is widely credited as the creator of 'Ted Lasso'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1324,
+      "title": "The Last Of Us",
+      "monologues": 4,
+      "creator": "Craig Mazin",
+      "confidence": 1.0,
+      "note": "Craig Mazin is credited as the creator of the television series 'The Last Of Us'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1325,
+      "title": "Constantine",
+      "monologues": 8,
+      "creator": "Daniel Cerone",
+      "confidence": 1.0,
+      "note": "Daniel Cerone is credited as the creator of the 'Constantine' television series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1326,
+      "title": "Deadwood",
+      "monologues": 8,
+      "creator": "David Milch",
+      "confidence": 1.0,
+      "note": "David Milch is widely recognized as the creator of the series 'Deadwood'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1327,
+      "title": "Elementary",
+      "monologues": 4,
+      "creator": "Robert Doherty",
+      "confidence": 1.0,
+      "note": "Robert Doherty is credited as the creator of the series 'Elementary'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1328,
+      "title": "Constantine",
+      "monologues": 5,
+      "creator": "Daniel Cerone",
+      "confidence": 1.0,
+      "note": "Daniel Cerone is credited as the creator of the 'Constantine' television series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1329,
+      "title": "Euphoria",
+      "monologues": 8,
+      "creator": "Sam Levinson",
+      "confidence": 1.0,
+      "note": "Sam Levinson is credited as the creator of the series 'Euphoria'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1330,
+      "title": "Deadwood",
+      "monologues": 5,
+      "creator": "David Milch",
+      "confidence": 1.0,
+      "note": "David Milch is widely recognized as the creator of the series 'Deadwood'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1331,
+      "title": "The Queens Gambit",
+      "monologues": 5,
+      "creator": "Scott Frank",
+      "confidence": 1.0,
+      "note": "Scott Frank is credited as the creator of 'The Queen's Gambit'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1332,
+      "title": "Euphoria",
+      "monologues": 8,
+      "creator": "Sam Levinson",
+      "confidence": 1.0,
+      "note": "Sam Levinson is the creator of the series 'Euphoria'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1333,
+      "title": "Black Mirror",
+      "monologues": 7,
+      "creator": "Charlie Brooker",
+      "confidence": 1.0,
+      "note": "Charlie Brooker is widely recognized as the creator of 'Black Mirror'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1334,
+      "title": "Euphoria",
+      "monologues": 8,
+      "creator": "Sam Levinson",
+      "confidence": 1.0,
+      "note": "Sam Levinson is the creator of the series 'Euphoria'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1335,
+      "title": "Lovecraft Country",
+      "monologues": 8,
+      "creator": "Misha Green",
+      "confidence": 1.0,
+      "note": "Misha Green is credited as the creator of 'Lovecraft Country'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1336,
+      "title": "Euphoria",
+      "monologues": 8,
+      "creator": "Sam Levinson",
+      "confidence": 1.0,
+      "note": "Sam Levinson is the creator of the series 'Euphoria'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1337,
+      "title": "Lovecraft Country",
+      "monologues": 4,
+      "creator": "Misha Green",
+      "confidence": 1.0,
+      "note": "Misha Green is credited as the creator of 'Lovecraft Country'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1338,
+      "title": "Euphoria",
+      "monologues": 8,
+      "creator": "Sam Levinson",
+      "confidence": 1.0,
+      "note": "Sam Levinson is the creator of the series 'Euphoria'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1339,
+      "title": "Euphoria",
+      "monologues": 4,
+      "creator": "Sam Levinson",
+      "confidence": 1.0,
+      "note": "Sam Levinson is the creator of the series 'Euphoria'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1340,
+      "title": "Awkward",
+      "monologues": 4,
+      "creator": "Lauren Iungerich",
+      "confidence": 1.0,
+      "note": "Lauren Iungerich is the credited creator of the series 'Awkward'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1341,
+      "title": "Lovecraft Country",
+      "monologues": 8,
+      "creator": "Misha Green",
+      "confidence": 1.0,
+      "note": "Misha Green is credited as the creator of 'Lovecraft Country'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1342,
+      "title": "Night Court",
+      "monologues": 8,
+      "creator": "Reinhold Weege",
+      "confidence": 1.0,
+      "note": "Reinhold Weege is the credited creator of the original 'Night Court' series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1343,
+      "title": "Your Honor",
+      "monologues": 8,
+      "creator": "Peter Moffat",
+      "confidence": 1.0,
+      "note": "Peter Moffat is credited as the creator of the series 'Your Honor'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1344,
+      "title": "Night Sky",
+      "monologues": 8,
+      "creator": "Holden Miller",
+      "confidence": 1.0,
+      "note": "Holden Miller is credited as the creator of the series 'Night Sky'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1345,
+      "title": "Will Trent",
+      "monologues": 4,
+      "creator": "Liz Heldens",
+      "confidence": 1.0,
+      "note": "Liz Heldens is credited as the creator of the series 'Will Trent'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1346,
+      "title": "That 90S Show",
+      "monologues": 3,
+      "creator": "Greg Mottola",
+      "confidence": 0.9,
+      "note": "Greg Mottola is credited as the creator of 'That 90s Show', a sequel to 'That 70s Show'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1348,
+      "title": "1899",
+      "monologues": 8,
+      "creator": "Baran bo Odar",
+      "confidence": 1.0,
+      "note": "Baran bo Odar is credited as the creator of the series '1899'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1349,
+      "title": "Star Trek The Next Generation",
+      "monologues": 8,
+      "creator": "Gene Roddenberry",
+      "confidence": 1.0,
+      "note": "Gene Roddenberry is widely recognized as the creator of 'Star Trek: The Next Generation'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1350,
+      "title": "The White Lotus",
+      "monologues": 8,
+      "creator": "Mike White",
+      "confidence": 1.0,
+      "note": "Mike White is credited as the creator of 'The White Lotus'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1351,
+      "title": "Sherlock",
+      "monologues": 8,
+      "creator": "Mark Gatiss",
+      "confidence": 0.9,
+      "note": "Mark Gatiss is one of the co-creators of the series 'Sherlock' along with Steven Moffat.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1352,
+      "title": "Electric Dreams",
+      "monologues": 5,
+      "creator": "Matthew Graham",
+      "confidence": 0.9,
+      "note": "Matthew Graham is credited as the creator of the anthology series 'Electric Dreams'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1353,
+      "title": "Better Call Saul",
+      "monologues": 8,
+      "creator": "Vince Gilligan",
+      "confidence": 1.0,
+      "note": "Vince Gilligan is widely recognized as the creator of 'Better Call Saul'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1354,
+      "title": "Lovecraft Country",
+      "monologues": 4,
+      "creator": "Misha Green",
+      "confidence": 1.0,
+      "note": "Misha Green is credited as the creator of 'Lovecraft Country'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1355,
+      "title": "You",
+      "monologues": 8,
+      "creator": "Greg Berlanti",
+      "confidence": 1.0,
+      "note": "Greg Berlanti is the creator of the series 'You'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1356,
+      "title": "Yellowjackets",
+      "monologues": 7,
+      "creator": "Ashley Lyle",
+      "confidence": 1.0,
+      "note": "Ashley Lyle is credited as the creator of 'Yellowjackets'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1357,
+      "title": "Mindhunter",
+      "monologues": 8,
+      "creator": "Joe Penhall",
+      "confidence": 1.0,
+      "note": "Joe Penhall is credited as the creator of the series 'Mindhunter'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1358,
+      "title": "Maggie",
+      "monologues": 3,
+      "creator": "Maggie Mull",
+      "confidence": 0.9,
+      "note": "Maggie Mull is credited as the creator of the series 'Maggie'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1359,
+      "title": "Ncis Los Angeles",
+      "monologues": 5,
+      "creator": "Shane Brennan",
+      "confidence": 1.0,
+      "note": "Shane Brennan is credited as the creator of NCIS: Los Angeles.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1360,
+      "title": "Minx",
+      "monologues": 8,
+      "creator": "Ellen Rapoport",
+      "confidence": 1.0,
+      "note": "Ellen Rapoport is credited as the creator of the series 'Minx'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1361,
+      "title": "Black Bird",
+      "monologues": 8,
+      "creator": "Dennis Lehane",
+      "confidence": 1.0,
+      "note": "Dennis Lehane is credited as the creator of the series 'Black Bird'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1362,
+      "title": "The Bear",
+      "monologues": 1,
+      "creator": "Christopher Storer",
+      "confidence": 1.0,
+      "note": "Christopher Storer is credited as the creator of the series 'The Bear'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1363,
+      "title": "Yellowstone",
+      "monologues": 6,
+      "creator": "Taylor Sheridan",
+      "confidence": 1.0,
+      "note": "Taylor Sheridan is widely credited as the creator of the series 'Yellowstone'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1364,
+      "title": "The Sopranos",
+      "monologues": 7,
+      "creator": "David Chase",
+      "confidence": 1.0,
+      "note": "David Chase is widely recognized as the creator of 'The Sopranos'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1365,
+      "title": "The Sopranos",
+      "monologues": 8,
+      "creator": "David Chase",
+      "confidence": 1.0,
+      "note": "David Chase is widely recognized as the creator of 'The Sopranos'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1366,
+      "title": "Midnight Mass",
+      "monologues": 8,
+      "creator": "Mike Flanagan",
+      "confidence": 1.0,
+      "note": "Mike Flanagan is the creator of the series 'Midnight Mass'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1367,
+      "title": "Midnight Mass",
+      "monologues": 8,
+      "creator": "Mike Flanagan",
+      "confidence": 1.0,
+      "note": "Mike Flanagan is the creator of 'Midnight Mass'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1368,
+      "title": "Lovecraft Country",
+      "monologues": 8,
+      "creator": "Misha Green",
+      "confidence": 1.0,
+      "note": "Misha Green is credited as the creator of 'Lovecraft Country'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1369,
+      "title": "Yellowjackets",
+      "monologues": 8,
+      "creator": "Ashley Lyle",
+      "confidence": 1.0,
+      "note": "Ashley Lyle is credited as the creator of 'Yellowjackets'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1370,
+      "title": "The Man Who Fell To Earth",
+      "monologues": 8,
+      "creator": "Alex Kurtzman",
+      "confidence": 0.9,
+      "note": "Alex Kurtzman is credited as the creator of the 2022 series adaptation of 'The Man Who Fell to Earth'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1371,
+      "title": "Midnight Mass",
+      "monologues": 7,
+      "creator": "Mike Flanagan",
+      "confidence": 1.0,
+      "note": "Mike Flanagan is the creator of 'Midnight Mass'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1372,
+      "title": "Midnight Mass",
+      "monologues": 8,
+      "creator": "Mike Flanagan",
+      "confidence": 1.0,
+      "note": "Mike Flanagan is the creator of 'Midnight Mass'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1373,
+      "title": "Severance",
+      "monologues": 6,
+      "creator": "Dan Erickson",
+      "confidence": 1.0,
+      "note": "Dan Erickson is credited as the creator of the series 'Severance'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1374,
+      "title": "Lovecraft Country",
+      "monologues": 6,
+      "creator": "Misha Green",
+      "confidence": 1.0,
+      "note": "Misha Green is credited as the creator of 'Lovecraft Country'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1375,
+      "title": "Kevin Can F K Himself",
+      "monologues": 6,
+      "creator": "Valerie Armstrong",
+      "confidence": 1.0,
+      "note": "Valerie Armstrong is credited as the creator of 'Kevin Can F**k Himself'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1376,
+      "title": "Lovecraft Country",
+      "monologues": 8,
+      "creator": "Misha Green",
+      "confidence": 1.0,
+      "note": "Misha Green is credited as the creator of 'Lovecraft Country'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1377,
+      "title": "Lovecraft Country",
+      "monologues": 8,
+      "creator": "Misha Green",
+      "confidence": 1.0,
+      "note": "Misha Green is credited as the creator of 'Lovecraft Country'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1378,
+      "title": "Lovecraft Country",
+      "monologues": 4,
+      "creator": "Misha Green",
+      "confidence": 1.0,
+      "note": "Misha Green is credited as the creator of 'Lovecraft Country'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1379,
+      "title": "The Afterparty",
+      "monologues": 8,
+      "creator": "Chris Miller",
+      "confidence": 1.0,
+      "note": "Chris Miller is credited as the creator of 'The Afterparty'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1380,
+      "title": "The Twilight Zone",
+      "monologues": 8,
+      "creator": "Rod Serling",
+      "confidence": 1.0,
+      "note": "Rod Serling is widely recognized as the creator of 'The Twilight Zone'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1381,
+      "title": "Cobra Kai",
+      "monologues": 2,
+      "creator": "Josh Heald",
+      "confidence": 1.0,
+      "note": "Josh Heald is credited as the creator of 'Cobra Kai'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1382,
+      "title": "Cobra Kai",
+      "monologues": 5,
+      "creator": "Josh Heald",
+      "confidence": 1.0,
+      "note": "Josh Heald is credited as the creator of 'Cobra Kai'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1383,
+      "title": "Brooklyn Nine Nine",
+      "monologues": 6,
+      "creator": "Michael Schur",
+      "confidence": 1.0,
+      "note": "Michael Schur is widely recognized as the creator of 'Brooklyn Nine-Nine'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1384,
+      "title": "Dave",
+      "monologues": 8,
+      "creator": "Dave Burd",
+      "confidence": 1.0,
+      "note": "Dave Burd is the creator of the series 'Dave'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1385,
+      "title": "The Rookie",
+      "monologues": 1,
+      "creator": "Alexi Hawley",
+      "confidence": 1.0,
+      "note": "Alexi Hawley is credited as the creator of the series 'The Rookie'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1386,
+      "title": "See",
+      "monologues": 4,
+      "creator": "Steven Knight",
+      "confidence": 1.0,
+      "note": "Steven Knight is credited as the creator of the series 'See'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1387,
+      "title": "Cobra Kai",
+      "monologues": 3,
+      "creator": "Josh Heald",
+      "confidence": 1.0,
+      "note": "Josh Heald is credited as the creator of 'Cobra Kai'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1388,
+      "title": "Cobra Kai",
+      "monologues": 5,
+      "creator": "Josh Heald",
+      "confidence": 1.0,
+      "note": "Josh Heald is credited as the creator of 'Cobra Kai'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1389,
+      "title": "Euphoria",
+      "monologues": 7,
+      "creator": "Sam Levinson",
+      "confidence": 1.0,
+      "note": "Sam Levinson is the credited creator of the series 'Euphoria'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1390,
+      "title": "Yellowstone",
+      "monologues": 8,
+      "creator": "Taylor Sheridan",
+      "confidence": 1.0,
+      "note": "Taylor Sheridan is widely recognized as the creator of 'Yellowstone'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1391,
+      "title": "The Magicians",
+      "monologues": 8,
+      "creator": "Sera Gamble",
+      "confidence": 1.0,
+      "note": "Sera Gamble is the most commonly credited creator of the television series 'The Magicians'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1392,
+      "title": "Twin Peaks",
+      "monologues": 6,
+      "creator": "David Lynch",
+      "confidence": 1.0,
+      "note": "David Lynch is widely recognized as the creator of 'Twin Peaks'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1393,
+      "title": "Twin Peaks",
+      "monologues": 8,
+      "creator": "David Lynch",
+      "confidence": 1.0,
+      "note": "David Lynch is widely recognized as the creator of 'Twin Peaks'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1394,
+      "title": "The Dead Zone",
+      "monologues": 5,
+      "creator": "Michael Taylor",
+      "confidence": 0.9,
+      "note": "Michael Taylor is commonly credited as the creator of the television series 'The Dead Zone'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1395,
+      "title": "The Mick",
+      "monologues": 4,
+      "creator": "Dave Chernin",
+      "confidence": 1.0,
+      "note": "Dave Chernin is the credited creator of 'The Mick'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1396,
+      "title": "The Comey Rule",
+      "monologues": 8,
+      "creator": "Billy Ray",
+      "confidence": 1.0,
+      "note": "Billy Ray is credited as the creator of 'The Comey Rule'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1398,
+      "title": "The Chi",
+      "monologues": 1,
+      "creator": "Lena Waithe",
+      "confidence": 1.0,
+      "note": "Lena Waithe is widely recognized as the creator of 'The Chi'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1399,
+      "title": "The X Files",
+      "monologues": 2,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1400,
+      "title": "The Simpsons",
+      "monologues": 8,
+      "creator": "Matt Groening",
+      "confidence": 1.0,
+      "note": "Matt Groening is widely recognized as the creator of 'The Simpsons'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1401,
+      "title": "Pen15",
+      "monologues": 4,
+      "creator": "Maya Erskine",
+      "confidence": 0.9,
+      "note": "Maya Erskine is one of the co-creators of 'Pen15'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1402,
+      "title": "In Treatment",
+      "monologues": 8,
+      "creator": "Ryan Murphy",
+      "confidence": 0.9,
+      "note": "Ryan Murphy is credited as the creator of the US version of 'In Treatment', which is an adaptation of an Israeli series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1403,
+      "title": "Home Economics",
+      "monologues": 5,
+      "creator": "Michael Colton",
+      "confidence": 0.9,
+      "note": "Michael Colton is credited as the creator of the series 'Home Economics'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1404,
+      "title": "The Comey Rule",
+      "monologues": 8,
+      "creator": "Billy Ray",
+      "confidence": 1.0,
+      "note": "Billy Ray is credited as the creator of 'The Comey Rule'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1405,
+      "title": "Dickinson",
+      "monologues": 7,
+      "creator": "Alena Smith",
+      "confidence": 1.0,
+      "note": "Alena Smith is credited as the creator of the series 'Dickinson'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1406,
+      "title": "The Handmaids Tale",
+      "monologues": 4,
+      "creator": "Bruce Miller",
+      "confidence": 1.0,
+      "note": "Bruce Miller is credited as the creator of 'The Handmaid's Tale' series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1407,
+      "title": "The Simpsons",
+      "monologues": 1,
+      "creator": "Matt Groening",
+      "confidence": 1.0,
+      "note": "Matt Groening is widely recognized as the creator of 'The Simpsons'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1408,
+      "title": "Mayor Of Kingstown",
+      "monologues": 7,
+      "creator": "Taylor Sheridan",
+      "confidence": 1.0,
+      "note": "Taylor Sheridan is credited as the creator of 'Mayor Of Kingstown'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1409,
+      "title": "Studio 60 On The Sunset Strip",
+      "monologues": 8,
+      "creator": "Aaron Sorkin",
+      "confidence": 1.0,
+      "note": "Aaron Sorkin is the credited creator of 'Studio 60 On The Sunset Strip'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1410,
+      "title": "Scrubs",
+      "monologues": 7,
+      "creator": "Bill Lawrence",
+      "confidence": 1.0,
+      "note": "Bill Lawrence is the credited creator of the television series 'Scrubs'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1411,
+      "title": "Hannah Montana",
+      "monologues": 6,
+      "creator": "Michael Poryes",
+      "confidence": 1.0,
+      "note": "Michael Poryes is credited as the creator of 'Hannah Montana'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1412,
+      "title": "Wandavision",
+      "monologues": 3,
+      "creator": "Jac Schaeffer",
+      "confidence": 1.0,
+      "note": "Jac Schaeffer is credited as the creator of 'Wandavision'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1413,
+      "title": "The Night Of",
+      "monologues": 2,
+      "creator": "Richard Price",
+      "confidence": 1.0,
+      "note": "Richard Price is credited as the creator of 'The Night Of'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1414,
+      "title": "The Twilight Zone",
+      "monologues": 4,
+      "creator": "Rod Serling",
+      "confidence": 1.0,
+      "note": "Rod Serling is widely recognized as the creator of 'The Twilight Zone'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1415,
+      "title": "Russian Doll",
+      "monologues": 5,
+      "creator": "Natasha Lyonne",
+      "confidence": 0.9,
+      "note": "Natasha Lyonne is commonly credited as a creator of 'Russian Doll' along with Amy Poehler and Leslye Headland.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1416,
+      "title": "Black Mirror",
+      "monologues": 8,
+      "creator": "Charlie Brooker",
+      "confidence": 1.0,
+      "note": "Charlie Brooker is widely recognized as the creator of 'Black Mirror'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1417,
+      "title": "Ted Lasso",
+      "monologues": 7,
+      "creator": "Bill Lawrence",
+      "confidence": 0.9,
+      "note": "Bill Lawrence is commonly credited as the creator of 'Ted Lasso'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1418,
+      "title": "The Fresh Prince Of Bel Air",
+      "monologues": 2,
+      "creator": "Andy Borowitz",
+      "confidence": 1.0,
+      "note": "Andy Borowitz is credited as the creator of 'The Fresh Prince of Bel-Air'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1419,
+      "title": "Married With Children",
+      "monologues": 5,
+      "creator": "Ron Leavitt",
+      "confidence": 1.0,
+      "note": "Ron Leavitt is widely recognized as the creator of 'Married With Children'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1420,
+      "title": "The X Files",
+      "monologues": 4,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1421,
+      "title": "The X Files",
+      "monologues": 3,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1422,
+      "title": "The X Files",
+      "monologues": 8,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1423,
+      "title": "Dr Ken",
+      "monologues": 7,
+      "creator": "Ken Jeong",
+      "confidence": 1.0,
+      "note": "Ken Jeong is credited as the creator of 'Dr. Ken'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1424,
+      "title": "Spartacus",
+      "monologues": 3,
+      "creator": "Steven S. DeKnight",
+      "confidence": 1.0,
+      "note": "Steven S. DeKnight is credited as the creator of the series 'Spartacus'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1425,
+      "title": "Spartacus",
+      "monologues": 5,
+      "creator": "Steven S. DeKnight",
+      "confidence": 1.0,
+      "note": "Steven S. DeKnight is credited as the creator of the series 'Spartacus'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1426,
+      "title": "The X Files",
+      "monologues": 2,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1427,
+      "title": "The X Files",
+      "monologues": 8,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1428,
+      "title": "One Day At A Time",
+      "monologues": 8,
+      "creator": "Norman Lear",
+      "confidence": 1.0,
+      "note": "Norman Lear is the creator of the original 'One Day At A Time' series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1429,
+      "title": "Pretty Little Liars",
+      "monologues": 1,
+      "creator": "I. Marlene King",
+      "confidence": 1.0,
+      "note": "I. Marlene King is the credited creator of 'Pretty Little Liars'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1430,
+      "title": "Gilmore Girls",
+      "monologues": 8,
+      "creator": "Amy Sherman-Palladino",
+      "confidence": 1.0,
+      "note": "Amy Sherman-Palladino is widely recognized as the creator of 'Gilmore Girls'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1431,
+      "title": "Lucifer",
+      "monologues": 7,
+      "creator": "Tom Kapinos",
+      "confidence": 1.0,
+      "note": "Tom Kapinos is credited as the creator of the television series 'Lucifer'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1432,
+      "title": "Supernatural",
+      "monologues": 3,
+      "creator": "Eric Kripke",
+      "confidence": 1.0,
+      "note": "Eric Kripke is the credited creator of the series 'Supernatural'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1433,
+      "title": "Supernatural",
+      "monologues": 4,
+      "creator": "Eric Kripke",
+      "confidence": 1.0,
+      "note": "Eric Kripke is the credited creator of the series 'Supernatural'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1434,
+      "title": "Insecure",
+      "monologues": 7,
+      "creator": "Issa Rae",
+      "confidence": 1.0,
+      "note": "Issa Rae is widely recognized as the creator of the series 'Insecure'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1436,
+      "title": "Dollface",
+      "monologues": 8,
+      "creator": "Jordan Weiss",
+      "confidence": 1.0,
+      "note": "Jordan Weiss is credited as the creator of the series 'Dollface'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1437,
+      "title": "Spartacus",
+      "monologues": 5,
+      "creator": "Steven S. DeKnight",
+      "confidence": 1.0,
+      "note": "Steven S. DeKnight is credited as the creator of the series 'Spartacus'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1438,
+      "title": "The X Files",
+      "monologues": 3,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1439,
+      "title": "Spartacus",
+      "monologues": 2,
+      "creator": "Steven S. DeKnight",
+      "confidence": 1.0,
+      "note": "Steven S. DeKnight is credited as the creator of the series 'Spartacus'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1440,
+      "title": "The X Files",
+      "monologues": 8,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1441,
+      "title": "Rick And Morty",
+      "monologues": 5,
+      "creator": "Justin Roiland",
+      "confidence": 1.0,
+      "note": "Justin Roiland is commonly credited as the co-creator of 'Rick And Morty'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1442,
+      "title": "Twin Peaks",
+      "monologues": 8,
+      "creator": "David Lynch",
+      "confidence": 1.0,
+      "note": "David Lynch is widely recognized as the creator of 'Twin Peaks'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1443,
+      "title": "The X Files",
+      "monologues": 1,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1444,
+      "title": "Run",
+      "monologues": 3,
+      "creator": "Vicky Jones",
+      "confidence": 1.0,
+      "note": "Vicky Jones is credited as the creator of the series 'Run'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1445,
+      "title": "The X Files",
+      "monologues": 8,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1446,
+      "title": "Greys Anatomy",
+      "monologues": 6,
+      "creator": "Shonda Rhimes",
+      "confidence": 1.0,
+      "note": "Shonda Rhimes is widely recognized as the creator of 'Grey's Anatomy'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1447,
+      "title": "Greys Anatomy",
+      "monologues": 8,
+      "creator": "Shonda Rhimes",
+      "confidence": 1.0,
+      "note": "Shonda Rhimes is widely recognized as the creator of 'Grey's Anatomy'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1448,
+      "title": "The X Files",
+      "monologues": 6,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1449,
+      "title": "Greys Anatomy",
+      "monologues": 4,
+      "creator": "Shonda Rhimes",
+      "confidence": 1.0,
+      "note": "Shonda Rhimes is widely recognized as the creator of 'Grey's Anatomy'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1450,
+      "title": "Lost",
+      "monologues": 5,
+      "creator": "J.J. Abrams",
+      "confidence": 1.0,
+      "note": "J.J. Abrams is widely recognized as the creator of the television series 'Lost'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1451,
+      "title": "Lost",
+      "monologues": 3,
+      "creator": "J.J. Abrams",
+      "confidence": 1.0,
+      "note": "J.J. Abrams is widely recognized as the creator of the television series 'Lost'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1452,
+      "title": "The X Files",
+      "monologues": 8,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1453,
+      "title": "Lost",
+      "monologues": 4,
+      "creator": "J.J. Abrams",
+      "confidence": 1.0,
+      "note": "J.J. Abrams is widely recognized as the creator of the television series 'Lost'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1454,
+      "title": "The X Files",
+      "monologues": 5,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1455,
+      "title": "Salem",
+      "monologues": 8,
+      "creator": "Brannon Braga",
+      "confidence": 0.9,
+      "note": "Brannon Braga is commonly credited as the creator of the series 'Salem'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1456,
+      "title": "The Leftovers",
+      "monologues": 4,
+      "creator": "Damon Lindelof",
+      "confidence": 1.0,
+      "note": "Damon Lindelof is widely recognized as the creator of 'The Leftovers'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1457,
+      "title": "Twin Peaks",
+      "monologues": 8,
+      "creator": "David Lynch",
+      "confidence": 1.0,
+      "note": "David Lynch is widely recognized as the creator of 'Twin Peaks'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1458,
+      "title": "Rick And Morty",
+      "monologues": 8,
+      "creator": "Justin Roiland",
+      "confidence": 1.0,
+      "note": "Justin Roiland is commonly credited as the creator of 'Rick And Morty'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1459,
+      "title": "Twin Peaks",
+      "monologues": 8,
+      "creator": "David Lynch",
+      "confidence": 1.0,
+      "note": "David Lynch is widely recognized as the creator of 'Twin Peaks'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1460,
+      "title": "Succession",
+      "monologues": 8,
+      "creator": "Jesse Armstrong",
+      "confidence": 1.0,
+      "note": "Jesse Armstrong is widely credited as the creator of the series 'Succession'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1461,
+      "title": "Upload",
+      "monologues": 7,
+      "creator": "Greg Daniels",
+      "confidence": 1.0,
+      "note": "Greg Daniels is the creator of the series 'Upload'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1462,
+      "title": "Snowpiercer",
+      "monologues": 6,
+      "creator": "Josh Friedman",
+      "confidence": 0.9,
+      "note": "Josh Friedman is credited as the creator of the TV series 'Snowpiercer'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1463,
+      "title": "Raised By Wolves",
+      "monologues": 6,
+      "creator": "Aaron Guzikowski",
+      "confidence": 1.0,
+      "note": "Aaron Guzikowski is credited as the creator of the series 'Raised By Wolves'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1464,
+      "title": "Space Force",
+      "monologues": 8,
+      "creator": "Greg Daniels",
+      "confidence": 1.0,
+      "note": "Greg Daniels is credited as the creator of the series 'Space Force'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1465,
+      "title": "The Outsider",
+      "monologues": 8,
+      "creator": "Richard Price",
+      "confidence": 1.0,
+      "note": "Richard Price is credited as the creator of the HBO series 'The Outsider', which is based on Stephen King's novel.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1466,
+      "title": "Dickinson",
+      "monologues": 6,
+      "creator": "Alena Smith",
+      "confidence": 1.0,
+      "note": "Alena Smith is credited as the creator of the series 'Dickinson'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1467,
+      "title": "Rick And Morty",
+      "monologues": 7,
+      "creator": "Justin Roiland",
+      "confidence": 1.0,
+      "note": "Justin Roiland is commonly credited as the co-creator of 'Rick And Morty'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1468,
+      "title": "Rick And Morty",
+      "monologues": 3,
+      "creator": "Justin Roiland",
+      "confidence": 1.0,
+      "note": "Justin Roiland is commonly credited as the co-creator of 'Rick And Morty'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1469,
+      "title": "His Dark Materials",
+      "monologues": 6,
+      "creator": "Jack Thorne",
+      "confidence": 1.0,
+      "note": "Jack Thorne is credited as the creator of the television adaptation of 'His Dark Materials'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1470,
+      "title": "Succession",
+      "monologues": 8,
+      "creator": "Jesse Armstrong",
+      "confidence": 1.0,
+      "note": "Jesse Armstrong is widely credited as the creator of the series 'Succession'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1471,
+      "title": "Cheers",
+      "monologues": 1,
+      "creator": "James Burrows",
+      "confidence": 0.9,
+      "note": "James Burrows is widely recognized as the creator of 'Cheers', although it was developed by a team including Glen Charles and Les Charles.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1472,
+      "title": "Chuck",
+      "monologues": 2,
+      "creator": "Josh Schwartz",
+      "confidence": 1.0,
+      "note": "Josh Schwartz is the credited creator of the series 'Chuck'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1473,
+      "title": "American Gods",
+      "monologues": 8,
+      "creator": "Bryan Fuller",
+      "confidence": 1.0,
+      "note": "Bryan Fuller is credited as the creator of the television series 'American Gods'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1474,
+      "title": "The Good Place",
+      "monologues": 8,
+      "creator": "Michael Schur",
+      "confidence": 1.0,
+      "note": "Michael Schur is widely recognized as the creator of 'The Good Place'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1475,
+      "title": "The Boys",
+      "monologues": 8,
+      "creator": "Eric Kripke",
+      "confidence": 1.0,
+      "note": "Eric Kripke is the creator of the television series 'The Boys'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1476,
+      "title": "Power",
+      "monologues": 8,
+      "creator": "Courtney A. Kemp",
+      "confidence": 1.0,
+      "note": "Courtney A. Kemp is the creator of the series 'Power'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1477,
+      "title": "Narcos",
+      "monologues": 5,
+      "creator": "Chris Brancato",
+      "confidence": 0.9,
+      "note": "Chris Brancato is commonly credited as one of the creators of 'Narcos'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1478,
+      "title": "Fleabag",
+      "monologues": 5,
+      "creator": "Phoebe Waller-Bridge",
+      "confidence": 1.0,
+      "note": "Phoebe Waller-Bridge is widely recognized as the creator of 'Fleabag'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1479,
+      "title": "Ballers",
+      "monologues": 3,
+      "creator": "Stephen Levinson",
+      "confidence": 1.0,
+      "note": "Stephen Levinson is credited as the creator of the series 'Ballers'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1480,
+      "title": "The Good Wife",
+      "monologues": 6,
+      "creator": "Michelle King",
+      "confidence": 1.0,
+      "note": "Michelle King is commonly credited as the creator of 'The Good Wife'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1481,
+      "title": "Altered Carbon",
+      "monologues": 8,
+      "creator": "Laeta Kalogridis",
+      "confidence": 1.0,
+      "note": "Laeta Kalogridis is credited as the creator of 'Altered Carbon'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1482,
+      "title": "The Man In The High Castle",
+      "monologues": 3,
+      "creator": "Frank Spotnitz",
+      "confidence": 1.0,
+      "note": "Frank Spotnitz is credited as the creator of 'The Man In The High Castle'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1483,
+      "title": "Catch 22",
+      "monologues": 8,
+      "creator": "Luke Davies",
+      "confidence": 0.9,
+      "note": "Luke Davies is credited as the creator of the 2019 adaptation of 'Catch-22'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1484,
+      "title": "Veep",
+      "monologues": 8,
+      "creator": "Armando Iannucci",
+      "confidence": 1.0,
+      "note": "Armando Iannucci is widely recognized as the creator of 'Veep'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1485,
+      "title": "Doom Patrol",
+      "monologues": 8,
+      "creator": "Jeremy Carver",
+      "confidence": 1.0,
+      "note": "Jeremy Carver is the credited creator of the series 'Doom Patrol'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1487,
+      "title": "The Flash",
+      "monologues": 8,
+      "creator": "Greg Berlanti",
+      "confidence": 1.0,
+      "note": "Greg Berlanti is the most commonly credited creator of 'The Flash' series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1488,
+      "title": "Black Lightning",
+      "monologues": 8,
+      "creator": "Salim Akil",
+      "confidence": 1.0,
+      "note": "Salim Akil is credited as the creator of the series 'Black Lightning'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1489,
+      "title": "Tom Clancys Jack Ryan",
+      "monologues": 8,
+      "creator": "Carlton Cuse",
+      "confidence": 0.9,
+      "note": "Carlton Cuse is commonly credited as a creator of the series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1490,
+      "title": "The X Files",
+      "monologues": 1,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1491,
+      "title": "King Of The Hill",
+      "monologues": 1,
+      "creator": "Mike Judge",
+      "confidence": 1.0,
+      "note": "Mike Judge is widely recognized as the creator of 'King Of The Hill'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1492,
+      "title": "Glee",
+      "monologues": 8,
+      "creator": "Ryan Murphy",
+      "confidence": 1.0,
+      "note": "Ryan Murphy is widely recognized as the creator of 'Glee'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1493,
+      "title": "Sex And The City",
+      "monologues": 1,
+      "creator": "Darren Star",
+      "confidence": 1.0,
+      "note": "Darren Star is widely recognized as the creator of 'Sex And The City'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1494,
+      "title": "The Night Manager",
+      "monologues": 7,
+      "creator": "David Farr",
+      "confidence": 1.0,
+      "note": "David Farr is credited as the creator of the television adaptation of 'The Night Manager'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1495,
+      "title": "The Night Manager",
+      "monologues": 8,
+      "creator": "David Farr",
+      "confidence": 1.0,
+      "note": "David Farr is credited as the creator of the television adaptation of 'The Night Manager'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1496,
+      "title": "The Night Manager",
+      "monologues": 8,
+      "creator": "David Farr",
+      "confidence": 1.0,
+      "note": "David Farr is credited as the creator of the television adaptation of 'The Night Manager'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1497,
+      "title": "The Night Manager",
+      "monologues": 8,
+      "creator": "David Farr",
+      "confidence": 1.0,
+      "note": "David Farr is credited as the creator of the television adaptation of 'The Night Manager'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1498,
+      "title": "The Night Manager",
+      "monologues": 8,
+      "creator": "David Farr",
+      "confidence": 1.0,
+      "note": "David Farr is credited as the creator of the television adaptation of 'The Night Manager'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1499,
+      "title": "Lodge 49",
+      "monologues": 2,
+      "creator": "Jim Gavin",
+      "confidence": 1.0,
+      "note": "Jim Gavin is credited as the creator of 'Lodge 49'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1500,
+      "title": "The Goldbergs",
+      "monologues": 2,
+      "creator": "Adam F. Goldberg",
+      "confidence": 1.0,
+      "note": "Adam F. Goldberg is the creator of the series 'The Goldbergs'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1501,
+      "title": "Fleabag",
+      "monologues": 1,
+      "creator": "Phoebe Waller-Bridge",
+      "confidence": 1.0,
+      "note": "Phoebe Waller-Bridge is widely recognized as the creator of 'Fleabag'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1502,
+      "title": "Tell Me A Story",
+      "monologues": 6,
+      "creator": "Kevin Williamson",
+      "confidence": 1.0,
+      "note": "Kevin Williamson is the credited creator of the series 'Tell Me A Story'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1503,
+      "title": "The Village",
+      "monologues": 8,
+      "creator": "David Wellington",
+      "confidence": 0.9,
+      "note": "David Wellington is credited as the creator of the US series 'The Village'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1504,
+      "title": "Game Of Thrones",
+      "monologues": 8,
+      "creator": "David Benioff",
+      "confidence": 1.0,
+      "note": "David Benioff and D.B. Weiss are credited as the creators of 'Game of Thrones'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1505,
+      "title": "Law And Order Special Victims Unit",
+      "monologues": 3,
+      "creator": "Dick Wolf",
+      "confidence": 1.0,
+      "note": "Dick Wolf is the creator of 'Law And Order Special Victims Unit'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1506,
+      "title": "Law And Order",
+      "monologues": 8,
+      "creator": "Dick Wolf",
+      "confidence": 1.0,
+      "note": "Dick Wolf is the creator of the original 'Law & Order' series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1507,
+      "title": "Halt And Catch Fire",
+      "monologues": 8,
+      "creator": "Christopher Cantwell",
+      "confidence": 1.0,
+      "note": "Christopher Cantwell is credited as one of the creators of 'Halt And Catch Fire'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1508,
+      "title": "Er",
+      "monologues": 1,
+      "creator": "Michael Crichton",
+      "confidence": 1.0,
+      "note": "Michael Crichton is the credited creator of the television series 'ER'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1509,
+      "title": "Er",
+      "monologues": 8,
+      "creator": "Michael Crichton",
+      "confidence": 1.0,
+      "note": "Michael Crichton is widely recognized as the creator of the television series 'ER'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1510,
+      "title": "Big Little Lies",
+      "monologues": 3,
+      "creator": "David E. Kelley",
+      "confidence": 1.0,
+      "note": "David E. Kelley is credited as the creator of the series 'Big Little Lies'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1511,
+      "title": "Big Little Lies",
+      "monologues": 8,
+      "creator": "David E. Kelley",
+      "confidence": 1.0,
+      "note": "David E. Kelley is credited as the creator of the series 'Big Little Lies'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1512,
+      "title": "Big Little Lies",
+      "monologues": 8,
+      "creator": "David E. Kelley",
+      "confidence": 1.0,
+      "note": "David E. Kelley is credited as the creator of 'Big Little Lies'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1513,
+      "title": "Big Little Lies",
+      "monologues": 8,
+      "creator": "David E. Kelley",
+      "confidence": 1.0,
+      "note": "David E. Kelley is credited as the creator of the series 'Big Little Lies'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1514,
+      "title": "Big Little Lies",
+      "monologues": 8,
+      "creator": "David E. Kelley",
+      "confidence": 1.0,
+      "note": "David E. Kelley is credited as the creator of 'Big Little Lies'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1515,
+      "title": "Big Little Lies",
+      "monologues": 8,
+      "creator": "David E. Kelley",
+      "confidence": 1.0,
+      "note": "David E. Kelley is credited as the creator of the series 'Big Little Lies'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1516,
+      "title": "Big Little Lies",
+      "monologues": 8,
+      "creator": "David E. Kelley",
+      "confidence": 1.0,
+      "note": "David E. Kelley is credited as the creator of the series 'Big Little Lies'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1517,
+      "title": "Good Omens",
+      "monologues": 6,
+      "creator": "Neil Gaiman",
+      "confidence": 1.0,
+      "note": "Neil Gaiman is credited as the creator of the series 'Good Omens', which is based on his novel co-written with Terry Pratchett.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1518,
+      "title": "Sharp Objects",
+      "monologues": 6,
+      "creator": "Gillian Flynn",
+      "confidence": 1.0,
+      "note": "Gillian Flynn is credited as the creator of the series 'Sharp Objects', which is based on her own novel.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1519,
+      "title": "Six Feet Under",
+      "monologues": 7,
+      "creator": "Alan Ball",
+      "confidence": 1.0,
+      "note": "Alan Ball is widely recognized as the creator of 'Six Feet Under'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1520,
+      "title": "The West Wing",
+      "monologues": 7,
+      "creator": "Aaron Sorkin",
+      "confidence": 1.0,
+      "note": "Aaron Sorkin is widely recognized as the creator of 'The West Wing'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1521,
+      "title": "The West Wing",
+      "monologues": 4,
+      "creator": "Aaron Sorkin",
+      "confidence": 1.0,
+      "note": "Aaron Sorkin is widely recognized as the creator of 'The West Wing'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1522,
+      "title": "Euphoria",
+      "monologues": 7,
+      "creator": "Sam Levinson",
+      "confidence": 1.0,
+      "note": "Sam Levinson is the creator of the series 'Euphoria'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1523,
+      "title": "The Act",
+      "monologues": 8,
+      "creator": "Nick Antosca",
+      "confidence": 1.0,
+      "note": "Nick Antosca is credited as the creator of the series 'The Act'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1524,
+      "title": "Better Call Saul",
+      "monologues": 8,
+      "creator": "Vince Gilligan",
+      "confidence": 1.0,
+      "note": "Vince Gilligan is widely recognized as the creator of 'Better Call Saul'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1525,
+      "title": "No Activity",
+      "monologues": 7,
+      "creator": "Trent O'Donnell",
+      "confidence": 1.0,
+      "note": "Trent O'Donnell is the credited creator of the series 'No Activity'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1526,
+      "title": "Whiskey Cavalier",
+      "monologues": 7,
+      "creator": "David Hemingson",
+      "confidence": 1.0,
+      "note": "David Hemingson is credited as the creator of 'Whiskey Cavalier'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1527,
+      "title": "Weird City",
+      "monologues": 2,
+      "creator": "Jordan Peele",
+      "confidence": 0.9,
+      "note": "Jordan Peele is commonly credited as the creator of 'Weird City'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1528,
+      "title": "Weird City",
+      "monologues": 3,
+      "creator": "Jordan Peele",
+      "confidence": 0.9,
+      "note": "Jordan Peele is commonly credited as the creator of 'Weird City'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1529,
+      "title": "Weird City",
+      "monologues": 4,
+      "creator": "Jordan Peele",
+      "confidence": 0.9,
+      "note": "Jordan Peele is commonly credited as the creator of 'Weird City'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1530,
+      "title": "The Good Cop",
+      "monologues": 8,
+      "creator": "Andy Breckman",
+      "confidence": 1.0,
+      "note": "Andy Breckman is credited as the creator of the US series 'The Good Cop'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1531,
+      "title": "The First",
+      "monologues": 1,
+      "creator": "Beau Willimon",
+      "confidence": 1.0,
+      "note": "Beau Willimon is credited as the creator of the series 'The First'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1532,
+      "title": "Sex Education",
+      "monologues": 3,
+      "creator": "Laurie Nunn",
+      "confidence": 1.0,
+      "note": "Laurie Nunn is credited as the creator of the series 'Sex Education'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1533,
+      "title": "Roswell New Mexico",
+      "monologues": 8,
+      "creator": "Carina Adly MacKenzie",
+      "confidence": 1.0,
+      "note": "Carina Adly MacKenzie is credited as the creator of 'Roswell, New Mexico'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1534,
+      "title": "Project Blue Book",
+      "monologues": 6,
+      "creator": "David O'Leary",
+      "confidence": 1.0,
+      "note": "David O'Leary is credited as the creator of 'Project Blue Book'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1535,
+      "title": "Homecoming",
+      "monologues": 8,
+      "creator": "Sam Esmail",
+      "confidence": 1.0,
+      "note": "Sam Esmail is the creator of the series 'Homecoming'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1536,
+      "title": "Barry",
+      "monologues": 7,
+      "creator": "Bill Hader",
+      "confidence": 1.0,
+      "note": "Bill Hader is widely recognized as the creator of the series 'Barry'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1537,
+      "title": "Bojack Horseman",
+      "monologues": 8,
+      "creator": "Raphael Bob-Waksberg",
+      "confidence": 1.0,
+      "note": "He is the credited creator of 'Bojack Horseman'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1538,
+      "title": "Atlanta",
+      "monologues": 6,
+      "creator": "Donald Glover",
+      "confidence": 1.0,
+      "note": "Donald Glover is widely recognized as the creator of the series 'Atlanta'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1539,
+      "title": "The Haunting Of Hill House",
+      "monologues": 8,
+      "creator": "Mike Flanagan",
+      "confidence": 1.0,
+      "note": "Mike Flanagan is credited as the creator of 'The Haunting Of Hill House'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1540,
+      "title": "Chernobyl",
+      "monologues": 8,
+      "creator": "Craig Mazin",
+      "confidence": 1.0,
+      "note": "Craig Mazin is credited as the creator of the miniseries 'Chernobyl'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1541,
+      "title": "Chernobyl",
+      "monologues": 7,
+      "creator": "Craig Mazin",
+      "confidence": 1.0,
+      "note": "Craig Mazin is credited as the creator of the miniseries 'Chernobyl'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1542,
+      "title": "The X Files",
+      "monologues": 4,
+      "creator": "Chris Carter",
+      "confidence": 1.0,
+      "note": "Chris Carter is widely recognized as the creator of 'The X Files'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1543,
+      "title": "Star Trek",
+      "monologues": 8,
+      "creator": "Gene Roddenberry",
+      "confidence": 1.0,
+      "note": "Gene Roddenberry is widely recognized as the creator of the original 'Star Trek' series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1544,
+      "title": "This Is Us",
+      "monologues": 8,
+      "creator": "Dan Fogelman",
+      "confidence": 1.0,
+      "note": "Dan Fogelman is widely recognized as the creator of 'This Is Us'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1545,
+      "title": "The Handmaids Tale",
+      "monologues": 2,
+      "creator": "Bruce Miller",
+      "confidence": 1.0,
+      "note": "Bruce Miller is credited as the creator of 'The Handmaid's Tale' series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1546,
+      "title": "American Vandal",
+      "monologues": 7,
+      "creator": "Tony Yacenda",
+      "confidence": 1.0,
+      "note": "Tony Yacenda is credited as the creator of 'American Vandal'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1547,
+      "title": "Black Mirror",
+      "monologues": 7,
+      "creator": "Charlie Brooker",
+      "confidence": 1.0,
+      "note": "Charlie Brooker is widely recognized as the creator of 'Black Mirror'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1548,
+      "title": "Here And Now",
+      "monologues": 8,
+      "creator": "Alan Ball",
+      "confidence": 1.0,
+      "note": "Alan Ball is the creator of the series 'Here And Now'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1549,
+      "title": "Black Sails",
+      "monologues": 8,
+      "creator": "Jon Steinberg",
+      "confidence": 1.0,
+      "note": "Jon Steinberg is credited as the creator of 'Black Sails'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1550,
+      "title": "Happy",
+      "monologues": 5,
+      "creator": "Grant Morrison",
+      "confidence": 1.0,
+      "note": "Grant Morrison is credited as the creator of the series 'Happy', which is based on his comic book of the same name.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1551,
+      "title": "Brooklyn Nine Nine",
+      "monologues": 4,
+      "creator": "Michael Schur",
+      "confidence": 1.0,
+      "note": "Michael Schur is widely recognized as the creator of 'Brooklyn Nine-Nine'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1552,
+      "title": "Izombie",
+      "monologues": 7,
+      "creator": "Rob Thomas",
+      "confidence": 1.0,
+      "note": "Rob Thomas is the credited creator of the series 'Izombie'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1553,
+      "title": "Smilf",
+      "monologues": 6,
+      "creator": "Frankie Shaw",
+      "confidence": 1.0,
+      "note": "Frankie Shaw is credited as the creator of the series 'Smilf'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1554,
+      "title": "Channel Zero",
+      "monologues": 4,
+      "creator": "Nick Antosca",
+      "confidence": 1.0,
+      "note": "Nick Antosca is credited as the creator of 'Channel Zero'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1555,
+      "title": "Sneaky Pete",
+      "monologues": 8,
+      "creator": "David Shore",
+      "confidence": 0.9,
+      "note": "David Shore is commonly credited as the creator of 'Sneaky Pete'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1556,
+      "title": "The Good Doctor",
+      "monologues": 8,
+      "creator": "David Shore",
+      "confidence": 1.0,
+      "note": "David Shore is the creator of the US series 'The Good Doctor'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1557,
+      "title": "13 Reasons Why",
+      "monologues": 4,
+      "creator": "Brian Yorkey",
+      "confidence": 1.0,
+      "note": "Brian Yorkey is credited as the creator of '13 Reasons Why'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1558,
+      "title": "Battlestar Galactica",
+      "monologues": 3,
+      "creator": "Glen A. Larson",
+      "confidence": 1.0,
+      "note": "Glen A. Larson is credited as the creator of the original 'Battlestar Galactica' series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1559,
+      "title": "Seinfeld",
+      "monologues": 2,
+      "creator": "Larry David",
+      "confidence": 1.0,
+      "note": "Larry David is widely recognized as the co-creator of 'Seinfeld'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1560,
+      "title": "American Horror Story",
+      "monologues": 8,
+      "creator": "Ryan Murphy",
+      "confidence": 1.0,
+      "note": "Ryan Murphy is the creator of 'American Horror Story'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1561,
+      "title": "Sons Of Anarchy",
+      "monologues": 4,
+      "creator": "Kurt Sutter",
+      "confidence": 1.0,
+      "note": "Kurt Sutter is widely recognized as the creator of 'Sons Of Anarchy'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1562,
+      "title": "Six Feet Under",
+      "monologues": 8,
+      "creator": "Alan Ball",
+      "confidence": 1.0,
+      "note": "Alan Ball is widely recognized as the creator of 'Six Feet Under'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1563,
+      "title": "Maniac",
+      "monologues": 8,
+      "creator": "Patrick Somerville",
+      "confidence": 1.0,
+      "note": "Patrick Somerville is credited as the creator of the series 'Maniac'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1564,
+      "title": "Yellowstone",
+      "monologues": 7,
+      "creator": "Taylor Sheridan",
+      "confidence": 1.0,
+      "note": "Taylor Sheridan is widely recognized as the creator of 'Yellowstone'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1565,
+      "title": "The Office",
+      "monologues": 8,
+      "creator": "Greg Daniels",
+      "confidence": 1.0,
+      "note": "Greg Daniels is credited as the creator of the US version of 'The Office'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1566,
+      "title": "Its Always Sunny In Philadelphia",
+      "monologues": 5,
+      "creator": "Rob McElhenney",
+      "confidence": 1.0,
+      "note": "Rob McElhenney is widely recognized as the creator of 'It's Always Sunny in Philadelphia'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1568,
+      "title": "Game Of Thrones",
+      "monologues": 8,
+      "creator": "David Benioff",
+      "confidence": 1.0,
+      "note": "David Benioff and D.B. Weiss are credited as the creators of 'Game of Thrones'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1569,
+      "title": "Silicon Valley",
+      "monologues": 8,
+      "creator": "Mike Judge",
+      "confidence": 1.0,
+      "note": "Mike Judge is widely recognized as the creator of the series 'Silicon Valley'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1570,
+      "title": "Ozark",
+      "monologues": 8,
+      "creator": "Bill Dubuque",
+      "confidence": 0.9,
+      "note": "Bill Dubuque is commonly credited as one of the creators of 'Ozark'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1571,
+      "title": "Ghosted",
+      "monologues": 3,
+      "creator": "Tom Gormican",
+      "confidence": 0.9,
+      "note": "Tom Gormican is credited as the creator of the US series 'Ghosted'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1572,
+      "title": "Im Dying Up Here",
+      "monologues": 7,
+      "creator": "David Flebotte",
+      "confidence": 1.0,
+      "note": "David Flebotte is credited as the creator of 'I'm Dying Up Here'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1573,
+      "title": "Billions",
+      "monologues": 8,
+      "creator": "Brian Koppelman",
+      "confidence": 1.0,
+      "note": "Brian Koppelman is commonly credited as the creator of 'Billions'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1574,
+      "title": "Rick And Morty",
+      "monologues": 4,
+      "creator": "Justin Roiland",
+      "confidence": 1.0,
+      "note": "Justin Roiland is commonly credited as the co-creator of 'Rick And Morty'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1575,
+      "title": "The Newsroom",
+      "monologues": 8,
+      "creator": "Aaron Sorkin",
+      "confidence": 1.0,
+      "note": "Aaron Sorkin is widely recognized as the creator of 'The Newsroom'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1576,
+      "title": "Killing Eve",
+      "monologues": 6,
+      "creator": "Phoebe Waller-Bridge",
+      "confidence": 1.0,
+      "note": "Phoebe Waller-Bridge is the credited creator of 'Killing Eve'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1577,
+      "title": "Friday Night Lights",
+      "monologues": 8,
+      "creator": "Peter Berg",
+      "confidence": 1.0,
+      "note": "Peter Berg is widely recognized as the creator of 'Friday Night Lights'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1578,
+      "title": "Glow",
+      "monologues": 3,
+      "creator": "Liz Flahive",
+      "confidence": 1.0,
+      "note": "Liz Flahive is credited as one of the creators of the series 'Glow'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1579,
+      "title": "A Very English Scandal",
+      "monologues": 7,
+      "creator": "Russell T. Davies",
+      "confidence": 0.9,
+      "note": "Russell T. Davies is credited as the creator of the series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1580,
+      "title": "A Very English Scandal",
+      "monologues": 8,
+      "creator": "Russell T. Davies",
+      "confidence": 0.9,
+      "note": "Russell T. Davies is credited as the creator of the series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1581,
+      "title": "A Very English Scandal",
+      "monologues": 8,
+      "creator": "Russell T. Davies",
+      "confidence": 0.9,
+      "note": "Russell T. Davies is credited as the creator of the series.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1582,
+      "title": "Grimm",
+      "monologues": 7,
+      "creator": "David Greenwalt",
+      "confidence": 1.0,
+      "note": "David Greenwalt is commonly credited as the creator of the series 'Grimm'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1583,
+      "title": "Silicon Valley",
+      "monologues": 7,
+      "creator": "Mike Judge",
+      "confidence": 1.0,
+      "note": "Mike Judge is widely recognized as the creator of the series 'Silicon Valley'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1584,
+      "title": "Atlanta",
+      "monologues": 7,
+      "creator": "Donald Glover",
+      "confidence": 1.0,
+      "note": "Donald Glover is widely recognized as the creator of the series 'Atlanta'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1585,
+      "title": "Entourage",
+      "monologues": 4,
+      "creator": "Doug Ellin",
+      "confidence": 1.0,
+      "note": "Doug Ellin is the credited creator of the series 'Entourage'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1586,
+      "title": "Silicon Valley",
+      "monologues": 8,
+      "creator": "Mike Judge",
+      "confidence": 1.0,
+      "note": "Mike Judge is widely recognized as the creator of the series 'Silicon Valley'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1587,
+      "title": "Vikings",
+      "monologues": 8,
+      "creator": "Michael Hirst",
+      "confidence": 1.0,
+      "note": "Michael Hirst is widely credited as the creator of the series 'Vikings'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1588,
+      "title": "Love",
+      "monologues": 8,
+      "creator": "Judd Apatow",
+      "confidence": 1.0,
+      "note": "Judd Apatow is the creator of the Netflix series 'Love'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1589,
+      "title": "Mozart In The Jungle",
+      "monologues": 2,
+      "creator": "Roman Coppola",
+      "confidence": 1.0,
+      "note": "Roman Coppola is credited as the creator of 'Mozart In The Jungle'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1590,
+      "title": "Lost",
+      "monologues": 5,
+      "creator": "J.J. Abrams",
+      "confidence": 1.0,
+      "note": "J.J. Abrams is widely recognized as the creator of the television series 'Lost'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1591,
+      "title": "Wilfred",
+      "monologues": 8,
+      "creator": "Adam Zwar",
+      "confidence": 1.0,
+      "note": "Adam Zwar is credited as the creator of the original Australian series 'Wilfred', which the US version is based on.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1592,
+      "title": "Bloodline",
+      "monologues": 8,
+      "creator": "Todd A. Kessler",
+      "confidence": 1.0,
+      "note": "Todd A. Kessler is credited as the creator of the series 'Bloodline'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1593,
+      "title": "How To Get Away With Murder",
+      "monologues": 8,
+      "creator": "Peter Nowalk",
+      "confidence": 1.0,
+      "note": "Peter Nowalk is the credited creator of 'How To Get Away With Murder'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1594,
+      "title": "Master Of None",
+      "monologues": 5,
+      "creator": "Aziz Ansari",
+      "confidence": 1.0,
+      "note": "Aziz Ansari is widely recognized as the creator of 'Master Of None'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1595,
+      "title": "Master Of None",
+      "monologues": 8,
+      "creator": "Aziz Ansari",
+      "confidence": 1.0,
+      "note": "Aziz Ansari is widely recognized as the creator of 'Master Of None'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1596,
+      "title": "Master Of None",
+      "monologues": 7,
+      "creator": "Aziz Ansari",
+      "confidence": 1.0,
+      "note": "Aziz Ansari is widely recognized as the creator of 'Master of None'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1597,
+      "title": "Friends",
+      "monologues": 2,
+      "creator": "David Crane",
+      "confidence": 1.0,
+      "note": "David Crane is widely recognized as one of the creators of 'Friends'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1598,
+      "title": "True Detective",
+      "monologues": 7,
+      "creator": "Nic Pizzolatto",
+      "confidence": 1.0,
+      "note": "Nic Pizzolatto is the creator of the series 'True Detective'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1599,
+      "title": "True Detective",
+      "monologues": 8,
+      "creator": "Nic Pizzolatto",
+      "confidence": 1.0,
+      "note": "Nic Pizzolatto is the creator of the series 'True Detective'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1600,
+      "title": "True Detective",
+      "monologues": 8,
+      "creator": "Nic Pizzolatto",
+      "confidence": 1.0,
+      "note": "Nic Pizzolatto is the creator of the series 'True Detective'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1601,
+      "title": "Queen Sugar",
+      "monologues": 8,
+      "creator": "Ava DuVernay",
+      "confidence": 1.0,
+      "note": "Ava DuVernay is widely recognized as the creator of 'Queen Sugar'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1603,
+      "title": "Twin Peaks",
+      "monologues": 8,
+      "creator": "David Lynch",
+      "confidence": 1.0,
+      "note": "David Lynch is widely recognized as the creator of 'Twin Peaks'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1604,
+      "title": "The Marvelous Mrs Maisel",
+      "monologues": 8,
+      "creator": "Amy Sherman-Palladino",
+      "confidence": 1.0,
+      "note": "Amy Sherman-Palladino is the credited creator of 'The Marvelous Mrs. Maisel'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1605,
+      "title": "Brooklyn Nine Nine",
+      "monologues": 7,
+      "creator": "Michael Schur",
+      "confidence": 1.0,
+      "note": "Michael Schur is widely recognized as the creator of 'Brooklyn Nine-Nine'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1606,
+      "title": "Family Guy",
+      "monologues": 2,
+      "creator": "Seth MacFarlane",
+      "confidence": 1.0,
+      "note": "Seth MacFarlane is widely recognized as the creator of 'Family Guy'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1607,
+      "title": "Lost",
+      "monologues": 8,
+      "creator": "J.J. Abrams",
+      "confidence": 1.0,
+      "note": "J.J. Abrams is widely recognized as the creator of the television series 'Lost'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1608,
+      "title": "Parks And Recreation",
+      "monologues": 7,
+      "creator": "Greg Daniels",
+      "confidence": 0.9,
+      "note": "Greg Daniels is commonly credited as the creator of 'Parks and Recreation'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1609,
+      "title": "Parks And Recreation",
+      "monologues": 7,
+      "creator": "Greg Daniels",
+      "confidence": 0.9,
+      "note": "Greg Daniels is commonly credited as the creator of the US version of 'Parks and Recreation'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1610,
+      "title": "Family Guy",
+      "monologues": 5,
+      "creator": "Seth MacFarlane",
+      "confidence": 1.0,
+      "note": "Seth MacFarlane is widely recognized as the creator of 'Family Guy'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1611,
+      "title": "Parks And Recreation",
+      "monologues": 8,
+      "creator": "Greg Daniels",
+      "confidence": 0.9,
+      "note": "Greg Daniels is commonly credited as the creator of 'Parks and Recreation'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1612,
+      "title": "Parks And Recreation",
+      "monologues": 8,
+      "creator": "Greg Daniels",
+      "confidence": 0.9,
+      "note": "Greg Daniels is commonly credited as the creator of 'Parks and Recreation'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1613,
+      "title": "Family Guy",
+      "monologues": 2,
+      "creator": "Seth MacFarlane",
+      "confidence": 1.0,
+      "note": "Seth MacFarlane is widely recognized as the creator of 'Family Guy'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1614,
+      "title": "Black Mirror",
+      "monologues": 3,
+      "creator": "Charlie Brooker",
+      "confidence": 1.0,
+      "note": "Charlie Brooker is widely recognized as the creator of 'Black Mirror'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1615,
+      "title": "The Good Place",
+      "monologues": 8,
+      "creator": "Michael Schur",
+      "confidence": 1.0,
+      "note": "Michael Schur is widely recognized as the creator of 'The Good Place'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1616,
+      "title": "Game Of Thrones",
+      "monologues": 8,
+      "creator": "David Benioff",
+      "confidence": 1.0,
+      "note": "David Benioff and D.B. Weiss are credited as the creators of 'Game of Thrones'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1617,
+      "title": "Game Of Thrones",
+      "monologues": 8,
+      "creator": "David Benioff",
+      "confidence": 1.0,
+      "note": "David Benioff and D.B. Weiss are credited as the creators of 'Game of Thrones'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1618,
+      "title": "Game Of Thrones",
+      "monologues": 6,
+      "creator": "David Benioff",
+      "confidence": 1.0,
+      "note": "David Benioff is most commonly credited as the creator of 'Game of Thrones'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1619,
+      "title": "Gypsy",
+      "monologues": 8,
+      "creator": "Lisa Rubin",
+      "confidence": 1.0,
+      "note": "Lisa Rubin is credited as the creator of the Netflix series 'Gypsy'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1620,
+      "title": "Westworld",
+      "monologues": 8,
+      "creator": "Jonathan Nolan",
+      "confidence": 0.9,
+      "note": "Jonathan Nolan is widely credited as one of the creators of 'Westworld'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1621,
+      "title": "Breaking Bad",
+      "monologues": 8,
+      "creator": "Vince Gilligan",
+      "confidence": 1.0,
+      "note": "Vince Gilligan is widely recognized as the creator of 'Breaking Bad'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1622,
+      "title": "Intelligence",
+      "monologues": 8,
+      "creator": "David Schwimmer",
+      "confidence": 0.9,
+      "note": "David Schwimmer is credited as the creator of the US series 'Intelligence'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1623,
+      "title": "Community",
+      "monologues": 8,
+      "creator": "Dan Harmon",
+      "confidence": 1.0,
+      "note": "Dan Harmon is widely recognized as the creator of the series 'Community'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1624,
+      "title": "Community",
+      "monologues": 4,
+      "creator": "Dan Harmon",
+      "confidence": 1.0,
+      "note": "Dan Harmon is widely recognized as the creator of the television series 'Community'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1625,
+      "title": "Community",
+      "monologues": 7,
+      "creator": "Dan Harmon",
+      "confidence": 1.0,
+      "note": "Dan Harmon is widely recognized as the creator of 'Community'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1626,
+      "title": "Enlisted",
+      "monologues": 7,
+      "creator": "Kevin Biegel",
+      "confidence": 1.0,
+      "note": "Kevin Biegel is the credited creator of the series 'Enlisted'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1627,
+      "title": "Modern Family",
+      "monologues": 8,
+      "creator": "Steven Levitan",
+      "confidence": 1.0,
+      "note": "Steven Levitan is widely recognized as the creator of 'Modern Family'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1628,
+      "title": "Modern Family",
+      "monologues": 3,
+      "creator": "Steven Levitan",
+      "confidence": 1.0,
+      "note": "Steven Levitan is widely recognized as the creator of 'Modern Family'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1629,
+      "title": "Modern Family",
+      "monologues": 2,
+      "creator": "Steven Levitan",
+      "confidence": 1.0,
+      "note": "Steven Levitan is widely recognized as the creator of 'Modern Family'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1630,
+      "title": "Modern Family",
+      "monologues": 2,
+      "creator": "Steven Levitan",
+      "confidence": 1.0,
+      "note": "Steven Levitan is widely recognized as the creator of 'Modern Family'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1631,
+      "title": "Californication",
+      "monologues": 7,
+      "creator": "Tom Kapinos",
+      "confidence": 1.0,
+      "note": "Tom Kapinos is the credited creator of 'Californication'.",
+      "original_author": "Unknown"
+    }
+  ],
+  "needs_human": [
+    {
+      "play_id": 1279,
+      "title": "Elsbeth",
+      "monologues": 4,
+      "creator": "",
+      "confidence": 0.0,
+      "note": "I cannot find information on a series titled 'Elsbeth'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1280,
+      "title": "High Potential",
+      "monologues": 6,
+      "creator": "",
+      "confidence": 0.0,
+      "note": "I cannot find a television series titled 'High Potential'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1282,
+      "title": "Nobody Wants This",
+      "monologues": 6,
+      "creator": "",
+      "confidence": 0.0,
+      "note": "There is no identifiable series titled 'Nobody Wants This'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1287,
+      "title": "Ripley",
+      "monologues": 5,
+      "creator": "",
+      "confidence": 0.0,
+      "note": "There is no widely recognized television series titled 'Ripley' that I can identify.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1288,
+      "title": "Baby Reindeer",
+      "monologues": 1,
+      "creator": "",
+      "confidence": 0.0,
+      "note": "I cannot find any information on a series titled 'Baby Reindeer'.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1347,
+      "title": "Kindred",
+      "monologues": 6,
+      "creator": "Octavia Butler",
+      "confidence": 0.8,
+      "note": "Based on the adaptation of her work, but unsure if she is credited as the creator.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1397,
+      "title": "Mythic Quest",
+      "monologues": 2,
+      "creator": "David Gordon Green",
+      "confidence": 0.0,
+      "note": "unsure",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1435,
+      "title": "The",
+      "monologues": 8,
+      "creator": "",
+      "confidence": 0.0,
+      "note": "There are many series with the title 'The', and without additional context, it's impossible to identify a specific creator.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1567,
+      "title": "Recovery Road",
+      "monologues": 7,
+      "creator": "Jessica Roth",
+      "confidence": 0.8,
+      "note": "Jessica Roth is credited as the creator of 'Recovery Road', but there may be some uncertainty due to multiple contributors.",
+      "original_author": "Unknown"
+    },
+    {
+      "play_id": 1602,
+      "title": "Thx",
+      "monologues": 8,
+      "creator": "",
+      "confidence": 0.0,
+      "note": "unsure",
+      "original_author": "Unknown"
+    }
+  ]
+}

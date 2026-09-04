@@ -13,16 +13,21 @@
 {% block content %}
         <p>Hey {{ user_name }},</p>
 
+        {# The end of the comp is always a date, never a duration. These grants
+           run to five different end dates and some never expire, so "free for a
+           month" would be false for most people, and checkably false. #}
+        {% set access = 'free until ' ~ expires_label if expires_label else 'free, with no end date on it' %}
+
         {% if account_type == 'educator' %}
-        <p>Your account is on {{ tier_display_name }}{% if duration_label %}, free for {{ duration_label }}{% else %}, free{% endif %}. No card, nothing to cancel, and I won't ask you for one later.</p>
+        <p>Your account is on {{ tier_display_name }}, {{ access }}. No card, nothing to cancel, and I won't ask you for one later.</p>
 
         <p>Same goes for your students. Send me their emails whenever you have the list, all at once or a few at a time, and I'll put them on the same dates so your whole class runs together instead of on thirty different clocks. My address is <a href="mailto:canberk@actorrise.com">canberk@actorrise.com</a>.</p>
         {% elif account_type == 'student' %}
-        <p>Your account is on {{ tier_display_name }}{% if duration_label %}, free for {{ duration_label }}{% else %}, free{% endif %}. No card, nothing to cancel, and I won't ask you for one later.</p>
+        <p>Your account is on {{ tier_display_name }}, {{ access }}. No card, nothing to cancel, and I won't ask you for one later.</p>
 
         <p>If your teacher wants the rest of the class on it, have them email me at <a href="mailto:canberk@actorrise.com">canberk@actorrise.com</a> and I'll set everyone up at once.</p>
         {% else %}
-        <p>I've put your account on {{ tier_display_name }}{% if duration_label %} for {{ duration_label }}{% endif %}, on me. No card, nothing to cancel, and I won't ask you for one later.</p>
+        <p>I've put your account on {{ tier_display_name }}, {{ access }}, on me. No card, nothing to cancel, and I won't ask you for one later.</p>
         {% endif %}
 
         <p>What that opens up:</p>
@@ -33,8 +38,8 @@
 
         <p>Start wherever makes sense: <a href="https://actorrise.com/practice">bring in a script</a>, or <a href="https://actorrise.com/monologues">go through the library</a>.</p>
 
-        {% if duration_label %}
-        <p>When the {{ duration_label }} is up the account just drops back to free. Nothing gets charged, nothing disappears. If you want longer, reply and say so and I'll push it out.</p>
+        {% if expires_label %}
+        <p>On {{ expires_label }} the account just drops back to free. Nothing gets charged, nothing disappears. If you want longer, reply and say so and I'll push it out.</p>
         {% endif %}
 
         <p>If something's broken or confusing, reply to this and tell me. It's just me back here, so it tends to get fixed the same week.</p>

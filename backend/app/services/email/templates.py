@@ -145,23 +145,27 @@ class EmailTemplates:
         self,
         user_name: str,
         tier_display_name: str = "Plus",
-        duration_label: Optional[str] = None,
+        expires_label: Optional[str] = None,
         account_type: Optional[str] = None,
         unsubscribe_url: Optional[str] = None,
     ) -> str:
         """Render the "I've put you on Plus" email for a comped account.
 
-        `duration_label` is human copy ("1 month", "2 weeks"), or None for a
-        permanent comp, which drops the expiry sentence entirely rather than
-        printing an empty one. `account_type` picks which promise is made:
-        an educator is told her class is covered, a student is pointed at their
-        teacher, and everyone else gets neither.
+        `expires_label` is a DATE the reader can check ("3 December 2026"), not
+        a duration. Comps run to many different end dates and some never expire,
+        so "free for a month" is false for most of them, and false in a way the
+        recipient can verify. None means permanent and drops the expiry sentence
+        rather than printing an empty one.
+
+        `account_type` picks which promise is made: an educator is told her
+        class is covered, a student is pointed at their teacher, everyone else
+        gets neither.
         """
         template = self.env.get_template('membership_granted.html')
         return template.render(
             user_name=user_name or "there",
             tier_display_name=tier_display_name or "Plus",
-            duration_label=duration_label,
+            expires_label=expires_label,
             account_type=account_type,
             unsubscribe_url=unsubscribe_url,
         )
@@ -170,18 +174,21 @@ class EmailTemplates:
         self,
         user_name: str,
         tier_display_name: str = "Plus",
-        duration_label: Optional[str] = None,
+        expires_label: Optional[str] = None,
         account_type: Optional[str] = None,
         **kwargs,
     ) -> str:
         """Plain-text alternative. Same promises, same order, no markup."""
         name = user_name or "there"
         tier = tier_display_name or "Plus"
-        free_for = f", free for {duration_label}" if duration_label else ", free"
+        access = (
+            f"free until {expires_label}" if expires_label
+            else "free, with no end date on it"
+        )
         lines = [f"Hey {name},", ""]
         if account_type == "educator":
             lines += [
-                f"Your account is on {tier}{free_for}. No card, nothing to cancel, "
+                f"Your account is on {tier}, {access}. No card, nothing to cancel, "
                 "and I won't ask you for one later.",
                 "",
                 "Same goes for your students. Send me their emails whenever you have "
@@ -191,17 +198,16 @@ class EmailTemplates:
             ]
         elif account_type == "student":
             lines += [
-                f"Your account is on {tier}{free_for}. No card, nothing to cancel, "
+                f"Your account is on {tier}, {access}. No card, nothing to cancel, "
                 "and I won't ask you for one later.",
                 "",
                 "If your teacher wants the rest of the class on it, have them email "
                 "me at canberk@actorrise.com and I'll set everyone up at once.",
             ]
         else:
-            for_x = f" for {duration_label}" if duration_label else ""
             lines += [
-                f"I've put your account on {tier}{for_x}, on me. No card, nothing to "
-                "cancel, and I won't ask you for one later.",
+                f"I've put your account on {tier}, {access}, on me. No card, nothing "
+                "to cancel, and I won't ask you for one later.",
             ]
         lines += [
             "",
@@ -214,12 +220,12 @@ class EmailTemplates:
             "Start wherever makes sense: actorrise.com/practice to bring in a script, "
             "or actorrise.com/monologues to go through the library.",
         ]
-        if duration_label:
+        if expires_label:
             lines += [
                 "",
-                f"When the {duration_label} is up the account just drops back to free. "
-                "Nothing gets charged, nothing disappears. If you want longer, reply "
-                "and say so and I'll push it out.",
+                f"On {expires_label} the account just drops back to free. Nothing gets "
+                "charged, nothing disappears. If you want longer, reply and say so and "
+                "I'll push it out.",
             ]
         lines += [
             "",
