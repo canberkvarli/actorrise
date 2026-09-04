@@ -4,6 +4,7 @@ API endpoints for user script management - upload, edit, manage scripts
 
 import asyncio
 import json as _json
+import threading
 from datetime import datetime, timedelta
 from queue import Queue, Empty
 from typing import List, Optional
@@ -2234,17 +2235,51 @@ def _build_scenes(db: Session, user_script, play_id: int, scenes_data: list) -> 
     return created
 
 
+# Background extractions that can still be stopped, by script id.
+#
+# The streaming upload has had a cancel_event since it was written — it notices
+# the client going away and stops. The background path never had one, so Cancel
+# on a full-length script was a button that did nothing: the request had already
+# returned, and the thread behind it ran to completion no matter what. One
+# instance, so a module-level registry is enough; a restart loses the handles,
+# and a restart has already stopped the threads.
+_EXTRACTION_CANCELS: dict = {}
+_EXTRACTION_CANCELS_LOCK = threading.Lock()
+
+
+def cancel_background_extraction(script_id: int) -> bool:
+    """Ask a running extraction to stop. True if one was listening."""
+    with _EXTRACTION_CANCELS_LOCK:
+        event = _EXTRACTION_CANCELS.get(script_id)
+    if event is None:
+        return False
+    event.set()
+    return True
+
+
 def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
                            file_ext: str, filename: str, mode: str, file_hash: str) -> None:
     """Finish reading a script after the request that uploaded it has gone."""
     db = SessionLocal()
+    cancel_event = threading.Event()
+    with _EXTRACTION_CANCELS_LOCK:
+        _EXTRACTION_CANCELS[script_id] = cancel_event
     try:
         parser = ScriptParser()
-        result = parser.parse_script(file_content, file_ext, filename, mode=mode)
+        result = parser.parse_script(
+            file_content, file_ext, filename, mode=mode, cancel_event=cancel_event
+        )
 
         script = db.query(UserScript).filter(UserScript.id == script_id).first()
         if not script:
             return  # deleted while we were reading it
+
+        # Cancelled while we were reading. Nothing is written: a half-read script
+        # on the shelf is worse than no script, because it looks finished.
+        if cancel_event.is_set():
+            db.delete(script)
+            db.commit()
+            return
 
         metadata = result.get("metadata", {})
         script.raw_text = result.get("raw_text") or script.raw_text
@@ -2286,16 +2321,69 @@ def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
             db.rollback()  # the script is safe; only the cache missed out
     except Exception as e:
         db.rollback()
+        # A cancelled parse raises on its way out. That is not a failure the
+        # actor needs told about — they asked for it — so the row goes rather
+        # than sitting on the shelf marked "failed".
         try:
             script = db.query(UserScript).filter(UserScript.id == script_id).first()
-            if script:
+            if script and cancel_event.is_set():
+                db.delete(script)
+                db.commit()
+            elif script:
                 script.processing_status = "failed"
                 script.processing_error = str(e)[:500]
                 db.commit()
         except Exception:
             pass
     finally:
+        with _EXTRACTION_CANCELS_LOCK:
+            _EXTRACTION_CANCELS.pop(script_id, None)
         db.close()
+
+
+@router.post("/{script_id}/cancel-extraction")
+async def cancel_extraction(
+    script_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Stop reading a script, and take it back off the shelf.
+
+    Cancel used to be wired to an AbortController that the background path never
+    set, so on exactly the scripts long enough to want cancelling — the ones
+    routed to background because they take minutes — the button did nothing and
+    the work carried on.
+
+    Deleting the row is the point. The actor cancelled: they should not be left
+    with a half-read script that looks like a finished one.
+    """
+    script = db.query(UserScript).filter(
+        UserScript.id == script_id,
+        UserScript.user_id == current_user.id,
+    ).first()
+    if not script:
+        raise HTTPException(status_code=404, detail="Script not found")
+
+    if script.processing_status not in ("processing", "pending", None):
+        raise HTTPException(
+            status_code=400,
+            detail="That script has finished reading. Delete it instead.",
+        )
+
+    was_running = cancel_background_extraction(script_id)
+
+    # Give back the upload the actor never got to keep.
+    if (current_user.total_scripts_uploaded or 0) > 0:
+        current_user.total_scripts_uploaded -= 1
+
+    # Nothing has written scenes yet — extraction commits them in one go at the
+    # end — so the row is all there is to remove. If the thread is mid-parse it
+    # sees the cancel and stops; if it is between the parse and the commit, it
+    # finds the row gone and bails on its own.
+    db.delete(script)
+    db.commit()
+
+    return {"cancelled": True, "was_running": was_running}
 
 
 @router.post("/upload-background", response_model=UserScriptDetailResponse)
@@ -2332,10 +2420,12 @@ async def upload_script_background(
 
     parser = ScriptParser()
     try:
-        raw_text = (
-            parser.extract_text_from_pdf(file_content)
-            if file_ext == "pdf"
-            else parser.extract_text_from_txt(file_content)
+        # In a thread, like the others. This one was missed in the first pass and
+        # is the same defect: pdfplumber over a full-length script, inline in an
+        # `async def`, blocking every other request on the worker while it runs.
+        raw_text = await run_in_threadpool(
+            parser.extract_text_from_pdf if file_ext == "pdf" else parser.extract_text_from_txt,
+            file_content,
         )
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")

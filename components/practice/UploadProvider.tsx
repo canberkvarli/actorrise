@@ -134,6 +134,16 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     !usage || usage.scripts_limit === -1 || usage.scripts_used < usage.scripts_limit;
 
   const abortControllerRef = useRef<AbortController | null>(null);
+  /** Set once a script is being read server-side, where aborting a fetch does nothing. */
+  const cancelBackgroundRef = useRef<(() => Promise<void>) | null>(null);
+
+  /** Whatever "stop this" means at the point it is pressed. */
+  const cancelUpload = useCallback(() => {
+    abortControllerRef.current?.abort();
+    const stopServer = cancelBackgroundRef.current;
+    cancelBackgroundRef.current = null;
+    void stopServer?.();
+  }, []);
   const progressScrollRef = useRef<HTMLDivElement | null>(null);
 
   const [scanning, setScanning] = useState(false);
@@ -334,6 +344,16 @@ export function UploadProvider({ children }: { children: ReactNode }) {
       setExtractionDone(false);
       setDoneInfo(null);
       setMinimized(false);
+
+      // Cancel has to work on this path too, and it never did: the button is
+      // wired to abortControllerRef, which only startExtraction ever set. So on
+      // exactly the scripts long enough to want cancelling — the ones routed
+      // here because they take minutes — pressing it did nothing at all.
+      // Aborting this fetch is only half of it; the server keeps reading after
+      // the request returns, so cancelBackgroundRef below tells it to stop.
+      const controller = new AbortController();
+      abortControllerRef.current = controller;
+
       try {
         const token = await getToken();
         if (!token) throw new Error("Please sign in again to upload.");
@@ -345,6 +365,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
           body: form,
+          signal: controller.signal,
         });
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
@@ -356,12 +377,35 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         }
 
         const script = await res.json();
+
+        // From here the reading happens on the server, past the end of this
+        // request. Cancel now means telling it to stop, not dropping a
+        // connection nobody is holding.
+        cancelBackgroundRef.current = async () => {
+          try {
+            const t = await getToken();
+            await fetch(`${API_URL}/api/scripts/${script.id}/cancel-extraction`, {
+              method: "POST",
+              headers: { Authorization: `Bearer ${t}` },
+            });
+            await queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY });
+            toast.info("Stopped reading it. Nothing was saved.");
+          } catch {
+            toast.error("Could not stop it. Delete the script from your shelf instead.");
+          }
+        };
+
         await queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY });
         toast.success("Reading your script. Carry on — it'll be waiting on your shelf.");
         router.push(`/practice?script=${script.id}`);
       } catch (e: unknown) {
-        toast.error(e instanceof Error ? e.message : "Upload failed");
+        if (e instanceof Error && e.name === "AbortError") {
+          toast.info("Upload cancelled");
+        } else {
+          toast.error(e instanceof Error ? e.message : "Upload failed");
+        }
       } finally {
+        abortControllerRef.current = null;
         setUploadingFile(false);
         setProgressSteps([]);
       }
@@ -486,7 +530,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
             doneInfo={doneInfo}
             expanded={expanded}
             onToggleExpanded={() => setExpanded((v) => !v)}
-            onCancel={() => abortControllerRef.current?.abort()}
+            onCancel={cancelUpload}
             onView={() => {
               const id = doneInfo!.id;
               setDoneInfo(null);
@@ -615,7 +659,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
                     </button>
                     <button
                       type="button"
-                      onClick={() => abortControllerRef.current?.abort()}
+                      onClick={cancelUpload}
                       className="shrink-0 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <IconX className="h-3.5 w-3.5" />
