@@ -8,6 +8,7 @@ from datetime import datetime, timedelta
 from queue import Queue, Empty
 from typing import List, Optional
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, text
@@ -176,6 +177,20 @@ class BulkResetRequest(BaseModel):
     lines: List[BulkResetLineData]
 
 
+class ScannedScene(BaseModel):
+    """One row of the scene map — what the picker is built from."""
+    index: int
+    act_label: Optional[str] = None
+    scene_label: Optional[str] = None
+    title: Optional[str] = None
+    characters: List[str] = []
+    line_count: int = 0
+    char_start: int
+    char_end: int
+    page_start: Optional[int] = None
+    page_end: Optional[int] = None
+
+
 class ScriptScanResponse(BaseModel):
     """Quick scan results for pre-extraction choice dialog"""
     page_count: int
@@ -185,6 +200,9 @@ class ScriptScanResponse(BaseModel):
     show_mode_choice: bool
     estimated_quick_seconds: int
     estimated_full_seconds: int
+    # The map. Every scene in the file, whether or not it will be extracted —
+    # what gets built is a separate, metered decision.
+    scenes: List[ScannedScene] = []
 
 
 # ============================================================================
@@ -211,71 +229,81 @@ async def scan_script(
     if len(file_content) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large (max 10MB)")
 
-    # Extract text (no AI needed)
-    import io
-    import pdfplumber as _pdfplumber
+    # Off the event loop. This function used to open the PDF inline in an
+    # `async def`, which blocks the worker: nothing else was served, health
+    # checks included, for as long as the parse took. On 2026-09-04 a full play
+    # blocked it for 42 seconds, Render concluded the service was dead and
+    # restarted the instance, and the upload died with it — reaching the browser
+    # as "Failed to fetch". One person uploading Hamlet took the whole API down.
+    return await run_in_threadpool(_scan_file, file_content, file_ext)
 
-    from app.services.script_parser import pdf_page_text
 
-    actual_pdf_pages = 0
+def _scan_file(file_content: bytes, file_ext: str) -> ScriptScanResponse:
+    """The scan itself. Synchronous, and called from a worker thread."""
+    from app.services.scene_map import build_scene_map, pages_for_span
+
+    client = None
     try:
-        if file_ext == "pdf":
-            pdf_file = io.BytesIO(file_content)
-            raw_text = ""
-            with _pdfplumber.open(pdf_file) as pdf:
-                actual_pdf_pages = len(pdf.pages)
-                for page in pdf.pages:
-                    page_text = pdf_page_text(page)
-                    if page_text:
-                        raw_text += page_text + "\n\n"
-            raw_text = raw_text.strip()
-        else:
-            try:
-                raw_text = file_content.decode("utf-8")
-            except UnicodeDecodeError:
-                raw_text = file_content.decode("latin-1")
+        from app.services.script_parser import ScriptParser
+
+        client = ScriptParser().client
+    except Exception:
+        # No key, no client, no enrichment. The regex map still stands.
+        client = None
+
+    try:
+        spans, offsets, raw_text = build_scene_map(file_content, file_ext, client=client)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Failed to read file: {e}")
 
-    if not raw_text or len(raw_text) < 100:
+    if not raw_text or len(raw_text.strip()) < 100:
         raise HTTPException(status_code=400, detail="File appears to be empty or too short")
 
-    # Detect structure (pure regex, instant)
-    from app.services.script_structure import detect_structure
-    from app.services.script_parser import parse_dialogue
+    scenes: List[ScannedScene] = []
+    for i, span in enumerate(spans):
+        page_start, page_end = pages_for_span(offsets, span.char_start, span.char_end)
+        scenes.append(ScannedScene(
+            index=i,
+            act_label=span.act_label,
+            scene_label=span.scene_label,
+            title=span.title,
+            characters=span.characters,
+            line_count=span.line_count,
+            char_start=span.char_start,
+            char_end=span.char_end,
+            page_start=page_start,
+            page_end=page_end,
+        ))
 
-    chunks = detect_structure(raw_text)
-    has_structure = len(chunks) > 1 or (len(chunks) == 1 and chunks[0].act_label is not None)
-    num_acts = len(set(c.act_label for c in chunks if c.act_label))
+    has_structure = any(s.act_label or s.scene_label for s in spans)
+    num_acts = len({s.act_label for s in spans if s.act_label})
 
-    # Count chunks that have dialogue (for time estimates)
-    dialogue_chunks = 0
-    for c in chunks:
-        if c.char_count >= 200:
-            sections = parse_dialogue(c.text)
-            if any(len(s["characters"]) >= 2 for s in sections):
-                dialogue_chunks += 1
+    # Scenes worth extracting: two speakers and enough text to be a scene. The
+    # count drives the time estimate; the full map above is what gets shown.
+    dialogue_scenes = sum(
+        1 for s in spans if len(s.characters) >= 2 and s.char_count >= 200
+    )
 
-    page_count = actual_pdf_pages if actual_pdf_pages > 0 else max(1, len(raw_text) // 3000)
+    page_count = len(offsets.starts) if offsets.starts else max(1, len(raw_text) // 3000)
 
-    # Time estimates
     if page_count <= 5:
         # Small scripts: single combined AI call (~5-10s)
         est_quick = 8
         est_full = 10
     else:
         base_time = 10  # metadata extraction
-        est_quick = base_time + max(10, dialogue_chunks * 3)
-        est_full = base_time + max(15, dialogue_chunks * 10)
+        est_quick = base_time + max(10, dialogue_scenes * 3)
+        est_full = base_time + max(15, dialogue_scenes * 10)
 
     return ScriptScanResponse(
         page_count=page_count,
         has_structure=has_structure,
         num_acts=num_acts,
-        num_sections=dialogue_chunks,
-        show_mode_choice=has_structure and dialogue_chunks >= 8,
+        num_sections=dialogue_scenes,
+        show_mode_choice=has_structure and dialogue_scenes >= 8,
         estimated_quick_seconds=est_quick,
         estimated_full_seconds=est_full,
+        scenes=scenes,
     )
 
 
@@ -324,7 +352,11 @@ async def upload_script(
     # This avoids DB connection timeouts during long AI extraction.
     try:
         parser = ScriptParser()
-        result = parser.parse_script(file_content, file_ext, file.filename)
+        # In a thread: parse_script is minutes of blocking work, and running it
+        # inside the coroutine stops this worker serving anything else at all.
+        result = await run_in_threadpool(
+            parser.parse_script, file_content, file_ext, file.filename
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -880,7 +912,9 @@ async def create_script_from_text(
     # ---- Phase 1: Extract everything BEFORE touching DB ----
     try:
         parser = ScriptParser()
-        result = parser.parse_script(text_bytes, "txt", "Pasted script.txt")
+        result = await run_in_threadpool(
+            parser.parse_script, text_bytes, "txt", "Pasted script.txt"
+        )
     except Exception as e:
         raise HTTPException(
             status_code=500,
@@ -2373,7 +2407,8 @@ async def reextract_script(
 
     try:
         parser = ScriptParser()
-        result = parser.parse_script(
+        result = await run_in_threadpool(
+            parser.parse_script,
             user_script.raw_text.encode("utf-8"),
             "txt",
             user_script.original_filename or f"script-{script_id}",

@@ -27,6 +27,11 @@ dependencies = [
     "lxml>=4.9.0",
     "beautifulsoup4>=4.12.0",
     "pdfplumber>=0.10.0",
+    # The scene map reads with pypdf (0.4s/170 pages) and only falls back to
+    # pdfplumber (15.6s) when the text comes back empty. Extraction still uses
+    # pdfplumber throughout — it is the one that strips watermarks and keeps
+    # the screenplay columns.
+    "pypdf>=4.0.0",
     # spacy removed 2026-09-04: declared but never imported anywhere in app/ or
     # scripts/, and it costs 32.8 MB of a 512 MB Render instance at import time.
     # langdetect is imported by the quality scripts but was never declared, so it
