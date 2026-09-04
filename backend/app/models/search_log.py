@@ -110,6 +110,19 @@ class MonologueView(Base):
     # means Ghost Light's lifetime trial starts at zero for everyone, which is
     # what a trial that has never been offered before should do.
     client = Column(String(16), nullable=True)
+    # Which install read it. The lifetime trial is keyed on user_id, and sign-out
+    # defeats that completely: the session is revoked, the app mints a fresh
+    # anonymous user, and the new user has spent nothing. Three more reads, two
+    # taps, repeatable. Counting against (user OR device) closes it.
+    #
+    # A random uuid from the app's own storage — not the hardware id, not the
+    # advertising id, nothing that identifies a person across apps. It says "this
+    # install" and that is all the counter ever needed.
+    #
+    # Nullable, and NULL means "not told". Every row before 2026-09-04 predates
+    # the header and the web never sends one, so NULL has to keep behaving as it
+    # does today rather than being backfilled into a guess.
+    device_id = Column(String(64), nullable=True)
     created_at = Column(DateTime, server_default=sql_text("now()"), nullable=False)
 
     __table_args__ = (
@@ -120,4 +133,13 @@ class MonologueView(Base):
         # and it runs on every detail open, so it must not scan the user's
         # whole history to answer.
         Index("ix_monologue_views_user_client", "user_id", "client"),
+        # The same question asked of the install rather than the account. Partial
+        # because every historical row and every web row is NULL, so a full index
+        # would be mostly dead weight serving a lookup that never happens.
+        Index(
+            "ix_monologue_views_device_client",
+            "device_id",
+            "client",
+            postgresql_where=sql_text("device_id IS NOT NULL"),
+        ),
     )

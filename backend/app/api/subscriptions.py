@@ -505,10 +505,19 @@ async def get_usage_limits(request: Request, current_user: User = Depends(get_cu
         distinct_reads,
         free_read_limit,
         normalise_client,
+        normalise_device,
     )
 
     client = normalise_client(request.headers.get("x-client"))
-    monologue_reads_used = distinct_reads(int(current_user.id), db, client=client)
+    # This is the endpoint the app polls to paint the wall, so it has to agree
+    # with the one that spends the read. If only the spender counted the device,
+    # signing out would show three reads left and then refuse the first one.
+    monologue_reads_used = distinct_reads(
+        int(current_user.id),
+        db,
+        client=client,
+        device_id=normalise_device(request.headers.get("x-device-id")),
+    )
     monologue_reads_limit = -1 if is_paid else free_read_limit(client)
 
     return UsageLimitsResponse(

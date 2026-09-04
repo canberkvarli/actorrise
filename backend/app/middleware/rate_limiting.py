@@ -414,6 +414,19 @@ def normalise_client(value: str | None) -> str:
     )
 
 
+def normalise_device(value: str | None) -> str | None:
+    """The install id to store and count against, or None if we were not told.
+
+    Truncated to the column width rather than trusted. This value arrives in a
+    header from an app we do not control at runtime, and a 10KB X-Device-Id
+    would otherwise reach a varchar(64) and turn a read into a 500. Empty and
+    whitespace-only collapse to None so they cannot become a single shared
+    identity that every malformed client counts against together.
+    """
+    cleaned = (value or "").strip()
+    return cleaned[:64] or None
+
+
 def free_read_limit(client: str | None) -> int:
     """The free-read allowance for this client."""
     return (
@@ -462,6 +475,7 @@ def distinct_reads(
     db: Session,
     *,
     client: str | None = None,
+    device_id: str | None = None,
     exclude_monologue_id: int | None = None,
 ) -> int:
     """Distinct pieces this user has spent against `client`'s own allowance.
@@ -475,17 +489,36 @@ def distinct_reads(
       starts at zero for everyone, which is correct for a trial that has never
       been offered before.
 
+    ``device_id`` closes the hole that made "for life" untrue. The count was
+    keyed on the account alone, so Sign out handed anyone a fresh allowance:
+    the session is revoked, the app mints a new anonymous user, and the new user
+    has spent nothing. Ghost Light therefore counts pieces read by this user OR
+    this install, and the union is deliberate rather than a max — reading A and
+    B signed in and C signed out is three pieces read, however they are filed.
+
+    Ghost Light only. The web has no device id, and a browser is far likelier to
+    be shared than a phone, so extending this there would quietly charge one
+    person for another's reading.
+
     ``exclude_monologue_id`` leaves the piece being opened out of its own
     count, so the last free piece is free rather than the first walled one.
     """
     from app.models.search_log import MonologueView
 
-    query = db.query(func.count(func.distinct(MonologueView.monologue_id))).filter(
-        MonologueView.user_id == user_id,
-    )
+    query = db.query(func.count(func.distinct(MonologueView.monologue_id)))
     if normalise_client(client) == CLIENT_GHOSTLIGHT:
-        query = query.filter(MonologueView.client == CLIENT_GHOSTLIGHT)
+        # An older app, or one whose storage failed, sends no device id. It must
+        # keep behaving exactly as before rather than matching every other row
+        # that also has NULL — which is what `device_id == None` would do, and it
+        # would pool every unlabelled install into one shared allowance.
+        who = (
+            or_(MonologueView.user_id == user_id, MonologueView.device_id == device_id)
+            if device_id
+            else (MonologueView.user_id == user_id)
+        )
+        query = query.filter(who, MonologueView.client == CLIENT_GHOSTLIGHT)
     else:
+        query = query.filter(MonologueView.user_id == user_id)
         query = query.filter(
             or_(
                 MonologueView.client == CLIENT_WEB,

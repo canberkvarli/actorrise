@@ -14,6 +14,7 @@ from app.middleware.rate_limiting import (
     distinct_reads,
     free_read_limit,
     normalise_client,
+    normalise_device,
     record_monologue_read,
     record_total_search,
 )
@@ -1181,6 +1182,7 @@ async def get_monologue(
     likelier caller and the larger allowance."""
 
     view_client = normalise_client(request.headers.get("x-client"))
+    view_device = normalise_device(request.headers.get("x-device-id"))
 
     monologue = (
         db.query(Monologue)
@@ -1206,6 +1208,7 @@ async def get_monologue(
             user_id=int(current_user.id),
             search_log_id=slid,
             client=view_client,
+            device_id=view_device,
         ))
         db.commit()
     except Exception:
@@ -1244,6 +1247,7 @@ async def get_monologue(
             int(current_user.id),
             db,
             client=view_client,
+            device_id=view_device,
             exclude_monologue_id=monologue_id,
         )
         if already_read >= free_read_limit(view_client):
@@ -1604,6 +1608,10 @@ async def record_read(
         raise HTTPException(status_code=404, detail="Monologue not found")
 
     client = normalise_client(request.headers.get("x-client") or CLIENT_GHOSTLIGHT)
+    # The install that is spending it. Without this the tally is keyed on the
+    # account alone, and Sign out hands out a fresh three: the session is revoked,
+    # the app mints a new anonymous user, and the new user has spent nothing.
+    device = normalise_device(request.headers.get("x-device-id"))
     unlimited = _user_has_unlimited_reads(int(current_user.id), db)
     # Still recorded, because the daily counter is what the usage dashboards
     # read. It is no longer what the wall consults: the gate counts distinct
@@ -1619,13 +1627,14 @@ async def record_read(
             monologue_id=monologue_id,
             user_id=int(current_user.id),
             client=client,
+            device_id=device,
         ))
         db.commit()
     except Exception:
         db.rollback()
 
     limit = free_read_limit(client)
-    reads_used = distinct_reads(int(current_user.id), db, client=client)
+    reads_used = distinct_reads(int(current_user.id), db, client=client, device_id=device)
 
     return {
         "monologue_id": monologue_id,
