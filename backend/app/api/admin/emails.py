@@ -259,6 +259,26 @@ class DncEntryOut(BaseModel):
 # Rendering helper
 # ========================================
 
+# Renderers are named, not bound. Building these as dicts of bound methods
+# resolves every entry eagerly, so a single missing method raised
+# AttributeError for every template rather than just its own, which is how
+# deleting one helper took all outbound email down on 2026-09-01. Shared by
+# the preview, single-send and both bulk paths so they cannot drift apart.
+RENDER_MAP = {
+    "custom": "render_custom",
+    "welcome": "render_welcome",
+    "weekly_engagement": "render_weekly_engagement",
+}
+
+# Marketing templates prefer a plain-text part for inbox placement. A template
+# without one still sends, it just goes out HTML only.
+PLAIN_TEXT_MAP = {
+    "custom": "render_custom_plain",
+    "welcome": "render_welcome_plain",
+    "weekly_engagement": "render_weekly_engagement_plain",
+}
+
+
 def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, str, Optional[str]]:
     """Render a template by ID, returning (html, subject, plain_text).
 
@@ -286,24 +306,7 @@ def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, 
     # Add unsubscribe_url placeholder for preview
     kwargs["unsubscribe_url"] = variables.get("unsubscribe_url", "#unsubscribe")
 
-    # Looked up by name, not by attribute: building these as dicts of bound
-    # methods evaluates every entry eagerly, so one missing renderer used to
-    # raise AttributeError for every template rather than just its own.
-    render_map = {
-        "custom": "render_custom",
-        "welcome": "render_welcome",
-        "weekly_engagement": "render_weekly_engagement",
-    }
-
-    # Marketing templates prefer a plain-text part for inbox placement. A
-    # template without one still renders, it just sends HTML only.
-    plain_text_map = {
-        "custom": "render_custom_plain",
-        "welcome": "render_welcome_plain",
-        "weekly_engagement": "render_weekly_engagement_plain",
-    }
-
-    render_fn = getattr(templates, render_map.get(template_id, ""), None)
+    render_fn = getattr(templates, RENDER_MAP.get(template_id, ""), None)
     if not render_fn:
         raise HTTPException(status_code=400, detail=f"No renderer for template: {template_id}")
 
@@ -311,7 +314,7 @@ def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, 
     subject = variables.get("subject") or meta["subject"]
 
     plain_text = None
-    plain_fn = getattr(templates, plain_text_map.get(template_id, ""), None)
+    plain_fn = getattr(templates, PLAIN_TEXT_MAP.get(template_id, ""), None)
     if plain_fn:
         plain_text = plain_fn(**kwargs)
 
@@ -658,19 +661,8 @@ def resume_batch(
                 EmailSend.status == "queued",
             ).all()
 
-            render_map = {
-                "custom": templates_svc.render_custom,
-                "welcome": templates_svc.render_welcome,
-                "weekly_engagement": templates_svc.render_weekly_engagement,
-            }
-            plain_text_map = {
-                "custom": templates_svc.render_custom_plain,
-                "welcome": templates_svc.render_welcome_plain,
-                "weekly_engagement": templates_svc.render_weekly_engagement_plain,
-            }
-
-            render_fn = render_map.get(template_id)
-            plain_fn = plain_text_map.get(template_id)
+            render_fn = getattr(templates_svc, RENDER_MAP.get(template_id, ""), None)
+            plain_fn = getattr(templates_svc, PLAIN_TEXT_MAP.get(template_id, ""), None)
             if not render_fn:
                 b.status = "failed"
                 b.errors_json = list(b.errors_json or []) + [f"Unknown template: {template_id}"]
@@ -935,18 +927,10 @@ def send_campaign_endpoint(
                 EmailSend.status == "queued",
             ).all()
 
-            render_map = {
-                "custom": templates_svc.render_custom,
-                "weekly_engagement": templates_svc.render_weekly_engagement,
-            }
-            # All marketing templates send as plain text for better inbox placement
-            plain_text_map = {
-                "custom": templates_svc.render_custom_plain,
-                "welcome": templates_svc.render_welcome_plain,
-                "weekly_engagement": templates_svc.render_weekly_engagement_plain,
-            }
-            render_fn = render_map.get(template_id)
-            plain_fn = plain_text_map.get(template_id)
+            # This map used to omit "welcome" while its plain-text twin carried
+            # it, so a welcome campaign failed as "Unknown template". Shared now.
+            render_fn = getattr(templates_svc, RENDER_MAP.get(template_id, ""), None)
+            plain_fn = getattr(templates_svc, PLAIN_TEXT_MAP.get(template_id, ""), None)
             if not render_fn:
                 b.status = "failed"
                 b.errors_json = [f"Unknown template: {template_id}"]

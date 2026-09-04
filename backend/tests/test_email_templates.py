@@ -8,7 +8,12 @@ nothing failed loudly. These tests are cheap and cover that whole class of bug.
 
 import pytest
 
-from app.api.admin.emails import TEMPLATES, _render_template
+from app.api.admin.emails import (
+    PLAIN_TEXT_MAP,
+    RENDER_MAP,
+    TEMPLATES,
+    _render_template,
+)
 from app.services.email.templates import EmailTemplates
 
 # The variables the admin composer actually posts for a custom send.
@@ -23,6 +28,23 @@ CUSTOM_VARS = {
     "cta_label": "",
     "cta_url": "",
 }
+
+
+def test_every_mapped_renderer_exists():
+    """The bulk send paths resolve renderers from these maps by name.
+
+    Preview would catch a broken renderer; a queued campaign would not, it just
+    fails mid-batch. Cheaper to assert the maps are honest.
+    """
+    templates = EmailTemplates()
+    for name in {**RENDER_MAP, **PLAIN_TEXT_MAP}.values():
+        assert getattr(templates, name, None), f"EmailTemplates has no {name}"
+
+
+def test_every_offered_template_has_a_renderer():
+    """A template in the admin dropdown with no entry in RENDER_MAP fails as
+    'Unknown template' only once a send is already queued."""
+    assert {t["id"] for t in TEMPLATES} - set(RENDER_MAP) == set()
 
 
 def test_constructing_email_templates_does_not_raise():
