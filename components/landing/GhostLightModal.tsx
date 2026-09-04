@@ -196,7 +196,7 @@ export function GhostLightModal() {
           a rendering fault. Neutralised here rather than in ui/dialog.tsx, which
           every other modal in the app depends on. */}
       <DialogContent
-        className="stage-scene stage-grain max-w-[368px] gap-0 overflow-hidden rounded-[22px] border-[var(--stage-line)] p-0 text-[var(--stage-fg)] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.75)] [&>button]:right-1 [&>button]:top-1 [&>button]:rounded-full [&>button]:text-[var(--stage-fg)] [&>button]:opacity-45 [&>button]:ring-offset-0 [&>button]:transition-opacity [&>button]:hover:opacity-100 [&>button]:focus:ring-0 [&>button]:data-[state=open]:bg-transparent"
+        className="stage-scene stage-grain max-w-[368px] gap-0 overflow-hidden rounded-[22px] border-[var(--stage-line)] p-0 text-[var(--stage-fg)] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.75)] [&>button]:right-0 [&>button]:top-0 [&>button]:rounded-full [&>button]:text-[var(--stage-fg)] [&>button]:opacity-40 [&>button]:outline-none [&>button]:ring-0 [&>button]:ring-offset-0 [&>button]:transition-opacity [&>button]:hover:opacity-100 [&>button]:focus:outline-none [&>button]:focus:ring-0 [&>button]:focus-visible:outline-none [&>button]:focus-visible:ring-0 [&>button]:data-[state=open]:bg-transparent"
       >
         {/* ── The stage ─────────────────────────────────────────────────────
             The bulb hangs, the light falls, the app stands in it. Fixed height
