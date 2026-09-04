@@ -72,8 +72,7 @@ export function LandingPartners() {
             <motion.p
               className="font-brand text-xl sm:text-2xl md:text-3xl tracking-tight font-semibold text-foreground"
               initial={{ opacity: 0, y: 14 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.4 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.45, ease: EASE }}
             >
               Where you&rsquo;ll find us
@@ -87,10 +86,11 @@ export function LandingPartners() {
           </div>
 
           <motion.div
-            className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-4 sm:gap-x-10 md:justify-start"
+            // items-start so the capped mark boxes share a top edge; an optional
+            // shortName label then hangs below without lifting its logo off the line.
+            className="mt-8 flex flex-wrap items-start justify-center gap-x-6 gap-y-4 sm:gap-x-10 md:justify-start"
             initial={{ opacity: 0, y: 14 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.2 }}
+            animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: EASE, delay: 0.06 }}
           >
             {APPROVED_PARTNERS.map((partner) => (
