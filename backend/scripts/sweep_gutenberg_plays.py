@@ -50,6 +50,9 @@ backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from sqlalchemy import create_engine, text  # noqa: E402
+from sqlalchemy.exc import (  # noqa: E402
+    DBAPIError, IntegrityError, OperationalError,
+)
 from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 from app.core.config import settings  # noqa: E402
@@ -83,7 +86,12 @@ _VOLUME = re.compile(
     # and nobody searching Phormio would ever find them. Same for "Three
     # Comedies" (110) and "The German Classics, v. 20" (120).
     r"|comedies|tragedies|farces|classics|masterpieces|cycle|pentateuch"
-    r"|one[- ]act plays|specimens)\b", re.I)
+    r"|one[- ]act plays|specimens"
+    # "X: Containing A, B and C" and "X: A Tragedy, and Other Poems" both name
+    # a book holding more than the title work. Found by sampling what landed:
+    # "Polite Satires: Containing The Unknown Hand..." and "Virginia: A
+    # Tragedy, and Other Poems" had already been ingested as single plays.
+    r"|containing|and other|satires|stories|sketches)\b", re.I)
 #: "Queen Mary; and, Harold" is two plays sharing a title line. Only the
 #: semicolon form is safe to judge from a title: a bare "X and the Y" reads the
 #: same in a collection and in a single play, and matching it threw out Millay's
@@ -93,8 +101,15 @@ _TWO_TITLES = re.compile(r";\s*and[,\s]", re.I)
 #: Periodicals. Punch ran for over a century and Gutenberg shelves its volumes
 #: under Plays/Films/Dramas; 17 of them reached the sweep and produced comic
 #: sketches attributed to an author called "Various".
-_PERIODICAL = re.compile(r"punch|charivari|magazine|review|journal|almanac"
-                         r"|annual|gazette|miscellany", re.I)
+#: Punch and Charivari name one publication and are safe alone. The generic
+#: words are not: "An Entomological Review" is the subtitle of Capek's Insect
+#: Play, and matching "review" on its own threw that out. So those require an
+#: issue marker beside them -- a volume, a number, or a date.
+_PERIODICAL = re.compile(
+    r"punch|charivari"
+    r"|(?:magazine|review|journal|almanac|annual|gazette|miscellany|weekly)"
+    r"[^,;]{0,30}[,;]?\s*(?:vol\.?|no\.?|issue|\d{1,3}(?:st|nd|rd|th)?[, ]|\d{4})",
+    re.I)
 _SHAKESPEARE = re.compile(r"shakespeare", re.I)
 
 # A playtext has speakers. Cheap structural check before we spend on the
@@ -257,7 +272,8 @@ def main() -> int:
             analyzer, embed = ContentAnalyzer(), generate_embeddings_batch
 
         totals = {"books": 0, "playtext": 0, "not_playtext": 0, "no_text": 0,
-                  "inserted": 0, "rejected": 0, "refused": 0, "volumes": 0}
+                  "inserted": 0, "rejected": 0, "refused": 0, "volumes": 0,
+                  "db_errors": 0}
         reasons: dict[str, int] = {}
         import collections
         reasons = collections.Counter()
@@ -301,12 +317,52 @@ def main() -> int:
                 continue
             totals["playtext"] += 1
 
-            report = ingest_play(
-                db, title=title, author=author, full_text=body,
-                copyright_status=PUBLIC_DOMAIN, license_type=LICENSE_PUBLIC_DOMAIN,
-                source_url=f"https://www.gutenberg.org/ebooks/{bid}",
-                apply=args.apply, analyzer=analyzer, embed=embed,
-            )
+            # One dropped connection must not end the run.
+            #
+            # ingest_play holds a transaction open across the analyser calls, so
+            # a book of 80 speeches keeps a Supabase connection idle-in-
+            # transaction for minutes at a time and the pooler eventually closes
+            # it. With four workers that is routine, not exceptional: all four
+            # died together on "server closed the connection unexpectedly", 22
+            # to 27 books into a 103-book list, and the sweep looked finished
+            # when it had barely started.
+            #
+            # pool_pre_ping cannot help -- it validates before checkout, and this
+            # dies mid-statement. So reconnect and move to the next book. The
+            # book is lost, not the run, and it stays off the done-file so a
+            # later pass picks it up.
+            report = None
+            for attempt in (1, 2):
+                try:
+                    report = ingest_play(
+                        db, title=title, author=author, full_text=body,
+                        copyright_status=PUBLIC_DOMAIN,
+                        license_type=LICENSE_PUBLIC_DOMAIN,
+                        source_url=f"https://www.gutenberg.org/ebooks/{bid}",
+                        apply=args.apply, analyzer=analyzer, embed=embed,
+                    )
+                    break
+                except (OperationalError, DBAPIError, IntegrityError) as exc:
+                    kind = type(exc).__name__
+                    try:
+                        db.rollback()
+                    except Exception:
+                        pass
+                    db.close()
+                    _engine.dispose()
+                    db = SessionLocal()
+                    scraper = GutenbergScraper(db)
+                    if attempt == 2:
+                        totals["db_errors"] += 1
+                        print(f"[{i}/{len(cands)}] {bid} DB {kind}, giving up on "
+                              f"this book: {title[:38]}")
+                    else:
+                        print(f"[{i}/{len(cands)}] {bid} DB {kind}, reconnected "
+                              f"and retrying: {title[:34]}")
+                        time.sleep(3)
+            if report is None:
+                continue
+
             if report.refused:
                 totals["refused"] += 1
                 print(f"[{i}/{len(cands)}] {bid} REFUSED: {report.refused}")
