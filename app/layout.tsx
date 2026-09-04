@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Suspense } from "react";
-import { Montserrat, JetBrains_Mono, Cormorant_Garamond, Playfair_Display } from "next/font/google";
+import {
+  Montserrat,
+  JetBrains_Mono,
+  Cormorant_Garamond,
+  Playfair_Display,
+  Big_Shoulders,
+} from "next/font/google";
 import "./globals.css";
 import { AuthProviderWrapper } from "@/components/providers/AuthProviderWrapper";
 import { AuthModalProvider } from "@/components/auth/AuthModalContext";
@@ -37,6 +43,21 @@ const playfairDisplay = Playfair_Display({
   variable: "--font-brand",
   subsets: ["latin"],
   weight: ["500", "600", "700"],
+});
+
+/**
+ * Playbill face — tall, narrow, printed. The one deliberate exception to the
+ * "every big title is Playfair" rule, and it is scoped to the Callboard, which
+ * is a physical pinned object rather than a page heading.
+ *
+ * The family is `Big_Shoulders`, not `Big_Shoulders_Display`. Google renamed it;
+ * the Display name is gone from next/font's family list entirely, so importing
+ * it builds locally off a warm cache and then fails the deploy.
+ */
+const bigShoulders = Big_Shoulders({
+  variable: "--font-playbill",
+  subsets: ["latin"],
+  weight: ["500", "700", "800"],
 });
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
@@ -191,7 +212,7 @@ export default function RootLayout({
         )}
       </head>
       <body
-        className={`${montserrat.variable} ${jetbrainsMono.variable} ${cormorantGaramond.variable} ${playfairDisplay.variable} font-sans antialiased`}
+        className={`${montserrat.variable} ${jetbrainsMono.variable} ${cormorantGaramond.variable} ${playfairDisplay.variable} ${bigShoulders.variable} font-sans antialiased`}
       >
         {/* Persist OAuth "last used" before React: from sessionStorage (set when user clicked Google/Apple) or URL */}
         <script
