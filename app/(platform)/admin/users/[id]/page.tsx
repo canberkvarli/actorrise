@@ -40,6 +40,18 @@ function getTierBadgeClass(tierName: string): string {
   return "bg-muted text-foreground border-border";
 }
 
+/**
+ * The standing offer, as buttons. Educators get a month with an open door to
+ * extend; students get a fortnight to try or the same month. Each preset also
+ * carries the tag, because granting and tagging in two separate cards meant the
+ * tag was skipped on 9 of 14 comps.
+ */
+const GRANT_PRESETS = [
+  { label: "Educator · 1 month", tier: "plus", days: "30", accountType: "educator", note: "Educator, 1 month free" },
+  { label: "Student · 2 weeks", tier: "plus", days: "14", accountType: "student", note: "Student, 2 week trial" },
+  { label: "Student · 1 month", tier: "plus", days: "30", accountType: "student", note: "Student, 1 month free" },
+] as const;
+
 /** Stored value -> what it's called in the header badge. */
 const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   actor: "Actor",
@@ -80,6 +92,7 @@ export default function AdminUserDetailPage() {
   const [grantDurationKey, setGrantDurationKey] = useState<string>("365");
   const [grantCustomDays, setGrantCustomDays] = useState("30");
   const [grantNote, setGrantNote] = useState("");
+  const [grantAccountType, setGrantAccountType] = useState("");
 
   const [benefitKeyPreset, setBenefitKeyPreset] = useState(BENEFIT_OPTIONS[0].key);
   const [customBenefitKey, setCustomBenefitKey] = useState("");
@@ -311,8 +324,21 @@ export default function AdminUserDetailPage() {
     grantMutation.mutate({
       tier_id: grantTierId,
       duration_days: durationDays,
+      // Omitted when blank so a plain goodwill comp doesn't tag anyone.
+      ...(grantAccountType ? { account_type: grantAccountType } : {}),
       note: grantNote.trim(),
     });
+  };
+
+  /** One tap sets tier, duration, tag and a default note together. */
+  const applyGrantPreset = (preset: (typeof GRANT_PRESETS)[number]) => {
+    const tier = tiers.find((t) => t.name.toLowerCase() === preset.tier);
+    if (tier) setGrantTierId(tier.id);
+    setGrantDurationKey(preset.days);
+    setGrantAccountType(preset.accountType);
+    // Only fill the note if it's still empty, so a reason already typed by hand
+    // is never overwritten by tapping a preset.
+    setGrantNote((cur) => cur.trim() || preset.note);
   };
 
   const runRevokeGrant = () => {
@@ -606,6 +632,20 @@ export default function AdminUserDetailPage() {
                 Timed grants drop back to Free automatically when they expire.
               </p>
 
+              <div className="flex flex-wrap gap-2">
+                {GRANT_PRESETS.map((preset) => (
+                  <Button
+                    key={preset.label}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => applyGrantPreset(preset)}
+                  >
+                    {preset.label}
+                  </Button>
+                ))}
+              </div>
+
               {data.subscription && (
                 <p className="text-sm">
                   Current: <span className="font-medium">{data.subscription.tier_display_name}</span>
@@ -669,10 +709,29 @@ export default function AdminUserDetailPage() {
                 </div>
               )}
 
+              <div>
+                <Label htmlFor="grant_account_type">Tag as</Label>
+                <select
+                  id="grant_account_type"
+                  value={grantAccountType}
+                  onChange={(e) => setGrantAccountType(e.target.value)}
+                  className="mt-1 flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <option value="">Don&apos;t change the tag</option>
+                  <option value="actor">Actor</option>
+                  <option value="educator">Educator</option>
+                  <option value="student">Student</option>
+                </select>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Set here so the comp and the tag happen together. A note saying
+                  &quot;Student&quot; is not something the dashboard can count.
+                </p>
+              </div>
+
               <Input
                 value={grantNote}
                 onChange={(e) => setGrantNote(e.target.value)}
-                placeholder="Reason (e.g. educator, 3 months free)"
+                placeholder="Reason (e.g. educator, 1 month free)"
               />
 
               <div className="flex flex-wrap gap-2">

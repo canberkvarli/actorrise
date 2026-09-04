@@ -13,7 +13,7 @@ import unittest
 from fastapi import HTTPException
 from pydantic import ValidationError
 
-from app.api.admin.users import AdminProfilePatchRequest
+from app.api.admin.users import AdminGrantRequest, AdminProfilePatchRequest
 from app.api.auth import UpdateOnboardingRequest, update_onboarding
 from app.core.account_types import (
     ACCOUNT_TYPE_FILTERS,
@@ -144,6 +144,30 @@ class AdminAccountTypeValidationTests(unittest.TestCase):
     def test_omitting_the_field_leaves_it_unset(self):
         req = AdminProfilePatchRequest(name="New Name", note="Unrelated edit")
         self.assertNotIn("account_type", req.model_fields_set)
+
+
+class GrantAccountTypeTests(unittest.TestCase):
+    """Granting a comp should be able to tag in the same action.
+
+    The two lived in separate cards and the tag got skipped: 14 comps went out
+    on 2026-09-04 and only 5 carried an account_type, with the word "Student"
+    typed into the free-text note six times where nothing can count it.
+    """
+
+    def test_grant_accepts_each_good_account_type(self):
+        for value in ("actor", "educator", "student"):
+            req = AdminGrantRequest(tier_id=4, duration_days=30, account_type=value, note="Educator comp")
+            self.assertEqual(req.account_type, value)
+
+    def test_grant_without_account_type_is_still_valid(self):
+        # Tagging stays optional: comps for people who are none of the three
+        # (a goodwill grant to a working actor) must not be blocked.
+        req = AdminGrantRequest(tier_id=4, duration_days=30, note="Goodwill")
+        self.assertIsNone(req.account_type)
+
+    def test_grant_rejects_a_bad_account_type(self):
+        with self.assertRaises(ValidationError):
+            AdminGrantRequest(tier_id=4, duration_days=30, account_type="teacher", note="Bad")
 
 
 if __name__ == "__main__":

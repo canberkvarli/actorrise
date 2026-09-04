@@ -162,7 +162,16 @@ class AdminGrantRequest(BaseModel):
 
     tier_id: int
     duration_days: int | None = None  # None = permanent comp (no expiry)
+    # Tag in the same action as the comp. These two used to live in separate
+    # cards and the tag lost every time: of 14 comps on 2026-09-04 only 5 were
+    # tagged, with "Student" typed into this note where nothing can count it.
+    account_type: str | None = None
     note: str = Field(min_length=3)
+
+    @field_validator("account_type")
+    @classmethod
+    def _check_account_type(cls, value: str | None) -> str | None:
+        return normalize_account_type(value)
 
 
 class AdminGrantRevokeRequest(BaseModel):
@@ -640,6 +649,7 @@ def grant_admin_user_membership(
 
     previous_tier = db.query(PricingTier).get(subscription.tier_id) if subscription.tier_id else None
     before = _serialize_subscription(subscription, previous_tier)
+    user_before = _serialize_user(target)
 
     # Comp grant: detach any Stripe subscription so is_active honors trial_end.
     subscription.tier_id = tier.id
@@ -657,9 +667,25 @@ def grant_admin_user_membership(
         subscription.trial_end = end
         subscription.current_period_end = end
 
+    if body.account_type is not None:
+        target.account_type = body.account_type
+
     db.flush()
     next_tier = db.query(PricingTier).get(subscription.tier_id)
     after = _serialize_subscription(subscription, next_tier)
+    # A tag change rides along as its own entry in the existing profile_update
+    # shape, rather than being wedged into the grant's before/after. Keeps both
+    # trails readable and leaves old grant entries the shape they always were.
+    if body.account_type is not None and user_before.get("account_type") != target.account_type:
+        _create_audit_log(
+            db,
+            actor_admin_id=admin.id,
+            target_user_id=target.id,
+            action_type="admin.user.profile_update",
+            before_json={"user": user_before, "profile": None},
+            after_json={"user": _serialize_user(target), "profile": None},
+            note=body.note,
+        )
     _create_audit_log(
         db,
         actor_admin_id=admin.id,

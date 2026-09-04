@@ -87,21 +87,65 @@ Reference example of Canberk's actual voice: user memory `email-voice.md`.
 Any marketing email sent to existing platform users (not cold outreach) must include a plain reply-to-opt-out option in the body or sign-off, not just the unsubscribe link. Reason: the /unsubscribe page's "Other" feedback reason has no free-text field (bug, not yet fixed as of 2026-07-09), so users who want to explain why they're leaving get stuck and end up emailing instead.
 
 Standard line, place near the sign-off:
-"reply CURTAIN and I'll take you off the list, no hard feelings"
+"reply UNSUBSCRIBE and I'll take you off the list, no hard feelings"
 
-If a user replies CURTAIN (or otherwise asks to stop), add their email to `email_do_not_contact` in Supabase right away. Keep the unsubscribe link too, this is in addition to it, not a replacement.
+If a user replies UNSUBSCRIBE (or otherwise asks to stop), add their email to `email_do_not_contact` in Supabase right away. Keep the unsubscribe link too, this is in addition to it, not a replacement.
 
 ## Trial-link CTA (dramatic one-word ask)
 
 No coupon codes. FOUNDER3 is retired as of 2026-07-22. Actors just use the Stripe trial: Plus membership, 2 weeks free, card on file, then the yearly charge (cancel anytime before it hits). Do NOT offer or reference FOUNDER3 or any coupon in new drafts.
 
-When offering the trial to actors, studios, or community theaters, close with a short, theatrical, one-word reply CTA instead of a generic "happy to answer questions" line: "If you want in, reply CURTAIN and I'll send you the link." One-word replies convert fastest with Canberk's audience, so keep the CTA to a single word.
+INDIVIDUAL ACTORS ONLY (corrected 2026-09-02): the CURTAIN CTA is for **individual actors** — current platform users and individual actor signups. When offering them the trial, close with a short, theatrical, one-word reply CTA instead of a generic "happy to answer questions" line: "If you want in, reply CURTAIN and I'll send you the link." One-word replies convert fastest with that audience, so keep the CTA to a single word.
 
-Trial link (base): https://buy.stripe.com/00w6oJgG8gjAaVSgsl6g801
+NEVER use CURTAIN in organizational outreach — theaters, studios, acting coaches, schools, chapters, libraries. Writing to an org is a peer-to-peer marketing email, not a signup funnel. It should read personal and warm, land the offer plainly, and end like one working theater person writing to another. Give the next step directly ("reply and I'll set your actors up", "tell me how many and I'll sort it") instead of asking a stranger to learn a code word. Supporting data as of 2026-09-02: across every batch sent to orgs, not one recipient has ever replied CURTAIN, while every actual conversion came from a plain human exchange.
 
-PREFILLED-EMAIL RULE (critical, do not skip): when someone replies CURTAIN, send them the link with their email appended as `?prefilled_email=<their address>`, using the exact address they replied from (that is their ActorRise account email). Example: https://buy.stripe.com/00w6oJgG8gjAaVSgsl6g801?prefilled_email=giosboss4@gmail.com . The webhook grants Plus by matching the checkout email to their ActorRise account, so a prefilled link makes the match automatic. Never send the bare base link to a specific person, and do not embed the link in cold outreach (only send after a CURTAIN reply).
+FIRST-TOUCH ONLY (added 2026-08-19): even for individual actors, the CURTAIN CTA belongs ONLY in a first-touch email. NEVER use it mid-conversation (a reply on an existing thread, an inbound lead, or anyone already talking with Canberk). In an ongoing conversation, just make the offer plainly and give the next step directly, no CURTAIN line.
 
-Note: CURTAIN is intentionally reused as BOTH the trial opt-in word AND the marketing opt-out word above. Canberk relies on context to tell them apart (a reply to a cold trial pitch = sign-up; a reply to a re-engagement/marketing email he already sent to an existing user = opt-out). If a CURTAIN reply's intent is genuinely ambiguous, flag it for Canberk rather than assuming either way.
+Trial link (base), 2 weeks / 14 days: https://buy.stripe.com/00w8wR4Xqd7o7JGa3X6g802
+
+LINK LENGTHS DIFFER, CHECK BEFORE SENDING. Three live Stripe payment links exist and only the first matches the "2 weeks free" copy above:
+- `00w8wR4Xqd7o7JGa3X6g802` — Plus $99/yr, **14-day** trial. This is the one to send.
+- `00w6oJgG8gjAaVSgsl6g801` — Plus $99/yr, **90-day** trial. Older founder-era link, do NOT send with 2-week copy.
+- `28EbJ30Had7o1li8ZT6g800` — Pro $199/yr, **90-day** trial.
+
+The in-app upgrade path (UpgradeModal → `/api/subscriptions/checkout` with `trial=true`) is a separate 14-day trial set in `backend/app/api/subscriptions.py`. It already matches the 2-week copy.
+
+PREFILLED-EMAIL RULE (critical, do not skip): when someone replies CURTAIN, send them the link with their email appended as `?prefilled_email=<their address>`, using the exact address they replied from (that is their ActorRise account email). Example: https://buy.stripe.com/00w8wR4Xqd7o7JGa3X6g802?prefilled_email=giosboss4@gmail.com . The webhook grants Plus by matching the checkout email to their ActorRise account, so a prefilled link makes the match automatic. Never send the bare base link to a specific person, and do not embed the link in cold outreach (only send after a CURTAIN reply).
+
+Note: CURTAIN is now the trial SIGN-UP word only. Marketing/re-engagement opt-outs use a separate, plain word: UNSUBSCRIBE (see the Opt-out requirement section above). The two no longer overlap, so a CURTAIN reply always means "sign me up for the trial" and an UNSUBSCRIBE reply always means "take me off the list." No context-guessing needed. (Changed 2026-08-17: opt-out was previously also CURTAIN, which was too appealing and got over-used.)
+
+## Educators & students free-access offer (added 2026-08-19)
+
+Educators, teachers, coaches, teaching artists, and their students do NOT get the Stripe trial and do NOT get the CURTAIN CTA. They get free Plus directly. The mechanism to give in emails:
+
+1. They sign up at https://actorrise.com (free to start).
+2. They email canberk@actorrise.com the address they signed up with.
+3. Canberk manually upgrades that account, on him.
+
+DURATIONS (revised 2026-09-05, replaces the old flat "3 months" — do NOT promise
+three months in new drafts):
+- **Educators: 1 month**, with the door left open. Always say the extension is
+  there for the asking ("need longer? just say so and I'll push it out").
+- **Students: 2 weeks to try, or 1 month.** Either is fine, pick by context; a
+  whole class coming in together reads better on the same month so the dates
+  don't scatter.
+
+STUDENTS COME THROUGH THEIR TEACHER (added 2026-09-05). Do not run a student
+signup drive and do not email students directly to offer this. The teacher
+reaches out with their students' addresses and Canberk grants them in a batch.
+Reason: the one email blast straight to students went badly (2026-09-04, seven
+NMU actors, an unsubscribe inside two minutes), while the teacher route worked
+first try — Stephanie DeYoung at Del Norte replied inside five hours and offered
+to collect her class list. So in educator emails, always include the "send me
+your students' emails and I'll do the same for them" line. That line IS the
+student funnel.
+
+Frame it as a gift, not a discount ("I don't run a discount, I just give it to you free"). This replaces any "reply CURTAIN" language for educator/student contexts. Prefer it over the trial whenever the audience is educators or students.
+
+In the admin, `/admin/users/<id>` → Grant comp membership has one-tap presets for
+all three (Educator · 1 month, Student · 2 weeks, Student · 1 month). Each sets
+the tier, the duration AND the account_type together, so use those rather than
+setting the fields by hand.
 
 ## Brand
 
