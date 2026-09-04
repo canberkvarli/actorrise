@@ -295,6 +295,55 @@ class TestSplitNames:
         assert "GRA VEDIGGER" not in spans[0].characters
 
 
+class TestSampleCleaning:
+    """What the model is shown before it names a scene.
+
+    Folger texts carry a through-line number on every line, and pypdf reads that
+    column as its own block, so a scene's text opens with a wall of
+    "FTLN 0001 FTLN 0002 FTLN 0003". The sample sent to the model was the first
+    6,000 characters of that. On A Midsummer Night's Dream it named Act 3 Scene 2
+    "Quince prepares for the play", which is a different scene entirely: it was
+    guessing, because it had been handed line numbers instead of dialogue.
+    """
+
+    def test_line_numbers_are_stripped_from_the_sample(self):
+        from app.services.scene_map import _samples_for, SceneSpan
+
+        span = SceneSpan(
+            act_label="Act 3",
+            scene_label="Scene 1",
+            text=(
+                "ACT 3 Scene 1 FTLN 0804 FTLN 0805 FTLN 0806 FTLN 0807 TLN 0808\n"
+                "BOTTOM\nAre we all met?\n"
+                "QUINCE\nPat, pat; and here's a marvellous convenient place.\n"
+            ),
+            char_start=0,
+            char_end=100,
+        )
+        sample = _samples_for([span])
+        assert "FTLN" not in sample
+        assert "TLN 0808" not in sample
+        # The dialogue, which is the whole point, survives.
+        assert "Are we all met?" in sample
+        assert "marvellous convenient place" in sample
+
+    def test_dialogue_reaches_the_model_instead_of_a_wall_of_numbers(self):
+        from app.services.scene_map import _samples_for, SceneSpan
+
+        # 400 line numbers in front of one line of dialogue: the real shape.
+        noise = " ".join(f"FTLN {n:04d}" for n in range(400))
+        span = SceneSpan(
+            act_label="Act 5",
+            scene_label="Scene 1",
+            text=f"ACT 5 Scene 1 {noise}\nTHESEUS\nThe lunatic, the lover, and the poet\n",
+            char_start=0,
+            char_end=100,
+        )
+        sample = _samples_for([span])
+        assert "The lunatic, the lover, and the poet" in sample
+        assert len(sample) < 500  # the noise is gone, not merely pushed along
+
+
 class TestSelectionToPages:
     """Turning ticked scenes into the pages extraction has to read.
 

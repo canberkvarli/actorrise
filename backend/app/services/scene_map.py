@@ -622,10 +622,32 @@ def _useful_title(raw) -> Optional[str]:
     return title[:80]
 
 
+# Folger through-line numbers. Every line of a Folger text carries one, and
+# pypdf reads that column as its own block, so a scene opens with hundreds of
+# "FTLN 0001 FTLN 0002" before a word of dialogue.
+_LINE_NUMBERS = re.compile(r"\b(?:F?TLN)\s*\d+\b")
+
+
+def _clean_sample(text: str) -> str:
+    """Dialogue, with the line-number column taken out.
+
+    The model was being handed 6,000 characters that began with a wall of
+    numbers, and naming scenes from it. On A Midsummer Night's Dream that
+    produced "Quince prepares for the play" for Act 3 Scene 2, which is a
+    different scene: it had nothing else to go on.
+
+    Only for the sample. The span's own text is left alone, because extraction
+    and the cast parser strip these themselves and neither should be handed
+    text that has been quietly rewritten underneath them.
+    """
+    stripped = _LINE_NUMBERS.sub(" ", text)
+    return re.sub(r"[ \t]{2,}", " ", stripped)
+
+
 def _samples_for(spans: Sequence[SceneSpan]) -> str:
     blocks = []
     for i, span in enumerate(spans[:_MAX_SAMPLES]):
-        excerpt = span.text[:_SAMPLE_CHARS]
+        excerpt = _clean_sample(span.text)[:_SAMPLE_CHARS]
         blocks.append(
             f"--- scene {i} (begins at character {span.char_start}) ---\n{excerpt}"
         )

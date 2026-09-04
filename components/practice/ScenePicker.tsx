@@ -136,7 +136,7 @@ export function ScenePicker({
         {/* The two numbers that describe the file, set as a line of type rather
             than as stat cards. They are one sentence long; a grid of boxes would
             be three times the furniture for the same two facts. */}
-        <p className="mt-2.5 font-typewriter text-[12.5px] tracking-wide text-paper-muted">
+        <p className="mt-3 font-typewriter text-[15px] tracking-wide text-paper-ink/75">
           <span className="font-bold text-primary">{scenes.length}</span>{" "}
           {scenes.length === 1 ? "scene" : "scenes"}
           <span aria-hidden className="px-2 text-paper-rule">
@@ -145,7 +145,7 @@ export function ScenePicker({
           <span className="font-bold text-primary">{pageCount}</span>{" "}
           {pageCount === 1 ? "page" : "pages"}
         </p>
-        <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed text-paper-muted">
+        <p className="mx-auto mt-2.5 max-w-sm text-[14.5px] leading-relaxed text-paper-muted">
           Choose what to build now. The rest keep, and you can come back for them.
         </p>
         <div aria-hidden className="mx-auto mt-5 h-px w-16 bg-paper-rule" />
@@ -154,10 +154,13 @@ export function ScenePicker({
       <div className="scrollbar-paper min-h-0 flex-1 overflow-y-auto px-3 pb-2 sm:px-7">
         {groups.map(([act, actScenes], groupIndex) => (
           <section key={`${act}-${groupIndex}`} className={cn(groupIndex > 0 && "mt-7")}>
+            {/* The act heading was 11px in a 0.25em track: small type stretched
+                thin, which is two things that hurt legibility at once. Bigger,
+                tighter, and at full ink. */}
             {act && (
-              <div className="mb-2 flex items-center gap-2.5 px-2">
-                <span aria-hidden className="h-[3px] w-[3px] rounded-full bg-primary/70" />
-                <h3 className="font-typewriter text-[11px] font-bold uppercase tracking-[0.25em] text-paper-ink/70">
+              <div className="mb-2.5 flex items-center gap-3 px-2">
+                <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-primary" />
+                <h3 className="font-typewriter text-[15px] font-bold uppercase tracking-[0.14em] text-paper-ink">
                   {act}
                 </h3>
                 <span aria-hidden className="h-px flex-1 bg-paper-rule" />
@@ -234,23 +237,26 @@ export function ScenePicker({
                         <span className="flex flex-wrap items-baseline gap-x-2">
                           <span
                             className={cn(
-                              "font-typewriter text-[15px] leading-6 transition-colors duration-150",
+                              "font-typewriter text-[17px] leading-7 transition-colors duration-150",
                               // Chosen rows take the brand colour outright. On a
                               // twenty-row list the eye needs a hue to run down,
                               // not a weight change it has to compare against
                               // its neighbour to notice.
-                              isPicked ? "font-bold text-primary" : "text-paper-ink/80",
+                              isPicked ? "font-bold text-primary" : "text-paper-ink",
                             )}
                           >
                             {sceneName(scene, i)}
                           </span>
                           {scene.title && (
-                            <span className="text-[14px] italic leading-6 text-paper-muted">
+                            <span className="text-[15.5px] italic leading-7 text-paper-ink/70">
                               {scene.title}
                             </span>
                           )}
                         </span>
-                        <span className="mt-0.5 block truncate text-[12.5px] leading-5 text-paper-muted/85">
+                        {/* Cast was 12.5px at 85% ink, which on a warm sheet is
+                            under the contrast floor and reads as grey noise.
+                            Full muted ink, a size up. */}
+                        <span className="mt-1 block truncate text-[14px] leading-5 text-paper-muted">
                           {scene.characters.length > 0
                             ? scene.characters.slice(0, 4).join(" · ") +
                               (scene.characters.length > 4
@@ -260,15 +266,24 @@ export function ScenePicker({
                         </span>
                       </span>
 
+                      {/* These were 11.5px at 65% ink: the smallest and faintest
+                          type on the sheet, carrying the one number that tells
+                          you how big a scene is. Now the size of the cast line,
+                          at full ink, with the page span a step back rather than
+                          a whisper. */}
                       <span
                         className={cn(
-                          "shrink-0 self-start pt-0.5 text-right font-typewriter text-[11.5px] leading-[1.45] tabular-nums transition-colors duration-150",
-                          isPicked ? "text-paper-ink/70" : "text-paper-muted/65",
+                          "shrink-0 self-start pt-1 text-right font-typewriter text-[14px] leading-[1.5] tabular-nums transition-colors duration-150",
+                          isPicked ? "text-paper-ink" : "text-paper-muted",
                           blocked && "opacity-40",
                         )}
                       >
-                        {size && <span className="block">{size}</span>}
-                        {pages && <span className="block opacity-70">{pages}</span>}
+                        {size && <span className="block font-bold">{size}</span>}
+                        {pages && (
+                          <span className="block text-[12.5px] text-paper-muted/80">
+                            {pages}
+                          </span>
+                        )}
                       </span>
                     </label>
                   </li>
@@ -281,7 +296,7 @@ export function ScenePicker({
 
       <footer className="shrink-0 border-t border-paper-rule bg-paper px-5 py-4 sm:px-8">
         {overLimit && (
-          <p className="mb-3 text-[12.5px] leading-relaxed text-paper-muted">
+          <p className="mb-3 text-[14px] leading-relaxed text-paper-muted">
             Your plan builds {limit} {limit === 1 ? "scene" : "scenes"} at a time.{" "}
             <button
               type="button"
