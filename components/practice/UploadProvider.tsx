@@ -31,6 +31,7 @@ import { UpgradeModal } from "@/components/billing/UpgradeModal";
 import { UploadStage } from "@/components/practice/UploadStage";
 import { ScenePicker, type ScannedScene } from "@/components/practice/ScenePicker";
 import { API_URL } from "@/lib/api";
+import { clearPending, loadPending, savePending } from "@/lib/pending-upload";
 import { SCRIPTS_QUERY_KEY, useScripts } from "@/hooks/useScripts";
 import { useSubscription, useUsageLimits } from "@/hooks/useSubscription";
 
@@ -167,8 +168,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const [scanning, setScanning] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  /** The upgrade modal was opened from the picker, so closing it goes back there. */
+  const [upgradeReturnsToPicker, setUpgradeReturnsToPicker] = useState(false);
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  /** A scanned script waiting to be picked from, offered back rather than lost. */
+  const [resumable, setResumable] = useState<{ file: File; scan: ScanResult } | null>(null);
   const [fileName, setFileName] = useState<string>("");
   const [progressSteps, setProgressSteps] = useState<{ group: string; detail: string }[]>([]);
   const [extractionDone, setExtractionDone] = useState(false);
@@ -187,6 +192,29 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   );
 
   const openUpgrade = useCallback(() => setShowUpgradeModal(true), []);
+
+  /**
+   * Pick up a script that was scanned but never built.
+   *
+   * This is the return leg from Stripe. Upgrading is a full page navigation, so
+   * nothing in React state survives it — you would come back a subscriber with
+   * a bigger allowance and no map to spend it on. The scan is on the device, so
+   * it comes back with you.
+   *
+   * Offered, not forced: no modal opens by itself on a page you navigated to for
+   * some other reason.
+   */
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const saved = await loadPending<ScanResult>();
+      if (cancelled || !saved) return;
+      setResumable({ file: saved.file, scan: saved.scan });
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Warn before a refresh/close cancels an in-flight upload.
   useEffect(() => {
@@ -493,6 +521,11 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         // A side has one scene. There is nothing to choose between, so we do not
         // stand a dialog in front of the thing they already asked for.
         if ((scan.scenes?.length ?? 0) >= PICKER_MIN_SCENES) {
+          // Keep the file and the map on the device before showing the picker.
+          // Closing it, reloading, or leaving for Stripe must not cost the
+          // upload — the scan already happened, and asking for the same file
+          // twice is asking someone to pay for our forgetfulness.
+          void savePending(file, scan);
           setPendingFile(file);
           setScanResult(scan);
           return;
@@ -524,12 +557,40 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     setScanResult(null);
     setPendingFile(null);
     if (!file || picks.length === 0) return;
+    // Chosen and building: the pending copy has done its job.
+    void clearPending();
     await startBackground(file, "full", picks);
   };
 
+  /**
+   * Close the picker without losing the script.
+   *
+   * The map stays on the device, and `resumable` below offers it back. Closing a
+   * dialog is not a decision to throw the upload away — most of the time it is
+   * "not right now", and the only way to undo it used to be uploading the same
+   * file again.
+   */
   const dismissModeChoice = () => {
+    if (scanResult && pendingFile) {
+      setResumable({ file: pendingFile, scan: scanResult });
+    }
     setScanResult(null);
     setPendingFile(null);
+  };
+
+  /** Give up on it properly, and stop offering it back. */
+  const discardPending = () => {
+    setResumable(null);
+    setScanResult(null);
+    setPendingFile(null);
+    void clearPending();
+  };
+
+  const resumePicking = () => {
+    if (!resumable) return;
+    setPendingFile(resumable.file);
+    setScanResult(resumable.scan);
+    setResumable(null);
   };
 
   const latestStep = progressSteps[progressSteps.length - 1]?.group ?? "Preparing…";
@@ -694,6 +755,47 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         )}
       </AnimatePresence>
 
+      {/* A script that was scanned but never built. Sits out of the way until
+          it is wanted — including after a trip through Stripe, which is a full
+          page load and takes every bit of React state with it. */}
+      <AnimatePresence>
+        {resumable && !isBusy && !showBanner && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 16 }}
+            transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+            className="fixed left-1/2 z-[9985] w-[calc(100%-2rem)] max-w-md -translate-x-1/2 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] md:bottom-6"
+          >
+            <div className="flex items-center gap-3 rounded-lg border border-paper-rule bg-paper px-4 py-3 shadow-lg shadow-black/10">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-typewriter text-[13px] text-paper-ink">
+                  {resumable.file.name.replace(/\.[^.]+$/, "")}
+                </span>
+                <span className="block text-[12px] text-paper-muted">
+                  {resumable.scan.scenes?.length ?? 0} scenes, none built yet
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={resumePicking}
+                className="shrink-0 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-all hover:brightness-110"
+              >
+                Choose scenes
+              </button>
+              <button
+                type="button"
+                onClick={discardPending}
+                aria-label="Discard this script"
+                className="shrink-0 rounded p-1 text-paper-muted transition-colors hover:text-paper-ink"
+              >
+                <IconX className="h-4 w-4" />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Pick what to build.
           This replaced a two-option dialog that asked how hard to work — "quick"
           or "full" — rather than what the actor wanted. Nobody rehearses all of
@@ -712,10 +814,16 @@ export function UploadProvider({ children }: { children: ReactNode }) {
             <ScenePicker
               scenes={scanResult.scenes}
               pageCount={scanResult.page_count}
+              fileName={pendingFile?.name ?? fileName}
               limit={sceneLimit}
               onConfirm={handleScenePick}
               onCancel={dismissModeChoice}
               onUpgrade={() => {
+                // Park the picker, don't destroy it. Whether they subscribe or
+                // change their mind, the map is what they come back to — and if
+                // they subscribe, they come back with a bigger allowance and the
+                // picker reopens already knowing it.
+                setUpgradeReturnsToPicker(true);
                 dismissModeChoice();
                 setShowUpgradeModal(true);
               }}
@@ -726,7 +834,15 @@ export function UploadProvider({ children }: { children: ReactNode }) {
 
       <UpgradeModal
         open={showUpgradeModal}
-        onOpenChange={setShowUpgradeModal}
+        onOpenChange={(open) => {
+          setShowUpgradeModal(open);
+          // Closed the upgrade modal without leaving the page — "maybe later".
+          // Go straight back to the scenes, not to an empty screen.
+          if (!open && upgradeReturnsToPicker) {
+            setUpgradeReturnsToPicker(false);
+            resumePicking();
+          }
+        }}
         feature="Script uploads"
         message="Upload and manage scripts with a Plus or Pro plan. Upgrade to get started."
       />
