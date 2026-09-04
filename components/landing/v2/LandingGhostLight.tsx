@@ -24,6 +24,7 @@ import { SpotlightHero } from "@/components/landing/v2/SpotlightHero";
 import { ThreeActs } from "@/components/landing/v2/ThreeActs";
 import { TitleMarquee } from "@/components/landing/v2/TitleMarquee";
 import { AppLaunchBar } from "@/components/landing/AppLaunchBar";
+import { GhostLightModal } from "@/components/landing/GhostLightModal";
 
 /** Courier "stage direction" eyebrow above the light sections */
 function SceneMark({ children }: { children: string }) {
@@ -55,6 +56,11 @@ export function LandingGhostLight() {
           instead would mean every sticky offset on the page had to know its
           height. */}
       <AppLaunchBar />
+
+      {/* Mounted here and nowhere else. The marketing layout would put it on all
+          1,281 SEO landing pages, which is exactly the interstitial Google
+          penalises; those pages get the Smart App Banner instead. */}
+      <GhostLightModal />
 
       {/* Header lives on the stage: always dark, floats over every scene.
           The cursor spotlight tracks across it like the hero. wash + overflow
