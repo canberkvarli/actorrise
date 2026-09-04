@@ -392,13 +392,28 @@ const STAGE_BG = 'bg-[#f2ece2] dark:bg-[#191410]';
 const SCRIPT_SURFACE = 'bg-white dark:bg-[#faf7f1] text-neutral-900';
 
 /**
- * Floating chrome — the control pill and the full-screen overlays.
+ * The floating control pill, which stays dark in both themes on purpose: it
+ * sits *over* the scene the way a video player's controls sit over a film, and
+ * it states its own `bg-neutral-900/90` rather than relying on a variant.
  *
- * Kept dark in both themes on purpose. These sit *over* the scene the way a
- * video player's controls sit over a film, and re-theming them would mean
- * re-tuning every muted grey inside for a light background, for no gain.
+ * Note the shape of this class, because it is a trap. The dark variant here is
+ * `@custom-variant dark (&:is(.dark *))` — a *descendant* selector. An element
+ * carrying `dark` therefore does not match its own `dark:` utilities, only its
+ * children do. Pairing this with STAGE_BG on one element, which four overlays
+ * used to do, left a cream panel wearing white text: the background fell back
+ * to its light value while the text stayed at its dark one. Those overlays now
+ * use STAGE_SURFACE and follow the theme.
  */
 const CHROME_DARK = 'dark';
+
+/** Type on the stage, in either theme. */
+const STAGE_INK = 'text-neutral-900 dark:text-neutral-100';
+/** A step back from the type: names, secondary lines. */
+const STAGE_INK_SOFT = 'text-neutral-600 dark:text-neutral-400';
+/** Furthest back: labels, hints, counts. */
+const STAGE_INK_FAINT = 'text-neutral-500 dark:text-neutral-500';
+/** Rules and outlines drawn on the stage. */
+const STAGE_RULE = 'border-neutral-300 dark:border-neutral-700';
 
 /**
  * How much of the AI's line may remain when the microphone starts.
@@ -654,6 +669,20 @@ export default function RehearsalPage() {
 
   const currentLineRef = useRef<HTMLDivElement>(null);
   const autoStartedRef = useRef(false);
+  /** The mic probe has been consulted once for this session. */
+  const autoBeganRef = useRef(false);
+  /**
+   * We walked on stage without a tap, so no user gesture was spent and the
+   * browser may still refuse to play the opening line. Cleared the moment audio
+   * is actually heard.
+   */
+  const beganWithoutGestureRef = useRef(false);
+  /**
+   * False until the mic probe has answered. Without it the gate paints for the
+   * few hundred ms before auto-begin fires, and a glimpse of a screen you are
+   * about to skip is worse than the screen.
+   */
+  const [gateChecked, setGateChecked] = useState(false);
   const gotResultRef = useRef(false);
   const lastKnownVoiceIdRef = useRef(voiceParam || 'coral');
   // Maps each AI character name → assigned TTS voice ID (for multi-character scenes)
@@ -926,6 +955,17 @@ export default function RehearsalPage() {
       const upgrade = parseUpgradeError(err);
       if (upgrade) {
         setUpgradeModal({ open: true, feature: "AI Voice", message: upgrade.message });
+        return;
+      }
+      /* Auto-begin spends no user gesture, and a browser that will not autoplay
+         audio rejects the opening line with NotAllowedError. Hand the scene back
+         to the gate rather than running it silently: the tap there is the
+         gesture, which is the whole reason that screen exists. */
+      if (beganWithoutGestureRef.current && err instanceof Error && err.name === 'NotAllowedError') {
+        beganWithoutGestureRef.current = false;
+        autoStartedRef.current = false;
+        setArmed(false);
+        setGateChecked(true);
         return;
       }
       const fallbackLine = lastAiLineForFallbackRef.current;
@@ -1236,7 +1276,10 @@ export default function RehearsalPage() {
     setLastAiLine(null);
     setFocusInitialized(false);
     setArmed(false);
+    setGateChecked(false);
     autoStartedRef.current = false;
+    autoBeganRef.current = false;
+    beganWithoutGestureRef.current = false;
     lineAudioBlobsRef.current.clear();
     lineTranscriptsRef.current.clear();
     lineAttemptsRef.current.clear();
@@ -1517,6 +1560,45 @@ export default function RehearsalPage() {
   useEffect(() => {
     if (focusInitialized) prewarmStream();
   }, [focusInitialized]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /**
+   * Walk straight on stage when the browser lets us.
+   *
+   * Tapping Rehearse already said what you wanted; landing on a screen that
+   * asks again is a door held shut in front of a room you asked to enter. On a
+   * short scene the interstitial can outlast the run.
+   *
+   * It cannot simply be deleted. That screen is the user gesture iOS Safari
+   * needs before the opening line's audio may play, and it is where someone
+   * whose mic is blocked is told so. A gesture is only required until the grant
+   * is remembered for the origin — so ask the browser whether the mic is
+   * already granted, and hold the door only when the answer is no.
+   *
+   * One tap the first time and none after, except on Safari, which does not
+   * implement the microphone permission descriptor: useMicPermission reports
+   * 'prompt' there, so the gate stays, which is right — a run that silently
+   * never hears you is a failure this app has shipped before.
+   */
+  useEffect(() => {
+    if (autoBeganRef.current) return;
+    if (!focusInitialized || armed || showFeedback || error) return;
+    // null means the permission probe has not answered yet. Waiting is what
+    // keeps the gate from flashing up in front of a scene we are about to start.
+    if (micStatus === null) return;
+
+    autoBeganRef.current = true;
+    if (micStatus === 'granted') {
+      beganWithoutGestureRef.current = true;
+      void handleBegin();
+    } else {
+      setGateChecked(true);
+    }
+  }, [focusInitialized, armed, showFeedback, error, micStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  /** Audio is playing, so the gesture question is settled for this run. */
+  useEffect(() => {
+    if (isSpeakingAI) beganWithoutGestureRef.current = false;
+  }, [isSpeakingAI]);
 
   // Auto-start: begin from session.current_line_index (respects "Start from here")
   useEffect(() => {
@@ -2253,25 +2335,25 @@ export default function RehearsalPage() {
       );
     }
     return (
-      <div className={cn(CHROME_DARK, "fixed inset-0 flex items-center justify-center", STAGE_BG)}>
+      <div className={cn("fixed inset-0 flex items-center justify-center", STAGE_SURFACE)}>
         <div className="text-center space-y-4">
           {error ? (
             <>
-              <p className="text-neutral-300 text-sm max-w-xs">{error}</p>
-              <Button size="sm" className="border border-neutral-600 bg-neutral-800 text-white hover:bg-neutral-700" onClick={() => router.push(backUrl)}>
+              <p className={cn("text-sm max-w-xs", STAGE_INK_SOFT)}>{error}</p>
+              <Button size="sm" variant="outline" className={cn(STAGE_RULE)} onClick={() => router.push(backUrl)}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
                 {scriptId ? 'Back to script' : 'Back'}
               </Button>
             </>
           ) : (
             <>
-              <div className="h-8 w-8 rounded-full border-2 border-neutral-700 border-t-primary animate-spin mx-auto" />
+              <div className={cn("h-8 w-8 rounded-full border-2 border-t-primary animate-spin mx-auto", STAGE_RULE)} />
               <motion.p
                 key={loadingTextIdx}
                 initial={{ opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -4 }}
-                className="text-neutral-400 text-sm"
+                className={cn("text-sm", STAGE_INK_SOFT)}
               >
                 {LOADING_TEXTS[loadingTextIdx]}
               </motion.p>
@@ -2290,7 +2372,7 @@ export default function RehearsalPage() {
     const showPlayTitle = playTitle && playTitle.toLowerCase() !== sceneTitle.toLowerCase();
 
     return (
-      <div className={cn(CHROME_DARK, "fixed inset-0 text-neutral-100 flex flex-col z-[10050]", STAGE_BG)}>
+      <div className={cn("fixed inset-0 flex flex-col z-[10050]", STAGE_SURFACE)}>
         <div className="flex-1 overflow-auto flex justify-center px-4 pt-10 pb-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -2299,10 +2381,10 @@ export default function RehearsalPage() {
           >
             {/* Header */}
             <div className="text-center space-y-2">
-              <p className="text-sm uppercase tracking-widest text-neutral-500 font-medium">Scene Complete</p>
-              <h1 className="text-2xl font-bold text-neutral-100">{sceneTitle}</h1>
+              <p className={cn("text-sm uppercase tracking-widest font-medium", STAGE_INK_FAINT)}>Scene Complete</p>
+              <h1 className={cn("text-2xl font-bold", STAGE_INK)}>{sceneTitle}</h1>
               {showPlayTitle && (
-                <p className="text-sm text-neutral-500">from {playTitle}</p>
+                <p className={cn("text-sm", STAGE_INK_FAINT)}>from {playTitle}</p>
               )}
             </div>
 
@@ -2320,10 +2402,10 @@ export default function RehearsalPage() {
             ) : (
               firstRun && (
                 <div className="rounded-lg border border-primary/30 bg-primary/10 p-5 text-center space-y-3">
-                  <p className="text-base font-semibold text-neutral-100">
+                  <p className={cn("text-base font-semibold", STAGE_INK)}>
                     That was your first scene.
                   </p>
-                  <p className="text-sm text-neutral-400">
+                  <p className={cn("text-sm", STAGE_INK_SOFT)}>
                     Now bring in something that&apos;s actually yours and run it the
                     same way.
                   </p>
@@ -2351,7 +2433,7 @@ export default function RehearsalPage() {
               <button
                 type="button"
                 onClick={sceneReplayIdx !== null ? stopSceneReplay : startSceneReplay}
-                className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-5 py-2.5 text-sm font-medium text-[#ff8a4c] hover:bg-primary/20 transition-colors"
+                className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-5 py-2.5 text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
               >
                 {sceneReplayIdx !== null
                   ? (<><Square className="w-3.5 h-3.5 fill-current" /> Stop replay</>)
@@ -2360,11 +2442,11 @@ export default function RehearsalPage() {
             </div>
 
             {/* Divider */}
-            <div className="border-t border-neutral-800/60" />
+            <div className={cn("border-t", STAGE_RULE)} />
 
             {/* Transcript: line-by-line breakdown */}
             <div className="space-y-5">
-              <p className="text-xs uppercase tracking-widest text-neutral-500 font-semibold">Your Performance</p>
+              <p className={cn("text-xs uppercase tracking-widest font-semibold", STAGE_INK_FAINT)}>Your Performance</p>
 
               <div className="space-y-3">
                 {orderedLines.map((line, idx) => {
@@ -2389,11 +2471,14 @@ export default function RehearsalPage() {
                           <div className={cn("w-4 h-4 rounded-full flex items-center justify-center shrink-0 text-[8px] font-bold text-white", meta?.color ?? 'bg-neutral-500')}>
                             {(meta?.label ?? line.character_name).charAt(0).toUpperCase()}
                           </div>
-                          <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-700">
+                          {/* The partner's lines sit a step back from yours in
+                              both themes: lighter than the page in dark, greyer
+                              than the page in light. */}
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 dark:text-neutral-600">
                             {line.character_name}
                           </span>
                         </div>
-                        <p className="text-sm text-neutral-600 leading-snug">
+                        <p className={cn("text-sm leading-snug", STAGE_INK_FAINT)}>
                           {renderTextWithStageDirections(line.text)}
                         </p>
                       </div>
@@ -2406,14 +2491,14 @@ export default function RehearsalPage() {
                       id={`review-line-${idx}`}
                       className={cn(
                         "pl-3 border-l space-y-1 transition-colors",
-                        sceneReplayIdx === idx ? "border-primary bg-primary/5" : "border-neutral-800"
+                        sceneReplayIdx === idx ? "border-primary bg-primary/5" : STAGE_RULE
                       )}
                     >
                       {/* Character name. No per-line score and no "skipped" label:
                           a red 40% on a line you delivered well is the app
                           confidently reporting its own hearing as your work. */}
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">
+                        <span className={cn("text-[10px] font-bold uppercase tracking-widest", STAGE_INK_SOFT)}>
                           {line.character_name}
                         </span>
                       </div>
@@ -2421,7 +2506,7 @@ export default function RehearsalPage() {
                       {/* Expected text */}
                       <p className={cn(
                         "text-[15px] leading-snug",
-                        wasDelivered ? "text-neutral-300" : "text-neutral-500"
+                        wasDelivered ? STAGE_INK : STAGE_INK_FAINT
                       )}>
                         {renderTextWithStageDirections(line.text)}
                       </p>
@@ -2438,7 +2523,7 @@ export default function RehearsalPage() {
                               onBounds={(speechStartRatio, speechEndRatio) => replayBoundsRef.current.set(idx, { startRatio: speechStartRatio, endRatio: speechEndRatio })}
                             />
                           )}
-                          <p className="text-xs text-neutral-600 italic leading-snug">{userTranscript}</p>
+                          <p className={cn("text-xs italic leading-snug", STAGE_INK_FAINT)}>{userTranscript}</p>
                         </>
                       )}
                     </div>
@@ -2450,12 +2535,14 @@ export default function RehearsalPage() {
         </div>
 
         {/* Sticky bottom actions */}
-        <div className="shrink-0 px-4 pb-5 pt-3 bg-gradient-to-t from-neutral-950 via-neutral-950 to-neutral-950/0">
+        {/* The fade under the actions has to be the room's own colour, or it is
+            a dark smear across the bottom of a cream page. */}
+        <div className="shrink-0 px-4 pb-5 pt-3 bg-gradient-to-t from-[#f2ece2] via-[#f2ece2] to-[#f2ece2]/0 dark:from-[#191410] dark:via-[#191410] dark:to-[#191410]/0">
           <div className="max-w-3xl mx-auto flex items-center justify-center gap-4">
             <button
               type="button"
               onClick={handleExit}
-              className="text-sm text-neutral-500 hover:text-neutral-300 transition-colors flex items-center gap-1.5"
+              className={cn("text-sm transition-colors flex items-center gap-1.5 hover:text-neutral-900 dark:hover:text-neutral-100", STAGE_INK_FAINT)}
             >
               <ArrowLeft className="w-3.5 h-3.5" />
               Back to Script
@@ -2463,12 +2550,12 @@ export default function RehearsalPage() {
             {/* Cold read is one take — no restarts. */}
             {!coldRead && (
               <>
-                <span className="text-neutral-800">·</span>
+                <span className="text-neutral-300 dark:text-neutral-700">·</span>
                 <button
                   type="button"
                   onClick={handleRestart}
                   disabled={isRestarting}
-                  className="text-sm text-neutral-400 hover:text-neutral-100 transition-colors disabled:opacity-50"
+                  className={cn("text-sm transition-colors disabled:opacity-50 hover:text-neutral-900 dark:hover:text-neutral-100", STAGE_INK_SOFT)}
                 >
                   {isRestarting ? 'Starting...' : 'Run It Again'}
                 </button>
@@ -2497,27 +2584,29 @@ export default function RehearsalPage() {
       {(!focusInitialized || (countdown !== null && countdown > 0)) && (
         <div className={cn("absolute inset-0 z-20 flex items-center justify-center", STAGE_BG)}>
           {!focusInitialized && (
-            <div className="h-8 w-8 rounded-full border-2 border-neutral-700 border-t-primary animate-spin" />
+            <div className={cn("h-8 w-8 rounded-full border-2 border-t-primary animate-spin", STAGE_RULE)} />
           )}
         </div>
       )}
 
-      {/* Begin gate — explicit start so iOS can play audio and the user has a clear cue */}
+      {/* Begin gate — the user gesture iOS needs, shown only when the mic probe
+          says we have not been granted the microphone yet, or when autoplay
+          turned the opening line down. Otherwise we go straight on stage. */}
       <AnimatePresence>
-        {focusInitialized && !armed && !showFeedback && !error && (
+        {focusInitialized && gateChecked && !armed && !showFeedback && !error && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.25 } }}
-            className={cn(CHROME_DARK, "fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 px-6 text-center", STAGE_BG)}
+            className={cn("fixed inset-0 z-40 flex flex-col items-center justify-center gap-6 px-6 text-center", STAGE_SURFACE)}
           >
             {sceneWithLines && (
               <div className="max-w-md">
-                <p className="text-xs uppercase tracking-widest text-neutral-500">Ready to rehearse</p>
-                <h2 className="mt-2 text-2xl font-semibold text-neutral-100">{sceneWithLines.title}</h2>
+                <p className={cn("text-xs uppercase tracking-widest", STAGE_INK_FAINT)}>Ready to rehearse</p>
+                <h2 className={cn("mt-2 text-2xl font-semibold", STAGE_INK)}>{sceneWithLines.title}</h2>
                 {session && (
-                  <p className="mt-1 text-sm text-neutral-400">
-                    You&apos;re playing <span className="font-medium text-neutral-200">{sessionRoles(session).join(' + ')}</span>
+                  <p className={cn("mt-1 text-sm", STAGE_INK_SOFT)}>
+                    You&apos;re playing <span className={cn("font-medium", STAGE_INK)}>{sessionRoles(session).join(' + ')}</span>
                   </p>
                 )}
               </div>
@@ -2535,10 +2624,10 @@ export default function RehearsalPage() {
                 mic is blocked is how a silent room reads as a broken product. */}
             {isMicBlocked ? (
               <div className="max-w-xs space-y-2">
-                <p className="text-xs text-orange-400">
+                <p className="text-xs text-orange-600 dark:text-orange-400">
                   Your mic is blocked, so I won&apos;t hear you.
                 </p>
-                <p className="text-xs text-neutral-500">
+                <p className={cn("text-xs", STAGE_INK_FAINT)}>
                   Allow the mic in your browser&apos;s address bar, or start anyway and tap
                   to move through the scene.
                 </p>
@@ -2552,7 +2641,7 @@ export default function RehearsalPage() {
                 </Button>
               </div>
             ) : (
-              <p className="max-w-xs text-xs text-neutral-500">
+              <p className={cn("max-w-xs text-xs", STAGE_INK_FAINT)}>
                 {micStatus === 'granted'
                   ? 'Your scene partner reads their lines aloud. When it’s your turn, just speak.'
                   : 'Your scene partner reads their lines aloud. I’ll ask for your mic so I can hear your lines.'}
@@ -2569,7 +2658,7 @@ export default function RehearsalPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0, transition: { duration: 0.25 } }}
-            className={cn(CHROME_DARK, "fixed inset-0 flex items-center justify-center z-30", STAGE_BG)}
+            className={cn("fixed inset-0 flex items-center justify-center z-30", STAGE_SURFACE)}
           >
             <motion.span
               key={countdown}
@@ -2578,7 +2667,7 @@ export default function RehearsalPage() {
               animate={{ opacity: 0.3, scale: 1 }}
               exit={{ opacity: 0, scale: 1.1 }}
               transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-              className="text-[6rem] sm:text-[10rem] font-extralight text-neutral-400 tabular-nums select-none"
+              className={cn("text-[6rem] sm:text-[10rem] font-extralight tabular-nums select-none", STAGE_INK_SOFT)}
             >
               {countdown}
             </motion.span>
