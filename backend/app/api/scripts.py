@@ -2257,6 +2257,38 @@ def cancel_background_extraction(script_id: int) -> bool:
     return True
 
 
+def learned_identity(current_title, current_author, metadata: dict, filename) -> tuple:
+    """Let the parse name the script, unless the actor already did.
+
+    Extraction works out the title and author and then nothing writes them back,
+    so every uploaded script is named after its file and credited to "Unknown" —
+    "Mnd" by nobody, for A Midsummer Night's Dream. The knowledge was there all
+    along: reading only the picked Act 5 pages, with no title page in the text,
+    the parse still returns the play and Shakespeare.
+
+    Only a placeholder is replaced. A title the actor typed is a decision, and
+    "Dream (audition cut)" must not be corrected to the full title by a model
+    that is confident and beside the point.
+    """
+    from app.services.script_parser import _is_usable_title, _title_from_filename
+
+    title = current_title
+    learned_title = (metadata.get("title") or "").strip()
+    is_placeholder_title = (
+        not current_title or current_title == _title_from_filename(filename or "")
+    )
+    if is_placeholder_title and learned_title and _is_usable_title(learned_title):
+        title = learned_title
+
+    author = current_author
+    learned_author = (metadata.get("author") or "").strip()
+    if (not current_author or current_author.strip().lower() == "unknown") and learned_author:
+        if learned_author.lower() != "unknown":
+            author = learned_author
+
+    return (title, author)
+
+
 def extraction_outcome(created: list) -> tuple:
     """What a finished extraction should say about itself.
 
@@ -2303,6 +2335,9 @@ def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
 
         metadata = result.get("metadata", {})
         script.raw_text = result.get("raw_text") or script.raw_text
+        script.title, script.author = learned_identity(
+            script.title, script.author, metadata, script.original_filename
+        )
         script.characters = metadata.get("characters", [])
         script.num_characters = len(script.characters or [])
         script.genre = metadata.get("genre") or script.genre
@@ -2590,6 +2625,11 @@ async def reextract_script(
         )
 
     metadata = result.get("metadata", {})
+    # Re-cutting is also the second chance to get the name right, for every
+    # script already on the shelf that landed before this wrote anything back.
+    user_script.title, user_script.author = learned_identity(
+        user_script.title, user_script.author, metadata, user_script.original_filename
+    )
     user_script.characters = metadata.get("characters", user_script.characters)
     user_script.num_characters = len(user_script.characters or [])
     created = _build_scenes(db, user_script, play_id, result["scenes"])
