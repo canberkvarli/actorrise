@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import os
+import threading
 from datetime import date, datetime, time, timedelta, timezone
 from typing import Any, Literal
 
@@ -166,6 +167,9 @@ class AdminGrantRequest(BaseModel):
     # cards and the tag lost every time: of 14 comps on 2026-09-04 only 5 were
     # tagged, with "Student" typed into this note where nothing can count it.
     account_type: str | None = None
+    # Defaults ON. Silent-by-default is what left 31 comped accounts never
+    # told they had anything; turn it off only to correct a mistake.
+    notify: bool = True
     note: str = Field(min_length=3)
 
     @field_validator("account_type")
@@ -251,6 +255,23 @@ def _serialize_user(user: User) -> dict[str, Any]:
         "organization": user.organization,
         "created_at": user.created_at.isoformat() if user.created_at else None,
     }
+
+
+def _duration_label(duration_days: int | None) -> str | None:
+    """Days -> the words a person would use. None for a permanent comp, which
+    drops the expiry sentence from the email rather than printing '0 days'."""
+    if duration_days is None:
+        return None
+    if duration_days % 365 == 0 and duration_days >= 365:
+        n = duration_days // 365
+        return "1 year" if n == 1 else f"{n} years"
+    if duration_days % 30 == 0 and duration_days >= 30:
+        n = duration_days // 30
+        return "1 month" if n == 1 else f"{n} months"
+    if duration_days % 7 == 0 and duration_days >= 7:
+        n = duration_days // 7
+        return "1 week" if n == 1 else f"{n} weeks"
+    return "1 day" if duration_days == 1 else f"{duration_days} days"
 
 
 def _create_audit_log(
@@ -696,6 +717,26 @@ def grant_admin_user_membership(
         note=body.note,
     )
     db.commit()
+
+    # Tell them. Granting used to be completely silent, so a comped account
+    # looked identical to a free one until the person happened to notice.
+    # After the commit and on a thread: a Resend hiccup must not undo a grant
+    # that already succeeded.
+    if body.notify:
+        from app.services.email.notifications import send_membership_granted_email
+
+        threading.Thread(
+            target=send_membership_granted_email,
+            kwargs={
+                "user_email": target.email,
+                "user_name": target.name,
+                "tier_display_name": tier.display_name,
+                "duration_label": _duration_label(body.duration_days),
+                "account_type": target.account_type,
+            },
+            daemon=True,
+        ).start()
+
     return after
 
 

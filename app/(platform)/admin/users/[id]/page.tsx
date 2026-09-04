@@ -93,6 +93,7 @@ export default function AdminUserDetailPage() {
   const [grantCustomDays, setGrantCustomDays] = useState("30");
   const [grantNote, setGrantNote] = useState("");
   const [grantAccountType, setGrantAccountType] = useState("");
+  const [grantNotify, setGrantNotify] = useState(true);
 
   const [benefitKeyPreset, setBenefitKeyPreset] = useState(BENEFIT_OPTIONS[0].key);
   const [customBenefitKey, setCustomBenefitKey] = useState("");
@@ -326,6 +327,7 @@ export default function AdminUserDetailPage() {
       duration_days: durationDays,
       // Omitted when blank so a plain goodwill comp doesn't tag anyone.
       ...(grantAccountType ? { account_type: grantAccountType } : {}),
+      notify: grantNotify,
       note: grantNote.trim(),
     });
   };
@@ -727,6 +729,23 @@ export default function AdminUserDetailPage() {
                   &quot;Student&quot; is not something the dashboard can count.
                 </p>
               </div>
+
+              <label className="flex items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={grantNotify}
+                  onChange={(e) => setGrantNotify(e.target.checked)}
+                  className="mt-1"
+                />
+                <span>
+                  Email them that they&apos;re on it
+                  <span className="block text-xs text-muted-foreground">
+                    On by default. Granting is otherwise silent, and a comped account
+                    looks identical to a free one until they happen to notice. Copy
+                    changes with the tag above. Uncheck only when fixing a mistake.
+                  </span>
+                </span>
+              </label>
 
               <Input
                 value={grantNote}

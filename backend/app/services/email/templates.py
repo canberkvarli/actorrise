@@ -141,6 +141,97 @@ class EmailTemplates:
             unsubscribe_url=unsubscribe_url,
         )
 
+    def render_membership_granted(
+        self,
+        user_name: str,
+        tier_display_name: str = "Plus",
+        duration_label: Optional[str] = None,
+        account_type: Optional[str] = None,
+        unsubscribe_url: Optional[str] = None,
+    ) -> str:
+        """Render the "I've put you on Plus" email for a comped account.
+
+        `duration_label` is human copy ("1 month", "2 weeks"), or None for a
+        permanent comp, which drops the expiry sentence entirely rather than
+        printing an empty one. `account_type` picks which promise is made:
+        an educator is told her class is covered, a student is pointed at their
+        teacher, and everyone else gets neither.
+        """
+        template = self.env.get_template('membership_granted.html')
+        return template.render(
+            user_name=user_name or "there",
+            tier_display_name=tier_display_name or "Plus",
+            duration_label=duration_label,
+            account_type=account_type,
+            unsubscribe_url=unsubscribe_url,
+        )
+
+    def render_membership_granted_plain(
+        self,
+        user_name: str,
+        tier_display_name: str = "Plus",
+        duration_label: Optional[str] = None,
+        account_type: Optional[str] = None,
+        **kwargs,
+    ) -> str:
+        """Plain-text alternative. Same promises, same order, no markup."""
+        name = user_name or "there"
+        tier = tier_display_name or "Plus"
+        free_for = f", free for {duration_label}" if duration_label else ", free"
+        lines = [f"Hey {name},", ""]
+        if account_type == "educator":
+            lines += [
+                f"Your account is on {tier}{free_for}. No card, nothing to cancel, "
+                "and I won't ask you for one later.",
+                "",
+                "Same goes for your students. Send me their emails whenever you have "
+                "the list, all at once or a few at a time, and I'll put them on the "
+                "same dates so your whole class runs together instead of on thirty "
+                "different clocks. My address is canberk@actorrise.com.",
+            ]
+        elif account_type == "student":
+            lines += [
+                f"Your account is on {tier}{free_for}. No card, nothing to cancel, "
+                "and I won't ask you for one later.",
+                "",
+                "If your teacher wants the rest of the class on it, have them email "
+                "me at canberk@actorrise.com and I'll set everyone up at once.",
+            ]
+        else:
+            for_x = f" for {duration_label}" if duration_label else ""
+            lines += [
+                f"I've put your account on {tier}{for_x}, on me. No card, nothing to "
+                "cancel, and I won't ask you for one later.",
+            ]
+        lines += [
+            "",
+            "What that opens up:",
+            "",
+            "1. Upload your own sides and rehearse them with a partner that reads every other role",
+            "2. The full monologue library, no limit on what you can read",
+            "3. Save what you find so it's there next time",
+            "",
+            "Start wherever makes sense: actorrise.com/practice to bring in a script, "
+            "or actorrise.com/monologues to go through the library.",
+        ]
+        if duration_label:
+            lines += [
+                "",
+                f"When the {duration_label} is up the account just drops back to free. "
+                "Nothing gets charged, nothing disappears. If you want longer, reply "
+                "and say so and I'll push it out.",
+            ]
+        lines += [
+            "",
+            "If something's broken or confusing, reply to this and tell me. It's just "
+            "me back here, so it tends to get fixed the same week.",
+            "",
+            "Canberk",
+            "Founder | Actor",
+            "actorrise.com",
+        ]
+        return "\n".join(lines)
+
     def render_upgrade_notification(
         self,
         user_name: str,

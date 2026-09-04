@@ -39,6 +39,45 @@ def send_welcome_email(user_email: str, user_name: Optional[str] = None) -> dict
 
 
 
+def send_membership_granted_email(
+    user_email: str,
+    user_name: Optional[str] = None,
+    tier_display_name: str = "Plus",
+    duration_label: Optional[str] = None,
+    account_type: Optional[str] = None,
+) -> dict:
+    """Tell someone Canberk just comped their account.
+
+    TRANSACTIONAL, and deliberately does not consult email_do_not_contact. It
+    reports a change to the recipient's own account that nothing else in the
+    product announces, the same way a receipt does. That matters here: the
+    Stripe webhook auto-adds paying subscribers to the DNC list with reason
+    "paid_subscriber", so honouring DNC would silence exactly the people most
+    likely to have paid before.
+
+    Fire-and-forget by contract: never raises, because a failed send must never
+    roll back a grant that already happened.
+    """
+    if not os.getenv("RESEND_API_KEY"):
+        print("Warning: RESEND_API_KEY not set. Membership granted email disabled.")
+        return {"id": "mock_membership_granted_id", "status": "disabled"}
+
+    try:
+        client = ResendEmailClient()
+        templates = EmailTemplates()
+        subject = f"You're on {tier_display_name or 'Plus'}"
+        html = templates.render_membership_granted(
+            user_name=user_name or "there",
+            tier_display_name=tier_display_name,
+            duration_label=duration_label,
+            account_type=account_type,
+        )
+        return client.send_email(to=user_email, subject=subject, html=html)
+    except Exception as e:
+        print(f"Error sending membership granted email to {user_email}: {e}")
+        return {"id": None, "status": "failed", "error": str(e)}
+
+
 def send_submission_notification(
     user_email: str,
     user_name: str,

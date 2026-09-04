@@ -1,0 +1,47 @@
+{% extends "base_personal.html" %}
+
+{# Sent when Canberk comps an account. Transactional: it tells someone about a
+   change to their own account that nothing else announces, so it goes out even
+   to addresses on the marketing do-not-contact list, the way a receipt would.
+
+   Deliberately still a letter. No hero, no button grid, no "YOUR BENEFITS"
+   table. The whole offer is a person giving you something, and a designed
+   template makes it read like a trial upsell from a company. #}
+
+{% block title %}You're on {{ tier_display_name }}{% endblock %}
+
+{% block content %}
+        <p>Hey {{ user_name }},</p>
+
+        {% if account_type == 'educator' %}
+        <p>Your account is on {{ tier_display_name }}{% if duration_label %}, free for {{ duration_label }}{% else %}, free{% endif %}. No card, nothing to cancel, and I won't ask you for one later.</p>
+
+        <p>Same goes for your students. Send me their emails whenever you have the list, all at once or a few at a time, and I'll put them on the same dates so your whole class runs together instead of on thirty different clocks. My address is <a href="mailto:canberk@actorrise.com">canberk@actorrise.com</a>.</p>
+        {% elif account_type == 'student' %}
+        <p>Your account is on {{ tier_display_name }}{% if duration_label %}, free for {{ duration_label }}{% else %}, free{% endif %}. No card, nothing to cancel, and I won't ask you for one later.</p>
+
+        <p>If your teacher wants the rest of the class on it, have them email me at <a href="mailto:canberk@actorrise.com">canberk@actorrise.com</a> and I'll set everyone up at once.</p>
+        {% else %}
+        <p>I've put your account on {{ tier_display_name }}{% if duration_label %} for {{ duration_label }}{% endif %}, on me. No card, nothing to cancel, and I won't ask you for one later.</p>
+        {% endif %}
+
+        <p>What that opens up:</p>
+
+        <p>1. Upload your own sides and rehearse them with a partner that reads every other role<br>
+        2. The full monologue library, no limit on what you can read<br>
+        3. Save what you find so it's there next time</p>
+
+        <p>Start wherever makes sense: <a href="https://actorrise.com/practice">bring in a script</a>, or <a href="https://actorrise.com/monologues">go through the library</a>.</p>
+
+        {% if duration_label %}
+        <p>When the {{ duration_label }} is up the account just drops back to free. Nothing gets charged, nothing disappears. If you want longer, reply and say so and I'll push it out.</p>
+        {% endif %}
+
+        <p>If something's broken or confusing, reply to this and tell me. It's just me back here, so it tends to get fixed the same week.</p>
+
+        <p style="margin-top: 28px;">
+            Canberk<br>
+            <span style="color: #666;">Founder | Actor</span><br>
+            <a href="https://actorrise.com" style="color: #666;">actorrise.com</a>
+        </p>
+{% endblock %}
