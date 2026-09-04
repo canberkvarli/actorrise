@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import api from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -133,6 +134,33 @@ function GroupRule({ children }: { children: React.ReactNode }) {
 
 export function ActorProfileForm() {
   const queryClient = useQueryClient();
+  const { user, refreshUser } = useAuth();
+  // A drama teacher should not be asked for her union status. Educators get the
+  // short version of this page: name, market, school and a photo. Students keep
+  // the full actor profile — they are actors, they just have a teacher.
+  const isEducator = user?.account_type === "educator";
+  // organization lives on `users`, not on ActorProfile, so it saves through the
+  // onboarding PATCH rather than the profile PUT the rest of this form uses.
+  const [organization, setOrganization] = useState("");
+  const [organizationLoaded, setOrganizationLoaded] = useState(false);
+  useEffect(() => {
+    // Populate once, from the auth user. Guarded so a background refreshUser()
+    // can't overwrite what they are in the middle of typing.
+    if (organizationLoaded || !user) return;
+    setOrganization(user.organization || "");
+    setOrganizationLoaded(true);
+  }, [user, organizationLoaded]);
+  const saveOrganization = useCallback(async () => {
+    if (!organizationLoaded) return;
+    if ((user?.organization || "") === organization.trim()) return;
+    try {
+      await api.patch("/api/auth/onboarding", { organization: organization.trim() });
+      await refreshUser();
+    } catch {
+      toast.error("Couldn't save that. Try again?");
+    }
+  }, [organization, organizationLoaded, user?.organization, refreshUser]);
+
   const { data: cachedProfile, isLoading: isQueryLoading, isFetching: isQueryFetching } = useProfileFormData();
   // Show skeleton only on very first load (no cached data at all). Revisits render instantly.
   const isFetching = isQueryLoading && !cachedProfile;
@@ -232,6 +260,12 @@ export function ActorProfileForm() {
 
   // Calculate profile completion percentage - matches backend calculation
   const completionPercentage = useMemo(() => {
+    // An educator is never shown the casting fields, so scoring her against them
+    // would peg her at ~30% forever with no way to fix it.
+    if (isEducator) {
+      const filled = [name, location].filter(Boolean).length;
+      return Math.round((filled / 2) * 100);
+    }
     const hasType = type || actorTypes.length > 0;
     const requiredFields = [
       name,
@@ -258,6 +292,7 @@ export function ActorProfileForm() {
     const percentage = (requiredCount / 7) * 70 + (optionalCount / 4) * 30;
     return Math.min(100, Math.round(percentage * 10) / 10); // Round to 1 decimal like backend
   }, [
+    isEducator,
     name,
     ageRange,
     gender,
@@ -291,6 +326,15 @@ export function ActorProfileForm() {
   );
 
   const callSheet = useMemo(() => {
+    if (isEducator) {
+      return {
+        primary: [
+          { key: "location", value: location, blank: "market", tab: "basic", fieldId: "location" },
+          { key: "organization", value: organization, blank: "school or studio", tab: "basic", fieldId: "organization" },
+        ] as CallSheetSlot[],
+        secondary: [] as CallSheetSlot[],
+      };
+    }
     const primary: CallSheetSlot[] = [
       { key: "age_range", value: ageRange, blank: "age range", tab: "basic", fieldId: "age_range" },
       { key: "gender", value: gender, blank: "gender", tab: "basic", fieldId: "gender" },
@@ -302,7 +346,7 @@ export function ActorProfileForm() {
       { key: "experience_level", value: experienceLabel, blank: "experience", tab: "acting", fieldId: "experience_level" },
     ];
     return { primary, secondary };
-  }, [ageRange, gender, unionStatus, location, actorTypeText, experienceLabel]);
+  }, [isEducator, organization, ageRange, gender, unionStatus, location, actorTypeText, experienceLabel]);
 
   /**
    * Only the fields the recommender actually reads. Height and name do not
@@ -860,6 +904,10 @@ export function ActorProfileForm() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           {/* A rail, not a segmented control. The grey pill made three equal
               buttons look like a toolbar; these are the acts of one document. */}
+          {/* Educators only have the first act, and a rail of one is not a rail.
+              Not rendered rather than CSS-hidden, so the casting tabs can't be
+              reached by keyboard either. */}
+          {!isEducator && (
           <TabsList className="grid w-full grid-cols-3 gap-0 rounded-none border-b border-border bg-transparent p-0">
             {TAB_RAIL.map((t) => (
               <TabsTrigger
@@ -881,6 +929,7 @@ export function ActorProfileForm() {
               </TabsTrigger>
             ))}
           </TabsList>
+          )}
 
           <div>
             <TabsContent value="basic" className="mt-6">
@@ -889,7 +938,11 @@ export function ActorProfileForm() {
                     <SectionHead
                       sketch={MasksSketch}
                       title="Who you are"
-                      aside="(what a casting office reads before you open your mouth.)"
+                      aside={
+                        isEducator
+                          ? "(so I know who I'm setting up, and where.)"
+                          : "(what a casting office reads before you open your mouth.)"
+                      }
                     />
                     <CardContent className="space-y-6 pt-6">
                       <GroupRule>Needed to match you</GroupRule>
@@ -915,6 +968,7 @@ export function ActorProfileForm() {
                         )}
                       </Field>
 
+                      {!isEducator && (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <Field>
                           <FieldLabel
@@ -986,6 +1040,7 @@ export function ActorProfileForm() {
                           )}
                         </Field>
                       </div>
+                      )}
 
                       {/* Location counts toward completion, so like union status
                           it belongs above the rule, not under "optional". */}
@@ -1028,6 +1083,27 @@ export function ActorProfileForm() {
                         )}
                       </Field>
 
+                      {isEducator && (
+                        <Field>
+                          <FieldLabel
+                            htmlFor="organization"
+                            hint="School, studio or company. It's how I keep your students grouped with you."
+                          >
+                            School or studio
+                          </FieldLabel>
+                          <Input
+                            id="organization"
+                            value={organization}
+                            onChange={(e) => setOrganization(e.target.value)}
+                            onBlur={saveOrganization}
+                            maxLength={280}
+                            className="max-w-sm"
+                          />
+                        </Field>
+                      )}
+
+                      {!isEducator && (
+                      <>
                       <GroupRule>Optional, sharpens the picks</GroupRule>
                       <Field>
                         <FieldLabel
@@ -1149,6 +1225,8 @@ export function ActorProfileForm() {
                           )}
                         </Field>
                       </div>
+                      </>
+                      )}
 
                     </CardContent>
                   </Card>

@@ -63,6 +63,13 @@ class User(Base):
     # be told apart from generic "somewhere else" signups.
     referral_detail = Column(String, nullable=True)
 
+    # Who this account is: 'actor' | 'educator' | 'student' (app/core/account_types.py).
+    # Nullable with no backfill — NULL means unknown/legacy, which is what every
+    # pre-existing account is. Never default it to 'actor'.
+    account_type = Column(String, nullable=True)
+    # School, studio or company. Free text, capped at 280 chars by the API.
+    organization = Column(String, nullable=True)
+
     # Last changelog entry the user dismissed (drives the "What's new" modal)
     last_seen_feature_id = Column(String, nullable=True)
 

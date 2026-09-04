@@ -46,6 +46,23 @@ const REFERRAL_QUESTION = {
   hint: "One tap. It's the only way I know what's working.",
 } as const;
 
+// Also new-signups-only, and also written on tap rather than at the end. Every
+// account used to be assumed a working actor; the educator funnel needs the
+// three apart, and a teacher who abandons the wizard is exactly the person I
+// most need counted. Fully optional — Continue is enabled with nothing picked.
+const ACCOUNT_TYPE_QUESTION = {
+  key: "accountType",
+  prompt: "Are you an actor, a teacher, or a student?",
+  hint: null,
+} as const;
+
+// Label is what the person calls themselves; id is the stored account_type.
+const ACCOUNT_TYPES = [
+  { id: "actor", label: "Actor" },
+  { id: "educator", label: "Teacher" },
+  { id: "student", label: "Student" },
+] as const;
+
 const PROFILE_QUESTIONS = [
   { key: "casting", prompt: "How are you usually cast?", hint: "So the roles I show you are ones you could actually book." },
   { key: "ageRange", prompt: "What's your playing age?", hint: null },
@@ -54,7 +71,10 @@ const PROFILE_QUESTIONS = [
   { key: "stage", prompt: "Where are you in it?", hint: null },
 ] as const;
 
-type QuestionKey = typeof REFERRAL_QUESTION.key | typeof PROFILE_QUESTIONS[number]["key"];
+type QuestionKey =
+  | typeof REFERRAL_QUESTION.key
+  | typeof ACCOUNT_TYPE_QUESTION.key
+  | typeof PROFILE_QUESTIONS[number]["key"];
 
 // Two-column tiles for the short-label questions; the rest read better stacked.
 const TWO_COLUMN_KEYS = new Set<QuestionKey>(["referral", "ageRange", "mediums"]);
@@ -109,7 +129,10 @@ export default function ProfileOnboardingFlow({
   const router = useRouter();
 
   const questions = useMemo(
-    () => (variant === "new" ? [REFERRAL_QUESTION, ...PROFILE_QUESTIONS] : [...PROFILE_QUESTIONS]),
+    () =>
+      variant === "new"
+        ? [REFERRAL_QUESTION, ACCOUNT_TYPE_QUESTION, ...PROFILE_QUESTIONS]
+        : [...PROFILE_QUESTIONS],
     [variant]
   );
   const totalSteps = questions.length;
@@ -121,6 +144,8 @@ export default function ProfileOnboardingFlow({
 
   const [referral, setReferral] = useState<string | null>(null);
   const [referralDetail, setReferralDetail] = useState("");
+  const [accountType, setAccountType] = useState<string | null>(null);
+  const [organization, setOrganization] = useState("");
   const [casting, setCasting] = useState<string | null>(null);
   const [ageRange, setAgeRange] = useState<string | null>(null);
   const [workOn, setWorkOn] = useState<string[]>([]);
@@ -151,6 +176,24 @@ export default function ProfileOnboardingFlow({
     void api.patch("/api/auth/onboarding", { referral_detail: referralDetail.trim() }).catch(() => {});
   }, [referralDetail]);
 
+  // Same fire-and-forget shape as referral, for the same reason.
+  const chooseAccountType = useCallback((id: string) => {
+    setAccountType(id);
+    void api.patch("/api/auth/onboarding", { account_type: id }).catch(() => {});
+    // Only teachers and students are asked where from; switching back to Actor
+    // clears anything already typed so no stray school name is left behind.
+    if (id === "actor") {
+      setOrganization((prev) => {
+        if (prev) void api.patch("/api/auth/onboarding", { organization: "" }).catch(() => {});
+        return "";
+      });
+    }
+  }, []);
+
+  const saveOrganization = useCallback(() => {
+    void api.patch("/api/auth/onboarding", { organization: organization.trim() }).catch(() => {});
+  }, [organization]);
+
   const answers: OnboardingAnswers = useMemo(
     () => ({ casting, ageRange, workOn, mediums, stage }),
     [casting, ageRange, workOn, mediums, stage]
@@ -165,6 +208,9 @@ export default function ProfileOnboardingFlow({
   const stepValid = useMemo(() => {
     switch (questions[step]?.key) {
       case "referral": return !!referral;
+      // Optional: Continue stays live with nothing picked, so nobody is stopped
+      // at signup by a question that only exists for my own bookkeeping.
+      case "accountType": return true;
       case "casting": return !!casting;
       case "ageRange": return !!ageRange;
       case "workOn": return workOn.length > 0;
@@ -173,6 +219,7 @@ export default function ProfileOnboardingFlow({
       default: return false;
     }
   }, [questions, step, referral, casting, ageRange, workOn, mediums, stage]);
+
 
   const goTo = useCallback((delta: number) => {
     setDirection(delta > 0 ? 1 : -1);
@@ -311,6 +358,22 @@ export default function ProfileOnboardingFlow({
                       autoFocus
                       placeholder="Where'd you hear about me? (optional)"
                       className="col-span-2 w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary"
+                    />
+                  )}
+                  {questions[step].key === "accountType" &&
+                    ACCOUNT_TYPES.map((a) => (
+                      <Tile key={a.id} label={a.label} selected={accountType === a.id} onClick={() => chooseAccountType(a.id)} />
+                    ))}
+                  {questions[step].key === "accountType" && (accountType === "educator" || accountType === "student") && (
+                    <input
+                      type="text"
+                      value={organization}
+                      onChange={(e) => setOrganization(e.target.value)}
+                      onBlur={saveOrganization}
+                      maxLength={280}
+                      autoFocus
+                      placeholder="School or studio (optional)"
+                      className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/70 focus:border-primary"
                     />
                   )}
                   {questions[step].key === "casting" &&

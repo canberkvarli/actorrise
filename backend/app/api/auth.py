@@ -1,3 +1,4 @@
+from app.core.account_types import normalize_account_type
 from app.core.database import get_db
 from app.core.security import verify_supabase_token
 from app.models.actor import ActorProfile
@@ -37,6 +38,8 @@ class UpdateOnboardingRequest(BaseModel):
     has_seen_first_rehearsal: bool | None = None
     referral_source: str | None = None
     referral_detail: str | None = None
+    account_type: str | None = None
+    organization: str | None = None
     last_seen_feature_id: str | None = None
 
 
@@ -234,6 +237,8 @@ def get_me(
         ),
         "referral_source": current_user.referral_source,
         "referral_detail": current_user.referral_detail,
+        "account_type": current_user.account_type,
+        "organization": current_user.organization,
         "last_seen_feature_id": current_user.last_seen_feature_id,
         "is_moderator": current_user.is_moderator,
         "can_approve_submissions": current_user.can_approve_submissions,
@@ -301,6 +306,17 @@ def update_onboarding(
         # Only the "other" tile sends this; an empty box on Continue is normal.
         cleaned = body.referral_detail.strip()[:280]
         current_user.referral_detail = cleaned or None
+    if body.account_type is not None:
+        # Closed vocabulary, unlike the referral columns: a typo like "teacher"
+        # would quietly land in the column and never be counted as an educator.
+        try:
+            current_user.account_type = normalize_account_type(body.account_type)
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+    if body.organization is not None:
+        # Same rule as referral_detail: trim, cap, empty string clears to null.
+        cleaned = body.organization.strip()[:280]
+        current_user.organization = cleaned or None
     if body.last_seen_feature_id is not None:
         # Empty string clears the value (used by admin "preview" reset).
         current_user.last_seen_feature_id = body.last_seen_feature_id or None
@@ -315,6 +331,8 @@ def update_onboarding(
         "has_seen_first_rehearsal": current_user.has_seen_first_rehearsal,
         "referral_source": current_user.referral_source,
         "referral_detail": current_user.referral_detail,
+        "account_type": current_user.account_type,
+        "organization": current_user.organization,
         "last_seen_feature_id": current_user.last_seen_feature_id,
     }
 

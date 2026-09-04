@@ -56,6 +56,10 @@ export interface AdminUserDetailResponse {
     has_seen_welcome: boolean;
     has_seen_search_tour: boolean;
     has_seen_profile_tour: boolean;
+    /** 'actor' | 'educator' | 'student'. Null = unknown/legacy, most accounts. */
+    account_type: string | null;
+    /** School, studio or company. Free text. */
+    organization: string | null;
     created_at: string | null;
   };
   profile: Record<string, unknown> | null;

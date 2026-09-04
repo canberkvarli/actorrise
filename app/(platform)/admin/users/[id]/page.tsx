@@ -40,6 +40,13 @@ function getTierBadgeClass(tierName: string): string {
   return "bg-muted text-foreground border-border";
 }
 
+/** Stored value -> what it's called in the header badge. */
+const ACCOUNT_TYPE_LABELS: Record<string, string> = {
+  actor: "Actor",
+  educator: "Educator",
+  student: "Student",
+};
+
 export default function AdminUserDetailPage() {
   const params = useParams<{ id: string }>();
   const userId = Number(params.id);
@@ -58,6 +65,10 @@ export default function AdminUserDetailPage() {
   const [location, setLocation] = useState("");
   const [experienceLevel, setExperienceLevel] = useState("");
   const [unionStatus, setUnionStatus] = useState("");
+  // Most educators arrive by email rather than answering the signup question,
+  // so tagging them by hand here is how this column actually gets filled.
+  const [accountType, setAccountType] = useState("");
+  const [organization, setOrganization] = useState("");
 
   const [tierId, setTierId] = useState<number | null>(null);
   const [subscriptionStatus, setSubscriptionStatus] = useState("active");
@@ -95,6 +106,8 @@ export default function AdminUserDetailPage() {
     setLocation((data.profile?.location as string) || "");
     setExperienceLevel((data.profile?.experience_level as string) || "");
     setUnionStatus((data.profile?.union_status as string) || "");
+    setAccountType((data.user.account_type as string) || "");
+    setOrganization((data.user.organization as string) || "");
     setTierId(data.subscription?.tier_id ?? null);
     setSubscriptionStatus(data.subscription?.status ?? "active");
     setBillingPeriod((data.subscription?.billing_period as "monthly" | "annual") ?? "monthly");
@@ -245,6 +258,10 @@ export default function AdminUserDetailPage() {
     profileMutation.mutate({
       name: displayName,
       marketing_opt_in: marketingOptIn,
+      // Always sent, including "": the backend keys off whether the field was
+      // present, so an empty value is how a mis-tag gets put back to unknown.
+      account_type: accountType,
+      organization,
       profile: {
         location: location || null,
         experience_level: experienceLevel || null,
@@ -406,6 +423,14 @@ export default function AdminUserDetailPage() {
                 {summary?.subscriptionTierDisplay != null ? String(summary.subscriptionTierDisplay) : ""}
               </Badge>
               <Badge variant="outline">Joined {formattedCreatedAt}</Badge>
+              {/* Only shown once tagged. A "Actor" badge on every untagged
+                  account would read as an answer nobody gave. */}
+              {data.user.account_type ? (
+                <Badge variant="outline">{ACCOUNT_TYPE_LABELS[String(data.user.account_type)] ?? String(data.user.account_type)}</Badge>
+              ) : null}
+              {data.user.organization ? (
+                <Badge variant="outline">{String(data.user.organization)}</Badge>
+              ) : null}
             </div>
           </div>
         </div>
@@ -523,6 +548,29 @@ export default function AdminUserDetailPage() {
                 <div>
                   <Label>Union status</Label>
                   <Input value={unionStatus} onChange={(e) => setUnionStatus(e.target.value)} placeholder="Optional" />
+                </div>
+                <div>
+                  <Label htmlFor="account_type">Account type</Label>
+                  <select
+                    id="account_type"
+                    value={accountType}
+                    onChange={(e) => setAccountType(e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    <option value="">Unknown</option>
+                    <option value="actor">Actor</option>
+                    <option value="educator">Educator</option>
+                    <option value="student">Student</option>
+                  </select>
+                </div>
+                <div>
+                  <Label>Organization</Label>
+                  <Input
+                    value={organization}
+                    onChange={(e) => setOrganization(e.target.value)}
+                    maxLength={280}
+                    placeholder="School, studio or company"
+                  />
                 </div>
               </div>
               <Input

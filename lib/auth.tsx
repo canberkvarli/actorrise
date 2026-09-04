@@ -26,6 +26,10 @@ interface User {
   /** Reverse trial: ISO timestamp when unlimited rehearsals lapse (null = none). */
   monologue_trial_ends_at?: string | null;
   referral_source?: string | null;
+  /** 'actor' | 'educator' | 'student'. Null/undefined = unknown (most accounts). */
+  account_type?: string | null;
+  /** School, studio or company. Free text. */
+  organization?: string | null;
   last_seen_feature_id?: string | null;
   is_moderator?: boolean;
   can_approve_submissions?: boolean;

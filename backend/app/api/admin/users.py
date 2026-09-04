@@ -7,11 +7,12 @@ from typing import Any, Literal
 
 import stripe
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import desc, func, or_
 from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
+from app.core.account_types import normalize_account_type
 from app.core.database import get_db
 from app.models.actor import (
     ActorProfile,
@@ -129,8 +130,17 @@ class AdminProfilePatchRequest(BaseModel):
     has_seen_search_tour: bool | None = None
     has_seen_profile_tour: bool | None = None
     email_verified: bool | None = None
+    # Most educators arrive by email, not by answering the signup question, so
+    # tagging them by hand here is the primary way this column gets filled.
+    account_type: str | None = None
+    organization: str | None = None
     profile: dict[str, Any] | None = None
     note: str = Field(min_length=3)
+
+    @field_validator("account_type")
+    @classmethod
+    def _check_account_type(cls, value: str | None) -> str | None:
+        return normalize_account_type(value)
 
 
 class AdminSubscriptionPatchRequest(BaseModel):
@@ -226,6 +236,8 @@ def _serialize_user(user: User) -> dict[str, Any]:
         "has_seen_welcome": user.has_seen_welcome,
         "has_seen_search_tour": user.has_seen_search_tour,
         "has_seen_profile_tour": user.has_seen_profile_tour,
+        "account_type": user.account_type,
+        "organization": user.organization,
         "created_at": user.created_at.isoformat() if user.created_at else None,
     }
 
@@ -466,6 +478,15 @@ def patch_admin_user_profile(
         target.has_seen_profile_tour = body.has_seen_profile_tour
     if body.email_verified is not None:
         target.email_verified = body.email_verified
+    if "account_type" in body.model_fields_set:
+        # Keyed off "was the field sent", not "is it non-None": the validator
+        # normalizes "" to None, and an admin correcting a mis-tag needs to be
+        # able to put someone back to unknown. `is not None` would silently
+        # ignore exactly that request.
+        target.account_type = body.account_type
+    if body.organization is not None:
+        cleaned = body.organization.strip()[:280]
+        target.organization = cleaned or None
 
     if body.profile:
         allowed_profile_fields = {
