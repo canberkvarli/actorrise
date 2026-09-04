@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { IconX } from "@tabler/icons-react";
 
-import { APP_STORE_URL } from "@/components/landing/v2/GhostLightAppTeaser";
+import { appStoreUrl } from "@/lib/appStore";
 
 /**
  * Ghost Light is out, said where people actually are.
@@ -65,7 +65,7 @@ export function AppLaunchBar() {
         <p className="text-[13px] font-medium leading-snug">
           Ghost Light is out on the App Store.{" "}
           <a
-            href={APP_STORE_URL}
+            href={appStoreUrl("launch_bar")}
             target="_blank"
             rel="noopener noreferrer"
             className="whitespace-nowrap underline underline-offset-4 hover:no-underline"

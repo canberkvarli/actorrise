@@ -3,7 +3,7 @@ import { HeroCta } from "@/components/landing/HeroCta";
 import { LandingLiveCount } from "@/components/landing/LandingLiveCount";
 import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
 import { StageMotes } from "@/components/landing/v2/StageMotes";
-import { APP_STORE_URL } from "@/components/landing/v2/GhostLightAppTeaser";
+import { appStoreUrl } from "@/lib/appStore";
 
 /**
  * Ghost Light hero: a dark stage, one spotlight that follows the cursor,
@@ -78,7 +78,7 @@ export function SpotlightHero() {
                 invented asides, and it mangles anything with a proper noun in
                 it — the same way it would mangle "The Seagull". */}
             <a
-              href={APP_STORE_URL}
+              href={appStoreUrl("hero")}
               target="_blank"
               rel="noopener noreferrer"
               className="font-typewriter italic tracking-wide transition-colors hover:text-[var(--stage-muted)]"

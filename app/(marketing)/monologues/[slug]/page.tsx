@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { GhostLightInlineCta } from "@/components/marketing/GhostLightInlineCta";
 import {
   findReplacementMonologue,
   getPublicMonologue,
@@ -132,6 +133,12 @@ export default async function PublicMonologuePage({ params }: Params) {
           </p>
         </div>
       )}
+
+      {/* After the words, before the rehearse card. Someone who has just read the
+          speech is the most qualified reader this site gets, and this page has
+          never mentioned the app to them. Kept quiet on purpose so the primary
+          conversion below still wins. */}
+      <GhostLightInlineCta />
 
       <div className="rounded-2xl border border-border bg-muted/30 p-8 text-center">
         <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">

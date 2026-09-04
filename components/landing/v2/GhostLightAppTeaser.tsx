@@ -11,15 +11,18 @@ import {
   useTransform,
 } from "framer-motion";
 
+import { appStoreUrl } from "@/lib/appStore";
+
 /**
  * Ghost Light iOS teaser: the app's own screens floating on the dark stage,
  * drifting at different speeds as you scroll past. Sits right before the
  * final CTA so the page ends on the dark with the app as the closer.
  */
 
-/** Live since 2026-09-03. Verified: returns 200, "Ghost Light: Monologues App". */
-export const APP_STORE_URL =
-  "https://apps.apple.com/us/app/ghost-light-monologues/id6804278673";
+/** Live since 2026-09-03. Re-exported so existing imports keep working; the
+ *  value and the campaign helper live in lib/appStore.ts, which server
+ *  components can import too. */
+export { APP_STORE_URL } from "@/lib/appStore";
 
 const PHONES = [
   {
@@ -107,7 +110,7 @@ export function GhostLightAppTeaser() {
             a released app should not be wearing one. It is a link now, and the
             only thing on this section you can click. */}
         <a
-          href={APP_STORE_URL}
+          href={appStoreUrl("landing_teaser")}
           target="_blank"
           rel="noopener noreferrer"
           className="mt-7 inline-flex items-center gap-2.5 rounded-full bg-primary-solid px-5 py-2.5 text-sm font-semibold text-primary-solid-foreground shadow-lg shadow-black/20 transition-transform hover:scale-[1.03] active:scale-95"
@@ -140,7 +143,7 @@ export function GhostLightAppTeaser() {
             the parallax keep working on a single element and there is one target
             instead of three adjacent ones announcing the same destination. */}
         <a
-          href={APP_STORE_URL}
+          href={appStoreUrl("landing_teaser")}
           target="_blank"
           rel="noopener noreferrer"
           aria-label="Get Ghost Light on the App Store"

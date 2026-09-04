@@ -10,7 +10,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { GhostLight } from "@/components/brand/GhostLight";
-import { APP_STORE_URL } from "@/components/landing/v2/GhostLightAppTeaser";
+import { appStoreUrl } from "@/lib/appStore";
 import { API_URL } from "@/lib/api";
 
 /**
@@ -237,7 +237,7 @@ export function GhostLightModal() {
               most tappable-looking thing on the panel, and a picture of an app
               that does nothing when you touch it reads as broken. */}
           <a
-            href={APP_STORE_URL}
+            href={appStoreUrl("landing_modal")}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Get Ghost Light on the App Store"
@@ -308,7 +308,7 @@ export function GhostLightModal() {
 
           {platform === "ios" ? (
             <a
-              href={APP_STORE_URL}
+              href={appStoreUrl("landing_modal")}
               target="_blank"
               rel="noopener noreferrer"
               onClick={() => {
