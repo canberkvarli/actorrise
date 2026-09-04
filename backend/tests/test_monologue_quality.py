@@ -219,6 +219,52 @@ class ScreenplayResidueTests(unittest.TestCase):
         self.assertFalse(assess_monologue_quality(text).ok)
 
 
+class CapsInsideDirectionsTests(unittest.TestCase):
+    """A caps name inside a parenthetical is typography, not residue.
+
+    `caps_residue` counts capitalised words to catch a speaker cue flattened
+    into someone else's speech. It used to count them across the DISPLAY text,
+    which meant an ordinary Jacobean exit plus one merged interjection --
+    "(Exit CARDINAL.)" and "(ANTONIO: What's your conceit in this?)" -- reached
+    the threshold of two and killed the speech.
+
+    That put two of our own features in direct conflict: `merge_interrupted_
+    speeches` writes "(NAME: ...)" deliberately, and this gate then threw the
+    result away. In a 40-book Gutenberg sweep it was 180 of 398 rejections,
+    and removing the false ones recovered 126 monologues from those books
+    alone. Webster and Marlowe were the worst hit, because Elizabethan stage
+    directions name people in caps constantly.
+    """
+
+    SPEECH = (
+        "With all your divinity do but direct me the way to it. I have known "
+        "many travel far for it, and yet return as arrant knaves as they went "
+        "forth, because they carried themselves always along with them. "
+        "(Exit CARDINAL.) Are you gone? Some fellows, they say, are possessed "
+        "with the devil, but this great fellow were able to possess the "
+        "greatest devil and make him worse."
+    )
+
+    def test_caps_inside_a_stage_direction_is_not_residue(self):
+        self.assertTrue(assess_monologue_quality(self.SPEECH).ok,
+                        assess_monologue_quality(self.SPEECH).reasons)
+
+    def test_our_own_merged_interjection_is_not_residue(self):
+        """The exact shape merge_interrupted_speeches writes."""
+        text = self.SPEECH + " (ANTONIO: What's your conceit in this?) I would have you lead your fortune by the hand."
+        self.assertNotIn("caps_residue", assess_monologue_quality(text).reasons)
+
+    def test_a_real_flattened_cue_is_still_caught(self):
+        """The check must keep doing its actual job: cues in the SPOKEN body."""
+        text = (
+            "EMERSON It's really for your own good, but the fact is, even in "
+            "our modern times, easy women don't find husbands and that is "
+            "simply how the world is arranged. PEGGY I understand, Dr. "
+            "Emerson, and I really am a very responsible person about it."
+        )
+        self.assertIn("caps_residue", assess_monologue_quality(text).reasons)
+
+
 class TruncationTests(unittest.TestCase):
     def test_no_terminal_punctuation_is_truncated(self):
         text = (

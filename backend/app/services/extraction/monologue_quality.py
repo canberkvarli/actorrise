@@ -629,7 +629,21 @@ def assess_monologue_quality(
     if _FOOTNOTE_CITATION.match(stripped):
         reasons.append("footnote_citation")
 
-    if len(set(_CAPS_WORD.findall(raw))) >= _CAPS_CUE_THRESHOLD:
+    # Caps cues left in the SPOKEN body — "HAMLET. To be or not to be" flattened
+    # into someone else's speech. Counted outside parentheticals on purpose.
+    #
+    # Run over the display text this rejected good Jacobean speeches wholesale:
+    # "(Exit CARDINAL.)" is one hit and "(ANTONIO: What's your conceit in this?)"
+    # is another, so any speech carrying an ordinary exit plus one merged
+    # interjection hit the threshold of 2. That put the speech-merge feature and
+    # this gate in direct conflict — merge writes "(NAME: ...)" by design, and
+    # this then threw the result away. 180 of 398 rejections in a 40-book
+    # Gutenberg sweep were this, nearly all of them false.
+    #
+    # A genuine flattened cue appears in the spoken text, never inside a
+    # parenthetical, so stripping them first keeps the check's real purpose.
+    spoken_for_caps = _BRACKET_CUE.sub(" ", _PARENTHETICAL.sub(" ", raw))
+    if len(set(_CAPS_WORD.findall(spoken_for_caps))) >= _CAPS_CUE_THRESHOLD:
         reasons.append("caps_residue")
 
     if _HTML_RESIDUE.search(raw):
