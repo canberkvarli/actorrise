@@ -331,6 +331,30 @@ def apply_ai_titles(
     ]
 
 
+def pages_for_selection(picked: Iterable[dict]) -> set:
+    """Every page the ticked scenes touch, 1-indexed.
+
+    Extraction reads these and nothing else, which is where the saving lives: a
+    dozen pages of Hamlet rather than the whole book.
+
+    An empty set means "no page information", not "no pages" — a TXT upload has
+    none. Callers must read the whole file in that case rather than nothing.
+    """
+    pages = set()
+    for scene in picked or []:
+        start, end = scene.get("page_start"), scene.get("page_end")
+        if start is None or end is None:
+            continue
+        try:
+            lo, hi = int(start), int(end)
+        except (TypeError, ValueError):
+            continue
+        if lo > hi:
+            lo, hi = hi, lo
+        pages.update(range(lo, hi + 1))
+    return pages
+
+
 # ---------------------------------------------------------------------------
 # Reading the file
 # ---------------------------------------------------------------------------

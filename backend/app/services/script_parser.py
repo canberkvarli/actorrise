@@ -1014,11 +1014,22 @@ def _indented_page_text(page) -> str:
     )
 
 
-def extract_pdf_text(file_content: bytes) -> str:
-    """Text of every page in a PDF, watermarks removed."""
+def extract_pdf_text(file_content: bytes, only_pages=None) -> str:
+    """Text of every page in a PDF, watermarks removed.
+
+    `only_pages` is a set of 1-indexed page numbers. When the actor has picked
+    which scenes to build, there is no reason to read the rest of the book:
+    pdfplumber costs about 90ms a page, so a dozen pages of Hamlet is under a
+    second where the whole thing was fifteen. None means read everything, which
+    is what an unpicked upload still does.
+    """
     try:
         with pdfplumber.open(io.BytesIO(file_content)) as pdf:
-            pages = [_clean_page(page) for page in pdf.pages]
+            wanted = [
+                page for i, page in enumerate(pdf.pages, start=1)
+                if only_pages is None or i in only_pages
+            ]
+            pages = [_clean_page(page) for page in wanted]
             plain = "\n\n".join(
                 t for t in ((p.extract_text() or "") for p in pages) if t
             ).strip()
@@ -1050,9 +1061,9 @@ class ScriptParser:
             )
         self.client = OpenAI(api_key=api_key)
 
-    def extract_text_from_pdf(self, file_content: bytes) -> str:
+    def extract_text_from_pdf(self, file_content: bytes, only_pages=None) -> str:
         """Extract text from PDF file using pdfplumber"""
-        return extract_pdf_text(file_content)
+        return extract_pdf_text(file_content, only_pages=only_pages)
 
     def extract_text_from_txt(self, file_content: bytes) -> str:
         """Extract text from TXT file"""

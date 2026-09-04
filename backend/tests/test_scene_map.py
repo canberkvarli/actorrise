@@ -144,6 +144,48 @@ class TestPageMapping:
         assert pages_for_span(PageOffsets([], total=0), 0, 10) == (None, None)
 
 
+class TestSelectionToPages:
+    """Turning ticked scenes into the pages extraction has to read.
+
+    This is the saving: pdfplumber over twelve pages of Hamlet, not a hundred
+    and seventy.
+    """
+
+    def test_collects_the_pages_the_picked_scenes_touch(self):
+        from app.services.scene_map import pages_for_selection
+
+        picked = [
+            {"page_start": 3, "page_end": 5},
+            {"page_start": 40, "page_end": 41},
+        ]
+        assert pages_for_selection(picked) == {3, 4, 5, 40, 41}
+
+    def test_overlapping_scenes_do_not_double_count(self):
+        from app.services.scene_map import pages_for_selection
+
+        picked = [{"page_start": 1, "page_end": 3}, {"page_start": 3, "page_end": 4}]
+        assert pages_for_selection(picked) == {1, 2, 3, 4}
+
+    def test_scenes_without_pages_yield_nothing_to_restrict_by(self):
+        # A TXT upload has no pages. Returning an empty set means "no page
+        # restriction", not "read no pages" — the caller must not turn that into
+        # an empty script.
+        from app.services.scene_map import pages_for_selection
+
+        assert pages_for_selection([{"char_start": 0, "char_end": 10}]) == set()
+
+    def test_a_malformed_range_is_skipped_not_crashed(self):
+        from app.services.scene_map import pages_for_selection
+
+        picked = [{"page_start": None, "page_end": 4}, {"page_start": 7, "page_end": 7}]
+        assert pages_for_selection(picked) == {7}
+
+    def test_a_backwards_range_still_yields_its_pages(self):
+        from app.services.scene_map import pages_for_selection
+
+        assert pages_for_selection([{"page_start": 9, "page_end": 6}]) == {6, 7, 8, 9}
+
+
 class TestEnrichmentMerge:
     """Folding the AI's answer back in. It may add, never silently drop."""
 

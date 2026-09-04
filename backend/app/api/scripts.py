@@ -2393,6 +2393,7 @@ async def upload_script_background(
     author: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
     mode: Optional[str] = Form("full"),
+    scenes: Optional[str] = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _gate: bool = Depends(require_script_upload()),
@@ -2418,13 +2419,31 @@ async def upload_script_background(
     import hashlib
     import threading
 
+    # What the actor ticked in the picker. Absent means the whole file, which is
+    # what an upload with no picker still sends.
+    from app.services.scene_map import pages_for_selection
+
+    picked_pages = None
+    if scenes:
+        try:
+            picked = _json.loads(scenes)
+            found = pages_for_selection(picked if isinstance(picked, list) else [])
+            # An empty set means the scenes carried no page numbers — a TXT
+            # upload — not that nothing was picked. Reading nothing would hand
+            # back an empty script.
+            picked_pages = found or None
+        except (ValueError, TypeError):
+            picked_pages = None
+
     parser = ScriptParser()
     try:
         # In a thread, like the others. This one was missed in the first pass and
         # is the same defect: pdfplumber over a full-length script, inline in an
         # `async def`, blocking every other request on the worker while it runs.
         raw_text = await run_in_threadpool(
-            parser.extract_text_from_pdf if file_ext == "pdf" else parser.extract_text_from_txt,
+            (lambda c: parser.extract_text_from_pdf(c, only_pages=picked_pages))
+            if file_ext == "pdf"
+            else parser.extract_text_from_txt,
             file_content,
         )
     except Exception as e:
@@ -2452,9 +2471,13 @@ async def upload_script_background(
     db.commit()
     db.refresh(user_script)
 
+    # Hand the thread the text we already read, not the file. Reading the PDF a
+    # second time was pure waste — the same pdfplumber pass, over the same pages,
+    # for the same result — and on a picked upload it would also have undone the
+    # picking by reading the whole book again.
     threading.Thread(
         target=_extract_in_background,
-        args=(user_script.id, current_user.id, file_content, file_ext, file.filename,
+        args=(user_script.id, current_user.id, raw_text.encode("utf-8"), "txt", file.filename,
               mode if mode in ("quick", "full") else "full",
               hashlib.sha256(file_content).hexdigest()),
         daemon=True,

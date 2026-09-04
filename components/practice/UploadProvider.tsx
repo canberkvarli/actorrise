@@ -16,8 +16,6 @@ import { toast } from "sonner";
 import {
   IconLoader2,
   IconCheck,
-  IconBolt,
-  IconBook,
   IconChevronDown,
   IconX,
   IconArrowRight,
@@ -31,9 +29,10 @@ import {
 } from "@/components/ui/dialog";
 import { UpgradeModal } from "@/components/billing/UpgradeModal";
 import { UploadStage } from "@/components/practice/UploadStage";
+import { ScenePicker, type ScannedScene } from "@/components/practice/ScenePicker";
 import { API_URL } from "@/lib/api";
 import { SCRIPTS_QUERY_KEY, useScripts } from "@/hooks/useScripts";
-import { useUsageLimits } from "@/hooks/useSubscription";
+import { useSubscription, useUsageLimits } from "@/hooks/useSubscription";
 
 // Known backend progress prefixes and their friendly group labels.
 const STEP_GROUPS: { match: string; label: string }[] = [
@@ -77,11 +76,6 @@ function groupLabel(raw: string): string {
   return raw;
 }
 
-function formatTime(seconds: number) {
-  if (seconds < 60) return `${Math.round(seconds)}s`;
-  const m = Math.round(seconds / 60);
-  return `${m}m`;
-}
 
 type ScanResult = {
   page_count: number;
@@ -91,7 +85,25 @@ type ScanResult = {
   show_mode_choice: boolean;
   estimated_quick_seconds: number;
   estimated_full_seconds: number;
+  /** Every scene in the file. Absent from older backends. */
+  scenes?: ScannedScene[];
 };
+
+/**
+ * How many scenes a plan builds at a time.
+ *
+ * Mirrored on the client so the picker can show the limit while you are picking.
+ * The server gate is still the authority — this only decides what the UI offers.
+ */
+const SCENE_ALLOWANCE: Record<string, number | null> = {
+  free: 1,
+  solo: 10,
+  plus: 40,
+  pro: null,
+};
+
+/** Below this there is nothing to choose between, so we do not ask. */
+const PICKER_MIN_SCENES = 2;
 
 interface UploadContextValue {
   /** True while scanning, awaiting a mode choice, or extracting. Triggers should disable. */
@@ -127,6 +139,12 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const { data: scripts = [] } = useScripts();
   const { usage } = useUsageLimits();
+  const { subscription } = useSubscription();
+
+  // Unknown tier reads as free: offering a picker that promises more than the
+  // server will build is worse than offering less and being right.
+  const sceneLimit =
+    SCENE_ALLOWANCE[subscription?.tier_name ?? "free"] ?? SCENE_ALLOWANCE.free;
 
   // Can the user upload another script? Unknown (still loading) defaults to true
   // so we never block on a slow request — the backend gate is the backstop.
@@ -337,7 +355,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   );
 
   const startBackground = useCallback(
-    async (file: File, mode: "quick" | "full") => {
+    async (file: File, mode: "quick" | "full", picks?: ScannedScene[]) => {
       setUploadingFile(true);
       setFileName(file.name);
       setProgressSteps([{ group: "Taking your script", detail: "Taking your script" }]);
@@ -361,6 +379,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         const form = new FormData();
         form.append("file", file);
         form.append("mode", mode);
+        if (picks?.length) form.append("scenes", JSON.stringify(picks));
         const res = await fetch(`${API_URL}/api/scripts/upload-background`, {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
@@ -471,7 +490,9 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         const scan: ScanResult = await scanRes.json();
         setScanning(false);
 
-        if (scan.show_mode_choice) {
+        // A side has one scene. There is nothing to choose between, so we do not
+        // stand a dialog in front of the thing they already asked for.
+        if ((scan.scenes?.length ?? 0) >= PICKER_MIN_SCENES) {
           setPendingFile(file);
           setScanResult(scan);
           return;
@@ -491,19 +512,19 @@ export function UploadProvider({ children }: { children: ReactNode }) {
     [isBusy, scripts, getToken, startExtraction, startBackground],
   );
 
-  const handleModeChoice = async (mode: "quick" | "full") => {
+  /**
+   * Build the scenes that were ticked.
+   *
+   * Always the background path. Reading is minutes on anything with a picker in
+   * front of it, and the streaming upload dies with the connection — a refresh
+   * would throw the work away after they had just chosen it.
+   */
+  const handleScenePick = async (picks: ScannedScene[]) => {
     const file = pendingFile;
-    const scan = scanResult;
     setScanResult(null);
     setPendingFile(null);
-    if (!file) return;
-    const estimate =
-      mode === "quick" ? scan?.estimated_quick_seconds : scan?.estimated_full_seconds;
-    if ((estimate ?? 0) > BACKGROUND_AFTER_SECONDS) {
-      await startBackground(file, mode);
-      return;
-    }
-    await startExtraction(file, mode);
+    if (!file || picks.length === 0) return;
+    await startBackground(file, "full", picks);
   };
 
   const dismissModeChoice = () => {
@@ -673,66 +694,32 @@ export function UploadProvider({ children }: { children: ReactNode }) {
         )}
       </AnimatePresence>
 
-      {/* Mode choice dialog */}
+      {/* Pick what to build.
+          This replaced a two-option dialog that asked how hard to work — "quick"
+          or "full" — rather than what the actor wanted. Nobody rehearses all of
+          Hamlet; they want the nunnery scene. */}
       <Dialog
         open={scanResult !== null}
         onOpenChange={(open) => {
           if (!open) dismissModeChoice();
         }}
       >
-        <DialogContent className="w-full max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-sans">
-              How should we extract scenes?
-            </DialogTitle>
+        <DialogContent className="w-full max-w-2xl gap-0 overflow-hidden p-0">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Choose which scenes to build</DialogTitle>
           </DialogHeader>
-          {scanResult && (
-            <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                Found{" "}
-                {scanResult.num_acts > 0 ? `${scanResult.num_acts} acts with ` : ""}
-                {scanResult.num_sections} scenes in {scanResult.page_count} pages.
-              </p>
-              <div className="space-y-3">
-                <button
-                  onClick={() => handleModeChoice("quick")}
-                  className="w-full text-left border border-border hover:border-primary/50 hover:shadow-md p-4 transition-all group"
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <IconBolt className="w-4 h-4 text-amber-500" />
-                      <span className="font-medium text-foreground">Quick Extract</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      ~{formatTime(scanResult.estimated_quick_seconds)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-snug">
-                    Two-person scenes only. Fastest option, great for focused rehearsal.
-                  </p>
-                </button>
-                <button
-                  onClick={() => handleModeChoice("full")}
-                  className="w-full text-left border border-border hover:border-primary/50 hover:shadow-md p-4 transition-all group"
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <IconBook className="w-4 h-4 text-blue-500" />
-                      <span className="font-medium text-foreground">Full Extract</span>
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      ~{formatTime(scanResult.estimated_full_seconds)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground leading-snug">
-                    All dialogue scenes (2+ characters). Full coverage of the script.
-                  </p>
-                </button>
-              </div>
-              <p className="text-xs text-muted-foreground/70">
-                Both options use 1 upload from your quota. You can always re-upload later.
-              </p>
-            </div>
+          {scanResult?.scenes && (
+            <ScenePicker
+              scenes={scanResult.scenes}
+              pageCount={scanResult.page_count}
+              limit={sceneLimit}
+              onConfirm={handleScenePick}
+              onCancel={dismissModeChoice}
+              onUpgrade={() => {
+                dismissModeChoice();
+                setShowUpgradeModal(true);
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>
