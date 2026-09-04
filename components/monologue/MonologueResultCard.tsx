@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { PrefetchLink } from "@/components/ui/prefetch-link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { IconBookmark, IconEdit, IconArrowRight } from "@tabler/icons-react";
@@ -241,14 +242,14 @@ export function MonologueResultCard({
           {/* One clear action: rehearse the piece. Memorize/self-tape live on the
               detail view + Collection, so the card stays a single obvious step. */}
           <div className="mt-4 pt-4 border-t flex items-center gap-3">
-            <Link prefetch={false}
+            <PrefetchLink
               href={`/monologue/${mono.id}/work`}
               onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               Rehearse
               <IconArrowRight className="h-3.5 w-3.5" />
-            </Link>
+            </PrefetchLink>
             {mono.favorite_count > 0 && (
               <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
                 <IconBookmark className="h-3 w-3" />

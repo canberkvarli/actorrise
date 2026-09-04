@@ -1,12 +1,12 @@
 "use client";
 
 import { Monologue } from "@/types/actor";
+import { PrefetchLink } from "@/components/ui/prefetch-link";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { isMeaningfulMonologueTitle, displayableAuthor } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { IconExternalLink, IconSparkles, IconPlus, IconCheck, IconArrowRight } from "@tabler/icons-react";
-import Link from "next/link";
 import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import { useToggleFavorite } from "@/hooks/useBookmarks";
@@ -119,14 +119,14 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
             {/* One clear action: rehearse the piece off-book with the AI, instead
                 of dead-ending on "add to collection". Memorize lives in Collection. */}
             <div className="flex items-center gap-2">
-              <Link prefetch={false}
+              <PrefetchLink
                 href={`/monologue/${monologue.id}/work`}
                 onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 Rehearse
                 <IconArrowRight className="h-3.5 w-3.5" />
-              </Link>
+              </PrefetchLink>
             </div>
             <div className="flex items-center gap-3">
               {monologue.source_url && (

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { GhostLightInlineCta } from "@/components/marketing/GhostLightInlineCta";
 import {
   findReplacementMonologue,
+  getIndexableMonologues,
   getPublicMonologue,
   idFromSlug,
   monologueSlug,
@@ -14,8 +15,30 @@ import { displayableAuthor } from "@/lib/utils";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
-// ISR: render on first request, cache for a day. Keeps 12k pages cheap + crawlable.
+// ISR: render on first request, cache for a day. Keeps ~20k pages cheap + crawlable.
 export const revalidate = 86400;
+
+/*
+ * A dynamic [slug] route with no generateStaticParams never enters static mode,
+ * so `revalidate` above was inert: Next served every hit as SSR and stamped
+ * `cache-control: private, no-cache, no-store`. Production measured 40k requests
+ * to 40k function invocations in 7 days, a 0% cache hit rate, 27 minutes of CPU
+ * and a 556ms P75 TTFB on the pages we most want Google to like.
+ *
+ * Prerendering a slice is enough to flip the route into static mode. With
+ * dynamicParams the other ~19k slugs still resolve, they are just generated on
+ * first request and then ISR-cached for the day instead of re-rendered per hit.
+ * Keep this small: every entry is a page build and a Supabase read on every
+ * deploy, and deploys are frequent.
+ */
+export const dynamicParams = true;
+
+const PRERENDER_COUNT = 500;
+
+export async function generateStaticParams() {
+  const monologues = await getIndexableMonologues(PRERENDER_COUNT);
+  return monologues.slice(0, PRERENDER_COUNT).map((m) => ({ slug: monologueSlug(m) }));
+}
 
 type Params = { params: Promise<{ slug: string }> };
 
