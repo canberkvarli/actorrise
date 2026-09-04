@@ -33,6 +33,19 @@ class Settings:
 
     # Comma-separated emails that bypass tier/usage limits (e.g. canberk@actorrise.com).
     superuser_emails: str = os.getenv("SUPERUSER_EMAILS", "canberk@actorrise.com").strip()
+    # App-store reviewers. They read unlimited monologues and never meet the wall.
+    #
+    # The demo account has three lifetime reads like anyone else, and Apple and
+    # Google now share it. Three is not enough for two reviewers, and once spent
+    # it is spent for good: the next reviewer signs in, sees nothing but the
+    # paywall, and the review notes promising a normal reading experience become
+    # a lie. That is a 2.1 "we were unable to review your app" rejection caused
+    # entirely by a previous reviewer having done their job.
+    #
+    # Separate from superuser_emails on purpose. That list is staff and grants
+    # far more than reads; this one should be exactly the review accounts, so it
+    # can be handed to a store without handing over anything else.
+    review_emails: str = os.getenv("REVIEW_EMAILS", "appreview@actorrise.com").strip()
     # Supabase Storage settings
     supabase_url: str | None = os.getenv("SUPABASE_URL")
     supabase_service_role_key: str | None = os.getenv("SUPABASE_SERVICE_ROLE_KEY")

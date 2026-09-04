@@ -1242,7 +1242,9 @@ async def get_monologue(
     # so a counter-based wall simply did not exist here. Counting distinct
     # pieces also makes re-opening something you are already working on free,
     # which a per-open counter would punish.
-    if fav is None and not _user_has_unlimited_reads(int(current_user.id), db):
+    if fav is None and not _user_has_unlimited_reads(
+        int(current_user.id), db, getattr(current_user, "email", None)
+    ):
         already_read = distinct_reads(
             int(current_user.id),
             db,
@@ -1569,9 +1571,40 @@ async def mark_studied(
     return {"monologue_id": monologue_id, "last_studied_at": now.isoformat()}
 
 
-def _user_has_unlimited_reads(user_id: int, db: Session) -> bool:
+def _reads_without_limit(email: str | None) -> bool:
+    """Accounts that never meet the wall: staff, and app-store reviewers.
+
+    Reviewers are here because the demo account has three lifetime reads like
+    anyone else, and Apple and Google now share it. Three is not enough for two
+    reviewers, and a spent account is spent for good — the next reviewer signs
+    in, meets only the paywall, and the review notes promising a normal reading
+    experience become untrue. Nothing in the app would look broken; it would
+    simply be unreviewable.
+
+    Checked by email rather than by handing the account a fake subscription, so
+    the billing tables keep telling the truth about who actually pays.
+    """
+    if not email:
+        return False
+    address = email.strip().lower()
+    allowed = {
+        e.strip().lower()
+        for e in f"{settings.superuser_emails},{settings.review_emails}".split(",")
+        if e.strip()
+    }
+    return address in allowed
+
+
+def _user_has_unlimited_reads(user_id: int, db: Session, email: str | None = None) -> bool:
     """True when the user is on any paid tier — Ghost Light's Monologues tier,
-    or any of the web tiers. Paid means unlimited full reads."""
+    or any of the web tiers. Paid means unlimited full reads.
+
+    ``email`` is optional and passed by callers that already hold the user, so
+    the reviewer check costs no extra query. Omitting it only means falling back
+    to the subscription answer, which is what every caller did before.
+    """
+    if _reads_without_limit(email):
+        return True
     sub = (
         db.query(UserSubscription)
         .filter(UserSubscription.user_id == user_id)
@@ -1612,7 +1645,9 @@ async def record_read(
     # account alone, and Sign out hands out a fresh three: the session is revoked,
     # the app mints a new anonymous user, and the new user has spent nothing.
     device = normalise_device(request.headers.get("x-device-id"))
-    unlimited = _user_has_unlimited_reads(int(current_user.id), db)
+    unlimited = _user_has_unlimited_reads(
+        int(current_user.id), db, getattr(current_user, "email", None)
+    )
     # Still recorded, because the daily counter is what the usage dashboards
     # read. It is no longer what the wall consults: the gate counts distinct
     # pieces against this client's own allowance.
