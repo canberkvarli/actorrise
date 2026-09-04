@@ -75,8 +75,26 @@ _ESSAY_SHELF = re.compile(r"Category:\s*Essays, Letters & Speeches", re.I)
 # Collected editions. Ingesting one of these as a single play is the anthology
 # collapse that already put 80 rows behind 7 shared URLs.
 _VOLUME = re.compile(
-    r"\b(works|complete works|plays|dramas|dramatic works|volume|vol\.|collected"
-    r"|anthology|selections|book of|representative)\b", re.I)
+    r"\b(works|complete works|plays|dramas|dramatic works|volume|vol\.?\s*\d"
+    r"|collected|anthology|selections|book of|representative"
+    # Genre plurals name a collection just as reliably as "Works" does, and
+    # leaving them out let real anthologies through: "The Comedies of Terence"
+    # became ONE play row holding 211 monologues from six different comedies,
+    # and nobody searching Phormio would ever find them. Same for "Three
+    # Comedies" (110) and "The German Classics, v. 20" (120).
+    r"|comedies|tragedies|farces|classics|masterpieces|cycle|pentateuch"
+    r"|one[- ]act plays|specimens)\b", re.I)
+#: "Queen Mary; and, Harold" is two plays sharing a title line. Only the
+#: semicolon form is safe to judge from a title: a bare "X and the Y" reads the
+#: same in a collection and in a single play, and matching it threw out Millay's
+#: "The Lamp and the Bell" and "Fanny and the Servant Problem", both single
+#: works. Anything subtler than this is caught structurally, by _cast_blocks.
+_TWO_TITLES = re.compile(r";\s*and[,\s]", re.I)
+#: Periodicals. Punch ran for over a century and Gutenberg shelves its volumes
+#: under Plays/Films/Dramas; 17 of them reached the sweep and produced comic
+#: sketches attributed to an author called "Various".
+_PERIODICAL = re.compile(r"punch|charivari|magazine|review|journal|almanac"
+                         r"|annual|gazette|miscellany", re.I)
 _SHAKESPEARE = re.compile(r"shakespeare", re.I)
 
 # A playtext has speakers. Cheap structural check before we spend on the
@@ -134,7 +152,14 @@ def candidates(rows: list[dict], skip: set[str], *,
         title = r["Title"].replace("\n", " ")
         if not shakespeare and (_SHAKESPEARE.search(title) or _SHAKESPEARE.search(r["Authors"])):
             continue
-        is_vol = bool(_VOLUME.search(title))
+        # A periodical is never a playtext, whatever shelf it sits on.
+        if _PERIODICAL.search(title):
+            continue
+        # "Various" is Gutenberg's author for anthologies and periodicals. It is
+        # not a person, and nothing it fronts is a single play.
+        if re.match(r"\s*various\b", r["Authors"], re.I):
+            continue
+        is_vol = bool(_VOLUME.search(title)) or bool(_TWO_TITLES.search(title))
         if is_vol and not volumes:
             continue
         r = dict(r, _volume=is_vol, _title=title)
@@ -150,6 +175,22 @@ def clean_author(raw: str) -> str:
         last, _, given = first.partition(",")
         return f"{given.strip()} {last.strip()}".strip()
     return first.strip()
+
+
+def cast_blocks(body: str) -> int:
+    """How many DRAMATIS PERSONAE blocks the text contains.
+
+    One play has one cast list. A collected edition has one PER PLAY, and that
+    is the only reliable way to tell "The Comedies of Terence" (six plays, 211
+    monologues collapsed onto a single row) from "Wilhelm Tell" (one very long
+    play, 133 monologues, entirely legitimate). Title words cannot separate
+    those: both say nothing useful, and guessing from "and" in a title threw out
+    real single plays.
+
+    Reuses the parser's own heading pattern so the two cannot drift.
+    """
+    from app.services.extraction.plain_text_parser import PlainTextParser
+    return len(PlainTextParser._CAST_HEADING.findall(body))
 
 
 def looks_like_a_playtext(body: str) -> tuple[bool, str]:
@@ -237,6 +278,20 @@ def main() -> int:
                 totals["no_text"] += 1
                 continue
             body = scraper.clean_gutenberg_text(raw)
+
+            # Structural anthology check, after the download and before we spend
+            # anything on the analyser. Two cast lists means two plays, and
+            # ingesting them as one row is the collapse that already put 211
+            # Terence monologues behind a single title nobody searches for.
+            blocks = cast_blocks(body)
+            if blocks > 1 and not args.volumes:
+                totals["volumes"] += 1
+                print(f"[{i}/{len(cands)}] {bid} VOLUME ({blocks} cast lists, "
+                      f"skipping): {title[:44]}")
+                DONE.open("a").write(bid + "\n")
+                time.sleep(args.sleep)
+                continue
+
             ok, why = looks_like_a_playtext(body)
             if not ok:
                 totals["not_playtext"] += 1
