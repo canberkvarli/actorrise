@@ -152,7 +152,7 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
           400px of nothing between them. Nothing was near anything it acted on. */}
       <div className="max-w-2xl">
         <h2 className="min-w-0">
-          <Link
+          <Link prefetch={false}
             href={`/monologue/${monologue.id}`}
             className="font-typewriter block min-w-0 break-words text-xl font-semibold leading-snug text-foreground transition-colors hover:text-primary sm:text-2xl"
           >
@@ -183,13 +183,13 @@ export function CollectionRow({ monologue, index = 0 }: CollectionRowProps) {
 
         {/* Actions sit under the thing they act on, not across the page from it. */}
         <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
-          <Link
+          <Link prefetch={false}
             href={`/monologue/${monologue.id}/work`}
             className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
           >
             Rehearse
           </Link>
-          <Link
+          <Link prefetch={false}
             href={memorizeHref}
             className="text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
           >

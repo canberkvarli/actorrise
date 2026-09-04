@@ -103,7 +103,7 @@ function ForYouCard({ m }: { m: Monologue }) {
   );
 
   return (
-    <Link
+    <Link prefetch={false}
       href={`/monologue/${m.id}`}
       className="group flex h-full flex-col rounded-xl border border-border/50 bg-card/40 p-4 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_0_24px_-12px_var(--primary)]"
     >

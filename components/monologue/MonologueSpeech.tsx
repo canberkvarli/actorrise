@@ -337,7 +337,7 @@ export function MonologueSpeech({
         {/* "Read" is gone: the character name opens the piece, and the speech
             itself now expands in place, so a third control for the same two
             jobs was just a link to argue with. */}
-        <Link
+        <Link prefetch={false}
           href={`/monologue/${mono.id}/work`}
           onClick={(e) => e.stopPropagation()}
           className="font-medium text-primary underline-offset-4 hover:underline"

@@ -44,7 +44,7 @@ function Piece({ m }: { m: Monologue }) {
     // unfinished placeholder rather than the reward for filling the form. A
     // lit left edge and a surface that actually sits above the page give them
     // the weight of a thing worth tapping.
-    <Link
+    <Link prefetch={false}
       href={`/monologue/${m.id}`}
       className="group relative flex h-full flex-col overflow-hidden border border-border bg-card p-4 pl-5 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/50 hover:shadow-[0_6px_28px_-16px_var(--primary)]"
     >

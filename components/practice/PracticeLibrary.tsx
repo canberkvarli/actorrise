@@ -170,7 +170,7 @@ function EmptyState({ demos }: { demos: UserScript[] }) {
           </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             {demos.map((demo) => (
-              <Link
+              <Link prefetch={false}
                 key={demo.id}
                 href={`/practice/${demo.id}`}
                 className="group relative overflow-hidden rounded-lg border border-border/60 bg-card/30 py-4 pl-5 pr-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/30"

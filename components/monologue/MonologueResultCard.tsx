@@ -241,7 +241,7 @@ export function MonologueResultCard({
           {/* One clear action: rehearse the piece. Memorize/self-tape live on the
               detail view + Collection, so the card stays a single obvious step. */}
           <div className="mt-4 pt-4 border-t flex items-center gap-3">
-            <Link
+            <Link prefetch={false}
               href={`/monologue/${mono.id}/work`}
               onClick={(e) => e.stopPropagation()}
               className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"

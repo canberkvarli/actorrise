@@ -119,7 +119,7 @@ export function MonologueCard({ monologue, index = 0 }: MonologueCardProps) {
             {/* One clear action: rehearse the piece off-book with the AI, instead
                 of dead-ending on "add to collection". Memorize lives in Collection. */}
             <div className="flex items-center gap-2">
-              <Link
+              <Link prefetch={false}
                 href={`/monologue/${monologue.id}/work`}
                 onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
