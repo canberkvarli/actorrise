@@ -208,9 +208,12 @@ def main() -> int:
         scraper = GutenbergScraper(db)
         analyzer = embed = None
         if args.apply:
-            from app.services.ai.monologue_analyzer import MonologueAnalyzer
-            from app.services.ai.embeddings import generate_embedding
-            analyzer, embed = MonologueAnalyzer(), generate_embedding
+            # Same pair the working ingest paths use. `embed` is a BATCH
+            # callable -- ingest_play hands it a list and keyword model/
+            # dimensions, so a single-text embedder is not a drop-in.
+            from app.services.ai.content_analyzer import ContentAnalyzer
+            from app.services.ai.langchain.embeddings import generate_embeddings_batch
+            analyzer, embed = ContentAnalyzer(), generate_embeddings_batch
 
         totals = {"books": 0, "playtext": 0, "not_playtext": 0, "no_text": 0,
                   "inserted": 0, "rejected": 0, "refused": 0, "volumes": 0}

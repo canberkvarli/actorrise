@@ -1,6 +1,7 @@
 """Extract monologues from plain text plays using pattern matching."""
 
 import re
+import unicodedata
 from typing import Dict, List, Optional
 
 from app.services.extraction import speech_merge as _merge
@@ -106,6 +107,16 @@ class PlainTextParser:
     #: title-cased: "Iv", "Ix", "Xlix".
     _ROMAN = re.compile(r"^[IVXLCDM]+$", re.IGNORECASE)
 
+    #: Musical-number headings in ballad opera and light opera. `_ROMAN` alone
+    #: does not catch these because the numeral has a word in front of it, so
+    #: "AIR XXXVII." reads as a speaker called "Air Xxxvii". The Beggar's Opera
+    #: is entirely built this way: a sweep of it produced 42 "monologues", every
+    #: one a song lyric attributed to a roman numeral. Gilbert and Sullivan,
+    #: Fielding and the 18th-century ballad operas all share the convention.
+    _SONG_HEADING = re.compile(
+        r"^(air|song|duet|trio|chorus|recitative|aria|glee|catch|ballad)"
+        r"\s+([IVXLCDM]+|\d{1,3})\.?$", re.IGNORECASE)
+
     def __init__(self):
         pass
 
@@ -200,6 +211,10 @@ class PlainTextParser:
         # A speech that someone briefly interrupted is still one speech.
         speeches = self._merge_interrupted_speeches(speeches)
 
+        # Read the cast block once, not per speech. Empty for modern texts,
+        # which spell their speakers out and need no expansion.
+        cast = self._cast_list(text)
+
         # Filter and clean speeches
         for character, speech_text in speeches:
             # Two texts, the same pair screenplay_pdf_parser produces:
@@ -221,7 +236,8 @@ class PlainTextParser:
 
             if min_words <= word_count <= max_words:
                 monologues.append({
-                    'character': self._normalize_character_name(character),
+                    'character': self._expand_from_cast(
+                        self._normalize_character_name(character), cast),
                     'text': display,
                     'dialogue': spoken,
                     'word_count': word_count,
@@ -354,6 +370,8 @@ class PlainTextParser:
             return False
         if self._ROMAN.match(cleaned.replace(".", "")):
             return False
+        if self._SONG_HEADING.match(cleaned):
+            return False
         words = [w.strip(".,;:").lower() for w in cleaned.split()]
         if not words:
             return False
@@ -364,6 +382,95 @@ class PlainTextParser:
         if any(w in self._STRUCTURAL for w in words) and len(words) > 2:
             return False
         return True
+
+    #: The cast block, which older playtexts print before Act I. Anchored to a
+    #: whole line so it does not fire on the word "characters" in a dedication,
+    #: and tolerant of \r because Gutenberg files are CRLF -- a `$` anchor
+    #: without `\r?` finds nothing at all in them.
+    _CAST_HEADING = re.compile(
+        r"^[ \t]*(?:DRAMATIS\s+PERSON(?:AE|Æ|A)|PERSONS\s+OF\s+THE\s+(?:PLAY|DRAMA)"
+        r"|CHARACTERS(?:\s+OF\s+THE\s+PLAY)?|THE\s+PERSONS)[ \t.:Æ]*\r?$",
+        re.MULTILINE | re.IGNORECASE)
+    #: One cast line: the leading caps run, up to a comma or a column gap. A
+    #: period must NOT end it, or "MRS. MARWOOD" is read as "MRS".
+    _CAST_ENTRY = re.compile(r"^[ \t]*([A-Z][A-Z'’.\- ÆÈÉÀÔ]{1,42}?)\s*(?:,|\s{2,}|\r?$)")
+    _CAST_SKIP = frozenset({"MEN", "WOMEN", "SCENE", "ACT", "THE END", "DANCERS",
+                            "SERVANTS", "OTHERS", "ATTENDANTS"})
+
+    def _cast_list(self, text: str) -> List[str]:
+        """Full character names from the DRAMATIS PERSONAE block."""
+        head = self._CAST_HEADING.search(text)
+        if not head:
+            return []
+        block = text[head.end(): head.end() + 5000]
+        stop = re.search(r"^[ \t]*(ACT\b|SCENE\b|PROLOGUE\b)", block,
+                         re.MULTILINE | re.IGNORECASE)
+        if stop:
+            block = block[: stop.start()]
+        names = []
+        for line in block.splitlines():
+            m = self._CAST_ENTRY.match(line)
+            if not m:
+                continue
+            name = " ".join(m.group(1).replace(".", "").split())
+            if (len(name) > 1 and name.upper() == name
+                    and name not in self._CAST_SKIP
+                    and not self._ROMAN.match(name)):
+                names.append(name)
+        return names
+
+    @staticmethod
+    def _name_tokens(value: str) -> List[str]:
+        return [w.strip(".,;:'’") for w in value.split() if w.strip(".,;:'’")]
+
+    @staticmethod
+    def _fold(value: str) -> str:
+        """Lowercase and strip accents, so a cue can match its own cast entry.
+
+        Molière abbreviates CLÉANTHIS to "Cle." and Gutenberg keeps the accent
+        in the cast list but not in the cue, so a plain startswith comparison
+        fails on the one character whose name carries one. Same for ALCMÈNE,
+        NAUCRATÈS, POSICLÈS -- French and Spanish drama is full of them.
+        """
+        decomposed = unicodedata.normalize("NFKD", value.lower())
+        return "".join(c for c in decomposed if not unicodedata.combining(c))
+
+    def _expand_from_cast(self, name: str, cast: List[str]) -> str:
+        """Turn an abbreviated cue into the full name the cast list gives.
+
+        Restoration and 18th-century texts abbreviate their speakers -- "Mira.",
+        "Sir Wil.", "Mrs Mar.", "Foib." -- and storing those verbatim means an
+        actor searching Millamant or Marwood finds nothing, and a character
+        called "Lady" appears in the library. The Way of the World alone stored
+        13 such names, and this is how every Congreve, Sheridan, Farquhar and
+        Goldsmith text in the sweep is typeset.
+
+        Positional prefix match first ("Sir Wil" -> "SIR WILFULL WITWOUD"), then
+        a single-token fallback for cues that name the surname of a two-part
+        entry ("Milla" -> "MRS MILLAMANT"). Ambiguity keeps the original: a wrong
+        expansion is worse than an abbreviation, because it is not visibly wrong.
+        """
+        if not cast:
+            return name
+        cue = [self._fold(t) for t in self._name_tokens(name)]
+        if not cue:
+            return name
+        hits = []
+        for full in cast:
+            tokens = [self._fold(t) for t in self._name_tokens(full)]
+            if len(tokens) >= len(cue) and all(
+                    tokens[i].startswith(cue[i]) for i in range(len(cue))):
+                hits.append(full)
+        if len(hits) != 1:
+            exact = [h for h in hits if len(self._name_tokens(h)) == len(cue)]
+            hits = exact if len(exact) == 1 else hits
+        if len(hits) != 1 and len(cue) == 1:
+            hits = [f for f in cast
+                    if any(self._fold(t).startswith(cue[0])
+                           for t in self._name_tokens(f))]
+        if len(hits) == 1:
+            return hits[0].title()
+        return name
 
     def _title_case_cast(self, text: str) -> List[str]:
         """Names that behave like speakers: Title Case cues that recur."""
