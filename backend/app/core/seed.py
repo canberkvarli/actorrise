@@ -83,7 +83,16 @@ def canonical_tiers() -> list[PricingTier]:
             is_active=True,
             sort_order=1,
         ),
-        # SOLO — $7/mo
+        # SOLO — $7/mo — RETIRED 2026-09-04, is_active=False on purpose.
+        #
+        # Sat on the pricing page with working Stripe prices from 2026-03-15 and
+        # sold nothing in six months. Its own feature row explains why: the
+        # ScenePartner allowance was 1 script and 3 sessions, identical to Free,
+        # so $7 bought nothing for the part of the product people arrive for.
+        #
+        # Kept here rather than deleted so a reseed cannot resurrect it and so
+        # the Stripe price ids stay findable. Nobody was ever subscribed, so
+        # retiring it changed no one's plan.
         PricingTier(
             name="solo",
             display_name="Solo",
@@ -99,10 +108,10 @@ def canonical_tiers() -> list[PricingTier]:
                 "download_formats": ["pdf", "docx"],
                 "priority_support": False,
                 "scene_partner_scripts": 1,
-                "scene_partner_sessions": 3,  # 3 unique scenes/month
+                "scene_partner_sessions": 3,
                 "monologue_sessions": -1,  # launch: unlimited for all tiers (2026-07-15), revisit once /work usage is understood
             },
-            is_active=True,
+            is_active=False,
             sort_order=1,
         ),
         # PLUS — $12/mo
@@ -121,7 +130,13 @@ def canonical_tiers() -> list[PricingTier]:
                 "download_formats": ["pdf", "docx"],
                 "priority_support": False,
                 "scene_partner_scripts": 5,
-                "scene_partner_sessions": 30,  # 30 unique scenes/month
+                # Unlimited as of 2026-09-04. This was 30 here and 10 in the
+                # client's fallback table: two different numbers for one limit,
+                # which is how you know neither came from measurement. The
+                # heaviest Plus account across the whole base has run 11
+                # sessions, so the cap could only ever stop the person
+                # rehearsing hardest.
+                "scene_partner_sessions": -1,
                 "monologue_sessions": -1,  # launch: unlimited for all tiers (2026-07-15), revisit once /work usage is understood
             },
             is_active=True,

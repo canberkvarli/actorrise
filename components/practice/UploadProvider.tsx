@@ -93,13 +93,23 @@ type ScanResult = {
 /**
  * How many scenes a plan builds at a time.
  *
- * Mirrored on the client so the picker can show the limit while you are picking.
- * The server gate is still the authority — this only decides what the UI offers.
+ * Free gets one, which is the whole point of the free tier: build a scene, run
+ * it end to end, see what the thing is. Paid builds the play.
+ *
+ * There is deliberately no per-tier ration beyond that. An earlier version of
+ * this table read free 1 / solo 10 / plus 40 / pro unlimited, invented against
+ * a cost problem the numbers do not show: across 818 accounts nobody holds more
+ * than two scripts, and the largest thing anyone has uploaded is a 20-scene
+ * Hamlet, so a 40-scene ceiling could never bind. A second meter on an action
+ * that has never reached its first meter buys nothing and costs a number in the
+ * paywall copy, a branch in the gate, and one more way for client and server to
+ * disagree.
+ *
+ * Solo is retired (2026-09-04) and intentionally absent.
  */
 const SCENE_ALLOWANCE: Record<string, number | null> = {
   free: 1,
-  solo: 10,
-  plus: 40,
+  plus: null,
   pro: null,
 };
 

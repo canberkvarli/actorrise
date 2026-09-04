@@ -51,25 +51,15 @@ export const DEFAULT_PRICING_TIERS: PricingTier[] = [
     },
     sort_order: 0,
   },
-  {
-    id: 2,
-    name: "solo",
-    display_name: "Solo",
-    description: "For actors getting started",
-    monthly_price_cents: 700,
-    annual_price_cents: 5900,
-    features: {
-      ai_searches_per_month: 25,
-      monologue_sessions: -1,
-      bookmarks_limit: 15,
-      recommendations: true,
-      download_formats: ["pdf", "docx"],
-      priority_support: false,
-      scene_partner_scripts: 1,
-      scene_partner_sessions: 3,
-    },
-    sort_order: 1,
-  },
+  /* Solo, $7, is retired as of 2026-09-04 and deliberately not listed here.
+     It sat on the pricing page with working Stripe prices from 2026-03-15 and
+     sold nothing in six months, which the feature row explains on its own: its
+     ScenePartner allowance was identical to Free, so seven dollars bought
+     nothing for the part of the product people come for. Nobody was subscribed,
+     so retiring it moved no one's plan.
+     This array is the fallback the pricing page renders when the API is slow or
+     down, so leaving Solo in it would keep selling a tier that no longer exists
+     at exactly the moments we are least able to notice. */
   {
     id: 3,
     name: "plus",
@@ -85,7 +75,13 @@ export const DEFAULT_PRICING_TIERS: PricingTier[] = [
       download_formats: ["pdf", "docx"],
       priority_support: false,
       scene_partner_scripts: 5,
-      scene_partner_sessions: 10,
+      /* Plus rehearses without a ceiling as of 2026-09-04. The cap was 30 in the
+         database and 10 here — a third number for the same limit, which is how
+         you know neither was measured. The heaviest Plus account across the
+         whole base has run 11 sessions, so the only person the cap could ever
+         stop is the one rehearsing hardest, which is the customer you least want
+         to stop. */
+      scene_partner_sessions: -1,
     },
     sort_order: 2,
   },
