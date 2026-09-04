@@ -179,8 +179,13 @@ export function GhostLightModal() {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      {/* The close button belongs to the Dialog primitive and is styled for a
+          light card: an accent-filled plate and a focus ring that draws a box
+          around itself the moment the modal opens. On a dark stage that reads as
+          a rendering fault. Neutralised here rather than in ui/dialog.tsx, which
+          every other modal in the app depends on. */}
       <DialogContent
-        className="stage-scene stage-grain max-w-[368px] gap-0 overflow-hidden rounded-[22px] border-[var(--stage-line)] p-0 text-[var(--stage-fg)] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.75)]"
+        className="stage-scene stage-grain max-w-[368px] gap-0 overflow-hidden rounded-[22px] border-[var(--stage-line)] p-0 text-[var(--stage-fg)] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.75)] [&>button]:right-1 [&>button]:top-1 [&>button]:rounded-full [&>button]:text-[var(--stage-fg)] [&>button]:opacity-45 [&>button]:ring-offset-0 [&>button]:transition-opacity [&>button]:hover:opacity-100 [&>button]:focus:ring-0 [&>button]:data-[state=open]:bg-transparent"
       >
         {/* ── The stage ─────────────────────────────────────────────────────
             The bulb hangs, the light falls, the app stands in it. Fixed height
@@ -204,15 +209,25 @@ export function GhostLightModal() {
 
           {/* The app, standing in the light and cropped by the dark. Tilted a
               little so it is a thing on a stage rather than a screenshot pasted
-              into a box. */}
-          <div className="absolute left-1/2 top-[96px] w-[132px] -translate-x-1/2 rotate-[-4deg]">
-            <div className="overflow-hidden rounded-[14px] border border-[var(--stage-line)] shadow-[0_18px_40px_-8px_rgba(0,0,0,0.85)]">
+              into a box.
+
+              read.png is a marketing image, not a raw capture: it carries its own
+              headline and the device does not begin until roughly 27% down. Shown
+              whole at this size it is an illegible smudge of someone else's type.
+              The negative offset pulls that headline out of frame so the crop
+              starts at the phone's own top edge, which is also where the cream
+              reading page begins — the one genuinely bright thing in the picture,
+              and the reason the bulb above it has something to light. */}
+          <div className="absolute left-1/2 top-[92px] w-[156px] -translate-x-1/2 rotate-[-4deg]">
+            <div className="h-[170px] overflow-hidden rounded-[16px] border border-[var(--stage-line)] shadow-[0_18px_45px_-6px_rgba(0,0,0,0.9)]">
               <Image
                 src="/ghostlight/read.png"
-                alt="Ghost Light showing a monologue on a warm paper page"
+                alt="Ghost Light showing Nora's speech from A Doll's House on a warm paper page"
                 width={680}
                 height={1471}
-                className="h-auto w-full"
+                /* 156 wide renders 337 tall; the device starts at 27.5% of that. */
+                className="w-full max-w-none"
+                style={{ marginTop: "-93px" }}
                 priority={false}
               />
             </div>
