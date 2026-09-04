@@ -286,20 +286,24 @@ def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, 
     # Add unsubscribe_url placeholder for preview
     kwargs["unsubscribe_url"] = variables.get("unsubscribe_url", "#unsubscribe")
 
+    # Looked up by name, not by attribute: building these as dicts of bound
+    # methods evaluates every entry eagerly, so one missing renderer used to
+    # raise AttributeError for every template rather than just its own.
     render_map = {
-        "custom": templates.render_custom,
-        "welcome": templates.render_welcome,
-        "weekly_engagement": templates.render_weekly_engagement,
+        "custom": "render_custom",
+        "welcome": "render_welcome",
+        "weekly_engagement": "render_weekly_engagement",
     }
 
-    # All marketing templates send as plain text for better inbox placement
+    # Marketing templates prefer a plain-text part for inbox placement. A
+    # template without one still renders, it just sends HTML only.
     plain_text_map = {
-        "custom": templates.render_custom_plain,
-        "welcome": templates.render_welcome_plain,
-        "weekly_engagement": templates.render_weekly_engagement_plain,
+        "custom": "render_custom_plain",
+        "welcome": "render_welcome_plain",
+        "weekly_engagement": "render_weekly_engagement_plain",
     }
 
-    render_fn = render_map.get(template_id)
+    render_fn = getattr(templates, render_map.get(template_id, ""), None)
     if not render_fn:
         raise HTTPException(status_code=400, detail=f"No renderer for template: {template_id}")
 
@@ -307,7 +311,7 @@ def _render_template(template_id: str, variables: dict[str, Any]) -> tuple[str, 
     subject = variables.get("subject") or meta["subject"]
 
     plain_text = None
-    plain_fn = plain_text_map.get(template_id)
+    plain_fn = getattr(templates, plain_text_map.get(template_id, ""), None)
     if plain_fn:
         plain_text = plain_fn(**kwargs)
 

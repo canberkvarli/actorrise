@@ -591,8 +591,13 @@ export default function AdminEmailsPage() {
       );
       setPreviewHtml(data.html);
       setPreviewSubject(subjectOverride || data.subject);
-    } catch {
-      toast.error("Failed to render preview");
+    } catch (err) {
+      // Surface the server's reason. A bare "Failed to render preview" hid a
+      // renderer crash that had every outbound email down for 17 days.
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+        (err as Error)?.message;
+      toast.error(detail ? `Preview failed: ${detail}` : "Failed to render preview");
     } finally {
       setPreviewing(false);
     }

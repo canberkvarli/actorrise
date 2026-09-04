@@ -249,6 +249,84 @@ class EmailTemplates:
             "actorrise.com",
         ])
 
+    # Restored after f1585d85: retiring the founder offer also deleted these
+    # three, but render_custom, render_custom_plain and the weekly digest
+    # still call them.
+    def render_weekly_engagement_plain(self, user_name: str, character_analysis: str = "", monologue_snippet: str = "", monologue_url: str = "", **kwargs) -> str:
+        name = user_name or "there"
+        lines = [
+            f"Hey {name},",
+            "",
+        ]
+        if character_analysis:
+            lines += [character_analysis, ""]
+        if monologue_snippet:
+            lines += [f'"{monologue_snippet}"', ""]
+        if monologue_url:
+            lines += [f"Read the full monologue: {monologue_url}", ""]
+        lines += [
+            "",
+            "Want to practice a scene? Try our sample script or upload your own and start rehearsing with AI Scene Partner.",
+            "Try it: actorrise.com/dashboard",
+            "",
+            "I'd love your feedback on Scene Partner - just reply to this email. I read everything.",
+            "",
+            "Canberk",
+            "Founder, ActorRise",
+            "actorrise.com",
+        ]
+        return "\n".join(lines)
+
+    # ── Custom template (freeform with Markdown) ──
+
+    def _markdown_to_html(self, text: str) -> str:
+        """Convert Markdown text to simple HTML paragraphs."""
+        import re
+
+        # Split into paragraphs
+        paragraphs = text.strip().split("\n\n")
+        html_parts = []
+
+        for para in paragraphs:
+            if not para.strip():
+                continue
+
+            # Convert single newlines to <br>
+            para = para.replace("\n", "<br>")
+
+            # Bold: **text** or __text__
+            para = re.sub(r'\*\*(.+?)\*\*', r'<strong>\1</strong>', para)
+            para = re.sub(r'__(.+?)__', r'<strong>\1</strong>', para)
+
+            # Italic: *text* or _text_
+            para = re.sub(r'\*([^*]+)\*', r'<em>\1</em>', para)
+            para = re.sub(r'_([^_]+)_', r'<em>\1</em>', para)
+
+            # Links: [text](url)
+            para = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'<a href="\2">\1</a>', para)
+
+            html_parts.append(f"<p>{para}</p>")
+
+        return "\n".join(html_parts)
+
+    def _markdown_to_plain(self, text: str) -> str:
+        """Convert Markdown to plain text (strip formatting)."""
+        import re
+
+        # Remove bold markers
+        text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+        text = re.sub(r'__(.+?)__', r'\1', text)
+
+        # Remove italic markers
+        text = re.sub(r'\*([^*]+)\*', r'\1', text)
+        text = re.sub(r'_([^_]+)_', r'\1', text)
+
+        # Convert links to "text (url)" format
+        text = re.sub(r'\[([^\]]+)\]\(([^)]+)\)', r'\1 (\2)', text)
+
+        return text
+
+    @staticmethod
     def _palette(theme: Optional[str] = None) -> dict:
         """Colours for one email.
 
