@@ -809,6 +809,55 @@ def rehearsable_scenes(scenes: List[Dict]) -> List[Dict]:
     return kept
 
 
+def _scene_from_source(chunk, character_names: Optional[List[str]] = None) -> List[Dict]:
+    """Build a scene straight out of the text, with no model in the loop.
+
+    The safety net under AI extraction. Every line is the line that is on the
+    page — nothing is retyped, so nothing can be summarized away — which makes
+    this both the fallback and the more faithful of the two readings. It gives
+    back one scene per chunk rather than trying to guess beats: the actor picked
+    this scene in the picker, so the chunk already is the unit they asked for.
+
+    Returns nothing when the chunk holds no real exchange, so front matter and
+    cast lists stay off the shelf instead of becoming one-line scenes.
+    """
+    # The same preparation extract_chunk_ai does before the model reads the text.
+    # Folger sets a shared verse line inline — "And we will hear it. PHILOSTRATE
+    # No, my noble lord" — and without this the reply stays glued to the previous
+    # speech and its speaker drops out of the scene entirely.
+    text = _split_inline_speakers(chunk.text, character_names or [])
+
+    lines: List[Dict] = []
+    for section in parse_dialogue(text):
+        lines.extend(section.get("lines", []))
+
+    speakers = Counter(l.get("character") for l in lines if l.get("character"))
+    if len(speakers) < 2 or len(lines) < REHEARSAL_MIN_LINES:
+        return []
+
+    ranked = [name for name, _ in speakers.most_common()]
+    label = " ".join(p for p in (chunk.act_label, chunk.scene_label) if p)
+
+    return [{
+        "title": label or f"{ranked[0]} & {ranked[1]}",
+        "character_1": ranked[0],
+        "character_2": ranked[1],
+        "description": None,
+        "setting": None,
+        "tone": None,
+        "primary_emotions": [],
+        "relationship_dynamic": None,
+        "lines": [
+            {
+                "character": l.get("character"),
+                "text": l.get("text", ""),
+                "stage_direction": l.get("stage_direction"),
+            }
+            for l in lines
+        ],
+    }]
+
+
 def _reseat_leads(scene: Dict) -> None:
     """Point character_1/2 at whoever actually speaks most, after folding."""
     speakers = Counter(
@@ -1870,6 +1919,22 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
             scenes = self.extract_chunk_ai(
                 chunk.text, characters, script_title, script_author
             )
+
+            # The model comes back empty more often than it looks. Three paths in
+            # extract_chunk_ai return [] without a word — no JSON array in the
+            # reply, JSON too broken to salvage, or every scene failing the
+            # character_1/character_2 check — and none of them can be told apart
+            # from "this chunk has no dialogue". It usually does have dialogue:
+            # the chunk only got here because the pre-filter found two or more
+            # speakers in it. Falling back to the deterministic parse costs one
+            # regex pass and hands the actor their own lines, verbatim, instead
+            # of an empty script. (Prod: MND Act 5 came back with nothing at all.)
+            if not scenes:
+                scenes = _scene_from_source(
+                    chunk, [c["name"] for c in characters if c.get("name")]
+                )
+                if scenes:
+                    progress(f"AI returned nothing for {chunk_label}, read it directly instead")
 
             # Tag each scene with its structural position
             for scene in scenes:

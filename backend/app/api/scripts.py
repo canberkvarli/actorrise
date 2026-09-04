@@ -2257,6 +2257,26 @@ def cancel_background_extraction(script_id: int) -> bool:
     return True
 
 
+def extraction_outcome(created: list) -> tuple:
+    """What a finished extraction should say about itself.
+
+    A script with no scenes is not a finished script, and marking it "completed"
+    is the difference between an actor who taps Redo and an actor who thinks the
+    upload they paid for silently ate their play. Prod 2026-09-04: script 106
+    came back empty, said completed, and offered nothing to do about it.
+
+    The message points at Redo rather than re-uploading because the text is
+    already stored — /reextract re-cuts from it for free.
+    """
+    if created:
+        return ("completed", None)
+    return (
+        "failed",
+        "I couldn't find any dialogue to cut into scenes. Try again, "
+        "the script is saved so it costs you nothing.",
+    )
+
+
 def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
                            file_ext: str, filename: str, mode: str, file_hash: str) -> None:
     """Finish reading a script after the request that uploaded it has gone."""
@@ -2306,7 +2326,7 @@ def _extract_in_background(script_id: int, user_id: int, file_content: bytes,
         created = _build_scenes(db, script, play.id, result.get("scenes", []))
         script.num_scenes_extracted = len(created)
         script.ai_extraction_completed = True
-        script.processing_status = "completed"
+        script.processing_status, script.processing_error = extraction_outcome(created)
         db.commit()
 
         try:
@@ -2531,9 +2551,17 @@ async def reextract_script(
 
     old_scenes = db.query(Scene).filter(Scene.user_script_id == script_id).all()
     if not result.get("scenes"):
+        # "the old ones were kept" is only true when there were old ones. Said to
+        # someone retrying an empty script, it claims a safety net that isn't
+        # there and hides the fact that nothing changed.
         raise HTTPException(
             status_code=422,
-            detail="That pass found no rehearsable scenes, so the old ones were kept.",
+            detail=(
+                "That pass found no rehearsable scenes, so the old ones were kept."
+                if old_scenes
+                else "That pass found no dialogue to cut. The script is still saved, "
+                     "so you can try once more."
+            ),
         )
 
     play_id = old_scenes[0].play_id if old_scenes else None
@@ -2566,6 +2594,10 @@ async def reextract_script(
     user_script.num_characters = len(user_script.characters or [])
     created = _build_scenes(db, user_script, play_id, result["scenes"])
     user_script.num_scenes_extracted = len(created)
+    # A re-cut that works has to clear the mark the failure left, or the script
+    # stays branded "failed" on the shelf while its scenes sit underneath, and
+    # the actor keeps being offered a retry for a problem they already solved.
+    user_script.processing_status, user_script.processing_error = extraction_outcome(created)
     db.commit()
     db.refresh(user_script)
 

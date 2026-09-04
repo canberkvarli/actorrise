@@ -11,6 +11,7 @@ import {
   IconPlus,
   IconPencil,
   IconRefresh,
+  IconScissorsOff,
 } from "@tabler/icons-react";
 import { toast } from "sonner";
 
@@ -146,7 +147,14 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
               <IconPlus className="h-3.5 w-3.5" />
               Add scene
             </button>
-            {scenes.length > 0 && (
+            {/* This used to be gated on `scenes.length > 0`, which hid it in the
+                one case that needs it most: a script that came back with nothing.
+                An actor looking at an empty shelf item had no way to ask for
+                another pass and no reason to think one was possible, so the only
+                move left was deleting and re-uploading, which costs an upload.
+                Re-cutting works off the stored text, so offer it whenever there
+                is text to cut. */}
+            {!isProcessing && (
               <button
                 type="button"
                 onClick={redoScenes}
@@ -172,10 +180,6 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
             <IconLoader2 className="h-4 w-4 animate-spin" />
             Still pulling scenes out of this script. Hang tight.
           </StatusNote>
-        ) : isFailed ? (
-          <StatusNote tone="error">
-            We couldn&apos;t extract scenes from this script. Try re-uploading, or flag it from the menu.
-          </StatusNote>
         ) : isLoading && scenes.length === 0 ? (
           <div className="space-y-2">
             {[1, 2, 3, 4].map((i) => (
@@ -183,7 +187,17 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
             ))}
           </div>
         ) : scenes.length === 0 ? (
-          <StatusNote>No scenes yet. Use “Add scene” to create one.</StatusNote>
+          /* A finished script with no scenes reads as a dead end, so it is the
+             one empty state that has to carry its own way out. Both roads are
+             here: another pass at the text, or writing the scene by hand. */
+          <NothingCameBack
+            failed={isFailed}
+            reason={script.processing_error}
+            canManage={canManage}
+            redoing={redoing}
+            onRedo={redoScenes}
+            onAdd={() => setAddOpen(true)}
+          />
         ) : (
           <div className="space-y-8">
             {groups.map((group, gi) => (
@@ -347,6 +361,82 @@ function SceneRow({
           </motion.div>
         )}
       </AnimatePresence>
+    </div>
+  );
+}
+
+/**
+ * The empty script. Not a shrug, an offer.
+ *
+ * What was here said "No scenes yet. Use Add scene to create one." next to a
+ * play the actor had just watched the app read for two minutes, which reads as
+ * "your upload vanished". The honest version says the pass came back empty,
+ * says the script is still saved, and puts the retry under the sentence that
+ * explains it rather than leaving it in a header the actor has stopped reading.
+ */
+function NothingCameBack({
+  failed,
+  reason,
+  canManage,
+  redoing,
+  onRedo,
+  onAdd,
+}: {
+  failed: boolean;
+  reason?: string | null;
+  canManage: boolean;
+  redoing: boolean;
+  onRedo: () => void;
+  onAdd: () => void;
+}) {
+  return (
+    <div className="flex flex-col items-center border border-dashed border-border/60 px-6 py-12 text-center">
+      <IconScissorsOff
+        aria-hidden
+        className="h-7 w-7 text-muted-foreground/40"
+        stroke={1.5}
+      />
+      <h3 className="mt-4 font-brand text-xl font-medium tracking-tight text-foreground text-balance">
+        {failed ? "That pass came back empty" : "No scenes on this one yet"}
+      </h3>
+      <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground text-balance">
+        {reason ||
+          (failed
+            ? "I couldn't find dialogue to cut into scenes."
+            : "Nothing has been cut from this script yet.")}
+      </p>
+
+      {canManage && (
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={onRedo}
+            disabled={redoing}
+            className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 h-9 text-sm font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-60"
+          >
+            {redoing ? (
+              <IconLoader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <IconRefresh className="h-4 w-4" />
+            )}
+            {redoing ? "Cutting again…" : "Cut the scenes again"}
+          </button>
+          <button
+            type="button"
+            onClick={onAdd}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border/70 px-3.5 h-9 text-sm font-medium text-foreground transition-colors hover:bg-muted/50"
+          >
+            <IconPlus className="h-4 w-4" />
+            Write one myself
+          </button>
+        </div>
+      )}
+
+      {canManage && (
+        <p className="mt-4 text-xs text-muted-foreground/70">
+          Your script is saved. Cutting it again is free and doesn&apos;t use an upload.
+        </p>
+      )}
     </div>
   );
 }
