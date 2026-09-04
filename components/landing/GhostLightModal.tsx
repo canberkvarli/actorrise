@@ -190,7 +190,7 @@ export function GhostLightModal() {
         {/* ── The stage ─────────────────────────────────────────────────────
             The bulb hangs, the light falls, the app stands in it. Fixed height
             so the composition cannot be pushed around by copy length. */}
-        <div className="relative h-[212px] w-full overflow-hidden">
+        <div className="relative h-[238px] w-full overflow-hidden">
           {/* The throw of the light. Elliptical and anchored to the bulb, not a
               centred circle, so it reads as a source above rather than a glow
               behind. */}
@@ -218,8 +218,10 @@ export function GhostLightModal() {
               starts at the phone's own top edge, which is also where the cream
               reading page begins — the one genuinely bright thing in the picture,
               and the reason the bulb above it has something to light. */}
-          <div className="absolute left-1/2 top-[92px] w-[156px] -translate-x-1/2 rotate-[-4deg]">
-            <div className="h-[170px] overflow-hidden rounded-[16px] border border-[var(--stage-line)] shadow-[0_18px_45px_-6px_rgba(0,0,0,0.9)]">
+          <div className="absolute left-1/2 top-[84px] w-[156px] -translate-x-1/2 rotate-[-4deg]">
+            {/* Tall enough to read as a phone. At 120px of surviving height it
+                was a card, and a card is not a thing you download. */}
+            <div className="h-[196px] overflow-hidden rounded-[16px] border border-[var(--stage-line)] shadow-[0_18px_45px_-6px_rgba(0,0,0,0.9)]">
               <Image
                 src="/ghostlight/read.png"
                 alt="Ghost Light showing Nora's speech from A Doll's House on a warm paper page"
@@ -237,10 +239,10 @@ export function GhostLightModal() {
               instead of being guillotined by the panel edge. */}
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-24"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-20"
             style={{
               background:
-                "linear-gradient(to top, var(--stage) 12%, color-mix(in oklab, var(--stage) 70%, transparent) 55%, transparent 100%)",
+                "linear-gradient(to top, var(--stage) 18%, color-mix(in oklab, var(--stage) 62%, transparent) 62%, transparent 100%)",
             }}
           />
         </div>
