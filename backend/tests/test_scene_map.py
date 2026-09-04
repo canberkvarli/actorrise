@@ -232,6 +232,69 @@ class TestPageMapping:
         assert pages_for_span(PageOffsets([], total=0), 0, 10) == (None, None)
 
 
+class TestSplitNames:
+    """pypdf sometimes puts a space inside a word.
+
+    Real Hamlet came back with "GRA VEDIGGER" in the Act 5 cast. It reads as a
+    typo we made, and it is the kind of small wrongness that makes an actor
+    distrust everything else on the row.
+
+    The danger is over-correcting. Plenty of real character names are two words,
+    and welding "DE LACEY" into "DELACEY" would be a worse bug than the one being
+    fixed, so the repair only fires where the first piece cannot stand alone.
+    """
+
+    @pytest.mark.parametrize(
+        "broken,fixed",
+        [
+            ("GRA VEDIGGER", "GRAVEDIGGER"),
+            ("OPH ELIA", "OPHELIA"),
+            ("ROS ENCRANTZ", "ROSENCRANTZ"),
+            ("HAMLE T", "HAMLET"),
+            ("HORATI O", "HORATIO"),
+        ],
+    )
+    def test_repairs_a_word_split_by_the_pdf_reader(self, broken, fixed):
+        from app.services.scene_map import repair_split_name
+
+        assert repair_split_name(broken) == fixed
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "DE LACEY",
+            "LA MAMA",
+            "VAN HELSING",
+            "ST JOHN",
+            "MRS ALVING",
+            "THE GHOST",
+            "OLD HAMLET",
+            "FIRST PLAYER",
+            "SECOND GRAVEDIGGER",
+            "LADY MACBETH",
+            "HENRY V",
+            "GEORGE II",
+            "HAMLET",
+            "KING",
+        ],
+    )
+    def test_leaves_real_names_alone(self, name):
+        from app.services.scene_map import repair_split_name
+
+        assert repair_split_name(name) == name
+
+    def test_a_cast_list_comes_back_repaired(self):
+        # The path that matters: the names the picker actually shows.
+        text = (
+            "ACT 5\n\nSCENE 1\n\n"
+            "GRA VEDIGGER\nA pickaxe and a spade.\n\n"
+            "HORATIO\nCustom hath made it in him a property of easiness.\n"
+        )
+        spans = detect_scene_spans(text)
+        assert "GRAVEDIGGER" in spans[0].characters
+        assert "GRA VEDIGGER" not in spans[0].characters
+
+
 class TestSelectionToPages:
     """Turning ticked scenes into the pages extraction has to read.
 

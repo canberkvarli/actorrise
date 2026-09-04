@@ -91,6 +91,53 @@ def pages_for_span(
     return (max(0, first) + 1, max(0, last) + 1)
 
 
+# Short words that legitimately begin a character name, so "DE LACEY" and "THE
+# GHOST" are left alone. Anything else this short in front of a real word is the
+# PDF reader having dropped a space into the middle of one.
+_NAME_PARTICLES = {
+    "DE", "DEL", "DELLA", "DI", "DA", "DU", "LA", "LE", "LES", "EL", "AL",
+    "VAN", "VON", "DER", "DEN", "TER", "ST", "MC", "MAC", "O",
+    "MR", "MRS", "MS", "DR", "SIR", "FR", "REV", "SGT", "CPL", "CPT", "LT",
+    "GEN", "COL", "MAJ", "SR", "JR", "THE", "A", "AN",
+    "OLD", "NEW", "BOY", "MAN", "MEN", "SON", "GOD", "KID", "SPY", "DOC",
+    "MOM", "DAD", "POP", "TWO", "ONE", "SIX", "TEN", "HIS", "HER", "OUR",
+}
+
+_ROMAN = re.compile(r"^[IVXLCDM]+$", re.IGNORECASE)
+
+
+def repair_split_name(name: str) -> str:
+    """Put back a space the PDF reader dropped into the middle of a word.
+
+    Real Hamlet listed "GRA VEDIGGER" in the Act 5 cast. pypdf occasionally
+    breaks a word in two, and a cast list is where it shows: the row reads like a
+    typo of ours, and small visible wrongness makes everything beside it look
+    unreliable too.
+
+    Over-correcting would be the worse bug, so this only fires where the first
+    piece cannot stand on its own — a stub too short to be a word and not one of
+    the particles that legitimately open a name. "DE LACEY", "THE GHOST" and
+    "FIRST PLAYER" come back untouched, and so does "HENRY V", because a trailing
+    roman numeral is a regnal number rather than a stranded letter.
+    """
+    parts = name.split()
+    if len(parts) != 2:
+        return name
+
+    head, tail = parts
+    upper_head = head.upper()
+
+    # "GRA VEDIGGER" — a stub in front of a whole word.
+    if len(head) <= 3 and upper_head not in _NAME_PARTICLES and len(tail) >= 4:
+        return head + tail
+
+    # "HAMLE T" — a letter or two stranded off the end.
+    if len(tail) <= 2 and len(head) >= 4 and not _ROMAN.match(tail):
+        return head + tail
+
+    return name
+
+
 def _speakers(text: str) -> Tuple[List[str], int]:
     """Who speaks in this slice, and how many lines they have between them."""
     names: List[str] = []
@@ -106,10 +153,11 @@ def _speakers(text: str) -> Tuple[List[str], int]:
     for section in sections:
         line_count += len(section.get("lines") or [])
         for name in section.get("characters") or []:
-            key = name.strip().upper()
+            fixed = repair_split_name(name.strip())
+            key = fixed.upper()
             if key and key not in seen:
                 seen.add(key)
-                names.append(name.strip())
+                names.append(fixed)
     return (names, line_count)
 
 
