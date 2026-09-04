@@ -1550,11 +1550,16 @@ export function ActorProfileForm() {
         </Tabs>
         </div>
 
-        <ProfilePayoff
-          signature={payoffSignature}
-          ready={payoffReady}
-          because={payoffBecause}
-        />
+        {/* Actors only. The payoff asks for a playing age and what you act in,
+            which are the very fields an educator's page does not have, so for
+            her it is an instruction she cannot follow. */}
+        {!isEducator && (
+          <ProfilePayoff
+            signature={payoffSignature}
+            ready={payoffReady}
+            because={payoffBecause}
+          />
+        )}
       </div>
       {/* Photo Viewer Modal */}
       {showPhotoViewer && headshotPreview && (
