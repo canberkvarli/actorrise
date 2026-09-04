@@ -191,6 +191,38 @@ def _finalize(spans: List[SceneSpan]) -> List[SceneSpan]:
     return spoken or out
 
 
+def _act_number(label: Optional[str]) -> Optional[int]:
+    """The digit in "Act 3". None for Prologue, Epilogue and the unlabelled."""
+    if not label:
+        return None
+    match = re.match(r"act\s+(\d+)", label.strip(), re.IGNORECASE)
+    return int(match.group(1)) if match else None
+
+
+def _drop_backwards_opening(spans: List[SceneSpan]) -> List[SceneSpan]:
+    """Drop a first scene that runs backwards against the rest of the play.
+
+    The survivor of a contents page. A listing ends with its highest act, so on
+    real Hamlet the front matter — the Folger introduction and the character
+    list — ran under the label "Act 5, Scene 2" from page 2 until the real Act 1
+    started on page 8. It has a cast, because "Characters in the Play" is a
+    column of capitalised names with descriptions under them, which is exactly
+    the shape of dialogue. So "nobody speaks here" does not catch it.
+
+    What gives it away is the order. Act 5 cannot come before Act 1.
+
+    Only a *leading* span is judged this way, and only against the act that
+    follows it. Sides and excerpts legitimately open on Act 3 Scene 2, and a
+    play that runs 3 then 4 then 5 is just a play.
+    """
+    while len(spans) >= 2:
+        first, second = _act_number(spans[0].act_label), _act_number(spans[1].act_label)
+        if first is None or second is None or first <= second:
+            break
+        spans = spans[1:]
+    return spans
+
+
 def _drop_front_matter(spans: List[SceneSpan], had_preamble: bool) -> List[SceneSpan]:
     """Remove the title page, if that is what the first span is.
 
@@ -269,8 +301,8 @@ def detect_scene_spans(text: str) -> List[SceneSpan]:
             )
         )
 
-    return _drop_front_matter(
-        _finalize(_absorb_bare_act_headers(spans)), had_preamble
+    return _drop_backwards_opening(
+        _drop_front_matter(_finalize(_absorb_bare_act_headers(spans)), had_preamble)
     )
 
 

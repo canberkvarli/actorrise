@@ -137,6 +137,44 @@ Nay, answer me: stand, and unfold yourself.
         assert len(spans) == 1
         assert set(spans[0].characters) == {"BARNARDO", "FRANCISCO"}
 
+    def test_the_last_contents_entry_does_not_swallow_the_front_matter(self):
+        # Real Hamlet, the survivor of the contents page. The listing ends with
+        # ACT 5 / SCENE 2, and everything after it — the Folger introduction,
+        # the editors' note, the character list — ran under that label until the
+        # real Act 1 began on page 8. It has a cast, so "nobody speaks here"
+        # does not catch it. What gives it away is the order: Act 5 cannot come
+        # before Act 1.
+        text = (
+            "Contents\n\nACT 1\nSCENE 1\n\nACT 5\n\nSCENE 2\n\n"
+            "From the Director of the Folger Shakespeare Library\n\n"
+            "Characters in the Play\n\n"
+            "GHOST\nof Hamlet, the former King of Denmark\n\n"
+            "HAMLET\nPrince of Denmark, son of the late King\n\n"
+            "OPHELIA\ndaughter of Polonius\n\n"
+            "ROSENCRANTZ\na courtier and old school friend\n\n"
+            "GUILDENSTERN\na courtier and old school friend\n\n"
+            "ACT 1\n\nSCENE 1\n\nBARNARDO\nWho's there?\n\n"
+            "FRANCISCO\nNay, answer me.\n\n"
+            "ACT 2\n\nSCENE 1\n\nPOLONIUS\nGive him this money.\n\n"
+            "REYNALDO\nI will, my lord.\n"
+        )
+        spans = detect_scene_spans(text)
+        labels = [(s.act_label, s.scene_label) for s in spans]
+        assert ("Act 5", "Scene 2") not in labels
+        assert labels == [("Act 1", "Scene 1"), ("Act 2", "Scene 1")]
+
+    def test_a_play_that_genuinely_opens_on_a_later_act_is_kept(self):
+        # Sides and excerpts start wherever they start. Only a *leading* span
+        # that runs backwards against the rest is front matter.
+        text = (
+            "ACT 3\n\nSCENE 2\n\nHAMLET\nSpeak the speech.\n\n"
+            "PLAYER\nI warrant your honour.\n\n"
+            "ACT 3\n\nSCENE 3\n\nKING\nO, my offence is rank.\n\n"
+            "POLONIUS\nMy lord.\n"
+        )
+        labels = [(s.act_label, s.scene_label) for s in detect_scene_spans(text)]
+        assert labels == [("Act 3", "Scene 2"), ("Act 3", "Scene 3")]
+
     def test_a_scene_with_a_cast_is_never_dropped(self):
         spans = detect_scene_spans(HAMLET_ISH)
         assert len(spans) == 3

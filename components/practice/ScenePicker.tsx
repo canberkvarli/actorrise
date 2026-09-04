@@ -137,12 +137,12 @@ export function ScenePicker({
             than as stat cards. They are one sentence long; a grid of boxes would
             be three times the furniture for the same two facts. */}
         <p className="mt-2.5 font-typewriter text-[12.5px] tracking-wide text-paper-muted">
-          <span className="text-paper-ink">{scenes.length}</span>{" "}
+          <span className="font-bold text-primary">{scenes.length}</span>{" "}
           {scenes.length === 1 ? "scene" : "scenes"}
           <span aria-hidden className="px-2 text-paper-rule">
             ·
           </span>
-          <span className="text-paper-ink">{pageCount}</span>{" "}
+          <span className="font-bold text-primary">{pageCount}</span>{" "}
           {pageCount === 1 ? "page" : "pages"}
         </p>
         <p className="mx-auto mt-2 max-w-xs text-[13px] leading-relaxed text-paper-muted">
@@ -155,8 +155,9 @@ export function ScenePicker({
         {groups.map(([act, actScenes], groupIndex) => (
           <section key={`${act}-${groupIndex}`} className={cn(groupIndex > 0 && "mt-7")}>
             {act && (
-              <div className="mb-2 flex items-center gap-3 px-2">
-                <h3 className="font-typewriter text-[11px] font-bold uppercase tracking-[0.25em] text-paper-muted">
+              <div className="mb-2 flex items-center gap-2.5 px-2">
+                <span aria-hidden className="h-[3px] w-[3px] rounded-full bg-primary/70" />
+                <h3 className="font-typewriter text-[11px] font-bold uppercase tracking-[0.25em] text-paper-ink/70">
                   {act}
                 </h3>
                 <span aria-hidden className="h-px flex-1 bg-paper-rule" />
@@ -178,7 +179,7 @@ export function ScenePicker({
                         // old version changed one small glyph, which meant you
                         // had to hunt for what you had already picked.
                         isPicked
-                          ? "bg-primary/[0.10]"
+                          ? "bg-primary/[0.13]"
                           : blocked
                             ? "cursor-not-allowed"
                             : "hover:bg-paper-ink/[0.045]",
@@ -234,7 +235,11 @@ export function ScenePicker({
                           <span
                             className={cn(
                               "font-typewriter text-[15px] leading-6 transition-colors duration-150",
-                              isPicked ? "font-bold text-paper-ink" : "text-paper-ink/80",
+                              // Chosen rows take the brand colour outright. On a
+                              // twenty-row list the eye needs a hue to run down,
+                              // not a weight change it has to compare against
+                              // its neighbour to notice.
+                              isPicked ? "font-bold text-primary" : "text-paper-ink/80",
                             )}
                           >
                             {sceneName(scene, i)}
@@ -294,8 +299,8 @@ export function ScenePicker({
               <>Nothing chosen yet</>
             ) : (
               <>
-                <span className="text-paper-ink">{picked.size}</span> of {scenes.length}{" "}
-                chosen
+                <span className="font-bold text-primary">{picked.size}</span> of{" "}
+                {scenes.length} chosen
               </>
             )}
             {limit != null && picked.size < Math.min(limit, scenes.length) && (

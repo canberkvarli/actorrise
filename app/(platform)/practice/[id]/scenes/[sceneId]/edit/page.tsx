@@ -2246,10 +2246,15 @@ export default function SceneEditPage() {
      34% cue indent leaves ~14 characters for the name. On a phone the cue drops
      to a small indent and the dialogue runs full width, which is what printed
      sides do on a narrow page too. */
-  const CUE_INDENT = "pl-2 sm:pl-[32%]";
-  const DIALOGUE_INDENT = "pl-2 pr-1 sm:pl-[16%] sm:pr-[10%]";
-  /** Action runs wider than dialogue, the way it does on a script page. */
-  const ACTION_INDENT = "pl-2 pr-1 sm:pl-[8%] sm:pr-[8%]";
+  const CUE_INDENT = "pl-2 sm:pl-[28%]";
+  /* 16%/10% put dialogue in a 74% column, and in Courier that is only about 55
+     characters — narrow enough that a long speech turned into a tall grey
+     ribbon you had to scroll past. Widened to 84%, roughly 63 characters, which
+     is inside the comfortable measure and takes a visible bite out of the
+     height of every long speech. */
+  const DIALOGUE_INDENT = "pl-2 pr-1 sm:pl-[9%] sm:pr-[7%]";
+  /** Action runs wider still, the way it does on a script page. */
+  const ACTION_INDENT = "pl-2 pr-1 sm:pl-[5%] sm:pr-[5%]";
 
   /** Everyone you are not reading. These are the parts the app reads back. */
   const readerNames = allSceneCharacters.filter((c) => !isMyRole(c));
