@@ -9,7 +9,7 @@ const INITIAL_DURATION_MS = 2000;
 const UPDATE_DURATION_MS = 1200;
 
 /** Fallback library stats so the section isn’t empty while the API loads (avoids long dash). */
-const FALLBACK_LIBRARY = { monologues: 8500, filmTv: 3800 };
+const FALLBACK_LIBRARY = { monologues: 13000, filmTv: 5400 };
 /** Fallback search count shown immediately before API responds — prevents showing "0". */
 const FALLBACK_SEARCHES = 600;
 const FALLBACK_USERS = 200;

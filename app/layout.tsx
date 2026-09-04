@@ -48,7 +48,7 @@ export const metadata: Metadata = {
     template: "%s | ActorRise",
   },
   description:
-    "Find your audition monologue in seconds with AI search. 8,500+ real pieces from plays, films, and TV, sorted by tone, length, and type. Free to start.",
+    "Find your audition monologue in seconds with AI search. 13,000+ real pieces from plays, films, and TV, sorted by tone, length, and type. Free to start.",
   keywords: [
     "monologue search",
     "audition monologues",
@@ -100,7 +100,7 @@ export const metadata: Metadata = {
     siteName: "ActorRise",
     title: "Find Your Audition Monologue in Seconds | ActorRise",
     description:
-      "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 8,500+ monologues from plays, films, and TV. Free to start, no credit card required.",
+      "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 13,000+ monologues from plays, films, and TV. Free to start, no credit card required.",
     images: [
       {
         url: "/opengraph-image",
@@ -114,7 +114,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Find Your Audition Monologue in Seconds | ActorRise",
     description:
-      "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 8,500+ monologues from plays, films, and TV. Free to start, no credit card required.",
+      "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 13,000+ monologues from plays, films, and TV. Free to start, no credit card required.",
     images: ["/opengraph-image"],
   },
   robots: {
@@ -138,7 +138,7 @@ const jsonLd = {
       "@id": `${siteUrl}/#website`,
       name: "ActorRise",
       url: siteUrl,
-      description: "Find your perfect audition monologue in seconds with AI search. 8,500+ monologues from plays, films, and TV. Spend your time rehearsing.",
+      description: "Find your perfect audition monologue in seconds with AI search. 13,000+ monologues from plays, films, and TV. Spend your time rehearsing.",
       publisher: { "@id": `${siteUrl}/#organization` },
     },
     {
@@ -156,7 +156,7 @@ const jsonLd = {
       name: "ActorRise",
       url: siteUrl,
       description:
-        "Find your monologue in seconds. Spend your time rehearsing. AI semantic search over 8,500+ monologues from plays, films, and TV.",
+        "Find your monologue in seconds. Spend your time rehearsing. AI semantic search over 13,000+ monologues from plays, films, and TV.",
       applicationCategory: "EntertainmentApplication",
       operatingSystem: "Any",
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },

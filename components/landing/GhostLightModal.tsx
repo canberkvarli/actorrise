@@ -9,7 +9,9 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { GhostLight } from "@/components/brand/GhostLight";
 import { APP_STORE_URL } from "@/components/landing/v2/GhostLightAppTeaser";
+import { API_URL } from "@/lib/api";
 
 /**
  * The app, said once, to someone who has stayed.
@@ -74,50 +76,59 @@ function track(event: string) {
   }
 }
 
-/**
- * The ghost light itself: flex, glass, filament.
- *
- * Drawn rather than shipped as an image so the filament can carry the same warm
- * accent as everything else and glow without a second network request.
- */
-function Bulb() {
-  return (
-    <svg
-      viewBox="0 0 40 74"
-      aria-hidden
-      className="relative h-[74px] w-10 overflow-visible"
-    >
-      <defs>
-        <radialGradient id="gl-filament" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="var(--stage-glow)" stopOpacity="1" />
-          <stop offset="100%" stopColor="var(--stage-glow)" stopOpacity="0.25" />
-        </radialGradient>
-      </defs>
+const STATS_CACHE_KEY = "actorrise_public_stats_v1";
 
-      {/* The flex, disappearing up into the fly tower rather than starting from
-          nowhere: the line fades out at the top instead of ending in a stub. */}
-      <line
-        x1="20"
-        y1="-40"
-        x2="20"
-        y2="34"
-        stroke="var(--stage-line)"
-        strokeWidth="1"
-      />
-      {/* Cage/socket */}
-      <rect x="15" y="30" width="10" height="7" rx="1.6" fill="var(--stage-raised)" stroke="var(--stage-line)" strokeWidth="0.75" />
-      {/* Glass */}
-      <ellipse cx="20" cy="49" rx="10.5" ry="12.5" fill="var(--stage-glow)" fillOpacity="0.1" stroke="var(--stage-glow)" strokeOpacity="0.35" strokeWidth="0.75" />
-      {/* Filament, the one genuinely hot thing in the composition */}
-      <circle cx="20" cy="49" r="5" fill="url(#gl-filament)" />
-      <path d="M17 51.5q3-6 6 0" stroke="var(--stage-glow)" strokeWidth="1.1" fill="none" strokeLinecap="round" />
-    </svg>
-  );
+/**
+ * How big the library actually is, from the same source the rest of the landing
+ * page uses.
+ *
+ * It was written here as "eight thousand", which was wrong by more than five
+ * thousand pieces: the real figure is north of thirteen. Every hardcoded count
+ * is a number that was true once, and the library grows every week, so the modal
+ * asks rather than remembers.
+ *
+ * Reads `LandingLiveCount`'s cache first, which is already warm because that
+ * component runs on this same page, so the number is there on first paint. The
+ * network call then refreshes it. Null until one of them answers, and the copy
+ * is written to read properly either way rather than flashing a zero.
+ */
+function useLibrarySize(): number | null {
+  const [count, setCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(STATS_CACHE_KEY);
+      const cached = raw ? (JSON.parse(raw) as { total_monologues?: number }) : null;
+      if (typeof cached?.total_monologues === "number" && cached.total_monologues > 0) {
+        setCount(cached.total_monologues);
+      }
+    } catch {
+      /* unreadable cache just means we wait for the network */
+    }
+
+    let alive = true;
+    fetch(`${API_URL}/api/public/stats`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { total_monologues?: number } | null) => {
+        if (alive && typeof d?.total_monologues === "number" && d.total_monologues > 0) {
+          setCount(d.total_monologues);
+        }
+      })
+      .catch(() => {
+        /* a modal must never depend on a stats endpoint being up */
+      });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  return count;
 }
 
 export function GhostLightModal() {
   const [platform, setPlatform] = useState<Platform>("none");
   const [open, setOpen] = useState(false);
+  const library = useLibrarySize();
 
   const remember = useCallback(() => {
     try {
@@ -190,7 +201,7 @@ export function GhostLightModal() {
         {/* ── The stage ─────────────────────────────────────────────────────
             The bulb hangs, the light falls, the app stands in it. Fixed height
             so the composition cannot be pushed around by copy length. */}
-        <div className="relative h-[238px] w-full overflow-hidden">
+        <div className="relative h-[276px] w-full overflow-hidden">
           {/* The throw of the light. Elliptical and anchored to the bulb, not a
               centred circle, so it reads as a source above rather than a glow
               behind. */}
@@ -203,8 +214,12 @@ export function GhostLightModal() {
             }}
           />
 
-          <div className="absolute left-1/2 top-0 -translate-x-1/2 motion-safe:animate-ghost-flicker">
-            <Bulb />
+          {/* The brand's own mark, not a bulb drawn for this file. A real ghost
+              light is a lamp standing on the stage floor, which is what
+              components/brand/GhostLight draws; the hand-made version hanging
+              from the flies was a different object wearing the same name. */}
+          <div className="absolute left-1/2 top-[18px] -translate-x-1/2">
+            <GhostLight size="lg" />
           </div>
 
           {/* The app, standing in the light and cropped by the dark. Tilted a
@@ -218,18 +233,20 @@ export function GhostLightModal() {
               starts at the phone's own top edge, which is also where the cream
               reading page begins — the one genuinely bright thing in the picture,
               and the reason the bulb above it has something to light. */}
-          <div className="absolute left-1/2 top-[84px] w-[156px] -translate-x-1/2 rotate-[-4deg]">
-            {/* Tall enough to read as a phone. At 120px of surviving height it
-                was a card, and a card is not a thing you download. */}
-            <div className="h-[196px] overflow-hidden rounded-[16px] border border-[var(--stage-line)] shadow-[0_18px_45px_-6px_rgba(0,0,0,0.9)]">
+          <div className="absolute left-1/2 top-[62px] w-[176px] -translate-x-1/2 rotate-[-3deg]">
+            {/* Tall enough to read as a phone. At 120px of surviving height this
+                was a card, and a card is not a thing anyone downloads. The page
+                is now legible down to the second paragraph of the speech, which
+                is the actual product: the words, set to be read. */}
+            <div className="h-[248px] overflow-hidden rounded-[18px] border border-[var(--stage-line)] shadow-[0_20px_50px_-6px_rgba(0,0,0,0.9)]">
               <Image
                 src="/ghostlight/read.png"
                 alt="Ghost Light showing Nora's speech from A Doll's House on a warm paper page"
                 width={680}
                 height={1471}
-                /* 156 wide renders 337 tall; the device starts at 27.5% of that. */
+                /* 176 wide renders 381 tall; the device begins at 27.5% of that. */
                 className="w-full max-w-none"
-                style={{ marginTop: "-93px" }}
+                style={{ marginTop: "-105px" }}
                 priority={false}
               />
             </div>
@@ -259,8 +276,20 @@ export function GhostLightModal() {
           </DialogTitle>
 
           <DialogDescription className="mx-auto mt-3 max-w-[19rem] text-[13px] leading-relaxed text-[var(--stage-muted)]">
-            Eight thousand monologues. Search by character, tone or length, keep
-            what you find, and read it offline in the waiting room.
+            {/* Reads properly before the count lands rather than flashing a zero
+                or a dash, so a slow stats call costs nothing. */}
+            {library ? (
+              <>
+                <span className="tabular-nums text-[var(--stage-fg)]">
+                  {library.toLocaleString()}
+                </span>{" "}
+                monologues.
+              </>
+            ) : (
+              "The whole library."
+            )}{" "}
+            Search by character, tone or length, keep what you find, and read it
+            offline in the waiting room.
           </DialogDescription>
 
           {platform === "ios" ? (
@@ -295,10 +324,15 @@ export function GhostLightModal() {
                 className="h-[76px] w-[76px] shrink-0 rounded-lg bg-white p-1.5"
                 unoptimized
               />
+              {/* iPhone, not "iPhone and iPad". Apple lists 80 iPad devices as
+                  supported, but that is compatibility mode: app.json sets
+                  supportsTablet false, there are no iPad screenshots, and an
+                  iPad Air is exactly where App Review found the paywall
+                  overflowing. Promising iPad here would be selling a letterbox. */}
               <p className="text-[12px] leading-relaxed text-[var(--stage-muted)]">
                 Point your phone&rsquo;s camera here.
                 <span className="mt-0.5 block text-[var(--stage-faint)]">
-                  iPhone and iPad. Free to start.
+                  iPhone. Free to start.
                 </span>
               </p>
             </div>

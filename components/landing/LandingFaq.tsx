@@ -11,7 +11,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "How does the search actually work?",
-    a: "You describe what you need the way you'd say it out loud, like \"angry woman in her twenties, under two minutes\" or \"something funny that isn't Shakespeare.\" It searches meaning, not keywords, across 8,500+ monologues from 1,500+ plays, films, and shows.",
+    a: "You describe what you need the way you'd say it out loud, like \"angry woman in her twenties, under two minutes\" or \"something funny that isn't Shakespeare.\" It searches meaning, not keywords, across 13,000+ monologues from 1,700+ plays, films, and shows.",
   },
   {
     q: "Where do the monologues come from?",

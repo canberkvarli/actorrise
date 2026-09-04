@@ -8,18 +8,18 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "Monologue Finder for Actors | Find Audition Pieces Fast",
   description:
-    "Use ActorRise's monologue finder to search 8,500+ real monologues by tone, length, and character type. No keyword guessing. Free to start.",
+    "Use ActorRise's monologue finder to search 13,000+ real monologues by tone, length, and character type. No keyword guessing. Free to start.",
   openGraph: {
     title: "Monologue Finder for Actors | ActorRise",
     description:
-      "Find your next audition piece in seconds. 8,500+ monologues, AI search, no keyword hunting. Free tier available.",
+      "Find your next audition piece in seconds. 13,000+ monologues, AI search, no keyword hunting. Free tier available.",
     url: `${siteUrl}/monologue-finder`,
   },
   twitter: {
     card: "summary_large_image",
     title: "Monologue Finder for Actors | ActorRise",
     description:
-      "Find your next audition piece in seconds. 8,500+ monologues, AI search, no keyword hunting. Free tier available.",
+      "Find your next audition piece in seconds. 13,000+ monologues, AI search, no keyword hunting. Free tier available.",
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/monologue-finder` },
