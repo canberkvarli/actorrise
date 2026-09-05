@@ -898,12 +898,16 @@ def _align_to_source(scenes: List[Dict], raw_text: str) -> List[Dict]:
     if not raw_text or not scenes:
         return scenes
 
-    source = [ln for sec in parse_dialogue(raw_text) for ln in sec["lines"]]
-    if not source:
-        return scenes
-    keys = [_spoken_key(ln["text"]) for ln in source]
-
     for scene in scenes:
+        # The scene's own chunk if it has one, the whole document if not. A
+        # side arrives as a single scene with no chunk, and there "the whole
+        # document" is the right answer; a play's Act 2 scene must not be
+        # aligned against Act 5.
+        scene_source = scene.get("_source_text") or raw_text
+        source = [ln for sec in parse_dialogue(scene_source) for ln in sec["lines"]]
+        if not source:
+            continue
+        keys = [_spoken_key(ln["text"]) for ln in source]
         ai_lines = scene.get("lines") or []
         if not ai_lines:
             continue
@@ -970,9 +974,14 @@ def _recover_dropped_dialogue(scenes: List[Dict], raw_text: str) -> List[Dict]:
             continue
 
         want = {c1.casefold(), c2.casefold()}
+        # Scoped to the scene's own chunk. Re-parsing the whole document here
+        # is what pulled Act 5 into Act 2: it gathers every line the two
+        # characters speak anywhere, and a character who appears twice in a
+        # play appears in both places.
+        scene_source = scene.get("_source_text") or raw_text
         det_lines = [
             ln
-            for sec in parse_dialogue(raw_text, character_names=[c1, c2])
+            for sec in parse_dialogue(scene_source, character_names=[c1, c2])
             for ln in sec["lines"]
             if ln["character"].casefold() in want
         ]
@@ -1936,10 +1945,16 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
                 if scenes:
                     progress(f"AI returned nothing for {chunk_label}, read it directly instead")
 
-            # Tag each scene with its structural position
+            # Tag each scene with its structural position, and with the text it
+            # came out of. The lossless guards below re-read the source to
+            # repair dropped lines, and without this they re-read the whole
+            # document: a scene for ROBIN and FAIRY then collects every line
+            # either speaks anywhere, which put Robin's Act 5 epilogue inside
+            # his Act 2 entrance and stored one speech in two scenes at once.
             for scene in scenes:
                 scene["act"] = chunk.act_label
                 scene["scene_number"] = chunk.scene_label
+                scene["_source_text"] = chunk.text
 
             if scenes:
                 progress(f"Found {len(scenes)} scene(s) in {chunk_label}")
@@ -2115,6 +2130,11 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         # Attribution and order come from the source; the AI keeps the framing.
         scenes = _align_to_source(scenes, raw_text)
         scenes = _recover_dropped_dialogue(scenes, raw_text)
+
+        # Internal to the guards above; nothing downstream should see a copy of
+        # the chunk hanging off every scene, least of all the extraction cache.
+        for scene in scenes:
+            scene.pop("_source_text", None)
 
         if not _has_title_page(raw_text) or not _is_usable_title(metadata.get("title")):
             metadata["title"] = _title_from_filename(filename)
