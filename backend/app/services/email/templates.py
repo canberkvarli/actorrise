@@ -493,6 +493,8 @@ class EmailTemplates:
             cta_label=kwargs.get("cta_label", ""),
             preheader=kwargs.get("preheader", ""),
             postscript=kwargs.get("postscript", ""),
+            greeting=kwargs.get("greeting", ""),
+            unsubscribe_note=kwargs.get("unsubscribe_note", ""),
             c=self._palette(kwargs.get("theme")),
         )
 

@@ -3,7 +3,10 @@
 {% block title %}{{ subject }}{% endblock %}
 
 {% block content %}
-        <p>hey {{ user_name.split()[0] }},</p>
+        {# Default greeting is lowercase on purpose, it reads like a text rather
+           than a mailshot. Override with `greeting` when a send wants a different
+           register, or none at all. #}
+        <p>{% if greeting %}{{ greeting }}{% else %}hey {{ user_name.split()[0] }},{% endif %}</p>
 
         {{ body_html|safe }}
 

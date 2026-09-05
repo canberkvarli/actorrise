@@ -43,9 +43,19 @@
             <td align="center" style="padding:0;">
                 <div class="ar-wrap ar-text" style="max-width:540px; margin:0 auto; padding:32px 20px; text-align:left; color:{{ c.fg }};">
                     {% block content %}{% endblock %}
+                    {# The opt-out line. `unsubscribe_note` overrides the wording,
+                       which matters when the body already says the same thing: a
+                       postscript reading "reply UNSUBSCRIBE" next to this default
+                       is the same offer made twice. The link itself always
+                       renders, whatever the wording, so an override cannot
+                       accidentally ship an email with no way out of the list. #}
                     {% if unsubscribe_url %}
                     <div class="ar-muted ar-rule" style="margin-top:36px; padding-top:16px; border-top:1px solid {{ c.rule }}; color:{{ c.muted }}; font-size:13px; line-height:1.5;">
+                        {% if unsubscribe_note %}
+                        {{ unsubscribe_note }} <a href="{{ unsubscribe_url }}" style="color:{{ c.muted }}; text-decoration:underline;">unsubscribe</a>.
+                        {% else %}
                         didn't mean to sign up for these? <a href="{{ unsubscribe_url }}" style="color:{{ c.muted }}; text-decoration:underline;">undo it here</a> and i'll stop, no hard feelings. i only send these to actors who actually want them.
+                        {% endif %}
                     </div>
                     {% endif %}
                 </div>

@@ -69,6 +69,33 @@ def test_welcome_library_size_tracks_the_corpus():
     assert library_claim(None).endswith("+")
 
 
+def test_greeting_and_optout_are_overridable_and_default_unchanged():
+    """The composer can reword the greeting and the opt-out line.
+
+    Both used to be hardcoded, so a send whose body already said "reply
+    UNSUBSCRIBE" ended up making the same offer twice, in two different
+    registers, with no way to fix either from the admin.
+    """
+    unsub = "https://actorrise.com/unsubscribe?t=abc"
+    base = {**CUSTOM_VARS, "theme": "auto", "unsubscribe_url": unsub}
+
+    default, _, _ = _render_template("custom", base)
+    assert "hey there," in default
+    assert "didn't mean to sign up for these?" in default
+
+    reworded, _, _ = _render_template(
+        "custom",
+        {**base, "greeting": "thanks for being here,", "unsubscribe_note": "not for you?"},
+    )
+    assert "thanks for being here," in reworded
+    assert "hey there," not in reworded
+    assert "not for you?" in reworded
+    assert "didn't mean to sign up" not in reworded
+
+    # Rewording the sentence must never drop the actual way out of the list.
+    assert unsub in reworded
+
+
 def test_constructing_email_templates_does_not_raise():
     """__init__ builds the default palette, so construction alone catches a lot."""
     EmailTemplates()
