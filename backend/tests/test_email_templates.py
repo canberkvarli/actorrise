@@ -14,7 +14,7 @@ from app.api.admin.emails import (
     TEMPLATES,
     _render_template,
 )
-from app.services.email.templates import EmailTemplates
+from app.services.email.templates import EmailTemplates, library_claim
 
 # The variables the admin composer actually posts for a custom send.
 CUSTOM_VARS = {
@@ -45,6 +45,28 @@ def test_every_offered_template_has_a_renderer():
     """A template in the admin dropdown with no entry in RENDER_MAP fails as
     'Unknown template' only once a send is already queued."""
     assert {t["id"] for t in TEMPLATES} - set(RENDER_MAP) == set()
+
+
+def test_welcome_library_size_tracks_the_corpus():
+    """The library claim must come from the live count, not a literal.
+
+    It was hardcoded as "8,600+" in welcome.html AND again in
+    render_welcome_plain. The corpus grew past 19,800 and both copies stayed
+    put, so the email undersold the product by more than half.
+    """
+    templates = EmailTemplates()
+    html = templates.render_welcome(user_name="Canberk", monologue_count=19_854)
+    plain = templates.render_welcome_plain(user_name="Canberk", monologue_count=19_854)
+
+    for body in (html, plain):
+        assert "19,000+" in body
+        assert "8,600" not in body, "stale hardcoded library size is back"
+
+    # Rounded down, so the claim stays true as the sweep keeps adding rows.
+    assert library_claim(19_854) == "19,000+"
+    assert library_claim(4_200) == "4,000+"
+    # A failed count must not print "None monologues".
+    assert library_claim(None).endswith("+")
 
 
 def test_constructing_email_templates_does_not_raise():

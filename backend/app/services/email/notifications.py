@@ -31,11 +31,35 @@ def send_welcome_email(user_email: str, user_name: Optional[str] = None) -> dict
         client = ResendEmailClient()
         templates = EmailTemplates()
         subject = "Welcome to ActorRise"
-        html = templates.render_welcome(user_name=user_name or "there")
+        html = templates.render_welcome(
+            user_name=user_name or "there",
+            monologue_count=_searchable_monologue_count(),
+        )
         return client.send_email(to=user_email, subject=subject, html=html)
     except Exception as e:
         print(f"Error sending welcome email to {user_email}: {e}")
         raise
+
+
+def _searchable_monologue_count() -> Optional[int]:
+    """Live library size, counted the way /api/public/stats counts it.
+
+    Returns None rather than raising: the welcome email is the first thing a new
+    signup sees, and it must not fail because a COUNT did. library_claim() falls
+    back to a floor when this is None.
+    """
+    try:
+        from sqlalchemy import text
+
+        from app.core.database import SessionLocal
+
+        with SessionLocal() as db:
+            return db.execute(
+                text("select count(*) from monologues where review_status is null")
+            ).scalar()
+    except Exception as e:  # noqa: BLE001 - never block the welcome on this
+        print(f"Could not read monologue count for welcome email: {e}")
+        return None
 
 
 

@@ -14,6 +14,24 @@ from typing import Optional
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 
+def library_claim(monologue_count: Optional[int] = None) -> str:
+    """How many monologues the welcome email says we have.
+
+    Counted the way /api/public/stats counts (review_status IS NULL, i.e.
+    "pieces an actor can actually find"), so the email can never contradict the
+    number on the landing page.
+
+    Rounded down to the nearest thousand on purpose: it stays true as the corpus
+    grows, and a moving exact figure in a welcome email reads like a dashboard.
+    The literal below is only a floor for when the count cannot be read; the
+    copy used to hardcode "8,600+" in two separate files and drifted to less
+    than half the real library before anyone noticed.
+    """
+    if not monologue_count or monologue_count < 1000:
+        return "19,000+"
+    return f"{monologue_count // 1000 * 1000:,}+"
+
+
 class EmailTemplates:
     """
     Render email templates with Jinja2.
@@ -133,12 +151,15 @@ class EmailTemplates:
         self,
         user_name: str,
         unsubscribe_url: Optional[str] = None,
+        monologue_count: Optional[int] = None,
+        **kwargs,
     ) -> str:
         """Render welcome email for new signups."""
         template = self.env.get_template('welcome.html')
         return template.render(
             user_name=user_name or "there",
             unsubscribe_url=unsubscribe_url,
+            library_claim=library_claim(monologue_count),
         )
 
     def render_membership_granted(
@@ -324,7 +345,9 @@ class EmailTemplates:
             "reply unsubscribe and i'll take you off, no worries.",
         ])
 
-    def render_welcome_plain(self, user_name: str, **kwargs) -> str:
+    def render_welcome_plain(
+        self, user_name: str, monologue_count: Optional[int] = None, **kwargs
+    ) -> str:
         name = user_name or "there"
         return "\n".join([
             f"Hey {name},",
@@ -333,7 +356,8 @@ class EmailTemplates:
             "",
             "Here's what you can do right now:",
             "",
-            "1. Search 8,600+ monologues with AI (way faster than flipping through books)",
+            f"1. Search {library_claim(monologue_count)} monologues with AI "
+            "(way faster than flipping through books)",
             "2. Upload scripts and rehearse scenes with an AI scene partner",
             "3. Build your actor profile page",
             "",
