@@ -112,6 +112,20 @@ _PERIODICAL = re.compile(
     re.I)
 _SHAKESPEARE = re.compile(r"shakespeare", re.I)
 
+#: Prose tracts written as a conversation. Gutenberg shelves them under
+#: Plays/Films/Dramas and they parse perfectly, because a pamphlet with two
+#: named speakers is structurally identical to a two-hander. But "A Dialogue
+#: Between Dean Swift and Tho. Prior" is an argument about the Irish economy,
+#: and it produced 102 rows of period political prose no actor would ever want
+#: to audition with. Same family as Wilde's Intentions, which the essay shelf
+#: caught; these carry no such marker, so the title is the only signal.
+#: Only "dialogue between" is safe. "Discourse", "conference" and "colloquy"
+#: all appear in real play titles -- "The Conference of the Birds: A Drama"
+#: would have been thrown out -- and a tract that avoids the phrase (Citt and
+#: Bumpkin, 1680) has to be caught by looking at it, not by its title.
+_PROSE_TRACT = re.compile(
+    r"\bdialogue[s]?\s+between\b|\bcatechism\b|\bdisputation\b", re.I)
+
 # A playtext has speakers. Cheap structural check before we spend on the
 # analyser. Three cue shapes, because requiring a period or colon after the name
 # rejected Tartuffe, whose speakers sit bare on their own line:
@@ -169,6 +183,9 @@ def candidates(rows: list[dict], skip: set[str], *,
             continue
         # A periodical is never a playtext, whatever shelf it sits on.
         if _PERIODICAL.search(title):
+            continue
+        # Nor is a prose tract written as a conversation.
+        if _PROSE_TRACT.search(title):
             continue
         # "Various" is Gutenberg's author for anthologies and periodicals. It is
         # not a person, and nothing it fronts is a single play.
