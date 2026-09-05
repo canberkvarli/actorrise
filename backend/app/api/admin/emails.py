@@ -37,6 +37,28 @@ from app.services.email.templates import EmailTemplates
 from app.services.email.tracking import add_tracking
 
 
+def _reject_unsupported_schedule(send_via: str, scheduled_at: Optional[str]) -> None:
+    """Refuse a scheduled send on a transport that cannot schedule.
+
+    Scheduling is a Resend API feature. SmtpEmailClient.send_email takes
+    **kwargs and never reads scheduled_at, so picking Gmail plus a send time
+    used to swallow the time silently and deliver the whole batch immediately.
+    The composer showed a filled-in field and the send went out days early.
+
+    Better to fail the request than to send hundreds of emails at the wrong
+    moment, so this is a hard 400 rather than a warning.
+    """
+    if scheduled_at and send_via != "resend":
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "Scheduling only works when sending via Resend. Gmail/SMTP has no "
+                "scheduling, so this batch would go out immediately. Either switch "
+                "Send via to Resend, or clear the schedule to send now."
+            ),
+        )
+
+
 def _get_email_client(send_via: str = "smtp"):
     """Get the appropriate email client based on send_via preference.
 
@@ -397,6 +419,7 @@ def bulk_send_email(
     """Start a bulk email send. Returns batch_id immediately, processes in background."""
     if not body.recipients:
         raise HTTPException(status_code=400, detail="No recipients provided")
+    _reject_unsupported_schedule(body.send_via, body.scheduled_at)
 
     _, default_subject, _ = _render_template(body.template_id, body.variables)
     subject = body.subject or default_subject
@@ -805,6 +828,7 @@ def send_campaign_endpoint(
     """Send a campaign to a user segment. Creates a tracked batch."""
     if body.target not in ("all", "free", "paid", "leads"):
         raise HTTPException(status_code=400, detail="target must be all, free, paid, or leads")
+    _reject_unsupported_schedule(body.send_via, body.scheduled_at)
 
     campaign_type = body.template_id
 
