@@ -38,6 +38,8 @@ QUERY_PARSE_CACHE: OrderedDict[str, Dict] = OrderedDict()
 SEARCH_RESULTS_CACHE: OrderedDict[str, List[Any]] = OrderedDict()
 
 
+from .vocabulary import PROFILE_AGE_TO_CORPUS
+
 _AGE_RANGE_ORDER = ["teens", "20s", "30s", "40s", "50s", "60+"]
 
 # Different ingestion pipelines stored ages in different vocabularies (e.g. some
@@ -57,12 +59,16 @@ _AGE_SYNONYMS = {
     # has, so profile-driven recommendations returned nothing for all 379
     # users who had set an age. Mapped here so the profile bands reach the
     # same rows the search dropdown does.
-    "18-25": ["teens", "20s", "20-30"],
-    "25-35": ["20s", "20-30", "30s", "30-40"],
-    "35-45": ["30s", "30-40", "40s", "40-50"],
-    "45-55": ["40s", "40-50", "50s", "50-60"],
-    "55+": ["50s", "50-60", "50+", "60+", "60s", "70s", "70+"],
 }
+
+# The actor profile uses a THIRD vocabulary — the bands in the profile form —
+# and none of its values exist in the corpus. An unmapped value fell through to
+# [itself, "any"], hard-filtering on a string no row has, so profile-driven
+# recommendations returned nothing for all 379 users who had set an age. Folded
+# in from the one canonical table so this copy cannot drift from the others.
+_AGE_SYNONYMS.update(
+    {band: list(values) for band, values in PROFILE_AGE_TO_CORPUS.items()}
+)
 
 
 def _expand_age_range(age_range: str) -> List[str]:

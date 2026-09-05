@@ -49,13 +49,17 @@ function toSentences(text: string): string[] {
     .map((s) => s.trim())
     .filter(Boolean);
 
-  /* A sentence of two or three words ("I'm not.", "No, it wasn't.") is a real
-     sentence but a useless thing to offer as a separate row — the list becomes
-     a wall of fragments. Glue anything very short onto the one before it. */
+  /* A one- or two-word sentence ("I'm not.", "Please.") is a real sentence but
+     a useless row on its own, so it joins the one before it.
+
+     The threshold is 2, not 3. At 3 it ate ordinary short sentences — "First
+     sentence here." is three words — and a speech written in short declaratives
+     collapsed back into a single un-cuttable block, which is the exact bug this
+     function exists to fix. Caught by monologueSegments.test.ts. */
   const out: string[] = [];
   for (const p of parts) {
-    const words = p.split(/\s+/).length;
-    if (out.length > 0 && words <= 3) out[out.length - 1] += " " + p;
+    const words = p.split(/\s+/).filter(Boolean).length;
+    if (out.length > 0 && words <= 2) out[out.length - 1] += " " + p;
     else out.push(p);
   }
   return out.length ? out : [text];

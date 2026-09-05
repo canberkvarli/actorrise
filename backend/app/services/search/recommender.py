@@ -9,14 +9,15 @@ from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from .semantic_search import SemanticSearch, exclude_hidden
+from .vocabulary import PROFILE_AGE_TO_CORPUS, PROFILE_GENRE_COLUMN
 
-# Profile age → DB age range mapping
+# Profile age → DB age range mapping. Derived from the one canonical table
+# rather than hand-maintained: this copy had drifted (35-45 was missing "30s"
+# and "40-50" entirely) and a second copy in semantic search had no profile
+# bands at all. "any" is appended here because age-agnostic pieces are always
+# valid recommendations.
 AGE_MAPPING = {
-    "18-25": ["teens", "20-30", "20s", "any"],
-    "25-35": ["20-30", "30-40", "20s", "30s", "any"],
-    "35-45": ["30-40", "40s", "any"],
-    "45-55": ["40s", "50s", "any"],
-    "55+": ["50s", "60+", "any"],
+    band: [*values, "any"] for band, values in PROFILE_AGE_TO_CORPUS.items()
 }
 
 
@@ -35,16 +36,28 @@ def _genre_conditions(preferred_genres: List[str]):
     "Musical" is in no column at all and yields no condition, which is what the
     empty-pool fallback in the caller is for.
     """
+    columns = {
+        "genre": Play.genre,
+        "category": Play.category,
+        "author": Play.author,
+    }
     conditions = []
     for genre in preferred_genres:
         g = (genre or "").strip()
         if not g:
             continue
-        if g.lower() == "shakespeare":
-            conditions.append(Play.author.ilike("%shakespeare%"))
-            continue
-        conditions.append(Play.genre.ilike(f"%{g}%"))
-        conditions.append(Play.category.ilike(f"%{g}%"))
+        # Look the routing up rather than guessing. An unknown value (someone
+        # adds a preference to the profile form and not here) falls back to
+        # checking both catalogue columns, which is wrong for nothing and right
+        # for most things.
+        known = PROFILE_GENRE_COLUMN.get(g, PROFILE_GENRE_COLUMN.get(g.title(), "unknown"))
+        if known is None:
+            continue  # catalogue has no such value — see the caller's fallback
+        if known in columns:
+            conditions.append(columns[known].ilike(f"%{g}%"))
+        else:
+            conditions.append(Play.genre.ilike(f"%{g}%"))
+            conditions.append(Play.category.ilike(f"%{g}%"))
     return conditions
 
 

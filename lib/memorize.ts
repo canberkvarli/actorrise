@@ -4,6 +4,8 @@
  * No React / DOM here — keep these unit-test friendly.
  */
 
+import { monologueSegments } from "@/lib/monologueSegments";
+
 const MIDDOT = "·"; // · U+00B7
 
 /** True for an alphabetic character (Unicode-aware, letters only). */
@@ -55,30 +57,14 @@ export function maskFirstLetters(text: string): string {
 /**
  * Split a monologue's body text into display "lines".
  *
- * Strategy:
- *   1. Split on newlines, trim, drop empties.
- *   2. If that yields a single chunk (no real line breaks), fall back to
- *      sentence splitting on `/(?<=[.!?])\s+/`.
- *
- * Always returns trimmed, non-empty strings.
+ * Delegates to the shared segmenter so a "line" is the same unit everywhere.
+ * It used to have its own rule — split on newlines, else split on
+ * `/(?<=[.!?])\s+/` — which disagreed with the cut editor's in two ways that
+ * showed: a paragraph break made this return two enormous chunks, and a bare
+ * "..." or a two-word sentence became a line of its own. Drilling a piece and
+ * cutting a piece then operated on different lists, so a saved cut's indices
+ * did not point at the lines Memorize was showing.
  */
 export function splitMonologue(text: string): string[] {
-  if (!text) return [];
-
-  const byNewline = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter((l) => l.length > 0);
-
-  if (byNewline.length > 1) {
-    return byNewline;
-  }
-
-  const single = byNewline[0] ?? text.trim();
-  if (!single) return [];
-
-  return single
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+  return monologueSegments(text);
 }
