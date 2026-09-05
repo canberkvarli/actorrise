@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { CutLine, CutMeter, type CutLineState } from "@/components/monologue/CutRail";
 import { cn } from "@/lib/utils";
 import { maskFirstLetters } from "@/lib/memorize";
 import { Segmented } from "./Segmented";
@@ -100,6 +101,8 @@ export function MemorizeView({
   // Trim (audition cut) state — only ever active when onSaveCut is provided.
   const canTrim = typeof onSaveCut === "function";
   const [trimming, setTrimming] = useState(false);
+  /** Line under the cursor while choosing the trim end, for the live preview. */
+  const [trimHover, setTrimHover] = useState<number | null>(null);
   const [savingCut, setSavingCut] = useState(false);
   const [selection, setSelection] = useState<{
     start: number | null;
@@ -164,12 +167,14 @@ export function MemorizeView({
 
   const cancelTrim = () => {
     setTrimming(false);
+    setTrimHover(null);
     setSelection({ start: null, end: null });
   };
 
   // Tap behavior during Trim: first tap = start, second = end (swap if needed),
   // a third tap restarts the selection from that line.
   const pickTrimLine = (index: number) => {
+    setTrimHover(null);
     setSelection((sel) => {
       if (sel.start == null || sel.end != null) {
         return { start: index, end: null };
@@ -227,6 +232,8 @@ export function MemorizeView({
   };
 
   const cutSeconds = cut ? estimateSeconds(lines.slice(cut.start, cut.end + 1)) : 0;
+  /** The whole piece, which is what the trim meter measures against. */
+  const fullSeconds = estimateSeconds(lines);
 
   /** Render a single line. In Build-up mode "mine" lines are always blanks
    *  (unless peeked); `newest` highlights the just-added line. */
@@ -250,41 +257,47 @@ export function MemorizeView({
     const dimmed = trimming && hasFullSelection && !inSelection;
 
     if (trimming) {
+      /* Same selection language as the Cut tab — see components/monologue/
+         CutRail.tsx. This used to be its own thing: a 3px rail plus
+         `bg-primary/5`, a five percent wash, and a line took no styling at all
+         until BOTH ends were picked. You could not tell you had chosen the
+         first line, which is exactly the complaint the Cut tab got. */
+      let state: CutLineState = "out";
+      let edge: "in" | "out" | null = null;
+      if (selStart == null) {
+        state = "neutral";
+      } else if (selEnd == null) {
+        const a = trimHover == null ? selStart : Math.min(selStart, trimHover);
+        const b = trimHover == null ? selStart : Math.max(selStart, trimHover);
+        if (i >= a && i <= b) state = trimHover == null ? "start-only" : "preview";
+        if (i === selStart) edge = "in";
+        if (trimHover != null && i === trimHover) edge = "out";
+      } else {
+        if (i >= selStart && i <= selEnd) state = "in";
+        if (i === selStart) edge = "in";
+        if (i === selEnd) edge = "out";
+      }
+
       return (
-        <motion.div key={i} className="relative pl-4">
-          <span
-            aria-hidden
-            className={cn(
-              "absolute left-0 top-1.5 bottom-1.5 w-[3px] rounded-full transition-colors",
-              inSelection ? "bg-primary/70" : "bg-transparent",
-            )}
-          />
+        <div key={i}>
           {showSpeaker && (
             <p
               className={cn(
-                "mb-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em]",
+                "mb-1.5 pl-12 text-[0.7rem] font-semibold uppercase tracking-[0.14em]",
                 t.inkFaint,
               )}
             >
               {line.speaker}
             </p>
           )}
-          <button
-            type="button"
+          <CutLine
+            text={line.text}
+            state={state}
+            edge={edge}
             onClick={() => pickTrimLine(i)}
-            aria-pressed={inSelection}
-            className={cn(
-              "-mx-2 block w-full cursor-pointer rounded-lg px-2 py-1 text-left transition-all",
-              t.hover,
-              inSelection && "bg-primary/5",
-              dimmed && "opacity-40",
-            )}
-          >
-            <span className={cn("block", family, sizeClass, leading, t.ink)}>
-              {line.text}
-            </span>
-          </button>
-        </motion.div>
+            onHover={() => setTrimHover(i)}
+          />
+        </div>
       );
     }
 
@@ -388,14 +401,23 @@ export function MemorizeView({
 
       {/* Toolbar */}
       {trimming ? (
-        <div className="flex flex-wrap items-center gap-3">
-          <span className="text-sm font-semibold text-foreground">Trim</span>
-          {selCount > 0 && (
-            <span className="text-sm tabular-nums text-muted-foreground">
-              {selCount} {selCount === 1 ? "line" : "lines"} · ~{fmtTime(selSeconds)}
-            </span>
-          )}
-          <div className="ml-auto flex items-center gap-2">
+        <div className="space-y-3">
+          {/* Same readout as the Cut tab: length against the whole piece and
+              against the limits rooms give you, rather than a bare line count.
+              "4 lines" is not a fact an actor can act on; "0:27, 0:52 trimmed"
+              is. */}
+          <CutMeter
+            cutSeconds={selCount > 0 ? selSeconds : fullSeconds}
+            fullSeconds={fullSeconds}
+          />
+          <p className="font-typewriter text-sm text-muted-foreground" aria-live="polite">
+            {selStart == null
+              ? "Tap where your cut starts."
+              : selEnd == null
+                ? "Now tap where it ends."
+                : "Tap any line to start a new cut."}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
             {cut && (
               <button
                 type="button"

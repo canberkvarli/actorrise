@@ -12,6 +12,7 @@ import {
   IconBulb,
   IconBulbFilled,
   IconNote,
+  IconRepeat,
 } from "@tabler/icons-react";
 import { Monologue } from "@/types/actor";
 import api from "@/lib/api";
@@ -29,6 +30,7 @@ import { ExportSheet } from "@/components/monologue/ExportSheet";
 import { useSaveNotes } from "@/hooks/useCollectionMeta";
 import { useToggleMemorized } from "@/hooks/useMemorized";
 import { useAuth } from "@/lib/auth";
+import { InstantTooltip } from "@/components/ui/instant-tooltip";
 import { EditMonologueModal } from "@/components/admin/EditMonologueModal";
 import type { EditMonologueBody } from "@/components/admin/EditMonologueModal";
 import { toast } from "sonner";
@@ -278,14 +280,21 @@ export default function MonologueDetailPage() {
           poster header a bordered button at the top of the page would be the
           first thing you see, above the piece it belongs to. */}
       <div className="relative">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="absolute left-4 top-5 z-10 inline-flex items-center gap-1.5 text-sm text-white/70 drop-shadow transition-colors hover:text-white"
-        >
-          <IconArrowLeft className="h-4 w-4" />
-          Back
-        </button>
+        {/* Back sits in the reading column, not pinned to the viewport edge.
+            At `left-4` on a wide screen it floated in the far corner, half a
+            screen from the content it belongs to. */}
+        <div className="pointer-events-none absolute inset-x-0 top-5 z-10">
+          <div className="container mx-auto max-w-3xl px-4">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="pointer-events-auto inline-flex items-center gap-1.5 text-sm text-white/70 drop-shadow transition-colors hover:text-white"
+            >
+              <IconArrowLeft className="h-4 w-4" />
+              Back
+            </button>
+          </div>
+        </div>
 
         {/* Plays take the one-sheet too. They have no poster, so the cover is
             printed from the row — see PlayCover. Giving a play the plain
@@ -347,26 +356,42 @@ export default function MonologueDetailPage() {
                   Marking a beat meant scrolling past every line to reach it and
                   scrolling back to keep reading, which is why it went unused.
                   It is one tap from the bar now, and the bar follows you. */}
-              <button
-                type="button"
-                onClick={scrollToNotes}
-                aria-label="Your notes"
-                title="Your notes"
-                className={`rounded-full p-2 transition-colors hover:bg-muted ${
-                  notes.trim() ? "text-foreground" : "text-muted-foreground"
-                }`}
-              >
-                <IconNote className="h-5 w-5" />
-              </button>
+              <InstantTooltip label={notes.trim() ? "Your notes" : "Add a note"}>
+                <button
+                  type="button"
+                  onClick={scrollToNotes}
+                  aria-label="Your notes"
+                  className={`rounded-full p-2 transition-colors hover:bg-muted ${
+                    notes.trim() ? "text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  <IconNote className="h-5 w-5" />
+                </button>
+              </InstantTooltip>
+
+              {/* Memorize, moved off the Rehearse pill. A drill is a way of
+                  working the text, which is what this row is. */}
+              {!monologue.paywalled && (
+                <InstantTooltip label="Memorize · line by line">
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/monologue/${monologue.id}/memorize`)}
+                    aria-label="Memorize line by line"
+                    className="rounded-full p-2 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  >
+                    <IconRepeat className="h-5 w-5" />
+                  </button>
+                </InstantTooltip>
+              )}
 
               {/* Off-book status. Distinct from the "Memorize" drill below —
                   this one only records where you are, it doesn't go anywhere. */}
+              <InstantTooltip label={memorized ? "Off book — tap to unmark" : "Mark as off book"}>
               <button
                 type="button"
                 onClick={handleToggleMemorized}
                 aria-pressed={memorized}
                 aria-label={memorized ? "Off book — tap to unmark" : "Mark as off book"}
-                title={memorized ? "Off book — tap to unmark" : "Mark as off book"}
                 className="rounded-full p-2 transition-colors hover:bg-muted"
               >
                 {memorized ? (
@@ -375,15 +400,16 @@ export default function MonologueDetailPage() {
                   <IconBulb className="h-5 w-5 text-muted-foreground/50 hover:text-muted-foreground" />
                 )}
               </button>
+              </InstantTooltip>
 
               {/* The retention lever. Savers return 2.1x more, so the collection
                   control keeps its place right beside the primary action. */}
+              <InstantTooltip label={isFavorited ? "In your collection" : "Save to collection"}>
               <button
                 type="button"
                 onClick={toggleFavorite}
                 aria-pressed={isFavorited}
                 aria-label={isFavorited ? "In your collection" : "Add to collection"}
-                title={isFavorited ? "In your collection" : "Add to collection"}
                 /* Was text-accent, which is a *surface* token — the pale blue a
                    panel is painted with in light, and a near-black warm grey in
                    dark. So a saved bookmark was invisible in both themes for the
@@ -399,6 +425,7 @@ export default function MonologueDetailPage() {
               >
                 <IconBookmark className={`h-5 w-5 ${isFavorited ? "fill-current" : ""}`} />
               </button>
+              </InstantTooltip>
 
               {user?.is_moderator && (
                 <button
@@ -626,31 +653,19 @@ export default function MonologueDetailPage() {
           transition={{ duration: 0.35, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
           className="pointer-events-none fixed inset-x-0 bottom-[88px] z-40 flex justify-center px-4 lg:bottom-6"
         >
-          {/* Memorize used to be an orphan section at the foot of the page with
-              its own heading and a sentence explaining itself. It is the same
-              kind of thing as Rehearse — a way to work the piece out loud — so
-              it belongs beside it, not three scrolls below it under a caption.
-              One pill, two actions, primary weight on the one people want. */}
-          <div className="pointer-events-auto inline-flex items-center rounded-full bg-primary-solid p-1 shadow-lg shadow-black/20">
-            <button
-              type="button"
-              onClick={() => router.push(`/monologue/${monologue.id}/work`)}
-              className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold text-primary-solid-foreground transition-transform hover:scale-[1.03] active:scale-95"
-            >
-              <IconPlayerPlay className="h-4 w-4" />
-              Rehearse
-            </button>
-            <span aria-hidden className="h-5 w-px bg-primary-solid-foreground/25" />
-            <button
-              type="button"
-              onClick={() => router.push(`/monologue/${monologue.id}/memorize`)}
-              title="Line-by-line drill until you don't need the page"
-              className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-primary-solid-foreground/85 transition-transform hover:scale-[1.03] hover:text-primary-solid-foreground active:scale-95"
-            >
-              <IconBulb className="h-4 w-4" />
-              Off book
-            </button>
-          </div>
+          {/* One action, not two. Pairing Rehearse with Off book put a second
+              button of near-equal weight against the one thing this page is
+              for, and the two are not siblings anyway: one runs the piece out
+              loud, the other is a drill. Memorize lives in the working bar
+              with the other ways of handling the text. */}
+          <button
+            type="button"
+            onClick={() => router.push(`/monologue/${monologue.id}/work`)}
+            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-primary-solid px-6 py-3 text-sm font-semibold text-primary-solid-foreground shadow-lg shadow-black/20 transition-transform hover:scale-[1.03] active:scale-95"
+          >
+            <IconPlayerPlay className="h-4 w-4" />
+            Rehearse
+          </button>
         </motion.div>
       )}
     </div>
