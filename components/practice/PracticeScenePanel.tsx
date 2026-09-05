@@ -17,6 +17,15 @@ import { toast } from "sonner";
 
 import api from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   getGenreBadgeClassName,
   getGenreBorderClassName,
@@ -52,6 +61,8 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
   const [editOpen, setEditOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [redoing, setRedoing] = useState(false);
+  const [confirmRedo, setConfirmRedo] = useState(false);
+  const [cost, setCost] = useState<{ scenes: number; sessions: number } | null>(null);
 
   const scenes = data?.scenes ?? [];
   const groups = groupScenesByAct(scenes);
@@ -63,6 +74,35 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
 
   const refreshScenes = () =>
     queryClient.invalidateQueries({ queryKey: ["scripts", script.id] });
+
+  /**
+   * Ask before re-cutting, but only when there is something to lose.
+   *
+   * A re-cut replaces the scenes and clears the rehearsal history recorded on
+   * them, which is a fair trade to offer and an unforgivable one to make
+   * silently. So the dialog fetches the real numbers and says them.
+   *
+   * On a script with no scenes there is nothing at stake, and a confirmation
+   * would be pure friction on the one screen that exists to get the actor
+   * unstuck. That case goes straight through.
+   */
+  const requestRedo = async () => {
+    if (scenes.length === 0) {
+      await redoScenes();
+      return;
+    }
+    setCost(null);
+    setConfirmRedo(true);
+    try {
+      const res = await api.get<{ scenes: number; sessions: number }>(
+        `/api/scripts/${script.id}/recut-cost`,
+      );
+      setCost(res.data);
+    } catch {
+      // Fall back to the general warning rather than blocking the retry.
+      setCost({ scenes: scenes.length, sessions: -1 });
+    }
+  };
 
   /**
    * Scene division is the part of extraction that varies run to run, so an
@@ -157,7 +197,7 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
             {!isProcessing && (
               <button
                 type="button"
-                onClick={redoScenes}
+                onClick={requestRedo}
                 disabled={redoing}
                 className="inline-flex items-center gap-1.5 rounded-md px-2.5 h-8 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-60"
               >
@@ -242,6 +282,16 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
             scriptId={script.id}
             existingActs={existingActs}
             onSceneAdded={refreshScenes}
+          />
+          <ConfirmRecutDialog
+            open={confirmRedo}
+            onOpenChange={setConfirmRedo}
+            cost={cost}
+            redoing={redoing}
+            onConfirm={async () => {
+              setConfirmRedo(false);
+              await redoScenes();
+            }}
           />
         </>
       )}
@@ -362,6 +412,69 @@ function SceneRow({
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+/**
+ * Naming the price before it is paid.
+ *
+ * Redo used to fire the moment it was tapped, and what it does is not obvious
+ * from the label: it spends minutes re-reading the script, replaces every
+ * scene, and clears the rehearsal history recorded against them. That last part
+ * is the one worth stopping for, so the dialog counts the sessions at stake and
+ * says the number rather than warning in the abstract.
+ */
+function ConfirmRecutDialog({
+  open,
+  onOpenChange,
+  cost,
+  redoing,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  cost: { scenes: number; sessions: number } | null;
+  redoing: boolean;
+  onConfirm: () => void | Promise<void>;
+}) {
+  const sessions = cost?.sessions ?? 0;
+  const sceneCount = cost?.scenes ?? 0;
+  const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="font-brand text-xl font-medium tracking-tight">
+            Cut this script again?
+          </DialogTitle>
+          <DialogDescription className="pt-1 leading-relaxed">
+            {cost === null
+              ? "Checking what this would replace…"
+              : sessions > 0
+                ? `This reads the script again and replaces ${plural(sceneCount, "scene")}. The ${plural(sessions, "rehearsal session")} recorded on them go too, and that history can't be brought back.`
+                : sessions < 0
+                  ? `This reads the script again and replaces ${plural(sceneCount, "scene")}, along with any rehearsal history on them.`
+                  : `This reads the script again and replaces ${plural(sceneCount, "scene")}. Nothing has been rehearsed on them yet, so there is no history to lose.`}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            Keep what I have
+          </Button>
+          <Button
+            type="button"
+            variant={sessions > 0 ? "destructive" : "default"}
+            onClick={onConfirm}
+            disabled={redoing || cost === null}
+            className="gap-2"
+          >
+            <IconRefresh className="h-4 w-4" />
+            Cut again
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
