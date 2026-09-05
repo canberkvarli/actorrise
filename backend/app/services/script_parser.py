@@ -258,11 +258,68 @@ def _strip_production_marks(text: str) -> str:
     return "\n".join(kept)
 
 
+# A cue standing alone on its line: "THESEUS", "FIRST FAIRY", "ROBIN GOODFELLOW".
+# Allows a trailing period or colon, which some editions print.
+_STANDALONE_CUE = re.compile(r"^\s*([A-Z][A-Z'’.\- ]{1,28}?)\s*[.:]?\s*$", re.MULTILINE)
+
+
+def _cue_names(text: str) -> List[str]:
+    """Names that stand alone on a line somewhere in this text.
+
+    The safety rule for splitting inline cues. A name only counts as a speaker
+    if the same text also prints it as a cue on a line of its own, so a
+    capitalised word leading a verse line ("OVER park, over pale") is never
+    mistaken for a character.
+    """
+    names = set()
+    for raw in _STANDALONE_CUE.findall(text or ""):
+        name = raw.strip().rstrip(".:").strip()
+        # Two words at most, and no lowercase: cues are short and shouted.
+        if 2 <= len(name) <= 28 and name == name.upper() and len(name.split()) <= 3:
+            if any(ch.isalpha() for ch in name):
+                names.add(name)
+    return sorted(names, key=len, reverse=True)  # longest first: FIRST FAIRY before FAIRY
+
+
+def _split_cue_lines(text: str) -> str:
+    """Give an inline speaker cue its own line.
+
+    Folger sets a shared verse line with the second speaker inline — "LYSANDER
+    More than to us" — and some extractions run a cue on after the previous
+    sentence — "Ay, there it is. OBERON I pray thee give it me." Both read as
+    one speech to a parser that only looks for a cue alone on a line, so the
+    second character's words end up in the first character's mouth. An actor
+    then rehearses lines that are not theirs, which is the one extraction error
+    that cannot be shrugged off.
+    """
+    names = _cue_names(text)
+    if not names:
+        return text
+
+    pattern = "|".join(re.escape(n) for n in names)
+    # At the head of a line, followed by dialogue on the same line.
+    text = re.sub(
+        rf"^[ \t]*({pattern})[ \t]+(?=\S)", r"\1\n", text, flags=re.MULTILINE
+    )
+    # Mid-line, once the previous sentence has closed.
+    text = re.sub(
+        rf"([.!?])[ \t]+({pattern})[ \t]+(?=\S)", r"\1\n\2\n", text
+    )
+    return text
+
+
 def _preprocess_text(text: str) -> str:
     """Strip publisher line-number prefixes (Folger FTLN, etc.) so regex can parse dialogue."""
     text = _strip_production_marks(text)
-    # Only strip if we detect the pattern appears frequently (not just stray numbers)
-    ftln_count = len(_LINE_NUMBER_PREFIX.findall(text[:5000]))
+    # Only strip if we detect the pattern appears frequently (not just stray numbers).
+    #
+    # Counted over the whole text, not the first 5,000 characters. A play opens
+    # with a title page, a cast list and a note on the text — several thousand
+    # characters carrying no line numbers at all — so the sample came back empty
+    # and the entire document kept its prefixes. Chunks escaped it by starting
+    # mid-play, which is why extraction looked healthy while raw_text, and every
+    # pass that reads the document whole, was still full of "FTLN 0024".
+    ftln_count = len(_LINE_NUMBER_PREFIX.findall(text))
     if ftln_count >= 5:
         text = _LINE_NUMBER_PREFIX.sub('', text)
         print(f"Stripped {ftln_count}+ FTLN/TLN line-number prefixes")
@@ -271,7 +328,11 @@ def _preprocess_text(text: str) -> str:
         # that remain at the end of verse lines (e.g. "390", "395", "2145")
         # Only do this when FTLN was detected (confirms it's a Folger text)
         text = re.sub(r'\s+\d{2,4}\s*$', '', text, flags=re.MULTILINE)
-    return text
+
+    # Last, once the line numbers are gone and a cue is actually visible at the
+    # head of its line. Every path that reads dialogue comes through here, so
+    # the AI prompt, the lossless guard and the regex fallback all get it.
+    return _split_cue_lines(text)
 
 
 def speaker_vocabulary(text: str, declared: Optional[List[str]] = None) -> List[str]:
