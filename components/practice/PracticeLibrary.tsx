@@ -203,9 +203,16 @@ export function PracticeLibrary({
 
         {/* The shelf */}
         <div className="min-w-0 lg:border-l lg:border-border/50 lg:pl-10">
-          <h2 className="mb-3 font-typewriter text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-            On the shelf
-          </h2>
+          {/* The way in sits at the top of the shelf, not under it. Below the
+              list it was the last thing on the page and moved further down with
+              every script added, so the more you used ScenePartner the harder
+              it got to add to it. */}
+          <div className="mb-4 flex items-baseline justify-between gap-3">
+            <h2 className="font-typewriter text-[15px] uppercase tracking-[0.14em] text-foreground">
+              On the shelf
+            </h2>
+            <UploadScriptButton variant="compact">Bring in a script</UploadScriptButton>
+          </div>
           <PracticeLibraryRail
             scripts={ordered}
             selectedId={effectiveId}
@@ -214,9 +221,6 @@ export function PracticeLibrary({
             onReport={handleReport}
             orientation="column"
           />
-          <div className="mt-4">
-            <UploadScriptButton variant="compact">Bring in a script</UploadScriptButton>
-          </div>
         </div>
       </div>
 

@@ -38,7 +38,7 @@ const rise = {
 function Line({ line }: { line: { character: string; text: string } }) {
   return (
     <div className="mt-7 border-l border-border/70 pl-5 sm:pl-6">
-      <p className="font-typewriter text-[11px] uppercase tracking-[0.2em] text-muted-foreground/70">
+      <p className="font-typewriter text-[13px] uppercase tracking-[0.16em] text-muted-foreground/80">
         {line.character}
       </p>
       <p className="mt-2 font-typewriter text-lg leading-[1.75] text-foreground/90 text-balance sm:text-xl">
@@ -50,7 +50,7 @@ function Line({ line }: { line: { character: string; text: string } }) {
 
 function Slug({ children }: { children: React.ReactNode }) {
   return (
-    <p className="font-typewriter text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+    <p className="font-typewriter text-[13.5px] uppercase tracking-[0.16em] text-muted-foreground">
       {children}
     </p>
   );
@@ -71,7 +71,20 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
   const { rung, script, scene, line, character, progress } = data;
 
   const sceneSlug = [scene?.act, scene?.scene_number].filter(Boolean).join(" · ");
-  const rehearseHref = scene ? `/scenes/${scene.id}/rehearse` : "#";
+
+  /* The rehearse screen runs a session; it does not create one. Sent there
+     without ?session= it says "No active rehearsal", and without ?script= its
+     Back button falls through to /rehearse — the monologue Collection, which
+     has nothing to do with the script you came from. So only an already-open
+     session goes straight to the stage. Everything else goes to the scene
+     editor, which is where you pick your role and start the session properly. */
+  const href =
+    rung === "resume" && scene && data.session_id
+      ? `/scenes/${scene.id}/rehearse?session=${data.session_id}` +
+        (script ? `&script=${script.id}` : "")
+      : scene && script
+        ? `/practice/${script.id}/scenes/${scene.id}/edit`
+        : "#";
 
   // The label under the title. Says who you are in the scene and where you
   // stopped, in that order, because the role is the part worth remembering.
@@ -123,7 +136,7 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
           animate="visible"
           className="mt-7 border-l border-dashed border-border/70 pl-5 sm:pl-6"
         >
-          <p className="font-typewriter text-[11px] uppercase tracking-[0.2em] text-muted-foreground/70">
+          <p className="font-typewriter text-[13px] uppercase tracking-[0.16em] text-muted-foreground/80">
             not yet cut
           </p>
           <p className="mt-2 max-w-md font-typewriter text-base leading-[1.75] text-muted-foreground sm:text-lg">
@@ -145,7 +158,7 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
             Cut the scenes
           </Link>
         ) : (
-          <Link href={rehearseHref} className={ACTION}>
+          <Link href={href} className={ACTION}>
             <IconPlayerPlayFilled className="h-3.5 w-3.5" />
             {rung === "resume" ? "Pick it up" : rung === "demo" ? "Read it with me" : "Start it"}
             <IconArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -153,7 +166,7 @@ export function WhatsNext({ data }: { data: WhatsNextData }) {
         )}
 
         {standing && (
-          <span className="font-typewriter text-xs text-muted-foreground">{standing}</span>
+          <span className="font-typewriter text-[13px] text-muted-foreground">{standing}</span>
         )}
 
         {rung === "demo" && (

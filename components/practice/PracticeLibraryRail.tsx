@@ -91,7 +91,7 @@ function ScriptCard({
         aria-current={selected ? "true" : undefined}
         className={[
           "relative flex h-full w-full flex-col overflow-hidden rounded-lg border text-left transition-all",
-          column ? "py-3 pl-4 pr-3" : "py-4 pl-5 pr-4",
+          column ? "py-3.5 pl-4 pr-3" : "py-4 pl-5 pr-4",
           "focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           selected
             ? "border-primary/50 bg-primary/[0.06] shadow-[0_0_28px_-14px_var(--primary)]"
@@ -109,29 +109,29 @@ function ScriptCard({
         />
         <h3
           className={`font-typewriter font-semibold leading-snug text-foreground ${
-            column ? "truncate text-sm" : "line-clamp-2 text-base"
+            column ? "truncate text-[15px]" : "line-clamp-2 text-base"
           }`}
         >
           {script.title}
         </h3>
-        <p className="mt-0.5 truncate font-typewriter text-xs text-muted-foreground">
+        <p className="mt-1 truncate font-typewriter text-[13px] text-muted-foreground">
           {script.author}
         </p>
         <div
           className={`mt-auto flex items-center justify-between gap-2 ${column ? "pt-1.5" : "pt-3"}`}
         >
-          <span className="truncate text-[10px] uppercase tracking-[0.15em] text-muted-foreground/60">
+          <span className="truncate font-typewriter text-[11.5px] uppercase tracking-[0.12em] text-muted-foreground/75">
             {script.genre || " "}
           </span>
           {isProcessing ? (
             <IconLoader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground/70" />
           ) : script.is_sample ? (
-            <span className="border border-border px-1 py-0.5 text-[9px] font-medium uppercase tracking-wide text-muted-foreground">
+            <span className="border border-border px-1.5 py-0.5 text-[10.5px] font-medium uppercase tracking-wide text-muted-foreground">
               Demo
             </span>
           ) : (
             sceneCount > 0 && (
-              <span className="shrink-0 text-xs tabular-nums text-muted-foreground/60">
+              <span className="shrink-0 font-typewriter text-[13px] tabular-nums text-muted-foreground/80">
                 {sceneCount} {sceneCount === 1 ? "scene" : "scenes"}
               </span>
             )
