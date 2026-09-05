@@ -84,6 +84,13 @@ export interface Monologue {
   imdb_rating?: number | null;
   imdb_id?: string | null;
   director?: string | null;
+  /** Release year, from film_tv_references.year. The endpoint has always sent
+   *  this; it was simply missing from the type, so nothing could render it. */
+  year?: number | null;
+  /* Deliberately absent: `overdone_reason`. The column is deferred() on the
+     ORM, so serializing it in the shared mapper would fire one extra SELECT
+     per row — sixty of them on a search page. The band label carries the
+     signal without the sentence. */
 }
 
 export interface SearchRequest {

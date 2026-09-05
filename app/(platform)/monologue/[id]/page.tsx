@@ -17,6 +17,7 @@ import api from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MonologueHeader,
+  MonologueOneSheet,
   MonologueBody,
   MonologueFooter,
 } from "@/components/monologue/MonologueDetailContent";
@@ -234,28 +235,46 @@ export default function MonologueDetailPage() {
   return (
     /* Bottom padding clears the floating Rehearse pill. Without it the pill
        parked on top of the notes panel, which is the last thing on the page. */
-    <div className="container mx-auto max-w-3xl px-4 py-8 pb-40 sm:py-10 lg:pb-28">
-      <motion.div
-        initial={{ opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      >
+    <div className="pb-40 lg:pb-28">
+      {/* The one-sheet runs full-bleed, so it sits outside the reading
+          container rather than inside it. Back floats over the banner: on a
+          poster header a bordered button at the top of the page would be the
+          first thing you see, above the piece it belongs to. */}
+      <div className="relative">
         <button
           type="button"
           onClick={() => router.back()}
-          className="mb-8 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className={`absolute left-4 top-5 z-10 inline-flex items-center gap-1.5 text-sm transition-colors ${
+            monologue.poster_url
+              ? "text-white/70 drop-shadow hover:text-white"
+              : "text-muted-foreground hover:text-foreground"
+          }`}
         >
           <IconArrowLeft className="h-4 w-4" />
           Back
         </button>
 
-        <MonologueHeader monologue={monologue} />
+        {monologue.poster_url ? (
+          <MonologueOneSheet monologue={monologue} />
+        ) : (
+          <div className="container mx-auto max-w-3xl px-4 pt-16">
+            <MonologueHeader monologue={monologue} standalone />
+          </div>
+        )}
+      </div>
+
+      <div className="container mx-auto max-w-3xl px-4">
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      >
 
         {/* The working bar. It follows you down the piece so the one thing you
             came to do — run it — is never scrolled away, and so switching how
             you're looking at the text doesn't mean scrolling back up.
             top-16/sm:top-20 clears the platform nav (65px / 81px). */}
-        <div ref={anchorRef} aria-hidden className="mt-8" />
+        <div ref={anchorRef} aria-hidden className="mt-6" />
         <div className="sticky top-16 z-30 -mx-4 border-y border-border/60 bg-background/95 px-4 py-2.5 backdrop-blur-md sm:top-20">
           <div className="flex items-center justify-between gap-3">
             <div
@@ -553,6 +572,7 @@ export default function MonologueDetailPage() {
           isSaving={editMonologueSaving}
         />
       </motion.div>
+      </div>
 
       {/* The one thing you came here to do, always in reach.
           It sits above the platform's bottom nav rather than becoming a second
