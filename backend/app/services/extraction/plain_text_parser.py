@@ -199,6 +199,26 @@ class PlainTextParser:
             if cast:
                 speeches = self._split_on_cast(text, cast)
 
+        # Pattern 5: a bare ALL-CAPS name alone on its line.
+        #
+        #     PHAEDRA                        <- Racine, indented
+        #     THE BEECH                      <- Maeterlinck, at column 0
+        #     TARTUFFE (after sitting down)  <- Moliere, with a direction
+        #
+        # No colon, no period, nothing for patterns 1 and 2 to anchor on, and
+        # the wrong case for pattern 4. This is the single largest blind spot
+        # measured: of 461 books a Gutenberg sweep read and got nothing from,
+        # sampling put roughly five in eight here rather than at a legitimate
+        # zero, and the losses include Phaedra and The Blue Bird.
+        #
+        # Confirmed by repetition like pattern 4, because one capitalised line
+        # on its own is just as likely to be a title or an act heading. A name
+        # that opens several speeches is a speaker.
+        if len(speeches) < 5:
+            cast = self._bare_caps_cast(text)
+            if cast:
+                speeches = self._split_on_bare_caps(text, cast)
+
         # Every pattern feeds through the same sanity check on the name. A cue
         # that turns out to be an act heading takes its whole "speech" with it,
         # which is the act's entire text.
@@ -471,6 +491,42 @@ class PlainTextParser:
         if len(hits) == 1:
             return hits[0].title()
         return name
+
+    #: A whole line that is nothing but an ALL-CAPS name, optionally carrying a
+    #: parenthetical direction. `\r?$` because Gutenberg files are CRLF.
+    _BARE_CAPS_CUE = re.compile(
+        r"^[ \t]*([A-Z][A-Z '’\-\.]{1,38}?)"
+        r"(?:[ \t]*\([^)\n]{0,90}\))?"
+        r"[ \t]*\r?$", re.MULTILINE)
+
+    def _bare_caps_cast(self, text: str) -> List[str]:
+        """ALL-CAPS names that sit alone on a line and recur like speakers."""
+        counts: Dict[str, int] = {}
+        for match in self._BARE_CAPS_CUE.finditer(text):
+            name = " ".join(match.group(1).split())
+            counts[name] = counts.get(name, 0) + 1
+        return [
+            name
+            for name, hits in counts.items()
+            if hits >= self._MIN_CUE_REPEATS
+            and self._is_plausible_character(name)
+        ]
+
+    def _split_on_bare_caps(self, text: str, cast: List[str]) -> List[tuple]:
+        """Cut at each confirmed cue line; a speech runs to the next one."""
+        allowed = {name.upper() for name in cast}
+        cues = []
+        for match in self._BARE_CAPS_CUE.finditer(text):
+            name = " ".join(match.group(1).split())
+            if name.upper() in allowed:
+                cues.append((match.start(), match.end(), name))
+        speeches = []
+        for i, (_, end, name) in enumerate(cues):
+            stop = cues[i + 1][0] if i + 1 < len(cues) else len(text)
+            body = text[end:stop].strip()
+            if body:
+                speeches.append((name, body))
+        return speeches
 
     def _title_case_cast(self, text: str) -> List[str]:
         """Names that behave like speakers: Title Case cues that recur."""

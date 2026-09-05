@@ -142,5 +142,86 @@ class CastListTests(unittest.TestCase):
         self.assertEqual(self.parser._cast_list(prose), [])
 
 
+class BareCapsCueTests(unittest.TestCase):
+    """A speaker named on its own line, with no punctuation to anchor on.
+
+    The largest measured blind spot in the parser. Of 461 Gutenberg books a
+    sweep read and got nothing from, sampling put roughly five in eight here
+    rather than at a legitimate zero -- Racine's Phaedra, Maeterlinck's The Blue
+    Bird and Moliere's Tartuffe among them, all returning 0 monologues from
+    texts full of dialogue. Patterns 1 and 2 need a colon or a period, and
+    pattern 4 needs Title Case; none of them can see this.
+
+        PHAEDRA                        indented, bare
+        THE BEECH                      at column 0
+        TARTUFFE (after sitting down)  with a direction
+    """
+
+    # Each speaker recurs five times: _MIN_CUE_REPEATS is what separates a
+    # speaker from a title that happens to be capitalised, so a shorter fixture
+    # tests nothing.
+    PHAEDRA = (
+        "          OENONE\n"
+        "          How cruelly his eyes, severely fixed,\n"
+        "          Surveyed you almost prostrate at his feet!\n"
+        "          PHAEDRA\n"
+        "          This proud mood that you resent may yield to time.\n"
+        "          OENONE\n"
+        "          He is a son of the Amazon, and cold.\n"
+        "          PHAEDRA\n"
+        "          And yet I saw him blush when he was named.\n"
+        "          OENONE\n"
+        "          Then there is hope for you, and I am glad.\n"
+        "          PHAEDRA\n"
+        "          Hope is the cruellest gift the gods can send.\n"
+        "          OENONE\n"
+        "          Do not despair, my lady, while he lives.\n"
+        "          PHAEDRA\n"
+        "          I have said too much. Leave me to my shame.\n"
+        "          OENONE\n"
+        "          I will not leave you to it. Come away.\n"
+        "          PHAEDRA\n"
+        "          Then lead me where the light cannot find me.\n"
+    )
+
+    def setUp(self):
+        self.parser = PlainTextParser()
+
+    def test_bare_caps_names_are_found(self):
+        cast = self.parser._bare_caps_cast(self.PHAEDRA)
+        self.assertIn("PHAEDRA", cast)
+        self.assertIn("OENONE", cast)
+
+    def test_speeches_split_at_each_cue(self):
+        speeches = self.parser._split_on_bare_caps(
+            self.PHAEDRA, self.parser._bare_caps_cast(self.PHAEDRA))
+        self.assertEqual(len(speeches), 10)   # 5 cues each for two speakers
+        self.assertEqual(speeches[0][0], "OENONE")
+        self.assertIn("severely fixed", speeches[0][1])
+        # A speech must stop at the next cue, not swallow the rest of the play.
+        self.assertNotIn("PHAEDRA", speeches[0][1])
+
+    def test_a_cue_may_carry_a_direction(self):
+        text = self.PHAEDRA.replace("          PHAEDRA\n",
+                                    "          PHAEDRA (rising)\n", 1)
+        self.assertIn("PHAEDRA", self.parser._bare_caps_cast(text))
+
+    def test_a_name_at_column_zero_works(self):
+        """Maeterlinck sets them flush left; Racine indents. Both are cues."""
+        flush = self.PHAEDRA.replace("          ", "")
+        self.assertIn("PHAEDRA", self.parser._bare_caps_cast(flush))
+
+    def test_act_headings_do_not_become_speakers(self):
+        text = ("ACT I\n\nSCENE II\n\n" + self.PHAEDRA) * 1
+        cast = self.parser._bare_caps_cast(text)
+        self.assertNotIn("ACT I", cast)
+        self.assertNotIn("SCENE II", cast)
+
+    def test_a_one_off_capital_line_is_not_a_speaker(self):
+        """A title needs to recur before it counts, or every heading qualifies."""
+        text = "THE TRAGEDY OF PHAEDRA\n\nsome front matter here\n"
+        self.assertEqual(self.parser._bare_caps_cast(text), [])
+
+
 if __name__ == "__main__":
     unittest.main()
