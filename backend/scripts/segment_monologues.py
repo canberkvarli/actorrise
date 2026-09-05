@@ -292,18 +292,56 @@ def segment_monologue(
         f"PLAY / FILM: {play_title}\n\n"
         f"TEXT:\n{text}"
     )
-    try:
-        response = client.chat.completions.create(
-            model=MODEL,
-            max_tokens=8192,
-            response_format={"type": "json_object"},
-            messages=[
-                {"role": "system", "content": SYSTEM_PROMPT},
-                {"role": "user", "content": user_content},
-            ],
-        )
-    except Exception as e:
-        return None, f"api error: {e}"
+    # Rate limits are a pause, not a verdict.
+    #
+    # A 429 used to fall into the generic handler below, get written down as
+    # "api error", and the row moved on unsegmented. That is silent, unbounded
+    # data loss: a run at 8 workers tripped the account's limit a third of the
+    # way in and lost 2,078 of 8,000 rows, while the log still scrolled past at
+    # full speed and the totals looked like progress.
+    #
+    # Retrying makes the run slower under load and correct instead of fast and
+    # lossy. The DB paths in this script already do this; the API path did not.
+    last_error = None
+    for attempt in range(5):
+        try:
+            response = client.chat.completions.create(
+                model=MODEL,
+                max_tokens=8192,
+                response_format={"type": "json_object"},
+                messages=[
+                    {"role": "system", "content": SYSTEM_PROMPT},
+                    {"role": "user", "content": user_content},
+                ],
+            )
+            break
+        except Exception as e:
+            last_error = e
+            text_of = str(e)
+            low = text_of.lower()
+            # A 429 is NOT automatically transient. OpenAI returns the same
+            # status for "slow down" and for "you have no credits remaining",
+            # and the second one never resolves by waiting. Retrying it just
+            # parks every worker in a sleep loop: three of them sat at 0% CPU
+            # for four minutes, having written nothing, and the run looked
+            # alive. Fail fast and loudly on quota so it is obvious what to fix.
+            out_of_credit = ("insufficient_quota" in low
+                             or "no credits remaining" in low
+                             or "exceeded your current quota" in low
+                             or "billing" in low)
+            if out_of_credit:
+                return None, f"OUT OF API CREDIT: {e}"
+            transient = ("429" in text_of or "rate limit" in low
+                         or "overloaded" in low or "timeout" in low
+                         or "503" in text_of or "502" in text_of)
+            if not transient or attempt == 4:
+                return None, f"api error: {e}"
+            # 4, 8, 16, 32 seconds. Jittered by the worker's own position in the
+            # pool simply by virtue of when it failed, which is enough to stop
+            # every thread retrying in lockstep.
+            time.sleep(min(60, 4 * (2 ** attempt)))
+    else:
+        return None, f"api error: {last_error}"
 
     if response.choices[0].finish_reason == "length":
         print(
