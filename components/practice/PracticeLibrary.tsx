@@ -50,7 +50,11 @@ export function PracticeLibrary({
   const deleteScript = useDeleteScript();
   const { user } = useAuth();
   const router = useRouter();
-  const { data: whatsNext, isLoading: whatsNextLoading } = useWhatsNext();
+  const {
+    data: whatsNext,
+    isLoading: whatsNextLoading,
+    isError: whatsNextFailed,
+  } = useWhatsNext();
 
   // ?script={id} (e.g. coming back from the editor, or after an upload) preselects
   // that script. Falls back to most-recent, then the demo.
@@ -160,6 +164,35 @@ export function PracticeLibrary({
                   </div>
                 ) : whatsNext ? (
                   <WhatsNext data={whatsNext} />
+                ) : whatsNextFailed ? (
+                  /* A failed lookup is not an empty shelf. Rendering NothingYet
+                     here would tell an actor with four scripts that their first
+                     scene starts here, which reads as "your work is gone" — and
+                     it would have happened to everyone in the window between
+                     this shipping and the endpoint going live behind it. Say
+                     what went wrong; the shelf beside this still has their
+                     scripts, so nobody is stranded. */
+                  <div className="max-w-md">
+                    <p className="font-typewriter text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                      couldn&apos;t reach the prompt desk
+                    </p>
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                      I couldn&apos;t work out where you left off. Your scripts are
+                      all still here, on the right.
+                    </p>
+                  </div>
+                ) : userScripts.length > 0 ? (
+                  /* Succeeded and found nothing, but they do own scripts: those
+                     scripts are still waiting to be cut, so point at the shelf
+                     rather than asking for another upload. */
+                  <div className="max-w-md">
+                    <p className="font-typewriter text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                      nothing on tonight
+                    </p>
+                    <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                      Pick a script from the shelf to see what&apos;s in it.
+                    </p>
+                  </div>
                 ) : (
                   <NothingYet />
                 )}
