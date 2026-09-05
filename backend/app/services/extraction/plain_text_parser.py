@@ -150,21 +150,40 @@ class PlainTextParser:
         # Matches: "HAMLET. To be or not to be..."
         pattern2 = r'\n([A-Z][A-Z\s\-\.]+)\.\s+([^\n]+(?:\n(?![A-Z][A-Z\s\-\.]+[\.:])[^\n]+)*)'
 
-        speeches = []
+        # Run every pattern and keep whichever reads the text best.
+        #
+        # These used to be a chain: try pattern 1, and only fall through to the
+        # next if the one before found fewer than five speeches. That threshold
+        # is the most expensive line this parser has had. Behn's The Rover is
+        # typeset "Will. Why, how the Devil...", which pattern 4 reads perfectly
+        # and returns 936 speeches from, several over 200 words. But pattern 2
+        # finds SEVEN incidental matches in the same text, seven is not fewer
+        # than five, and so patterns 3, 4 and 5 never ran. The play came out of
+        # a 29,000-word span with one monologue.
+        #
+        # Seven junk matches suppressing nine hundred good ones is not a tuning
+        # problem, it is the wrong question -- "did the first pattern find
+        # enough" instead of "which pattern fits this text". Comparing them
+        # directly has no threshold to get wrong and no ordering to be unlucky
+        # in.
+        #
+        # Compared on speeches whose cue is a plausible CHARACTER, so a pattern
+        # cannot win by matching a thousand act headings.
+        def _named(pairs):
+            return [(c, b) for c, b in pairs
+                    if b and self._is_plausible_character(c)]
 
-        # Try pattern 1 (colon format)
-        for match in re.finditer(pattern1, text, re.MULTILINE):
-            character = match.group(1).strip()
-            speech_text = match.group(2).strip()
-            speeches.append((character, speech_text))
+        attempts = []
 
-        # If pattern 1 didn't find much, try pattern 2
-        if len(speeches) < 5:
-            speeches = []
-            for match in re.finditer(pattern2, text, re.MULTILINE):
-                character = match.group(1).strip()
-                speech_text = match.group(2).strip()
-                speeches.append((character, speech_text))
+        # 1: "HAMLET:\n  To be or not to be..."
+        attempts.append(_named(
+            (m.group(1).strip(), m.group(2).strip())
+            for m in re.finditer(pattern1, text, re.MULTILINE)))
+
+        # 2: "HAMLET. To be or not to be..."
+        attempts.append(_named(
+            (m.group(1).strip(), m.group(2).strip())
+            for m in re.finditer(pattern2, text, re.MULTILINE)))
 
         # Pattern 3: Gutenberg italic cues — "_Mother._ Would you like to..."
         #
@@ -177,12 +196,11 @@ class PlainTextParser:
         # Matched by walking cue positions rather than one regex, because a
         # speech runs until the NEXT cue and expressing that as a single
         # lookahead-heavy pattern is where the other two became unreadable.
-        if len(speeches) < 5:
-            speeches = []
-            cues = list(self._ITALIC_CUE.finditer(text))
-            for i, m in enumerate(cues):
-                end = cues[i + 1].start() if i + 1 < len(cues) else len(text)
-                speeches.append((m.group(1).strip(), text[m.end():end].strip()))
+        cues = list(self._ITALIC_CUE.finditer(text))
+        attempts.append(_named(
+            (m.group(1).strip(),
+             text[m.end(): (cues[i + 1].start() if i + 1 < len(cues) else len(text))].strip())
+            for i, m in enumerate(cues)))
 
         # Pattern 4: Title Case cues — "Dorine.  He passes for a saint..."
         #
@@ -195,10 +213,8 @@ class PlainTextParser:
         # sentence beginning with a capitalised word and a full stop. The first
         # pass proposes names, the second keeps only those that recur, and the
         # speech then runs from one confirmed cue to the next.
-        if len(speeches) < 5:
-            cast = self._title_case_cast(text)
-            if cast:
-                speeches = self._split_on_cast(text, cast)
+        cast = self._title_case_cast(text)
+        attempts.append(_named(self._split_on_cast(text, cast)) if cast else [])
 
         # Pattern 5: a bare ALL-CAPS name alone on its line.
         #
@@ -215,10 +231,10 @@ class PlainTextParser:
         # Confirmed by repetition like pattern 4, because one capitalised line
         # on its own is just as likely to be a title or an act heading. A name
         # that opens several speeches is a speaker.
-        if len(speeches) < 5:
-            cast = self._bare_caps_cast(text)
-            if cast:
-                speeches = self._split_on_bare_caps(text, cast)
+        bare = self._bare_caps_cast(text)
+        attempts.append(_named(self._split_on_bare_caps(text, bare)) if bare else [])
+
+        speeches = max(attempts, key=len)
 
         # Every pattern feeds through the same sanity check on the name. A cue
         # that turns out to be an act heading takes its whole "speech" with it,

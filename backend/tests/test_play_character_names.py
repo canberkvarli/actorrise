@@ -98,6 +98,58 @@ class CastExpansionTests(unittest.TestCase):
                          "Mrs Tarleton")
 
 
+#: One speech's worth of text, long enough to clear a test floor.
+_SPEECH_LINE = "Something of substance said here at reasonable length. " * 6
+
+
+class PatternSelectionTests(unittest.TestCase):
+    """The best-fitting pattern must win, not the first one over a threshold.
+
+    The patterns used to be a chain: try the next only if the one before found
+    fewer than five speeches. Behn's The Rover is typeset "Will. Why, how the
+    Devil...", which the Title Case pattern reads perfectly -- 936 speeches,
+    several over 200 words. But the ALL-CAPS pattern finds SEVEN incidental
+    matches in the same text, and seven is not fewer than five, so the chain
+    stopped there. A 29,000-word play came out with one monologue.
+
+    Seven junk matches must never be able to suppress nine hundred good ones.
+    """
+
+    # Seven ALL-CAPS matches: enough to satisfy the old threshold of five, and
+    # nowhere near a reading of the play. A speech must start with a capital
+    # for the Title Case cue to fire, so these are written as real lines.
+    DECOY = "\n".join(
+        f"MARIA. She crosses to the window and waits there a while, {i}."
+        for i in range(7)
+    )
+    # The same play in the Restoration abbreviated style, which is what the
+    # Title Case pattern reads. Built from a module-level line because a
+    # generator expression in a class body cannot see class attributes.
+    REAL = "\n".join(
+        f"Will. {_SPEECH_LINE}\nBelv. {_SPEECH_LINE}\nFlor. {_SPEECH_LINE}"
+        for _ in range(6)
+    )
+
+    def setUp(self):
+        self.parser = PlainTextParser()
+
+    def test_a_weak_early_pattern_does_not_suppress_a_strong_later_one(self):
+        got = self.parser.extract_monologues(
+            self.DECOY + "\n" + self.REAL, min_words=20)
+        # The Title Case cast must win: Will/Belv/Flor, not seven Marias.
+        speakers = {m["character"] for m in got}
+        self.assertTrue(
+            {"Will", "Belv", "Flor"} & speakers,
+            f"the decoy pattern won; got {speakers}",
+        )
+        self.assertGreater(len(got), 7, "fewer speeches than the decoy offered")
+
+    def test_the_decoy_alone_still_parses(self):
+        """Choosing the max must not mean discarding a text's only reading."""
+        got = self.parser.extract_monologues(self.DECOY, min_words=1)
+        self.assertGreaterEqual(len(got), 1)
+
+
 class CastListTests(unittest.TestCase):
     """Reading the DRAMATIS PERSONAE block itself."""
 
