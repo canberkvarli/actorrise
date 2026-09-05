@@ -38,10 +38,11 @@ from app.models.actor import (
 )
 from app.models.user import User
 from app.api.scenes import whats_next
+from app.models.organization import Organization
 from tests.dbfixture import memory_db, restore
 
 _TABLES = (
-    User, FilmTvReference, Play, UserScript, Scene, SceneLine,
+    Organization, User, FilmTvReference, Play, UserScript, Scene, SceneLine,
     RehearsalSession, RehearsalLineDelivery, SceneFavorite,
 )
 

@@ -274,6 +274,29 @@ def _preprocess_text(text: str) -> str:
     return text
 
 
+def speaker_vocabulary(text: str, declared: Optional[List[str]] = None) -> List[str]:
+    """Every name that might introduce a speech, from the page and from the cast.
+
+    The two splitters below can only break a merged line on a name they know,
+    and they were only ever told the cast list the AI returns. That list gives
+    the dramatis personae — "ROBIN GOODFELLOW", "A FAIRY" — while the cues
+    printed in the script read "ROBIN" and "FAIRY", so on A Midsummer Night's
+    Dream the names never matched and Oberon's speeches stayed glued to Robin's
+    lines. The script already says who speaks; the deterministic parser
+    recognises every cue as it reads. Ask it, and keep the declared names too,
+    for anyone named in the cast but not yet cued in this chunk.
+    """
+    names = {n.strip().upper() for n in (declared or []) if n and n.strip()}
+    try:
+        for section in parse_dialogue(text or ""):
+            names.update(
+                c.strip().upper() for c in section.get("characters", set()) if c and c.strip()
+            )
+    except Exception:
+        pass  # a vocabulary is an optimisation; never fail extraction over it
+    return sorted(names)
+
+
 def _split_inline_speakers(text: str, character_names: List[str]) -> str:
     """
     Split inline speaker tags that got concatenated during PDF text extraction.
@@ -1762,7 +1785,13 @@ Return ONLY valid JSON."""
         """
         import time as _time
 
-        character_names = [c['name'] for c in characters if c.get('name')]
+        # Names from the cast list AND the cues printed in this chunk. The list
+        # alone gave "ROBIN GOODFELLOW" where the page says "ROBIN", so the
+        # splitters below never fired and Oberon's speeches stayed on Robin's
+        # lines. See speaker_vocabulary.
+        character_names = speaker_vocabulary(
+            chunk_text, [c['name'] for c in characters if c.get('name')]
+        )
         char_hint = ', '.join(character_names) if character_names else "(auto-detect)"
 
         # Truncate very large chunks (shouldn't happen after structural splitting)
@@ -2017,7 +2046,10 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         scenes = self.clean_scenes_batch(scenes, script_title)
 
         # Step 5: Deterministic post-processing (merged speakers + embedded stage directions)
-        character_names = [c['name'] for c in characters if c.get('name')]
+        character_names = speaker_vocabulary(
+            "\n".join(c.text for c in chunks),
+            [c['name'] for c in characters if c.get('name')],
+        )
         scenes = _fix_merged_lines(scenes, character_names)
 
         return scenes

@@ -32,12 +32,13 @@ from app.models.actor import (
 )
 from app.models.user import User
 from app.api.scripts import purge_scenes
+from app.models.organization import Organization
 from tests.dbfixture import memory_db, restore
 
 
 # Only the tables the purge walks; see tests/dbfixture for why not all of them.
 _TABLES = (
-    User, FilmTvReference, Play, UserScript, Scene, SceneLine,
+    Organization, User, FilmTvReference, Play, UserScript, Scene, SceneLine,
     RehearsalSession, RehearsalLineDelivery, SceneFavorite,
 )
 

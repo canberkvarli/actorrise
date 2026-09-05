@@ -15,6 +15,13 @@ pragma it would have passed here and still 500'd in production.
 from sqlalchemy import JSON, create_engine, event
 from sqlalchemy.orm import sessionmaker
 
+# users.organization_id is a foreign key onto organizations, and SQLAlchemy
+# refuses to emit the users DDL unless that table is in the metadata. Whether it
+# was depended on which other test module had already imported it, so adding an
+# unrelated test file could break these — which is exactly what happened. Import
+# it here so the fixture stands on its own.
+from app.models.organization import Organization  # noqa: F401
+
 
 def memory_db(models):
     """Create `models`' tables in a fresh in-memory database.
