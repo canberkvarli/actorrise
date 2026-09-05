@@ -20,9 +20,6 @@ fails here the same way it failed in Postgres.
 
 import unittest
 
-from sqlalchemy import JSON, create_engine, event
-from sqlalchemy.orm import sessionmaker
-
 from app.models.actor import (
     FilmTvReference,
     Play,
@@ -35,11 +32,10 @@ from app.models.actor import (
 )
 from app.models.user import User
 from app.api.scripts import purge_scenes
+from tests.dbfixture import memory_db, restore
 
 
-# Only the tables the purge walks. Creating the whole metadata against SQLite
-# fails on pgvector columns elsewhere in the tree, the same reason
-# test_free_read_wall builds one table by hand.
+# Only the tables the purge walks; see tests/dbfixture for why not all of them.
 _TABLES = (
     User, FilmTvReference, Play, UserScript, Scene, SceneLine,
     RehearsalSession, RehearsalLineDelivery, SceneFavorite,
@@ -47,47 +43,11 @@ _TABLES = (
 
 
 def _memory_db():
-    """These tables on SQLite, with foreign keys actually enforced.
-
-    Two things are Postgres-only and have to be stood down for the fixture:
-    server_default=now(), which SQLite refuses as DDL, and ARRAY columns, which
-    it has no type for. Both are module-level shared state on the column
-    objects, so they are restored in _restore_schema once the test is done.
-
-    Foreign keys are switched on deliberately. SQLite ignores them by default,
-    and a purge that deletes in the wrong order would then pass here while still
-    500ing in production, which is exactly the bug being fixed.
-    """
-    saved = []
-    for model in _TABLES:
-        for col in model.__table__.c:
-            # Only now() has to go. Stripping every server_default turned
-            # plain NOT NULL columns like plays.source_type into landmines
-            # that SQLite could no longer fill in for itself.
-            # str() straight off the clause: `x or ""` asks a SQLAlchemy
-            # clause for its truth value, which it refuses to answer.
-            default_sql = str(getattr(col.server_default, "arg", "")).lower()
-            if col.server_default is not None and "now(" in default_sql:
-                saved.append((col, "server_default", col.server_default))
-                col.server_default = None
-            if type(col.type).__name__ == "ARRAY":
-                saved.append((col, "type", col.type))
-                col.type = JSON()
-
-    engine = create_engine("sqlite://")
-
-    @event.listens_for(engine, "connect")
-    def _fk_on(conn, _record):
-        conn.execute("PRAGMA foreign_keys=ON")
-
-    for model in _TABLES:
-        model.__table__.create(engine)
-    return sessionmaker(bind=engine)(), saved
+    return memory_db(_TABLES)
 
 
 def _restore_schema(saved):
-    for col, attr, value in saved:
-        setattr(col, attr, value)
+    restore(saved)
 
 
 class PurgeScenesClearsEverythingHangingOffAScene(unittest.TestCase):

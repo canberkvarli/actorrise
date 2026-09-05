@@ -11,7 +11,6 @@ import UnderConstructionScripts from "@/components/UnderConstructionScripts";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { PracticeLibrary } from "@/components/practice/PracticeLibrary";
-import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
 import { CallboardMarquee } from "@/components/community/CallboardMarquee";
 import {
   HowItWorksWalkthrough,
@@ -21,9 +20,10 @@ import {
 /**
  * /practice — the page that opens after login.
  *
- * A two-pane library: pick a script on the left, see its scenes on the right,
- * open one in the editor to rehearse. Opens on the most-recent script (or the
- * demo for brand-new users).
+ * The rehearsal room. It opens on the work: the line you stopped on, or the
+ * first line of a scene that is ready, set large enough to read from across the
+ * desk. The shelf sits beside it and only takes over when you reach for a
+ * script. See WhatsNext for the ladder that decides what the stage holds.
  */
 export default function PracticePage() {
   // Hooks must run on every render — call before any feature-flag early return.
@@ -36,9 +36,10 @@ export default function PracticePage() {
     const safeScripts = scripts ?? [];
     const userScripts = safeScripts.filter((s) => !s.is_sample);
     const demoScript = safeScripts.find((s) => s.is_sample) ?? null;
-    // Most recently uploaded user script — the default selection.
-    // FUTURE: when recent-rehearsal data lands, default to the most recently
-    // practiced *scene* instead.
+    // Most recently uploaded user script. No longer the default selection —
+    // that FUTURE note about defaulting to the most recently *practiced* scene
+    // is what the stage does now, from rehearsal_sessions. Kept only so a
+    // deep-link with a stale id has somewhere sensible to fall back to.
     const featuredScriptId =
       [...userScripts].sort((a, b) =>
         (b.created_at ?? "").localeCompare(a.created_at ?? ""),
@@ -100,34 +101,17 @@ export default function PracticePage() {
           {/* Ambient activity stays at the very top, first visit or hundredth. */}
           <CallboardMarquee />
 
-          {hasOwnScript ? (
-            /* Screen identity — this is the rehearsal room, not just a list. */
-            <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <p className="font-typewriter text-xs italic tracking-wide text-muted-foreground/70">
-                  (from the top.)
-                </p>
-                <h1 className="mt-1 font-brand text-4xl font-semibold tracking-tight text-foreground sm:text-5xl">
-                  ScenePartner
-                </h1>
-                <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">
-                  Bring in your sides and rehearse every other role with a partner
-                  that holds your lines and never misses a cue.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <HowItWorksButton onOpen={() => setWalkthroughOpen(true)} />
-                <UploadScriptButton variant="primary">Upload a script</UploadScriptButton>
-              </div>
-            </header>
-          ) : (
-            /* First visit: the welcome screen below IS the identity and the CTA,
-               so the header would only push it under the fold and offer a second
-               Upload button. Just keep (?) reachable. */
-            <div className="flex justify-end sm:-mb-9">
-              <HowItWorksButton onOpen={() => setWalkthroughOpen(true)} />
-            </div>
-          )}
+          {/* No title, no tagline.
+              This used to read "ScenePartner" in Playfair over a paragraph
+              explaining what ScenePartner is — landing-page copy sitting on the
+              app's home screen, seen daily by people who already bought it, and
+              a second Playfair title competing with the script's own. The stage
+              below opens on a real line of dialogue, which says what this room
+              is for far better than a sentence describing it. All that is left
+              up here is the way in and the way to ask. */}
+          <div className="flex items-center justify-end gap-2">
+            <HowItWorksButton onOpen={() => setWalkthroughOpen(true)} />
+          </div>
 
           <Suspense fallback={null}>
             <PracticeLibrary

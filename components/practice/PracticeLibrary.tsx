@@ -1,35 +1,38 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { IconArrowRight, IconPlayerPlayFilled } from "@tabler/icons-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
+import { IconArrowLeft } from "@tabler/icons-react";
 import { toast } from "sonner";
 
 import api from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ConfirmDeleteDialog } from "@/components/ui/confirm-delete-dialog";
-import { getGenreDotClassName } from "@/lib/genreColors";
-import { HelpVideoDialog } from "@/components/help/HelpVideoDialog";
-import { FIRST_SCENE_VIDEO } from "@/lib/help-videos";
+import { Skeleton } from "@/components/ui/skeleton";
 import { UploadScriptButton } from "@/components/practice/UploadScriptButton";
 import { PracticeLibraryRail } from "@/components/practice/PracticeLibraryRail";
 import { PracticeScenePanel } from "@/components/practice/PracticeScenePanel";
+import { WhatsNext, NothingYet } from "@/components/practice/WhatsNext";
+import { useWhatsNext } from "@/hooks/useWhatsNext";
 import { useDeleteScript, type UserScript } from "@/hooks/useScripts";
 
 interface PracticeLibraryProps {
   /** All scripts (user + demo). */
   scripts: UserScript[];
-  /** Most-recent user script — the default selection. */
+  /** Most-recent user script — kept for the deep-link fallback. */
   featuredScriptId: number | null;
-  /** System sample id (selected by default for brand-new users). */
+  /** System sample id. */
   demoScriptId: number | null;
 }
 
 /**
- * Two-pane practice library: a script picker (left rail / mobile chips) and the
- * selected script's scenes (right). Opens on the most-recent script, or the
- * demo for brand-new users. Selection lives here; scenes load lazily in the panel.
+ * The rehearsal room: what you were working on, and the shelf it came off.
+ *
+ * This was a two-pane library that opened on the most recently *uploaded*
+ * script — a filing order, not a working one. Now the stage leads with the next
+ * real thing to do (see useWhatsNext), and a script is only selected when you
+ * reach for one. Selection lives here; scenes load lazily in the panel.
  */
 export function PracticeLibrary({
   scripts,
@@ -46,6 +49,8 @@ export function PracticeLibrary({
   const [deleteTarget, setDeleteTarget] = useState<UserScript | null>(null);
   const deleteScript = useDeleteScript();
   const { user } = useAuth();
+  const router = useRouter();
+  const { data: whatsNext, isLoading: whatsNextLoading } = useWhatsNext();
 
   // ?script={id} (e.g. coming back from the editor, or after an upload) preselects
   // that script. Falls back to most-recent, then the demo.
@@ -54,17 +59,14 @@ export function PracticeLibrary({
   const paramId =
     paramScriptId && ordered.some((s) => s.id === paramScriptId) ? paramScriptId : null;
 
-  const defaultId = paramId ?? featuredScriptId ?? demoScriptId ?? ordered[0]?.id ?? null;
+  // Nothing is selected by default any more. The stage opens on what you were
+  // actually doing; a script is only "selected" once you reach for one on the
+  // shelf, or arrive back here from the editor with ?script= set. Picking the
+  // most recent upload as a default is what made this a file browser.
+  const paramSelected = paramId ? ordered.find((s) => s.id === paramId) ?? null : null;
   const isValid = selectedId != null && ordered.some((s) => s.id === selectedId);
-  const effectiveId = isValid ? selectedId : defaultId;
+  const effectiveId = isValid ? selectedId : paramSelected?.id ?? null;
   const selectedScript = ordered.find((s) => s.id === effectiveId) ?? null;
-
-  // First run means "nothing of your own yet" — not "nothing at all". The API
-  // hands every account the sample scripts, so keying the welcome off the total
-  // meant it never showed in production and its demo button was unreachable.
-  if (userScripts.length === 0) {
-    return <EmptyState demos={demoScripts} />;
-  }
 
   const handleConfirmDelete = async () => {
     if (!deleteTarget) return;
@@ -106,10 +108,70 @@ export function PracticeLibrary({
 
   return (
     <>
-      <div className="space-y-5">
-        <div>
-          <h2 className="mb-3 font-typewriter text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            Your shelf
+      {/* The room: the work on the left, the shelf on the right.
+          It was a header, then a shelf, then a panel, stacked — which reads as
+          a file browser however the type is set. The split gives the work the
+          larger measure and demotes the shelf to what it is: where the rest of
+          it lives until you reach for it. */}
+      <div className="grid gap-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)] lg:gap-12">
+        {/* The stage. One region, two things it can hold, and the swap between
+            them is the only motion on the screen after load. */}
+        <div className="min-w-0">
+          <AnimatePresence mode="wait" initial={false}>
+            {selectedScript ? (
+              <motion.div
+                key={`script-${selectedScript.id}`}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                className="min-w-0"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedId(null);
+                    // The deep-link is what put us here; clear it or the
+                    // back-to-stage button appears to do nothing on remount.
+                    router.replace("/practice", { scroll: false });
+                  }}
+                  className="mb-4 inline-flex items-center gap-1.5 font-typewriter text-[11px] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  <IconArrowLeft className="h-3.5 w-3.5" />
+                  back to the stage
+                </button>
+                <PracticeScenePanel script={selectedScript} />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="stage"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+                className="min-w-0"
+              >
+                {whatsNextLoading ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-3 w-40" />
+                    <Skeleton className="h-14 w-3/4" />
+                    <Skeleton className="h-20 w-full max-w-md" />
+                    <Skeleton className="h-11 w-40" />
+                  </div>
+                ) : whatsNext ? (
+                  <WhatsNext data={whatsNext} />
+                ) : (
+                  <NothingYet />
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* The shelf */}
+        <div className="min-w-0 lg:border-l lg:border-border/50 lg:pl-10">
+          <h2 className="mb-3 font-typewriter text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+            On the shelf
           </h2>
           <PracticeLibraryRail
             scripts={ordered}
@@ -117,10 +179,12 @@ export function PracticeLibrary({
             onSelect={setSelectedId}
             onRequestDelete={setDeleteTarget}
             onReport={handleReport}
+            orientation="column"
           />
+          <div className="mt-4">
+            <UploadScriptButton variant="compact">Bring in a script</UploadScriptButton>
+          </div>
         </div>
-
-        {selectedScript && <PracticeScenePanel key={selectedScript.id} script={selectedScript} />}
       </div>
 
       <ConfirmDeleteDialog
@@ -136,88 +200,5 @@ export function PracticeLibrary({
   );
 }
 
-function EmptyState({ demos }: { demos: UserScript[] }) {
-  const [videoOpen, setVideoOpen] = useState(false);
-
-  return (
-    <section className="flex flex-col items-center justify-center px-4 py-4 text-center sm:py-6">
-      <p className="stage-direction text-sm sm:text-base text-muted-foreground/70">
-        (an empty stage. for now.)
-      </p>
-      <h1 className="mt-4 max-w-2xl font-brand text-4xl sm:text-5xl md:text-6xl font-medium leading-[1.05] text-balance">
-        Your first <em className="italic text-primary">scene</em> starts here.
-      </h1>
-      <p className="mt-4 max-w-md text-base text-muted-foreground leading-relaxed">
-        Upload any script and rehearse with a partner that reads every other
-        role, holds your lines, and never misses a cue.
-      </p>
-      <div className="mt-8 flex flex-col sm:flex-row gap-3 sm:items-center justify-center">
-        <UploadScriptButton variant="primary">Upload a script</UploadScriptButton>
-      </div>
-
-      {/* Free carried 0 script uploads until 2026-08-11, so "upload a script"
-          read as an invitation to hit a paywall. It now includes one, and saying
-          so is the difference between trying and assuming. */}
-      <p className="mt-4 text-xs text-muted-foreground">
-        Your first script is free.
-      </p>
-
-      {/* Nothing of your own yet — so borrow one of mine and hear it work. */}
-      {demos.length > 0 && (
-        <div className="mt-8 w-full max-w-lg">
-          <p className="stage-direction text-xs text-muted-foreground/70">
-            (or borrow one of mine.)
-          </p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2">
-            {demos.map((demo) => (
-              <Link prefetch={false}
-                key={demo.id}
-                href={`/practice/${demo.id}`}
-                className="group relative overflow-hidden rounded-lg border border-border/60 bg-card/30 py-4 pl-5 pr-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/30"
-              >
-                <span
-                  aria-hidden
-                  className={`absolute inset-y-0 left-0 w-1 opacity-70 ${getGenreDotClassName(demo.genre)}`}
-                />
-                <p className="font-typewriter text-sm font-semibold text-foreground">
-                  {demo.title}
-                </p>
-                <p className="mt-0.5 truncate font-typewriter text-xs text-muted-foreground">
-                  {demo.author}
-                </p>
-                <span className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors group-hover:text-primary">
-                  Open it
-                  <IconArrowRight className="h-3.5 w-3.5" />
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {FIRST_SCENE_VIDEO.youtubeId && (
-        <>
-          <button
-            type="button"
-            onClick={() => setVideoOpen(true)}
-            /* Bare text button, so its box was only as tall as the line (20px).
-               px-3 keeps the label visually where it was while giving the tap
-               a real 44px box on the page new actors actually land on. */
-            className="mt-6 inline-flex min-h-[44px] items-center gap-1.5 px-3 text-sm text-muted-foreground transition-colors hover:text-foreground md:min-h-0 md:px-0"
-          >
-            <IconPlayerPlayFilled className="h-3.5 w-3.5" />
-            Watch how it works ({FIRST_SCENE_VIDEO.durationLabel})
-          </button>
-          <HelpVideoDialog
-            youtubeId={FIRST_SCENE_VIDEO.youtubeId}
-            title={FIRST_SCENE_VIDEO.title}
-            open={videoOpen}
-            onOpenChange={setVideoOpen}
-          />
-        </>
-      )}
-    </section>
-  );
-}
 
 export default PracticeLibrary;

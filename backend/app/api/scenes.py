@@ -10,7 +10,7 @@ from app.core.database import get_db
 from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import require_scene_partner
 from app.models.actor import (Play, RehearsalLineDelivery, RehearsalSession,
-                              Scene, SceneFavorite, UserScript)
+                              Scene, SceneFavorite, SceneLine, UserScript)
 from app.models.billing import UserSubscription
 from app.models.user import User
 from app.services.ai.langchain.scene_partner import (ScenePartnerGraph,
@@ -427,6 +427,163 @@ class FirstRehearsalSceneResponse(BaseModel):
     ai_character: str
     title: str
     play_title: Optional[str] = None
+
+
+def _line_payload(db: Session, scene_id: int, index: int) -> Optional[dict]:
+    """One line of the scene, as words rather than a number."""
+    line = (
+        db.query(SceneLine)
+        .filter(SceneLine.scene_id == scene_id)
+        .order_by(SceneLine.line_order)
+        .offset(max(0, index))
+        .first()
+    )
+    if line is None:  # index past the end, or a scene with no lines
+        line = (
+            db.query(SceneLine)
+            .filter(SceneLine.scene_id == scene_id)
+            .order_by(SceneLine.line_order)
+            .first()
+        )
+    if line is None:
+        return None
+    return {"character": line.character_name, "text": line.text}
+
+
+def _rung(rung: str, script, scene=None, line=None, character=None,
+          progress=None, session_id=None) -> dict:
+    return {
+        "rung": rung,
+        "script": {"id": script.id, "title": script.title, "genre": script.genre,
+                   "is_sample": bool(script.is_sample)} if script else None,
+        "scene": {"id": scene.id, "title": scene.title, "act": scene.act,
+                  "scene_number": scene.scene_number} if scene else None,
+        "character": character,
+        "line": line,
+        "progress": progress,
+        "session_id": session_id,
+    }
+
+
+def whats_next(db: Session, user_id: int) -> Optional[dict]:
+    """The next real thing to do, for the top of the rehearsal room.
+
+    /practice opened on the most recently *uploaded* script, which is a filing
+    order rather than a working one; the page carried a FUTURE note admitting
+    it. This answers the question the actor actually has when they walk in.
+
+    A ladder, best rung first. Every rung that can carry a line of dialogue
+    does, because the screen should always show a piece of writing and never a
+    status message. Most accounts have never rehearsed, so `start` is the common
+    rung and gets the same treatment as `resume`.
+    """
+    from datetime import datetime, timezone
+
+    from app.services.rehearsal_cleanup import is_session_stale
+
+    now = datetime.now(timezone.utc)
+
+    def as_utc(dt):
+        """These columns are DateTime without a zone, so they read back naive.
+
+        Comparing one against an aware now() raises rather than returning a
+        wrong answer, which would take the whole screen down for anyone with a
+        session open. They are written as UTC, so say so.
+        """
+        if dt is None:
+            return None
+        return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+
+    # 1. Unfinished work. Stale ones are ghosts — the hourly sweep abandons them.
+    open_sessions = (
+        db.query(RehearsalSession)
+        .filter(
+            RehearsalSession.user_id == user_id,
+            RehearsalSession.status == "in_progress",
+        )
+        .order_by(RehearsalSession.started_at.desc(), RehearsalSession.id.desc())
+        .all()
+    )
+    for session in open_sessions:
+        last_activity = as_utc(session.updated_at or session.started_at)
+        if is_session_stale("in_progress", last_activity, now):
+            continue
+        scene = db.query(Scene).filter(Scene.id == session.scene_id).first()
+        if scene is None:
+            continue
+        script = (
+            db.query(UserScript).filter(UserScript.id == scene.user_script_id).first()
+            if scene.user_script_id else None
+        )
+        at = session.current_line_index or 0
+        return _rung(
+            "resume", script, scene,
+            line=_line_payload(db, scene.id, at),
+            character=session.user_character,
+            progress={"current": at, "total": session.max_lines or scene.line_count or 0},
+            session_id=session.id,
+        )
+
+    own = (
+        db.query(UserScript)
+        .filter(UserScript.user_id == user_id)
+        .order_by(UserScript.created_at.desc(), UserScript.id.desc())
+        .all()
+    )
+
+    # 2. Nothing open, but something ready to start: the newest script that has
+    #    scenes, opened on its first line.
+    for script in own:
+        scene = (
+            db.query(Scene)
+            .filter(Scene.user_script_id == script.id)
+            .order_by(Scene.id)
+            .first()
+        )
+        if scene is not None:
+            return _rung(
+                "start", script, scene,
+                line=_line_payload(db, scene.id, 0),
+                character=scene.character_1_name,
+                progress={"current": 0, "total": scene.line_count or 0},
+            )
+
+    # 3. A script arrived and has no scenes to rehearse yet.
+    if own:
+        return _rung("cut", own[0])
+
+    # 4. Nothing of their own. The sample play speaks first — a real line of
+    #    Shakespeare is a better welcome than an empty shelf.
+    demo_scene = (
+        db.query(Scene)
+        .join(UserScript, Scene.user_script_id == UserScript.id)
+        .filter(UserScript.is_sample.is_(True))
+        .order_by(UserScript.id, Scene.id)
+        .first()
+    )
+    if demo_scene is not None:
+        script = db.query(UserScript).filter(
+            UserScript.id == demo_scene.user_script_id
+        ).first()
+        return _rung(
+            "demo", script, demo_scene,
+            line=_line_payload(db, demo_scene.id, 0),
+            character=demo_scene.character_1_name,
+            progress={"current": 0, "total": demo_scene.line_count or 0},
+        )
+
+    return None
+
+
+# NOTE: must be declared BEFORE "/{scene_id}" or FastAPI matches
+# "whats-next" as a scene_id and 422s on int parsing.
+@router.get("/whats-next")
+def get_whats_next(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """What the rehearsal room should put in front of this actor."""
+    return {"next": whats_next(db, current_user.id)}
 
 
 # NOTE: must be declared BEFORE "/{scene_id}" or FastAPI matches
