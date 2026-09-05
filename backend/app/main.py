@@ -14,6 +14,7 @@ from app.api.admin.searches import router as admin_searches_router
 from app.api.admin.stripe_revenue import router as admin_stripe_revenue_router
 from app.api.admin.sessions import router as admin_sessions_router
 from app.api.admin.users import router as admin_users_router
+from app.api.admin.organizations import router as admin_organizations_router
 from app.api.audition import router as audition_router
 from app.api.community import router as community_router
 from app.api.monologue_work import router as monologue_work_router
@@ -296,6 +297,7 @@ app.include_router(admin_monologues_router)
 app.include_router(admin_film_tv_router)
 app.include_router(admin_stats_router)
 app.include_router(admin_users_router)
+app.include_router(admin_organizations_router)
 app.include_router(admin_feedback_router)
 app.include_router(admin_emails_router)
 app.include_router(admin_searches_router)

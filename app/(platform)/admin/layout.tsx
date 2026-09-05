@@ -15,6 +15,7 @@ import {
   IconMicrophone,
   IconMessageReport,
   IconClipboardCheck,
+  IconBuilding,
 } from "@tabler/icons-react";
 
 type NavItem = {
@@ -49,6 +50,7 @@ const GROUPS: NavGroup[] = [
     title: "People",
     items: [
       { href: "/admin/users", label: "Users", icon: IconUsers },
+      { href: "/admin/organizations", label: "Organizations", icon: IconBuilding },
     ],
   },
   {

@@ -1,5 +1,5 @@
 from app.core.database import Base
-from sqlalchemy import Boolean, Column, DateTime, Integer, String, text
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, text
 from sqlalchemy.orm import relationship
 
 
@@ -67,8 +67,14 @@ class User(Base):
     # Nullable with no backfill — NULL means unknown/legacy, which is what every
     # pre-existing account is. Never default it to 'actor'.
     account_type = Column(String, nullable=True)
-    # School, studio or company. Free text, capped at 280 chars by the API.
+    # School, studio or company, as the USER describes themselves. Free text,
+    # capped at 280 chars by the API, shown on their profile. Never rewrite it
+    # from the admin: it is their words about themselves.
     organization = Column(String, nullable=True)
+    # Which Organization we have decided this account belongs to. Set by an admin,
+    # never by the user, and never inferred automatically: a teacher's students
+    # sign up on gmail, so the email domain cannot answer this.
+    organization_id = Column(Integer, ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, index=True)
 
     # Last changelog entry the user dismissed (drives the "What's new" modal)
     last_seen_feature_id = Column(String, nullable=True)
