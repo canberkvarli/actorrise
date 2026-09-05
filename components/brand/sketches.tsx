@@ -16,22 +16,35 @@ type SketchProps = {
   /** seconds before the drawing starts once in view */
   delay?: number;
   title?: string;
+  /**
+   * Draw on mount instead of waiting to be scrolled into view.
+   *
+   * `whileInView` holds every path at pathLength 0 — i.e. fully invisible —
+   * until an IntersectionObserver fires. That is right for a decorative accent
+   * far down a landing page and wrong anywhere the sketch is load-bearing: on
+   * a play cover it is the artwork, and "invisible until observed" means a
+   * blank card whenever the observer is late, throttled, or never runs.
+   */
+  eager?: boolean;
 };
 
-function useSketchAnimation(delay: number) {
+function useSketchAnimation(delay: number, eager = false) {
   const reduce = useReducedMotion();
-  return (order: number): Partial<ComponentProps<typeof motion.path>> =>
-    reduce
-      ? {}
+  return (order: number): Partial<ComponentProps<typeof motion.path>> => {
+    if (reduce) return {};
+    const transition = {
+      pathLength: { duration: 0.9, ease: "easeInOut" as const, delay: delay + order * 0.18 },
+      opacity: { duration: 0.01, delay: delay + order * 0.18 },
+    };
+    return eager
+      ? { initial: { pathLength: 0, opacity: 0 }, animate: { pathLength: 1, opacity: 1 }, transition }
       : {
           initial: { pathLength: 0, opacity: 0 },
           whileInView: { pathLength: 1, opacity: 1 },
           viewport: { once: true, amount: 0.6 },
-          transition: {
-            pathLength: { duration: 0.9, ease: "easeInOut", delay: delay + order * 0.18 },
-            opacity: { duration: 0.01, delay: delay + order * 0.18 },
-          },
+          transition,
         };
+  };
 }
 
 /**
@@ -88,8 +101,8 @@ function Frame({
 }
 
 /** Yorick — Hamlet. The one everybody brings. */
-export function SkullSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+export function SkullSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
       <motion.path
@@ -114,8 +127,8 @@ export function SkullSketch({ size = 48, className, delay = 0, title }: SketchPr
 }
 
 /** Comedy and tragedy — the trade itself. */
-export function MasksSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+export function MasksSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
       <motion.path
@@ -136,39 +149,83 @@ export function MasksSketch({ size = 48, className, delay = 0, title }: SketchPr
   );
 }
 
-/** Is this a dagger which I see before me — Macbeth. */
-export function DaggerSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+/**
+ * Is this a dagger which I see before me — Macbeth.
+ *
+ * Redrawn 2026-09-05. The old one was a bulging leaf-shaped blade with
+ * radiating lines above it, which read as a quill pen throwing sparkles. A
+ * dagger is legible only if it has the four parts: a straight tapered blade
+ * with a real point, a crossguard wider than the grip, the grip itself, and a
+ * pommel to stop the hand. All four are here and nothing else is.
+ */
+export function DaggerSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
-      <motion.path {...strokeProps} {...draw(0)} d="M32 4 C36 12 36 26 32 38 C28 26 28 12 32 4 Z" />
-      <motion.path {...strokeProps} {...draw(1)} d="M22 40 L42 40" />
-      <motion.path {...strokeProps} {...draw(2)} d="M32 40 L32 52 M28 56 C30 53 34 53 36 56" />
-      <motion.path {...strokeProps} {...draw(3)} d="M14 16 L18 20 M50 16 L46 20 M12 30 L17 31 M52 30 L47 31" />
+      {/* Blade: straight edges to a single point, not a curve that bulges. */}
+      <motion.path
+        {...strokeProps}
+        {...draw(0)}
+        d="M32 5 L28.6 26 L28.6 30 L35.4 30 L35.4 26 Z"
+      />
+      {/* Fuller — the groove down the centre. Reads as forged metal. */}
+      <motion.path {...strokeProps} {...draw(1)} d="M32 11 L32 27" />
+      {/* Crossguard, swept very slightly down at the tips. */}
+      <motion.path {...strokeProps} {...draw(2)} d="M21 29.5 C25 31.4 39 31.4 43 29.5" />
+      {/* Grip, tapering in toward the pommel. */}
+      <motion.path {...strokeProps} {...draw(3)} d="M29.6 32 L30.4 45 L33.6 45 L34.4 32" />
+      {/* Pommel. A path, not a motion.circle — the shared draw() helper is
+          typed against motion.path, and pathLength animates on a path anyway. */}
+      <motion.path
+        {...strokeProps}
+        {...draw(4)}
+        d="M28.4 49 A3.6 3.6 0 1 1 35.6 49 A3.6 3.6 0 1 1 28.4 49 Z"
+      />
     </Frame>
   );
 }
 
-/** A rose by any other name — Romeo & Juliet. */
-export function RoseSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+/**
+ * A rose by any other name — Romeo & Juliet.
+ *
+ * Redrawn 2026-09-05. The old bloom was a single unbroken line spiralling
+ * outward, which flattened into a lollipop: a disc on a stick. A rose reads as
+ * a rose from the overlap of a few distinct petals, so the bloom is now a
+ * closed outer silhouette with two petal folds and a small tight centre inside
+ * it, and the calyx sits between bloom and stem to stop the flower floating.
+ */
+export function RoseSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
-      <motion.path
-        {...strokeProps}
-        {...draw(0)}
-        d="M32 22 C30 18 33 15 36 16 C40 17 40 22 36 25 C31 28 25 25 26 19 C27 12 36 9 42 14 C48 19 46 28 38 31 C29 34 20 28 22 18"
-      />
-      <motion.path {...strokeProps} {...draw(1)} d="M32 32 C32 40 32 48 32 58" />
-      <motion.path {...strokeProps} {...draw(2)} d="M32 42 C27 40 23 41 20 38 C25 36 30 38 32 42 Z" />
-      <motion.path {...strokeProps} {...draw(3)} d="M32 50 C37 48 41 49 44 46 C39 44 34 46 32 50 Z" />
+      {/* A bud in profile, not a bloom seen head-on. Every head-on attempt
+          collapsed into a ring — first a lollipop, then, once inner petals
+          were added, a bullseye — because concentric near-circles read as
+          circles no matter what they are meant to be. In profile the
+          silhouette comes to a point at the top and the sepals flare at the
+          bottom, so it can never be mistaken for a disc.
+
+          The two outer petals meet at the tip and part at the base. */}
+      <motion.path {...strokeProps} {...draw(0)} d="M32 33 C27 32 24 27 24.5 21 C25 15.5 28.5 11.5 32 10" />
+      <motion.path {...strokeProps} {...draw(0)} d="M32 33 C37 32 40 27 39.5 21 C39 15.5 35.5 11.5 32 10" />
+      {/* The furled petal inside, two long strokes that echo the outer curve
+          without closing — this is the wrap that says "rose" and not "leaf". */}
+      <motion.path {...strokeProps} {...draw(1)} d="M28.6 14.5 C30.6 18.5 31 24 30 30.5" />
+      <motion.path {...strokeProps} {...draw(1)} d="M35.4 14.5 C33.4 18.5 33 24 34 30.5" />
+      {/* Sepals, flaring down and away from the bud. */}
+      <motion.path {...strokeProps} {...draw(2)} d="M26.5 28.5 C23.5 31.5 22 35.5 23 38.5 C26 37 27.5 33 27.5 30" />
+      <motion.path {...strokeProps} {...draw(2)} d="M37.5 28.5 C40.5 31.5 42 35.5 41 38.5 C38 37 36.5 33 36.5 30" />
+      <motion.path {...strokeProps} {...draw(3)} d="M32 33 L32 57" />
+      {/* One leaf each side, at different heights so it is not a symmetry drill. */}
+      <motion.path {...strokeProps} {...draw(4)} d="M32 44 C27.5 41.5 23 43 21.5 46.5 C25.5 48.5 30 47.5 32 44 Z" />
+      <motion.path {...strokeProps} {...draw(4)} d="M32 50 C36 48 40 49.5 41 52.5 C37.5 54 34 53 32 50 Z" />
     </Frame>
   );
 }
 
 /** Uneasy lies the head — Lear, the histories, every king. */
-export function CrownSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+export function CrownSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
       <motion.path
@@ -183,8 +240,8 @@ export function CrownSketch({ size = 48, className, delay = 0, title }: SketchPr
 }
 
 /** The Fool, Feste, the joker — the one who tells the truth. */
-export function JesterSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+export function JesterSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
       <motion.path
@@ -204,8 +261,8 @@ export function JesterSketch({ size = 48, className, delay = 0, title }: SketchP
 }
 
 /** The stage door, ajar, light spilling through. Walk in off book. */
-export function StageDoorSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+export function StageDoorSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
       <motion.path {...strokeProps} {...draw(0)} d="M16 58 L16 8 L48 8 L48 58" />
@@ -217,8 +274,8 @@ export function StageDoorSketch({ size = 48, className, delay = 0, title }: Sket
 }
 
 /** A stage mic, waves coming off it — say the lines out loud. */
-export function MicSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+export function MicSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
       <motion.path {...strokeProps} {...draw(0)} d="M22 18 A10 10 0 1 1 42 18 A10 10 0 1 1 22 18" />
@@ -238,8 +295,8 @@ export function MicSketch({ size = 48, className, delay = 0, title }: SketchProp
 }
 
 /** The ghost light — a bare bulb on a stand, left burning on the empty stage. */
-export function GhostLightSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+export function GhostLightSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
       <motion.path {...strokeProps} {...draw(0)} d="M24 16 A8 8 0 1 1 40 16 A8 8 0 1 1 24 16" />
@@ -290,8 +347,8 @@ export function CurtainSketch({
 }
 
 /** A follow spot: the lamp hunting for someone worth lighting. */
-export function SpotlightSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+export function SpotlightSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   const fade = useSketchFade(delay);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
@@ -316,8 +373,8 @@ export function SpotlightSketch({ size = 48, className, delay = 0, title }: Sket
 }
 
 /** Clapperboard — scene one, take one. The film and TV half of the library. */
-export function ClapperSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+export function ClapperSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
       {/* the stick, hinged at the left and held open */}
@@ -335,8 +392,8 @@ export function ClapperSketch({ size = 48, className, delay = 0, title }: Sketch
 }
 
 /** A stack of sides, dog-eared. Twelve thousand pages, give or take. */
-export function ScriptPagesSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+export function ScriptPagesSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
       {/* the sheet underneath, just showing */}
@@ -355,8 +412,8 @@ export function ScriptPagesSketch({ size = 48, className, delay = 0, title }: Sk
 }
 
 /** A ticket stub — the house, the seat, the night you kept the corner of. */
-export function TicketSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+export function TicketSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   const fade = useSketchFade(delay);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
@@ -376,8 +433,8 @@ export function TicketSketch({ size = 48, className, delay = 0, title }: SketchP
 }
 
 /** Footlights along the lip of the stage — the house is warming up. */
-export function FootlightsSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+export function FootlightsSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
       {/* Redrawn: the old version put a wide arc across the top with three
@@ -404,8 +461,8 @@ export function FootlightsSketch({ size = 48, className, delay = 0, title }: Ske
 }
 
 /** A reel of film. The other half of the library, spinning. */
-export function ReelSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+export function ReelSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
       <motion.path {...strokeProps} {...draw(0)} d="M32 8 A24 24 0 1 1 31.9 8 Z" />
@@ -418,8 +475,8 @@ export function ReelSketch({ size = 48, className, delay = 0, title }: SketchPro
 }
 
 /** The marquee out front, with the title still going up. */
-export function MarqueeSketch({ size = 48, className, delay = 0, title }: SketchProps) {
-  const draw = useSketchAnimation(delay);
+export function MarqueeSketch({ size = 48, className, delay = 0, title, eager }: SketchProps) {
+  const draw = useSketchAnimation(delay, eager);
   return (
     <Frame size={size} className={className} title={title} viewBox="0 0 64 64">
       {/* The building it hangs off. The canopy widens toward the bottom and the

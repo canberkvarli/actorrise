@@ -6,12 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Monologue } from "@/types/actor";
 import { useSaveCut } from "@/hooks/useCollectionMeta";
 import { estimateDurationSeconds, formatClock } from "@/lib/estimateDuration";
+import { monologueSegments } from "@/lib/monologueSegments";
 
 /**
- * Audition cut editor: pick the first and last spoken line of your cut and the
- * live duration updates as you go, so trimming to a 1- or 2-minute limit stops
- * being a Google-Doc chore. Line indices are into text.split("\n"), the same
- * convention the export uses.
+ * Audition cut editor: pick the first and last unit of your cut and the live
+ * duration updates as you go, so trimming to a 1- or 2-minute limit stops
+ * being a Google-Doc chore.
+ *
+ * The units come from monologueSegments() — sentences for prose, lines for
+ * verse — and the saved indices are positions in that array, which is what the
+ * export applies. It used to be text.split("\n") on both sides, which sounds
+ * equivalent and was not: 98.2% of this corpus has no newline, so the editor
+ * showed a single row containing the whole speech and cutting was impossible.
  *
  * Every actor cuts to fit a time limit; this makes the cut a property the actor
  * owns on the piece, not a throwaway copy.
@@ -27,7 +33,7 @@ export function CutEditor({
    *  it and keep the parts that carry information: the instruction and clock. */
   embedded?: boolean;
 }) {
-  const lines = useMemo(() => (monologue.text ?? "").split("\n"), [monologue.text]);
+  const lines = useMemo(() => monologueSegments(monologue.text), [monologue.text]);
   // Indices of the lines that actually carry words — only these are selectable.
   const spokenIdx = useMemo(
     () => lines.map((l, i) => (l.trim() ? i : -1)).filter((i) => i >= 0),

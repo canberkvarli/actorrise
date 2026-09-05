@@ -240,6 +240,24 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
     [resetTranscript, goToLine],
   );
 
+  /**
+   * Skip, as opposed to advancing by saying the line.
+   *
+   * With the lines hidden, goToLine() masks the new line and only the STALL_MS
+   * timer un-masks it — so pressing Skip left you looking at three seconds of
+   * dots. But pressing Skip *is* the admission that you do not have the line,
+   * which is the exact thing that timer spends three seconds trying to detect.
+   * Waiting for it again is asking a question you have already been answered.
+   * Cue the new line at once.
+   */
+  const skipLine = useCallback(
+    (next: number) => {
+      goToLineAndReset(next);
+      if (offBook) setRevealCurrent(true);
+    },
+    [goToLineAndReset, offBook],
+  );
+
   // Stall timer: quiet on the current line → cue it (reveal the text).
   useEffect(() => {
     if (!started || completed || !isListening) return;
@@ -759,7 +777,7 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
                   {offBook ? "Show lines" : "Hide lines"}
                 </DockButton>
                 {!tapToAdvance && (
-                  <DockButton onClick={() => goToLineAndReset(activeIndex + 1)}>Skip</DockButton>
+                  <DockButton onClick={() => skipLine(activeIndex + 1)}>Skip</DockButton>
                 )}
                 <DockButton onClick={restart}>Restart</DockButton>
               </div>

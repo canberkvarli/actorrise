@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter, notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +11,7 @@ import {
   IconEdit,
   IconBulb,
   IconBulbFilled,
+  IconNote,
 } from "@tabler/icons-react";
 import { Monologue } from "@/types/actor";
 import api from "@/lib/api";
@@ -75,6 +76,8 @@ export default function MonologueDetailPage() {
   // right where the intent is. (Savers return 2.1x more than non-savers.)
   const [justSaved, setJustSaved] = useState(false);
   const notesRef = useRef<HTMLTextAreaElement>(null);
+  const notesSectionRef = useRef<HTMLElement>(null);
+  const [notesState, setNotesState] = useState<"idle" | "saving" | "saved">("idle");
   /** Zero-height marker just above the sticky bar. The bar itself can't be the
    *  scroll target — once it sticks, its own rect stops moving. */
   const anchorRef = useRef<HTMLDivElement>(null);
@@ -92,9 +95,43 @@ export default function MonologueDetailPage() {
   };
 
   const scrollToNotes = () => {
-    notesRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    notesSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     notesRef.current?.focus();
   };
+
+  /**
+   * Write the note if it differs. Called by the debounce below and again on
+   * blur, so an in-flight edit is committed either way; the equality check
+   * makes the second call a no-op rather than a duplicate write.
+   */
+  const flushNotes = useCallback(() => {
+    if (!monologue) return;
+    if ((notes ?? "") === (monologue.notes ?? "")) return;
+    setNotesState("saving");
+    saveNotes.mutate(
+      { monologueId: monologue.id, notes },
+      { onSuccess: () => setNotesState("saved") },
+    );
+    setMonologue((prev) => (prev ? { ...prev, notes } : prev));
+  }, [monologue, notes, saveNotes]);
+
+  /* Autosave a second after you stop typing. Blur alone was losing notes: an
+     actor types a beat, taps Rehearse, and the textarea never blurs in a way
+     that lands before the route changes. */
+  useEffect(() => {
+    if (!monologue) return;
+    if ((notes ?? "") === (monologue.notes ?? "")) return;
+    const t = setTimeout(flushNotes, 1000);
+    return () => clearTimeout(t);
+  }, [notes, monologue, flushNotes]);
+
+  /* Let "saved" fade rather than sit there claiming a save that has scrolled
+     out of relevance. */
+  useEffect(() => {
+    if (notesState !== "saved") return;
+    const t = setTimeout(() => setNotesState("idle"), 2200);
+    return () => clearTimeout(t);
+  }, [notesState]);
 
   /**
    * Each mode has its own header — the live cut clock, the copy/print buttons —
@@ -244,23 +281,18 @@ export default function MonologueDetailPage() {
         <button
           type="button"
           onClick={() => router.back()}
-          className={`absolute left-4 top-5 z-10 inline-flex items-center gap-1.5 text-sm transition-colors ${
-            monologue.poster_url
-              ? "text-white/70 drop-shadow hover:text-white"
-              : "text-muted-foreground hover:text-foreground"
-          }`}
+          className="absolute left-4 top-5 z-10 inline-flex items-center gap-1.5 text-sm text-white/70 drop-shadow transition-colors hover:text-white"
         >
           <IconArrowLeft className="h-4 w-4" />
           Back
         </button>
 
-        {monologue.poster_url ? (
-          <MonologueOneSheet monologue={monologue} />
-        ) : (
-          <div className="container mx-auto max-w-3xl px-4 pt-16">
-            <MonologueHeader monologue={monologue} standalone />
-          </div>
-        )}
+        {/* Plays take the one-sheet too. They have no poster, so the cover is
+            printed from the row — see PlayCover. Giving a play the plain
+            typographic header instead made every film feel like the real page
+            and every play like the fallback, which is backwards for a
+            monologue library built on plays. */}
+        <MonologueOneSheet monologue={monologue} />
       </div>
 
       <div className="container mx-auto max-w-3xl px-4">
@@ -311,6 +343,22 @@ export default function MonologueDetailPage() {
             </div>
 
             <div className="flex flex-shrink-0 items-center gap-1.5">
+              {/* Notes lives at the foot of the page, under the whole piece.
+                  Marking a beat meant scrolling past every line to reach it and
+                  scrolling back to keep reading, which is why it went unused.
+                  It is one tap from the bar now, and the bar follows you. */}
+              <button
+                type="button"
+                onClick={scrollToNotes}
+                aria-label="Your notes"
+                title="Your notes"
+                className={`rounded-full p-2 transition-colors hover:bg-muted ${
+                  notes.trim() ? "text-foreground" : "text-muted-foreground"
+                }`}
+              >
+                <IconNote className="h-5 w-5" />
+              </button>
+
               {/* Off-book status. Distinct from the "Memorize" drill below —
                   this one only records where you are, it doesn't go anywhere. */}
               <button
@@ -461,49 +509,38 @@ export default function MonologueDetailPage() {
         </AnimatePresence>
 
         {/* Your marks on the piece. Not a card — it belongs to the monologue
-            above it, so it reads as margin notes rather than another feature. */}
-        <section className="mt-12 border-t border-border/60 pt-6">
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Your notes
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Beats, intentions, reminders. Saved to your collection.
-          </p>
+            above it, so it reads as margin notes rather than another feature.
+
+            Reachable from the working bar as well, which is where it is
+            actually wanted: this sits below the whole piece, so noting a beat
+            meant scrolling past every line to find it and scrolling back. */}
+        <section ref={notesSectionRef} className="mt-12 border-t border-border/60 pt-6">
+          <div className="flex items-baseline justify-between gap-3">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Your notes
+            </h2>
+            {/* Was silent. It saved on blur only, so a note typed and then
+                abandoned — closing the tab, hitting Rehearse — was simply
+                lost, with nothing on screen ever having claimed otherwise. */}
+            <span
+              aria-live="polite"
+              className={`font-typewriter text-[11px] tracking-wide transition-opacity duration-300 ${
+                notesState === "idle" ? "opacity-0" : "opacity-70"
+              } ${notesState === "saved" ? "text-teal-600 dark:text-teal-400" : "text-muted-foreground"}`}
+            >
+              {notesState === "saving" ? "saving…" : notesState === "saved" ? "saved" : ""}
+            </span>
+          </div>
           <textarea
             ref={notesRef}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            onBlur={() => {
-              if ((notes ?? "") !== (monologue.notes ?? "")) {
-                saveNotes.mutate({ monologueId: monologue.id, notes });
-                setMonologue((prev) => (prev ? { ...prev, notes } : prev));
-              }
-            }}
-            placeholder="Add a note…"
+            onBlur={flushNotes}
+            placeholder="Beats, intentions, reminders…"
             rows={4}
             className="mt-3 w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
           />
         </section>
-
-        {/* The other way to work it, kept as a quiet path rather than a button
-            competing with Rehearse. */}
-        {!monologue.paywalled && (
-          <section className="mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-border/60 pt-6">
-            <div>
-              <p className="text-sm font-medium text-foreground">Get it off book</p>
-              <p className="text-sm text-muted-foreground">
-                Line-by-line drill until you don&apos;t need the page.
-              </p>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => router.push(`/monologue/${monologue.id}/memorize`)}
-            >
-              Memorize
-            </Button>
-          </section>
-        )}
 
         <div className="mt-10">
           <MonologueFooter
@@ -589,14 +626,31 @@ export default function MonologueDetailPage() {
           transition={{ duration: 0.35, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
           className="pointer-events-none fixed inset-x-0 bottom-[88px] z-40 flex justify-center px-4 lg:bottom-6"
         >
-          <button
-            type="button"
-            onClick={() => router.push(`/monologue/${monologue.id}/work`)}
-            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-primary-solid px-6 py-3 text-sm font-semibold text-primary-solid-foreground shadow-lg shadow-black/20 transition-transform hover:scale-[1.03] active:scale-95"
-          >
-            <IconPlayerPlay className="h-4 w-4" />
-            Rehearse
-          </button>
+          {/* Memorize used to be an orphan section at the foot of the page with
+              its own heading and a sentence explaining itself. It is the same
+              kind of thing as Rehearse — a way to work the piece out loud — so
+              it belongs beside it, not three scrolls below it under a caption.
+              One pill, two actions, primary weight on the one people want. */}
+          <div className="pointer-events-auto inline-flex items-center rounded-full bg-primary-solid p-1 shadow-lg shadow-black/20">
+            <button
+              type="button"
+              onClick={() => router.push(`/monologue/${monologue.id}/work`)}
+              className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold text-primary-solid-foreground transition-transform hover:scale-[1.03] active:scale-95"
+            >
+              <IconPlayerPlay className="h-4 w-4" />
+              Rehearse
+            </button>
+            <span aria-hidden className="h-5 w-px bg-primary-solid-foreground/25" />
+            <button
+              type="button"
+              onClick={() => router.push(`/monologue/${monologue.id}/memorize`)}
+              title="Line-by-line drill until you don't need the page"
+              className="inline-flex items-center gap-2 rounded-full px-5 py-2 text-sm font-medium text-primary-solid-foreground/85 transition-transform hover:scale-[1.03] hover:text-primary-solid-foreground active:scale-95"
+            >
+              <IconBulb className="h-4 w-4" />
+              Off book
+            </button>
+          </div>
         </motion.div>
       )}
     </div>

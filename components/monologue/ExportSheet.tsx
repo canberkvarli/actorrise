@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Monologue } from "@/types/actor";
 import { displayableAuthor } from "@/lib/utils";
 import { estimateDurationSeconds, formatClock } from "@/lib/estimateDuration";
+import { applyCut } from "@/lib/monologueSegments";
 
 /**
  * Audition-ready export: the actor's CUT only (or the full piece if none set),
@@ -28,16 +29,14 @@ export function ExportSheet({
     return [monologue.play_title, author].filter(Boolean).join(" · ");
   }, [monologue.play_title, monologue.author]);
 
-  const cutText = useMemo(() => {
-    const lines = (monologue.text ?? "").split("\n");
-    const { cut_start_line: s, cut_end_line: e } = monologue;
-    if (s === null || s === undefined || e === null || e === undefined) {
-      return monologue.text ?? "";
-    }
-    const lo = Math.min(s, e);
-    const hi = Math.max(s, e);
-    return lines.slice(lo, hi + 1).join("\n");
-  }, [monologue]);
+  /* Must go through the shared segmenter: the indices are positions in
+     monologueSegments(), which is sentences for prose and lines only for
+     verse. Splitting on "\n" here would slice a different array than the one
+     the editor counted against. */
+  const cutText = useMemo(
+    () => applyCut(monologue.text, monologue.cut_start_line, monologue.cut_end_line),
+    [monologue],
+  );
 
   const isCut =
     monologue.cut_start_line !== null &&

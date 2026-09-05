@@ -10,6 +10,7 @@ import { MonologueTextRenderer } from "@/components/monologue/MonologueTextRende
 import { GhostLightSketch } from "@/components/brand/sketches";
 import { isBibliographicText, stageDirectionPercentage } from "@/lib/monologueText";
 import { posterAt, overdoneBand } from "@/lib/poster";
+import { PlayCover, clothFor } from "@/components/monologue/PlayCover";
 
 export interface MonologueDetailContentProps {
   monologue: Monologue;
@@ -150,15 +151,20 @@ export function MonologueOneSheet({ monologue }: { monologue: Monologue }) {
   const facts = castingFacts(monologue);
   const poster = posterAt(monologue.poster_url, 600);
   const backdrop = posterAt(monologue.poster_url, 400);
+  const cloth = clothFor(monologue.play_title || monologue.character_name || "");
 
-  if (!poster) return <MonologueHeader monologue={monologue} standalone />;
-
-  // The billing block, the way a one-sheet carries one.
-  const billing = [
-    monologue.year ? String(monologue.year) : null,
-    monologue.director,
-    monologue.imdb_rating ? `★ ${monologue.imdb_rating.toFixed(1)}` : null,
-  ].filter(Boolean) as string[];
+  // The billing block, the way a one-sheet carries one. A play bills its
+  // playwright where a film bills its director — the same line, different
+  // trade — so a play is not left with an empty credit.
+  const billing = (
+    poster
+      ? [
+          monologue.year ? String(monologue.year) : null,
+          monologue.director,
+          monologue.imdb_rating ? `★ ${monologue.imdb_rating.toFixed(1)}` : null,
+        ]
+      : [author, monologue.category ? clean(monologue.category) : null]
+  ).filter(Boolean) as string[];
 
   return (
     <header className="relative isolate overflow-hidden">
@@ -167,13 +173,25 @@ export function MonologueOneSheet({ monologue }: { monologue: Monologue }) {
           extractor. aria-hidden: it carries no information the sharp copy
           beside it doesn't already state. */}
       <div aria-hidden className="absolute inset-0 -z-10">
-        <Image
-          src={backdrop as string}
-          alt=""
-          fill
-          unoptimized
-          className="scale-125 object-cover blur-2xl saturate-[1.35]"
-        />
+        {backdrop ? (
+          <Image
+            src={backdrop}
+            alt=""
+            fill
+            unoptimized
+            className="scale-125 object-cover blur-2xl saturate-[1.35]"
+          />
+        ) : (
+          /* No poster to blur, so the wash comes from the cloth the cover is
+             bound in. Same effect — a header keyed to this particular piece —
+             reached without an image. */
+          <div
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(120% 90% at 22% 0%, ${cloth.bg}, transparent 70%)`,
+            }}
+          />
+        )}
         {/* Four stops, not two. A plain from/via/to ramp is already half faded
             by the time it reaches the casting line and the overdone mark, and
             white type on a near-background wash is unreadable — the first
@@ -200,16 +218,28 @@ export function MonologueOneSheet({ monologue }: { monologue: Monologue }) {
             transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
             className="w-[38%] max-w-[190px] shrink-0 sm:max-w-[230px]"
           >
-            <div className="relative aspect-[2/3] overflow-hidden rounded-sm shadow-[0_22px_50px_-18px_rgba(0,0,0,0.9)] ring-1 ring-white/15">
-              <Image
-                src={poster}
-                alt={`${monologue.play_title} poster`}
-                fill
-                unoptimized
-                sizes="(max-width: 640px) 38vw, 230px"
-                className="object-cover"
-                priority
-              />
+            <div className="relative overflow-hidden rounded-sm shadow-[0_22px_50px_-18px_rgba(0,0,0,0.9)] ring-1 ring-white/15">
+              {poster ? (
+                <div className="relative aspect-[2/3]">
+                  <Image
+                    src={poster}
+                    alt={`${monologue.play_title} poster`}
+                    fill
+                    unoptimized
+                    sizes="(max-width: 640px) 38vw, 230px"
+                    className="object-cover"
+                    priority
+                  />
+                </div>
+              ) : (
+                <PlayCover
+                  title={monologue.play_title}
+                  author={author}
+                  year={monologue.year}
+                  genre={monologue.genre}
+                  themes={monologue.themes}
+                />
+              )}
             </div>
           </motion.div>
 
