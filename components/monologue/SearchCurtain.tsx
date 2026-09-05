@@ -34,7 +34,7 @@ import {
  * "still looking" and "found nothing" the same picture.
  */
 
-type SearchMode = "plays" | "film_tv";
+type SearchMode = "plays" | "film_tv" | "for_you";
 
 /** Lower case and parenthesised on purpose — these are invented asides, which
  *  is what `.stage-direction` (which force-lowercases) is actually for. */
@@ -51,6 +51,16 @@ const BEATS: Record<SearchMode, string[]> = {
     "(rolling through the reels.)",
     "(listening for the one that lands.)",
     "(marking the scenes worth your time.)",
+    "(almost.)",
+  ],
+  /* Find for me is not a search — nobody typed anything. These beats describe
+     what it is actually doing with the profile, so the wait explains the
+     feature instead of filling time. */
+  for_you: [
+    "(reading your profile.)",
+    "(putting the overdone ones back.)",
+    "(looking for what you haven't been sent.)",
+    "(casting you against type, once.)",
     "(almost.)",
   ],
 };
@@ -96,9 +106,20 @@ const CURTAIN_SKETCHES: Record<SearchMode, typeof SpotlightSketch[]> = {
      away from it, and three drawings that land beat four with a dud in the
      rotation. */
   film_tv: [ClapperSketch, ReelSketch, SpotlightSketch],
+  for_you: [SpotlightSketch, MasksSketch, CrownSketch, DaggerSketch, RoseSketch, SkullSketch],
 };
 
-export function SearchCurtain({ mode = "plays" }: { mode?: SearchMode }) {
+export function SearchCurtain({
+  mode = "plays",
+  name,
+  facts,
+}: {
+  mode?: SearchMode;
+  /** First name, shown in proper case. Only used by `for_you`. */
+  name?: string | null;
+  /** The profile fields the recommendation is actually keyed on. */
+  facts?: string[];
+}) {
   const beats = BEATS[mode];
   const [beat, setBeat] = useState(0);
   const reduced = useReducedMotion();
@@ -169,6 +190,40 @@ export function SearchCurtain({ mode = "plays" }: { mode?: SearchMode }) {
         </AnimatePresence>
       </div>
 
+      {/* The personal line. Deliberately NOT .stage-direction: that class
+          force-lowercases, and it would render a person's name as "canberk".
+          The beats below stay lowercase because they are invented asides; a
+          name is not. */}
+      {mode === "for_you" && (
+        <motion.p
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+          className="mt-7 text-center font-brand text-2xl font-medium text-foreground sm:text-3xl"
+        >
+          {name ? <>Casting you, {name}.</> : <>Casting you.</>}
+        </motion.p>
+      )}
+
+      {/* What it is keyed on, so the wait shows its working rather than
+          asking you to trust it. Staggered in, one fact at a time. */}
+      {mode === "for_you" && facts && facts.length > 0 && (
+        <div className="mt-3 flex flex-wrap items-center justify-center gap-x-2 gap-y-1">
+          {facts.map((f, i) => (
+            <motion.span
+              key={f}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4, delay: 0.35 + i * 0.12, ease: [0.22, 1, 0.36, 1] }}
+              className="flex items-center gap-2 font-typewriter text-xs capitalize text-muted-foreground"
+            >
+              {i > 0 && <span aria-hidden className="text-muted-foreground/40">·</span>}
+              {f}
+            </motion.span>
+          ))}
+        </div>
+      )}
+
       {/* Fixed height so the beam below doesn't jump as lines change length. */}
       <div className="mt-6 flex h-6 items-center">
         <AnimatePresence mode="wait">
@@ -199,7 +254,11 @@ export function SearchCurtain({ mode = "plays" }: { mode?: SearchMode }) {
       </div>
 
       {/* One steady announcement, rather than five as the beats change. */}
-      <span className="sr-only">Searching for monologues…</span>
+      <span className="sr-only">
+        {mode === "for_you"
+          ? "Finding monologues that suit your profile…"
+          : "Searching for monologues…"}
+      </span>
     </div>
   );
 }

@@ -51,6 +51,17 @@ _AGE_SYNONYMS = {
     "40s": ["40s", "40-50"],
     "50s": ["50s", "50-60", "50+"],
     "60+": ["60+", "60s", "70s", "70+"],
+    # The actor profile uses a THIRD vocabulary — the bands in the profile
+    # form — and none of its values exist in the corpus. An unmapped value
+    # fell through to [itself, "any"], which hard-filtered to a string no row
+    # has, so profile-driven recommendations returned nothing for all 379
+    # users who had set an age. Mapped here so the profile bands reach the
+    # same rows the search dropdown does.
+    "18-25": ["teens", "20s", "20-30"],
+    "25-35": ["20s", "20-30", "30s", "30-40"],
+    "35-45": ["30s", "30-40", "40s", "40-50"],
+    "45-55": ["40s", "40-50", "50s", "50-60"],
+    "55+": ["50s", "50-60", "50+", "60+", "60s", "70s", "70+"],
 }
 
 

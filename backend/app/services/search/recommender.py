@@ -20,6 +20,34 @@ AGE_MAPPING = {
 }
 
 
+def _genre_conditions(preferred_genres: List[str]):
+    """
+    A profile's preferred genres live in two different columns.
+
+    `plays.category` holds only "classical" (626) and "contemporary" (1,860).
+    The dramatic genre — drama, comedy, crime — is in `plays.genre`. This
+    matched `category` alone, so the two most popular preferences on the whole
+    platform, Comedy (260 users) and Drama (275), matched zero plays and the
+    recommender's SQL pool came back empty for them. "Find for me" then had
+    nothing to show and rendered the no-results state.
+
+    Shakespeare is in neither column; it is an author, so it is matched as one.
+    "Musical" is in no column at all and yields no condition, which is what the
+    empty-pool fallback in the caller is for.
+    """
+    conditions = []
+    for genre in preferred_genres:
+        g = (genre or "").strip()
+        if not g:
+            continue
+        if g.lower() == "shakespeare":
+            conditions.append(Play.author.ilike("%shakespeare%"))
+            continue
+        conditions.append(Play.genre.ilike(f"%{g}%"))
+        conditions.append(Play.category.ilike(f"%{g}%"))
+    return conditions
+
+
 def _attr_bool(obj: Any, name: str, default: bool = False) -> bool:
     """Read ORM attribute as bool for type-safe conditionals."""
     val = getattr(obj, name, default)
@@ -338,18 +366,27 @@ class Recommender:
         query = exclude_hidden(self.db.query(Monologue).join(Play))
         query = self._apply_casting_filters(query, filters)
 
-        if preferred_genres:
-            genre_conditions = [
-                Play.category.ilike(f"%{genre}%") for genre in preferred_genres
-            ]
-            query = query.filter(or_(*genre_conditions))
-
         # Fetch a pool of top-scored candidates, then sample for variety
         pool_size = min(limit * 4, 80)
-        query = query.order_by(
-            (Monologue.favorite_count * (1.0 - Monologue.overdone_score)).desc(),
-        )
-        pool = query.limit(pool_size).all()
+        ordering = (Monologue.favorite_count * (1.0 - Monologue.overdone_score)).desc()
+
+        pool: List[Monologue] = []
+        if preferred_genres:
+            genre_conditions = _genre_conditions(preferred_genres)
+            if genre_conditions:
+                pool = (
+                    query.filter(or_(*genre_conditions))
+                    .order_by(ordering)
+                    .limit(pool_size)
+                    .all()
+                )
+
+        # A taste is a preference, not a requirement. If the genre filter finds
+        # nothing — because the catalogue simply has no musicals, say — fall back
+        # to the unfiltered pool rather than telling an actor that nothing in a
+        # 20,000-piece library suits them.
+        if not pool:
+            pool = query.order_by(ordering).limit(pool_size).all()
 
         if len(pool) <= limit:
             return pool

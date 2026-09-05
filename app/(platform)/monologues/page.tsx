@@ -106,6 +106,9 @@ function SearchContent() {
   const [maxOverdoneScore, setMaxOverdoneScore] = useState(1);
   const [results, setResults] = useState<Monologue[]>([]);
   const [isPlaysLoading, setIsPlaysLoading] = useState(false);
+  /** Distinguishes the "Find for me" wait from a typed search — both set
+   *  isPlaysLoading, but they are different acts and get different curtains. */
+  const [isFindingForMe, setIsFindingForMe] = useState(false);
   const [isFilmTvLoading, setIsFilmTvLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -950,6 +953,26 @@ function SearchContent() {
     await performSearch(playsQuery, filters);
   };
 
+  /** First name only. A full name in "Casting you, …" reads like a letter from
+   *  a bank; a first name reads like the stage manager calling you. */
+  const firstName = useMemo(() => {
+    const raw = (profileData?.name || user?.name || "").trim();
+    return raw ? raw.split(/\s+/)[0] : null;
+  }, [profileData?.name, user?.name]);
+
+  /** The profile fields the recommendation is actually keyed on, shown during
+   *  the wait so the feature explains itself instead of asking for trust. */
+  const forYouFacts = useMemo(() => {
+    if (!profileData) return [];
+    return [
+      profileData.gender && profileData.gender !== "prefer not to say"
+        ? profileData.gender
+        : null,
+      profileData.age_range,
+      ...(profileData.preferred_genres ?? []).slice(0, 2),
+    ].filter((x): x is string => Boolean(x));
+  }, [profileData]);
+
   const handleFindForMe = async () => {
     // Only block if the profile is truly empty (0%). Any partial info is
     // enough to surface useful recommendations — the backend handles
@@ -961,6 +984,7 @@ function SearchContent() {
     }
 
     setIsPlaysLoading(true);
+    setIsFindingForMe(true);
     setHasSearched(true);
     setPlaysQuery(""); // Clear query to show it's AI-based
     setFilters({ gender: "", age_range: "", emotion: "", theme: "", category: "", tone: "", difficulty: "", author: "", max_duration: "" }); // Clear filters
@@ -1008,6 +1032,7 @@ function SearchContent() {
       setResults([]);
     } finally {
       setIsPlaysLoading(false);
+      setIsFindingForMe(false);
     }
   };
 
@@ -2078,7 +2103,16 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             >
-              <SearchCurtain mode="plays" />
+              {/* Find for me gets its own curtain. Nobody typed anything, so
+                  "reading twelve thousand pages" describes the wrong act — and
+                  this is the one moment where naming the actor is honest
+                  rather than decorative, because the wait really is the
+                  profile being read. */}
+              <SearchCurtain
+                mode={isFindingForMe ? "for_you" : "plays"}
+                name={firstName}
+                facts={forYouFacts}
+              />
             </motion.div>
           ) : hasSearched && results.length === 0 && !searchError ? (
             <motion.div
