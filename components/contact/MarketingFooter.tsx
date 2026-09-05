@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { ContactModal } from "./ContactModal";
+import changelogData from "@/public/changelog.json";
 import { APPROVED_PARTNERS } from "@/data/partners";
 import { getLatestModalEntry, getLastSeenId } from "@/lib/changelog";
 import type { ChangelogEntry } from "@/lib/changelog";
@@ -10,17 +11,17 @@ import type { ChangelogEntry } from "@/lib/changelog";
 function WhatsNewLink() {
   const [hasUnseen, setHasUnseen] = useState(false);
 
+  // Bundled at build time rather than fetched. The file is 1.5KB and it sits in
+  // the footer of every marketing page, so the runtime fetch was buying 4.6k
+  // edge requests a week to decide whether to draw one dot. Still inside an
+  // effect because getLastSeenId reads localStorage, which the server cannot.
   useEffect(() => {
-    fetch("/changelog.json")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: { updates?: ChangelogEntry[] } | null) => {
-        if (!data?.updates?.length) return;
-        const latest = getLatestModalEntry(data.updates);
-        if (latest && latest.id !== getLastSeenId()) {
-          setHasUnseen(true);
-        }
-      })
-      .catch(() => {});
+    const updates = (changelogData as { updates?: ChangelogEntry[] }).updates;
+    if (!updates?.length) return;
+    const latest = getLatestModalEntry(updates);
+    if (latest && latest.id !== getLastSeenId()) {
+      setHasUnseen(true);
+    }
   }, []);
 
   return (

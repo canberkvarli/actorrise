@@ -8,18 +8,18 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "How to Find a Monologue for an Audition (Fast)",
   description:
-    "How to find an audition monologue that fits you: pick the length, tone, and type the room wants, skip the overdone ones, and search 13,000+ real pieces.",
+    "How to find an audition monologue that fits you: pick the length, tone, and type the room wants, skip the overdone ones, and search 19,000+ real pieces.",
   openGraph: {
     title: "How to Find a Monologue for an Audition | ActorRise",
     description:
-      "The fast way to find an audition monologue that actually fits you: length, tone, type, and a searchable database of 13,000+ real pieces.",
+      "The fast way to find an audition monologue that actually fits you: length, tone, type, and a searchable database of 19,000+ real pieces.",
     url: `${siteUrl}/how-to-find-a-monologue`,
   },
   twitter: {
     card: "summary_large_image",
     title: "How to Find a Monologue for an Audition | ActorRise",
     description:
-      "The fast way to find an audition monologue that actually fits you: length, tone, type, and 13,000+ real pieces.",
+      "The fast way to find an audition monologue that actually fits you: length, tone, type, and 19,000+ real pieces.",
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/how-to-find-a-monologue` },
@@ -167,7 +167,7 @@ export default function HowToFindAMonologuePage() {
             ActorRise monologue finder
           </Link>{" "}
           does. It reads what you describe and ranks real monologues that fit your tone, length,
-          gender, and type, pulled from 13,000+ pieces across plays, film, and TV.
+          gender, and type, pulled from 19,000+ pieces across plays, film, and TV.
         </p>
 
         <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-4">

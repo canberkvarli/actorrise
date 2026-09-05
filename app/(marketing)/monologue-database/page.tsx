@@ -6,20 +6,20 @@ import { StageHero } from "@/components/marketing/StageHero";
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
 export const metadata: Metadata = {
-  title: "The Monologue Database for Actors | 13,000+ Real Pieces",
+  title: "The Monologue Database for Actors | 19,000+ Real Pieces",
   description:
-    "One of the largest monologue databases online: 13,000+ real pieces from plays, film, and TV, searchable by tone, length, gender, and type. Free to start.",
+    "One of the largest monologue databases online: 19,000+ real pieces from plays, film, and TV, searchable by tone, length, gender, and type. Free to start.",
   openGraph: {
     title: "The Monologue Database for Actors | ActorRise",
     description:
-      "13,000+ real monologues, searchable by tone, length, and type. Not AI-generated text. Free tier available.",
+      "19,000+ real monologues, searchable by tone, length, and type. Not AI-generated text. Free tier available.",
     url: `${siteUrl}/monologue-database`,
   },
   twitter: {
     card: "summary_large_image",
     title: "The Monologue Database for Actors | ActorRise",
     description:
-      "13,000+ real monologues, searchable by tone, length, and type. Not AI-generated text. Free tier available.",
+      "19,000+ real monologues, searchable by tone, length, and type. Not AI-generated text. Free tier available.",
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/monologue-database` },
@@ -83,7 +83,7 @@ export default function MonologueDatabasePage() {
             The <em className="italic text-primary">monologue database</em> built for actors
           </>
         }
-        lede="ActorRise is a searchable monologue database with 13,000+ real pieces from plays, film, and TV. Instead of scrolling anthologies or generic lists, you search by what you actually need, tone, length, gender, and type, and read the real text in seconds."
+        lede="ActorRise is a searchable monologue database with 19,000+ real pieces from plays, film, and TV. Instead of scrolling anthologies or generic lists, you search by what you actually need, tone, length, gender, and type, and read the real text in seconds."
       />
 
       <div className="container mx-auto px-6 py-12 md:py-16 max-w-2xl">
@@ -95,7 +95,7 @@ export default function MonologueDatabasePage() {
         <ul className="space-y-3 text-muted-foreground mb-10">
           <li className="flex gap-2">
             <span className="text-primary">·</span>
-            <span>13,000+ real monologues from plays, film, and TV, not AI-generated text</span>
+            <span>19,000+ real monologues from plays, film, and TV, not AI-generated text</span>
           </li>
           <li className="flex gap-2">
             <span className="text-primary">·</span>
@@ -185,7 +185,7 @@ export default function MonologueDatabasePage() {
 
         <div className="rounded-2xl border border-border bg-muted/30 p-8 text-center">
           <h2 className="text-2xl font-semibold tracking-tight text-foreground mb-2">
-            Search 13,000+ monologues now
+            Search 19,000+ monologues now
           </h2>
           <p className="text-muted-foreground mb-6">
             Find the right piece, read the real text, and rehearse it. Free to start, no credit card.

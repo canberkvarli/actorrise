@@ -53,7 +53,7 @@ function ScaleBlock() {
       </p>
       <p className="text-lg text-foreground/95 leading-snug">
         <span className="font-semibold tabular-nums text-foreground">
-          {monologues ? monologues.toLocaleString() : "13,000+"}
+          {monologues ? monologues.toLocaleString() : "19,000+"}
         </span>{" "}
         monologues. AI search, no keyword frustration.
       </p>

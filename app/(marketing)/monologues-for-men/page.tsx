@@ -8,18 +8,18 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "Monologues for Men: Comedic, Dramatic, Classical & Contemporary",
   description:
-    "Monologues for men from 13,000+ real pieces. Comedic, dramatic, classical, contemporary. AI search by tone, length, age range, and type. Free to try.",
+    "Monologues for men from 19,000+ real pieces. Comedic, dramatic, classical, contemporary. AI search by tone, length, age range, and type. Free to try.",
   openGraph: {
     title: "Monologues for Men | ActorRise",
     description:
-      "Search 13,000+ monologues for men. Comedic, dramatic, classical, contemporary. AI-powered discovery.",
+      "Search 19,000+ monologues for men. Comedic, dramatic, classical, contemporary. AI-powered discovery.",
     url: `${siteUrl}/monologues-for-men`,
   },
   twitter: {
     card: "summary_large_image",
     title: "Monologues for Men | ActorRise",
     description:
-      "Search 13,000+ monologues for men. Comedic, dramatic, classical, contemporary. AI-powered discovery.",
+      "Search 19,000+ monologues for men. Comedic, dramatic, classical, contemporary. AI-powered discovery.",
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/monologues-for-men` },

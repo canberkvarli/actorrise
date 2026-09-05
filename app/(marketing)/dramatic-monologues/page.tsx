@@ -8,18 +8,18 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 export const metadata: Metadata = {
   title: "Dramatic Monologues for Auditions",
   description:
-    "Dramatic monologues for auditions from 13,000+ real pieces. Serious, emotional, high-stakes. AI search by tone, length, and character type.",
+    "Dramatic monologues for auditions from 19,000+ real pieces. Serious, emotional, high-stakes. AI search by tone, length, and character type.",
   openGraph: {
     title: "Dramatic Monologues for Auditions | ActorRise",
     description:
-      "Search 13,000+ monologues for dramatic, emotional pieces. AI-powered discovery by tone, length, and character.",
+      "Search 19,000+ monologues for dramatic, emotional pieces. AI-powered discovery by tone, length, and character.",
     url: `${siteUrl}/dramatic-monologues`,
   },
   twitter: {
     card: "summary_large_image",
     title: "Dramatic Monologues for Auditions | ActorRise",
     description:
-      "Search 13,000+ monologues for dramatic, emotional pieces. AI-powered discovery by tone, length, and character.",
+      "Search 19,000+ monologues for dramatic, emotional pieces. AI-powered discovery by tone, length, and character.",
     images: ["/opengraph-image"],
   },
   alternates: { canonical: `${siteUrl}/dramatic-monologues` },

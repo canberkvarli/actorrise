@@ -59,7 +59,7 @@ export function LandingDemoSearch() {
   // long enough to be wrong by five thousand pieces, and a CTA that undersells
   // the library is the worst place to carry a stale number.
   const { monologues } = useLibraryStats();
-  const searchLabel = `Search ${monologues ? monologues.toLocaleString() : "13,000+"} monologues`;
+  const searchLabel = `Search ${monologues ? monologues.toLocaleString() : "19,000+"} monologues`;
 
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<DemoSearchResultItem[]>([]);

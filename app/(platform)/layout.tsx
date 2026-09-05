@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import changelogData from "@/public/changelog.json";
 import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -182,20 +183,18 @@ export default function PlatformLayout({
     if (IS_A_WORKING_SCREEN.test(pathname ?? "")) return;
 
     let cancelled = false;
+    // Bundled at build time, not fetched: 1.5KB of JSON is cheaper to ship in
+    // the chunk than to request on every page view.
     const timeoutId = setTimeout(() => {
-      fetch("/changelog.json")
-        .then((res) => res.ok ? res.json() : null)
-        .then((data: { updates?: ChangelogEntry[] } | null) => {
-          if (cancelled || !data?.updates?.length) return;
-          const latest = getLatestModalEntry(data.updates);
-          if (!latest) return;
-          const seenServer = user.last_seen_feature_id ?? null;
-          const seenLocal = getLastSeenId();
-          if (latest.id === seenServer || latest.id === seenLocal) return;
-          setChangelogModalEntry(latest);
-          setShowChangelogModal(true);
-        })
-        .catch(() => {});
+      const updates = (changelogData as { updates?: ChangelogEntry[] }).updates;
+      if (cancelled || !updates?.length) return;
+      const latest = getLatestModalEntry(updates);
+      if (!latest) return;
+      const seenServer = user.last_seen_feature_id ?? null;
+      const seenLocal = getLastSeenId();
+      if (latest.id === seenServer || latest.id === seenLocal) return;
+      setChangelogModalEntry(latest);
+      setShowChangelogModal(true);
     }, 1000);
 
     return () => {

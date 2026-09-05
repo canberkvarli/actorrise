@@ -69,7 +69,7 @@ export const metadata: Metadata = {
     template: "%s | ActorRise",
   },
   description:
-    "Find your audition monologue in seconds with AI search. 13,000+ real pieces from plays, films, and TV, sorted by tone, length, and type. Free to start.",
+    "Find your audition monologue in seconds with AI search. 19,000+ real pieces from plays, films, and TV, sorted by tone, length, and type. Free to start.",
   keywords: [
     "monologue search",
     "audition monologues",
@@ -121,7 +121,7 @@ export const metadata: Metadata = {
     siteName: "ActorRise",
     title: "Find Your Audition Monologue in Seconds | ActorRise",
     description:
-      "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 13,000+ monologues from plays, films, and TV. Free to start, no credit card required.",
+      "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 19,000+ monologues from plays, films, and TV. Free to start, no credit card required.",
     images: [
       {
         url: "/opengraph-image",
@@ -135,7 +135,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Find Your Audition Monologue in Seconds | ActorRise",
     description:
-      "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 13,000+ monologues from plays, films, and TV. Free to start, no credit card required.",
+      "Stop wasting hours searching books. Find your perfect audition monologue in seconds with AI search. 19,000+ monologues from plays, films, and TV. Free to start, no credit card required.",
     images: ["/opengraph-image"],
   },
   robots: {
@@ -159,7 +159,7 @@ const jsonLd = {
       "@id": `${siteUrl}/#website`,
       name: "ActorRise",
       url: siteUrl,
-      description: "Find your perfect audition monologue in seconds with AI search. 13,000+ monologues from plays, films, and TV. Spend your time rehearsing.",
+      description: "Find your perfect audition monologue in seconds with AI search. 19,000+ monologues from plays, films, and TV. Spend your time rehearsing.",
       publisher: { "@id": `${siteUrl}/#organization` },
     },
     {
@@ -177,7 +177,7 @@ const jsonLd = {
       name: "ActorRise",
       url: siteUrl,
       description:
-        "Find your monologue in seconds. Spend your time rehearsing. AI semantic search over 13,000+ monologues from plays, films, and TV.",
+        "Find your monologue in seconds. Spend your time rehearsing. AI semantic search over 19,000+ monologues from plays, films, and TV.",
       applicationCategory: "EntertainmentApplication",
       operatingSystem: "Any",
       offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
@@ -193,8 +193,13 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        {/* Preload auth modal logo so it’s cached before first open (avoids flash of missing logo) */}
-        <link rel="preload" href="/transparent_textlogo.png" as="image" />
+        {/* No logo preload here. It used to warm /transparent_textlogo.png for the
+            auth modal, but BrandLogo renders that wordmark through next/image, so
+            the browser asks for /_next/image?url=... instead and the raw file in
+            cache never gets used. It downloaded the asset on every page load for
+            nothing: 6.8k requests and 453MB of transfer in one week, the second
+            biggest line on the whole account. next/image's own `priority` emits a
+            preload for the URL actually requested. */}
         {gaId && (
           <>
             <Script
