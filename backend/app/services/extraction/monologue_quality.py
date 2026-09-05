@@ -24,7 +24,20 @@ from dataclasses import dataclass, field
 # walk into a room with it. Anything under 75 (~30s) is clip-length: real words
 # by a real character, but not a piece you can offer. The old floor was chosen
 # to maximise yield and it worked: it yielded 6,165 rows nobody could use.
-DEFAULT_MIN_WORDS = 75
+#: The shortest thing we are willing to call a monologue, in SPOKEN words.
+#:
+#: 40 originally, then 75, now 100. Each rise was the same judgement: a piece
+#: too short to work is worse than no piece at all, because it still costs the
+#: actor a search, a click and a read before they find that out.
+#:
+#: At 100 this retires 29% of the corpus, and the part it removes is the part
+#: nobody could audition with -- the 2-3 minute band is untouched, because
+#: everything in it was already over 100 words.
+#:
+#: Every parser must import this rather than defaulting to a literal. Eight of
+#: them carried their own `min_words: int = 75` and would have quietly kept the
+#: old floor when this moved. test_word_floor_is_not_duplicated pins that.
+DEFAULT_MIN_WORDS = 100
 DEFAULT_MAX_WORDS = 400
 
 # A speaker label in transcript form: line begins with an ALL-CAPS name

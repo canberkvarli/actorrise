@@ -99,7 +99,7 @@ class TestGoldenParser:
             (CUE_X, "ARTHUR"),
             _dialogue(f"You asked me a question. {FILLER}"),
         ]
-        out = segment_screenplay(lines)
+        out = segment_screenplay(lines, min_words=40)
         # _clean_cue_name title-cases, so compare case-insensitively.
         chars = [m["character"].upper() for m in out]
         assert chars.count("ARTHUR") == 2, "Arthur's two speeches must stay apart"
@@ -117,7 +117,7 @@ class TestGoldenParser:
             (CUE_X, "CHARLIE (CONT'D)"),
             _dialogue("It was the most honest thing I ever read."),
         ]
-        out = segment_screenplay(lines)
+        out = segment_screenplay(lines, min_words=40)
         assert len(out) == 1
         assert "most honest thing" in out[0]["text"]
         assert "essay" in out[0]["text"]
@@ -130,7 +130,7 @@ class TestGoldenParser:
             (CUE_X, "KURTZ"),
             _dialogue(f"You are an errand boy. {FILLER}"),
         ]
-        out = segment_screenplay(lines)
+        out = segment_screenplay(lines, min_words=40)
         for m in out:
             if m["character"] == "WILLARD":
                 assert "errand boy" not in m["text"]
@@ -142,7 +142,7 @@ class TestGoldenParser:
             (CUE_X, "TRAVIS"),
             _dialogue(f"Someday a real rain will come. {FILLER}"),
         ]
-        for m in segment_screenplay(lines):
+        for m in segment_screenplay(lines, min_words=40):
             assert not has_flattened_scene(m["text"])
 
     def test_unindented_document_yields_nothing(self):

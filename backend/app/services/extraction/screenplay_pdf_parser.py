@@ -34,6 +34,7 @@ from app.services.extraction.monologue_quality import (
     to_display_text,
 )
 from app.services.extraction.speech_merge import merge_interrupted_speeches
+from app.services.extraction.monologue_quality import DEFAULT_MIN_WORDS
 
 _PAREN = re.compile(r"\([^)]*\)")
 
@@ -123,7 +124,7 @@ def _dedouble_lines(lines):
     return [(x, _dedouble(t) if t and _line_is_doubled(t) else t) for x, t in lines]
 
 
-def segment_screenplay(lines, min_words: int = 75, max_words: int = 400):
+def segment_screenplay(lines, min_words: int = DEFAULT_MIN_WORDS, max_words: int = 400):
     """Segment indented screenplay lines into single-speaker monologues.
 
     ``lines`` is an ordered list of ``(x0, text)`` tuples; a ``(None, None)``
@@ -285,7 +286,7 @@ def lines_from_pdf(path: str, max_pages: int = 200):
     return out
 
 
-def extract_with_status(path: str, min_words: int = 75, max_words: int = 400):
+def extract_with_status(path: str, min_words: int = DEFAULT_MIN_WORDS, max_words: int = 400):
     """Full path, returning ``(monologues, status)``.
 
     Status is the point of this function. Every failure mode below used to
@@ -325,7 +326,7 @@ def extract_with_status(path: str, min_words: int = 75, max_words: int = 400):
     return [], "no_monologues"
 
 
-def extract_screenplay_monologues(path: str, min_words: int = 75, max_words: int = 400):
+def extract_screenplay_monologues(path: str, min_words: int = DEFAULT_MIN_WORDS, max_words: int = 400):
     """Full path: PDF -> lines -> (skip if unusable) -> single-speaker monologues.
 
     Kept for existing callers. Prefer extract_with_status() for anything doing

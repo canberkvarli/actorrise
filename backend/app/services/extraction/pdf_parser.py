@@ -3,6 +3,7 @@
 import pdfplumber
 from typing import List, Dict
 from .plain_text_parser import PlainTextParser
+from app.services.extraction.monologue_quality import DEFAULT_MIN_WORDS
 
 
 class PDFParser:
@@ -14,7 +15,7 @@ class PDFParser:
     def extract_monologues(
         self,
         pdf_path: str,
-        min_words: int = 75,
+        min_words: int = DEFAULT_MIN_WORDS,
         max_words: int = 500
     ) -> List[Dict]:
         """Extract monologues from PDF scripts"""

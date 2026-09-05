@@ -79,24 +79,24 @@ class ProposeRepairTests(unittest.TestCase):
     LONG = ("I have carried this for years and I am done carrying it. " * 4).strip()  # 44 words
 
     def test_clean_text_proposes_no_change(self):
-        new, actions = propose_repair(self.LONG)
+        new, actions = propose_repair(self.LONG, min_words=40)
         self.assertEqual(new, self.LONG)
         self.assertEqual(actions, [])
 
     def test_cutoff_tail_is_repaired(self):
-        new, actions = propose_repair(self.LONG + " And then when I finally")
+        new, actions = propose_repair(self.LONG + " And then when I finally", min_words=40)
         self.assertEqual(new, self.LONG)
         self.assertIn("trimmed_tail", actions)
 
     def test_artifact_is_repaired(self):
-        new, actions = propose_repair("BOB (CONT'D)\n" + self.LONG)
+        new, actions = propose_repair("BOB (CONT'D)\n" + self.LONG, min_words=40)
         self.assertEqual(new, self.LONG)
         self.assertIn("stripped_artifacts", actions)
 
     def test_too_destructive_repair_is_rejected(self):
         # Only one short sentence survives — send to review, don't mangle.
         text = "So short. " + "then it rambles on with no ending whatsoever and just stops mid" * 3
-        new, actions = propose_repair(text)
+        new, actions = propose_repair(text, min_words=40)
         self.assertIsNone(new)
         self.assertIn("needs_review", actions)
 

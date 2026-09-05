@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 
 from app.services.extraction import speech_merge as _merge
 from app.services.extraction.speech_merge import merge_interrupted_speeches
+from app.services.extraction.monologue_quality import DEFAULT_MIN_WORDS
 
 
 class PlainTextParser:
@@ -123,7 +124,7 @@ class PlainTextParser:
     def extract_monologues(
         self,
         text: str,
-        min_words: int = 75,
+        min_words: int = DEFAULT_MIN_WORDS,
         max_words: int = 500
     ) -> List[Dict]:
         """

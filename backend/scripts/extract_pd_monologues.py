@@ -8,7 +8,7 @@ FTLN prefixes) yielded ZERO monologues because PlainTextParser only knows
 
 Why: the 2026-07 search audit found comedy is 26% of search demand but 8% of
 the corpus — while the library's 132 PD comedy plays yielded only 140
-monologues in the original ingestion (min_words=50 favored long dramatic
+monologues in the original ingestion (a 50-word floor favored long dramatic
 speeches; comedies skew shorter). This pass re-runs extraction with a lower
 floor over play texts we already have (plays.full_text) or re-fetch from each
 play's own Gutenberg source_url (public domain).

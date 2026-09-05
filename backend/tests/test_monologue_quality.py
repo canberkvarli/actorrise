@@ -291,9 +291,22 @@ class TruncationTests(unittest.TestCase):
 class LengthTests(unittest.TestCase):
     """These call the real gate, not the shadow — length IS what they test."""
 
-    def test_the_floor_is_seventy_five_words(self):
-        """~30s at 150wpm. Below that it is a clip, not a piece you can offer."""
-        self.assertEqual(DEFAULT_MIN_WORDS, 75)
+    def test_the_floor_is_one_hundred_words(self):
+        """~40s at 150wpm. Below that it is a clip, not a piece you can offer.
+
+        40 -> 75 -> 100. Raising it to 100 retired 29% of the corpus and left
+        the 2-3 minute band untouched, because everything in that band was
+        already over 100 words. The rows it removes are the ones an actor
+        clicks, reads and discards.
+        """
+        self.assertEqual(DEFAULT_MIN_WORDS, 100)
+
+    def test_an_eighty_word_speech_is_now_too_short(self):
+        """The 75-word floor still admitted pieces too thin to audition with."""
+        text = " ".join(["word"] * 80) + "."
+        result = _assess(text)
+        self.assertFalse(result.ok)
+        self.assertIn("too_short", result.reasons)
 
     def test_a_sixty_word_speech_is_now_too_short(self):
         """The old 40-word floor admitted 6,165 rows no actor could use."""

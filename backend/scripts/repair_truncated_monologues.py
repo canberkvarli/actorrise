@@ -39,6 +39,7 @@ backend_dir = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(backend_dir))
 
 from audit_truncated_monologues import truncation_reasons  # noqa: E402
+from app.services.extraction.monologue_quality import DEFAULT_MIN_WORDS
 
 _TERMINAL_CHARS = ".!?…\"'”’)]"
 _SENTENCE_END = ".!?…"
@@ -96,7 +97,7 @@ def trim_incomplete_tail(text: str) -> str:
     return s
 
 
-def propose_repair(text: str, min_words: int = 40, min_keep_ratio: float = 0.6):
+def propose_repair(text: str, min_words: int = DEFAULT_MIN_WORDS, min_keep_ratio: float = 0.6):
     """Return (repaired_text, actions). repaired_text is None when the piece
     needs human review instead; equal to `text` when nothing was wrong."""
     actions: list[str] = []

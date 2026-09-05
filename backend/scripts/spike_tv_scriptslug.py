@@ -30,6 +30,7 @@ sys.path.insert(0, str(backend_dir))
 # pylint: disable=wrong-import-position
 from app.services.extraction.monologue_extractor import MonologueExtractor
 from app.services.extraction.monologue_quality import assess_monologue_quality
+from app.services.extraction.monologue_quality import DEFAULT_MIN_WORDS
 # pylint: enable=wrong-import-position
 
 UA = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -79,7 +80,7 @@ def main() -> None:
                 fh.write(resp.content)
                 fh.flush()
                 cands = extractor.extract_from_source(fh.name, "pdf",
-                                                      min_words=75, max_words=400)
+                                                      min_words=DEFAULT_MIN_WORDS, max_words=400)
         except Exception as e:  # noqa: BLE001
             print(f"  {show}: error {e}")
             continue

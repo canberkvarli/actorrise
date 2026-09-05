@@ -3,6 +3,7 @@
 from lxml import etree
 import re
 from typing import List, Dict, Optional
+from app.services.extraction.monologue_quality import DEFAULT_MIN_WORDS
 
 
 class TEIParser:
@@ -11,7 +12,7 @@ class TEIParser:
     def extract_monologues(
         self,
         tei_xml: str,
-        min_words: int = 75,
+        min_words: int = DEFAULT_MIN_WORDS,
         max_words: int = 500
     ) -> List[Dict]:
         """

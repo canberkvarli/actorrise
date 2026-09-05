@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 import xml.etree.ElementTree as ET
 from typing import Dict, List, Optional
+from app.services.extraction.monologue_quality import DEFAULT_MIN_WORDS
 
 
 class TEIXMLParser:
@@ -30,7 +31,7 @@ class TEIXMLParser:
     def extract_monologues(
         self,
         xml_content: str,
-        min_words: int = 75,
+        min_words: int = DEFAULT_MIN_WORDS,
         max_words: int = 500
     ) -> List[Dict]:
         """

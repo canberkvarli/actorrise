@@ -38,7 +38,7 @@ class SegmentationTests(unittest.TestCase):
             self._mono(80),
             (ACTION, "She walks out."),
         ]
-        out = segment_screenplay(lines)
+        out = segment_screenplay(lines, min_words=40)
         self.assertEqual(len(out), 1)
         self.assertEqual(out[0]["character"], "Maeve")
         self.assertNotIn("She enters", out[0]["text"])
@@ -49,7 +49,7 @@ class SegmentationTests(unittest.TestCase):
             (CUE, "TOM"), self._mono(80),
             (CUE, "GREG"), self._mono(80),
         ]
-        out = segment_screenplay(lines)
+        out = segment_screenplay(lines, min_words=40)
         self.assertEqual(len(out), 2)
         self.assertEqual({m["character"] for m in out}, {"Tom", "Greg"})
 
@@ -61,7 +61,7 @@ class SegmentationTests(unittest.TestCase):
             (DIALOG, "than his dad, and that is the whole point of the story here."),
             (ACTION, "Cut to black."),
         ]
-        out = segment_screenplay(lines)
+        out = segment_screenplay(lines, min_words=40)
         self.assertEqual(len(out), 1)                  # one continuous speech, not two
         self.assertIn("(beat)", out[0]["text"])        # direction preserved for italic render
         self.assertNotIn("(beat)", out[0]["dialogue"])  # spoken lines are clean
@@ -72,7 +72,7 @@ class SegmentationTests(unittest.TestCase):
             (DIALOG, "I have waited my whole life to say this " + "word " * 70),
             (DIALOG, "[LAUGHTER] and here we finally are at the very end of it all."),
         ]
-        out = segment_screenplay(lines)
+        out = segment_screenplay(lines, min_words=40)
         self.assertEqual(len(out), 1)
         self.assertIn("(LAUGHTER)", out[0]["text"])     # bracket normalised to paren
         self.assertNotIn("[", out[0]["text"])
@@ -83,13 +83,13 @@ class SegmentationTests(unittest.TestCase):
             (ACTION, "He lights a cigarette and stares out the window for a while."),
             (DIALOG, "orphan dialogue with no speaker should be dropped entirely here."),
         ]
-        out = segment_screenplay(lines)
+        out = segment_screenplay(lines, min_words=40)
         self.assertEqual(len(out), 1)
         self.assertEqual(out[0]["character"], "Don")
 
     def test_short_blocks_below_floor_are_dropped(self):
         lines = [(CUE, "PEGGY"), (DIALOG, "No, only my work.")]
-        self.assertEqual(segment_screenplay(lines), [])
+        self.assertEqual(segment_screenplay(lines, min_words=40), [])
 
     def test_contd_continuation_merges_across_action(self):
         # The Whale: one continuous Charlie speech the layout split with an action
@@ -195,7 +195,7 @@ class UnusableLayoutTests(unittest.TestCase):
         lines = []
         for _ in range(6):
             lines += [(18, "JUROR EIGHT"), self._long_line(12)]
-        self.assertEqual(segment_screenplay(lines), [])
+        self.assertEqual(segment_screenplay(lines, min_words=40), [])
 
     def test_dialogue_band_follows_the_text_not_a_fixed_offset(self):
         # Good Will Hunting: cue and dialogue indents nearly coincide, so a
@@ -206,7 +206,7 @@ class UnusableLayoutTests(unittest.TestCase):
             self._long_line(DLG_X),
             (108, "He leaves."),
         ]
-        monos = segment_screenplay(lines)
+        monos = segment_screenplay(lines, min_words=40)
         self.assertEqual(len(monos), 1)
         self.assertEqual(monos[0]["character"], "Sean")
 

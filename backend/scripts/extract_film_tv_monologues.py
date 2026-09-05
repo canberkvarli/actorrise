@@ -52,6 +52,7 @@ from sqlalchemy.orm import Session as DBSession, sessionmaker
 from app.core.config import settings
 from app.models.actor import FilmTvReference, Monologue, Play
 from app.services.ai.content_analyzer import ContentAnalyzer
+from app.services.extraction.monologue_quality import DEFAULT_MIN_WORDS
 
 # Dedicated engine for this long-running script. Mirrors segment_monologues.py:
 # the shared app.core.database engine has pool_recycle=300, which is too aggressive
@@ -518,7 +519,7 @@ def parse_screenplay_pdf(pdf_bytes: bytes, debug: bool = False) -> list[dict]:
 
 # ── Monologue Identification ─────────────────────────────────────────────────
 
-def merge_consecutive_speeches(blocks: list[dict], min_words: int = 75) -> list[dict]:
+def merge_consecutive_speeches(blocks: list[dict], min_words: int = DEFAULT_MIN_WORDS) -> list[dict]:
     """
     Merge consecutive dialogue blocks by the same character into monologues.
     Also merges across short interruptions (brief stage directions or very short
@@ -813,7 +814,7 @@ def main() -> None:
         print(f"    Source: {source_used} | {len(blocks)} dialogue blocks | {working_url}")
 
         # Merge consecutive speeches and filter by length
-        candidates = merge_consecutive_speeches(blocks, min_words=75)
+        candidates = merge_consecutive_speeches(blocks, min_words=DEFAULT_MIN_WORDS)
         if not candidates:
             print(f"    No monologue-length speeches found (need 80+ words)")
             time.sleep(IMSDB_DELAY)
