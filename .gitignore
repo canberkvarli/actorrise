@@ -84,3 +84,16 @@ data-gym-cache/
 *.xlsx
 .~lock.*#
 /*_Draft.md
+
+# Screenshots, probe output and one-off session junk that collects in the repo
+# root. All root-anchored on purpose: public/ art and anything inside a package
+# is real and must keep showing up. `git status` had 53 untracked entries, which
+# is the same as having none — you stop reading it, and then you miss the two
+# that were actual source.
+/*.png
+/*.log
+/*.csv
+/*.pdf
+/.sync_probe.txt
+.playwright-mcp/
+/vta-assets/
