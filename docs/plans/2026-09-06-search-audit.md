@@ -69,7 +69,20 @@ a stage audition and a harsh one for a self-tape. A source-aware floor, stage at
 100 and screen nearer 75, would return most of those 164 titles without putting
 clip-length fragments back in front of anyone.
 
-That is Canberk's call, not a cleanup. Nothing here presumes it.
+**DONE 2026-09-06.** The floor is now per-source via
+`monologue_quality.min_words_for_source`: stage 100, screen 75, unknown sources
+get the stricter stage floor. Both the retire and un-gate scripts ask that helper
+instead of comparing against the constant, which is load-bearing: retire's flat
+comparison would have pulled every freed screen piece straight back out on its
+next run. 1,496 screen pieces freed.
+
+| | before | after |
+|---|---|---|
+| film titles with zero visible pieces | 164 | 3 |
+| tv titles with zero visible pieces | 40 | 0 |
+
+Better Call Saul went 0/7 to 7/7 visible. Shawshank 7/7, Joker 2/2, BoJack 2/2,
+Black Swan 1/1. Undo lists are in `backend/backups/ungated_*.json`.
 
 ## Finding 1b: the mode toggle silently switches the AI off
 
@@ -171,8 +184,8 @@ failed", not "you lack this title". Read it that way.
 1. DONE. Mode toggle no longer counts as an actor-chosen filter, so the AI parse
    and the spell-corrector run again after being dark on 96% of searches.
 2. DONE, and smaller than advertised. 185 mis-gated rows freed.
-3. DECIDE: a source-aware word floor. Stage at 100, screen nearer 75. This is
-   what actually blanks 164 film/TV titles, and it is a product call.
+3. DONE. Source-aware word floor, stage 100 and screen 75. This is what was
+   actually blanking 164 film/TV titles.
 4. When a filtered search comes back thin, look in the other tab and say so.
 5. Normalise numerals and apostrophes in title lookup.
 6. Route bare abstract words to attribute filters, and de-duplicate by play so
