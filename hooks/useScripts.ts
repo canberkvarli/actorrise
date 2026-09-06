@@ -107,6 +107,65 @@ export function useShareScript() {
   });
 }
 
+/**
+ * Save the shelf the way the actor just dragged it.
+ *
+ * The drag has already happened on screen by the time this fires, so the cache
+ * is moved to match before the request goes out and put back if it fails.
+ * Waiting for the round trip would let the card snap back to where it was for
+ * a moment, which reads as the drag not having worked.
+ *
+ * Only the actor's own scripts move. Samples belong to no one, so they keep
+ * whatever slots they held in the cached list.
+ */
+export function useReorderScripts() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (scriptIds: number[]) => {
+      const res = await api.patch<{ script_ids: number[] }>("/api/scripts/reorder", {
+        script_ids: scriptIds,
+      });
+      return res.data.script_ids;
+    },
+    onMutate: async (scriptIds) => {
+      await queryClient.cancelQueries({ queryKey: SCRIPTS_QUERY_KEY });
+      const prev = queryClient.getQueryData<UserScript[]>(SCRIPTS_QUERY_KEY);
+      queryClient.setQueryData<UserScript[]>(SCRIPTS_QUERY_KEY, (list) =>
+        list ? reorderUserScripts(list, scriptIds) : list
+      );
+      return { prev };
+    },
+    onError: (_e, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(SCRIPTS_QUERY_KEY, ctx.prev);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY });
+    },
+  });
+}
+
+/**
+ * The cached list with the user's scripts in `scriptIds` order, and every
+ * sample left in the slot it already occupied.
+ */
+export function reorderUserScripts(list: UserScript[], scriptIds: number[]): UserScript[] {
+  const mine = new Map(list.filter((s) => !s.is_sample).map((s) => [s.id, s]));
+  const moved: UserScript[] = [];
+  for (const id of scriptIds) {
+    const script = mine.get(id);
+    if (script && !moved.includes(script)) moved.push(script);
+  }
+  // Anything the caller didn't name keeps its place at the end, matching what
+  // the server does with a list that has gone stale.
+  for (const script of mine.values()) {
+    if (!moved.includes(script)) moved.push(script);
+  }
+
+  let next = 0;
+  return list.map((script) => (script.is_sample ? script : moved[next++] ?? script));
+}
+
 export function useDeleteScript() {
   const queryClient = useQueryClient();
 

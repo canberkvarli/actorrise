@@ -140,77 +140,87 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
     // The selected script, opened like a playbook: title page on the left,
     // the scenes on the right. Same spine color as its card on the shelf,
     // so the eye connects the two.
-    <div className="relative min-w-0 overflow-hidden rounded-xl border border-border/60 bg-card/40 md:grid md:grid-cols-[280px_minmax(0,1fr)]">
+    // overflow-clip, not overflow-hidden: hidden makes this a scroll container
+    // and the sticky title page below stops sticking. Clipping is identical.
+    <div className="relative min-w-0 overflow-clip rounded-xl border border-border/60 bg-card/40 md:grid md:grid-cols-[280px_minmax(0,1fr)]">
       <span
         aria-hidden
         className={`absolute inset-y-0 left-0 w-1 ${getGenreDotClassName(script.genre)} opacity-70`}
       />
 
-      {/* Title page */}
-      <div className="flex min-w-0 flex-col gap-3 border-b border-border/60 px-5 py-5 sm:px-6 md:border-b-0 md:border-r">
-        <div>
-          <h2 className="font-brand text-2xl font-medium tracking-tight text-foreground text-balance">
-            {script.title}
-          </h2>
-          {script.genre && (
-            <span
-              className={`mt-2 inline-flex items-center border px-1.5 py-0.5 text-[10px] uppercase tracking-wide font-medium ${getGenreBadgeClassName(script.genre)}`}
-            >
-              {script.genre}
-            </span>
-          )}
-        </div>
-        {metaParts.length > 0 && (
-          <p className="text-sm text-muted-foreground">{metaParts.join(" · ")}</p>
-        )}
-        {script.description && (
-          <p className="text-sm text-muted-foreground/90 leading-relaxed line-clamp-5">
-            {script.description}
-          </p>
-        )}
-
-        {canManage && (
-          <div className="mt-auto flex flex-wrap items-center gap-2 pt-3">
-            <button
-              type="button"
-              onClick={() => setEditOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border/70 px-2.5 h-8 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
-            >
-              <IconPencil className="h-3.5 w-3.5" />
-              Edit details
-            </button>
-            <button
-              type="button"
-              onClick={() => setAddOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border/70 px-2.5 h-8 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors"
-            >
-              <IconPlus className="h-3.5 w-3.5" />
-              Add scene
-            </button>
-            {/* This used to be gated on `scenes.length > 0`, which hid it in the
-                one case that needs it most: a script that came back with nothing.
-                An actor looking at an empty shelf item had no way to ask for
-                another pass and no reason to think one was possible, so the only
-                move left was deleting and re-uploading, which costs an upload.
-                Re-cutting works off the stored text, so offer it whenever there
-                is text to cut. */}
-            {!isProcessing && (
-              <button
-                type="button"
-                onClick={requestRedo}
-                disabled={redoing}
-                className="inline-flex items-center gap-1.5 rounded-md px-2.5 h-8 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-60"
+      {/* Title page. The column still stretches, so its divider runs the full
+          height, but what's in it stays at the top and follows you down a long
+          list of scenes. */}
+      <div className="min-w-0 border-b border-border/60 md:border-b-0 md:border-r">
+        <div className="flex min-w-0 flex-col gap-3 px-5 py-5 sm:px-6 md:sticky md:top-6">
+          <div>
+            <h2 className="font-brand text-2xl font-medium tracking-tight text-foreground text-balance">
+              {script.title}
+            </h2>
+            {script.genre && (
+              <span
+                className={`mt-2 inline-flex items-center border px-1.5 py-0.5 text-[10px] uppercase tracking-wide font-medium ${getGenreBadgeClassName(script.genre)}`}
               >
-                {redoing ? (
-                  <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <IconRefresh className="h-3.5 w-3.5" />
-                )}
-                {redoing ? "Cutting again…" : "Redo scenes"}
-              </button>
+                {script.genre}
+              </span>
             )}
           </div>
-        )}
+          {metaParts.length > 0 && (
+            <p className="text-sm text-muted-foreground">{metaParts.join(" · ")}</p>
+          )}
+          {script.description && (
+            <p className="text-sm text-muted-foreground/90 leading-relaxed line-clamp-5">
+              {script.description}
+            </p>
+          )}
+  
+          {/* These sat on mt-auto, which pinned them to the bottom of a column
+              that stretches to match the scene list. Every scene extracted pushed
+              them further down, so on a full play they were a screen and a half
+              below the script they act on. They belong under the synopsis. */}
+          {canManage && (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setEditOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border/70 px-2.5 h-8 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors"
+              >
+                <IconPencil className="h-3.5 w-3.5" />
+                Edit details
+              </button>
+              <button
+                type="button"
+                onClick={() => setAddOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-md border border-border/70 px-2.5 h-8 text-xs font-medium text-foreground hover:bg-muted/50 transition-colors"
+              >
+                <IconPlus className="h-3.5 w-3.5" />
+                Add scene
+              </button>
+              {/* This used to be gated on `scenes.length > 0`, which hid it in the
+                  one case that needs it most: a script that came back with nothing.
+                  An actor looking at an empty shelf item had no way to ask for
+                  another pass and no reason to think one was possible, so the only
+                  move left was deleting and re-uploading, which costs an upload.
+                  Re-cutting works off the stored text, so offer it whenever there
+                  is text to cut. */}
+              {!isProcessing && (
+                <button
+                  type="button"
+                  onClick={requestRedo}
+                  disabled={redoing}
+                  className="inline-flex items-center gap-1.5 rounded-md px-2.5 h-8 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors disabled:opacity-60"
+                >
+                  {redoing ? (
+                    <IconLoader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <IconRefresh className="h-3.5 w-3.5" />
+                  )}
+                  {redoing ? "Cutting again…" : "Redo scenes"}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* The scenes */}

@@ -608,7 +608,6 @@ export default function RehearsalPage() {
   const [isRestarting, setIsRestarting] = useState(false);
   const [linesRemaining, setLinesRemaining] = useState<number | null>(null); // tracked for API but not displayed
   const [showFeedback, setShowFeedback] = useState(false);
-  const [sessionFeedback, setSessionFeedback] = useState<any>(null);
   const [upgradeModal, setUpgradeModal] = useState<{ open: boolean; feature: string; message: string }>({
     open: false, feature: "", message: "",
   });
@@ -1093,7 +1092,6 @@ export default function RehearsalPage() {
       setActiveLineIndex(lines.length - 1);
       setLastAiLine(null);
       stopAllAudioRef.current(); // kill mic + TTS before entering review
-      loadFeedback();
       const elapsed = Math.floor((Date.now() - sessionStartTimeRef.current) / 1000);
       setSessionDuration(elapsed);
       // Mark completed before the abandon handler can see it. The unmount path
@@ -1223,7 +1221,6 @@ export default function RehearsalPage() {
       if (data.session_status === 'completed') {
         stopAllAudioRef.current(); // kill mic + TTS before entering review
         setSessionDuration(Math.floor((Date.now() - sessionStartTimeRef.current) / 1000));
-        loadFeedback(); // fire-and-forget — feedback loads while review is already visible
         setFadeToReview(true);
         setTimeout(() => setShowFeedback(true), 500);
       }
@@ -1286,7 +1283,6 @@ export default function RehearsalPage() {
     setSession(null);
     setSceneWithLines(null);
     setShowFeedback(false);
-    setSessionFeedback(null);
     setFadeToReview(false);
     setActiveLineIndex(null);
     setLastAiLine(null);
@@ -1464,15 +1460,13 @@ export default function RehearsalPage() {
     setArmed(true);
   };
 
-  const loadFeedback = async () => {
-    if (!session) return;
-    try {
-      const response = await api.get(`/api/scenes/rehearse/${session.id}/feedback`);
-      setSessionFeedback(response.data);
-    } catch (err) {
-      console.error('Error loading feedback:', err);
-    }
-  };
+  // Finishing a scene used to call /feedback, which runs an LLM over the
+  // transcript and writes it a report card: what was flat, what to work on.
+  // Nothing ever rendered it — the state it filled was never read — so every
+  // rehearsal paid for a critique no actor saw, and the ones that did get seen,
+  // on the admin page, were wrong often enough to be worth not writing. An
+  // actor rehearsing at home has a teacher already, or is choosing not to.
+  // The endpoint is still there for the admin view of past sessions.
 
   /* ── Effects ───────────────────────────────────────────────────── */
 
@@ -2007,7 +2001,6 @@ export default function RehearsalPage() {
 
     // ── Instantly reset all UI — user sees countdown immediately ──
     setShowFeedback(false);
-    setSessionFeedback(null);
     setFadeToReview(false);
     lineAudioBlobsRef.current.clear();
     lineTranscriptsRef.current.clear();

@@ -1231,6 +1231,21 @@ def _fail_abandoned_extractions(db: Session, user_id: int) -> None:
         db.rollback()
 
 
+# The shelf, top to bottom. A script with no position has never been arranged,
+# and those come first, newest first — so bringing one in puts it where it can
+# be seen instead of under everything the actor has already tidied.
+_SHELF_ORDER = (
+    UserScript.shelf_order.asc().nullsfirst(),
+    UserScript.created_at.desc(),
+    UserScript.id.desc(),
+)
+
+
+def shelf_ordered(query):
+    """Order a UserScript query the way the actor's shelf reads."""
+    return query.order_by(*_SHELF_ORDER)
+
+
 @router.get("/", response_model=List[UserScriptResponse])
 async def list_user_scripts(
     db: Session = Depends(get_db),
@@ -1244,7 +1259,7 @@ async def list_user_scripts(
             UserScript.user_id == current_user.id,
             UserScript.is_sample == True,
         )
-    ).order_by(UserScript.is_sample.desc(), UserScript.created_at.desc()).all()
+    ).order_by(UserScript.is_sample.desc(), *_SHELF_ORDER).all()
 
     if not scripts:
         return []
@@ -1271,6 +1286,67 @@ async def list_user_scripts(
         data["scene_titles"] = [sc.title for sc in scenes]
         result.append(UserScriptResponse(**data))
     return result
+
+
+class ShelfOrderRequest(BaseModel):
+    """The shelf, top to bottom, as the actor just arranged it."""
+    script_ids: List[int]
+
+
+def apply_shelf_order(db: Session, user_id: int, script_ids: List[int]) -> List[int]:
+    """Write the actor's arrangement, and return the shelf it wrote.
+
+    Only their own scripts move. An id that belongs to someone else, or to no
+    one (a sample is shared by every actor), or to a script that has since been
+    deleted, is skipped rather than refused: the rail sends what it last
+    rendered, and a stale row in that list is not a reason to lose the
+    arrangement the actor just made.
+
+    Everything they own gets a position, including scripts the client never
+    mentioned — an upload it hasn't seen yet goes to the end. A script left
+    without one would sort as "never arranged" and jump to the top of the shelf
+    on the next load.
+    """
+    owned = (
+        db.query(UserScript)
+        .filter(UserScript.user_id == user_id, UserScript.is_sample.is_(False))
+        .order_by(UserScript.created_at.desc(), UserScript.id.desc())
+        .all()
+    )
+    by_id = {s.id: s for s in owned}
+
+    arranged: List[int] = []
+    for script_id in script_ids:
+        if script_id in by_id and script_id not in arranged:
+            arranged.append(script_id)
+
+    if not arranged:
+        return [s.id for s in owned]
+
+    # Whatever the client didn't name keeps its newest-first order, after the
+    # part it did.
+    named = set(arranged)
+    arranged += [s.id for s in owned if s.id not in named]
+
+    for position, script_id in enumerate(arranged):
+        by_id[script_id].shelf_order = position
+    return arranged
+
+
+@router.patch("/reorder")
+async def reorder_shelf(
+    request: ShelfOrderRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Save the order the actor dragged their shelf into.
+
+    Declared above PATCH /{script_id}: FastAPI matches in declaration order, so
+    below it "reorder" would be read as a script id and 422 every time.
+    """
+    order = apply_shelf_order(db, current_user.id, request.script_ids)
+    db.commit()
+    return {"script_ids": order}
 
 
 @router.get("/{script_id}", response_model=UserScriptDetailResponse)

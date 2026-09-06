@@ -15,7 +15,7 @@ import { PracticeLibraryRail } from "@/components/practice/PracticeLibraryRail";
 import { PracticeScenePanel } from "@/components/practice/PracticeScenePanel";
 import { WhatsNext, NothingYet } from "@/components/practice/WhatsNext";
 import { useWhatsNext } from "@/hooks/useWhatsNext";
-import { useDeleteScript, type UserScript } from "@/hooks/useScripts";
+import { useDeleteScript, useReorderScripts, type UserScript } from "@/hooks/useScripts";
 
 interface PracticeLibraryProps {
   /** All scripts (user + demo). */
@@ -48,6 +48,7 @@ export function PracticeLibrary({
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<UserScript | null>(null);
   const deleteScript = useDeleteScript();
+  const reorderScripts = useReorderScripts();
   const { user } = useAuth();
   const router = useRouter();
   const {
@@ -220,6 +221,14 @@ export function PracticeLibrary({
             onRequestDelete={setDeleteTarget}
             onReport={handleReport}
             orientation="column"
+            onReorder={(scriptIds) => {
+              // The shelf has already moved on screen. A toast here would fire
+              // on every drag; the arrangement showing up where it was dropped
+              // is the confirmation. Only a failure needs saying.
+              reorderScripts.mutate(scriptIds, {
+                onError: () => toast.error("Couldn't save the new order"),
+              });
+            }}
           />
         </div>
       </div>

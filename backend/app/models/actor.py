@@ -489,6 +489,13 @@ class UserScript(Base):
     num_characters = Column(Integer, default=0)
     num_scenes_extracted = Column(Integer, default=0)
 
+    # Where this sits on the actor's shelf. NULL means never arranged, and
+    # those sort first by upload date: a script brought in after an
+    # arrangement lands at the top where it can be seen, rather than at the
+    # bottom of a shelf that has already been tidied. Never set on a sample —
+    # samples belong to no one and every actor sees the same rows.
+    shelf_order = Column(Integer, nullable=True, index=True)
+
     created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
     updated_at = Column(DateTime(timezone=True), onupdate=sql_text('now()'))
 

@@ -1,11 +1,12 @@
 """A real database for tests, on SQLite, with foreign keys enforced.
 
 The model tree cannot be created wholesale against SQLite — pgvector columns
-elsewhere stop it — so tests name the tables they need and get those. Two things
-are Postgres-only and stand down for the duration: server_default=now(), which
-SQLite refuses as DDL, and ARRAY columns, which it has no type for. Both live on
-the column objects, which are module-level shared state, so restore() puts them
-back.
+elsewhere stop it — so tests name the tables they need and get those. Three
+things are Postgres-only and stand down for the duration: server_default=now(),
+which SQLite refuses as DDL; onupdate=now(), which it refuses on every UPDATE
+("no such function: now") and so only shows up in a test that changes a row;
+and ARRAY columns, which it has no type for. All three live on the column
+objects, which are module-level shared state, so restore() puts them back.
 
 Foreign keys are switched on deliberately. SQLite ignores them by default, and
 the bug this was first written for was a delete in the wrong order: without the
@@ -41,6 +42,14 @@ def memory_db(models):
             if col.server_default is not None and "now(" in default_sql:
                 saved.append((col, "server_default", col.server_default))
                 col.server_default = None
+            # updated_at carries onupdate=now(). It is not DDL, so the table
+            # creates cleanly and the column only fails when something writes
+            # to the row — which made a passing fixture blow up the first time
+            # a test did an UPDATE rather than an INSERT.
+            onupdate_sql = str(getattr(col.onupdate, "arg", "")).lower()
+            if col.onupdate is not None and "now(" in onupdate_sql:
+                saved.append((col, "onupdate", col.onupdate))
+                col.onupdate = None
             if type(col.type).__name__ == "ARRAY":
                 saved.append((col, "type", col.type))
                 col.type = JSON()
