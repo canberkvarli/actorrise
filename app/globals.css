@@ -363,44 +363,62 @@
   }
 
   /* ── The Callboard ────────────────────────────────────────────────────────
-     A board hanging on a wall, not a page background. The ground is woven
-     paper built from two crossed gradients rather than a cork photograph,
-     so it costs nothing, scales, and re-tints per theme instead of staying
-     a fixed brown while everything around it flips. */
+     A dark board hanging under a work light, in BOTH themes.
+
+     It used to take its ground from --paper, which made the board and the
+     notices pinned to it the same near-white beige. Two surfaces one shade
+     apart cannot describe depth, so the whole thing read as a single flat
+     brown rectangle and the orange had nothing to sit against. A real
+     callboard is a dark object; bone paper on it is where the contrast is.
+     So the board keeps its own colour and only the room around it flips. */
   .callboard {
-    --board: var(--paper);
-    --board-ink: var(--paper-ink);
-    --board-muted: var(--paper-muted);
-    --board-rule: var(--paper-rule);
-    /* Notices sit a shade brighter than the ground so the paper reads as
-       stock laid ON the board, not as holes cut out of it. */
-    --board-card: oklch(0.995 0.004 85);
-    --board-edge: oklch(0.62 0.055 60);
-    background-color: var(--board);
+    /* ink — warm charcoal, the default gel */
+    --board: oklch(0.245 0.013 58);
+    --board-deep: oklch(0.185 0.012 58);
+    --board-edge: oklch(0.31 0.028 52);
+    --board-card: oklch(0.972 0.007 86);
+    --board-ink: oklch(0.20 0.016 58);
+    --board-muted: oklch(0.47 0.020 58);
+    --board-rule: oklch(0.86 0.014 78);
+    /* the work light falling across the top of the board */
+    --board-light: oklch(0.86 0.13 72);
+    /* second accent: the ghost-light green, for anything genuinely live */
+    --board-live: oklch(0.80 0.15 152);
     color: var(--board-ink);
+    background-color: var(--board);
     background-image:
       repeating-linear-gradient(
         45deg,
-        color-mix(in oklab, var(--board-ink) 3.5%, transparent) 0 1px,
+        color-mix(in oklab, black 22%, transparent) 0 1px,
         transparent 1px 5px
       ),
       repeating-linear-gradient(
         -45deg,
-        color-mix(in oklab, var(--board-ink) 3.5%, transparent) 0 1px,
+        color-mix(in oklab, white 5%, transparent) 0 1px,
         transparent 1px 5px
       );
   }
 
-  .dark .callboard {
-    /* Not the app's near-black: a board is an object with its own colour, and
-       a green-black one is what the wings actually look like under a work
-       light. Kept well clear of --stage so it never reads as a hole. */
-    --board: oklch(0.235 0.018 155);
-    --board-ink: oklch(0.93 0.012 85);
-    --board-muted: oklch(0.72 0.015 85);
-    --board-rule: oklch(0.36 0.02 155);
-    --board-card: oklch(0.305 0.016 120);
-    --board-edge: oklch(0.32 0.03 60);
+  /* Alternate gels. Swapped live by the ?gel= control so the palette gets
+     chosen by eye on real data rather than argued about in the abstract. */
+  .callboard[data-gel="oxblood"] {
+    --board: oklch(0.235 0.048 24);
+    --board-deep: oklch(0.175 0.042 24);
+    --board-edge: oklch(0.30 0.055 30);
+    --board-light: oklch(0.85 0.12 55);
+  }
+  .callboard[data-gel="slate"] {
+    --board: oklch(0.265 0.022 245);
+    --board-deep: oklch(0.20 0.020 245);
+    --board-edge: oklch(0.33 0.024 250);
+    --board-light: oklch(0.88 0.09 220);
+    --board-live: oklch(0.82 0.14 165);
+  }
+  .callboard[data-gel="cork"] {
+    --board: oklch(0.42 0.055 62);
+    --board-deep: oklch(0.32 0.050 62);
+    --board-edge: oklch(0.30 0.040 52);
+    --board-light: oklch(0.90 0.12 80);
   }
 
   /* The frame: a wooden edge, an inner bevel, and a shadow underneath so the
@@ -408,46 +426,136 @@
   .callboard-frame {
     border: 3px solid var(--board-edge);
     box-shadow:
-      inset 0 1px 0 color-mix(in oklab, white 22%, transparent),
-      inset 0 0 0 1px color-mix(in oklab, var(--board-ink) 8%, transparent),
-      0 18px 50px -22px color-mix(in oklab, black 55%, transparent);
+      inset 0 1px 0 color-mix(in oklab, white 14%, transparent),
+      inset 0 0 0 1px color-mix(in oklab, black 30%, transparent),
+      0 30px 70px -28px color-mix(in oklab, black 78%, transparent);
   }
+
+  /* The work light. A hard-edged pool thrown from up and left, plus a vignette
+     that drops the far corners away. It drifts on a 44s cycle, which is the
+     single cheapest thing that keeps the board from ever being fully still. */
+  .callboard-light {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    background:
+      radial-gradient(
+        62% 46% at var(--lx, 26%) var(--ly, -6%),
+        color-mix(in oklab, var(--board-light) 30%, transparent) 0%,
+        color-mix(in oklab, var(--board-light) 11%, transparent) 38%,
+        transparent 72%
+      ),
+      radial-gradient(
+        120% 100% at 50% 40%,
+        transparent 42%,
+        color-mix(in oklab, var(--board-deep) 82%, transparent) 100%
+      );
+    animation: board-light-drift 44s ease-in-out infinite alternate;
+  }
+  @keyframes board-light-drift {
+    0%   { --lx: 22%; --ly: -9%; opacity: 0.92; }
+    50%  { --lx: 34%; --ly: -3%; opacity: 1; }
+    100% { --lx: 44%; --ly: -8%; opacity: 0.95; }
+  }
+  @property --lx { syntax: "<percentage>"; inherits: false; initial-value: 26%; }
+  @property --ly { syntax: "<percentage>"; inherits: false; initial-value: -6%; }
 
   /* A pinned notice. The shadow is tight at the pin and loose at the far
      bottom corner, which is what makes paper look hung rather than pasted. */
   .callboard-notice {
+    position: relative;
     background-color: var(--board-card);
     color: var(--board-ink);
     box-shadow:
-      0 1px 2px color-mix(in oklab, black 18%, transparent),
-      6px 14px 26px -14px color-mix(in oklab, black 60%, transparent);
-    /* The tilt lives here, in CSS, so framer-motion can own the entrance
-       transform on the wrapper without the two fighting over one property. */
+      0 1px 2px color-mix(in oklab, black 30%, transparent),
+      8px 18px 34px -14px color-mix(in oklab, black 78%, transparent);
+    /* The resting tilt lives here so framer-motion can own the entrance
+       transform on the wrapper without the two fighting over one property.
+       The sway rides on top of it, phase-shifted per notice. */
     transform: rotate(var(--tilt, 0deg));
     transition:
       transform 350ms cubic-bezier(0.2, 0.8, 0.2, 1),
       box-shadow 350ms ease;
   }
+  /* Paper is not perfectly rectangular and it is not perfectly flat. A torn
+     top edge and a faint cylinder of shading sell it more than any texture. */
+  .callboard-notice::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      100deg,
+      color-mix(in oklab, black 5%, transparent) 0%,
+      transparent 18%,
+      transparent 84%,
+      color-mix(in oklab, black 7%, transparent) 100%
+    );
+  }
+  /* Ambient breathing. Each notice gets its own phase via --sway so the board
+     never moves as one slab. Half a degree; you feel it, you do not watch it. */
+  .callboard-settled .callboard-notice {
+    animation: board-sway 11s ease-in-out infinite alternate;
+    animation-delay: var(--sway, 0s);
+  }
+  @keyframes board-sway {
+    from { transform: rotate(calc(var(--tilt, 0deg) - 0.32deg)) translateY(0px); }
+    to   { transform: rotate(calc(var(--tilt, 0deg) + 0.32deg)) translateY(-2px); }
+  }
   .callboard-notice:hover,
-  .callboard-notice:focus-within {
-    transform: rotate(0deg) translateY(-3px);
+  .callboard-notice:focus-within,
+  .callboard-settled .callboard-notice:hover,
+  .callboard-settled .callboard-notice:focus-within {
+    animation-play-state: paused;
+    transform: rotate(0deg) translateY(-4px);
     box-shadow:
-      0 1px 2px color-mix(in oklab, black 18%, transparent),
-      10px 22px 40px -16px color-mix(in oklab, black 65%, transparent);
+      0 1px 2px color-mix(in oklab, black 30%, transparent),
+      14px 28px 50px -16px color-mix(in oklab, black 82%, transparent);
   }
   /* One column of cards all leaning the same few degrees reads as a rendering
      bug on a phone, not as scatter. Half the tilt, and none of the lift. */
   @media (max-width: 639px) {
-    .callboard-notice {
-      transform: rotate(calc(var(--tilt, 0deg) * 0.5));
-    }
+    .callboard-notice { transform: rotate(calc(var(--tilt, 0deg) * 0.5)); }
+    .callboard-settled .callboard-notice { animation-duration: 15s; }
   }
+
+  /* The masthead hitting the board like an ink stamp. */
+  .board-stamp {
+    animation: board-stamp 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation-delay: var(--stamp-delay, 0.35s);
+  }
+  @keyframes board-stamp {
+    0%   { opacity: 0; transform: scale(1.07); filter: blur(7px); }
+    62%  { opacity: 1; filter: blur(0); }
+    100% { opacity: 1; transform: scale(1); filter: blur(0); }
+  }
+
+  /* The live dot on a notice that has just been pinned up for real. */
+  .board-live-dot {
+    background: var(--board-live);
+    box-shadow: 0 0 0 0 color-mix(in oklab, var(--board-live) 70%, transparent);
+    animation: board-pulse 2.4s ease-out infinite;
+  }
+  @keyframes board-pulse {
+    0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--board-live) 65%, transparent); }
+    70%  { box-shadow: 0 0 0 7px transparent; }
+    100% { box-shadow: 0 0 0 0 transparent; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .callboard-notice,
+    .callboard-settled .callboard-notice,
     .callboard-notice:hover,
     .callboard-notice:focus-within {
       transform: none;
       transition: none;
+      animation: none;
+    }
+    .callboard-light,
+    .board-stamp,
+    .board-live-dot {
+      animation: none;
     }
   }
 
