@@ -48,6 +48,54 @@ _CHAR_WITH_DIALOGUE = re.compile(r"^([A-Z][A-Z\s'\-]{0,30})[:.]\s+(.+)$")
 # CHARACTER. or CHARACTER: (name only, dialogue on next lines)
 _CHAR_ONLY = re.compile(r"^([A-Z][A-Z\s'\-]{0,30})[:.]?\s*$")
 
+# CHARACTER, direction — Folger puts the direction on the cue line itself:
+# "OBERON, to Robin", "ROBIN, in Lysander's voice", "BOTTOM, waking up". In
+# prose the speech follows on the same line: "BOTTOM, waking up When my cue
+# comes". The direction starts lowercase; that is what separates it from a
+# cast-list entry ("THESEUS, Duke of Athens").
+_CHAR_WITH_DIRECTION = re.compile(
+    r"^((?:A |THE )?[A-Z][A-Z'’\-]+(?: [A-Z][A-Z'’\-]+){0,2}), ([a-z][^\n]*)$"
+)
+
+# Words a direction can carry a capitalised name after: "to Robin",
+# "as Pyramus", "in Lysander's voice", "applying the nectar to Demetrius' eyes".
+_DIRECTION_LINKERS = {
+    "to", "as", "of", "in", "with", "at", "on", "for", "from", "and", "by",
+    "the", "a", "an", "his", "her", "their",
+}
+_DIRECTION_MAX_WORDS = 8
+
+
+def _split_direction(rest: str):
+    """Where the direction ends and the speech begins on a Folger cue line.
+
+    Returns (direction, speech). The speech is empty when the line was only a
+    cue. A direction is lowercase words, plus a capitalised name where a linker
+    lets one in: "waking up When my cue comes" breaks before "When", while
+    "in Demetrius' voice Follow me" keeps Demetrius and breaks before "Follow".
+    """
+    words = rest.split()
+    n = 0
+    while n < len(words) and n < _DIRECTION_MAX_WORDS:
+        word = words[n]
+        core = word.strip("’'\"“”,;:.!?")
+        if not core:
+            n += 1
+            continue
+        if core[0].islower():
+            n += 1
+            if word[-1] in ".!?":
+                break
+            continue
+        prev = words[n - 1].strip(",;:").lower() if n else ""
+        if prev in _DIRECTION_LINKERS:
+            n += 1
+            continue
+        break
+    direction = " ".join(words[:n]).rstrip(".,;:")
+    speech = " ".join(words[n:])
+    return direction, speech
+
 # Indented dialogue (screenplay format)
 _DIALOGUE_INDENTED = re.compile(r'^\s{2,}(.+)')
 
@@ -63,7 +111,11 @@ _EXCLUDE_PATTERNS = [
         r'^ACT\s+[IVX\d]+', r'^SCENE\s+[IVX\d]+',
         r'^ACT\s+(ONE|TWO|THREE|FOUR|FIVE)',
         r'^SCENE\s+(ONE|TWO|THREE|FOUR|FIVE)',
-        r'^PROLOGUE', r'^EPILOGUE', r'^CHORUS', r'^THE\s+CHORUS',
+        # PROLOGUE, EPILOGUE and CHORUS are not here: they are parts. Quince
+        # speaks as Prologue in the play within the play, the fairies sing as
+        # Chorus in the lullaby, and Henry V's Chorus has the best speeches in
+        # it. Whether the word is also a heading is the structure detector's
+        # question, not the cue parser's.
         r'^ENTER\b', r'^EXIT\b', r'^EXEUNT\b',
         r'^INT\.', r'^EXT\.', r'^COLD\s+OPEN', r'^TEASER', r'^TAG\b',
         r'^FADE\s+(IN|OUT|TO)', r'^CUT\s+TO', r'^DISSOLVE',
@@ -79,16 +131,31 @@ def _is_excluded(name: str) -> bool:
 
 # Lines that look like stage directions even when not in brackets
 _STAGE_DIR_LINE = re.compile(
-    r'^(Enter|Exit|Exeunt|Re-enter|They exit|He exits|She exits|All exit|'
-    r'Aside|Music|Sound|Flourish|Trumpets|Alarum|Sennet)\b',
+    r'^(Enter|Exit|Exeunt|Re-enter|They exit|He exits|She exits|All exit|Aside)\b',
     re.IGNORECASE
 )
+
+# A sound cue is a noun and a full stop: "Music plays." "Flourish." Titania's
+# "Music, ho, music such as charmeth sleep!" is a line, and the comma says so.
+_SOUND_DIR_LINE = re.compile(
+    r'^(Music|Sound|Flourish|Trumpets|Alarum|Alarums|Sennet|Thunder|Lightning|'
+    r'Drum|Drums|Horns|Hautboys|Fanfare)\b[^,!?;]*\.$',
+    re.IGNORECASE
+)
+
+# Who a direction can be about without naming anyone.
+_DIRECTION_SUBJECTS = {
+    "he", "she", "they", "all", "both", "fairies", "lords", "ladies", "attendants",
+    "servants", "soldiers", "others", "everyone",
+}
 
 # Inline stage directions: "Character does something." or "All but X exit."
 # These appear as plain sentences within dialogue in Folger texts.
 _INLINE_STAGE_DIR = re.compile(
-    r'^.{0,60}\b(exit|exits|exeunt|leads|enters|kneels|falls|rises|draws|'
-    r'weeps|kisses|stabs|dies|sleeps|wakes|reads|sings|dances|fights|'
+    r'^.{0,60}\b(exit|exits|exeunt|leads|enters|kneels|kneel|falls|rises|draws|'
+    r'weeps|kisses|stabs|dies|sleeps|sleep|wakes|wake|reads|sings|sing|dances|dance|fights|'
+    r'lies|lie|lays|lay|sits|sit|stands|stand|puts|put|holds|embraces|embrace|'
+    r'retires|retire|follows|follow|drinks|eats|writes|plays|anoints|squeezes|'
     r'aside|apart|within|takes|gives|turns|picks up|puts on|throws|'
     r'spreads|crows|crow|sounds|rings|strikes|beats|blows|flourishes|'
     r'withdraws|advances|retreats|beckons|gestures|points|bows|curtsies|'
@@ -139,20 +206,72 @@ def _is_screenplay_action(text: str, character_names: List[str]) -> bool:
     return False
 
 
-def _is_stage_direction_line(text: str) -> bool:
-    """Check if a line looks like a stage direction rather than dialogue."""
+def _has_direction_subject(s: str, names) -> bool:
+    """Is this sentence about somebody, the way a direction is?
+
+    "Demetrius exits." and "He lies down." are directions. "This fellow doth
+    not stand upon points." and "Pyramus draws near the wall." are Theseus
+    talking, however many direction verbs they carry: nobody in the cast is
+    called Pyramus, and "This" is not a person. The subject is what decides.
+    """
+    words = re.findall(r"[A-Za-z'’\-]+", s)
+    # "The fairies exit." is about the fairies. "The more I hate, the more he
+    # follows me." is Hermia, and "the" must not be what makes it a direction.
+    if words and words[0].lower() == "the":
+        words = words[1:]
+    if not words:
+        return False
+    if words[0].lower() in _DIRECTION_SUBJECTS:
+        return True
+    known = {n.upper() for n in (names or ())}
+    if not known:
+        # Nothing to check a name against: fall back to the old shape test.
+        return not re.match(
+            r'^(I |You |We |My |Our |His |Her |The |A |But |And |So |If |What |How |Why |Where |When )', s
+        )
+    # The subject runs up to the first lowercase word: "Titania and Bottom sleep."
+    for word in words:
+        if word[0].islower() and word.lower() not in {"and", "but"}:
+            break
+        upper = word.upper()
+        singular = upper[:-3] + "Y" if upper.endswith("IES") else upper.rstrip("S")
+        if upper in known or singular in known:
+            return True
+    return False
+
+
+def _is_stage_direction_line(text: str, names=()) -> bool:
+    """Check if a line looks like a stage direction rather than dialogue.
+
+    `names` is the cast as the text cues it; with it, a sentence only counts
+    as a direction when it is about one of them or about "he", "she", "they".
+    """
     s = text.strip()
-    if _STAGE_DIR_LINE.match(s):
+    if _STAGE_DIR_LINE.match(s) or _SOUND_DIR_LINE.match(s):
         return True
     if _PAGE_HEADER.match(s):
         return True
     # Short lines with stage-direction verbs that end with a period
     # (dialogue lines in verse rarely end with periods in Shakespeare)
     if len(s) < 80 and s.endswith('.') and _INLINE_STAGE_DIR.match(s):
-        # Extra check: must not start with a speech-like pattern (I, You, We, etc.)
-        if not re.match(r'^(I |You |We |My |Our |His |Her |The |A |But |And |So |If |What |How |Why |Where |When )', s):
-            return True
+        return _has_direction_subject(s, names)
     return False
+
+
+def _split_trailing_direction(text: str, names=()):
+    """A direction printed at the end of a speech: "I alone will go. Demetrius exits."
+
+    Returns (speech, direction). The speech used to be dropped whole because
+    its last sentence looked like a direction, which it was; the first two
+    sentences were Demetrius's line.
+    """
+    parts = re.split(r'(?<=[.!?])\s+', text.strip())
+    if len(parts) < 2:
+        return text, None
+    last = parts[-1]
+    if _PAGE_HEADER.match(last) or not _is_stage_direction_line(last, names):
+        return text, None
+    return " ".join(parts[:-1]), last.rstrip('.')
 
 
 def _extract_stage_direction(text: str):
@@ -262,14 +381,36 @@ def _strip_production_marks(text: str) -> str:
 # Allows a trailing period or colon, which some editions print.
 _STANDALONE_CUE = re.compile(r"^\s*([A-Z][A-Z'’.\- ]{1,28}?)\s*[.:]?\s*$", re.MULTILINE)
 
+# A cue at the head of a line with the speech running straight on, no
+# punctuation between — how Folger sets prose: "QUINCE Is all our company here?"
+# Each word of the name needs two letters, so "FLUTE O, sweet bully Bottom!"
+# yields FLUTE and leaves Flute his "O".
+_NAME_WORD = r"[A-Z][A-Z'’\-]+"
+_NAME = rf"(?:A |THE )?{_NAME_WORD}(?: {_NAME_WORD}){{0,2}}"
+# What follows has to be a word, not a number: "ACT 2" and "SCENE 1" lead as
+# many lines as any speaker does. And not another shouted word: "FIRST FAIRY"
+# is one name, not FIRST speaking the word "FAIRY". A capital is fine on its
+# own ("FLUTE O, sweet bully Bottom!") or starting a word ("QUINCE Is all").
+_LEADING_CUE = re.compile(
+    rf"^[ \t]*({_NAME})(?:,)?[ \t]+(?=[A-Z](?![A-Z])|[a-z\"“‘'(\[])", re.MULTILINE
+)
+
+# Never speakers, however often they head a line.
+_NEVER_A_CUE = {"ACT", "SCENE", "SC", "FTLN", "TLN", "THE END", "END", "FINIS"}
+
+# How many lines a name has to lead before it counts as a speaker. One is a
+# shouted word; two is somebody talking. Peaseblossom gets two prose lines in
+# the whole of Act 4, and both of them are his.
+_LEADING_CUE_MIN = 2
+
 
 def _cue_names(text: str) -> List[str]:
-    """Names that stand alone on a line somewhere in this text.
+    """Names this text treats as speakers.
 
-    The safety rule for splitting inline cues. A name only counts as a speaker
-    if the same text also prints it as a cue on a line of its own, so a
-    capitalised word leading a verse line ("OVER park, over pale") is never
-    mistaken for a character.
+    The safety rule for splitting inline cues. A name counts if the text prints
+    it as a cue on a line of its own, or leads two or more lines with it the
+    way Folger prose does. A capitalised word at the head of one verse line
+    ("OVER park, over pale") is never mistaken for a character.
     """
     names = set()
     for raw in _STANDALONE_CUE.findall(text or ""):
@@ -278,6 +419,13 @@ def _cue_names(text: str) -> List[str]:
         if 2 <= len(name) <= 28 and name == name.upper() and len(name.split()) <= 3:
             if any(ch.isalpha() for ch in name):
                 names.add(name)
+
+    leading = Counter(m.strip() for m in _LEADING_CUE.findall(text or ""))
+    for name, count in leading.items():
+        if count >= _LEADING_CUE_MIN and not _is_excluded(name):
+            names.add(name)
+
+    names -= _NEVER_A_CUE
     return sorted(names, key=len, reverse=True)  # longest first: FIRST FAIRY before FAIRY
 
 
@@ -325,9 +473,24 @@ def _preprocess_text(text: str) -> str:
         print(f"Stripped {ftln_count}+ FTLN/TLN line-number prefixes")
 
         # After stripping FTLN prefixes, also remove bare line reference numbers
-        # that remain at the end of verse lines (e.g. "390", "395", "2145")
-        # Only do this when FTLN was detected (confirms it's a Folger text)
-        text = re.sub(r'\s+\d{2,4}\s*$', '', text, flags=re.MULTILINE)
+        # that remain at the end of verse lines (e.g. "5", "390", "2145").
+        # Only do this when FTLN was detected (confirms it's a Folger text).
+        # Folger numbers every fifth line, so the first one on a page is a
+        # single digit; catching only two digits and up left "5" in the text.
+        # A heading is a word and a number, and the number is the heading:
+        # "Scene 1" has to come out of this still saying which scene it is.
+        text = re.sub(
+            r'^(?!\s*(?:ACT|SCENE|SC\.)\b)(.*\S)\s+\d{1,4}\s*$', r'\1', text,
+            flags=re.MULTILINE | re.IGNORECASE,
+        )
+
+    # A two-word cue the PDF reader broke over two lines: "FIRST" / "FAIRY".
+    # Left apart, "FIRST" is a speaker with no lines and the lullaby is sung by
+    # whichever fairy came last.
+    text = re.sub(
+        r"^(FIRST|SECOND|THIRD|FOURTH|FIFTH)\n([A-Z][A-Z'’\-]+)$", r"\1 \2", text,
+        flags=re.MULTILINE,
+    )
 
     # Last, once the line numbers are gone and a cue is actually visible at the
     # head of its line. Every path that reads dialogue comes through here, so
@@ -683,6 +846,45 @@ def parse_dialogue(text: str, character_names=None) -> List[Dict]:
     sections = []
     current_section = {"characters": set(), "lines": []}
     current_character = None
+    # A direction read off a cue line, waiting for that character's first line.
+    pending_direction = None
+    # The cast as this text cues it, so a direction can be told from a line
+    # that merely mentions a verb: "Demetrius exits." against "Pyramus draws
+    # near the wall."
+    cast = _cue_names(text)
+
+    def hang_direction(direction: str) -> None:
+        """Keep a direction printed between lines: it rides on the speech before it."""
+        nonlocal pending_direction
+        if current_section["lines"] and current_section["lines"][-1]["character"] == current_character:
+            last = current_section["lines"][-1]
+            last["stage_direction"] = (
+                f'{last["stage_direction"]}; {direction}' if last.get("stage_direction") else direction
+            )
+        else:
+            pending_direction = direction
+
+    def start_speech(character: str) -> None:
+        nonlocal current_section, current_character, pending_direction
+        # New character entering — start new section if we already have 2
+        if character not in current_section["characters"] and current_section["lines"]:
+            if len(current_section["characters"]) >= 2:
+                sections.append(current_section)
+                current_section = {"characters": set(), "lines": []}
+        current_section["characters"].add(character)
+        current_character = character
+        pending_direction = None
+
+    def add_line(character: str, text_content: str) -> None:
+        nonlocal pending_direction
+        clean_text, stage_dir = _extract_stage_direction(text_content)
+        if clean_text:
+            current_section["lines"].append({
+                "character": character,
+                "text": clean_text,
+                "stage_direction": stage_dir or pending_direction,
+            })
+            pending_direction = None
 
     for line in text.split('\n'):
         stripped = line.strip()
@@ -694,6 +896,19 @@ def parse_dialogue(text: str, character_names=None) -> List[Dict]:
         # that follows a heading doesn't get attached to the previous speaker.
         if _is_excluded(stripped):
             current_character = None
+            continue
+
+        # Try: CHARACTER, direction — with or without the speech on the same line.
+        m = _CHAR_WITH_DIRECTION.match(stripped)
+        if m:
+            character = m.group(1).strip()
+            if _is_excluded(character):
+                continue
+            direction, speech = _split_direction(m.group(2))
+            start_speech(character)
+            pending_direction = direction or None
+            if speech:
+                add_line(character, speech)
             continue
 
         # Page-break debris: a bare page number ("22..") or a lone (MORE)/(CONT'D).
@@ -723,22 +938,8 @@ def parse_dialogue(text: str, character_names=None) -> List[Dict]:
             if _is_excluded(character):
                 continue
 
-            # New character entering — start new section if we already have 2
-            if character not in current_section["characters"] and current_section["lines"]:
-                if len(current_section["characters"]) >= 2:
-                    sections.append(current_section)
-                    current_section = {"characters": set(), "lines": []}
-
-            current_section["characters"].add(character)
-            current_character = character
-
-            clean_text, stage_dir = _extract_stage_direction(dialogue_text)
-            if clean_text:
-                current_section["lines"].append({
-                    "character": character,
-                    "text": clean_text,
-                    "stage_direction": stage_dir,
-                })
+            start_speech(character)
+            add_line(character, dialogue_text)
             continue
 
         # Try: CHARACTER (name only, dialogue on following lines)
@@ -749,19 +950,16 @@ def parse_dialogue(text: str, character_names=None) -> List[Dict]:
             if _is_excluded(character):
                 continue
 
-            if character not in current_section["characters"] and current_section["lines"]:
-                if len(current_section["characters"]) >= 2:
-                    sections.append(current_section)
-                    current_section = {"characters": set(), "lines": []}
-
-            current_section["characters"].add(character)
-            current_character = character
+            start_speech(character)
             continue
 
         # Try: dialogue continuation (indented or sentence-case)
         if current_character:
-            # Skip stage direction lines embedded in dialogue
-            if _is_stage_direction_line(stripped):
+            # A stage direction between lines is not spoken, but it is not
+            # thrown away either: it hangs off the speech it follows.
+            if _is_stage_direction_line(stripped, cast):
+                if not _PAGE_HEADER.match(stripped):
+                    hang_direction(stripped.rstrip('.'))
                 continue
             # Skip screenplay action that narrates the characters (e.g.
             # "Rachel takes the camera out of her bag.") — not spoken dialogue.
@@ -788,13 +986,10 @@ def parse_dialogue(text: str, character_names=None) -> List[Dict]:
                 text_content = m.group(1).strip()
 
             if text_content:
-                clean_text, stage_dir = _extract_stage_direction(text_content)
-                if clean_text:
-                    current_section["lines"].append({
-                        "character": current_character,
-                        "text": clean_text,
-                        "stage_direction": stage_dir,
-                    })
+                text_content, trailing = _split_trailing_direction(text_content, cast)
+                add_line(current_character, text_content)
+                if trailing:
+                    hang_direction(trailing)
 
     # Don't forget the last section
     if current_section["lines"]:
@@ -940,6 +1135,95 @@ def _scene_from_source(chunk, character_names: Optional[List[str]] = None) -> Li
             for l in lines
         ],
     }]
+
+
+def _place_framing(result: List[Dict], framing: List, valid_entries: List) -> List[Dict]:
+    """Put each title where the model says it goes, not where it fell in the array.
+
+    Asked for nine scenes in order, gpt-4o-mini returned nine objects with the
+    fourth one missing and everything after it shifted up: Act 3 Scene 2 was
+    titled for Titania and Bottom, who are not in it. Each object now carries
+    the scene number it was asked about, and that is what places it. Position
+    is the fallback for a reply that left the number out.
+    """
+    positions = [orig_i for orig_i, _ in valid_entries]
+    for k, item in enumerate(framing):
+        if not isinstance(item, dict):
+            continue
+        number = item.get("scene")
+        try:
+            number = int(number)
+        except (TypeError, ValueError):
+            number = None
+        if number is not None and 1 <= number <= len(result):
+            result[number - 1] = item
+        elif k < len(positions):
+            result[positions[k]] = item
+    return result
+
+
+def whole_scene(span) -> Optional[Dict]:
+    """One scene of a play, every cue and every speech, in the order printed.
+
+    The model chooses nothing here. Lines come from the deterministic parser
+    reading the span between two headings, the leads are whoever speaks most,
+    and the rest of the cast keeps their lines: rehearsal reads every part that
+    is not the actor's, so a six-hander works the same as a two-hander.
+
+    None when nobody speaks in the span, or only one person does. An act
+    heading with nothing under it, a page of front matter, a soliloquy with no
+    one to answer: not scenes, and not put on the shelf as if they were.
+    """
+    lines: List[Dict] = []
+    for section in parse_dialogue(span.text):
+        lines.extend(section.get("lines", []))
+
+    speakers = Counter(l.get("character") for l in lines if l.get("character"))
+    if len(speakers) < 2 or len(lines) < REHEARSAL_MIN_LINES:
+        return None
+
+    ranked = [name for name, _ in speakers.most_common()]
+    label = ", ".join(p for p in (span.act_label, span.scene_label) if p)
+
+    return {
+        "title": label or f"{ranked[0]} & {ranked[1]}",
+        "character_1": ranked[0],
+        "character_2": ranked[1],
+        "cast": ranked,
+        "act": span.act_label,
+        "scene_number": span.scene_label,
+        "description": None,
+        "setting": None,
+        "tone": None,
+        "primary_emotions": [],
+        "relationship_dynamic": None,
+        "lines": [
+            {
+                "character": l.get("character"),
+                "text": l.get("text", ""),
+                "stage_direction": l.get("stage_direction"),
+            }
+            for l in lines
+        ],
+    }
+
+
+def whole_scenes(spans) -> List[Dict]:
+    """Every scene in the spans, cut on the play's own headings.
+
+    Once there are labelled scenes, an unlabelled span is a scrap: the tail of
+    the scene before, sitting at the top of the first picked page. A side with
+    no headings at all is one scene, and stays.
+    """
+    labelled = any(s.act_label or s.scene_label for s in spans)
+    scenes: List[Dict] = []
+    for span in spans:
+        if labelled and not (span.act_label or span.scene_label):
+            continue
+        scene = whole_scene(span)
+        if scene:
+            scenes.append(scene)
+    return scenes
 
 
 def _reseat_leads(scene: Dict) -> None:
@@ -1359,15 +1643,35 @@ Return ONLY valid JSON, no explanation."""
         # Build summaries of each scene for the prompt (first ~500 chars each)
         scene_summaries = []
         for i, scene_data in enumerate(scenes):
-            characters = list(scene_data["characters"])
-            if len(characters) != 2:
+            # Two leads, and whoever else is in the room. A whole scene of a
+            # play has its full cast; the title still turns on the two leads.
+            characters = list(scene_data.get("characters") or scene_data.get("cast") or [])
+            if len(characters) < 2:
                 scene_summaries.append(None)
                 continue
             char1, char2 = characters[0], characters[1]
-            preview = "\n".join(
+            others = f", {len(characters)} parts" if len(characters) > 2 else ""
+            where = " ".join(p for p in (scene_data.get("act"), scene_data.get("scene_number")) if p)
+            where = f" {where}," if where else ""
+            # The opening, the middle and the close, so a 130-speech scene is
+            # named for what happens in it and not for its first exchange.
+            # (The lovers' fight in MND was titled after Oberon's opening aside.)
+            transcript = "\n".join(
                 f"{l['character']}: {l['text']}" for l in scene_data["lines"]
-            )[:500]
-            scene_summaries.append(f"SCENE {i+1} ({char1} & {char2}, {len(scene_data['lines'])} lines):\n{preview}")
+            )
+            if len(transcript) <= 1000:
+                preview = transcript
+            else:
+                mid = len(transcript) // 2
+                preview = (
+                    transcript[:400] + "\n[...]\n"
+                    + transcript[mid - 150: mid + 150] + "\n[...]\n"
+                    + transcript[-300:]
+                )
+            parts = ", ".join(characters)
+            scene_summaries.append(
+                f"SCENE {i+1}:{where} parts: {parts}; {len(scene_data['lines'])} speeches\n{preview}"
+            )
 
         # Filter out None entries and build prompt
         valid_entries = [(i, s) for i, s in enumerate(scene_summaries) if s]
@@ -1378,17 +1682,20 @@ Return ONLY valid JSON, no explanation."""
         context = f' from "{script_title}"' if script_title else ""
         author_hint = f" by {script_author}" if script_author else ""
 
-        prompt = f"""Analyze these {len(valid_entries)} two-person scenes{context}{author_hint}.
+        prompt = f"""Analyze these {len(valid_entries)} scenes{context}{author_hint}.
 
 {scenes_block}
 
 For EACH scene, respond with a JSON object containing:
-- title: Brief descriptive title
+- scene: the SCENE number as given above (an integer)
+- title: Brief descriptive title (what happens in THIS scene's text, not the act and scene number)
 - description: 1-2 sentence summary
 - setting: Where it takes place (null if unclear)
 - tone: romantic/comedic/tragic/tense/dramatic/lighthearted/mysterious/melancholic
 - primary_emotions: Array of 1-3 emotions
 - relationship_dynamic: romantic/adversarial/familial/friendship/professional/mentor-student/strangers
+
+Describe only what is in the text shown for each scene, not what you remember of the play.
 
 Return a JSON ARRAY of objects, one per scene, in the same order. Return ONLY valid JSON."""
 
@@ -1409,13 +1716,9 @@ Return a JSON ARRAY of objects, one per scene, in the same order. Return ONLY va
                 if json_match:
                     metadata_list = json.loads(json_match.group())
                     if isinstance(metadata_list, list):
-                        # Map results back to original indices
                         result = [self._default_metadata(sd) for sd in scenes]
-                        for idx, (orig_i, _) in enumerate(valid_entries):
-                            if idx < len(metadata_list):
-                                result[orig_i] = metadata_list[idx]
                         print(f"Batch analyzed {len(valid_entries)} scenes in 1 AI call")
-                        return result
+                        return _place_framing(result, metadata_list, valid_entries)
                 break  # No valid JSON but no error — don't retry
             except Exception as e:
                 is_rate_limit = "429" in str(e) or "rate_limit" in str(e).lower()
@@ -2053,6 +2356,40 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
 
         return all_scenes
 
+    # Fields the model is allowed to fill in on a whole scene. Lines are not
+    # among them.
+    _FRAMING = ("title", "description", "setting", "tone", "primary_emotions",
+                "relationship_dynamic")
+
+    def extract_scenes_whole(self, spans, script_title: str = "",
+                             script_author: str = "", on_progress=None,
+                             cancel_event=None) -> List[Dict]:
+        """Cut a play on its own headings and keep every line of every scene.
+
+        One model call for the whole script, and it only writes the framing:
+        a title, a summary, a tone. Which lines a scene has, and who says them,
+        is read off the page.
+        """
+        def progress(msg):
+            print(msg)
+            if on_progress:
+                on_progress(msg)
+
+        scenes = whole_scenes(spans)
+        spoken = sum(len(s["lines"]) for s in scenes)
+        progress(f"Read {len(scenes)} scenes, {spoken} speeches, nothing skipped")
+        if not scenes or (cancel_event and cancel_event.is_set()):
+            return scenes
+
+        progress("Naming the scenes")
+        framing = self.analyze_scenes_batch(scenes, script_title, script_author)
+        for scene, meta in zip(scenes, framing):
+            for key in self._FRAMING:
+                value = (meta or {}).get(key)
+                if value:
+                    scene[key] = value
+        return scenes
+
     def extract_scenes_quick(self, chunks, characters: List[Dict],
                              script_title: str = "", script_author: str = "",
                              on_progress=None, cancel_event=None) -> List[Dict]:
@@ -2161,8 +2498,32 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         pages_est = max(1, len(raw_text) // 3000)
         progress(f"Read ~{pages_est} pages of text")
 
+        # A play that carries its own headings is cut on them, whole. The
+        # model never gets to choose which lines survive; it names the scenes.
+        # Everything below this branch is for text with no structure to read:
+        # sides, pasted dialogue, screenplays.
+        from app.services.scene_map import detect_scene_spans
+
+        spans = detect_scene_spans(_preprocess_text(raw_text))
+        is_play = any(s.act_label or s.scene_label for s in spans)
+
+        if is_play:
+            check_cancelled()
+            progress("Learning who the characters are")
+            metadata = self.extract_script_metadata(raw_text)
+            script_title = metadata.get("title", "")
+            script_author = metadata.get("author", "")
+            characters = metadata.get('characters', [])
+            progress(f"Found {len(characters)} characters in \"{script_title}\"")
+
+            check_cancelled()
+            progress(f"Cutting on the play's own headings, {len(spans)} scenes")
+            scenes = self.extract_scenes_whole(
+                spans, script_title, script_author,
+                on_progress=on_progress, cancel_event=cancel_event
+            )
         # Short scripts (< 5 pages): single AI call for metadata + scenes
-        if pages_est <= 5:
+        elif pages_est <= 5:
             check_cancelled()
             progress("Analyzing script and extracting scenes")
             combined = self.extract_combined(raw_text)
@@ -2221,8 +2582,10 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         # deterministic parser as the source of truth (before the length filter, so
         # recovered lines count toward the 4-line minimum).
         # Attribution and order come from the source; the AI keeps the framing.
-        scenes = _align_to_source(scenes, raw_text)
-        scenes = _recover_dropped_dialogue(scenes, raw_text)
+        # A whole scene came off the page already; there is nothing to repair.
+        if not is_play:
+            scenes = _align_to_source(scenes, raw_text)
+            scenes = _recover_dropped_dialogue(scenes, raw_text)
 
         # Internal to the guards above; nothing downstream should see a copy of
         # the chunk hanging off every scene, least of all the extraction cache.

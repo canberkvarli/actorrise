@@ -105,6 +105,12 @@ _NAME_PARTICLES = {
 
 _ROMAN = re.compile(r"^[IVXLCDM]+$", re.IGNORECASE)
 
+# How an edition announces its cast list.
+_CAST_LIST = re.compile(
+    r"characters in the play|dramatis person|cast of characters|^\s*(the )?characters\s*$",
+    re.IGNORECASE | re.MULTILINE,
+)
+
 
 def repair_split_name(name: str) -> str:
     """Put back a space the PDF reader dropped into the middle of a word.
@@ -288,6 +294,11 @@ def _drop_front_matter(spans: List[SceneSpan], had_preamble: bool) -> List[Scene
     first = spans[0]
     if first.act_label or first.scene_label:
         return spans
+    # A cast list reads exactly like dialogue once the parser knows a Folger
+    # cue: "NICK BOTTOM, weaver" is a cue with a direction, and the description
+    # under it is his line. It says what it is at the top, so believe that.
+    if _CAST_LIST.search(first.text):
+        return spans[1:]
     if len(first.characters) >= 2:
         return spans
     return spans[1:]
