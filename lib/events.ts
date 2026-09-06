@@ -13,7 +13,10 @@ import api from "./api";
 
 export type UserEventName =
   | "onboarding_step_viewed"
-  | "search_box_focused";
+  | "search_box_focused"
+  | "cut_editor_opened"
+  | "notes_field_focused"
+  | "memorized_toggled";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 

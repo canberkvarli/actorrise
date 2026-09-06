@@ -35,6 +35,11 @@ CLIENT_EVENT_NAMES = frozenset(
     {
         "onboarding_step_viewed",  # {step, key}
         "search_box_focused",  # once per /monologues mount
+        # Collection depth: 167 favorites, 2 cuts, 2 notes, 13 memorized. These
+        # split "never found the feature" from "found it, didn't want it".
+        "cut_editor_opened",  # {monologue_id, surface}
+        "notes_field_focused",  # {monologue_id}, once per detail-page mount
+        "memorized_toggled",  # {monologue_id, memorized}
     }
 )
 

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { CutLine, CutMeter, type CutLineState } from "@/components/monologue/CutRail";
 import { cn } from "@/lib/utils";
 import { maskFirstLetters } from "@/lib/memorize";
+import { trackEvent } from "@/lib/events";
 import { Segmented } from "./Segmented";
 import { SettingsPopover } from "./SettingsPopover";
 import { SelfRecorder } from "./SelfRecorder";
@@ -157,6 +158,9 @@ export function MemorizeView({
   // ---- Trim mode -----------------------------------------------------------
 
   const enterTrim = () => {
+    // The memorize screen's own way into the cut editor; the detail page
+    // reports surface "detail". No monologue id in these props by design.
+    trackEvent("cut_editor_opened", { surface: "memorize" });
     setTrimming(true);
     setShowFull(false);
     setMode("read");

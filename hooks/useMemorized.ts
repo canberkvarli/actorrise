@@ -3,6 +3,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import { trackEvent } from "@/lib/events";
 import { Monologue } from "@/types/actor";
 
 /**
@@ -21,6 +22,10 @@ export function useToggleMemorized() {
       memorized: boolean;
     }) => {
       await api.post(`/api/monologues/${monologueId}/memorized`, { memorized });
+      // Every toggle, both directions, from every surface that uses this hook.
+      // The favorites row only keeps the final state (13 memorized), not how
+      // many people ever touched the switch.
+      trackEvent("memorized_toggled", { monologue_id: monologueId, memorized });
       return { monologueId, memorized };
     },
     onMutate: async ({ monologueId, memorized }) => {

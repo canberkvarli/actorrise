@@ -16,6 +16,7 @@ import {
 } from "@tabler/icons-react";
 import { Monologue } from "@/types/actor";
 import api from "@/lib/api";
+import { trackEvent } from "@/lib/events";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   MonologueHeader,
@@ -150,6 +151,21 @@ export default function MonologueDetailPage() {
   const openCut = () => {
     setMode("cut");
     scrollToStage();
+  };
+
+  // Discovery, not use: 167 favorites carry 2 cuts and 2 notes, and the
+  // database cannot say whether the features are buried or unwanted. Entering
+  // cut mode (by any of its buttons) and the first focus of the notes box are
+  // the "found it" half of that question; the saves are already recorded.
+  useEffect(() => {
+    if (mode !== "cut" || !monologue) return;
+    trackEvent("cut_editor_opened", { monologue_id: monologue.id, surface: "detail" });
+  }, [mode, monologue]);
+  const notesFocusedRef = useRef(false);
+  const noteNotesFocused = () => {
+    if (notesFocusedRef.current || !monologue) return;
+    notesFocusedRef.current = true;
+    trackEvent("notes_field_focused", { monologue_id: monologue.id });
   };
 
   useEffect(() => {
@@ -562,6 +578,7 @@ export default function MonologueDetailPage() {
             ref={notesRef}
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            onFocus={noteNotesFocused}
             onBlur={flushNotes}
             placeholder="Beats, intentions, reminders…"
             rows={4}
