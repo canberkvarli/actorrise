@@ -30,7 +30,7 @@ import { MonologueWall } from "@/components/monologue/MonologueWall";
 import { ExportSheet } from "@/components/monologue/ExportSheet";
 import { useSaveNotes } from "@/hooks/useCollectionMeta";
 import { useBeats, useSaveBeat } from "@/hooks/useBeats";
-import { BeatReader } from "@/components/monologue/BeatReader";
+import { BeatReader, BEAT_LINE_ATTR } from "@/components/monologue/BeatReader";
 import { beatUnits } from "@/lib/beatUnits";
 import { useToggleMemorized } from "@/hooks/useMemorized";
 import { useAuth } from "@/lib/auth";
@@ -115,9 +115,48 @@ export default function MonologueDetailPage() {
     });
   };
 
+  /* The bottom textarea, for the note that is about the piece rather than
+     about a line. Only the fallback now — see openNote. */
   const scrollToNotes = () => {
     notesSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     notesRef.current?.focus();
+  };
+
+  const beatsWrapRef = useRef<HTMLDivElement>(null);
+  const [openBeat, setOpenBeat] = useState<number | null>(null);
+
+  /**
+   * What the note button in the working bar does.
+   *
+   * It used to call scrollToNotes, which sails past the margin the notes now
+   * live in and lands on the box at the foot of the page — the exact trip
+   * ("scroll past every line to reach it") that the margin exists to remove.
+   *
+   * So it opens a line instead, and it opens the line you are looking at: the
+   * first one at or below the sticky bar. A note is about the bit you just
+   * read, and the bar follows you down the piece, so "here" is the only
+   * sensible target. Falls back to the box when there is no margin to write in
+   * — signed out, paywalled, or reading in cut/copy.
+   */
+  const openNote = () => {
+    const wrap = beatsWrapRef.current;
+    if (!wrap) {
+      scrollToNotes();
+      return;
+    }
+    const lines = Array.from(
+      wrap.querySelectorAll<HTMLElement>(`[${BEAT_LINE_ATTR}]`),
+    );
+    if (lines.length === 0) {
+      scrollToNotes();
+      return;
+    }
+    const target =
+      lines.find((el) => el.getBoundingClientRect().top >= NAV_OFFSET) ??
+      lines[lines.length - 1];
+    const index = Number(target.getAttribute(BEAT_LINE_ATTR));
+    setOpenBeat(Number.isNaN(index) ? 0 : index);
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
   /**
@@ -382,17 +421,24 @@ export default function MonologueDetailPage() {
             </div>
 
             <div className="flex flex-shrink-0 items-center gap-1.5">
-              {/* Notes lives at the foot of the page, under the whole piece.
-                  Marking a beat meant scrolling past every line to reach it and
-                  scrolling back to keep reading, which is why it went unused.
-                  It is one tap from the bar now, and the bar follows you. */}
-              <InstantTooltip label={notes.trim() ? "Your notes" : "Add a note"}>
+              {/* Opens a note on the line you are looking at — see openNote.
+                  This used to jump to the box at the foot of the page, which
+                  is the trip the margin was built to remove. */}
+              <InstantTooltip
+                label={
+                  beatMap.size > 0
+                    ? `Your notes · ${beatMap.size}`
+                    : "Note this line"
+                }
+              >
                 <button
                   type="button"
-                  onClick={scrollToNotes}
-                  aria-label="Your notes"
+                  onClick={openNote}
+                  aria-label="Note this line"
                   className={`rounded-full p-2 transition-colors hover:bg-muted ${
-                    notes.trim() ? "text-foreground" : "text-muted-foreground"
+                    beatMap.size > 0 || notes.trim()
+                      ? "text-foreground"
+                      : "text-muted-foreground"
                   }`}
                 >
                   <IconNote className="h-5 w-5" />
@@ -503,17 +549,34 @@ export default function MonologueDetailPage() {
                     measured
                     textSlot={
                       user && !monologue.paywalled && units.length > 0 ? (
-                        <BeatReader
-                          units={units}
-                          beats={beatMap}
-                          onSave={(index, body, anchor) =>
-                            saveBeat.mutate({
-                              segmentIndex: index,
-                              body,
-                              anchorText: anchor,
-                            })
-                          }
-                        />
+                        <div ref={beatsWrapRef}>
+                          <BeatReader
+                            units={units}
+                            beats={beatMap}
+                            openIndex={openBeat}
+                            onOpenChange={setOpenBeat}
+                            onSave={(index, body, anchor) => {
+                              saveBeat.mutate({
+                                segmentIndex: index,
+                                body,
+                                anchorText: anchor,
+                              });
+                              /* The case for the margin was one number: two
+                                 notes, ever, by two people. Shipping the fix
+                                 without a way to read that number again would
+                                 leave us guessing whether it worked. */
+                              trackEvent(
+                                body.trim() ? "beat_saved" : "beat_cleared",
+                                {
+                                  monologue_id: monologue.id,
+                                  segment_index: index,
+                                  length: body.trim().length,
+                                  total_beats: beatMap.size,
+                                },
+                              );
+                            }}
+                          />
+                        </div>
                       ) : undefined
                     }
                   />
@@ -571,8 +634,8 @@ export default function MonologueDetailPage() {
                   <Button size="sm" variant="outline" onClick={openCut}>
                     Cut it to time
                   </Button>
-                  <Button size="sm" variant="outline" onClick={scrollToNotes}>
-                    Add a note
+                  <Button size="sm" variant="outline" onClick={openNote}>
+                    Mark a beat
                   </Button>
                   <Button
                     size="sm"
@@ -594,8 +657,12 @@ export default function MonologueDetailPage() {
             meant scrolling past every line to find it and scrolling back. */}
         <section ref={notesSectionRef} className="mt-12 border-t border-border/60 pt-6">
           <div className="flex items-baseline justify-between gap-3">
+            {/* Retitled once the margin existed. "Your notes" was true of both
+                and told you nothing about which one you were looking at; this
+                is the note about the piece, the margin holds the notes about
+                its lines. */}
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-              Your notes
+              On the whole piece
             </h2>
             {/* Was silent. It saved on blur only, so a note typed and then
                 abandoned — closing the tab, hitting Rehearse — was simply
@@ -615,7 +682,7 @@ export default function MonologueDetailPage() {
             onChange={(e) => setNotes(e.target.value)}
             onFocus={noteNotesFocused}
             onBlur={flushNotes}
-            placeholder="Beats, intentions, reminders…"
+            placeholder="Who you're talking to, what you want, why now…"
             rows={4}
             className="mt-3 w-full resize-y rounded-md border border-input bg-background px-3 py-2 text-sm leading-relaxed outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring"
           />

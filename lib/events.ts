@@ -16,7 +16,9 @@ export type UserEventName =
   | "search_box_focused"
   | "cut_editor_opened"
   | "notes_field_focused"
-  | "memorized_toggled";
+  | "memorized_toggled"
+  | "beat_saved"
+  | "beat_cleared";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 

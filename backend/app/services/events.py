@@ -40,6 +40,13 @@ CLIENT_EVENT_NAMES = frozenset(
         "cut_editor_opened",  # {monologue_id, surface}
         "notes_field_focused",  # {monologue_id}, once per detail-page mount
         "memorized_toggled",  # {monologue_id, memorized}
+        # Margin notes replaced the one box at the foot of the page, on the
+        # evidence that the box had been written in twice in the product's
+        # life at an average of 30 characters. These are how we find out
+        # whether writing on the line itself actually gets used — without
+        # them the next read of that number is a guess.
+        "beat_saved",  # {monologue_id, segment_index, length, total_beats}
+        "beat_cleared",  # same shape; length is 0
     }
 )
 

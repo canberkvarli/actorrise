@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+
 import { AnimatePresence, motion } from "framer-motion";
 import { IconPlus } from "@tabler/icons-react";
 
@@ -29,11 +30,22 @@ interface BeatReaderProps {
   onSave: (segmentIndex: number, body: string, anchorText: string) => void;
   /** Paywalled text is a teaser; there is nothing honest to annotate. */
   disabled?: boolean;
+  /** Controlled, so the note button in the working bar can open a line too. */
+  openIndex: number | null;
+  onOpenChange: (index: number | null) => void;
 }
 
-export function BeatReader({ units, beats, onSave, disabled }: BeatReaderProps) {
-  const [openIndex, setOpenIndex] = useState<number | null>(null);
+/** Marks each line in the DOM so callers can find the one you are looking at. */
+export const BEAT_LINE_ATTR = "data-beat-index";
 
+export function BeatReader({
+  units,
+  beats,
+  onSave,
+  disabled,
+  openIndex,
+  onOpenChange,
+}: BeatReaderProps) {
   return (
     <div className="mx-auto max-w-[62ch]">
       {units.map((u) => (
@@ -43,8 +55,8 @@ export function BeatReader({ units, beats, onSave, disabled }: BeatReaderProps) 
           body={beats.get(u.index) ?? ""}
           open={openIndex === u.index}
           disabled={disabled}
-          onOpen={() => setOpenIndex(u.index)}
-          onClose={() => setOpenIndex((i) => (i === u.index ? null : i))}
+          onOpen={() => onOpenChange(u.index)}
+          onClose={() => onOpenChange(null)}
           onSave={(body) => onSave(u.index, body, anchorFor(u.text))}
         />
       ))}
@@ -73,6 +85,7 @@ function BeatLine({
 
   return (
     <div
+      {...{ [BEAT_LINE_ATTR]: unit.index }}
       className={cn(
         "group relative pl-11 pr-1",
         // Blocks breathe; units inside a block sit together, the way sentences
