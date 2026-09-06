@@ -256,9 +256,13 @@ class Recommender:
         if preferred_genres:
             query = f"monologue about {' and '.join(preferred_genres[:3])}"
             try:
-                comfort_results = self.semantic_search.search(
+                # search() returns ([(monologue, score), ...], quote_match_types).
+                # This used to bind the whole tuple, so the first iteration hit
+                # the list, not a Monologue, and "Find for me" 500'd every time.
+                scored, _ = self.semantic_search.search(
                     query, limit=comfort_limit * 2, filters=filters
                 )
+                comfort_results = [m for m, _score in scored]
             except Exception as e:
                 print(f"Semantic search failed: {e}")
                 try:
