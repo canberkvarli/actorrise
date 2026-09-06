@@ -42,6 +42,7 @@ export function ProblemsTab() {
   const weak = summary.weak_match_count;
   const repeats = summary.repeat_count ?? 0;
   const gaps = summary.content_gap_count;
+  const wrongTab = summary.wrong_tab_count ?? 0;
 
   // A search is "bad" if it returned nothing or returned junk. Repeats overlap
   // with both, so they're reported alongside rather than added in.
@@ -102,9 +103,19 @@ export function ProblemsTab() {
         <StatTile
           label="We don't have it"
           value={gaps.toLocaleString()}
-          caption="Searches we recognised as a real title we're missing"
+          caption="A real title we're genuinely missing. This is the scrape list."
           active={problem === "gap"}
           onClick={() => toggle("gap")}
+        />
+      </div>
+
+      <div className="grid gap-2 grid-cols-1">
+        <StatTile
+          label="Looked in the wrong tab"
+          value={wrongTab.toLocaleString()}
+          caption="We have it, it just lives under the other tab. They were redirected, so this is a save, not a miss."
+          active={problem === "wrong_tab"}
+          onClick={() => toggle("wrong_tab")}
         />
       </div>
 

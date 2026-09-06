@@ -132,22 +132,48 @@ Nothing tells them the piece exists one tab over. This is what most of the
 Fix: when a filtered search comes back thin, re-run it without the mode filter
 and, if the other tab has results, say so instead of showing an empty stage.
 
-## Finding 2: title lookup does not normalise punctuation or numerals
+## Finding 2: WITHDRAWN. Title lookup already handles these.
 
-The corpus has these. Actors searched them and got nothing.
+My first pass said numerals and apostrophes broke the title lookup. Wrong. I had
+tested with raw SQL ILIKE instead of calling the lookup. Running the real
+`detect_catalogue_title` against the live catalogue:
 
-| Typed | In corpus as |
+| Typed | Resolves to | Pieces |
+|---|---|---|
+| `brooklyn 99` | Brooklyn Nine Nine | 2 |
+| `queen's gambit` | The Queens Gambit | 2 |
+| `one flew over the cuckoos nest` | One Flew Over the Cuckoo's Nest | 3 |
+| `yellow jackets` | Yellowjackets | 12 |
+| `better call saul` | Better Call Saul | 7 |
+
+Every one resolves. `_normalise_title` already strips punctuation and
+`_squash_title` already handles the digit/word split. Nothing to fix.
+
+What the table actually shows is the real pattern: **every one of these is a
+screen title, and every one returns 0 on the Plays tab.** Finding 1c was not one
+of several problems. For title searches it is the only problem.
+
+## Finding 2b: the cross-tab redirect also already works
+
+`compute_content_gap` returns `available_in` for all of them, so the UI has been
+offering the other tab correctly the whole time.
+
+The bug was never in the search. It was in the **reporting**. The admin summary
+counted every `content_gap` object as missing content, including recoveries:
+
+| 30 days to 2026-09-06 | |
 |---|---|
-| `brooklyn 99` | Brooklyn Nine Nine |
-| `queen's gambit` | The Queens Gambit |
-| `one flew over the cuckoos nest` | One Flew Over the Cuckoo's Nest, 5x |
-| `yellow jackets` | Yellowjackets |
+| reported as "we don't have it" | 66 |
+| actually in the other tab, actor redirected | 57 |
+| genuinely missing | 9 |
 
-Numerals spelled out vs digits, and apostrophe present vs absent. A fold on both
-sides of the title comparison fixes all four.
+That headline is what pointed this audit at a scraping backlog. Anastasia, Black
+Swan, Sing Street, Mean Girls and Better Call Saul were all on the "missing"
+list, and all five are in the library.
 
-(`garry potter` is NOT one of these. Verified: it resolves correctly in Film &
-TV mode. It failed only because the actor was in Plays mode. See Finding 1c.)
+Fixed: the summary now splits `content_gap_count` (real gaps, the scrape list)
+from `wrong_tab_count` (recoveries, a save). The row flag reads "it's under
+film / tv" instead of "we don't have it", and the two are separately filterable.
 
 ## Finding 3: the genuine scrape list is short
 
@@ -186,8 +212,10 @@ failed", not "you lack this title". Read it that way.
 2. DONE, and smaller than advertised. 185 mis-gated rows freed.
 3. DONE. Source-aware word floor, stage 100 and screen 75. This is what was
    actually blanking 164 film/TV titles.
-4. When a filtered search comes back thin, look in the other tab and say so.
-5. Normalise numerals and apostrophes in title lookup.
-6. Route bare abstract words to attribute filters, and de-duplicate by play so
-   `war` cannot return the same title four times.
-7. Scrape the titles in Finding 3. Last, not first.
+4. DONE. The dashboard no longer reports cross-tab recoveries as missing
+   content. "We don't have it" went 60 to 7, which is the real scrape list.
+5. WITHDRAWN. Title normalisation was never broken.
+6. TODO, and now the only search work left: route bare abstract words to
+   attribute filters, and de-duplicate by play so `war` cannot return the same
+   title four times.
+7. Scrape the titles in Finding 3. It is nine searches, not sixty.

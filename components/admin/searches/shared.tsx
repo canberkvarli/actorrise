@@ -56,6 +56,8 @@ export interface SearchSummary {
   scoreable_count?: number;
   title_lookup_count?: number;
   content_gap_count: number;
+  /** Title existed, just under the other tab. A recovery, not a miss. */
+  wrong_tab_count: number;
   avg_best_cosine: number | null;
   by_match_strategy: { key: string; count: number }[];
   by_query_type: { key: string; count: number }[];
@@ -104,7 +106,14 @@ export interface ContentRequestItem {
 }
 
 /** Which kind of failure a view is filtered to. `null` = everything. */
-export type ProblemFilter = "zero" | "weak" | "gap" | "repeat" | "any" | null;
+export type ProblemFilter =
+  | "zero"
+  | "weak"
+  | "gap"
+  | "wrong_tab"
+  | "repeat"
+  | "any"
+  | null;
 
 export interface LogFilters {
   q: string;
@@ -244,7 +253,17 @@ export function ProblemFlags({ entry }: { entry: SearchLogEntry }) {
   const flags: string[] = [];
   if (entry.results_count === 0) flags.push("nothing found");
   else if (entry.weak_match) flags.push("poor match");
-  if (entry.content_gap && typeof entry.content_gap === "object") flags.push("we don't have it");
+  // A content_gap carrying `available_in` is the opposite of a gap: the title
+  // is in the library, just under the other tab, and the actor was told so.
+  // Labelling that "we don't have it" put 57 titles we own on the missing list.
+  if (entry.content_gap && typeof entry.content_gap === "object") {
+    const gap = entry.content_gap as { available_in?: unknown };
+    flags.push(
+      Array.isArray(gap.available_in) && gap.available_in.length > 0
+        ? `it's under ${gap.available_in.join(" / ")}`
+        : "we don't have it",
+    );
+  }
   if (entry.is_repeat) flags.push("tried again");
 
   if (flags.length === 0) {

@@ -84,7 +84,18 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
             "count(*) FILTER (WHERE weak_match IS TRUE) AS weak, "
             # content_gap is jsonb: a real gap is an object; most rows store the
             # jsonb literal 'null' (NOT sql NULL), so IS NOT NULL over-counts.
-            "count(*) FILTER (WHERE jsonb_typeof(content_gap) = 'object') AS gaps, "
+            #
+            # A gap carrying `available_in` is NOT a gap. It is the cross-tab
+            # recovery: the actor searched a film title on the Plays tab and was
+            # told where it actually lives. Counting those as missing content
+            # read as "we don't have it: 66" when 57 of the 66 were titles we
+            # own, and it sent a 2026-09-06 audit hunting for a scraping backlog
+            # that did not exist. Anastasia, Black Swan and Better Call Saul were
+            # all on that list, and all three are in the library.
+            "count(*) FILTER (WHERE jsonb_typeof(content_gap) = 'object' "
+            "  AND NOT (content_gap ? 'available_in')) AS gaps, "
+            "count(*) FILTER (WHERE jsonb_typeof(content_gap) = 'object' "
+            "  AND content_gap ? 'available_in') AS wrong_tab, "
             "avg(best_cosine) FILTER (WHERE best_cosine IS NOT NULL) AS avg_cos, "
             # The weak-rate denominator must be the SCOREABLE (vector) rows only.
             # Title/character pre-pass hits never set weak_match or best_cosine,
@@ -105,10 +116,11 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
     zero_results = int(totals[1] or 0)
     weak_matches = int(totals[2] or 0)
     content_gaps = int(totals[3] or 0)
-    avg_cosine = totals[4]
-    scoreable = int(totals[5] or 0)
-    title_lookup_count = int(totals[6] or 0)
-    repeat_count = int(totals[7] or 0)
+    wrong_tab_count = int(totals[4] or 0)
+    avg_cosine = totals[5]
+    scoreable = int(totals[6] or 0)
+    title_lookup_count = int(totals[7] or 0)
+    repeat_count = int(totals[8] or 0)
 
     def _distribution(column):
         rows = (
@@ -194,6 +206,9 @@ def _compute_summary(start_dt: datetime, end_dt: datetime, db: Session) -> dict[
         "scoreable_count": scoreable,
         "title_lookup_count": title_lookup_count,
         "content_gap_count": content_gaps,
+        # Searches where the title exists but sat under the other tab. A win,
+        # not a miss: the actor was redirected rather than told we lack it.
+        "wrong_tab_count": wrong_tab_count,
         "avg_best_cosine": round(float(avg_cosine), 3) if avg_cosine is not None else None,
         "by_match_strategy": by_match_strategy,
         "by_query_type": by_query_type,
@@ -251,11 +266,19 @@ def get_search_logs(
     if problem:
         # `content_gap` is jsonb — most rows hold the jsonb literal 'null', so a
         # plain IS NOT NULL matches everything. Same test as _compute_summary.
-        gap_clause = sa_text("jsonb_typeof(search_logs.content_gap) = 'object'")
+        gap_clause = sa_text(
+            "jsonb_typeof(search_logs.content_gap) = 'object' "
+            "AND NOT (search_logs.content_gap ? 'available_in')"
+        )
+        wrong_tab_clause = sa_text(
+            "jsonb_typeof(search_logs.content_gap) = 'object' "
+            "AND search_logs.content_gap ? 'available_in'"
+        )
         clauses = {
             "zero": lambda qy: qy.filter(SearchLog.results_count == 0),
             "weak": lambda qy: qy.filter(SearchLog.weak_match.is_(True)),
             "gap": lambda qy: qy.filter(gap_clause),
+            "wrong_tab": lambda qy: qy.filter(wrong_tab_clause),
             "repeat": lambda qy: qy.filter(SearchLog.is_repeat.is_(True)),
             "any": lambda qy: qy.filter(
                 (SearchLog.results_count == 0)
