@@ -120,9 +120,12 @@ export function ScenePicker({
     });
   };
 
+  // How many this plan will let them build in one go.
+  const allowance = limit == null ? scenes.length : Math.min(limit, scenes.length);
+  const hasAllowance = picked.size >= allowance;
+
   const takeAllowance = () => {
-    const allowed = limit == null ? scenes.length : limit;
-    setPicked(new Set(scenes.slice(0, allowed).map((s) => s.index)));
+    setPicked(new Set(scenes.slice(0, allowance).map((s) => s.index)));
   };
 
   return (
@@ -148,6 +151,32 @@ export function ScenePicker({
         <p className="mx-auto mt-2.5 max-w-sm text-[14.5px] leading-relaxed text-paper-muted">
           Choose what to build now. The rest keep, and you can come back for them.
         </p>
+
+        {/* Taking the whole play was a dotted-underline link at 12.5px in the
+            footer status line, and it was only rendered when a plan had a
+            limit — so anyone whose plan builds everything had no way to say
+            "all of it" and ticked nine boxes by hand. It is a real button now,
+            where the choice is made rather than under it. */}
+        {scenes.length > 1 && (
+          <button
+            type="button"
+            onClick={() => (hasAllowance ? setPicked(new Set()) : takeAllowance())}
+            className={cn(
+              "mt-4 inline-flex items-center gap-2 rounded-md border px-3.5 py-1.5 transition-colors",
+              "font-typewriter text-[13.5px] tracking-wide",
+              hasAllowance
+                ? "border-paper-rule text-paper-muted hover:bg-paper-ink/[0.05] hover:text-paper-ink"
+                : "border-primary/40 text-primary hover:bg-primary/[0.08]",
+            )}
+          >
+            {hasAllowance
+              ? "Clear"
+              : allowance === scenes.length
+                ? `Build the whole thing · ${scenes.length} scenes`
+                : `Build the first ${allowance}`}
+          </button>
+        )}
+
         <div aria-hidden className="mx-auto mt-5 h-px w-16 bg-paper-rule" />
       </header>
 
@@ -316,20 +345,6 @@ export function ScenePicker({
               <>
                 <span className="font-bold text-primary">{picked.size}</span> of{" "}
                 {scenes.length} chosen
-              </>
-            )}
-            {limit != null && picked.size < Math.min(limit, scenes.length) && (
-              <>
-                <span aria-hidden className="px-2 text-paper-rule">
-                  ·
-                </span>
-                <button
-                  type="button"
-                  onClick={takeAllowance}
-                  className="underline decoration-dotted underline-offset-4 transition-colors hover:text-paper-ink"
-                >
-                  take {Math.min(limit, scenes.length)}
-                </button>
               </>
             )}
           </span>

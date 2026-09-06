@@ -40,6 +40,28 @@ from dataclasses import dataclass, field
 DEFAULT_MIN_WORDS = 100
 DEFAULT_MAX_WORDS = 400
 
+#: The floor above is calibrated for the stage, and screen writing is simply
+#: shorter. Medians: play 128w, film 124w, tv **106w**. A flat 100 therefore sits
+#: six words from the middle of the entire TV corpus and retires 43% of it,
+#: leaving 164 of 1,436 film/TV titles with nothing at all behind their name and
+#: 611 more with one or two pieces (audit, 2026-09-06).
+#:
+#: The band it was cutting is not fragments. Red's parole hearing from The
+#: Shawshank Redemption is 78 words. Tom's speech in 500 Days of Summer is 94.
+#: Brennan's job history in Step Brothers is 90. At ~150wpm those run 31-38
+#: seconds, which is a self-tape, not a clip.
+#:
+#: So the floor is per-source rather than one number: what makes a piece
+#: unusable is the same everywhere, but the length that signals it is not.
+SCREEN_MIN_WORDS = 75
+_SOURCE_MIN_WORDS = {"film": SCREEN_MIN_WORDS, "tv": SCREEN_MIN_WORDS}
+
+
+def min_words_for_source(source_type: str | None) -> int:
+    """Word floor for a piece from `source_type`. Unknown sources get the
+    stage floor, which is the stricter of the two."""
+    return _SOURCE_MIN_WORDS.get((source_type or "").strip().lower(), DEFAULT_MIN_WORDS)
+
 # A speaker label in transcript form: line begins with an ALL-CAPS name
 # (2+ chars, allowing spaces / . ' -) immediately followed by a colon.
 #   "MARIA:", "DR. REYES:", "OLD MAN:"

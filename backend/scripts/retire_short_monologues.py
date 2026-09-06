@@ -42,7 +42,10 @@ from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 from app.core.config import settings  # noqa: E402
 from app.models.actor import Monologue, Play  # noqa: E402
-from app.services.extraction.monologue_quality import DEFAULT_MIN_WORDS  # noqa: E402
+from app.services.extraction.monologue_quality import (  # noqa: E402
+    DEFAULT_MIN_WORDS,
+    min_words_for_source,
+)
 
 # pgbouncer drops idle pooled connections under a long loop; a dedicated engine
 # with pre-ping survives it.
@@ -57,13 +60,25 @@ CHUNK = 500
 
 
 def _targets(db):
-    """Rows under the floor that are not already retired or under review."""
-    return (
-        db.query(Monologue.id, Monologue.word_count, Monologue.review_status)
-        .filter(Monologue.word_count < DEFAULT_MIN_WORDS)
+    """Rows under the floor FOR THEIR SOURCE, not already retired or in review.
+
+    The floor is per-source (stage 100, screen 75), so this is not one SQL
+    comparison. Filtering in Python against the shared helper is what stops this
+    script re-retiring the ~1,500 screen pieces that ungate_above_floor.py just
+    freed -- a flat `word_count < DEFAULT_MIN_WORDS` would take every one of them
+    straight back out of search on the next run.
+    """
+    rows = (
+        db.query(
+            Monologue.id, Monologue.word_count, Monologue.review_status,
+            Play.source_type,
+        )
+        .join(Play, Play.id == Monologue.play_id)
         .filter(Monologue.review_status.is_(None))
         .order_by(Monologue.id)
+        .all()
     )
+    return [r for r in rows if (r.word_count or 0) < min_words_for_source(r.source_type)]
 
 
 def restore(path: Path) -> None:
@@ -99,31 +114,31 @@ def main() -> int:
 
     db = SessionLocal()
     try:
-        rows = _targets(db).all()
+        rows = _targets(db)
         total = db.query(func.count(Monologue.id)).scalar() or 0
 
-        print(f"floor            {DEFAULT_MIN_WORDS} words")
+        print(f"floor            stage {DEFAULT_MIN_WORDS}w / screen {min_words_for_source('film')}w")
         print(f"corpus           {total}")
         print(f"to retire        {len(rows)}  ({len(rows) / total:.1%})")
         print(f"remaining after  {total - len(rows)}")
 
-        by_source = (
-            db.query(Play.source_type, func.count(Monologue.id))
-            .join(Monologue, Monologue.play_id == Play.id)
-            .filter(Monologue.word_count < DEFAULT_MIN_WORDS)
-            .filter(Monologue.review_status.is_(None))
-            .group_by(Play.source_type)
-            .all()
-        )
-        for src, n in sorted(by_source, key=lambda r: -r[1]):
+        # Counted off the actual target rows. Re-deriving this from a flat
+        # `word_count < DEFAULT_MIN_WORDS` reported 914 film and 582 tv rows for
+        # retirement on a run whose real target set was empty, because the floor
+        # is per-source and that comparison is not.
+        by_source: dict[str, int] = {}
+        for r in rows:
+            by_source[str(r.source_type)] = by_source.get(str(r.source_type), 0) + 1
+        for src, n in sorted(by_source.items(), key=lambda r: -r[1]):
+            floor = min_words_for_source(src)
             kept = (
                 db.query(func.count(Monologue.id))
                 .join(Play, Play.id == Monologue.play_id)
                 .filter(Play.source_type == src)
-                .filter(Monologue.word_count >= DEFAULT_MIN_WORDS)
+                .filter(Monologue.word_count >= floor)
                 .scalar()
             )
-            print(f"  {str(src):6s} retire {n:5d}   keep {kept:5d}")
+            print(f"  {src:6s} (floor {floor:3d}w) retire {n:5d}   keep {kept:5d}")
 
         if not args.apply:
             print("\nDRY RUN — nothing written. Re-run with --apply.")

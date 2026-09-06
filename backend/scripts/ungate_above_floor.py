@@ -6,15 +6,17 @@ the retirement decision was made against text that the same run then restored,
 and `word_count` was resynced afterwards. So a set of rows carries a status that
 says "under the floor" while storing a word count that is over it.
 
-WHAT THIS DOES NOT DO. It does not relitigate the floor. `DEFAULT_MIN_WORDS` is
-100 as of 2026-09-05 (a40b42f0) and this script reads that constant rather than
-hardcoding a number, so it only ever frees rows the current policy would keep.
-The ~5,600 rows sitting at 75-99 words are BELOW today's floor and are left
-exactly where they are. Lowering the floor for film/TV is a product decision,
-not a data repair, and it does not belong in a cleanup script.
+THE FLOOR IS PER-SOURCE. Stage 100 words, screen 75 (see
+monologue_quality.min_words_for_source). A flat 100 is calibrated for the stage
+and retires 43% of the TV corpus, whose median piece is 106 words. The band it
+was cutting is not fragments: Red's parole hearing from The Shawshank Redemption
+is 78 words.
+
+This script never hardcodes a number. It asks the same helper the parsers ask,
+so it can only ever free rows the current policy would itself keep.
 
 Retire and restore are the mirror of scripts/retire_short_monologues.py, which
-will not re-gate these: its target set is `word_count < DEFAULT_MIN_WORDS`.
+uses the same helper and so will not re-gate what this frees.
 
     python -m scripts.ungate_above_floor                       # dry run
     python -m scripts.ungate_above_floor --apply
@@ -37,7 +39,11 @@ from sqlalchemy.orm import sessionmaker  # noqa: E402
 
 from app.core.config import settings  # noqa: E402
 from app.models.actor import Monologue, Play  # noqa: E402
-from app.services.extraction.monologue_quality import DEFAULT_MIN_WORDS  # noqa: E402
+from app.services.extraction.monologue_quality import (  # noqa: E402
+    DEFAULT_MIN_WORDS,
+    SCREEN_MIN_WORDS,
+    min_words_for_source,
+)
 
 _engine = create_engine(settings.database_url, pool_size=5, max_overflow=10,
                         pool_pre_ping=True, pool_recycle=1800)
@@ -50,13 +56,24 @@ CHUNK = 500
 
 
 def _targets(db):
-    """Retired rows whose stored word count clears the CURRENT floor."""
-    return (
-        db.query(Monologue.id, Monologue.word_count, Monologue.review_status)
+    """Retired rows whose stored word count clears the floor FOR THEIR SOURCE.
+
+    The floor is per-source (stage 100, screen 75), so this cannot be one SQL
+    comparison. The retired set is only a few thousand rows, so it is filtered
+    in Python against the same helper the parsers use — never a literal, or this
+    script drifts from the extractor the next time a floor moves.
+    """
+    rows = (
+        db.query(
+            Monologue.id, Monologue.word_count, Monologue.review_status,
+            Play.source_type,
+        )
+        .join(Play, Play.id == Monologue.play_id)
         .filter(Monologue.review_status == STATUS)
-        .filter(Monologue.word_count >= DEFAULT_MIN_WORDS)
         .order_by(Monologue.id)
+        .all()
     )
+    return [r for r in rows if (r.word_count or 0) >= min_words_for_source(r.source_type)]
 
 
 def restore(path: Path) -> None:
@@ -91,15 +108,15 @@ def main() -> int:
 
     db = SessionLocal()
     try:
-        rows = _targets(db).all()
-        still_gated = (
+        rows = _targets(db)
+        total_gated = (
             db.query(func.count(Monologue.id))
             .filter(Monologue.review_status == STATUS)
-            .filter(Monologue.word_count < DEFAULT_MIN_WORDS)
             .scalar()
         )
+        still_gated = total_gated - len(rows)
 
-        print(f"current floor      {DEFAULT_MIN_WORDS} words")
+        print(f"floor              stage {DEFAULT_MIN_WORDS}w / screen {SCREEN_MIN_WORDS}w")
         print(f"to un-gate         {len(rows)}  (retired, but >= the floor)")
         print(f"left retired       {still_gated}  (genuinely under the floor)")
 

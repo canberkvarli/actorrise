@@ -149,6 +149,53 @@ Four days will quickly steep themselves in night.
         self.assertTrue(_is_stage_direction_line("Philostrate exits.", self.PLAY_CAST))
 
 
+class ADirectionThatNamesWhoItIsAimedAt(unittest.TestCase):
+    """Folger: "PHILOSTRATE, giving Theseus a paper".
+
+    The direction runs until the speech starts, and it can name a character on
+    the way. The first cut broke at the first capital letter unless the word
+    before it was one of a short list of prepositions, so "giving" was taken as
+    the whole direction and Philostrate's line began "Theseus a paper There is
+    a brief how many sports are ripe."
+
+    A capital only continues the direction when it is somebody the play cues.
+    That is what stops "waking up When my cue comes" losing the "When".
+    """
+
+    CAST = ["THESEUS", "PHILOSTRATE", "BOTTOM", "FLUTE", "LYSANDER"]
+
+    SCENE = """THESEUS
+Say what abridgment have you for this evening?
+PHILOSTRATE, giving Theseus a paper
+There is a brief how many sports are ripe.
+THESEUS
+What are they that do play it?
+"""
+
+    def test_the_whole_direction_is_the_direction(self):
+        line = [l for l in _lines(self.SCENE, self.CAST) if l["character"] == "PHILOSTRATE"][0]
+        self.assertEqual(line["stage_direction"], "giving Theseus a paper")
+
+    def test_and_the_speech_starts_where_it_should(self):
+        said = _said_by(self.SCENE, "PHILOSTRATE", self.CAST)
+        self.assertTrue(said.startswith("There is a brief"), said)
+        self.assertNotIn("Theseus a paper", said)
+
+    def test_a_direction_that_names_nobody_still_ends_at_the_speech(self):
+        scene = "BOTTOM, waking up When my cue comes, call me.\nFLUTE Ready.\nBOTTOM And I.\nFLUTE Now.\n"
+        line = [l for l in _lines(scene, self.CAST) if l["character"] == "BOTTOM"][0]
+        self.assertEqual(line["stage_direction"], "waking up")
+        self.assertTrue(line["text"].startswith("When my cue comes"), line["text"])
+
+    def test_a_role_the_actor_plays_is_not_swallowed(self):
+        """"BOTTOM, as Pyramus" — the direction stops after the role."""
+        scene = ("BOTTOM, as Pyramus Thisbe, the flowers of odious savors sweet.\n"
+                 "FLUTE Ready.\nBOTTOM And I.\nFLUTE Now.\n")
+        line = [l for l in _lines(scene, self.CAST) if l["character"] == "BOTTOM"][0]
+        self.assertEqual(line["stage_direction"], "as Pyramus")
+        self.assertTrue(line["text"].startswith("Thisbe, the flowers"), line["text"])
+
+
 class TheLineNumberStripStaysOnItsOwnLine(unittest.TestCase):
     SAMPLE = (
         "\n".join(f"FTLN {i:04d} Verse line {i} of the speech." for i in range(14, 19))

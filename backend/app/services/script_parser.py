@@ -66,14 +66,19 @@ _DIRECTION_LINKERS = {
 _DIRECTION_MAX_WORDS = 8
 
 
-def _split_direction(rest: str):
+def _split_direction(rest: str, cast=()):
     """Where the direction ends and the speech begins on a Folger cue line.
 
     Returns (direction, speech). The speech is empty when the line was only a
-    cue. A direction is lowercase words, plus a capitalised name where a linker
-    lets one in: "waking up When my cue comes" breaks before "When", while
-    "in Demetrius' voice Follow me" keeps Demetrius and breaks before "Follow".
+    cue. A direction is lowercase words, plus a capitalised word that either
+    follows a linker ("in Demetrius' voice", "as Pyramus") or names somebody
+    the play cues ("giving Theseus a paper"). Everything else starts the
+    speech, which is what keeps the "When" in "waking up When my cue comes".
+
+    Without the cast, "PHILOSTRATE, giving Theseus a paper" broke at the first
+    capital and put "Theseus a paper" in Philostrate's mouth.
     """
+    known = {n.strip().upper() for n in (cast or ()) if n and n.strip()}
     words = rest.split()
     n = 0
     while n < len(words) and n < _DIRECTION_MAX_WORDS:
@@ -89,6 +94,11 @@ def _split_direction(rest: str):
             continue
         prev = words[n - 1].strip(",;:").lower() if n else ""
         if prev in _DIRECTION_LINKERS:
+            n += 1
+            continue
+        # "giving Theseus a paper": the direction says who it is aimed at.
+        possessive = core.upper().rstrip("'’S") if core.upper().endswith(("'S", "’S")) else core.upper()
+        if n and (core.upper() in known or possessive in known):
             n += 1
             continue
         break
@@ -938,7 +948,7 @@ def parse_dialogue(text: str, character_names=None, cast=None) -> List[Dict]:
             character = m.group(1).strip()
             if _is_excluded(character):
                 continue
-            direction, speech = _split_direction(m.group(2))
+            direction, speech = _split_direction(m.group(2), known_cast)
             start_speech(character)
             pending_direction = direction or None
             if speech:
