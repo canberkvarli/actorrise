@@ -165,6 +165,10 @@ _INLINE_STAGE_DIR = re.compile(
     r'^.{0,60}\b(exit|exits|exeunt|leads|enters|kneels|kneel|falls|rises|draws|'
     r'weeps|kisses|stabs|dies|sleeps|sleep|wakes|wake|reads|sings|sing|dances|dance|fights|'
     r'lies|lie|lays|lay|sits|sit|stands|stand|puts|put|holds|embraces|embrace|'
+    # Seen on the page and missing: "Bottom and Flute arise.", "Lion worries
+    # the mantle.", "The Lion roars." Only ever consulted for a run the printer
+    # already set in italic, so a common word here cannot take a spoken line.
+    r'arise|arises|worries|worry|roars|roar|'
     r'retires|retire|follows|follow|drinks|eats|writes|plays|anoints|squeezes|'
     r'aside|apart|within|takes|gives|turns|picks up|puts on|throws|'
     r'spreads|crows|crow|sounds|rings|strikes|beats|blows|flourishes|'
@@ -284,6 +288,27 @@ def _split_trailing_direction(text: str, names=()):
     return " ".join(parts[:-1]), last.rstrip('.')
 
 
+# A screenplay's parenthetical direction is a couple of words and usually
+# lowercase: "(beat)", "(quietly)", "(to Jane)". Verse breaks a long
+# parenthetical onto its own line and it is spoken:
+#
+#     in which our valiant Hamlet
+#     (For so this side of our known world esteemed him)
+#     Did slay this Fortinbras.
+#
+# Every whole-line bracket in the two plays measured is of the second kind, and
+# reading them as directions took a line of Hamlet's out of the play.
+_WRYLY_MAX_WORDS = 4
+
+
+def _is_a_wryly(body: str) -> bool:
+    """Is this bracket an instruction to the actor rather than words to say?"""
+    inner = body.strip()
+    if not inner:
+        return False
+    return len(inner.split()) <= _WRYLY_MAX_WORDS or inner[0].islower()
+
+
 def _extract_stage_direction(text: str):
     """Extract stage direction from text, return (clean_text, stage_direction).
 
@@ -301,7 +326,7 @@ def _extract_stage_direction(text: str):
     """
     stripped = text.strip()
     match = _STAGE_DIR.fullmatch(stripped)
-    if match:
+    if match and _is_a_wryly(match.group(1)):
         return "", match.group(1).strip()
     return text, None
 
@@ -397,6 +422,147 @@ def _strip_production_marks(text: str) -> str:
             continue
         kept.append(_REVISION_MARK.sub("", line))
     return "\n".join(kept)
+
+
+# Italic, carried out of the PDF. Every edition of a play sets stage directions
+# in italic and speech in roman, and pdfplumber reports the font of each
+# character, so the page answers a question the words cannot: "Pyramus draws
+# near the wall. Silence." is Theseus and "Pyramus stabs himself." is a
+# direction, and only the type tells them apart.
+#
+# Control characters, so nothing in a script can collide with them. They live
+# only between extraction and _preprocess_text, and _strip_markup takes them
+# off anything an actor or the database ever sees.
+_ITALIC_OPEN = "\x02"
+_ITALIC_CLOSE = "\x03"
+_ITALIC_MARKS = re.compile(r"[\x02\x03]")
+_ITALIC_RUN = re.compile(r"\x02([^\x02\x03]*)\x03")
+
+# What is left of a line once its italic is taken out: nothing, or a line
+# number. Neither counts as the line having roman text on it.
+_ONLY_A_NUMBER = re.compile(r"^\s*(?:FTLN|TLN)?\s*\d*\s*$", re.IGNORECASE)
+
+
+def _strip_markup(text: str) -> str:
+    """Text with the italic markers removed."""
+    return _ITALIC_MARKS.sub("", text or "")
+
+
+def _is_italic(char) -> bool:
+    name = char.get("fontname") or ""
+    return "Italic" in name or "Oblique" in name
+
+
+def _line_with_italics(line) -> str:
+    """One pdfplumber line, with its italic runs wrapped in markers.
+
+    pdfplumber lays out `text` with the spaces it infers from the gaps, while
+    `chars` holds only the glyphs actually drawn. They line up one to one on
+    the non-space characters, and when they do not — a ligature, a glyph the
+    layout invented — the line is returned untouched rather than marked in the
+    wrong place.
+    """
+    text = line.get("text") or ""
+    chars = line.get("chars") or []
+    spots = [i for i, ch in enumerate(text) if not ch.isspace()]
+    if not chars or len(spots) != len(chars):
+        return text
+
+    flags = [_is_italic(c) for c in chars]
+    if not any(flags):
+        return text
+
+    inserts = []
+    previous = False
+    for k, italic in enumerate(flags):
+        if italic and not previous:
+            inserts.append((spots[k], _ITALIC_OPEN))
+        elif previous and not italic:
+            inserts.append((spots[k - 1] + 1, _ITALIC_CLOSE))
+        previous = italic
+    if previous:
+        inserts.append((spots[-1] + 1, _ITALIC_CLOSE))
+
+    out = list(text)
+    for position, marker in reversed(inserts):
+        out.insert(position, marker)
+    return "".join(out)
+
+
+def _describes_an_action(run: str) -> bool:
+    """Does this read as somebody doing something, rather than saying it?"""
+    stripped = run.strip()
+    return bool(_STAGE_DIR_LINE.match(stripped) or _INLINE_STAGE_DIR.match(stripped))
+
+
+def _apply_italic_directions(text: str) -> str:
+    """Turn italic runs into directions, and unwrap the rest.
+
+    Two rules, both about where the italic sits rather than what it says:
+
+    An italic run with real roman text beside it on the same line is a
+    direction. The printer changed font in the middle of a line of verse, and
+    the only reason to do that is to stop speaking. A line number beside it is
+    not real text.
+
+    An italic run that is the whole line is a direction only if it describes an
+    action. Folger sets Bottom's quoted verse in italic — "The raging rocks / And
+    shivering shocks" — and taking every full-line italic would delete the
+    speech.
+
+    A direction comes out on its own line, still marked, so the parser can take
+    it as one without going back to guessing from the words.
+    """
+    if _ITALIC_OPEN not in text:
+        return text
+
+    # A screenplay marks action by where it sits on the page, not by italic,
+    # and its column positions are what carry the meaning. Nothing to read here.
+    if _SCREENPLAY_MARKERS.search(text[:4000]):
+        return _strip_markup(text)
+
+    out = []
+    for line in text.split("\n"):
+        if _ITALIC_OPEN not in line:
+            out.append(line)
+            continue
+
+        # "LYSANDER, to Theseus" — Folger italicises who a speech is aimed at,
+        # on the cue line, with the name still in roman. That is a cue, not a
+        # direction standing on its own, and splitting it off leaves a speech
+        # with nobody to say it. The cue reader downstream already knows this
+        # shape, so hand the line over whole.
+        bare = _strip_markup(line).strip()
+        if _CHAR_WITH_DIRECTION.match(bare) or _CHAR_ONLY.match(bare):
+            out.append(_strip_markup(line))
+            continue
+
+        # The running header at the top of every page sets the play's title in
+        # italic and the act and scene in roman: "9 A Midsummer Night's Dream
+        # ACT 1. SC. 1". Splitting the title out of it leaves "ACT 1. SC. 1"
+        # alone on a line, which the structure detector reads as the start of
+        # an act — one new act per page, and a play cut into 40 fragments.
+        if _PAGE_HEADER.match(bare):
+            out.append(_strip_markup(line))
+            continue
+
+        roman = _ITALIC_RUN.sub("", line)
+        beside_real_text = not _ONLY_A_NUMBER.match(_strip_markup(roman))
+
+        pieces = []
+        for part in re.split(r"(\x02[^\x02\x03]*\x03)", line):
+            run = _ITALIC_RUN.fullmatch(part)
+            if not run:
+                pieces.append(part)
+                continue
+            body = run.group(1).strip()
+            if body and (beside_real_text or _describes_an_action(body)):
+                pieces.append(f"\n{_ITALIC_OPEN}{body}{_ITALIC_CLOSE}\n")
+            else:
+                pieces.append(run.group(1))
+        out.append("".join(pieces))
+
+    return "\n".join(out)
 
 
 # A cue standing alone on its line: "THESEUS", "FIRST FAIRY", "ROBIN GOODFELLOW".
@@ -516,6 +682,10 @@ def _preprocess_text(text: str) -> str:
     # hyphen inside a word. Only closed up between two letters, so a spaced
     # dash used as punctuation ("Demetrius - my noble lord") is left alone.
     text = re.sub(r'(?<=[A-Za-z]) +-(?=[a-z])', '-', text)
+
+    # After the line numbers have gone, so a number is never mistaken for the
+    # roman text that makes an italic run mid-line.
+    text = _apply_italic_directions(text)
 
     # A two-word cue the PDF reader broke over two lines: "FIRST" / "FAIRY".
     # Left apart, "FIRST" is a speaker with no lines and the lullaby is sung by
@@ -934,12 +1104,28 @@ def parse_dialogue(text: str, character_names=None, cast=None) -> List[Dict]:
         stripped = line.strip()
         if not stripped:
             continue
+        # Any marker that survived to here is not a direction; it was unwrapped
+        # italic that belongs in the line. Never let one reach an actor.
+        if _ITALIC_OPEN in stripped or _ITALIC_CLOSE in stripped:
+            if not _ITALIC_RUN.fullmatch(stripped):
+                line = _strip_markup(line)
+                stripped = line.strip()
 
         # Sluglines / scene headings / stage transitions (INT./EXT./ACT/ENTER/FADE…)
         # are not dialogue. Skip them and drop the speaker context so the action
         # that follows a heading doesn't get attached to the previous speaker.
         if _is_excluded(stripped):
             current_character = None
+            continue
+
+        # The page said this was a direction, in italic. No guessing needed,
+        # and no cast list: this is what tells "Pyramus stabs himself." from
+        # Theseus's "Pyramus draws near the wall. Silence."
+        marked = _ITALIC_RUN.fullmatch(stripped)
+        if marked:
+            body = marked.group(1).strip()
+            if body and not _PAGE_HEADER.match(body):
+                hang_direction(body.rstrip("."))
             continue
 
         # Try: CHARACTER, direction — with or without the speech on the same line.
@@ -1475,6 +1661,21 @@ def pdf_page_text(page) -> str:
     return _clean_page(page).extract_text() or ""
 
 
+def _page_text_marking_italics(page) -> str:
+    """Cleaned page text with its italic runs marked.
+
+    Falls back to plain extraction when the page has no lines to read, so a
+    page pdfplumber lays out differently is never worse off than before.
+    """
+    try:
+        lines = page.extract_text_lines()
+    except Exception:
+        lines = None
+    if not lines:
+        return page.extract_text() or ""
+    return "\n".join(_line_with_italics(line) for line in lines)
+
+
 def _indented_page_text(page) -> str:
     """Cleaned page text with each line put back in its own column.
 
@@ -1507,13 +1708,16 @@ def extract_pdf_text(file_content: bytes, only_pages=None) -> str:
                 if only_pages is None or i in only_pages
             ]
             pages = [_clean_page(page) for page in wanted]
+            # Italic is how a play says "this is a direction, not a line", and
+            # it is on the page in front of us. Read it while the fonts are
+            # still here; by the time the text is a string it is gone.
             plain = "\n\n".join(
-                t for t in ((p.extract_text() or "") for p in pages) if t
+                t for t in (_page_text_marking_italics(p) for p in pages) if t.strip()
             ).strip()
 
             # Only a screenplay is typed in columns. Plays, prose and everything
             # else come back exactly as they always have.
-            if not _SCREENPLAY_MARKERS.search(plain[:4000]):
+            if not _SCREENPLAY_MARKERS.search(_strip_markup(plain[:4000])):
                 return plain
 
             return "\n\n".join(
@@ -2655,7 +2859,10 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         progress(f"Extracted {len(scenes)} rehearsal-ready scenes")
 
         return {
-            "raw_text": raw_text,
+            # The italic markers are working notes between the PDF and the
+            # parser. Nothing downstream should ever see one, least of all the
+            # stored copy of the script.
+            "raw_text": _strip_markup(raw_text),
             "metadata": metadata,
             "scenes": scenes
         }

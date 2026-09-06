@@ -105,6 +105,36 @@ class AParenthesisInVerseIsSpoken(unittest.TestCase):
         self.assertIn("men have broke (In number more than ever women spoke), In that same place", hermia)
 
 
+LINE_BROKEN_PARENTHESIS = """HORATIO
+in which our valiant Hamlet
+(For so this side of our known world esteemed him)
+Did slay this Fortinbras.
+MARCELLUS
+Good now, sit down and tell me.
+HORATIO
+That can I.
+MARCELLUS
+Say it.
+"""
+
+
+class AParenthesisOnItsOwnLineIsStillVerse(unittest.TestCase):
+    """Folger breaks a long parenthetical onto its own line, and it is spoken.
+    Every whole-line bracket in the two plays measured is of this kind; reading
+    them as directions took a line of Hamlet's out of the play. A screenplay's
+    wryly is a couple of words, usually lowercase, and stays a direction."""
+
+    def test_the_clause_is_still_horatios(self):
+        self.assertIn(
+            "For so this side of our known world esteemed him",
+            _said_by(LINE_BROKEN_PARENTHESIS, "HORATIO"),
+        )
+
+    def test_it_is_not_filed_as_a_direction(self):
+        for line in _lines(LINE_BROKEN_PARENTHESIS):
+            self.assertIsNone(line.get("stage_direction"), line)
+
+
 class AParenthesisAloneOnALineIsADirection(unittest.TestCase):
     def test_a_wryly_is_still_a_direction(self):
         rachel = [l for l in _lines(WRYLY_ON_ITS_OWN_LINE) if l["character"] == "RACHEL"]
