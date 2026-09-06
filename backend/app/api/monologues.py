@@ -801,8 +801,15 @@ async def request_content(
             status_code=400, detail="A play title or search query is required."
         )
 
+    # The user id is what makes this a request rather than an anonymous vote.
+    # Without it the queue knows a title is wanted but not by whom, and nobody
+    # can be told when it lands.
     upsert_content_request(
-        db, title, author=body.author, character_name=body.character_name
+        db,
+        title,
+        author=body.author,
+        character_name=body.character_name,
+        user_id=cast(int, current_user.id),
     )
     return {"status": "ok"}
 

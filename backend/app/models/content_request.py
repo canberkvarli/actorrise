@@ -3,7 +3,7 @@
 from datetime import datetime
 
 from app.core.database import Base
-from sqlalchemy import Column, DateTime, Index, Integer, String
+from sqlalchemy import Column, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy import func
 from sqlalchemy import text as sql_text
 from sqlalchemy.orm import Session
@@ -26,11 +26,83 @@ class ContentRequest(Base):
     )
 
 
+class ContentRequestRequester(Base):
+    """Who asked for a title, so they can be told when it lands.
+
+    `content_requests` deliberately dedupes by (title, author) and only counts
+    presses, which means it has never recorded WHO pressed. That made "tell the
+    actor who asked" impossible: the demand was known, the person was not.
+
+    Deliberately thin. A request id, a user, when they asked, and whether they
+    have since been told. Nothing about the search itself belongs here -- the
+    consent this table represents is "I asked you for this", not "you may keep
+    my search history".
+    """
+
+    __tablename__ = "content_request_requesters"
+
+    id = Column(Integer, primary_key=True, index=True)
+    content_request_id = Column(
+        Integer,
+        ForeignKey("content_requests.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    user_id = Column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    created_at = Column(DateTime, server_default=sql_text("(now())"), nullable=False)
+    #: Set when the "it is up now" email is actually sent, so a second tap on a
+    #: request offers only the people who have not been told yet.
+    notified_at = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        # One row per person per request. A repeat press must not queue a
+        # second email to the same actor.
+        Index(
+            "ix_content_request_requesters_unique",
+            "content_request_id",
+            "user_id",
+            unique=True,
+        ),
+        Index("ix_content_request_requesters_user", "user_id"),
+    )
+
+
+def record_requester(
+    db: Session, content_request_id: int, user_id: int | None
+) -> None:
+    """Link a user to a request they pressed track on. Idempotent.
+
+    Anonymous searches pass user_id=None and are simply not recorded: there is
+    nobody to write to. Never raises into the request path -- failing to note
+    who asked must not fail the ask itself.
+    """
+    if not user_id:
+        return
+    exists = (
+        db.query(ContentRequestRequester)
+        .filter(
+            ContentRequestRequester.content_request_id == content_request_id,
+            ContentRequestRequester.user_id == user_id,
+        )
+        .first()
+    )
+    if exists:
+        return
+    db.add(
+        ContentRequestRequester(
+            content_request_id=content_request_id, user_id=user_id
+        )
+    )
+    db.commit()
+
+
 def upsert_content_request(
     db: Session,
     title: str,
     author: str | None = None,
     character_name: str | None = None,
+    user_id: int | None = None,
 ) -> "ContentRequest":
     """Record a content request, deduped by (title, author).
 
@@ -61,4 +133,5 @@ def upsert_content_request(
         )
         db.add(row)
     db.commit()
+    record_requester(db, row.id, user_id)
     return row

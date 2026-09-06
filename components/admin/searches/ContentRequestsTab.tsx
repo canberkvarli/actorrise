@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { BRAND, timeAgo, type ContentRequestItem } from "./shared";
+import { NotifyRequestersDialog } from "./NotifyRequestersDialog";
 
 /**
  * The four states a request moves through, in the order work actually happens.
@@ -61,6 +62,7 @@ export function ContentRequestsTab() {
   const [draft, setDraft] = useState<EditDraft | null>(null);
   const [pendingDelete, setPendingDelete] = useState<ContentRequestItem | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [notifying, setNotifying] = useState<ContentRequestItem | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-content-requests"],
@@ -225,6 +227,23 @@ export function ContentRequestsTab() {
                       Asked for {r.request_count}×{" "}
                       <span className="opacity-70">· last {timeAgo(r.last_requested_at)}</span>
                     </p>
+                    {/* Only ever shown when somebody is actually waiting AND the
+                        title is really in the library, so there is something
+                        true to say. Vibe rows ("High stakes") never light up. */}
+                    {r.can_notify ? (
+                      <button
+                        onClick={() => setNotifying(r)}
+                        className="mt-2 rounded border px-2 py-1 text-xs font-medium"
+                        style={{ borderColor: BRAND, color: BRAND }}
+                      >
+                        It's up now · tell the {r.waiting_count}{" "}
+                        {r.waiting_count === 1 ? "person" : "people"} who asked
+                      </button>
+                    ) : r.waiting_count > 0 ? (
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        {r.waiting_count} waiting. Add it and you can tell them.
+                      </p>
+                    ) : null}
                   </div>
                   <select
                     value={r.status}
@@ -457,6 +476,19 @@ export function ContentRequestsTab() {
           if (pendingDelete) await deleteMutation.mutateAsync(pendingDelete.id);
         }}
       />
+
+      {notifying ? (
+        <NotifyRequestersDialog
+          requestId={notifying.id}
+          title={notifying.play_title}
+          onClose={() => setNotifying(null)}
+          onSent={(n) => {
+            setNotifying(null);
+            setNotice(`Told ${n} ${n === 1 ? "actor" : "actors"}.`);
+            invalidate();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

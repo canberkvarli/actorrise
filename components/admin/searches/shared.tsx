@@ -103,6 +103,22 @@ export interface ContentRequestItem {
   first_requested_at: string;
   last_requested_at: string;
   status: string;
+  /** People who asked and have not been told the title landed. */
+  waiting_count: number;
+  /** The title is in the library now, so there is something true to say. */
+  title_resolves: boolean;
+  /** Both of the above. The "tell them" button shows only on this. */
+  can_notify: boolean;
+}
+
+/** One ready-to-read note to an actor who asked for a title that has landed. */
+export interface NotifyDraft {
+  requester_id: number;
+  user_id: number;
+  email: string;
+  name: string;
+  subject: string;
+  body: string;
 }
 
 /** Which kind of failure a view is filtered to. `null` = everything. */

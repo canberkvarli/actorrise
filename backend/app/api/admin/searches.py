@@ -1,12 +1,14 @@
 """Admin search analytics API."""
 
+import os
 from datetime import date, datetime, time, timedelta
 from typing import Any, Optional
 
 from app.api.admin.stats import require_moderator
 from app.core.database import get_db
 from app.models.actor import Monologue, Play
-from app.models.content_request import ContentRequest
+from app.models.content_request import ContentRequest, ContentRequestRequester
+from app.models.email_do_not_contact import EmailDoNotContact
 from app.models.search_log import SearchLog
 from app.models.user import User
 from app.services.admin_filters import test_user_filter
@@ -513,13 +515,69 @@ def get_content_requests(
         .order_by(desc(ContentRequest.request_count), desc(ContentRequest.last_requested_at))
         .all()
     )
-    return {"requests": [_serialize_request(r) for r in requests]}
+    waiting = _waiting_counts(db, [r.id for r in requests])
+    resolves = _title_resolves(db, requests)
+    return {
+        "requests": [
+            _serialize_request(r, waiting.get(r.id, 0), resolves.get(r.id, False))
+            for r in requests
+        ]
+    }
+
+
+def _waiting_counts(db: Session, request_ids: list[int]) -> dict[int, int]:
+    """How many askers per request have NOT been told yet."""
+    if not request_ids:
+        return {}
+    rows = (
+        db.query(
+            ContentRequestRequester.content_request_id,
+            func.count().label("n"),
+        )
+        .filter(
+            ContentRequestRequester.content_request_id.in_(request_ids),
+            ContentRequestRequester.notified_at.is_(None),
+        )
+        .group_by(ContentRequestRequester.content_request_id)
+        .all()
+    )
+    return {rid: int(n) for rid, n in rows}
+
+
+def _title_resolves(db: Session, requests: list[ContentRequest]) -> dict[int, bool]:
+    """True when the requested title now exists in the catalogue with a piece
+    an actor can actually open.
+
+    This is the whole gate on the "tell them" button, and it is why the queue
+    cleans itself: about half of it is vibes rather than titles ("High stakes",
+    "monologues for women", "Power dynamics"). Those never resolve, so they
+    never light up and never need triaging.
+    """
+    out: dict[int, bool] = {}
+    for r in requests:
+        title = (r.play_title or "").strip()
+        if not title:
+            out[r.id] = False
+            continue
+        hit = (
+            db.query(Monologue.id)
+            .join(Play, Play.id == Monologue.play_id)
+            .filter(
+                func.lower(Play.title) == title.lower(),
+                Monologue.review_status.is_(None),
+            )
+            .first()
+        )
+        out[r.id] = hit is not None
+    return out
 
 
 VALID_STATUSES = ("requested", "planned", "added", "rejected")
 
 
-def _serialize_request(r: ContentRequest) -> dict[str, Any]:
+def _serialize_request(
+    r: ContentRequest, waiting: int = 0, resolves: bool = False
+) -> dict[str, Any]:
     return {
         "id": r.id,
         "play_title": r.play_title,
@@ -529,7 +587,155 @@ def _serialize_request(r: ContentRequest) -> dict[str, Any]:
         "first_requested_at": r.first_requested_at.isoformat(),
         "last_requested_at": r.last_requested_at.isoformat(),
         "status": r.status,
+        # People who asked and have not been told yet.
+        "waiting_count": waiting,
+        # The title is in the library now, so there is something true to say.
+        "title_resolves": resolves,
+        # The button shows only when both hold.
+        "can_notify": bool(waiting and resolves),
     }
+
+
+# ── Telling the actors who asked ──────────────────────────────────────────────
+
+
+def _requested_title_email(name: str, title: str, url: str, pieces: int) -> str:
+    """The body of the "it's up now" note.
+
+    Voice rules from CLAUDE.md are not decoration here: first person singular,
+    no dash of any kind, signed Canberk, no emoji, peer to peer. The thank-you
+    line is load-bearing -- it tells the actor their press had an effect, which
+    is the thing that turns the track button from a complaint button into a
+    request button.
+
+    Deliberately NO trial pitch and no CURTAIN. CURTAIN is first-touch only, and
+    somebody who asked for a title and is being answered is mid-conversation.
+    Attaching a sale would also make the pretext look manufactured, which is the
+    exact failure this whole feature is shaped to avoid.
+    """
+    piece_word = "piece" if pieces == 1 else "pieces"
+    return (
+        f"Hey {name},\n\n"
+        f"You asked about {title} a while back. It's up now, "
+        f"{pieces} {piece_word} from it.\n\n"
+        f"{url}\n\n"
+        "Save it and you can practice it right away.\n\n"
+        "Thanks for flagging it was missing. That's genuinely how I pick what "
+        "to add next, so it helps.\n\n"
+        "Canberk\n\n"
+        "reply UNSUBSCRIBE and I'll take you off the list, no hard feelings"
+    )
+
+
+@router.get("/content-requests/{request_id}/notify-draft")
+def get_notify_drafts(
+    request_id: int,
+    db: Session = Depends(get_db),
+    _mod: User = Depends(require_moderator),
+) -> dict[str, Any]:
+    """Build one draft per actor still waiting on this request.
+
+    Drafts only. Nothing is sent from here -- the admin reads them and posts to
+    the existing /api/admin/emails/send, per the draft-approve-send rule.
+    """
+    req = db.query(ContentRequest).filter(ContentRequest.id == request_id).first()
+    if not req:
+        raise HTTPException(status_code=404, detail="Request not found")
+
+    title = (req.play_title or "").strip()
+    pieces = (
+        db.query(Monologue.id)
+        .join(Play, Play.id == Monologue.play_id)
+        .filter(
+            func.lower(Play.title) == title.lower(),
+            Monologue.review_status.is_(None),
+        )
+        .all()
+    )
+    if not pieces:
+        raise HTTPException(
+            status_code=409,
+            detail=f"{title} is not in the library yet, so there is nothing to tell them.",
+        )
+
+    base = os.getenv("SITE_URL", "https://actorrise.com")
+    url = f"{base}/monologues?monologue={pieces[0][0]}"
+
+    waiting = (
+        db.query(ContentRequestRequester, User)
+        .join(User, User.id == ContentRequestRequester.user_id)
+        .filter(
+            ContentRequestRequester.content_request_id == request_id,
+            ContentRequestRequester.notified_at.is_(None),
+        )
+        .all()
+    )
+
+    # Checked BEFORE the drafts are built, not after, so an opted-out actor
+    # never appears in a list the admin is about to press send on.
+    blocked = {
+        e.lower()
+        for (e,) in db.query(EmailDoNotContact.email).all()
+        if e
+    }
+
+    drafts = []
+    skipped = []
+    for link, user in waiting:
+        email = (user.email or "").strip()
+        if not email or email.lower() in blocked:
+            skipped.append({"user_id": user.id, "reason": "do not contact"})
+            continue
+        first = (user.name or "").strip().split(" ")[0] or "there"
+        drafts.append(
+            {
+                "requester_id": link.id,
+                "user_id": user.id,
+                "email": email,
+                "name": first,
+                "subject": f"{title} is up",
+                "body": _requested_title_email(first, title, url, len(pieces)),
+            }
+        )
+
+    return {
+        "request_id": request_id,
+        "title": title,
+        "piece_count": len(pieces),
+        "url": url,
+        "drafts": drafts,
+        "skipped": skipped,
+    }
+
+
+class NotifiedBody(BaseModel):
+    """Requester link ids that were actually emailed."""
+
+    requester_ids: list[int]
+
+
+@router.post("/content-requests/{request_id}/mark-notified")
+def mark_notified(
+    request_id: int,
+    body: NotifiedBody,
+    db: Session = Depends(get_db),
+    _mod: User = Depends(require_moderator),
+) -> dict[str, Any]:
+    """Stamp the people who were told, so a second tap offers only the rest."""
+    if not body.requester_ids:
+        return {"marked": 0}
+    marked = (
+        db.query(ContentRequestRequester)
+        .filter(
+            ContentRequestRequester.content_request_id == request_id,
+            ContentRequestRequester.id.in_(body.requester_ids),
+            ContentRequestRequester.notified_at.is_(None),
+        )
+        .update({ContentRequestRequester.notified_at: datetime.utcnow()},
+                synchronize_session=False)
+    )
+    db.commit()
+    return {"marked": int(marked)}
 
 
 class ContentRequestUpdate(BaseModel):
