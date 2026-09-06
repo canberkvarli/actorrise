@@ -11,6 +11,7 @@ from app.services.email.notifications import (
 )
 from app.services import app_settings
 from app.services.community import record_event
+from app.services.events import record_user_event
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -184,6 +185,14 @@ def get_current_user(
             # defaulted off: there is no code to offer.
             # Green Room: "Someone from <city> just joined". Fire-and-forget, safe.
             record_event(user.id, "joined")
+            # Funnel step 0. Written here, not in the browser, because the
+            # OAuth callback is a server route and GA4 missed 27 of 28 signups
+            # for exactly that reason (see components/analytics/SignupTracker).
+            record_user_event(
+                user.id,
+                "signup_completed",
+                {"provider": (token_data.get("app_metadata") or {}).get("provider")},
+            )
     else:
         # An anonymous account that has since upgraded now carries a real email:
         # backfill it (and opt into marketing + a belated welcome).
@@ -199,6 +208,14 @@ def get_current_user(
             except Exception:
                 pass
             record_event(user.id, "joined")
+            record_user_event(
+                user.id,
+                "signup_completed",
+                {
+                    "provider": (token_data.get("app_metadata") or {}).get("provider"),
+                    "upgraded_from_anonymous": True,
+                },
+            )
         # Update name if it's in the token and different from stored value
         elif name and user.name != name:
             user.name = name
@@ -334,7 +351,15 @@ def update_onboarding(
     if body.has_completed_onboarding is not None:
         current_user.has_completed_onboarding = body.has_completed_onboarding
     if body.has_completed_profile_onboarding is not None:
+        # The flip, not the flag: an idempotent re-send from the client must not
+        # count a second completion.
+        just_completed = (
+            body.has_completed_profile_onboarding
+            and not current_user.has_completed_profile_onboarding
+        )
         current_user.has_completed_profile_onboarding = body.has_completed_profile_onboarding
+        if just_completed:
+            record_user_event(int(current_user.id), "onboarding_completed")
     if body.has_seen_first_rehearsal is not None:
         current_user.has_seen_first_rehearsal = body.has_seen_first_rehearsal
     if body.referral_source is not None:

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { displayableAuthor } from "@/lib/utils";
 import api from "@/lib/api";
+import { trackEvent } from "@/lib/events";
 import type { Monologue } from "@/types/actor";
 import {
   AGE_RANGES,
@@ -145,6 +146,14 @@ export default function ProfileOnboardingFlow({
   const [direction, setDirection] = useState(1);
   const [showPayoff, setShowPayoff] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // Where in the wizard people stop. The last step_viewed without an
+  // onboarding_completed is the drop-off point; nothing recorded it before.
+  useEffect(() => {
+    const key = questions[step]?.key;
+    if (!key) return;
+    trackEvent("onboarding_step_viewed", { step, key, total: totalSteps, variant });
+  }, [step, questions, totalSteps, variant]);
 
   const [referral, setReferral] = useState<string | null>(null);
   const [referralDetail, setReferralDetail] = useState("");

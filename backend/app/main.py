@@ -34,6 +34,7 @@ from app.api.speech import router as speech_router
 from app.api.scripts import router as scripts_router
 from app.api.subscriptions import router as subscriptions_router
 from app.api.tracking import router as tracking_router
+from app.api.events import router as events_router
 from app.api.webhooks import router as webhooks_router
 from app.core.config import settings
 from app.core.database import Base, engine
@@ -44,6 +45,7 @@ from app.models.moderation import (  # noqa: F401; register with Base for create
 from app.models.tape import UserTape  # noqa: F401; register with Base for create_all
 from app.models.audition_usage import AuditionFeedbackUsage  # noqa: F401; register with Base for create_all
 from app.models.app_setting import AppSetting  # noqa: F401; register with Base for create_all
+from app.models.user_event import UserEvent  # noqa: F401; register with Base for create_all
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -292,6 +294,7 @@ app.include_router(public_router)
 app.include_router(pricing_router)
 app.include_router(subscriptions_router)
 app.include_router(tracking_router)
+app.include_router(events_router)
 app.include_router(webhooks_router)
 app.include_router(admin_monologues_router)
 app.include_router(admin_film_tv_router)

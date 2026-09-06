@@ -6,6 +6,7 @@ import { SearchTour } from "@/components/onboarding/SearchTour";
 import { MonologuePaywallModal } from "@/components/monologue-work/MonologuePaywallModal";
 import { useTypewriterPlaceholder } from "@/hooks/useTypewriterPlaceholder";
 import { useAuth } from "@/lib/auth";
+import { trackEvent } from "@/lib/events";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
@@ -685,6 +686,15 @@ function SearchContent() {
   // Links a monologue open back to the search that produced it (?slid= on the
   // detail fetch -> monologue_views.search_log_id, funnel analytics).
   const searchLogIdRef = useRef<number | null>(null);
+
+  // First focus of the search box this mount. With first_search_submitted it
+  // splits "never touched the box" from "typed and bailed".
+  const searchBoxFocusedRef = useRef(false);
+  const noteSearchBoxFocused = () => {
+    if (searchBoxFocusedRef.current) return;
+    searchBoxFocusedRef.current = true;
+    trackEvent("search_box_focused", { mode: searchMode });
+  };
 
   const performSearch = async (
     searchQuery: string,
@@ -1686,6 +1696,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                   onFocus={() => {
                     pauseTypewriter();
+                    noteSearchBoxFocused();
                     if (currentQuery) setIsTyping(true);
                   }}
                   onBlur={() => {

@@ -716,6 +716,22 @@ async def search_monologues(
                 db.add(log_row)
                 db.commit()
                 search_log_id = int(log_row.id)
+                # Activation: 46% of new users never get this far. "First" is
+                # decided here against search_logs, not in the browser, so a
+                # second device or a cleared cache cannot mint a second first.
+                if page == 1:
+                    earlier = (
+                        db.query(SearchLog.id)
+                        .filter(SearchLog.user_id == int(current_user.id), SearchLog.id < log_row.id)
+                        .first()
+                    )
+                    if earlier is None:
+                        from app.services.events import record_user_event
+                        record_user_event(
+                            int(current_user.id),
+                            "first_search_submitted",
+                            {"search_log_id": search_log_id, "results_count": total},
+                        )
             except Exception:
                 db.rollback()
 
