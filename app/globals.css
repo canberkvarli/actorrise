@@ -363,198 +363,137 @@
   }
 
   /* ── The Callboard ────────────────────────────────────────────────────────
-     A dark board hanging under a work light, in BOTH themes.
+     A stage manager's call sheet, not a cork board.
 
-     It used to take its ground from --paper, which made the board and the
-     notices pinned to it the same near-white beige. Two surfaces one shade
-     apart cannot describe depth, so the whole thing read as a single flat
-     brown rectangle and the orange had nothing to sit against. A real
-     callboard is a dark object; bone paper on it is where the contrast is.
-     So the board keeps its own colour and only the room around it flips. */
-  .callboard {
-    /* ink — warm charcoal, the default gel */
-    --board: oklch(0.245 0.013 58);
-    --board-deep: oklch(0.185 0.012 58);
-    --board-edge: oklch(0.31 0.028 52);
-    --board-card: oklch(0.972 0.007 86);
-    --board-ink: oklch(0.20 0.016 58);
-    --board-muted: oklch(0.47 0.020 58);
-    --board-rule: oklch(0.86 0.014 78);
-    /* the work light falling across the top of the board */
-    --board-light: oklch(0.86 0.13 72);
-    /* second accent: the ghost-light green, for anything genuinely live */
-    --board-live: oklch(0.80 0.15 152);
-    color: var(--board-ink);
-    background-color: var(--board);
-    background-image:
-      repeating-linear-gradient(
-        45deg,
-        color-mix(in oklab, black 22%, transparent) 0 1px,
-        transparent 1px 5px
-      ),
-      repeating-linear-gradient(
-        -45deg,
-        color-mix(in oklab, white 5%, transparent) 0 1px,
-        transparent 1px 5px
-      );
-  }
+     The pinned-paper version is gone. It cost an enormous amount of space —
+     floating sheets, tacks, tilt, drop shadows — to hold about twenty items,
+     which left a metre of blank board at the bottom and a Top billing sheet
+     that was 60% empty. A real callboard feels alive because it is CROWDED.
+     Skeuomorphism was buying atmosphere with the exact resource (density) that
+     produces the feeling it was trying to fake.
 
-  /* Alternate gels. Swapped live by the ?gel= control so the palette gets
-     chosen by eye on real data rather than argued about in the abstract. */
-  .callboard[data-gel="oxblood"] {
-    --board: oklch(0.235 0.048 24);
-    --board-deep: oklch(0.175 0.042 24);
-    --board-edge: oklch(0.30 0.055 30);
-    --board-light: oklch(0.85 0.12 55);
-  }
-  .callboard[data-gel="slate"] {
-    --board: oklch(0.265 0.022 245);
-    --board-deep: oklch(0.20 0.020 245);
-    --board-edge: oklch(0.33 0.024 250);
-    --board-light: oklch(0.88 0.09 220);
-    --board-live: oklch(0.82 0.14 165);
-  }
-  .callboard[data-gel="cork"] {
-    --board: oklch(0.42 0.055 62);
-    --board-deep: oklch(0.32 0.050 62);
-    --board-edge: oklch(0.30 0.040 52);
-    --board-light: oklch(0.90 0.12 80);
-  }
-
-  /* The frame: a wooden edge, an inner bevel, and a shadow underneath so the
-     whole thing hangs off the wall rather than lying flat on it. */
-  .callboard-frame {
-    border: 3px solid var(--board-edge);
-    box-shadow:
-      inset 0 1px 0 color-mix(in oklab, white 14%, transparent),
-      inset 0 0 0 1px color-mix(in oklab, black 30%, transparent),
-      0 30px 70px -28px color-mix(in oklab, black 78%, transparent);
-  }
-
-  /* The work light. A hard-edged pool thrown from up and left, plus a vignette
-     that drops the far corners away. It drifts on a 44s cycle, which is the
-     single cheapest thing that keeps the board from ever being fully still. */
-  .callboard-light {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 0;
-    background:
-      radial-gradient(
-        62% 46% at var(--lx, 26%) var(--ly, -6%),
-        color-mix(in oklab, var(--board-light) 30%, transparent) 0%,
-        color-mix(in oklab, var(--board-light) 11%, transparent) 38%,
-        transparent 72%
-      ),
-      radial-gradient(
-        120% 100% at 50% 40%,
-        transparent 42%,
-        color-mix(in oklab, var(--board-deep) 82%, transparent) 100%
-      );
-    animation: board-light-drift 44s ease-in-out infinite alternate;
-  }
-  @keyframes board-light-drift {
-    0%   { --lx: 22%; --ly: -9%; opacity: 0.92; }
-    50%  { --lx: 34%; --ly: -3%; opacity: 1; }
-    100% { --lx: 44%; --ly: -8%; opacity: 0.95; }
-  }
-  @property --lx { syntax: "<percentage>"; inherits: false; initial-value: 26%; }
-  @property --ly { syntax: "<percentage>"; inherits: false; initial-value: -6%; }
-
-  /* A pinned notice. The shadow is tight at the pin and loose at the far
-     bottom corner, which is what makes paper look hung rather than pasted. */
-  .callboard-notice {
+     So: ruled monospace rows, hairlines, tabular columns, one screen. And the
+     repetition problem goes with it. Seven prose sentences reading "X is
+     looking for a comedic monologue for a woman in her 18-25" is one sentence
+     stuttering; the same seven facts in aligned columns are a legible pattern
+     you read down in a second. Stop writing sentences, start writing columns. */
+  .callsheet {
+    /* Cold near-black, deliberately not the old board's brown. The previous
+       ground was warm enough that the orange sat inside the same family as the
+       surface and stopped reading as an accent at all. */
+    --sheet: oklch(0.165 0.006 65);
+    --sheet-raised: oklch(0.205 0.007 65);
+    --sheet-ink: oklch(0.945 0.005 85);
+    --sheet-dim: oklch(0.635 0.008 72);
+    --sheet-faint: oklch(0.435 0.008 72);
+    --sheet-rule: oklch(0.295 0.008 65);
+    /* Second accent. Orange means "go read this"; green means "this just
+       happened". Two colours carrying two meanings, not decoration. */
+    --sheet-live: oklch(0.80 0.15 152);
     position: relative;
-    background-color: var(--board-card);
-    color: var(--board-ink);
-    box-shadow:
-      0 1px 2px color-mix(in oklab, black 30%, transparent),
-      8px 18px 34px -14px color-mix(in oklab, black 78%, transparent);
-    /* The resting tilt lives here so framer-motion can own the entrance
-       transform on the wrapper without the two fighting over one property.
-       The sway rides on top of it, phase-shifted per notice. */
-    transform: rotate(var(--tilt, 0deg));
-    transition:
-      transform 350ms cubic-bezier(0.2, 0.8, 0.2, 1),
-      box-shadow 350ms ease;
+    background-color: var(--sheet);
+    color: var(--sheet-ink);
   }
-  /* Paper is not perfectly rectangular and it is not perfectly flat. A torn
-     top edge and a faint cylinder of shading sell it more than any texture. */
-  .callboard-notice::after {
+  /* The sheet is dark in a shell that may be in light mode, so wherever the
+     content stops short of the viewport the app's pale body showed as a strip
+     under the footer. A fixed backdrop paints the whole viewport behind the
+     content instead, which holds at any scroll position and any content height
+     — extra bottom padding only ever hides this at one window size. */
+  .callsheet::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    background: var(--sheet);
+    z-index: -1;
+  }
+
+  /* Section rule: the label sits inset in a hairline that runs the full width,
+     the way a printed running order divides itself. */
+  .sheet-rule {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    gap: 0.85rem;
+  }
+  .sheet-rule::after {
+    content: "";
+    height: 1px;
+    background: var(--sheet-rule);
+  }
+
+  /* A row. The wipe is the entrance: rows reveal left-to-right like a line
+     being printed, not fading in like a card. ~450ms for the whole table, so
+     it reads as the sheet arriving rather than as a show being staged. */
+  .sheet-row {
+    animation: sheet-in 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--row-delay, 0ms);
+  }
+  @keyframes sheet-in {
+    from {
+      opacity: 0;
+      clip-path: inset(0 100% 0 0);
+      transform: translateY(3px);
+    }
+    to {
+      opacity: 1;
+      clip-path: inset(0 0 0 0);
+      transform: translateY(0);
+    }
+  }
+
+  /* Hover bleeds past the row's own box so the highlight reads as a ruler laid
+     across the sheet rather than as a button. */
+  .sheet-row-hit {
+    position: relative;
+    transition: background-color 140ms ease;
+  }
+  .sheet-row-hit::before {
     content: "";
     position: absolute;
-    inset: 0;
+    inset: 0 -1rem;
+    background: transparent;
+    transition: background-color 140ms ease;
     pointer-events: none;
-    background: linear-gradient(
-      100deg,
-      color-mix(in oklab, black 5%, transparent) 0%,
-      transparent 18%,
-      transparent 84%,
-      color-mix(in oklab, black 7%, transparent) 100%
-    );
   }
-  /* Ambient breathing. Each notice gets its own phase via --sway so the board
-     never moves as one slab. Half a degree; you feel it, you do not watch it. */
-  .callboard-settled .callboard-notice {
-    animation: board-sway 11s ease-in-out infinite alternate;
-    animation-delay: var(--sway, 0s);
-  }
-  @keyframes board-sway {
-    from { transform: rotate(calc(var(--tilt, 0deg) - 0.32deg)) translateY(0px); }
-    to   { transform: rotate(calc(var(--tilt, 0deg) + 0.32deg)) translateY(-2px); }
-  }
-  .callboard-notice:hover,
-  .callboard-notice:focus-within,
-  .callboard-settled .callboard-notice:hover,
-  .callboard-settled .callboard-notice:focus-within {
-    animation-play-state: paused;
-    transform: rotate(0deg) translateY(-4px);
-    box-shadow:
-      0 1px 2px color-mix(in oklab, black 30%, transparent),
-      14px 28px 50px -16px color-mix(in oklab, black 82%, transparent);
-  }
-  /* One column of cards all leaning the same few degrees reads as a rendering
-     bug on a phone, not as scatter. Half the tilt, and none of the lift. */
-  @media (max-width: 639px) {
-    .callboard-notice { transform: rotate(calc(var(--tilt, 0deg) * 0.5)); }
-    .callboard-settled .callboard-notice { animation-duration: 15s; }
+  .sheet-row-hit:hover::before,
+  .sheet-row-hit:focus-within::before {
+    background: var(--sheet-raised);
   }
 
-  /* The masthead hitting the board like an ink stamp. */
-  .board-stamp {
-    animation: board-stamp 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
-    animation-delay: var(--stamp-delay, 0.35s);
+  /* The caret at the head of the list. The single cheapest signal that the
+     board is watching rather than printed: it blinks whether or not anything
+     has happened, which is honest — a cursor means "listening", not "busy". */
+  .sheet-caret {
+    animation: sheet-blink 1.15s steps(1, end) infinite;
   }
-  @keyframes board-stamp {
-    0%   { opacity: 0; transform: scale(1.07); filter: blur(7px); }
-    62%  { opacity: 1; filter: blur(0); }
-    100% { opacity: 1; transform: scale(1); filter: blur(0); }
+  @keyframes sheet-blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
   }
 
-  /* The live dot on a notice that has just been pinned up for real. */
-  .board-live-dot {
-    background: var(--board-live);
-    box-shadow: 0 0 0 0 color-mix(in oklab, var(--board-live) 70%, transparent);
-    animation: board-pulse 2.4s ease-out infinite;
+  /* A row that genuinely arrived on the last poll. Rare, so it is loud. */
+  .sheet-live-dot {
+    background: var(--sheet-live);
+    animation: sheet-pulse 2.2s ease-out infinite;
   }
-  @keyframes board-pulse {
-    0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--board-live) 65%, transparent); }
-    70%  { box-shadow: 0 0 0 7px transparent; }
+  @keyframes sheet-pulse {
+    0%   { box-shadow: 0 0 0 0 color-mix(in oklab, var(--sheet-live) 60%, transparent); }
+    70%  { box-shadow: 0 0 0 6px transparent; }
     100% { box-shadow: 0 0 0 0 transparent; }
+  }
+  .sheet-fresh {
+    animation: sheet-strike 1400ms ease-out both;
+  }
+  @keyframes sheet-strike {
+    0%   { background-color: color-mix(in oklab, var(--sheet-live) 20%, transparent); }
+    100% { background-color: transparent; }
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .callboard-notice,
-    .callboard-settled .callboard-notice,
-    .callboard-notice:hover,
-    .callboard-notice:focus-within {
-      transform: none;
-      transition: none;
-      animation: none;
-    }
-    .callboard-light,
-    .board-stamp,
-    .board-live-dot {
+    .sheet-row,
+    .sheet-caret,
+    .sheet-live-dot,
+    .sheet-fresh {
       animation: none;
     }
   }

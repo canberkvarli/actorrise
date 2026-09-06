@@ -2,105 +2,162 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
 import {
   useCommunityFeed,
   useShareActivity,
   type FeedEvent,
 } from "@/hooks/useCommunityFeed";
 import { useTrending } from "@/hooks/useTrending";
-import { Avatar, EventLine, chipFor, relativeTime } from "./eventRender";
-import { BEAT, useBoardReveal } from "./useBoardReveal";
 
 /**
- * The Callboard — the board itself, not a feed wearing its name.
+ * The Callboard — a stage manager's call sheet.
  *
- * Backstage a callboard is a physical object: a dark board under a work light,
- * notices pinned at angles by the stage manager, a sign-in sheet down one side.
- * This renders that object. Everything pinned to it is a door — a notice you
- * can act on — because a real callboard exists to be obeyed, not admired.
+ * This replaces a pinned-cork-board version that looked the part and failed at
+ * the job. Three findings from looking at it on production drove the rewrite:
  *
- * The board is alive in three separate registers, and they are deliberately
- * different from each other:
+ *  1. DENSITY WAS BACKWARDS. Twenty items spread over three full screens, with
+ *     a metre of blank board at the bottom. A callboard feels alive because it
+ *     is crowded; the paper skeuomorphism was spending the exact resource that
+ *     produces that feeling in order to imitate it.
  *
- *  1. THE ARRIVAL. The day gets pinned up in front of you over ~3.8s. Staged
- *     timing, real events. See useBoardReveal for why this is not realtime.
- *  2. THE AMBIENT. Once settled, the work light drifts and the paper breathes
- *     on out-of-phase cycles. Pure CSS, no JS, no re-render.
- *  3. THE LIVE PIN. When the 25s poll returns an event that was not there
- *     before, that one row pins itself in and wears a green pulse until the
- *     next poll. Rare — which is exactly why it should be unmistakable.
+ *  2. THE REPETITION WAS BRUTAL. Seven consecutive rows reading "X is looking
+ *     for a comedic monologue for a woman in her 18-25". As prose that is one
+ *     sentence stuttering. The fix is not a better card — it is to stop writing
+ *     sentences and start writing columns. The same seven facts, aligned, are a
+ *     pattern you read down in a second and can actually compare.
  *
- * Two things this deliberately drops from earlier versions:
+ *  3. TWO PANELS SAID THE SAME THING. "Sign-in sheet" and "As it happens" were
+ *     both "who is here, doing what", so the board showed each actor's name
+ *     twice and spent 80% of its area saying it. One roster, one row per actor,
+ *     with arriving as just another verb.
  *
- *  - The four-up stat grid. One of its cells was "rehearsals", and `rehearsed`
- *    has fired twice in the product's entire history, so the page shipped a
- *    permanent, prominent 0.
- *  - Hover-to-reveal action chips. Hover does not exist on a phone, so on
- *    mobile every row in the live feed linked precisely nowhere.
+ * Motion was restarted from zero along with the layout. There is no staged
+ * arrival show any more. At roughly two real events an hour the honest source
+ * of life is the clock: timestamps re-render every 20s, a caret blinks at the
+ * head of the roster because a cursor means "listening", and a row that truly
+ * arrived on the last poll strikes green and holds a pulse. Nothing here
+ * animates to imply activity that did not happen.
  */
 
-/* Deterministic tilt from the notice's own identity. Math.random() here would
-   reshuffle every card on every 25s refetch, which is the exact thing that
-   makes fake-scatter look cheap. */
-function hash(seed: string): number {
-  let h = 0;
-  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-function tilt(seed: string, spread = 2.2): string {
-  return `${((hash(seed) % 200) / 100 - 1) * spread}deg`;
-}
-/* Sway phase, so the board never breathes as one slab. */
-function sway(seed: string): string {
-  return `-${(hash(seed + "s") % 110) / 10}s`;
-}
-
-const STAMP_DATE = new Intl.DateTimeFormat("en-GB", {
-  weekday: "short",
+const SHEET_DATE = new Intl.DateTimeFormat("en-GB", {
+  weekday: "long",
   day: "numeric",
-  month: "short",
+  month: "long",
 });
 
-/** Gels are chosen by eye on real data, not argued about in the abstract.
-    `?gel=oxblood|slate|cork` swaps the board's palette and remembers it. */
-function useGel(): string {
-  const [gel, setGel] = useState("ink");
+/** Column-width time. "2m", "7h", "1d" — the word "ago" is a whole column of
+    nothing repeated fourteen times. */
+function compactTime(iso: string, now: number): string {
+  const secs = Math.max(0, Math.floor((now - new Date(iso).getTime()) / 1000));
+  if (secs < 45) return "now";
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return `${mins}m`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h`;
+  return `${Math.floor(hrs / 24)}d`;
+}
+
+/** Time actually passes, so the sheet should show it passing. This is the one
+    piece of motion on the page that can never be dishonest. */
+function useNow(): number {
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    try {
-      const q = new URLSearchParams(window.location.search).get("gel");
-      if (q) {
-        localStorage.setItem("callboard:gel", q);
-        setGel(q);
-      } else {
-        setGel(localStorage.getItem("callboard:gel") || "ink");
-      }
-    } catch {
-      /* ignore */
-    }
+    const id = window.setInterval(() => setNow(Date.now()), 20_000);
+    return () => window.clearInterval(id);
   }, []);
-  return gel;
+  return now;
+}
+
+type Row = {
+  id: number;
+  name: string;
+  verb: string;
+  detail: string;
+  href: string;
+  at: string;
+};
+
+function genderNoun(g?: string): string {
+  const s = (g || "").toLowerCase();
+  if (s.startsWith("f") || s === "woman") return "woman";
+  if (s.startsWith("m") || s === "man") return "man";
+  return s || "";
+}
+
+/** One event, flattened into columns. The verb column is a closed vocabulary
+    on purpose: four or five repeated words down a column scan as a category,
+    whereas five different phrasings of the same idea scan as noise. */
+function toRow(e: FeedEvent): Row | null {
+  const p = e.payload;
+  /* "Someone", not an em-dash. A dash in a name column reads as missing data
+     and makes the row look broken; the anonymity is a real fact about a real
+     actor who has not set a name, so say it. */
+  const name = e.name && e.name !== "Someone" ? e.name : "Someone";
+  const at = e.created_at;
+  const piece = p.monologue_id ? `/monologue/${p.monologue_id}` : "/monologues";
+
+  switch (e.event_type) {
+    case "joined":
+      return { id: e.id, name, verb: "signed in", detail: e.city || "", href: "/monologues", at };
+    case "searched": {
+      const bits = [p.tone, genderNoun(p.gender), p.age_range, p.emotion].filter(Boolean);
+      return {
+        id: e.id,
+        name,
+        verb: "wants",
+        detail: bits.join(" · ") || "a monologue",
+        href: "/monologues",
+        at,
+      };
+    }
+    case "viewed":
+      return { id: e.id, name, verb: "reading", detail: p.title || "a monologue", href: piece, at };
+    case "bookmarked":
+      return { id: e.id, name, verb: "saved", detail: p.title || "a monologue", href: piece, at };
+    case "worked":
+      return { id: e.id, name, verb: "worked", detail: "out loud", href: "/rehearse", at };
+    case "rehearsed":
+    case "rehearsing":
+      return {
+        id: e.id,
+        name,
+        verb: "rehearsing",
+        detail: p.title || "a scene",
+        href: "/rehearse",
+        at,
+      };
+    case "shared":
+      return { id: e.id, name, verb: "shared", detail: p.title || "a script", href: piece, at };
+    case "milestone":
+      return {
+        id: e.id,
+        name,
+        verb: "hit",
+        detail: `${p.milestone_n} rehearsals`,
+        href: "/rehearse",
+        at,
+      };
+    case "trending":
+      return { id: e.id, name, verb: "trending", detail: p.title || "", href: piece, at };
+    default:
+      // went_plus is retired: it published billing status beside a real name.
+      return null;
+  }
 }
 
 export function CallboardFeed() {
   const { data } = useCommunityFeed(100);
   const { data: trending } = useTrending(7);
-  const reduceMotion = useReducedMotion();
-  const gel = useGel();
+  const now = useNow();
 
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const ready = mounted && !!data;
-  const { playing, settled, cue } = useBoardReveal(ready);
-
   const events = useMemo(() => data?.events ?? [], [data]);
-  const joined = useMemo(() => events.filter((e) => e.event_type === "joined"), [events]);
-  const searched = useMemo(() => events.filter((e) => e.event_type === "searched"), [events]);
 
-  /* Which ids are new *since the last poll*, so a genuinely fresh event can
-     announce itself. The first payload is not "new" — everything would pulse
-     at once and the signal would mean nothing on the one visit it matters. */
+  /* Ids that appeared on the last poll, so a genuinely fresh row can announce
+     itself. The first payload is not "new" — every row would strike green at
+     once and the signal would mean nothing on the one visit it matters. */
   const knownIds = useRef<Set<number> | null>(null);
   const freshIds = useMemo(() => {
     const ids = new Set(events.map((e) => e.id));
@@ -113,40 +170,42 @@ export function CallboardFeed() {
     return new Set([...ids].filter((id) => !prev.has(id)));
   }, [events]);
 
-  /* Arrivals live on the sign-in sheet, so they come out of the running feed —
-     otherwise the same person appears twice on one board, and every third row
-     of "as it happens" is someone who has not done anything yet.
-
-     Then one row per actor. Searching fires an event per refinement, so a
-     single person tuning their filters produced five near-identical rows in a
-     row. Keeping only each actor's latest turns that back into a board of
-     people rather than a log. */
-  const doings = useMemo(() => {
+  /* One row per actor. Searching fires an event per refinement, so a single
+     person tuning filters produced five near-identical consecutive rows.
+     Keeping each actor's latest turns a log back into a roster of people.
+     Anonymous arrivals all come back as "Someone", so they are keyed by id and
+     tallied at the foot rather than repeated as a column of em-dashes. */
+  const [roster, anonCount] = useMemo(() => {
     const seen = new Set<string>();
-    const out: FeedEvent[] = [];
+    const out: Row[] = [];
+    let anon = 0;
     for (const e of events) {
-      if (e.event_type === "joined") continue;
-      const who = e.name || String(e.id);
+      const named = e.name && e.name !== "Someone";
+      if (!named && e.event_type === "joined") {
+        anon++;
+        continue;
+      }
+      /* Every unnamed actor keys to the same slot, not to their event id. The
+         feed returns them all as "Someone", so keying per event let a single
+         anonymous person's bulk saving fill nine of fourteen rows with an
+         identical timestamp and an em-dash where the name goes — a roster of
+         nobody. One row for the most recent unnamed action is the honest
+         amount of space that signal deserves. */
+      const who = named ? (e.name as string) : "someone";
       if (seen.has(who)) continue;
       seen.add(who);
-      out.push(e);
-      if (out.length === 9) break;
+      const row = toRow(e);
+      if (row) out.push(row);
+      if (out.length === 14) break;
     }
-    return out;
+    return [out, anon] as const;
   }, [events]);
-
-  /* Arrivals who have not set a name come back as "Someone". Three "Someone"
-     rows on a sign-in sheet reads as a rendering fault; as a tally at the foot
-     of the sheet it reads as what it is. */
-  const [named, anonCount] = useMemo(() => {
-    const withName = joined.filter((e) => e.name && e.name !== "Someone");
-    return [withName.slice(0, 7), joined.length - withName.length] as const;
-  }, [joined]);
 
   const searchTags = useMemo(() => {
     const counts = new Map<string, number>();
     const bump = (v?: string) => v && counts.set(v, (counts.get(v) ?? 0) + 1);
-    for (const e of searched) {
+    for (const e of events) {
+      if (e.event_type !== "searched") continue;
       const p = e.payload;
       bump(p.tone);
       bump(p.gender === "female" ? "women" : p.gender === "male" ? "men" : p.gender);
@@ -154,456 +213,279 @@ export function CallboardFeed() {
       bump(p.emotion);
       (p.themes ?? []).forEach((t) => bump(t));
     }
-    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
-  }, [searched]);
+    return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10);
+  }, [events]);
 
-  if (!ready || !data) return <BoardSkeleton />;
+  const counts = useMemo(() => {
+    const searched = events.filter((e) => e.event_type === "searched").length;
+    const joined = events.filter((e) => e.event_type === "joined").length;
+    return { searched, joined };
+  }, [events]);
+
+  if (!mounted || !data) return <SheetSkeleton />;
 
   const headline = trending?.[0];
-  const alsoBilled = (trending ?? []).slice(1, 6);
+  /* Deduped on character + play, not on id. Trending returns separate rows for
+     the same speech ingested from different sources, which billed "HAMLET ·
+     Hamlet" twice in a row and read as a rendering fault rather than as two
+     genuinely different pieces. */
+  const alsoBilled = (() => {
+    const seen = new Set<string>();
+    const out: NonNullable<typeof trending> = [];
+    for (const m of trending ?? []) {
+      const key = `${m.character_name}|${m.play_title}`.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(m);
+    }
+    return out.slice(1, 6);
+  })();
   const windowLabel = data.window === "today" ? "today" : "this week";
 
   return (
-    <div className="px-3 pb-24 pt-5 sm:px-6 sm:pt-10">
-      <div
-        data-gel={gel}
-        className={`callboard callboard-frame stage-grain relative isolate mx-auto w-full max-w-5xl overflow-hidden px-4 pb-10 pt-8 sm:px-9 sm:pb-16 sm:pt-14 ${
-          settled ? "callboard-settled" : ""
-        }`}
-      >
-        {/* The work light, thrown from up and left. Sits under everything. */}
-        <div className="callboard-light" aria-hidden />
+    <div className="callsheet min-h-screen px-4 pb-24 pt-8 sm:px-8 sm:pt-12">
+      <div className="mx-auto w-full max-w-5xl">
+        {/* ── Header block ─────────────────────────────────────────────────
+            A call sheet states the show, the date and the numbers, then gets
+            out of the way. It does not have a hero. */}
+        <header>
+          <p className="font-typewriter text-[11px] uppercase tracking-[0.3em] text-[var(--sheet-faint)]">
+            The house, before curtain
+          </p>
+          <h1 className="font-playbill mt-2 text-[clamp(3rem,11vw,6.5rem)] leading-[0.85] tracking-[-0.01em] text-[var(--sheet-ink)]">
+            The Callboard
+          </h1>
 
-        <div className="relative z-10">
-          {/* ── The masthead, screenprinted onto the board itself ─────────── */}
-          <header className="mb-9 sm:mb-14">
-            <motion.p
-              initial={playing ? { opacity: 0 } : false}
-              animate={{ opacity: 1 }}
-              transition={cue(BEAT.stamp)}
-              className="font-typewriter text-xs italic tracking-wide text-[var(--board-light)]/70 sm:text-sm"
-            >
-              (the house, before curtain.)
-            </motion.p>
+          {/* The numbers sit on one ruled line, tabular, like a call sheet's
+              header strip — not as four big stat tiles, which is how the
+              previous version shipped a permanent prominent 0. */}
+          <div className="mt-6 border-y border-[var(--sheet-rule)] py-2.5">
+            <dl className="flex flex-wrap items-baseline gap-x-7 gap-y-1.5 font-typewriter text-[13px]">
+              <div className="text-[var(--sheet-dim)]">{SHEET_DATE.format(new Date())}</div>
+              <Stat n={data.actor_count} label={`in the house ${windowLabel}`} />
+              {counts.searched > 0 && <Stat n={counts.searched} label="searches" />}
+              {counts.joined > 0 && <Stat n={counts.joined} label="new faces" />}
+            </dl>
+          </div>
+        </header>
 
-            {/* Breaks its own frame: the title runs wider than the board's
-                padding and clips at the edge, the way a screenprint laid down
-                slightly off-register actually does. */}
-            <h1
-              className={`font-playbill -ml-1 mt-1 text-[clamp(3.25rem,15.5vw,8.5rem)] leading-[0.86] tracking-[-0.015em] text-[var(--board-card)] sm:-ml-2 ${
-                playing ? "board-stamp" : ""
-              }`}
-              style={{
-                textShadow:
-                  "0 1px 0 color-mix(in oklab, black 55%, transparent), 0 14px 34px color-mix(in oklab, black 60%, transparent)",
-              }}
-            >
-              The Callboard
-            </h1>
-
-            <motion.div
-              initial={playing ? { scaleX: 0 } : false}
-              animate={{ scaleX: 1 }}
-              transition={
-                playing
-                  ? { duration: 0.5, delay: BEAT.rule, ease: [0.22, 1, 0.36, 1] }
-                  : { duration: 0 }
-              }
-              style={{ transformOrigin: "left" }}
-              className="mt-5 h-px w-full bg-[color-mix(in_oklab,var(--board-card)_28%,transparent)]"
-            />
-
-            {/* Numbers count up rather than appear. A number that arrives at a
-                value has visibly been counted; one that is simply printed has
-                not. */}
-            <p className="mt-3 flex flex-wrap items-baseline gap-x-2.5 gap-y-1 font-typewriter text-[11px] uppercase tracking-[0.2em] text-[color-mix(in_oklab,var(--board-card)_62%,transparent)] sm:text-[13px]">
-              <span>{STAMP_DATE.format(new Date())}</span>
-              <Sep />
-              <span>
-                <Count to={data.actor_count} play={playing} at={BEAT.counts} /> in the house{" "}
-                {windowLabel}
-              </span>
-              {searched.length > 0 && (
-                <>
-                  <Sep />
-                  <span>
-                    <Count to={searched.length} play={playing} at={BEAT.counts + 0.1} /> searches
+        {/* ── Billing + what the house wants, side by side ─────────────────
+            Two things that are each too small to hold a screen on their own,
+            so they share one band and the roster gets the full width below. */}
+        {/* Three bands, not two. At two columns the billing ran long on the
+            left while the tag list ended halfway down the right, leaving a
+            column of dead board — the exact failure the pinboard version was
+            rebuilt to escape. Splitting "Also billed" into its own band evens
+            the three heights and buys back the space. */}
+        <div className="mt-10 grid gap-x-10 gap-y-10 sm:grid-cols-2 lg:grid-cols-[1.15fr_1fr_1fr]">
+          <section>
+            <SectionRule>Tonight&rsquo;s bill</SectionRule>
+            {headline && (
+              <Link href={`/monologue/${headline.id}`} className="group mt-4 block">
+                <p className="font-playbill text-[clamp(2rem,5.5vw,3.25rem)] leading-[0.95] text-[var(--sheet-ink)] transition-colors group-hover:text-primary">
+                  {headline.character_name}
+                </p>
+                <p className="mt-1.5 font-typewriter text-sm text-[var(--sheet-dim)]">
+                  {headline.play_title}
+                  {headline.author ? ` · ${headline.author}` : ""}
+                </p>
+                {/* The character name alone is a link with no affordance — on a
+                    sheet where every other row is also clickable, nothing marks
+                    this as the one thing the page is actually recommending. */}
+                <span className="mt-4 inline-flex items-center gap-1.5 border-b border-primary/50 pb-0.5 font-typewriter text-[13px] font-semibold uppercase tracking-[0.12em] text-primary">
+                  Read it
+                  <span aria-hidden className="transition-transform group-hover:translate-x-1">
+                    →
                   </span>
-                </>
-              )}
-              {joined.length > 0 && (
-                <>
-                  <Sep />
-                  <span>
-                    <Count to={joined.length} play={playing} at={BEAT.counts + 0.2} /> new faces
-                  </span>
-                </>
-              )}
-            </p>
-          </header>
+                </span>
+              </Link>
+            )}
 
-          {/* ── The notices ─────────────────────────────────────────────────
-              Explicit columns, not CSS columns and not a grid. CSS columns
-              dropped notices into a void (Chrome cannot break a
-              `break-inside-avoid` card, so a tall feed threw the balance); a
-              grid makes every card inherit the tallest one's height. Explicit
-              columns do neither, and they let the board be *composed* — the
-              standing notices on the left, the moving ones on the right. */}
+          </section>
 
-          {/* Top billing runs wide and off-centre, and the columns tuck up
-              underneath its bottom edge. A sheet spanning the full width with
-              its text in the left third reads as a layout that failed; a poster
-              pinned off-register, overlapping what is behind it, reads as a
-              poster. */}
-          {headline && (
-            <div className="relative z-20 mb-4 sm:mb-2 sm:w-[74%]">
-              <Notice
-                seed={`top-${headline.id}`}
-                at={BEAT.billing}
-                cue={cue}
-                playing={playing}
-                label="Top billing"
-              >
-                <Link href={`/monologue/${headline.id}`} className="group block">
-                  <p className="font-playbill text-[clamp(2.4rem,8.5vw,4.25rem)] leading-[0.92] text-[var(--board-ink)] transition-colors group-hover:text-primary">
-                    {headline.character_name}
-                  </p>
-                  <p className="mt-2.5 font-typewriter text-[15px] text-[var(--board-muted)]">
-                    {headline.play_title}
-                    {headline.author ? ` · ${headline.author}` : ""}
-                  </p>
-                  <span className="mt-5 inline-flex items-center gap-1.5 border-b-2 border-primary/60 pb-0.5 text-[15px] font-semibold text-primary">
-                    Read it
-                    <span aria-hidden className="transition-transform group-hover:translate-x-1">
+          <section>
+            <SectionRule>Also billed</SectionRule>
+            {alsoBilled.length > 0 && (
+              <ul className="mt-4 border-t border-[var(--sheet-rule)]">
+                {alsoBilled.map((m, i) => (
+                  <li
+                    key={m.id}
+                    className="sheet-row sheet-row-hit border-b border-[var(--sheet-rule)]"
+                    style={{ "--row-delay": `${140 + i * 40}ms` } as React.CSSProperties}
+                  >
+                    <Link
+                      href={`/monologue/${m.id}`}
+                      className="flex items-baseline gap-3 py-2 font-typewriter text-[13px]"
+                    >
+                      <span className="shrink-0 font-semibold uppercase tracking-wide text-[var(--sheet-ink)]">
+                        {m.character_name}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-[var(--sheet-faint)]">
+                        {m.play_title}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="sm:col-span-2 lg:col-span-1">
+            <SectionRule>The house is hunting for</SectionRule>
+            {/* Every tag runs that search. The previous version rendered the
+                same list as inert spans, which put twelve dead ends on the one
+                panel that describes live demand. */}
+            <div className="mt-4 flex flex-wrap gap-x-1.5 gap-y-2">
+              {searchTags.map(([tag, n], i) => (
+                <Link
+                  key={tag}
+                  href={`/monologues?q=${encodeURIComponent(tag)}`}
+                  style={{ "--row-delay": `${180 + i * 30}ms` } as React.CSSProperties}
+                  className={`sheet-row border px-2 py-1 font-typewriter text-[13px] capitalize transition-colors hover:border-primary hover:text-primary ${
+                    n > 2
+                      ? "border-[var(--sheet-dim)] font-semibold text-[var(--sheet-ink)]"
+                      : "border-[var(--sheet-rule)] text-[var(--sheet-dim)]"
+                  }`}
+                >
+                  {tag}
+                </Link>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        {/* ── The roster ───────────────────────────────────────────────────
+            The main event, full width. Arriving is just another verb here, so
+            nobody appears twice on one sheet. */}
+        <section className="mt-12">
+          <SectionRule>
+            In the house
+            <span aria-hidden className="sheet-caret ml-2 text-primary">
+              ▮
+            </span>
+          </SectionRule>
+
+          <ul className="mt-3 border-t border-[var(--sheet-rule)]">
+            {roster.map((r, i) => {
+              const fresh = freshIds.has(r.id);
+              return (
+                <li
+                  key={r.id}
+                  className={`sheet-row sheet-row-hit border-b border-[var(--sheet-rule)] ${
+                    fresh ? "sheet-fresh" : ""
+                  }`}
+                  style={{ "--row-delay": `${i * 32}ms` } as React.CSSProperties}
+                >
+                  <Link
+                    href={r.href}
+                    className="group flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-2.5 font-typewriter text-[13px] sm:grid sm:grid-cols-[0.6rem_minmax(0,9rem)_5.5rem_minmax(0,1fr)_2.5rem_0.9rem] sm:items-center sm:gap-x-4 sm:gap-y-0"
+                  >
+                    <span className="flex h-2 w-2 shrink-0 items-center sm:w-[0.6rem]">
+                      {fresh && (
+                        <span
+                          aria-hidden
+                          className="sheet-live-dot h-1.5 w-1.5 rounded-full"
+                        />
+                      )}
+                    </span>
+                    <span className="truncate text-[15px] font-semibold text-[var(--sheet-ink)] sm:text-[13px]">
+                      {r.name}
+                    </span>
+                    <span className="shrink-0 uppercase tracking-[0.08em] text-[var(--sheet-faint)]">
+                      {r.verb}
+                    </span>
+                    {/* pl-5 matches the status-dot column, which only exists on
+                        the first line once the row wraps — without it the
+                        detail hangs to the left of the name it belongs to. */}
+                    <span className="order-last min-w-0 basis-full truncate pl-5 text-[var(--sheet-dim)] sm:order-none sm:basis-auto sm:pl-0">
+                      {r.detail}
+                    </span>
+                    <span className="ml-auto shrink-0 tabular-nums text-[var(--sheet-faint)] sm:ml-0 sm:text-right">
+                      {compactTime(r.at, now)}
+                    </span>
+                    <span
+                      aria-hidden
+                      className="hidden text-primary opacity-0 transition-opacity group-hover:opacity-100 sm:inline"
+                    >
                       →
                     </span>
-                  </span>
-                </Link>
-              </Notice>
-            </div>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+
+          {anonCount > 0 && (
+            <p className="mt-3 font-typewriter text-[13px] text-[var(--sheet-faint)]">
+              + {anonCount} who haven&rsquo;t signed their name yet
+            </p>
           )}
+        </section>
 
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:gap-6">
-            <div className="flex flex-1 flex-col gap-5 sm:gap-7 sm:pt-8">
-              {(named.length > 0 || anonCount > 0) && (
-                <Notice
-                  seed="signin"
-                  at={BEAT.signin}
-                  cue={cue}
-                  playing={playing}
-                  label="Sign-in sheet"
-                >
-                  <ul>
-                    {named.map((e, i) => (
-                      <motion.li
-                        key={e.id}
-                        initial={playing ? { opacity: 0, x: -14 } : false}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={cue(BEAT.signin + 0.2, { stagger: 0.09, index: i })}
-                        className="flex items-center gap-3 border-b border-dashed border-[var(--board-rule)] py-2.5 last:border-b-0"
-                      >
-                        <Avatar e={e} size={32} />
-                        <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-[var(--board-ink)]">
-                          {e.name}
-                        </span>
-                        {e.city && (
-                          <span className="hidden shrink-0 font-typewriter text-xs text-[var(--board-muted)] min-[420px]:inline">
-                            {e.city}
-                          </span>
-                        )}
-                        <Stamp fresh={freshIds.has(e.id)}>{relativeTime(e.created_at)}</Stamp>
-                      </motion.li>
-                    ))}
-                  </ul>
-                  {anonCount > 0 && (
-                    <p className="mt-3 font-typewriter text-[13px] text-[var(--board-muted)]">
-                      + {anonCount} who haven&rsquo;t signed their name yet
-                    </p>
-                  )}
-                </Notice>
-              )}
-
-              {searchTags.length > 0 && (
-                <Notice
-                  seed="hunting"
-                  at={BEAT.hunting}
-                  cue={cue}
-                  playing={playing}
-                  label="The house is hunting for"
-                >
-                  {/* Each tag runs that search rather than dumping you on an
-                      empty /monologues. They scatter in from their own offsets
-                      rather than fading as a block — twelve things fading in
-                      together is one thing fading in. */}
-                  <div className="flex flex-wrap gap-x-2 gap-y-2.5">
-                    {searchTags.map(([tag, count], i) => (
-                      <motion.span
-                        key={tag}
-                        initial={
-                          playing
-                            ? {
-                                opacity: 0,
-                                y: (hash(tag) % 18) - 9,
-                                x: (hash(tag + "x") % 18) - 9,
-                                rotate: (hash(tag + "r") % 14) - 7,
-                              }
-                            : false
-                        }
-                        animate={{ opacity: 1, y: 0, x: 0, rotate: 0 }}
-                        transition={cue(BEAT.hunting + 0.18, { stagger: 0.035, index: i })}
-                      >
-                        <Link
-                          href={`/monologues?q=${encodeURIComponent(tag)}`}
-                          className={`inline-block border px-2.5 py-1 font-typewriter capitalize transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary ${
-                            count > 2
-                              ? "border-[var(--board-ink)]/45 text-[15px] font-semibold text-[var(--board-ink)]"
-                              : "border-[var(--board-rule)] text-sm text-[var(--board-muted)]"
-                          }`}
-                        >
-                          {tag}
-                        </Link>
-                      </motion.span>
-                    ))}
-                  </div>
-                </Notice>
-              )}
-            </div>
-
-            {/* Overlaps the left column by a hair on desktop, so the two read
-                as paper laid over paper rather than as two table cells. */}
-            <div className="flex flex-1 flex-col gap-5 sm:-ml-4 sm:gap-7">
-              {doings.length > 0 && (
-                <Notice
-                  seed="asithappens"
-                  at={BEAT.happening}
-                  cue={cue}
-                  playing={playing}
-                  label="As it happens"
-                >
-                  <ul>
-                    {doings.map((e, i) => {
-                      const chip = chipFor(e);
-                      const fresh = freshIds.has(e.id);
-                      return (
-                        <motion.li
-                          key={e.id}
-                          /* A row that shows up on a later poll was not part of
-                             the replay, so it gets the drop-and-settle on its
-                             own — the same vocabulary the actor just watched,
-                             which is what makes it legible as the board doing
-                             its thing rather than a glitch. */
-                          initial={
-                            playing || fresh ? { opacity: 0, y: -16, rotate: fresh ? -1.5 : 0 } : false
-                          }
-                          animate={{ opacity: 1, y: 0, rotate: 0 }}
-                          transition={cue(BEAT.happening + 0.2, { stagger: 0.07, index: i })}
-                          className="border-b border-dashed border-[var(--board-rule)] py-3 last:border-b-0"
-                        >
-                          <p className="text-[15px] leading-snug text-[var(--board-muted)]">
-                            <span className="font-semibold text-[var(--board-ink)]">{e.name}</span>{" "}
-                            <EventLine e={e} />
-                          </p>
-                          <p className="mt-1.5 flex items-center gap-3">
-                            <Stamp fresh={fresh}>{relativeTime(e.created_at)}</Stamp>
-                            {chip && (
-                              <Link
-                                href={chip.href}
-                                className="text-[13px] font-semibold text-primary underline-offset-2 hover:underline"
-                              >
-                                {chip.label} →
-                              </Link>
-                            )}
-                          </p>
-                        </motion.li>
-                      );
-                    })}
-                  </ul>
-                </Notice>
-              )}
-
-              {alsoBilled.length > 0 && (
-                <Notice
-                  seed="also"
-                  at={BEAT.also}
-                  cue={cue}
-                  playing={playing}
-                  label="Also billed"
-                >
-                  <ul>
-                    {alsoBilled.map((m, i) => (
-                      <motion.li
-                        key={m.id}
-                        initial={playing ? { opacity: 0, y: -8 } : false}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={cue(BEAT.also + 0.15, { stagger: 0.06, index: i })}
-                        className="border-b border-dashed border-[var(--board-rule)] last:border-b-0"
-                      >
-                        <Link
-                          href={`/monologue/${m.id}`}
-                          className="group flex items-baseline gap-2 py-2.5"
-                        >
-                          <span className="font-playbill text-xl text-[var(--board-ink)] transition-colors group-hover:text-primary">
-                            {m.character_name}
-                          </span>
-                          <span className="min-w-0 flex-1 truncate font-typewriter text-[13px] text-[var(--board-muted)]">
-                            {m.play_title}
-                          </span>
-                        </Link>
-                      </motion.li>
-                    ))}
-                  </ul>
-                </Notice>
-              )}
-            </div>
-          </div>
-
-          <VisibilityStamp />
-        </div>
+        <VisibilityStamp />
       </div>
     </div>
   );
 }
 
-function Sep() {
+function Stat({ n, label }: { n: number; label: string }) {
   return (
-    <span aria-hidden className="opacity-40">
-      ·
-    </span>
+    <div className="flex items-baseline gap-1.5">
+      <dd className="tabular-nums text-[15px] font-semibold text-[var(--sheet-ink)]">{n}</dd>
+      <dt className="uppercase tracking-[0.12em] text-[var(--sheet-faint)]">{label}</dt>
+    </div>
   );
 }
 
-/** A timestamp, wearing a live pulse if this row arrived on the last poll. */
-function Stamp({ fresh, children }: { fresh: boolean; children: React.ReactNode }) {
+function SectionRule({ children }: { children: React.ReactNode }) {
   return (
-    <span className="flex shrink-0 items-center gap-1.5 font-typewriter text-xs text-[var(--board-muted)]">
-      {fresh && <span aria-hidden className="board-live-dot h-1.5 w-1.5 rounded-full" />}
-      {children}
-    </span>
+    <h2 className="sheet-rule font-typewriter text-[11px] font-bold uppercase tracking-[0.24em] text-[var(--sheet-dim)]">
+      <span>{children}</span>
+    </h2>
   );
 }
 
-/** A number that arrives at its value instead of being printed at it. */
-function Count({ to, play, at }: { to: number; play: boolean; at: number }) {
-  const [n, setN] = useState(play ? 0 : to);
-
-  useEffect(() => {
-    if (!play) {
-      setN(to);
-      return;
-    }
-    let raf = 0;
-    const dur = 1100;
-    const start = performance.now() + at * 1000;
-    const tick = (now: number) => {
-      const t = Math.min(1, Math.max(0, (now - start) / dur));
-      // easeOutExpo: fast off the mark, then a long deliberate settle, which is
-      // what makes it read as counting rather than as a slider being dragged.
-      const eased = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
-      setN(Math.round(eased * to));
-      if (t < 1) raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
-  }, [to, play, at]);
-
-  return <span className="tabular-nums text-[var(--board-card)]">{n}</span>;
-}
-
-/** A sheet of paper, tacked to the board. */
-function Notice({
-  seed,
-  at,
-  cue,
-  playing,
-  label,
-  children,
-}: {
-  seed: string;
-  at: number;
-  cue: (at: number, extra?: { stagger?: number; index?: number }) => object;
-  playing: boolean;
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <motion.div
-      /* The wrapper owns the entrance (drop in from above the frame, overshoot,
-         settle — as if pinned up one at a time); the inner .callboard-notice
-         owns the resting tilt and the ambient sway in CSS. Two elements because
-         all three want `transform`. */
-      initial={playing ? { opacity: 0, y: -46, rotate: -2.5 } : false}
-      animate={{ opacity: 1, y: 0, rotate: 0 }}
-      transition={cue(at)}
-    >
-      <div
-        className="callboard-notice px-4 pb-4 pt-8 sm:px-6 sm:pb-6 sm:pt-9"
-        style={
-          { "--tilt": tilt(seed), "--sway": sway(seed) } as React.CSSProperties
-        }
-      >
-        <Tack at={at} playing={playing} />
-        <h2 className="mb-4 flex items-center gap-3 font-typewriter text-[11px] font-bold uppercase tracking-[0.22em] text-[var(--board-muted)] sm:text-[13px]">
-          {label}
-          <span aria-hidden className="h-px flex-1 bg-[var(--board-rule)]" />
-        </h2>
-        {children}
-      </div>
-    </motion.div>
-  );
-}
-
-/** Brass pin. Highlight up and left, shadow down and right. Lands 90ms after
-    the paper it holds — the pin goes in second, not first. */
-function Tack({ at, playing }: { at: number; playing: boolean }) {
-  return (
-    <motion.span
-      aria-hidden
-      initial={playing ? { scale: 0, opacity: 0 } : false}
-      animate={{ scale: 1, opacity: 1 }}
-      transition={
-        playing
-          ? { type: "spring", stiffness: 500, damping: 16, delay: at + 0.09 }
-          : { duration: 0 }
-      }
-      className="absolute left-1/2 top-2.5 h-3.5 w-3.5 -translate-x-1/2 rounded-full"
-      style={{
-        background:
-          "radial-gradient(circle at 32% 28%, oklch(0.92 0.09 85), oklch(0.68 0.15 62) 55%, oklch(0.45 0.11 55))",
-        boxShadow:
-          "0 2px 4px color-mix(in oklab, black 55%, transparent), 0 0 0 1px color-mix(in oklab, black 25%, transparent)",
-      }}
-    />
-  );
-}
-
-/** The visibility control, stamped at the foot of the board like a notice from
-    the office rather than a stray link. */
+/** The visibility control, set as a line of small print at the foot of the
+    sheet the way a real call sheet carries its notices. */
 function VisibilityStamp() {
   const { shareActivity, isLoading, setShareActivity } = useShareActivity();
   if (isLoading || shareActivity === undefined) return null;
   return (
-    <div className="mt-12 border-t border-[color-mix(in_oklab,var(--board-card)_20%,transparent)] pt-5 sm:mt-16">
+    <div className="mt-14 border-t border-[var(--sheet-rule)] pt-4">
       <button
         type="button"
         onClick={() => setShareActivity(!shareActivity)}
-        className="font-typewriter text-[11px] uppercase tracking-[0.18em] text-[color-mix(in_oklab,var(--board-card)_55%,transparent)] underline-offset-4 transition-colors hover:text-[var(--board-card)] hover:underline sm:text-xs"
+        className="font-typewriter text-[11px] uppercase tracking-[0.2em] text-[var(--sheet-faint)] underline-offset-4 transition-colors hover:text-[var(--sheet-ink)] hover:underline"
       >
         {shareActivity
-          ? "You are on this board · take me off"
-          : "You are off this board · put me back"}
+          ? "You are on this sheet · take me off"
+          : "You are off this sheet · put me back"}
       </button>
     </div>
   );
 }
 
-/** Bare cork under the work light. Deliberately empty of card shapes: the
-    replay begins with a board that has nothing on it, so a skeleton showing
-    four grey rectangles would spoil the first beat of the show. */
-function BoardSkeleton() {
+/** Hairlines only. The sheet's own structure is the loading state, so nothing
+    moves position when the data lands. */
+function SheetSkeleton() {
   return (
-    <div className="px-3 pb-24 pt-5 sm:px-6 sm:pt-10">
-      <div className="callboard callboard-frame stage-grain relative isolate mx-auto min-h-[70vh] w-full max-w-5xl overflow-hidden px-4 pb-10 pt-8 sm:px-9 sm:pt-14">
-        <div className="callboard-light" aria-hidden />
+    <div className="callsheet min-h-screen px-4 pb-24 pt-8 sm:px-8 sm:pt-12">
+      <div className="mx-auto w-full max-w-5xl">
+        <div className="h-3 w-48 bg-[var(--sheet-rule)]" />
+        <div className="mt-4 h-[clamp(3rem,11vw,6.5rem)] w-full max-w-2xl bg-[var(--sheet-raised)]" />
+        <div className="mt-6 border-y border-[var(--sheet-rule)] py-2.5">
+          <div className="h-3 w-72 bg-[var(--sheet-rule)]" />
+        </div>
+        <div className="mt-12 border-t border-[var(--sheet-rule)]">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="border-b border-[var(--sheet-rule)] py-3.5">
+              <div
+                className="h-3 bg-[var(--sheet-raised)]"
+                style={{ width: `${34 + ((i * 13) % 46)}%` }}
+              />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );

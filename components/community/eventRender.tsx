@@ -24,7 +24,16 @@ function pronoun(g?: string): string {
 function Title({ children }: { children: React.ReactNode }) {
   // align-baseline: Courier's line box differs from the sans around it, so in
   // any flex/inline-block context the title would otherwise ride high.
-  return <span className="font-typewriter align-baseline text-foreground/90">{children}</span>;
+  //
+  // The colour is inherited, not set. It used to be `text-foreground/90`, which
+  // is near-white in dark mode — correct on the dark /practice panel, and
+  // white-on-white inside a bone-paper Callboard notice, where it made every
+  // saved-piece title invisible. Inheriting means the title is always legible
+  // against whatever surface it was dropped onto; weight carries the emphasis
+  // that colour used to.
+  return (
+    <span className="font-typewriter align-baseline font-medium text-current">{children}</span>
+  );
 }
 
 export function relativeTime(iso: string): string {
