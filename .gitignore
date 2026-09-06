@@ -97,3 +97,9 @@ data-gym-cache/
 /.sync_probe.txt
 .playwright-mcp/
 /vta-assets/
+
+# Script output, not source. audit_corpus_quality.py and the TV creator
+# sweeps write timestamped reports here; they are a record of one run against
+# one state of the corpus, so committing them means committing a number that
+# was already stale when it landed.
+/backend/reports/
