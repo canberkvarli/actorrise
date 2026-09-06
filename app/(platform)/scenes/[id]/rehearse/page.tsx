@@ -1262,6 +1262,22 @@ export default function RehearsalPage() {
   const micStatusRef = useRef<typeof micStatus>(micStatus);
   useEffect(() => { micStatusRef.current = micStatus; }, [micStatus]);
 
+  // Everything the abandon handler needs to say WHY the run died. It runs from
+  // an unmount/pagehide closure with stale state, so this is refreshed every
+  // render. Values are the closed list in services/rehearsal_failure.py.
+  const abandonContextRef = useRef({ error, speechError, armed, micStatus, srSupported: isSpeechRecognitionSupported });
+  abandonContextRef.current = { error, speechError, armed, micStatus, srSupported: isSpeechRecognitionSupported };
+  const failureReason = (lineIdx: number): string => {
+    const c = abandonContextRef.current;
+    if (c.error) return 'load_error';
+    if (!c.srSupported) return 'speech_unsupported';
+    if (c.speechError === 'mic-blocked' || c.micStatus === 'denied') return 'mic_denied';
+    if (c.speechError === 'unavailable') return 'speech_unavailable';
+    if (c.speechError) return 'speech_error';
+    if (!c.armed) return 'never_began';
+    return lineIdx > 0 ? 'left_midway' : 'no_lines';
+  };
+
   /* ── Load session ──────────────────────────────────────────────── */
 
   const loadSession = async () => {
@@ -1522,7 +1538,9 @@ export default function RehearsalPage() {
       fetch(`${API_URL}/api/scenes/rehearse/${sessionId}/abandon`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: '{}',
+        // -> rehearsal_sessions.failure_reason. "51 abandoned at 2.1 lines"
+        // becomes "31 mic_denied, 12 never_began, 8 left_midway".
+        body: JSON.stringify({ reason: failureReason(lineIdx) }),
         keepalive: true,
       }).catch(() => {});
     };

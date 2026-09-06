@@ -1185,13 +1185,24 @@ async def deliver_line(
     )
 
 
+class AbandonRequest(BaseModel):
+    """Optional body on abandon. `reason` is one of services/rehearsal_failure
+    .FAILURE_REASONS; anything else is stored as NULL rather than rejected,
+    because this call goes out on pagehide with keepalive and a 4xx there
+    would lose the abandon itself."""
+    reason: Optional[str] = None
+
+
 @router.post("/rehearse/{session_id}/abandon")
 async def abandon_session(
     session_id: int,
+    body: Optional[AbandonRequest] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Mark an in-progress session as abandoned (e.g. user navigated away)."""
+    from app.services.rehearsal_failure import normalize_failure_reason
+
     session = db.query(RehearsalSession).filter_by(
         id=session_id,
         user_id=current_user.id,
@@ -1202,10 +1213,11 @@ async def abandon_session(
         return {"ok": True, "status": str(session.status)}
     ended_at = datetime.now(timezone.utc)
     session.status = "abandoned"  # type: ignore
+    session.failure_reason = normalize_failure_reason(body.reason if body else None)  # type: ignore
     session.completed_at = ended_at  # type: ignore
     session.duration_seconds = _duration_seconds(session.started_at, ended_at)  # type: ignore
     db.commit()
-    return {"ok": True, "status": "abandoned"}
+    return {"ok": True, "status": "abandoned", "failure_reason": session.failure_reason}
 
 
 @router.get("/rehearse/{session_id}/feedback", response_model=SessionFeedbackResponse)

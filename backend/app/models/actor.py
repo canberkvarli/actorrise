@@ -364,6 +364,12 @@ class RehearsalSession(Base):
     # timed_out (they vanished; the hourly sweep closed it). abandoned and
     # timed_out both mean "didn't finish" — see services/rehearsal_cleanup.
     status = Column(String, nullable=False, default="in_progress")
+    # WHY it did not finish, from the client at abandon time. Closed vocabulary
+    # in services/rehearsal_failure.py (mic_denied, speech_unsupported,
+    # never_began, no_lines, left_midway, ...). NULL on completed sessions, on
+    # timed_out ones (the sweep cannot know) and on everything before the
+    # column. Splits "the mic never worked" from "they got bored".
+    failure_reason = Column(String(32), nullable=True)
     current_line_index = Column(Integer, default=0)  # Where they left off
 
     # Line Cap (resolved from tier at session start; NULL = unlimited)
