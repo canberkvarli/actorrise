@@ -1182,6 +1182,7 @@ async def get_monologue(
     monologue_id: int,
     request: Request,
     slid: Optional[int] = Query(None, description="search_logs id that led to this open (funnel analytics)"),
+    rank: Optional[int] = Query(None, ge=1, le=10000, description="1-based position of the clicked result in that search"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
@@ -1223,6 +1224,8 @@ async def get_monologue(
             monologue_id=monologue_id,
             user_id=int(current_user.id),
             search_log_id=slid,
+            # Only meaningful relative to a search; a rank with no slid is noise.
+            rank=rank if slid else None,
             client=view_client,
             device_id=view_device,
         ))

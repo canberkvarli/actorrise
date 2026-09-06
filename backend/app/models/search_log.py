@@ -98,6 +98,13 @@ class MonologueView(Base):
     monologue_id = Column(Integer, ForeignKey("monologues.id", ondelete="CASCADE"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     search_log_id = Column(Integer, ForeignKey("search_logs.id", ondelete="SET NULL"), nullable=True)
+    # 1-based position of the result in the list the actor clicked, sent by the
+    # client as ?rank= alongside ?slid=. Joined to search_logs.best_cosine this
+    # is the relevance metric: a strong-cosine search whose opens all sit at
+    # rank 6+ failed the user, whatever the thumbs widget says (1 negative, 0
+    # positive in the 30 days to 2026-09-06). NULL: opened from somewhere other
+    # than a result list, or a row from before the column.
+    rank = Column(Integer, nullable=True)
     # Which client opened the piece: "web" or "ghostlight". The free-read wall
     # is a SEPARATE trial per client (web 5 a month, Ghost Light 3 for life), so
     # the count has to know where the read happened or the two allowances pool

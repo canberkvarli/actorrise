@@ -1061,9 +1061,16 @@ function SearchContent() {
     params.set("m", mono.id.toString());
     router.replace(`/monologues?${params.toString()}`, { scroll: false });
     // Fetch fresh data in background (view count, etc.); slid ties the open
-    // back to the search that produced it.
+    // back to the search that produced it, rank says how far down the list it
+    // was (1-based). Together they are the click-through record for that search.
     const slid = searchLogIdRef.current;
-    api.get<Monologue>(`/api/monologues/${mono.id}${slid ? `?slid=${slid}` : ""}`)
+    const open = new URLSearchParams();
+    if (slid) {
+      open.set("slid", String(slid));
+      if (position != null) open.set("rank", String(position + 1));
+    }
+    const qs = open.toString();
+    api.get<Monologue>(`/api/monologues/${mono.id}${qs ? `?${qs}` : ""}`)
       .then((response) => setSelectedMonologue(response.data))
       .catch(() => {});
   };
