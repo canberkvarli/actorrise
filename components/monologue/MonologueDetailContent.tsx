@@ -237,6 +237,7 @@ export function MonologueOneSheet({ monologue }: { monologue: Monologue }) {
                   author={author}
                   year={monologue.year}
                   genre={monologue.genre}
+                  category={monologue.category}
                   themes={monologue.themes}
                 />
               )}

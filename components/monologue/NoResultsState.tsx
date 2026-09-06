@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 
 import { Button } from "@/components/ui/button";
-import { GhostLightSketch, MasksSketch } from "@/components/brand/sketches";
+import { Glyph, glyphFor } from "@/components/brand/glyphs";
 
 /**
  * The empty stage. Three ways a search comes back with nothing, each said
@@ -50,7 +50,12 @@ export function NoResultsState({
   children,
 }: NoResultsStateProps) {
   const copy = COPY[reason];
-  const Sketch = reason === "none" ? GhostLightSketch : MasksSketch;
+  /* The catalogue maps state:no-results to the script and pen, which is also
+     feature:request — the same mark for "nothing here" and "ask me to add it",
+     which is exactly the move this screen offers. One glyph for all three
+     reasons: the copy is what differentiates them, and the house rule is one
+     glyph per view, not one per variant. */
+  const glyph = glyphFor("state:no-results") ?? "script-pen";
 
   return (
     <motion.div
@@ -59,7 +64,8 @@ export function NoResultsState({
       transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
       className="mx-auto flex max-w-md flex-col items-center px-4 py-16 text-center"
     >
-      <Sketch size={76} delay={0.1} className="text-muted-foreground/50" />
+      {/* 88 is the catalogue's empty-state size; muted ink, never the orange. */}
+      <Glyph name={glyph} size={88} className="text-muted-foreground/50" />
 
       <p className="stage-direction mt-6 text-sm text-muted-foreground/70">{copy.direction}</p>
       <h3 className="mt-2 font-brand text-3xl font-medium text-foreground sm:text-4xl">

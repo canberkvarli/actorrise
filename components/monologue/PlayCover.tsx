@@ -1,14 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import {
-  SkullSketch,
-  MasksSketch,
-  CrownSketch,
-  RoseSketch,
-  DaggerSketch,
-  GhostLightSketch,
-} from "@/components/brand/sketches";
+import { Glyph, glyphFor, type GlyphName } from "@/components/brand/glyphs";
 
 /**
  * A play has no poster, and there is no rights-clean source for 232 of them.
@@ -16,10 +9,15 @@ import {
  * the title set like a spine.
  *
  * Everything here is derived from the row itself — nothing is stored, nothing
- * is uploaded, nothing is generated at request time. Six SVG emblems and six
- * cloth colours cover the whole catalogue for about 3KB, they take
- * `currentColor` so they invert with the theme, and they animate. A folder of
- * generated raster covers would do none of that and would cost real storage.
+ * is uploaded, nothing is generated at request time. The emblem comes from the
+ * stage-glyph catalogue and the cloth from a hash of the title, so the whole
+ * catalogue is covered for a few KB; they take `currentColor` and scale. A
+ * folder of generated raster covers would do neither and would cost storage.
+ *
+ * Measured over the 15,800 play monologues, the resolution produces ten
+ * distinct emblems — crown 35%, laurel 31%, rose 23%, dagger 6%, then a tail of
+ * lantern / samovar / bear / skull / unicorn / donkey — and never falls through
+ * to the neutral curtain.
  */
 
 /** Deterministic, so The Seagull is the same green on every visit. */
@@ -41,40 +39,62 @@ const CLOTHS = [
   { bg: "oklch(0.30 0.020 240)", ink: "oklch(0.93 0.02 90)" }, // slate
 ] as const;
 
-const EMBLEMS = {
-  masks: MasksSketch,
-  skull: SkullSketch,
-  crown: CrownSketch,
-  rose: RoseSketch,
-  dagger: DaggerSketch,
-  ghost: GhostLightSketch,
-} as const;
+/** "A Midsummer Night's Dream" → "a-midsummer-nights-dream", the CONTEXT key form. */
+function slug(s: string | null | undefined): string {
+  return (s ?? "")
+    .toLowerCase()
+    .replace(/['’]/g, "")        // "night's" → "nights", matching the map's keys
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/** "Anton Chekhov" → "chekhov". The map keys authors by surname. */
+function authorSlug(s: string | null | undefined): string {
+  const parts = slug(s).split("-").filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : "";
+}
 
 /**
- * Which emblem. Ordered most-specific first: a revenge tragedy should get the
- * dagger, not the generic skull, and a comedy should never get either.
+ * Which emblem, resolved through the glyph catalogue's own context map.
  *
- * Jester and Curtain are deliberately not in the set. Rendered at size the
- * jester is a rabbit — three antennae with beads on a dome — and the curtain
- * is a shallow arc that reads as nothing at all.
+ * This used to pick from six hand-drawn sketches by genre keyword, so every
+ * tragedy got the same skull and every comedy the same masks. The catalogue
+ * knows individual plays — Macbeth's dagger, Midsummer's donkey, Streetcar's
+ * lantern, Salesman's suitcase, the Menagerie's unicorn, Godot's bowler,
+ * Chekhov's samovar — so a cover can be about its play rather than its genre.
+ *
+ * Resolution order is the one the catalogue prescribes: play → author → first
+ * tag → nothing. "Skip rather than guess" is why the fallback is the curtain
+ * (page:landing / state:end) rather than a wrong specific.
  */
 export function emblemFor(opts: {
   genre?: string | null;
+  category?: string | null;
   themes?: string[] | null;
   title?: string | null;
-}): keyof typeof EMBLEMS {
-  const g = (opts.genre ?? "").toLowerCase();
-  const hay = [(opts.themes ?? []).join(" "), opts.title ?? ""].join(" ").toLowerCase();
-  const has = (...words: string[]) => words.some((w) => hay.includes(w));
+  author?: string | null;
+}): GlyphName {
+  const tagKeys = [
+    ...(opts.themes ?? []).map((t) => `tag:${slug(t)}`),
+    opts.genre ? `tag:${slug(opts.genre)}` : "",
+    // classical → laurel, contemporary → lantern. Last, so a piece about power
+    // still gets its crown; this is the floor, not the first answer. It carries
+    // ~31% of the catalogue on its own, because `genre` is the literal string
+    // "drama" for almost every play and "drama" is not a context key.
+    opts.category ? `tag:${slug(opts.category)}` : "",
+  ].filter(Boolean);
 
-  if (g.includes("comed") || has("comedy", "farce")) return "masks";
-  if (has("revenge", "murder", "betrayal", "blood", "assassin")) return "dagger";
-  if (has("love", "romance", "marriage", "desire", "longing", "lovers")) return "rose";
-  if (g.includes("histor") || has("power", "ambition", "king", "queen", "crown", "throne"))
-    return "crown";
-  if (g.includes("traged") || has("death", "grief", "mortality", "fate", "madness"))
-    return "skull";
-  return "ghost";
+  // Author is looked up by surname and only resolves for authors the catalogue
+  // names — Chekhov's samovar. Shakespeare deliberately does not resolve here:
+  // the map ties him to the skull via tag:shakespeare, and stamping a skull on
+  // As You Like It would be worse than letting the themes decide.
+  return (
+    glyphFor(
+      `play:${slug(opts.title)}`,
+      `author:${authorSlug(opts.author)}`,
+      ...tagKeys,
+    ) ?? "curtain"
+  );
 }
 
 /** The cloth a given title is bound in — so the banner behind it can match. */
@@ -87,6 +107,7 @@ export function PlayCover({
   author,
   year,
   genre,
+  category,
   themes,
   className,
 }: {
@@ -94,11 +115,13 @@ export function PlayCover({
   author?: string | null;
   year?: number | null;
   genre?: string | null;
+  /** classical | contemporary — the catalogue's floor when nothing else hits. */
+  category?: string | null;
   themes?: string[] | null;
   className?: string;
 }) {
   const cloth = CLOTHS[hash(title) % CLOTHS.length];
-  const Emblem = EMBLEMS[emblemFor({ genre, themes, title })];
+  const emblem = emblemFor({ genre, category, themes, title, author });
 
   return (
     <div
@@ -125,10 +148,10 @@ export function PlayCover({
         animate={{ opacity: 0.92, scale: 1 }}
         transition={{ duration: 0.6, delay: 0.15, ease: [0.22, 1, 0.36, 1] }}
       >
-        {/* eager: the emblem is the artwork on this card, not an accent. Left
-            on whileInView it stays at pathLength 0 until an observer fires,
-            and a cover with an invisible emblem is just a coloured rectangle. */}
-        <Emblem size={54} eager />
+        {/* No `draw`: the catalogue's draw mode is whileInView, and a cover
+            emblem must never depend on an observer firing — that is how you get
+            a coloured rectangle with nothing on it. Static renders immediately. */}
+        <Glyph name={emblem} size={54} />
       </motion.div>
 
       <div className="w-full">

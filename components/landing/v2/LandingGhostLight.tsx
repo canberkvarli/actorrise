@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion, useScroll, useSpring } from "framer-motion";
 import { BrandLogo } from "@/components/brand/BrandLogo";
+import { Glyph } from "@/components/brand/glyphs";
 import { SpotlightSurface } from "@/components/brand/SpotlightSurface";
 import { ContactModalTrigger } from "@/components/contact/ContactModalTrigger";
 import { LandingFaq } from "@/components/landing/LandingFaq";
@@ -173,7 +174,15 @@ export function LandingGhostLight() {
 
       <footer className="dark stage-scene border-t border-[var(--stage-line)]">
         <div className="container mx-auto px-4 sm:px-6 py-10 flex flex-col gap-5">
-          <p className="stage-direction text-xs text-[var(--stage-faint)]">(curtain call.)</p>
+          {/* The one glyph on this page. state:end in the catalogue is the
+              curtain, and the line under it has said "curtain call" all along —
+              so the mark and the words are the same thing, which is the point.
+              Muted stage ink, never the orange, and nothing else on the landing
+              carries a glyph: the house rule is one per view. */}
+          <div className="flex items-center gap-3 text-[var(--stage-faint)]">
+            <Glyph name="curtain" size={40} />
+            <p className="stage-direction text-xs">(curtain call.)</p>
+          </div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div className="flex items-center gap-3">
               <p className="text-sm text-[var(--stage-muted)]">© {new Date().getFullYear()} ActorRise</p>
