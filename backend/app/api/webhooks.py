@@ -68,7 +68,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(get_db)):
         elif event_type == "invoice.payment_failed":
             handle_payment_failed(event_data, db)
         elif event_type == "customer.subscription.updated":
-            handle_subscription_updated(event_data, db)
+            # previous_attributes is how Stripe says "the trial just ended":
+            # status was trialing, now it is something else.
+            handle_subscription_updated(
+                event_data, db, previous_attributes=event["data"].get("previous_attributes")
+            )
         elif event_type == "customer.subscription.deleted":
             handle_subscription_deleted(event_data, db)
         else:
@@ -316,6 +320,23 @@ def handle_invoice_paid(invoice: dict, db: Session):
                     currency=(invoice.get("currency") or "usd").upper(),
                     ga_client_id=(stripe_sub.get("metadata") or {}).get("ga_client_id"),
                 )
+                # The same moment, in our own database, so trial-to-paid is a
+                # query and not a GA4 report nobody trusts.
+                from app.services.events import record_trial_ended, record_user_event
+
+                _sid = stripe_sub.get("id") or invoice.get("subscription")
+                _tier = tier_row.name if tier_row else "plus"
+                record_user_event(
+                    subscription.user_id,
+                    "trial_converted",
+                    {
+                        "subscription_id": _sid,
+                        "tier": _tier,
+                        "amount_cents": invoice["amount_paid"],
+                        "currency": invoice.get("currency") or "usd",
+                    },
+                )
+                record_trial_ended(db, subscription.user_id, _sid, "converted", tier=_tier)
     except Exception as e:
         print(f"Warning: GA4 trial_converted not sent: {e}")
 
@@ -362,11 +383,15 @@ def handle_payment_failed(invoice: dict, db: Session):
     print(f"❌ Payment failed for user {subscription.user_id}")
 
 
-def handle_subscription_updated(stripe_subscription: dict, db: Session):
+def handle_subscription_updated(
+    stripe_subscription: dict, db: Session, previous_attributes: dict | None = None
+):
     """
     Handle subscription changes (upgrades, downgrades, cancellations).
 
-    Updates subscription status and cancellation details.
+    Updates subscription status and cancellation details. When the previous
+    status was `trialing`, this event IS the trial ending: records trial_ended
+    with the outcome Stripe moved it to.
     """
     subscription = (
         db.query(UserSubscription)
@@ -390,6 +415,23 @@ def handle_subscription_updated(stripe_subscription: dict, db: Session):
     print(
         f"✅ Subscription updated for user {subscription.user_id} - status: {stripe_subscription['status']}"
     )
+
+    # Trial just ended (trialing -> active | past_due | canceled | ...).
+    try:
+        prev_status = (previous_attributes or {}).get("status")
+        new_status = stripe_subscription.get("status")
+        if prev_status == "trialing" and new_status and new_status != "trialing":
+            from app.services.events import record_trial_ended, trial_outcome
+
+            record_trial_ended(
+                db,
+                subscription.user_id,
+                stripe_subscription.get("id"),
+                trial_outcome(new_status),
+                stripe_status=new_status,
+            )
+    except Exception as e:
+        print(f"Warning: trial_ended not recorded: {e}")
 
 
 def handle_subscription_deleted(stripe_subscription: dict, db: Session):
@@ -426,15 +468,24 @@ def handle_subscription_deleted(stripe_subscription: dict, db: Session):
                 .first()
             )
             trial_start = stripe_subscription.get("trial_start")
+            days_into_trial = round((ended_at - trial_start) / 86400) if trial_start else None
             track_trial_cancelled(
                 user_id=subscription.user_id,
                 tier=tier_row.name if tier_row else "plus",
-                days_into_trial=(
-                    round((ended_at - trial_start) / 86400) if trial_start else None
-                ),
+                days_into_trial=days_into_trial,
                 ga_client_id=(stripe_subscription.get("metadata") or {}).get(
                     "ga_client_id"
                 ),
+            )
+            from app.services.events import record_trial_ended
+
+            record_trial_ended(
+                db,
+                subscription.user_id,
+                stripe_subscription.get("id"),
+                "cancelled",
+                tier=tier_row.name if tier_row else "plus",
+                days_into_trial=days_into_trial,
             )
     except Exception as e:
         print(f"Warning: GA4 trial_cancelled not sent: {e}")

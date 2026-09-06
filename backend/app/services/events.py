@@ -25,6 +25,8 @@ SERVER_EVENT_NAMES = frozenset(
         "signup_completed",  # users row created with a real email (auth.get_current_user)
         "onboarding_completed",  # has_completed_profile_onboarding flipped false -> true
         "first_search_submitted",  # the user's first search_logs row
+        "trial_ended",  # {subscription_id, outcome: converted|cancelled|past_due|...}
+        "trial_converted",  # first real charge on a subscription that had a trial
     }
 )
 
@@ -61,6 +63,61 @@ def sanitize_properties(props: Optional[dict[str, Any]]) -> dict[str, Any]:
         elif isinstance(value, _SCALARS):
             out[key] = value[:MAX_STRING_LEN] if isinstance(value, str) else value
     return out
+
+
+def trial_outcome(stripe_status: str) -> str:
+    """Stripe's post-trial status as an outcome word.
+
+    `active` after `trialing` is a conversion; `canceled` is spelt our way so
+    the two webhook paths that can report a cancellation agree on the label.
+    Anything else (past_due, unpaid, incomplete_expired) is kept verbatim.
+    """
+    if stripe_status == "active":
+        return "converted"
+    if stripe_status == "canceled":
+        return "cancelled"
+    return stripe_status or "unknown"
+
+
+def record_trial_ended(
+    db,
+    user_id: Optional[int],
+    subscription_id: Optional[str],
+    outcome: str,
+    **extra: Any,
+) -> bool:
+    """One trial_ended per Stripe subscription, whichever webhook says so first.
+
+    A trial's end can reach us three ways (invoice.paid, subscription.updated
+    with previous status trialing, subscription.deleted inside the trial
+    window) and Stripe does not order them. The subscription id in the
+    properties is the dedupe key, so trial-to-paid stays a plain
+    count(trial_converted) / count(trial_ended).
+    """
+    try:
+        if subscription_id:
+            dup = (
+                db.query(UserEvent.id)
+                .filter(
+                    UserEvent.event_name == "trial_ended",
+                    UserEvent.properties["subscription_id"].as_string() == subscription_id,
+                )
+                .first()
+            )
+            if dup is not None:
+                return False
+    except Exception:
+        # A failed lookup must not block the write; a rare duplicate is a
+        # smaller error than a missing row.
+        try:
+            db.rollback()
+        except Exception:
+            pass
+    return record_user_event(
+        user_id,
+        "trial_ended",
+        {"subscription_id": subscription_id, "outcome": outcome, **extra},
+    )
 
 
 def record_user_event(
