@@ -63,6 +63,16 @@ class User(Base):
     # be told apart from generic "somewhere else" signups.
     referral_detail = Column(String, nullable=True)
 
+    # Where the account actually came from, as the browser saw it: the utm_*
+    # tags and the external referrer on the FIRST page this visitor loaded,
+    # written once when the users row is created and never touched again.
+    # Distinct from referral_source above, which is what the actor SAYS.
+    # NULL means "arrived with none", which is what every pre-2026-09-06 row is.
+    utm_source = Column(String, nullable=True)
+    utm_medium = Column(String, nullable=True)
+    utm_campaign = Column(String, nullable=True)
+    referrer = Column(String, nullable=True)
+
     # Who this account is: 'actor' | 'educator' | 'student' (app/core/account_types.py).
     # Nullable with no backfill — NULL means unknown/legacy, which is what every
     # pre-existing account is. Never default it to 'actor'.

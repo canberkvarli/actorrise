@@ -43,7 +43,45 @@ class UpdateOnboardingRequest(BaseModel):
     last_seen_feature_id: str | None = None
 
 
+# The browser sends its first-touch attribution (lib/attribution.ts) as a small
+# JSON header on every API call. It is only ever READ at the moment a users row
+# is created, so an existing account can never be re-attributed by a later visit.
+ATTRIBUTION_HEADER = "x-attribution"
+ATTRIBUTION_KEYS = ("utm_source", "utm_medium", "utm_campaign", "referrer")
+_ATTRIBUTION_MAX_LEN = 512
+
+
+def attribution_from_request(request: Request | None) -> dict[str, str]:
+    """Parse the X-Attribution header into {column: value}. Never raises.
+
+    Anything malformed, oversized, or not one of the four known keys is dropped
+    rather than rejected: attribution is nice-to-have and must never fail auth.
+    """
+    if request is None:
+        return {}
+    raw = request.headers.get(ATTRIBUTION_HEADER)
+    if not raw or len(raw) > 4096:
+        return {}
+    try:
+        import json
+
+        parsed = json.loads(raw)
+    except Exception:
+        return {}
+    if not isinstance(parsed, dict):
+        return {}
+    out: dict[str, str] = {}
+    for key in ATTRIBUTION_KEYS:
+        value = parsed.get(key)
+        if isinstance(value, str):
+            value = value.strip()[:_ATTRIBUTION_MAX_LEN]
+            if value:
+                out[key] = value
+    return out
+
+
 def get_current_user(
+    request: Request,
     credentials: HTTPAuthorizationCredentials = Depends(security),
     db: Session = Depends(get_db)
 ) -> User:
@@ -111,6 +149,8 @@ def get_current_user(
             supabase_id=supabase_id,
             name=name,
             marketing_opt_in=not is_placeholder_email,
+            # First-touch acquisition source, written exactly once, here.
+            **attribution_from_request(request),
         )
         db.add(user)
         try:

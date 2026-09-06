@@ -18,6 +18,7 @@ import { GoogleAnalytics } from "@/components/analytics/GoogleAnalytics";
 import { FontLoader } from "@/components/FontLoader";
 import { OAuthCallbackRedirect } from "@/components/auth/OAuthCallbackRedirect";
 import { LastAuthCookieSync } from "@/components/auth/LastAuthCookieSync";
+import { AttributionCapture } from "@/components/analytics/AttributionCapture";
 
 const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
 
@@ -258,6 +259,7 @@ export default function RootLayout({
           />
           <Analytics />
           <GoogleAnalytics />
+          <AttributionCapture />
         </ThemeProvider>
       </body>
     </html>

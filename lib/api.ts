@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { attributionHeader } from "./attribution";
 
 // Production API (Render). Use custom domain when verified; fallback to onrender.com.
 export const PRODUCTION_API_URL = "https://api.actorrise.com";
@@ -122,6 +123,14 @@ async function request<T = unknown>(
 
   if (authToken) {
     headers.Authorization = `Bearer ${authToken}`;
+  }
+
+  // First-touch acquisition source. The backend only reads it when it creates
+  // the users row, so sending it on every call costs a few bytes and means the
+  // very first authenticated request (which is what mints the account) has it.
+  const attribution = attributionHeader();
+  if (attribution) {
+    headers["X-Attribution"] = attribution;
   }
 
   const { timeoutMs, ...fetchInit } = options ?? {};
