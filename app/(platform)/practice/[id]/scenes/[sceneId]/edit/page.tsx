@@ -288,6 +288,25 @@ type CharacterVoices = Record<string, string | null>;
 
 const DEFAULT_VOICE_CYCLE = ["coral", "ash", "ballad", "sage", "onyx", "nova", "fable", "shimmer", "alloy", "echo"];
 
+/** The width of the page itself, and of every bar that has to line up with it:
+    the cast summary above, the cast panel, and the action bar at the foot.
+    They were four separate `max-w-[46rem]` literals, so widening the paper
+    would have left the bars at the old measure, hanging short of its edges.
+
+    46rem was too narrow to be one width for every screen. The paper is 736px,
+    less its own px-14 padding is 624px of content, and dialogue sits in 84% of
+    that (pl-9/pr-7) — 524px. Courier Prime advances 0.6em, so at the 17px
+    dialogue is set in, that measure is 51 characters. Comfortable is 60–75,
+    and 51 is what made a long speech into a column you scroll: the same words
+    in a 70-character measure take about a quarter fewer lines.
+
+    So it steps up rather than widening everywhere. Phones keep 46rem because
+    they never had the room to spare; the extra width is spent only where it
+    was going to waste, at lg and above. 54rem lands dialogue at 62 characters,
+    60rem at 70 — the top of the comfortable range, and the reason it stops
+    there instead of filling the viewport. */
+const PAPER_WIDTH = "max-w-[46rem] lg:max-w-[54rem] xl:max-w-[60rem]";
+
 function getCharacterVoices(sceneId: number): CharacterVoices {
   if (typeof window === "undefined") return {};
   try {
@@ -2247,11 +2266,14 @@ export default function SceneEditPage() {
      to a small indent and the dialogue runs full width, which is what printed
      sides do on a narrow page too. */
   const CUE_INDENT = "pl-2 sm:pl-[28%]";
-  /* 16%/10% put dialogue in a 74% column, and in Courier that is only about 55
-     characters — narrow enough that a long speech turned into a tall grey
-     ribbon you had to scroll past. Widened to 84%, roughly 63 characters, which
-     is inside the comfortable measure and takes a visible bite out of the
-     height of every long speech. */
+  /* 16%/10% put dialogue in a 74% column, narrow enough that a long speech
+     turned into a tall grey ribbon you had to scroll past. Widened to 84%.
+     These are percentages of the paper's *content* box, inside its px-14, so
+     the character count they buy depends on how wide the paper is — see
+     PAPER_WIDTH, which is where the measure is actually reasoned about. (An
+     earlier note here put this at 63 characters; that took the percentage of
+     the full 736px paper rather than its 624px of content, and set it in 16px
+     rather than the 17px below. It was 51.) */
   const DIALOGUE_INDENT = "pl-2 pr-1 sm:pl-[9%] sm:pr-[7%]";
   /** Action runs wider still, the way it does on a script page. */
   const ACTION_INDENT = "pl-2 pr-1 sm:pl-[5%] sm:pr-[5%]";
@@ -2277,7 +2299,10 @@ export default function SceneEditPage() {
        other script surface in the app is Courier Prime via --font-typewriter.
        The two do not match, and this is the one screen where the type IS the
        design. */
-    <div className="font-typewriter mx-auto max-w-[46rem] bg-paper text-paper-ink rounded-xl border border-black/5 px-5 sm:px-14 py-6 sm:py-10 overflow-hidden shadow-[0_24px_70px_-24px_rgba(203,75,0,0.20),0_10px_34px_-14px_rgba(0,0,0,0.28)] dark:shadow-[0_24px_70px_-24px_rgba(203,75,0,0.28),0_10px_34px_-14px_rgba(0,0,0,0.55)]">
+    <div className={cn(
+      "font-typewriter mx-auto bg-paper text-paper-ink rounded-xl border border-black/5 px-5 sm:px-14 py-6 sm:py-10 overflow-hidden shadow-[0_24px_70px_-24px_rgba(203,75,0,0.20),0_10px_34px_-14px_rgba(0,0,0,0.28)] dark:shadow-[0_24px_70px_-24px_rgba(203,75,0,0.28),0_10px_34px_-14px_rgba(0,0,0,0.55)]",
+      PAPER_WIDTH,
+    )}>
       {/* Title inside parchment — editable */}
       <div className="text-center mb-6 pb-5 border-b border-paper-rule">
         {editingSceneField === "title" ? (
@@ -3208,7 +3233,10 @@ export default function SceneEditPage() {
       type="button"
       onClick={() => setCastOpen((v) => !v)}
       aria-expanded={castOpen}
-      className="mx-auto mb-3 flex w-full max-w-[46rem] items-center justify-center gap-x-2 gap-y-1 flex-wrap rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+      className={cn(
+        "mx-auto mb-3 flex w-full items-center justify-center gap-x-2 gap-y-1 flex-wrap rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground",
+        PAPER_WIDTH,
+      )}
     >
       <span>
         You&apos;re reading{" "}
@@ -3230,7 +3258,7 @@ export default function SceneEditPage() {
   );
 
   const castPanel = (
-    <div className="mx-auto w-full max-w-[46rem] mb-5 border border-border bg-card/50 backdrop-blur-sm px-3 sm:px-4 py-3">
+    <div className={cn("mx-auto w-full mb-5 border border-border bg-card/50 backdrop-blur-sm px-3 sm:px-4 py-3", PAPER_WIDTH)}>
       {/* One row per character, every row on the same grid, so names, toggles and
           voices sit on shared rails. The two-column version put "you're playing"
           on the left and "reader" on the right, which spread six characters over
@@ -3452,7 +3480,7 @@ export default function SceneEditPage() {
         {/* The bar spans the window, its contents don't. Pinned to the viewport
             edges, Back and Edit ended up a screen apart from the scene they act
             on. They sit on the same rails as the cast and the page below. */}
-        <div className="mx-auto flex w-full max-w-[46rem] items-center justify-between gap-2 px-4 py-3 sm:px-6">
+        <div className={cn("mx-auto flex w-full items-center justify-between gap-2 px-4 py-3 sm:px-6", PAPER_WIDTH)}>
         {/* Left: Back */}
         <Button
           variant="ghost"

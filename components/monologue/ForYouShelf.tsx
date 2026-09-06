@@ -7,6 +7,7 @@ import { IconSparkles } from "@tabler/icons-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
 import type { Monologue } from "@/types/actor";
+import { ShelfCard } from "@/components/monologue/ShelfCard";
 import ProfileOnboardingFlow from "@/components/onboarding/ProfileOnboardingFlow";
 
 /**
@@ -88,7 +89,7 @@ export function ForYouShelf() {
             variants={{ hidden: { opacity: 0, y: 12 }, show: { opacity: 1, y: 0 } }}
             transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
           >
-            <ForYouCard m={m} />
+            <ShelfCard m={m} />
           </motion.div>
         ))}
       </motion.div>
@@ -96,31 +97,6 @@ export function ForYouShelf() {
   );
 }
 
-function ForYouCard({ m }: { m: Monologue }) {
-  const mins = Math.round((m.estimated_duration_seconds || 0) / 60);
-  const meta = [m.character_age_range, m.tone, mins ? `${mins} min` : null].filter(
-    Boolean,
-  );
-
-  return (
-    <Link prefetch={false}
-      href={`/monologue/${m.id}`}
-      className="group flex h-full flex-col rounded-xl border border-border/50 bg-card/40 p-4 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_0_24px_-12px_var(--primary)]"
-    >
-      <h3 className="font-typewriter text-base font-semibold leading-snug text-foreground line-clamp-1">
-        {m.character_name}
-      </h3>
-      <p className="font-typewriter text-xs text-muted-foreground line-clamp-1">
-        {m.play_title}
-      </p>
-      {meta.length > 0 && (
-        <p className="mt-auto pt-3 text-xs text-muted-foreground/70">
-          {meta.join(" · ")}
-        </p>
-      )}
-    </Link>
-  );
-}
 
 function ProfileNudge({ onOpen }: { onOpen: () => void }) {
   return (

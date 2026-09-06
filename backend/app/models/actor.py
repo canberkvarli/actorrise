@@ -1,7 +1,8 @@
 from app.core.database import Base
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import (ARRAY, JSON, Boolean, Column, DateTime, Float,
-                        ForeignKey, Integer, String, Text, UniqueConstraint)
+from sqlalchemy import (ARRAY, JSON, BigInteger, Boolean, Column, DateTime,
+                        Float, ForeignKey, Integer, String, Text,
+                        UniqueConstraint)
 from sqlalchemy import text as sql_text
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import deferred, relationship
@@ -241,6 +242,37 @@ class MonologueFavorite(Base):
 
     # Relationships
     monologue = relationship("Monologue", back_populates="favorites")
+
+
+class MonologueBeat(Base):
+    """One margin note, pinned to one segment of a monologue.
+
+    MonologueFavorite.notes is the note on the whole piece and stays as it is.
+    This is the note on a line. The blob has been used twice in the product's
+    life, at an average of 30 characters, which is an actor marking a spot
+    rather than writing a paragraph — so the spot is what this stores.
+
+    segment_index counts the units monologueSegments() derives from the text
+    (verse keeps its lines, prose splits at sentences) — the same units Cut
+    works in. anchor_text keeps the head of that segment as it read when the
+    note was written, because an admin repair shifts every index after the
+    edit and would otherwise re-point notes at the wrong lines.
+    """
+    __tablename__ = "monologue_beats"
+
+    id = Column(BigInteger, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    monologue_id = Column(Integer, ForeignKey("monologues.id"), nullable=False, index=True)
+    segment_index = Column(Integer, nullable=False)
+    anchor_text = Column(Text, nullable=True)
+    body = Column(Text, nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
+    updated_at = Column(DateTime(timezone=True), server_default=sql_text('now()'))
+
+    __table_args__ = (
+        UniqueConstraint("user_id", "monologue_id", "segment_index",
+                         name="monologue_beats_unique_segment"),
+    )
 
 
 class SearchHistory(Base):

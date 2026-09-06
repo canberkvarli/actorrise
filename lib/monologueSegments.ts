@@ -72,6 +72,17 @@ function toSentences(text: string): string[] {
  * and nothing else.
  */
 export function monologueSegments(text: string | null | undefined): string[] {
+  return splitIntoUnits(text);
+}
+
+/**
+ * The same split, applied to one block rather than to a whole piece.
+ *
+ * Margin notes hang off the reader's own blocks (see beatUnits), and those
+ * blocks have to break into the same units Cut breaks the piece into — one
+ * splitter, so a "line" means the same thing wherever the actor meets one.
+ */
+export function splitIntoUnits(text: string | null | undefined): string[] {
   const t = text ?? "";
   if (!t.trim()) return [];
   // Blank lines are dropped rather than kept as empty rows: they were only ever

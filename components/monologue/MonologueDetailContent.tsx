@@ -146,7 +146,16 @@ function OverdoneOnDark({ score }: { score: number | null | undefined }) {
  * A play has no poster and gets the typographic variant below instead. Giving
  * it a darkened banner with nothing behind it would be drama with no source.
  */
-export function MonologueOneSheet({ monologue }: { monologue: Monologue }) {
+export function MonologueOneSheet({
+  monologue,
+  backSlot,
+}: {
+  monologue: Monologue;
+  /** Rendered as the header's first row. Passed in rather than absolutely
+      positioned over the banner: floating it meant Back landed on the poster's
+      top-left corner, because the poster starts at this container's padding. */
+  backSlot?: React.ReactNode;
+}) {
   const author = displayableAuthor(monologue.author);
   const facts = castingFacts(monologue);
   const poster = posterAt(monologue.poster_url, 600);
@@ -210,7 +219,8 @@ export function MonologueOneSheet({ monologue }: { monologue: Monologue }) {
 
       {/* pb runs long on purpose: it puts the gradient's fade-out below the
           last line of type rather than behind it. */}
-      <div className="container mx-auto max-w-3xl px-4 pb-16 pt-6 sm:pb-20 sm:pt-8">
+      <div className="container mx-auto max-w-3xl px-4 pb-16 pt-4 sm:pb-20 sm:pt-5">
+        {backSlot ? <div className="mb-4 sm:mb-5">{backSlot}</div> : null}
         <div className="flex items-end gap-5 sm:gap-8">
           <motion.div
             initial={{ opacity: 0, y: 18, rotate: -1.5 }}
@@ -412,9 +422,16 @@ export function MonologueHeader({
 export function MonologueBody({
   monologue,
   measured = false,
+  textSlot,
 }: {
   monologue: Monologue;
   measured?: boolean;
+  /** Replaces the rendered text, keeping the guards, the dimming notice and
+      the end mark around it. The detail page passes the annotatable reader
+      through here rather than reimplementing the frame — the "text not
+      available" check in particular is the kind of thing that gets forgotten
+      in a second copy. */
+  textSlot?: React.ReactNode;
 }) {
   if (isBibliographicText(monologue.text)) {
     return (
@@ -449,11 +466,12 @@ export function MonologueBody({
             : "font-typewriter text-base leading-relaxed"
         }
       >
-        {monologue.text_segments && monologue.text_segments.length > 0 ? (
-          <MonologueTextRenderer text={monologue.text} segments={monologue.text_segments} />
-        ) : (
-          <MonologueText text={monologue.text} />
-        )}
+        {textSlot ??
+          (monologue.text_segments && monologue.text_segments.length > 0 ? (
+            <MonologueTextRenderer text={monologue.text} segments={monologue.text_segments} />
+          ) : (
+            <MonologueText text={monologue.text} />
+          ))}
       </div>
 
       {/* End mark. A piece should finish somewhere, not just stop. */}

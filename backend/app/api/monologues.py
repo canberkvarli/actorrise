@@ -4,7 +4,7 @@ import html as html_module
 import os
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Literal, Optional, cast
 
 from app.api.auth import get_current_user, get_current_user_optional
@@ -25,7 +25,8 @@ from app.core.config import settings
 from app.core.database import get_db
 from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import require_ai_search_when_query
-from app.models.actor import Monologue, MonologueFavorite, Play
+from app.models.actor import (Monologue, MonologueBeat, MonologueFavorite,
+                              Play)
 from app.models.user import User
 from app.services.search.grounding import query_is_unservable
 from app.services.search.query_optimizer import (correct_query_typos,
@@ -1529,6 +1530,124 @@ class SetMemorizedRequest(BaseModel):
 
 class SetNotesRequest(BaseModel):
     notes: str = ""
+
+
+class BeatResponse(BaseModel):
+    segment_index: int
+    body: str
+    anchor_text: Optional[str] = None
+
+
+class SetBeatRequest(BaseModel):
+    body: str = ""
+    # The head of the segment as the actor saw it. Stored so a later text
+    # repair, which shifts every index after the edit, does not leave the note
+    # pinned to a line it was never about.
+    anchor_text: Optional[str] = None
+
+
+@router.get("/{monologue_id:int}/beats", response_model=List[BeatResponse])
+async def list_beats(
+    monologue_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """The actor's margin notes on this piece, in the order they appear in it."""
+    rows = (
+        db.query(MonologueBeat)
+        .filter(
+            MonologueBeat.user_id == current_user.id,
+            MonologueBeat.monologue_id == monologue_id,
+        )
+        .order_by(MonologueBeat.segment_index)
+        .all()
+    )
+    return [
+        BeatResponse(
+            segment_index=cast(int, r.segment_index),
+            body=cast(str, r.body),
+            anchor_text=cast(Optional[str], r.anchor_text),
+        )
+        for r in rows
+    ]
+
+
+@router.put("/{monologue_id:int}/beats/{segment_index:int}", response_model=Optional[BeatResponse])
+async def set_beat(
+    monologue_id: int,
+    segment_index: int,
+    payload: SetBeatRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Write, replace, or clear one margin note.
+
+    An empty body deletes rather than storing a blank: a note you cleared is
+    not a note, and the table's own check constraint refuses blanks anyway.
+
+    Like set_notes, this adds the piece to the collection if it isn't there.
+    Marking a beat IS keeping the piece, and making the actor save it first
+    would put a step in front of the thing they were already doing.
+    """
+    if segment_index < 0:
+        raise HTTPException(status_code=422, detail="segment_index must be >= 0")
+
+    monologue = db.query(Monologue).filter(Monologue.id == monologue_id).first()
+    if not monologue:
+        raise HTTPException(status_code=404, detail="Monologue not found")
+
+    body = (payload.body or "").strip()
+    existing = (
+        db.query(MonologueBeat)
+        .filter(
+            MonologueBeat.user_id == current_user.id,
+            MonologueBeat.monologue_id == monologue_id,
+            MonologueBeat.segment_index == segment_index,
+        )
+        .first()
+    )
+
+    if not body:
+        if existing:
+            db.delete(existing)
+            db.commit()
+        return None
+
+    anchor = (payload.anchor_text or "").strip()[:120] or None
+
+    if existing:
+        existing.body = body  # type: ignore[assignment]
+        if anchor:
+            existing.anchor_text = anchor  # type: ignore[assignment]
+        existing.updated_at = datetime.now(timezone.utc)  # type: ignore[assignment]
+    else:
+        existing = MonologueBeat(
+            user_id=current_user.id,
+            monologue_id=monologue_id,
+            segment_index=segment_index,
+            anchor_text=anchor,
+            body=body,
+        )
+        db.add(existing)
+
+        fav = (
+            db.query(MonologueFavorite)
+            .filter(
+                MonologueFavorite.user_id == current_user.id,
+                MonologueFavorite.monologue_id == monologue_id,
+            )
+            .first()
+        )
+        if not fav:
+            db.add(MonologueFavorite(user_id=current_user.id, monologue_id=monologue_id))
+            monologue.favorite_count = int(monologue.favorite_count or 0) + 1  # type: ignore[assignment]
+
+    db.commit()
+    return BeatResponse(
+        segment_index=segment_index,
+        body=body,
+        anchor_text=cast(Optional[str], existing.anchor_text),
+    )
 
 
 @router.post("/{monologue_id:int}/notes")

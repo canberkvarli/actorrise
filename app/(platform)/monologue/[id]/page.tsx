@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useParams, useRouter, notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -29,6 +29,9 @@ import { CutEditor } from "@/components/monologue/CutEditor";
 import { MonologueWall } from "@/components/monologue/MonologueWall";
 import { ExportSheet } from "@/components/monologue/ExportSheet";
 import { useSaveNotes } from "@/hooks/useCollectionMeta";
+import { useBeats, useSaveBeat } from "@/hooks/useBeats";
+import { BeatReader } from "@/components/monologue/BeatReader";
+import { beatUnits } from "@/lib/beatUnits";
 import { useToggleMemorized } from "@/hooks/useMemorized";
 import { useAuth } from "@/lib/auth";
 import { InstantTooltip } from "@/components/ui/instant-tooltip";
@@ -73,6 +76,21 @@ export default function MonologueDetailPage() {
   const [editMonologueSaving, setEditMonologueSaving] = useState(false);
   const saveNotes = useSaveNotes();
   const toggleMemorized = useToggleMemorized();
+
+  /* Margin notes. The whole-piece textarea below stays — some things are about
+     the piece and not about a line — but the marks that actually get made are
+     made against a line, so those live in the reading column itself. */
+  const monologueId = monologue?.id ?? 0;
+  const { data: beatRows } = useBeats(monologueId, Boolean(user) && !!monologue);
+  const saveBeat = useSaveBeat(monologueId);
+  const beatMap = useMemo(
+    () => new Map((beatRows ?? []).map((b) => [b.segment_index, b.body])),
+    [beatRows],
+  );
+  const units = useMemo(
+    () => (monologue ? beatUnits(monologue.text, monologue.text_segments) : []),
+    [monologue],
+  );
   // Saving used to be a silent bookmark: 889 opens produced 45 saves, and the
   // things that turn a save into a working piece (a cut, a note) sat two scrolls
   // down where ~nobody found them. On save we now surface the next step inline,
@@ -292,33 +310,29 @@ export default function MonologueDetailPage() {
        parked on top of the notes panel, which is the last thing on the page. */
     <div className="pb-40 lg:pb-28">
       {/* The one-sheet runs full-bleed, so it sits outside the reading
-          container rather than inside it. Back floats over the banner: on a
-          poster header a bordered button at the top of the page would be the
-          first thing you see, above the piece it belongs to. */}
-      <div className="relative">
-        {/* Back sits in the reading column, not pinned to the viewport edge.
-            At `left-4` on a wide screen it floated in the far corner, half a
-            screen from the content it belongs to. */}
-        <div className="pointer-events-none absolute inset-x-0 top-5 z-10">
-          <div className="container mx-auto max-w-3xl px-4">
-            <button
-              type="button"
-              onClick={() => router.back()}
-              className="pointer-events-auto inline-flex items-center gap-1.5 text-sm text-white/70 drop-shadow transition-colors hover:text-white"
-            >
-              <IconArrowLeft className="h-4 w-4" />
-              Back
-            </button>
-          </div>
-        </div>
+          container rather than inside it. Back rides on the banner — a bordered
+          button above the header would be the first thing you see, over the
+          piece it belongs to — but it is a row inside the header, not a float
+          over it. Floating meant it landed on the poster's top-left corner.
 
-        {/* Plays take the one-sheet too. They have no poster, so the cover is
-            printed from the row — see PlayCover. Giving a play the plain
-            typographic header instead made every film feel like the real page
-            and every play like the fallback, which is backwards for a
-            monologue library built on plays. */}
-        <MonologueOneSheet monologue={monologue} />
-      </div>
+          Plays take the one-sheet too. They have no poster, so the cover is
+          printed from the row — see PlayCover. Giving a play the plain
+          typographic header instead made every film feel like the real page
+          and every play like the fallback, which is backwards for a
+          monologue library built on plays. */}
+      <MonologueOneSheet
+        monologue={monologue}
+        backSlot={
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="-ml-1 inline-flex items-center gap-1.5 rounded-full px-1 py-1 text-sm text-white/70 drop-shadow transition-colors hover:text-white"
+          >
+            <IconArrowLeft className="h-4 w-4" />
+            Back
+          </button>
+        }
+      />
 
       <div className="container mx-auto max-w-3xl px-4">
       <motion.div
@@ -481,7 +495,28 @@ export default function MonologueDetailPage() {
             >
               {mode === "read" && (
                 <>
-                  <MonologueBody monologue={monologue} measured />
+                  {/* Signed out, or nothing to annotate: the plain reader. The
+                      margin only appears for someone who has somewhere to put
+                      a note, and a paywalled `text` is a forty-word teaser. */}
+                  <MonologueBody
+                    monologue={monologue}
+                    measured
+                    textSlot={
+                      user && !monologue.paywalled && units.length > 0 ? (
+                        <BeatReader
+                          units={units}
+                          beats={beatMap}
+                          onSave={(index, body, anchor) =>
+                            saveBeat.mutate({
+                              segmentIndex: index,
+                              body,
+                              anchorText: anchor,
+                            })
+                          }
+                        />
+                      ) : undefined
+                    }
+                  />
                   {monologue.paywalled && <MonologueWall />}
                 </>
               )}
