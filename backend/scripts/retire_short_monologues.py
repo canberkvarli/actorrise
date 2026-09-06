@@ -1,10 +1,14 @@
-"""Retire monologues under the 75-word floor.
+"""Retire monologues under the word floor (DEFAULT_MIN_WORDS, currently 100).
 
 At ~150wpm a 60-word speech is twenty-four seconds. It is not broken — Mercutio,
 the Nurse, Walt Whitman's worth of real characters are in here — it is simply
 not a piece an actor can walk into a room with. The corpus was built on a
 40/50-word floor chosen to maximise yield, and it did: 6,165 of 14,777 rows are
 clip-length.
+
+The floor is DEFAULT_MIN_WORDS and it has moved: 40 -> 75 (061cf80d, 2026-09-01)
+-> 100 (a40b42f0, 2026-09-05). This docstring said "75" for a day after it was
+no longer true and an audit drew a wrong conclusion from it. Read the constant.
 
 RETIRED, NOT DELETED. `review_status='too_short'` takes a row out of search
 (see semantic_search.HIDDEN_REVIEW_STATUSES) while leaving it addressable, which

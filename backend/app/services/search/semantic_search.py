@@ -153,6 +153,12 @@ FILM_TV_MIN_WORDS = 50
 #: handful of genuinely broken ones in a review queue no one can then face.
 HIDDEN_REVIEW_STATUSES = frozenset({"pending", "too_short", "not_monologue"})
 
+#: Filters the UI sets on the actor's behalf rather than ones they chose. The
+#: Plays / Film & TV tab is always on, so treating source_type as a deliberate
+#: narrowing suppressed AI query parsing on 96% of searches. Used only to decide
+#: whether to run the parse — these still filter results exactly as before.
+_MODE_ONLY_FILTERS = frozenset({"source_type"})
+
 
 def review_hides_from_search(review_status) -> bool:
     """True when a piece must not be served (see HIDDEN_REVIEW_STATUSES).
@@ -781,7 +787,22 @@ class SemanticSearch:
                     api_key=self.analyzer.api_key,
                 )
 
-        if explicit_filters:
+        # Skipping the AI parse when the actor has already narrowed the search by
+        # hand is the right trade. The bug was what counted as "by hand": the
+        # Plays / Film & TV tab always sends source_type, and it landed in the
+        # same dict, so this branch was taken on 894 of 932 searches in the 30
+        # days to 2026-09-06 — 96%. The block below does two jobs, and the second
+        # one is the spell-corrector (`corrected_query`), so a misspelling like
+        # "vilian" was embedded as typed and returned Othello and Coriolanus with
+        # full confidence instead of correcting to "villain".
+        #
+        # A tab the actor never thought of as a filter must not switch the AI off.
+        # Only genuinely actor-chosen filters suppress the parse. Merging and
+        # precedence below are untouched: explicit filters still win.
+        actor_chosen_filters = {
+            k: v for k, v in explicit_filters.items() if k not in _MODE_ONLY_FILTERS
+        }
+        if actor_chosen_filters:
             # If the user provided explicit filters, skip AI parsing entirely to save cost.
             logger.debug("Using explicit filters, skipping AI query parsing")
         else:

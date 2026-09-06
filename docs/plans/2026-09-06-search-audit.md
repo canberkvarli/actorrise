@@ -27,35 +27,49 @@ By retrieval branch:
 
 The title branch is perfect when it fires. It just does not fire often enough.
 
-## Finding 1: 5,795 monologues are hidden by a gate that expired
+## Finding 1: the gate is mostly correct. I got this wrong first time.
 
-`review_status='too_short'` covers 5,833 rows, 25% of the corpus. Their stored
-word counts average 89. The floor is 75.
+**Correction.** My first pass claimed 5,795 monologues were hidden by an expired
+gate, reading a 75-word floor from this script's docstring and from memory. The
+actual constant is `DEFAULT_MIN_WORDS = 100`, raised from 75 on **2026-09-05**
+(a40b42f0), the day before this audit. Against the real floor the picture is:
 
-- 5,795 of 5,833 now have `word_count >= 75`.
-- A 400-row sample recounted from `text`: **100%** are genuinely over the floor,
-  and the stored count is accurate in every case.
-- All 5,833 were last written on **2026-09-01**, the stage-directions restore.
+| Gated rows | Verdict |
+|---|---|
+| 185 | at or above the 100 floor, genuinely mis-gated |
+| 5,610 | 75-99 words, below today's floor |
+| 38 | under 75, correctly gated under any floor |
 
-The pieces were gated while the play parser was stripping stage directions and
-making them look short. The restore put the text back and resynced
-`word_count`. Nothing ever cleared `review_status`. They have been invisible
-since, and all 5,833 are already embedded, so un-gating costs nothing.
+The 185 were freed by `scripts/ungate_above_floor.py`, which reads the constant
+rather than hardcoding a number. They restored **zero** blank titles, so this was
+tidying, not a fix.
 
-What it unlocks:
+The other 5,610 are below a floor that was deliberately raised one day earlier.
+Clearing them is not a data repair, it is reversing that decision, so it is left
+alone.
 
-- **164 of 1,436** film/TV titles currently return zero pieces when named.
-- **611** more return only 1-2, so the title branch backfills with vector junk.
-- Clearing the stale gate makes **121 film, 40 TV, 20 play** titles findable by
-  name again.
+### The real question underneath it
 
-Directly explains searched-and-failed: Better Call Saul (7 pieces, 0 visible),
-Joker (2, 0), BoJack Horseman (2, 0), Black Swan (1, 0).
+The floor is calibrated for stage, and it is being applied to film and TV, whose
+pieces are naturally shorter.
 
-Proposed: clear `review_status` where it is `too_short` and `word_count >= 75`.
-Reversible, no re-embedding, no scraping. Re-run the real gate afterwards if a
-floor is still wanted, and consider a lower floor for film/TV, whose pieces are
-naturally shorter than stage work.
+| Source | Median piece | Under the 100 floor |
+|---|---|---|
+| play | 128w | 24% |
+| film | 124w | 22% |
+| tv | **106w** | **43%** |
+
+TV's median piece is 106 words. The floor sits within six words of the middle of
+the entire TV corpus, which is why 43% of it is gated and why **164 of 1,436**
+film/TV titles return nothing when an actor names them, with 611 more returning
+only one or two.
+
+At ~150wpm the 100-word floor is a 40-second piece. That is a defensible bar for
+a stage audition and a harsh one for a self-tape. A source-aware floor, stage at
+100 and screen nearer 75, would return most of those 164 titles without putting
+clip-length fragments back in front of anyone.
+
+That is Canberk's call, not a cleanup. Nothing here presumes it.
 
 ## Finding 1b: the mode toggle silently switches the AI off
 
@@ -154,13 +168,13 @@ failed", not "you lack this title". Read it that way.
 
 ## Order of work
 
-1. Clear the stale `too_short` gate. One statement, unlocks 25% of the corpus
-   and 181 titles. No scraping, no re-embedding, reversible.
-2. Stop the mode toggle counting as an explicit filter, so the AI parse and the
-   spell-corrector run again. One condition, restores a feature that has been
-   dark on 96% of searches.
-3. When a filtered search comes back thin, look in the other tab and say so.
-4. Normalise numerals and apostrophes in title lookup.
-5. Route bare abstract words to attribute filters, and de-duplicate by play so
+1. DONE. Mode toggle no longer counts as an actor-chosen filter, so the AI parse
+   and the spell-corrector run again after being dark on 96% of searches.
+2. DONE, and smaller than advertised. 185 mis-gated rows freed.
+3. DECIDE: a source-aware word floor. Stage at 100, screen nearer 75. This is
+   what actually blanks 164 film/TV titles, and it is a product call.
+4. When a filtered search comes back thin, look in the other tab and say so.
+5. Normalise numerals and apostrophes in title lookup.
+6. Route bare abstract words to attribute filters, and de-duplicate by play so
    `war` cannot return the same title four times.
-6. Scrape the titles in Finding 3. Last, not first.
+7. Scrape the titles in Finding 3. Last, not first.
