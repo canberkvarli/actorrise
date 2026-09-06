@@ -1240,7 +1240,67 @@ def parse_dialogue(text: str, character_names=None, cast=None) -> List[Dict]:
                 merged.append(dict(line))  # copy so we don't mutate
         section["lines"] = merged
 
-    return sections
+    return _drop_title_block(sections)
+
+
+# What a title block says under the title: who wrote it, who translated it,
+# what kind of piece it is. None of it is anybody's line.
+_PUBLICATION_DETAIL = re.compile(
+    r"\b(?:author|adapted|translated|written|screenplay|teleplay|book|lyrics|music)\s*(?:by\b|:)"
+    r"|^by\s+\S"
+    r"|\bcopyright\b|©"
+    r"|^an?\s+[a-z\- ]{0,30}\b(?:play|scene|comedy|tragedy|drama|musical)\b",
+    re.IGNORECASE,
+)
+
+
+def _drop_title_block(sections: List[Dict]) -> List[Dict]:
+    """Take the play's own name out of the cast.
+
+    A pasted scene opens the way scripts open:
+
+        THE BREAKUP
+        A short scene. Author: Sample Script.
+
+    which reads as a cue and a line, so the title joins the cast and can be
+    handed to an actor to read. ActorRise's own sample script does this.
+
+    Three things have to hold together before anything is dropped, because a
+    character with one line still has a line. It has to be the first speech in
+    the text, its speaker must never speak again, and what it says has to be
+    publication detail rather than dialogue. Hamlet is why the rule cannot be
+    "drop the speaker named after the play": it very often is.
+    """
+    if not sections:
+        return sections
+    head_lines = sections[0].get("lines") or []
+    if not head_lines:
+        return sections
+
+    speaker = head_lines[0].get("character")
+    if not speaker:
+        return sections
+    if not _PUBLICATION_DETAIL.search((head_lines[0].get("text") or "").strip()):
+        return sections
+
+    spoken = sum(
+        1 for s in sections for l in s.get("lines", []) if l.get("character") == speaker
+    )
+    others = {
+        l.get("character")
+        for s in sections
+        for l in s.get("lines", [])
+        if l.get("character") and l.get("character") != speaker
+    }
+    if spoken != 1 or len(others) < 2:
+        return sections
+
+    sections[0]["lines"] = head_lines[1:]
+    if not any(l.get("character") == speaker for l in sections[0]["lines"]):
+        sections[0]["characters"] = {
+            c for c in sections[0].get("characters", set()) if c != speaker
+        }
+    return [s for s in sections if s.get("lines")]
 
 
 def filter_two_person_scenes(
