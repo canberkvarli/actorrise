@@ -54,7 +54,7 @@ from app.services.extraction.monologue_quality import (
 )
 from app.services.extraction.plain_text_parser import PlainTextParser
 from app.services.extraction.source_adapter import resolve_metadata
-from app.services.licensing import may_store_text
+from app.services.licensing import may_store_text, max_words_for
 from app.utils.duration import estimate_duration_seconds
 
 logger = logging.getLogger(__name__)
@@ -177,7 +177,10 @@ def ingest_play(
     genre: str = "drama",
     language: str = "en",
     min_words: int = DEFAULT_MIN_WORDS,
-    max_words: int = DEFAULT_MAX_WORDS,
+    # None means "ask the rights", which is the right default: the 400-word
+    # ceiling is the fair-use excerpt bound and has no bearing on a play
+    # published in 1892. Pass a number to override.
+    max_words: Optional[int] = None,
     apply: bool = False,
     supersede: bool = False,
     analyzer: Any = None,
@@ -216,6 +219,9 @@ def ingest_play(
 
     if apply and (analyzer is None or embed is None):
         raise ValueError("apply=True needs both analyzer and embed")
+
+    if max_words is None:
+        max_words = max_words_for(copyright_status, license_type)
 
     parser = parser or PlainTextParser()
     candidates = parser.extract_monologues(

@@ -53,6 +53,34 @@ _COPYRIGHTED_TEXT_BASES = frozenset({
 #: and the legal ceiling should not be able to drift apart.
 EXCERPT_MAX_WORDS = 400
 
+#: ...but only a COPYRIGHTED work needs that ceiling. 400 words is where an
+#: excerpt stops being an excerpt, which is a statement about fair use and says
+#: nothing about a play published in 1892.
+#:
+#: Applying it everywhere cost exactly the pieces the library is shortest of.
+#: 21% of the speeches in the Perseus Greek drama corpus run past 400 words --
+#: Ajax at 492, Medea at 472 -- and those are the three-and-four-minute pieces
+#: that the whole week's scraping never moved: 254 in the 3-4 minute band and
+#: 12 above four, unchanged. Every one of them was being rejected as `too_long`
+#: by a rule written for somebody else's copyright.
+#:
+#: 900 words is about six minutes at performance pace. An actor cuts a long
+#: speech down; they cannot lengthen one that was never stored.
+PUBLIC_DOMAIN_MAX_WORDS = 900
+
+
+def max_words_for(copyright_status: str | None,
+                  license_type: str | None) -> int:
+    """The longest text we may store for a work with these rights.
+
+    Fair use is bounded by law; public domain is bounded only by what is useful.
+    """
+    if copyright_status in (PUBLIC_DOMAIN, USER_UPLOADED):
+        return PUBLIC_DOMAIN_MAX_WORDS
+    if license_type in (LICENSE_LICENSED, LICENSE_CC_BY):
+        return PUBLIC_DOMAIN_MAX_WORDS
+    return EXCERPT_MAX_WORDS
+
 
 def may_store_text(
     copyright_status: str | None,
