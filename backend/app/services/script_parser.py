@@ -275,12 +275,24 @@ def _split_trailing_direction(text: str, names=()):
 
 
 def _extract_stage_direction(text: str):
-    """Extract stage direction from text, return (clean_text, stage_direction)."""
-    match = _STAGE_DIR.search(text)
+    """Extract stage direction from text, return (clean_text, stage_direction).
+
+    Only a bracket that is the whole line counts. A screenplay puts a wryly on
+    its own line — "(beat)", "(quietly)" — and that is a direction. Verse puts
+    an aside in brackets inside the line, and that is the playwright:
+
+        Turned her obedience (which is due to me)
+        To stubborn harshness.
+
+    Lifting those out handed the actor a line with words missing and printed
+    them somewhere else on the page. It happened four times in one scene of A
+    Midsummer Night's Dream, and it left the punctuation stranded too: "By all
+    the vows that ever men have broke ,".
+    """
+    stripped = text.strip()
+    match = _STAGE_DIR.fullmatch(stripped)
     if match:
-        stage_dir = match.group(1).strip()
-        clean = _STAGE_DIR.sub('', text).strip()
-        return clean, stage_dir
+        return "", match.group(1).strip()
     return text, None
 
 
@@ -479,10 +491,21 @@ def _preprocess_text(text: str) -> str:
         # single digit; catching only two digits and up left "5" in the text.
         # A heading is a word and a number, and the number is the heading:
         # "Scene 1" has to come out of this still saying which scene it is.
+        # [ \t] and not \s: \s matches a newline, so given
+        #     ...and with reveling. 20
+        #     7
+        # the match ran across the break, threw away the page number on the
+        # next line and kept the "20" it was aimed at. The actor's line ended
+        # "with reveling. 20".
         text = re.sub(
-            r'^(?!\s*(?:ACT|SCENE|SC\.)\b)(.*\S)\s+\d{1,4}\s*$', r'\1', text,
+            r'^(?![ \t]*(?:ACT|SCENE|SC\.)\b)(.*\S)[ \t]+\d{1,4}[ \t]*$', r'\1', text,
             flags=re.MULTILINE | re.IGNORECASE,
         )
+
+    # "New -bent in heaven" for "New-bent": the PDF put a space in front of a
+    # hyphen inside a word. Only closed up between two letters, so a spaced
+    # dash used as punctuation ("Demetrius - my noble lord") is left alone.
+    text = re.sub(r'(?<=[A-Za-z]) +-(?=[a-z])', '-', text)
 
     # A two-word cue the PDF reader broke over two lines: "FIRST" / "FAIRY".
     # Left apart, "FIRST" is a speaker with no lines and the lullaby is sung by
@@ -824,7 +847,7 @@ def _parse_screenplay(text: str, columns: Dict[str, int]) -> List[Dict]:
     return sections
 
 
-def parse_dialogue(text: str, character_names=None) -> List[Dict]:
+def parse_dialogue(text: str, character_names=None, cast=None) -> List[Dict]:
     text = _preprocess_text(text)
     """
     Parse script text into dialogue sections using regex.
@@ -848,10 +871,17 @@ def parse_dialogue(text: str, character_names=None) -> List[Dict]:
     current_character = None
     # A direction read off a cue line, waiting for that character's first line.
     pending_direction = None
-    # The cast as this text cues it, so a direction can be told from a line
-    # that merely mentions a verb: "Demetrius exits." against "Pyramus draws
-    # near the wall."
-    cast = _cue_names(text)
+    # The cast, so a direction can be told from a line that merely carries the
+    # same verb: "Philostrate exits." against "Pyramus draws near the wall."
+    #
+    # Names cued in this text, plus any the caller knows from the wider
+    # document. Philostrate is a character in A Midsummer Night's Dream who
+    # never speaks in Act 1, so "Philostrate exits." sat in the middle of
+    # Theseus's speech: the scene had no idea he was a person. Pyramus, on the
+    # other hand, is a part the mechanicals perform and is never a speaker
+    # anywhere, which is what keeps "Pyramus draws near the wall." a line.
+    known_cast = set(_cue_names(text))
+    known_cast.update(n.strip().upper() for n in (cast or ()) if n and n.strip())
 
     def hang_direction(direction: str) -> None:
         """Keep a direction printed between lines: it rides on the speech before it."""
@@ -885,6 +915,10 @@ def parse_dialogue(text: str, character_names=None) -> List[Dict]:
                 "stage_direction": stage_dir or pending_direction,
             })
             pending_direction = None
+        elif stage_dir:
+            # A wryly on its own line: nothing spoken, but it still belongs to
+            # the speech it sits in rather than being dropped on the floor.
+            hang_direction(stage_dir)
 
     for line in text.split('\n'):
         stripped = line.strip()
@@ -957,7 +991,7 @@ def parse_dialogue(text: str, character_names=None) -> List[Dict]:
         if current_character:
             # A stage direction between lines is not spoken, but it is not
             # thrown away either: it hangs off the speech it follows.
-            if _is_stage_direction_line(stripped, cast):
+            if _is_stage_direction_line(stripped, known_cast):
                 if not _PAGE_HEADER.match(stripped):
                     hang_direction(stripped.rstrip('.'))
                 continue
@@ -986,7 +1020,7 @@ def parse_dialogue(text: str, character_names=None) -> List[Dict]:
                 text_content = m.group(1).strip()
 
             if text_content:
-                text_content, trailing = _split_trailing_direction(text_content, cast)
+                text_content, trailing = _split_trailing_direction(text_content, known_cast)
                 add_line(current_character, text_content)
                 if trailing:
                     hang_direction(trailing)
@@ -1162,7 +1196,7 @@ def _place_framing(result: List[Dict], framing: List, valid_entries: List) -> Li
     return result
 
 
-def whole_scene(span) -> Optional[Dict]:
+def whole_scene(span, cast: Optional[List[str]] = None) -> Optional[Dict]:
     """One scene of a play, every cue and every speech, in the order printed.
 
     The model chooses nothing here. Lines come from the deterministic parser
@@ -1175,7 +1209,7 @@ def whole_scene(span) -> Optional[Dict]:
     one to answer: not scenes, and not put on the shelf as if they were.
     """
     lines: List[Dict] = []
-    for section in parse_dialogue(span.text):
+    for section in parse_dialogue(span.text, cast=cast):
         lines.extend(section.get("lines", []))
 
     speakers = Counter(l.get("character") for l in lines if l.get("character"))
@@ -1216,11 +1250,18 @@ def whole_scenes(spans) -> List[Dict]:
     no headings at all is one scene, and stays.
     """
     labelled = any(s.act_label or s.scene_label for s in spans)
+
+    # Who the play knows, gathered before any one scene is read. A direction
+    # can name someone who has nothing to say in the scene it appears in —
+    # "Philostrate exits." in an Act 1 that Philostrate never speaks in — and
+    # a scene reading only its own cues has no way to tell that from a line.
+    cast = sorted({name for span in spans for name in _cue_names(span.text)})
+
     scenes: List[Dict] = []
     for span in spans:
         if labelled and not (span.act_label or span.scene_label):
             continue
-        scene = whole_scene(span)
+        scene = whole_scene(span, cast=cast)
         if scene:
             scenes.append(scene)
     return scenes
