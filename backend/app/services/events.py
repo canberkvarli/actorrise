@@ -27,6 +27,12 @@ SERVER_EVENT_NAMES = frozenset(
         "first_search_submitted",  # the user's first search_logs row
         "trial_ended",  # {subscription_id, outcome: converted|cancelled|past_due|...}
         "trial_converted",  # first real charge on a subscription that had a trial
+        # What a searcher actually does next. 240 of the 242 people who
+        # searched in the last 30 days opened a monologue; 17 rehearsed a
+        # scene. Working a monologue wrote nothing at all, so the activation
+        # number only ever counted the minority path. Emitted at the metered
+        # start, after the gate: a 403 is a paywall, not a rehearsal.
+        "monologue_work_started",  # {monologue_id}
     }
 )
 
@@ -47,6 +53,10 @@ CLIENT_EVENT_NAMES = frozenset(
         # them the next read of that number is a guess.
         "beat_saved",  # {monologue_id, segment_index, length, total_beats}
         "beat_cleared",  # same shape; length is 0
+        # The other half of monologue_work_started. The run reaching its last
+        # line was already known — it fires trackRehearsalCompleted to GA4 —
+        # and was thrown away rather than kept where the funnel could join it.
+        "monologue_work_finished",  # {monologue_id, lines}
     }
 )
 

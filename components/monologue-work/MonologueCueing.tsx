@@ -14,6 +14,7 @@ import { useSpeechRecognition } from "@/hooks/useSpeechRecognition";
 import { useToggleFavorite } from "@/hooks/useBookmarks";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
 import { useAuth } from "@/lib/auth";
+import { trackEvent } from "@/lib/events";
 import { wordMatchScore, toDeliverableLines, spokenPrefixCount } from "@/lib/lineMatching";
 import {
   trackRehearsalStarted,
@@ -146,7 +147,15 @@ export function MonologueCueing({ monologue, onExit }: MonologueCueingProps) {
       duration_seconds: Math.floor((Date.now() - (startedAtRef.current ?? Date.now())) / 1000),
       lines_total: lines.length,
     });
-  }, [completed, lines.length]);
+    // The same fact, kept where the funnel can join it. GA4 cannot be tied to
+    // a users row and ad blockers eat it, so finishing a monologue was known
+    // and then thrown away. Its other half is monologue_work_started, written
+    // by the server at the metered start.
+    trackEvent("monologue_work_finished", {
+      monologue_id: monologue.id,
+      lines: lines.length,
+    });
+  }, [completed, lines.length, monologue.id]);
 
   // Advancing past line 0 means they actually spoke it (or tapped through it).
   useEffect(() => {

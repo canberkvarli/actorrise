@@ -18,7 +18,8 @@ export type UserEventName =
   | "notes_field_focused"
   | "memorized_toggled"
   | "beat_saved"
-  | "beat_cleared";
+  | "beat_cleared"
+  | "monologue_work_finished";
 
 type Props = Record<string, string | number | boolean | null | undefined>;
 
