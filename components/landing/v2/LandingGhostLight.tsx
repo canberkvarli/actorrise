@@ -16,6 +16,7 @@ import { LandingPricing } from "@/components/landing/LandingPricing";
 import { LandingSearchShowcase } from "@/components/landing/LandingSearchShowcase";
 import { LandingStickyCta } from "@/components/landing/LandingStickyCta";
 import { LandingTestimonials } from "@/components/landing/LandingTestimonials";
+import { LandingCallboard } from "@/components/landing/LandingCallboard";
 import { LandingVideoShowcase } from "@/components/landing/LandingVideoShowcase";
 import { RevealSection } from "@/components/landing/RevealSection";
 import { FinalCta } from "@/components/landing/v2/FinalCta";
@@ -141,6 +142,19 @@ export function LandingGhostLight() {
           <SceneMark>(now you try.)</SceneMark>
           <LandingSearchShowcase />
         </div>
+
+        {/* Live proof immediately before the quoted kind.
+
+            Everything else on this page is a claim we make about ourselves.
+            This is the one block a visitor cannot read as marketing, because
+            it is simply what happened in the last few hours whether or not it
+            flatters us — so it goes first and lets the testimonials follow
+            something already established rather than open the argument.
+            Renders nothing on a quiet night. */}
+        <RevealSection id="callboard">
+          <SceneMark>(the house, tonight.)</SceneMark>
+          <LandingCallboard />
+        </RevealSection>
 
         <InkStatement />
 

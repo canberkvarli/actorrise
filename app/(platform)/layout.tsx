@@ -77,7 +77,7 @@ import {
 } from "@/lib/changelog";
 import { LastAuthProviderSync } from "@/components/auth/LastAuthProviderSync";
 import { AppLaunchBar } from "@/components/landing/AppLaunchBar";
-import { CallboardLamp } from "@/components/community/CallboardLamp";
+import { CallboardLamp, CallboardMenuRow } from "@/components/community/CallboardLamp";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -578,6 +578,15 @@ export default function PlatformLayout({
                     </Link>
                   </Button>
                 )}
+
+                {/* The board's only persistent handle on a phone: the lamp
+                    beside Help is desktop-only, so without this row mobile
+                    could reach the Callboard through contextual whispers or
+                    not at all. */}
+                <CallboardMenuRow
+                  active={pathname === "/callboard"}
+                  onNavigate={() => setMobileMenuOpen(false)}
+                />
 
                 {/* Secondary links only in hamburger; Account is in bottom nav */}
                 {/* Bookmarks Link */}

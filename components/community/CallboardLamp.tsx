@@ -61,3 +61,58 @@ export function CallboardLamp({ active }: { active: boolean }) {
     </Button>
   );
 }
+
+/**
+ * The same thing as a row in the mobile hamburger.
+ *
+ * The lamp lives in a desktop-only cluster, so on a phone the board had no
+ * persistent handle at all — only the whispers, which are contextual and
+ * therefore easy to miss if you never hit the surface carrying one. The
+ * hamburger is where this app already keeps its secondary destinations, and a
+ * row there gets what the desktop icon cannot: a name.
+ */
+export function CallboardMenuRow({
+  active,
+  onNavigate,
+}: {
+  active: boolean;
+  onNavigate: () => void;
+}) {
+  const { awake, actorCount } = useHouseIsAwake();
+
+  return (
+    <Button
+      asChild
+      variant={active ? "default" : "ghost"}
+      size="sm"
+      className="w-full justify-between gap-2"
+    >
+      <Link
+        href="/callboard"
+        onClick={onNavigate}
+        className="flex w-full items-center justify-between"
+      >
+        <div className="flex items-center gap-2">
+          <IconUsers className="h-4 w-4" />
+          The Callboard
+        </div>
+        {/* The count IS the reason to tap, so on mobile it is spelled out
+            rather than reduced to a dot — there is room for it here, and a
+            number is a far better invitation than a coloured pixel. */}
+        <span className="flex min-w-[1.75rem] items-center justify-end gap-1.5">
+          {awake && (
+            <>
+              <span aria-hidden className="relative flex h-1.5 w-1.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
+                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+              </span>
+              {actorCount > 0 && (
+                <span className="text-xs text-muted-foreground">{actorCount}</span>
+              )}
+            </>
+          )}
+        </span>
+      </Link>
+    </Button>
+  );
+}
