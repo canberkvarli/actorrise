@@ -55,6 +55,10 @@ STATEMENTS = [
         "CREATE INDEX IF NOT EXISTS ix_content_request_requesters_user "
         "ON content_request_requesters (user_id)"
     ),
+    # Applied to prod 2026-09-07. Every other public table has RLS on with no
+    # policies: the API connects as the table owner and bypasses it, so this
+    # only closes the anon/authenticated PostgREST path, which nothing uses.
+    text("ALTER TABLE content_request_requesters ENABLE ROW LEVEL SECURITY"),
 ]
 
 # created_at comes from the SEARCH, not from now(): "you asked about this a
