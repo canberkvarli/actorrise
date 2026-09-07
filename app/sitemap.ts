@@ -1,6 +1,7 @@
   import type { MetadataRoute } from "next";
   import { BLOG_POSTS } from "@/lib/blog/posts";
-  import { getIndexableMonologues, monologueSlug } from "@/lib/monologueSeo";
+  import { COLLECTIONS } from "@/lib/monologueCollections";
+import { getIndexableMonologues, monologueSlug } from "@/lib/monologueSeo";
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.actorrise.com";
 
@@ -17,6 +18,14 @@
       { url: `${baseUrl}/audition-monologues`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.9 },
       { url: `${baseUrl}/audition-ai`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.9 },
       { url: `${baseUrl}/pricing`, lastModified: lastMod, changeFrequency: "weekly", priority: 0.9 },
+
+      /* ── Keyword collection pages (real lists, lib/monologueCollections) ── */
+      ...COLLECTIONS.map((c) => ({
+        url: `${baseUrl}/monologues/${c.slug}`,
+        lastModified: new Date("2026-09-07"),
+        changeFrequency: "weekly" as const,
+        priority: 0.8,
+      })),
 
       /* ── Keyword landing pages (monologues) ─────────────────── */
       { url: `${baseUrl}/shakespeare-monologues`, lastModified: lastMod, changeFrequency: "monthly", priority: 0.9 },

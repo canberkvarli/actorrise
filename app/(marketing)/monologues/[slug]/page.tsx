@@ -3,8 +3,11 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { GhostLightInlineCta } from "@/components/marketing/GhostLightInlineCta";
+import { MonologueCollectionPage } from "@/components/marketing/MonologueCollectionPage";
+import { COLLECTIONS, findCollection } from "@/lib/monologueCollections";
 import {
   findReplacementMonologue,
+  getCollectionMonologues,
   getIndexableMonologues,
   getPublicMonologue,
   idFromSlug,
@@ -37,7 +40,11 @@ const PRERENDER_COUNT = 500;
 
 export async function generateStaticParams() {
   const monologues = await getIndexableMonologues(PRERENDER_COUNT);
-  return monologues.slice(0, PRERENDER_COUNT).map((m) => ({ slug: monologueSlug(m) }));
+  return [
+    // Keyword collection pages share this route: a slug with no trailing id.
+    ...COLLECTIONS.map((c) => ({ slug: c.slug })),
+    ...monologues.slice(0, PRERENDER_COUNT).map((m) => ({ slug: monologueSlug(m) })),
+  ];
 }
 
 type Params = { params: Promise<{ slug: string }> };
@@ -56,6 +63,22 @@ function readableLength(seconds: number | null): string | null {
 
 export async function generateMetadata({ params }: Params): Promise<Metadata> {
   const { slug } = await params;
+  const collection = findCollection(slug);
+  if (collection) {
+    const canonical = `${siteUrl}/monologues/${collection.slug}`;
+    return {
+      title: collection.title,
+      description: collection.description,
+      alternates: { canonical },
+      openGraph: { title: `${collection.title} | ActorRise`, description: collection.description, url: canonical },
+      twitter: {
+        card: "summary_large_image",
+        title: `${collection.title} | ActorRise`,
+        description: collection.description,
+        images: ["/opengraph-image"],
+      },
+    };
+  }
   const id = idFromSlug(slug);
   if (!id) return {};
   const m = await getPublicMonologue(id);
@@ -87,6 +110,11 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 
 export default async function PublicMonologuePage({ params }: Params) {
   const { slug } = await params;
+  const collection = findCollection(slug);
+  if (collection) {
+    const monologues = await getCollectionMonologues(collection.filters);
+    return <MonologueCollectionPage collection={collection} monologues={monologues} />;
+  }
   const id = idFromSlug(slug);
   const m = id ? await getPublicMonologue(id) : null;
   if (!m) {

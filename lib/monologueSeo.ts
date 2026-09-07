@@ -142,6 +142,92 @@ export async function findReplacementMonologue(slug: string): Promise<PublicMono
   };
 }
 
+export interface CollectionMonologue {
+  id: number;
+  character: string;
+  playTitle: string | null;
+  author: string | null;
+  sourceType: string;
+  gender: string | null;
+  tone: string | null;
+  durationSeconds: number | null;
+  isPublicDomain: boolean;
+  /** First ~180 characters, public-domain pieces only. Copyrighted text is never excerpted. */
+  teaser: string | null;
+}
+
+type CollectionRow = {
+  id: number;
+  character_name: string | null;
+  text: string | null;
+  character_gender: string | null;
+  estimated_duration_seconds: number | null;
+  tone: string | null;
+  plays: { title: string | null; author: string | null; copyright_status: string; source_type: string; category: string | null } | null;
+};
+
+function teaserOf(text: string | null): string | null {
+  const t = (text || "").replace(/\s+/g, " ").trim();
+  if (!t) return null;
+  if (t.length <= 180) return t;
+  const cut = t.slice(0, 180);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), 120))}…`;
+}
+
+/**
+ * The pieces behind one keyword collection page (lib/monologueCollections.ts).
+ * Best-rated first, so the top of the page is the strongest shelf, then stable
+ * by id so the page does not reshuffle between crawls.
+ */
+export async function getCollectionMonologues(
+  filters: {
+    gender?: "female" | "male";
+    tones?: string[];
+    era?: "classical" | "contemporary";
+    maxSeconds?: number;
+    ages?: string[];
+    sources?: string[];
+  },
+  limit = 30,
+): Promise<CollectionMonologue[]> {
+  let q = db()
+    .from("monologues")
+    .select(
+      "id, character_name, text, character_gender, estimated_duration_seconds, tone, plays!inner(title, author, copyright_status, source_type, category)",
+    )
+    .neq("plays.copyright_status", "user_uploaded")
+    .not("text", "is", null)
+    .is("review_status", null);
+  if (filters.gender) q = q.eq("character_gender", filters.gender);
+  if (filters.tones?.length) q = q.in("tone", filters.tones);
+  if (filters.era) q = q.eq("plays.category", filters.era);
+  if (filters.maxSeconds) q = q.lte("estimated_duration_seconds", filters.maxSeconds).gt("estimated_duration_seconds", 0);
+  if (filters.ages?.length) q = q.in("character_age_range", filters.ages);
+  if (filters.sources?.length) q = q.in("plays.source_type", filters.sources);
+  const { data, error } = await q
+    .order("quality_score", { ascending: false, nullsFirst: false })
+    .order("id", { ascending: true })
+    .limit(limit);
+  if (error || !data) return [];
+  return (data as unknown as CollectionRow[])
+    .filter((r) => r.plays && r.text)
+    .map((r) => {
+      const pd = r.plays!.copyright_status === "public_domain";
+      return {
+        id: r.id,
+        character: r.character_name?.trim() || "Monologue",
+        playTitle: r.plays!.title?.trim() || null,
+        author: r.plays!.author?.trim() || null,
+        sourceType: r.plays!.source_type,
+        gender: r.character_gender || null,
+        tone: r.tone || null,
+        durationSeconds: r.estimated_duration_seconds ?? null,
+        isPublicDomain: pd,
+        teaser: pd ? teaserOf(r.text) : null,
+      };
+    });
+}
+
 /** Ids + slug fields for the sitemap (excludes user-uploaded). Paginated past the 1k row cap. */
 export async function getIndexableMonologues(
   max = 12000,
