@@ -443,21 +443,25 @@
 
   /* Hover bleeds past the row's own box so the highlight reads as a ruler laid
      across the sheet rather than as a button. */
+  /* The highlight is the row's own background, and the bleed past the text
+     column comes from padding cancelled by an equal negative margin.
+
+     This was originally an absolutely positioned ::before. Positioned elements
+     paint AFTER non-positioned in-flow siblings, so the highlight laid an
+     opaque panel straight over the row's text and the whole line vanished on
+     hover — pointer-events:none kept the link clickable, which is why it read
+     as disappearing rather than as breaking. Fixing that with z-index means
+     keeping two elements in a stacking order forever; a background cannot
+     cover its own box's content no matter what else changes, so there is no
+     ordering left to get wrong. */
   .sheet-row-hit {
-    position: relative;
+    padding-inline: 1rem;
+    margin-inline: -1rem;
     transition: background-color 140ms ease;
   }
-  .sheet-row-hit::before {
-    content: "";
-    position: absolute;
-    inset: 0 -1rem;
-    background: transparent;
-    transition: background-color 140ms ease;
-    pointer-events: none;
-  }
-  .sheet-row-hit:hover::before,
-  .sheet-row-hit:focus-within::before {
-    background: var(--sheet-raised);
+  .sheet-row-hit:hover,
+  .sheet-row-hit:focus-within {
+    background-color: var(--sheet-raised);
   }
 
   /* The caret at the head of the list. The single cheapest signal that the
