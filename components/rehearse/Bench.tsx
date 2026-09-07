@@ -64,14 +64,26 @@ export function Bench({
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
       /* `dark stage-scene` is the app's own lit surface — the same move the
          landing makes between acts. The bench is lit and the shelf below sits
-         in the house, which is the whole idea stated in one class. */
-      className="dark stage-scene stage-grain relative isolate overflow-hidden rounded-2xl border border-[var(--stage-line)] px-5 py-7 text-[var(--stage-fg)] sm:px-9 sm:py-10"
+         in the house, which is the whole idea stated in one class.
+
+         Deliberately NOT overflow-hidden. The panel used to clip its own
+         children, which meant the tooltips on the buttons at its right edge
+         were cut in half by the edge they sat against. The two things that
+         actually need clipping — the bloom, which is thrown from outside the
+         box, and the grain, whose ::after is a square inset:0 that would show
+         its corners against the rounding — are clipped by the layer below
+         instead. The panel's own background needs no help; backgrounds
+         respect border-radius on their own. */
+      className="dark stage-scene relative isolate rounded-2xl border border-[var(--stage-line)] px-5 py-7 text-[var(--stage-fg)] sm:px-9 sm:py-10"
     >
-      {/* One warm bloom, thrown from behind the poster. */}
+      {/* The decoration, and the only thing that clips. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -left-24 -top-28 -z-10 h-96 w-96 rounded-full bg-[radial-gradient(circle,var(--stage-glow),transparent_68%)] opacity-70"
-      />
+        className="stage-grain pointer-events-none absolute inset-0 -z-10 overflow-hidden rounded-2xl"
+      >
+        {/* One warm bloom, thrown from behind the poster. */}
+        <div className="absolute -left-24 -top-28 h-96 w-96 rounded-full bg-[radial-gradient(circle,var(--stage-glow),transparent_68%)] opacity-70" />
+      </div>
 
       <div className="flex flex-col gap-6 sm:flex-row sm:gap-9">
         <motion.div
@@ -174,6 +186,7 @@ export function Bench({
 
             <span className="ml-auto flex items-center gap-1">
               <InstantTooltip
+                align="end"
                 label={memorized ? "Off book. Tap to unmark." : "Mark as off book"}
               >
                 <button
@@ -190,7 +203,7 @@ export function Bench({
                   )}
                 </button>
               </InstantTooltip>
-              <InstantTooltip label="Remove from collection">
+              <InstantTooltip align="end" label="Remove from collection">
                 <button
                   type="button"
                   onClick={onRemove}

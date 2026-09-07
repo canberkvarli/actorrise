@@ -16,17 +16,34 @@ export function InstantTooltip({
   label,
   children,
   side = "bottom",
+  align = "center",
 }: {
   label: string;
   children: React.ReactNode;
   side?: "top" | "bottom";
+  /**
+   * Which edge the label hangs from. Centred is right until the trigger is
+   * itself at an edge: a 36px button with a "Remove from collection" label
+   * centred on it puts ~60px of tooltip past the trigger on each side, which
+   * on a right-aligned button leaves the label hanging outside its container
+   * — clipped if anything above it clips, and off-screen on a phone if not.
+   * `end` right-aligns it to the trigger so it can only ever grow inwards.
+   */
+  align?: "center" | "start" | "end";
 }) {
+  const alignment =
+    align === "end"
+      ? "right-0"
+      : align === "start"
+        ? "left-0"
+        : "left-1/2 -translate-x-1/2";
+
   return (
     <span className="group/tip relative inline-flex">
       {children}
       <span
         role="tooltip"
-        className={`pointer-events-none absolute left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-md bg-foreground px-2 py-1 font-typewriter text-[11px] text-background opacity-0 shadow-md transition-opacity duration-100 group-hover/tip:opacity-100 group-focus-within/tip:opacity-100 ${
+        className={`pointer-events-none absolute z-50 whitespace-nowrap rounded-md bg-foreground px-2 py-1 font-typewriter text-[11px] text-background opacity-0 shadow-md transition-opacity duration-100 group-hover/tip:opacity-100 group-focus-within/tip:opacity-100 ${alignment} ${
           side === "bottom" ? "top-full mt-1.5" : "bottom-full mb-1.5"
         }`}
       >

@@ -480,7 +480,13 @@ export default function MonologueDetailPage() {
 
               {/* The retention lever. Savers return 2.1x more, so the collection
                   control keeps its place right beside the primary action. */}
-              <InstantTooltip label={isFavorited ? "In your collection" : "Save to collection"}>
+              {/* Last icon in the bar, so its label hangs off the right edge of
+                  the reading column — and on a phone that edge is the screen.
+                  Right-aligned, it can only grow inwards. */}
+              <InstantTooltip
+                align="end"
+                label={isFavorited ? "In your collection" : "Save to collection"}
+              >
               <button
                 type="button"
                 onClick={toggleFavorite}
