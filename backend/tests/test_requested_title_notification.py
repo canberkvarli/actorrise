@@ -81,3 +81,13 @@ def test_thanks_them_for_flagging(body):
 def test_piece_count_is_pluralised(n, expected):
     out = _requested_title_email("Sam", "X", "http://u", n)
     assert expected in out
+
+
+def test_the_email_says_the_catalogue_title_not_what_was_typed():
+    """content_requests stores the actor's own typing, so play_title is
+    "mean girls" or "better call saul". Sending "better call saul is up" to a
+    real person reads as a mailmerge that went wrong. The draft endpoint
+    resolves the catalogue's title and says that instead."""
+    body = _requested_title_email("Sam", "Better Call Saul", "http://u", 7)
+    assert "Better Call Saul" in body
+    assert "better call saul" not in body

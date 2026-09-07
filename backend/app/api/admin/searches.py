@@ -642,20 +642,25 @@ def get_notify_drafts(
     if not req:
         raise HTTPException(status_code=404, detail="Request not found")
 
-    title = (req.play_title or "").strip()
+    # The request stores what the ACTOR TYPED, so play_title is "mean girls"
+    # or "better call saul". Sending "better call saul is up" to a real person
+    # reads as a mailmerge that went wrong. The catalogue's own title is the
+    # one the email says out loud.
+    requested = (req.play_title or "").strip()
     pieces = (
-        db.query(Monologue.id)
+        db.query(Monologue.id, Play.title)
         .join(Play, Play.id == Monologue.play_id)
         .filter(
-            func.lower(Play.title) == title.lower(),
+            func.lower(Play.title) == requested.lower(),
             Monologue.review_status.is_(None),
         )
         .all()
     )
+    title = pieces[0][1] if pieces else requested
     if not pieces:
         raise HTTPException(
             status_code=409,
-            detail=f"{title} is not in the library yet, so there is nothing to tell them.",
+            detail=f"{requested} is not in the library yet, so there is nothing to tell them.",
         )
 
     base = os.getenv("SITE_URL", "https://actorrise.com")
