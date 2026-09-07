@@ -39,9 +39,15 @@ export function ShelfCard({ m }: { m: Monologue }) {
       <h3 className="font-typewriter text-base font-semibold leading-snug text-foreground line-clamp-1">
         {m.character_name}
       </h3>
-      <p className="font-typewriter text-xs text-muted-foreground line-clamp-1">
-        {m.play_title}
-      </p>
+      {/* Nothing rather than an echo. A title role ("Hamlet" from Hamlet,
+          "Othello" from Othello) printed both lines identically, which reads as
+          a rendering fault instead of two facts. The line collapses instead of
+          repeating itself. */}
+      {m.play_title?.trim().toLowerCase() !== m.character_name?.trim().toLowerCase() && (
+        <p className="font-typewriter text-xs text-muted-foreground line-clamp-1">
+          {m.play_title}
+        </p>
+      )}
       <div className="mt-auto flex items-end justify-between gap-2 pt-3">
         <p className="min-w-0 text-xs text-muted-foreground/70">{meta.join(" · ")}</p>
         {source && (

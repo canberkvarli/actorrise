@@ -362,6 +362,19 @@
     font-feature-settings: "kern" 1;
   }
 
+  /* Tailwind's animate-ping ignores prefers-reduced-motion, and the Callboard
+     whispers put a pulsing dot on the search page, the nav, the collection,
+     the empty shelf and the landing. Someone who has asked the OS for less
+     motion should not get five throbbing dots as their reward for using the
+     product. The dot still reads as "live" because it keeps its colour; only
+     the pulse stops. Global rather than scoped: any other animate-ping in the
+     app wants the same courtesy. */
+  @media (prefers-reduced-motion: reduce) {
+    .animate-ping {
+      animation: none;
+    }
+  }
+
   /* ── The Callboard ────────────────────────────────────────────────────────
      A stage manager's call sheet, not a cork board.
 

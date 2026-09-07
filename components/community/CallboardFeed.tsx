@@ -274,12 +274,12 @@ export function CallboardFeed() {
               header strip — not as four big stat tiles, which is how the
               previous version shipped a permanent prominent 0. */}
           <div className="mt-6 border-y border-[var(--sheet-rule)] py-2.5">
-            <dl className="flex flex-wrap items-baseline gap-x-7 gap-y-1.5 font-typewriter text-[13px]">
+            <p className="flex flex-wrap items-baseline gap-x-7 gap-y-1.5 font-typewriter text-[13px]">
               <div className="text-[var(--sheet-dim)]">{SHEET_DATE.format(new Date())}</div>
               <Stat n={data.actor_count} label={`in the house ${windowLabel}`} />
               {counts.searched > 0 && <Stat n={counts.searched} label="searches" />}
               {counts.joined > 0 && <Stat n={counts.joined} label="new faces" />}
-            </dl>
+            </p>
           </div>
         </header>
 
@@ -404,10 +404,18 @@ export function CallboardFeed() {
                   >
                     <span className="flex h-2 w-2 shrink-0 items-center sm:w-[0.6rem]">
                       {fresh && (
-                        <span
-                          aria-hidden
-                          className="sheet-live-dot h-1.5 w-1.5 rounded-full"
-                        />
+                        <>
+                          <span
+                            aria-hidden
+                            className="sheet-live-dot h-1.5 w-1.5 rounded-full"
+                          />
+                          {/* The pulse was the board's only "this just
+                              arrived" signal and it was aria-hidden with
+                              nothing in its place, so the one genuinely live
+                              thing on the page existed for sighted users
+                              only. */}
+                          <span className="sr-only">Just now: </span>
+                        </>
                       )}
                     </span>
                     <span className="truncate text-[15px] font-semibold text-[var(--sheet-ink)] sm:text-[13px]">
@@ -451,11 +459,30 @@ export function CallboardFeed() {
 }
 
 function Stat({ n, label }: { n: number; label: string }) {
+  /* Not a description list any more.
+
+     I had written this as <dl>/<dt>/<dd> with the <dd> first, which is invalid.
+     Putting the <dt> first fixed the HTML and broke the reading: a description
+     list is read term-then-description, so it announced "in the house today,
+     12" while the design needs the number to come first visually. Reversing the
+     DOM back to fix the reading re-breaks the markup.
+
+     The list semantics were never earning anything here — this is one short
+     line of stamped text, not a glossary. A plain span with the visual pieces
+     hidden and the whole phrase exposed once says exactly the right thing in
+     both directions. */
   return (
-    <div className="flex items-baseline gap-1.5">
-      <dd className="tabular-nums text-[15px] font-semibold text-[var(--sheet-ink)]">{n}</dd>
-      <dt className="uppercase tracking-[0.12em] text-[var(--sheet-faint)]">{label}</dt>
-    </div>
+    <span className="flex items-baseline gap-1.5">
+      <span className="sr-only">
+        {n} {label}
+      </span>
+      <span aria-hidden className="tabular-nums text-[15px] font-semibold text-[var(--sheet-ink)]">
+        {n}
+      </span>
+      <span aria-hidden className="uppercase tracking-[0.12em] text-[var(--sheet-faint)]">
+        {label}
+      </span>
+    </span>
   );
 }
 
