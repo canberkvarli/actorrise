@@ -9,6 +9,7 @@ from app.api.auth import get_current_user
 from app.core.database import get_db
 from app.middleware.burst_limiter import BurstLimiter
 from app.middleware.rate_limiting import require_scene_partner
+from app.services.rehearsal_client import client_browser, client_platform
 from app.models.actor import (Play, RehearsalLineDelivery, RehearsalSession,
                               Scene, SceneFavorite, SceneLine, UserScript)
 from app.models.billing import UserSubscription
@@ -19,7 +20,7 @@ from app.services.benefits import get_effective_benefits
 from app.services.character_names import (canonical_character_map,
                                           line_belongs_to,
                                           resolve_rehearsal_roles)
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -794,12 +795,14 @@ async def get_resumable_session(
 @router.post("/rehearse/start", response_model=RehearsalSessionResponse)
 async def start_rehearsal(
     request: StartRehearsalRequest,
+    http_request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     _gate: bool = Depends(require_scene_partner(increment=True)),
     _burst: bool = Depends(BurstLimiter("scene_partner")),
 ):
     """Start a new rehearsal session. Only scenes from the user's own scripts can be rehearsed."""
+    user_agent = http_request.headers.get("user-agent")
     scene = db.query(Scene).filter_by(id=request.scene_id).first()
 
     if not scene:
@@ -915,6 +918,10 @@ async def start_rehearsal(
         status="in_progress",
         current_line_index=start_index,
         max_lines=lines_per_session if lines_per_session and lines_per_session != -1 else None,
+        # Recorded here because here is the only place it can be. A timed_out
+        # session is closed by a sweep with no client left to ask.
+        client_platform=client_platform(user_agent),
+        client_browser=client_browser(user_agent),
     )
 
     db.add(session)

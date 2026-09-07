@@ -402,6 +402,17 @@ class RehearsalSession(Base):
     # timed_out ones (the sweep cannot know) and on everything before the
     # column. Splits "the mic never worked" from "they got bored".
     failure_reason = Column(String(32), nullable=True)
+    # WHAT it was running on, read off the User-Agent at start. failure_reason
+    # can only ever describe an abandon, because the client is what reports it;
+    # timed_out is set by a server sweep long after the browser has gone, and
+    # that is 45% of all failures. These two are written on the request that
+    # creates the session, so every death carries them, however it died.
+    #
+    # "ios" / "android" / "desktop", and a browser family including the in-app
+    # webviews (instagram, tiktok, facebook) — the two suspects for speech
+    # being refused. See services/rehearsal_client.py.
+    client_platform = Column(String(16), nullable=True, index=True)
+    client_browser = Column(String(32), nullable=True, index=True)
     current_line_index = Column(Integer, default=0)  # Where they left off
 
     # Line Cap (resolved from tier at session start; NULL = unlimited)
