@@ -61,6 +61,8 @@ export interface Monologue {
   paywalled?: boolean;
   notes?: string | null;
   last_studied_at?: string | null;
+  /** When it was saved. Present on collection payloads only. */
+  saved_at?: string | null;
   cut_start_line?: number | null;
   cut_end_line?: number | null;
   overdone_score: number;

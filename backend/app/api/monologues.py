@@ -84,6 +84,10 @@ class MonologueResponse(BaseModel):
     memorized: bool = False
     notes: Optional[str] = None
     last_studied_at: Optional[str] = None
+    # When the actor saved it. The collection screen puts the most recently
+    # touched piece on the bench, and 81% of saved rows have never been
+    # studied — so without this the rule would be null for four pieces in five.
+    saved_at: Optional[str] = None
     cut_start_line: Optional[int] = None
     cut_end_line: Optional[int] = None
     overdone_score: float
@@ -213,6 +217,7 @@ def _monologue_to_response(
     memorized: bool = False,
     notes: Optional[str] = None,
     last_studied_at: Optional[str] = None,
+    saved_at: Optional[str] = None,
     cut_start_line: Optional[int] = None,
     cut_end_line: Optional[int] = None,
 ) -> MonologueResponse:
@@ -271,6 +276,7 @@ def _monologue_to_response(
         memorized=memorized,
         notes=notes,
         last_studied_at=last_studied_at,
+        saved_at=saved_at,
         cut_start_line=cut_start_line,
         cut_end_line=cut_end_line,
         overdone_score=cast(float, m.overdone_score),
@@ -1256,6 +1262,7 @@ async def get_monologue(
         memorized=bool(fav.memorized) if fav else False,
         notes=fav.notes if fav else None,
         last_studied_at=fav.last_studied_at.isoformat() if fav and fav.last_studied_at else None,
+        saved_at=fav.created_at.isoformat() if fav and fav.created_at else None,
         cut_start_line=fav.cut_start_line if fav else None,
         cut_end_line=fav.cut_end_line if fav else None,
     )
@@ -1459,6 +1466,7 @@ async def get_my_favorites(
             memorized=bool(f.memorized),
             notes=f.notes,
             last_studied_at=f.last_studied_at.isoformat() if f.last_studied_at else None,
+            saved_at=f.created_at.isoformat() if f.created_at else None,
             cut_start_line=f.cut_start_line,
             cut_end_line=f.cut_end_line,
         )

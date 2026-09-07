@@ -3,106 +3,119 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Segmented } from "@/components/memorize/Segmented";
-import { useBookmarks } from "@/hooks/useBookmarks";
+import api from "@/lib/api";
+import { toastBookmark } from "@/lib/toast";
+import { useBookmarks, useToggleFavorite } from "@/hooks/useBookmarks";
+import { useToggleMemorized } from "@/hooks/useMemorized";
+import { pickCurrent } from "@/lib/collectionMeta";
 import { Monologue } from "@/types/actor";
-import { CollectionRow } from "@/components/rehearse/CollectionRow";
+import { Bench } from "@/components/rehearse/Bench";
+import { Shelf } from "@/components/rehearse/Shelf";
 import { RecentlyRemoved } from "@/components/rehearse/RecentlyRemoved";
 
-type Filter = "all" | "to-study" | "memorized" | "due";
-
-function CollectionSkeletons() {
+function BenchSkeleton() {
   return (
-    <div className="divide-y divide-border border-t border-border">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="flex items-start justify-between gap-6 py-7">
-          <div className="w-full max-w-md space-y-3">
-            <Skeleton className="h-7 w-2/3" />
-            <Skeleton className="h-4 w-1/2" />
-            <Skeleton className="h-3 w-24" />
-          </div>
-          <Skeleton className="h-9 w-24 rounded-md" />
+    <div className="rounded-2xl border border-border px-5 py-7 sm:px-9 sm:py-10">
+      <div className="flex flex-col gap-6 sm:flex-row sm:gap-9">
+        <Skeleton className="aspect-[2/3] w-32 shrink-0 rounded-sm sm:w-44" />
+        <div className="w-full space-y-4">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-11 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-24 w-full max-w-prose" />
+          <Skeleton className="h-11 w-40 rounded-md" />
         </div>
-      ))}
+      </div>
     </div>
   );
 }
 
+/**
+ * /rehearse — the piece you are working on, and the rest of the shelf.
+ *
+ * This was a library screen: an eyebrow, a "Collection" title, a four-segment
+ * filter bar and a list of rows. The numbers say it was never a library. 70
+ * actors hold a collection at all; the median is 2 pieces and 46% hold exactly
+ * one. So the filter bar was routinely rendering `All · 1 / To study · 1 /
+ * Memorized · 0` — three segments describing one row — above a Review tab that
+ * needed a memorized piece to go stale, and there are 11 memorized pieces in
+ * the entire product.
+ *
+ * Filtering, counting and sorting all answer "which one?". Nobody holding two
+ * pieces asks that. They ask what to do with the one in front of them, so the
+ * page leads with that piece at working size and says the answer once.
+ */
 export function RehearseHub() {
   const router = useRouter();
-  // Avoid an SSR/client hydration mismatch: the collection is client-only data,
-  // so render the loading state until mounted, then swap in the real content.
+  const queryClient = useQueryClient();
+  // The collection is client-only data; render loading until mounted so SSR
+  // and the first client pass agree.
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   const { data, isLoading } = useBookmarks({ alwaysFresh: true });
 
-  const { all, toStudy, memorized, due } = useMemo(() => {
-    // A cached or unexpected non-array payload would crash the whole page
-    // at .map, so widen the guard past null/undefined.
-    const all = Array.isArray(data) ? data : [];
-    const memorized = all.filter((m) => m.memorized);
-    // Spaced review: a memorized piece is "due" if it hasn't been studied in a
-    // week (or never since being marked off-book), so it doesn't quietly fade.
-    const DUE_MS = 7 * 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    const due = memorized.filter((m) => {
-      if (!m.last_studied_at) return true;
-      const studied = new Date(m.last_studied_at).getTime();
-      return Number.isNaN(studied) || now - studied > DUE_MS;
-    });
-    return {
-      all,
-      toStudy: all.filter((m) => !m.memorized),
-      memorized,
-      due,
-    };
-  }, [data]);
+  const mark = useToggleMemorized();
+  const toggleFavorite = useToggleFavorite();
 
-  const total = all.length;
-  const memorizedCount = memorized.length;
+  // A cached or unexpected non-array payload would crash at .map.
+  const all = useMemo(() => (Array.isArray(data) ? data : []), [data]);
 
-  // Default to "To study" when there's something to study, else "All".
-  const [filter, setFilter] = useState<Filter>("to-study");
-  const [filterTouched, setFilterTouched] = useState(false);
-  useEffect(() => {
-    if (filterTouched || !mounted || isLoading) return;
-    setFilter(toStudy.length > 0 ? "to-study" : "all");
-  }, [filterTouched, mounted, isLoading, toStudy.length]);
+  /* Which piece is on the bench. Defaults to the most recently touched and is
+     otherwise whatever the actor picked off the shelf. Held as an id, not an
+     object, so it survives the list refetching underneath it — marking a piece
+     off book rewrites every row, and holding the object would put a stale copy
+     on the bench. */
+  const [pickedId, setPickedId] = useState<number | null>(null);
+  const current = useMemo(() => {
+    if (pickedId !== null) {
+      const found = all.find((m) => m.id === pickedId);
+      if (found) return found;
+    }
+    return pickCurrent(all);
+  }, [all, pickedId]);
 
-  const visible =
-    filter === "to-study"
-      ? toStudy
-      : filter === "memorized"
-        ? memorized
-        : filter === "due"
-          ? due
-          : all;
-
-  const isEmpty = !isLoading && total === 0;
+  const isEmpty = !isLoading && all.length === 0;
   const showContent = mounted && !isLoading;
+
+  const handleRemove = (monologue: Monologue) => {
+    toggleFavorite.mutate({ monologueId: monologue.id, isFavorited: true });
+    queryClient.invalidateQueries({ queryKey: ["recently-removed"] });
+    // Removing the piece on the bench hands the bench to the next one.
+    if (pickedId === monologue.id) setPickedId(null);
+    toastBookmark(false, {
+      label: "Monologue",
+      duration: 6000,
+      onUndo: async () => {
+        queryClient.setQueryData<Monologue[]>(["bookmarks"], (old) => {
+          const list = old ?? [];
+          return list.some((m) => m.id === monologue.id)
+            ? list
+            : [{ ...monologue, is_favorited: true }, ...list];
+        });
+        try {
+          await api.post(`/api/monologues/${monologue.id}/favorite`);
+        } catch {
+          toast.error("Couldn't restore. Try again.");
+        }
+        queryClient.invalidateQueries({ queryKey: ["bookmarks"] });
+        queryClient.invalidateQueries({ queryKey: ["recently-removed"] });
+      },
+    });
+  };
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-      className="space-y-8"
     >
-      {/* The eyebrow, the title and the description all said "this is where your
-          saved pieces live". Three lines, one fact. The eyebrow says it best, so
-          the third line goes and the rule goes with it. */}
-      <header>
-        <p className="stage-direction text-sm text-muted-foreground/70">(your repertoire.)</p>
-        <h1 className="mt-2 font-brand text-4xl font-medium leading-[1.05] sm:text-5xl">
-          Collection
-        </h1>
-      </header>
-
       {!showContent ? (
-        <CollectionSkeletons />
+        <BenchSkeleton />
       ) : isEmpty ? (
         <div className="flex flex-col items-center justify-center gap-5 py-24 text-center">
           <div className="space-y-1.5">
@@ -113,60 +126,38 @@ export function RehearseHub() {
               Nothing here yet.
             </p>
             <p className="text-sm text-muted-foreground">
-              Save a monologue and it&apos;ll show up here, ready to study.
+              Save a monologue and it&apos;ll show up here, ready to work.
             </p>
           </div>
           <Button onClick={() => router.push("/monologues")}>
             Find monologues
           </Button>
         </div>
-      ) : (
-        <div className="space-y-6">
-          {/* Filter */}
-          <Segmented<Filter>
-            ariaLabel="Filter collection"
-            value={filter}
-            onChange={(v) => {
-              setFilter(v);
-              setFilterTouched(true);
-            }}
-            options={[
-              { value: "all", label: `All · ${total}` },
-              { value: "to-study", label: `To study · ${toStudy.length}` },
-              { value: "memorized", label: `Memorized · ${memorizedCount}` },
-              ...(due.length > 0
-                ? [{ value: "due" as const, label: `Review · ${due.length}` }]
-                : []),
-            ]}
+      ) : current ? (
+        <>
+          {/* Keyed on the id so switching pieces replays the bench's entrance
+              rather than swapping text inside a static panel. */}
+          <AnimatePresence mode="wait">
+            <Bench
+              key={current.id}
+              monologue={current}
+              onToggleMemorized={() =>
+                mark.mutate({
+                  monologueId: current.id,
+                  memorized: !current.memorized,
+                })
+              }
+              onRemove={() => handleRemove(current)}
+            />
+          </AnimatePresence>
+
+          <Shelf
+            items={all}
+            selectedId={current.id}
+            onSelect={(m) => setPickedId(m.id)}
           />
-
-          {filter === "due" && (
-            <p className="-mt-3 text-sm text-muted-foreground">
-              Memorized pieces you haven&apos;t run in a week — give them a
-              refresh.
-            </p>
-          )}
-
-          {/* List */}
-          {visible.length === 0 ? (
-            <p className="border-t border-border py-16 text-center text-sm text-muted-foreground">
-              {filter === "memorized"
-                ? "Nothing memorized yet. Keep going."
-                : filter === "due"
-                  ? "Nothing due — your memorized pieces are fresh."
-                  : "Nothing to study right now."}
-            </p>
-          ) : (
-            <div className="divide-y divide-border border-t border-border">
-              <AnimatePresence mode="popLayout" initial={false}>
-                {visible.map((m: Monologue, i: number) => (
-                  <CollectionRow key={m.id} monologue={m} index={i} />
-                ))}
-              </AnimatePresence>
-            </div>
-          )}
-        </div>
-      )}
+        </>
+      ) : null}
 
       {showContent && <RecentlyRemoved />}
     </motion.div>

@@ -5,15 +5,21 @@ import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RehearseHub } from "@/components/rehearse/RehearseHub";
 
+/* Shaped like the bench, because that is what arrives. It used to be a title,
+   a filter bar and a six-card grid — none of which the page has any more, and
+   the median collection is two pieces, so it was promising six. */
 function RehearseFallback() {
   return (
-    <div className="space-y-8">
-      <Skeleton className="h-10 w-48" />
-      <Skeleton className="h-9 w-72 rounded-lg" />
-      <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <Skeleton key={i} className="h-52 w-full rounded-lg" />
-        ))}
+    <div className="rounded-2xl border border-border px-5 py-7 sm:px-9 sm:py-10">
+      <div className="flex flex-col gap-6 sm:flex-row sm:gap-9">
+        <Skeleton className="aspect-[2/3] w-32 shrink-0 rounded-sm sm:w-44" />
+        <div className="w-full space-y-4">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-11 w-2/3" />
+          <Skeleton className="h-4 w-1/2" />
+          <Skeleton className="h-24 w-full max-w-prose" />
+          <Skeleton className="h-11 w-40 rounded-md" />
+        </div>
       </div>
     </div>
   );
@@ -24,13 +30,10 @@ function RehearseFallback() {
  */
 export default function RehearsePage() {
   return (
+    /* The page-level radial wash is gone: the bench is a lit panel now and
+       brings its own bloom, so a second glow sat behind an opaque surface
+       doing nothing but tinting the margins around it. */
     <div className="relative isolate container mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 max-w-6xl">
-      {/* Soft warm glow up top — a radial wash that fades out on every side, so
-          it blends in instead of reading as a hard-edged rectangle. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-80 bg-[radial-gradient(60%_100%_at_50%_0%,color-mix(in_oklab,var(--primary)_9%,transparent),transparent_72%)]"
-      />
       <Suspense fallback={<RehearseFallback />}>
         <RehearseHub />
       </Suspense>
