@@ -4,6 +4,7 @@ import Link from "next/link";
 import { IconUsers } from "@tabler/icons-react";
 import { Button } from "@/components/ui/button";
 import { useHouseIsAwake } from "@/hooks/useCallboardPulse";
+import { trackWhisperClicked } from "@/lib/analytics";
 
 /**
  * The Callboard's place in the chrome: an icon in the utility cluster, beside
@@ -36,6 +37,7 @@ export function CallboardLamp({ active }: { active: boolean }) {
     >
       <Link
         href="/callboard"
+        onClick={() => trackWhisperClicked("nav_lamp", { awake })}
         aria-label={
           awake
             ? `The Callboard — ${actorCount} in the house`
@@ -89,7 +91,10 @@ export function CallboardMenuRow({
     >
       <Link
         href="/callboard"
-        onClick={onNavigate}
+        onClick={() => {
+          trackWhisperClicked("nav_lamp", { awake, surface_variant: "mobile_menu" });
+          onNavigate();
+        }}
         className="flex w-full items-center justify-between"
       >
         <div className="flex items-center gap-2">

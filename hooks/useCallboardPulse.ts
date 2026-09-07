@@ -153,3 +153,54 @@ export function useHouseIsAwake(): { awake: boolean; actorCount: number } {
   }, [events, ready]);
   return { awake, actorCount };
 }
+
+/**
+ * Someone else in the house touching a piece that is on YOUR shelf.
+ *
+ * The collection is the most private screen in the product and the easiest
+ * place for an actor to feel like the only person here — it is, by definition,
+ * a page containing nothing but their own things. A generic "9 in the house"
+ * line would be true and inert there.
+ *
+ * The overlap is the whole point: "K••• is reading Lady Bracknell too" is
+ * about a piece the actor has already committed to, which is the one fact from
+ * the feed they have a stake in. Returns null far more often than not, and
+ * that is correct — this should feel like a coincidence when it happens, not
+ * like a widget that is always full.
+ */
+export function useShelfOverlap(
+  savedIds: number[]
+): { event: FeedEvent; monologueId: number } | null {
+  const { events } = useCallboardPulse();
+  // Joined so the memo is not invalidated by a new array identity on every
+  // render of the collection page.
+  const key = savedIds.join(",");
+
+  return useMemo(() => {
+    if (!key) return null;
+    const mine = new Set(key.split(",").map(Number));
+    for (const e of events) {
+      const id = e.payload.monologue_id;
+      if (!id || !mine.has(id)) continue;
+      if (e.event_type !== "viewed" && e.event_type !== "bookmarked") continue;
+      if (!e.name || e.name === "Someone") continue;
+      return { event: e, monologueId: id };
+    }
+    return null;
+  }, [events, key]);
+}
+
+/** How much the house did today, for surfaces that have no better hook into
+    the actor's own things. Counts only doing, never arriving: "6 saved today"
+    is evidence the room works, "6 signed up" is evidence only that marketing
+    works. */
+export function useHouseActivity(): { saves: number; searches: number } {
+  const { events } = useCallboardPulse();
+  return useMemo(
+    () => ({
+      saves: events.filter((e) => e.event_type === "bookmarked").length,
+      searches: events.filter((e) => e.event_type === "searched").length,
+    }),
+    [events]
+  );
+}

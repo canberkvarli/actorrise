@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 import { toastBookmark } from "@/lib/toast";
 import { Whisper } from "@/components/community/Whisper";
-import { useLatestSave } from "@/hooks/useCallboardPulse";
+import { useLatestSave, useShelfOverlap } from "@/hooks/useCallboardPulse";
 import { useBookmarks, useToggleFavorite } from "@/hooks/useBookmarks";
 import { useToggleMemorized } from "@/hooks/useMemorized";
 import { pickCurrent } from "@/lib/collectionMeta";
@@ -167,6 +167,13 @@ export function RehearseHub() {
         </>
       ) : null}
 
+      {/* The collection is the most private screen in the product: by
+          definition a page containing nothing but your own things, and so the
+          easiest place to feel like the only person here. This is the one
+          surface where a generic "9 in the house" would be true and inert, so
+          it only speaks when the house overlaps with the actor's OWN shelf. */}
+      {showContent && !isEmpty && <ShelfOverlapWhisper items={all} />}
+
       {showContent && <RecentlyRemoved />}
     </motion.div>
   );
@@ -185,6 +192,7 @@ function EmptyShelfWhisper() {
   if (!latest?.payload.title) return null;
   return (
     <Whisper
+      surface="shelf_empty"
       href={
         latest.payload.monologue_id
           ? `/monologue/${latest.payload.monologue_id}`
@@ -195,5 +203,33 @@ function EmptyShelfWhisper() {
       <span className="font-medium text-foreground/90">{latest.name}</span> just saved{" "}
       <span className="font-typewriter">{latest.payload.title}</span>
     </Whisper>
+  );
+}
+
+/**
+ * "K••• is reading Lady Bracknell too."
+ *
+ * Silent unless someone in the house has just touched a piece that is already
+ * on this actor's shelf, which is rare — and the rarity is the point. A line
+ * that fires every visit is a widget; one that fires occasionally is a
+ * coincidence, and a coincidence about a piece you have already committed to
+ * is the only fact from the feed you have a stake in.
+ */
+function ShelfOverlapWhisper({ items }: { items: Monologue[] }) {
+  const overlap = useShelfOverlap(items.map((m) => m.id));
+  if (!overlap) return null;
+
+  const { event, monologueId } = overlap;
+  const piece = items.find((m) => m.id === monologueId);
+  const title = piece?.character_name || event.payload.title || "a piece you saved";
+  const verb = event.event_type === "bookmarked" ? "saved" : "is reading";
+
+  return (
+    <div className="mt-8 border-t border-border/50 pt-4">
+      <Whisper surface="collection" href={`/monologue/${monologueId}`}>
+        <span className="font-medium text-foreground/90">{event.name}</span> {verb}{" "}
+        <span className="font-typewriter">{title}</span> too
+      </Whisper>
+    </div>
   );
 }

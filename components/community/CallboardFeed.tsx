@@ -8,6 +8,7 @@ import {
   type FeedEvent,
 } from "@/hooks/useCommunityFeed";
 import { useTrending } from "@/hooks/useTrending";
+import { useBookmarks } from "@/hooks/useBookmarks";
 
 /**
  * The Callboard — a stage manager's call sheet.
@@ -145,6 +146,19 @@ function toRow(e: FeedEvent): Row | null {
   }
 }
 
+
+/** The play title, unless it just repeats the character's name.
+
+    "Othello · Othello" and "Hamlet · Hamlet" read as a rendering fault, not as
+    two facts. A title-role piece genuinely has nothing to add in the second
+    column, so the column stays empty rather than echoing. */
+function subtitleFor(character?: string | null, play?: string | null): string {
+  const c = (character || "").trim().toLowerCase();
+  const p = (play || "").trim();
+  if (!p) return "";
+  return p.toLowerCase() === c ? "" : p;
+}
+
 export function CallboardFeed() {
   const { data } = useCommunityFeed(100);
   const { data: trending } = useTrending(7);
@@ -269,6 +283,14 @@ export function CallboardFeed() {
           </div>
         </header>
 
+        {/* ── Your call ────────────────────────────────────────────────────
+            Everything else on this sheet is other people. Without this the
+            board is a page an actor admires rather than one they return to:
+            nothing on it is addressed to them, so there is no reason it should
+            be open on a Tuesday. A real callboard carries the whole company's
+            names AND yours, and yours is the line you look for first. */}
+        <YourCall />
+
         {/* ── Billing + what the house wants, side by side ─────────────────
             Two things that are each too small to hold a screen on their own,
             so they share one band and the roster gets the full width below. */}
@@ -321,7 +343,7 @@ export function CallboardFeed() {
                         {m.character_name}
                       </span>
                       <span className="min-w-0 flex-1 truncate text-[var(--sheet-faint)]">
-                        {m.play_title}
+                        {subtitleFor(m.character_name, m.play_title)}
                       </span>
                     </Link>
                   </li>
@@ -488,5 +510,56 @@ function SheetSkeleton() {
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * The actor's own line on the board.
+ *
+ * Deliberately the shortest section here: it is a reminder, not a dashboard.
+ * The collection page already does inventory properly, so repeating it would
+ * only mean two screens doing one job worse. This says the one useful thing —
+ * the piece you are on — and gets out of the way.
+ *
+ * Renders nothing for an actor with an empty shelf. On the board, "you have
+ * nothing saved" would be a scolding from a page they came to for company.
+ */
+function YourCall() {
+  const { data } = useBookmarks();
+  const mine = Array.isArray(data) ? data : [];
+  if (mine.length === 0) return null;
+
+  const current = mine[0];
+  const rest = mine.length - 1;
+
+  return (
+    <section className="mt-10">
+      <SectionRule>Your call</SectionRule>
+      <div className="mt-3 border-t border-[var(--sheet-rule)]">
+        <div className="sheet-row sheet-row-hit border-b border-[var(--sheet-rule)]">
+          <Link
+            href={`/monologue/${current.id}`}
+            className="group flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-3 font-typewriter text-[13px]"
+          >
+            <span className="text-[15px] font-semibold text-[var(--sheet-ink)] sm:text-[13px]">
+              {current.character_name}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-[var(--sheet-dim)]">
+              {subtitleFor(current.character_name, current.play_title)}
+            </span>
+            <span className="shrink-0 uppercase tracking-[0.08em] text-primary">
+              Rehearse →
+            </span>
+          </Link>
+        </div>
+      </div>
+      {rest > 0 && (
+        <p className="mt-2.5 font-typewriter text-[13px] text-[var(--sheet-faint)]">
+          <Link href="/rehearse" className="underline-offset-4 hover:text-[var(--sheet-ink)] hover:underline">
+            + {rest} more on your shelf
+          </Link>
+        </p>
+      )}
+    </section>
   );
 }

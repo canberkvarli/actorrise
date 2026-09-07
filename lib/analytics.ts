@@ -313,3 +313,36 @@ export function getGaClientId(): string | null {
   const parts = match[1].split(".");
   return parts.length >= 4 ? parts.slice(-2).join(".") : null;
 }
+
+// ─── Callboard whispers ──────────────────────────────────────────────
+
+/**
+ * The Callboard's live lines, wherever they appear (search, a monologue page,
+ * the empty shelf, the collection, the nav lamp, the landing block).
+ *
+ * These shipped on a design argument and no evidence, and they are the kind of
+ * thing that is easy to admire and impossible to evaluate by looking. Two
+ * events answer the only question that matters: does a whisper on surface X
+ * get acted on, or is it decoration? `surface` is the dimension to break by —
+ * the honest outcome is that some of the surfaces earn their place and some
+ * get deleted.
+ *
+ * Impressions fire once per surface per page view, not per render, so the
+ * 25s refetch does not inflate the denominator.
+ */
+export type WhisperSurface =
+  | "search_pre"
+  | "search_empty"
+  | "monologue"
+  | "shelf_empty"
+  | "collection"
+  | "nav_lamp"
+  | "landing";
+
+export function trackWhisperShown(surface: WhisperSurface, params?: Record<string, unknown>) {
+  sendEvent("callboard_whisper_shown", { surface, ...params });
+}
+
+export function trackWhisperClicked(surface: WhisperSurface, params?: Record<string, unknown>) {
+  sendEvent("callboard_whisper_clicked", { surface, ...params });
+}

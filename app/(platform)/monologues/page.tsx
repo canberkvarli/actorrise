@@ -2181,6 +2181,18 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   {!queryInvalidReason && queryUsedForResults.trim() && (
                     <RequestQueryButton query={queryUsedForResults} className="flex items-center justify-center" />
                   )}
+                  {/* A search that found nothing is at once the loneliest
+                      moment in the product and the highest-intent one, and it
+                      was a pure dead end. The lead answers the question the
+                      actor is actually asking here — "did I do something
+                      wrong?" — with the honest no, then hands over what the
+                      house IS finding as live, clickable queries. */}
+                  <div className="mt-8 flex justify-center">
+                    <HouseIsHunting
+                      surface="search_empty"
+                      lead="Nobody else has found that today either"
+                    />
+                  </div>
                 </NoResultsState>
               )}
             </motion.div>

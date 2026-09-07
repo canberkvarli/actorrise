@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { API_URL } from "@/lib/api";
+import { trackWhisperClicked, trackWhisperShown } from "@/lib/analytics";
 
 /**
  * The house, live, on the landing page.
@@ -127,6 +128,16 @@ export function LandingCallboard() {
     if (rows.length === 8) break;
   }
 
+  /* The landing block is the only whisper a logged-out visitor ever sees, so
+     it is the one place these events measure acquisition rather than
+     engagement. Fires once, and only once there are enough rows to render. */
+  const fired = useRef(false);
+  useEffect(() => {
+    if (fired.current || rows.length < 4) return;
+    fired.current = true;
+    trackWhisperShown("landing", { row_count: rows.length });
+  }, [rows.length]);
+
   /* Nothing at all rather than an empty frame. A landing page proving the
      product is alive must not ship a section captioned "right now" above six
      blank rows on the one night traffic is thin. */
@@ -171,7 +182,11 @@ export function LandingCallboard() {
 
       <p className="mt-5 font-typewriter text-xs text-muted-foreground/70">
         First initials only. Actors can keep themselves off the board at any time.{" "}
-        <Link href="/signup" className="text-primary underline-offset-4 hover:underline">
+        <Link
+          href="/signup"
+          onClick={() => trackWhisperClicked("landing", { target: "signup" })}
+          className="text-primary underline-offset-4 hover:underline"
+        >
           Join them →
         </Link>
       </p>
