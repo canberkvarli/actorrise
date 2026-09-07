@@ -47,7 +47,13 @@ logger = logging.getLogger(__name__)
 # v15: per-result scores on the pgvector path now carry real cosine similarity
 # instead of rank position, so the 0.30 relevance floor finally bites. Cached
 # rank-based scores would mask the fix, so the cache is invalidated.
-CACHE_VERSION = "15"
+# v16: naming only an AUTHOR is a lookup now, not a vector query. Asking the
+# index what "shakespeare monologue" resembles returned 23 candidates from 5
+# plays, 17 of them Hamlet, out of 1,689 Shakespeare pieces; the page was 10/16
+# Hamlet with one speech on it twice. It is 18 pieces from 12 plays through the
+# lookup, and warhorses no longer open a browse page. Old entries hold the
+# Hamlet-heavy pages, so they have to go.
+CACHE_VERSION = "16"
 
 
 class CacheManager:

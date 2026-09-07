@@ -18,9 +18,22 @@ resolution, shared by the search endpoint and scripts/run_golden_search.py.
 from __future__ import annotations
 
 import difflib
+import logging
 import re
 import time
 from typing import Dict, Iterable, Optional
+
+logger = logging.getLogger(__name__)
+
+#: overdone_score above which the card says "everyone brings this".
+#: Mirrors overdoneBand() in lib/poster.ts — the two must agree, or the
+#: page demotes a piece it does not visibly flag, or flags one it led with.
+_WARHORSE_SCORE = 0.8
+#: Pieces from one play on a browse page. Deliberately tighter than the
+#: vector path's MAX_PER_PLAY=2 is able to be in practice: there the cap
+#: is advisory (overflow is appended and the caller's slice pulls it
+#: back), here the pool is wide enough for it to actually hold.
+_BROWSE_MAX_PER_PLAY = 3
 
 # Canonical title -> medium. Membership in the library is NOT considered here;
 # compute_content_gap() suppresses the gap when the results contain the title.
@@ -422,7 +435,49 @@ def find_title_monologues(db, title: str, filters: Optional[dict] = None,
     filters = filters or {}
     if not prepass_can_honour(filters, title):
         return []
+    return _lookup_over_plays(db, title_norm=norm, filters=filters, limit=limit)
 
+
+def find_author_monologues(db, author: str, filters: Optional[dict] = None,
+                           limit: int = 20) -> list:
+    """The monologues of `author`, best-first. Empty when we carry none.
+
+    Naming an author is a lookup, exactly as naming a show is, and for the
+    same reason: the author's name does not appear in their own dialogue, so
+    asking the vector index what "shakespeare monologue" is *similar to*
+    returns whatever text is most Shakespeare-ish — which is Hamlet.
+
+    Measured on 2026-09-07: "shakespeare monologue" retrieved a candidate pool
+    of 23 pieces from 5 plays, 17 of them Hamlet, out of the 1,689 Shakespeare
+    pieces the library holds. The page came back 10/16 Hamlet with the same
+    speech on it twice. diversify_by_play could not save it — a cap of 2 per
+    play cannot fill 18 slots from 5 plays, so the overflow it sank to the
+    back was pulled straight back up by the caller's [:limit].
+
+    The fix is not a better cap, it is not doing a similarity search for a
+    question that has an exact answer.
+    """
+    if db is None or not author or not author.strip():
+        return []
+    filters = filters or {}
+    merged = dict(filters)
+    merged["author"] = author.strip()
+    # Same fail-closed guard the title path uses; the title argument only feeds
+    # the film/TV word-gate exemption, which an author lookup wants too.
+    if not prepass_can_honour(merged, author):
+        return []
+    return _lookup_over_plays(db, title_norm=None, filters=merged, limit=limit,
+                              browsing=True)
+
+
+def _lookup_over_plays(db, title_norm: Optional[str], filters: dict,
+                       limit: int, browsing: bool = False) -> list:
+    """Shared body: resolve matching plays, then their shippable monologues.
+
+    `title_norm` None means "every play the other filters allow" — which is
+    how the author lookup gets the whole of an author's shelf instead of the
+    handful a vector query happens to surface.
+    """
     from sqlalchemy import or_ as sa_or
     from sqlalchemy import text as sa_text
     from sqlalchemy.orm import joinedload, undefer
@@ -432,10 +487,16 @@ def find_title_monologues(db, title: str, filters: Optional[dict] = None,
                                                      era_year_clause,
                                                      review_hides_from_search)
 
-    expr = "regexp_replace(lower(p.title), '[^\\w\\s]', '', 'g')"
-    expr = f"regexp_replace({expr}, '^(the|a|an)\\s+', '')"
-    sql = f"SELECT p.id FROM plays p WHERE {expr} = :n"
-    params: Dict[str, object] = {"n": norm}
+    params: Dict[str, object] = {}
+    if title_norm is not None:
+        expr = "regexp_replace(lower(p.title), '[^\\w\\s]', '', 'g')"
+        expr = f"regexp_replace({expr}, '^(the|a|an)\\s+', '')"
+        sql = f"SELECT p.id FROM plays p WHERE {expr} = :n"
+        params["n"] = title_norm
+    else:
+        # Author lookup. The author predicate below is not optional here — the
+        # caller always sets it — so this never degrades to "every play".
+        sql = "SELECT p.id FROM plays p WHERE TRUE"
     # source_type narrows which play rows count, so it is applied here rather
     # than against the monologues.
     source_type = filters.get("source_type")
@@ -534,7 +595,11 @@ def find_title_monologues(db, title: str, filters: Optional[dict] = None,
         rows = q.all()
     except Exception:
         # A failed pre-pass must degrade to the normal vector path, never to a
-        # broken search.
+        # broken search — but silently is how a real fault in here reads as
+        # "we carry nothing for that", which is indistinguishable from an
+        # empty library and cost an afternoon to find once.
+        logger.warning("title/author pre-pass failed, falling back to vector",
+                       exc_info=True)
         return []
 
     keep = [m for m in rows if not review_hides_from_search(m.review_status)]
@@ -544,7 +609,49 @@ def find_title_monologues(db, title: str, filters: Optional[dict] = None,
             m.id,
         )
     )
-    return keep[:limit]
+
+    if not browsing:
+        return keep[:limit]
+
+    # Browsing an author is not the same request as naming a show.
+    # Two adjustments, both only for the browse case:
+    #
+    # 1. Warhorses stop leading. The card labels these "everyone brings this",
+    #    which is the product telling the actor not to bring it — and the page
+    #    was then ranking them first, so it sold and warned on the same row.
+    #    They stay on the page (they are real pieces, and someone browsing
+    #    Shakespeare may well want Hamlet); they just do not open it. If the
+    #    actor NAMED the show or the character, famous is what they asked for,
+    #    which is why this does not apply to those lookups.
+    #
+    # 2. A hard cap per play, applied against the page rather than sunk below
+    #    it. diversify_by_play appends its overflow, so the caller's [:limit]
+    #    pulls it straight back — fine when the pool is wide, useless when it
+    #    is one play deep. Here the pool IS wide (1,689 Shakespeare pieces
+    #    across ~40 plays), so the cap can simply hold.
+    warhorse = lambda m: (m.overdone_score or 0) > _WARHORSE_SCORE  # noqa: E731
+    keep.sort(key=lambda m: (warhorse(m),))
+
+    page: list = []
+    spill: list = []
+    per_play: Dict[object, int] = {}
+    for m in keep:
+        play = getattr(m, "play", None)
+        title = getattr(play, "title", None) if play else None
+        if title is None:
+            page.append(m)
+        elif per_play.get(title, 0) < _BROWSE_MAX_PER_PLAY:
+            per_play[title] = per_play.get(title, 0) + 1
+            page.append(m)
+        else:
+            spill.append(m)
+        if len(page) >= limit:
+            break
+    # Only top up from the spill if the shelf genuinely could not fill the
+    # page — a thin author should still return everything we hold.
+    if len(page) < limit:
+        page.extend(spill[: limit - len(page)])
+    return page[:limit]
 
 
 # Words that surround a title without being part of one. Stripped so "the

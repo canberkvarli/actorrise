@@ -38,6 +38,7 @@ from app.services.search.title_lookup import (compute_content_gap,
                                               detect_catalogue_title,
                                               detect_title_lookup,
                                               find_character_monologues,
+                                              find_author_monologues,
                                               find_title_monologues,
                                               promote_title_matches)
 from app.services.search.scene_intent import detect_two_person_scene_intent
@@ -208,6 +209,36 @@ class PlayResponse(BaseModel):
 
 class FavoriteNoteUpdate(BaseModel):
     notes: Optional[str] = None
+
+
+#: Words that carry no search intent of their own around an author's name, so
+#: "shakespeare monologue" and "monologues by shakespeare" both read as "show
+#: me this author" rather than as a description of a piece.
+_AUTHOR_QUERY_FILLER = {
+    "monologue", "monologues", "monolog", "speech", "speeches", "piece",
+    "pieces", "audition", "auditions", "by", "from", "for", "the", "a", "an",
+    "of", "some", "any", "good", "best", "classical", "play", "plays",
+}
+
+
+def _query_is_only_author(query: str, author: str) -> bool:
+    """True when the query names an author and nothing else that narrows it.
+
+    "shakespeare monologue" yes; "shakespeare monologue about grief" no — the
+    leftover words are a real similarity question and belong to the vector
+    path. Compared on bare alphanumeric tokens so punctuation and the stored
+    "William Shakespeare" against a typed "shakespeare" both fold together.
+    """
+    if not query or not author:
+        return False
+    tokens = {t for t in re.sub(r"[^a-z0-9\s]", " ", query.lower()).split() if t}
+    author_tokens = {
+        t for t in re.sub(r"[^a-z0-9\s]", " ", author.lower()).split() if t
+    }
+    if not tokens:
+        return False
+    leftover = tokens - author_tokens - _AUTHOR_QUERY_FILLER
+    return not leftover
 
 
 def _monologue_to_response(
@@ -499,6 +530,31 @@ async def search_monologues(
                     db, char_hit["names"], filters=filters, limit=fetch_limit
                 )
 
+            # The query may name only an AUTHOR ("shakespeare monologue",
+            # reachable in one tap from the Shakespeare starting point). Same
+            # lookup-not-similarity logic again, and the most extreme case of
+            # it: asking the vector index what is similar to "shakespeare"
+            # returns whatever text is most Shakespeare-ish, which is Hamlet.
+            #
+            # Measured 2026-09-07: that query retrieved 23 candidates from 5
+            # plays — 17 of them Hamlet — out of the 1,689 Shakespeare pieces
+            # the library holds, and the page came back 10/16 Hamlet with the
+            # same speech on it twice. Through the lookup it is 18 pieces from
+            # 12 plays. Only runs when the author is ALL the query named: with
+            # real words left over ("shakespeare monologue about grief") the
+            # similarity question is the right one and the vector path keeps it.
+            author_rows: list[Monologue] = []
+            author_filter = (filters or {}).get("author")
+            if (
+                not title_rows
+                and author_filter
+                and isinstance(author_filter, str)
+                and _query_is_only_author(search_q, author_filter)
+            ):
+                author_rows = find_author_monologues(
+                    db, author_filter, filters=filters, limit=fetch_limit
+                )
+
             # Prefer whichever pre-pass better answers the lookup: more pieces
             # wins. A bare "hamlet" matches both a 1-shell "Hamlet" play row and
             # the character Hamlet's 67 pieces — the character set is what the
@@ -509,6 +565,10 @@ async def search_monologues(
                 prepass_rows, prepass_kind = title_rows, "title"
             elif char_rows:
                 prepass_rows, prepass_kind = char_rows, "character"
+            elif author_rows:
+                # Last: naming a show or a character is more specific than
+                # naming who wrote it, so either of those wins the page.
+                prepass_rows, prepass_kind = author_rows, "author"
             else:
                 prepass_rows, prepass_kind = [], None
 
