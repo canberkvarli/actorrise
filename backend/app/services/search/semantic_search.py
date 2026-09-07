@@ -1545,9 +1545,17 @@ class SemanticSearch:
             # Add semantic-only matches
             combined_with_scores.extend(semantic_only)
 
-            # Sort by score descending and take top limit
+            # Sort by score descending, cap pieces-per-play, then take the page.
+            #
+            # The semantic pool is diversified above, but that happens BEFORE the
+            # text matches are merged in, and this sort then undid it. Searching
+            # "war" on the Plays tab returned 20 pieces of which 14 were Edward
+            # the Second, even though the pool handed to diversify_by_play held
+            # 14 distinct plays and no Edward the Second at all: it arrived on
+            # the text side, which never passed the cap. Capping here, after the
+            # merge, is the only point that sees everything that reaches the page.
             combined_with_scores.sort(key=lambda x: x[1], reverse=True)
-            top_results = combined_with_scores[:limit]
+            top_results = diversify_by_play(combined_with_scores)[:limit]
 
             logger.debug(
                 "Hybrid: %s text + %s semantic = %s combined, top %s after sorting",
