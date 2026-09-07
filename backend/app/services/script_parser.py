@@ -130,13 +130,39 @@ _EXCLUDE_PATTERNS = [
         r'^INT\.', r'^EXT\.', r'^COLD\s+OPEN', r'^TEASER', r'^TAG\b',
         r'^FADE\s+(IN|OUT|TO)', r'^CUT\s+TO', r'^DISSOLVE',
         r'^CONTINUED', r'^END\s+OF', r'^(A\s+)?MONTAGE\b',
+
+        # An edition's apparatus, which arrives looking exactly like a cue.
+        # Measured across 40 corpus plays: cast lists came back holding
+        # Wilde's setting headers, a table of contents, act headings written
+        # out in words, roman numerals off a scene list and stray initials
+        # left by footnote markers. None of them is a part.
+        #
+        # What must NOT be here: ALL, BOTH, VOICES, MEN, OMNES (a crowd is
+        # cued somehow), PROLOGUE, CHORUS and EPILOGUE (real parts, and
+        # Quince speaks as Prologue), and anything two letters long, because
+        # PA and MA are somebody's parents.
+        r'^(CHARACTERS?|PERSONS?|DRAMATIS\s+PERSONAE|CAST)\b',
+        r'^(INTRODUCTION|PREFACE|CONTENTS|FOOTNOTES?|NOTES?|APPENDIX|BIBLIOGRAPHY)$',
+        r'^(TIME|PLACE|SETTING|SCENERY|SYNOPSIS|ARGUMENT|PERIOD)$',
+        r'^THE\s+(FIRST|SECOND|THIRD|FOURTH|FIFTH|SIXTH)\s+ACT$',
+        r'^(ACT|SCENE|CURTAIN|FINIS|THE\s+END)$',
+        r'^[IVXLCDM]+$',                 # III, IV, V off a scene list
+        r'^[A-Z]$',                      # a lone initial from a footnote
+        # A title left stranded when a cast-list line was cut at its full stop.
+        # LORD, LADY and SIR are deliberately absent: they are whole words and
+        # whole parts. Hamlet Act 5 Scene 2 has a Lord who comes in with a
+        # message, and excluding him cost him all three of his speeches.
+        r'^(MR|MRS|MS|DR|ST|REV|CAPT|COL|GEN|MAJ|SGT|LT|PROF|FR)$',
     ]
 ]
 
 
 def _is_excluded(name: str) -> bool:
     # A shooting script numbers its slug lines ("18 INT/EXT. COURTHOUSE").
-    return any(p.match(re.sub(r'^\d+\s+', '', name)) for p in _EXCLUDE_PATTERNS)
+    stripped = re.sub(r'^\d+\s+', '', (name or "").strip()).rstrip('.:').strip()
+    if not stripped:
+        return True
+    return any(p.match(stripped) for p in _EXCLUDE_PATTERNS)
 
 
 # Lines that look like stage directions even when not in brackets
