@@ -23,6 +23,7 @@ import api from "@/lib/api";
 import { Monologue } from "@/types/actor";
 import { motion, AnimatePresence } from "framer-motion";
 import { TrendingPreSearch } from "@/components/monologue/TrendingPreSearch";
+import { HouseIsHunting } from "@/components/community/HouseIsHunting";
 import { ForYouShelf } from "@/components/monologue/ForYouShelf";
 import { SearchCurtain } from "@/components/monologue/SearchCurtain";
 // A ticket stub for "nothing on this bill" — the masks were already doing duty
@@ -1511,6 +1512,20 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
     >
+      {/* Directly under the search bar, and first.
+          An empty search box is the loneliest screen we own, and this is the
+          only thing on the page saying other actors are here tonight. It also
+          happens to be the best answer to "what do I type?" — eight queries
+          real people ran today, each one live. Both of those jobs are done at
+          the search bar and nowhere else: placed further down (it was
+          originally below the shelves, 1158px in) it was past the fold on
+          every laptop and might as well not have existed.
+          It is two lines tall and renders nothing when the house is quiet, so
+          it costs the shelves below almost no room and never advertises the
+          silence. */}
+      <div className="mb-8">
+        <HouseIsHunting />
+      </div>
       {/* Personalization, surfaced by default (not hidden behind "Find for
           me"): profile-havers rehearse ~1.6x more. Recruits a profile when
           there isn't one. Plays only — film/TV recs are separate. */}

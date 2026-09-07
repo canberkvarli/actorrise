@@ -77,6 +77,7 @@ import {
 } from "@/lib/changelog";
 import { LastAuthProviderSync } from "@/components/auth/LastAuthProviderSync";
 import { AppLaunchBar } from "@/components/landing/AppLaunchBar";
+import { CallboardLamp } from "@/components/community/CallboardLamp";
 
 function cleanImageUrl(url: string) {
   return url.trim().split("?")[0].split("#")[0];
@@ -337,6 +338,15 @@ export default function PlatformLayout({
                   </Button>
                 );
               })}
+              {/* The Callboard, as a lamp rather than a tab.
+
+                  It is a place to feel something, not a task, so it does not
+                  deserve a fifth top-level label competing with the three
+                  things people came to do — and a nav item would have been its
+                  second entry point in the entire app, which is how a page
+                  stays unvisited. A lit dot says the room is occupied and
+                  costs one icon's worth of space. */}
+              <CallboardLamp active={pathname === "/callboard"} />
               {user?.is_moderator && (
                 <Button
                   asChild

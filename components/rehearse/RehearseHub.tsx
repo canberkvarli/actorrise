@@ -10,6 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import api from "@/lib/api";
 import { toastBookmark } from "@/lib/toast";
+import { Whisper } from "@/components/community/Whisper";
+import { useLatestSave } from "@/hooks/useCallboardPulse";
 import { useBookmarks, useToggleFavorite } from "@/hooks/useBookmarks";
 import { useToggleMemorized } from "@/hooks/useMemorized";
 import { pickCurrent } from "@/lib/collectionMeta";
@@ -132,6 +134,12 @@ export function RehearseHub() {
           <Button onClick={() => router.push("/monologues")}>
             Find monologues
           </Button>
+          {/* What this drawer is for, demonstrated by a real actor instead of
+              explained. "Save a monologue and it'll show up here" is
+              instruction; "Kylie saved Lady Bracknell's speech" is evidence
+              that the shelf is a thing people actually fill. Silent when
+              nobody has saved anything recently. */}
+          <EmptyShelfWhisper />
         </div>
       ) : current ? (
         <>
@@ -161,5 +169,31 @@ export function RehearseHub() {
 
       {showContent && <RecentlyRemoved />}
     </motion.div>
+  );
+}
+
+/**
+ * The empty shelf's whisper.
+ *
+ * An empty state is where a new actor decides whether this product is alive or
+ * abandoned, and ours was answering that question with instructional copy. One
+ * real person having just saved one real piece settles it better than any
+ * sentence beginning "Save a monologue and…".
+ */
+function EmptyShelfWhisper() {
+  const latest = useLatestSave();
+  if (!latest?.payload.title) return null;
+  return (
+    <Whisper
+      href={
+        latest.payload.monologue_id
+          ? `/monologue/${latest.payload.monologue_id}`
+          : "/callboard"
+      }
+      className="mt-1"
+    >
+      <span className="font-medium text-foreground/90">{latest.name}</span> just saved{" "}
+      <span className="font-typewriter">{latest.payload.title}</span>
+    </Whisper>
   );
 }

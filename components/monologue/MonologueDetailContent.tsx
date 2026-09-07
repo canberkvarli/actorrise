@@ -11,6 +11,8 @@ import { GhostLightSketch } from "@/components/brand/sketches";
 import { isBibliographicText, stageDirectionPercentage } from "@/lib/monologueText";
 import { posterAt, overdoneBand } from "@/lib/poster";
 import { PlayCover, clothFor } from "@/components/monologue/PlayCover";
+import { PieceWhisper } from "@/components/community/Whisper";
+import { usePieceActivity } from "@/hooks/useCallboardPulse";
 
 export interface MonologueDetailContentProps {
   monologue: Monologue;
@@ -285,6 +287,14 @@ export function MonologueOneSheet({
               ))}
               <OverdoneOnDark score={monologue.overdone_score} />
             </div>
+
+            {/* "Is this piece any good?" answered with evidence rather than a
+                score, at the moment the actor is deciding. Deliberately a fact
+                about a person and not a view count: the pulse only sees a
+                window of recent events, so any number here would quietly
+                undercount. Absent whenever nobody has touched this piece
+                lately, which is most pieces most of the time. */}
+            <PieceActivityLine monologueId={monologue.id} tone="dark" />
           </div>
         </div>
 
@@ -410,6 +420,12 @@ export function MonologueHeader({
           {monologue.scene_description}
         </p>
       )}
+
+      {/* Plays reach this header, not the poster one-sheet, and the whisper was
+          originally only wired into the one-sheet — so it never appeared on the
+          two-thirds of the corpus that has no poster. On the light canvas it
+          takes the default tone rather than the over-poster one. */}
+      {standalone && <PieceActivityLine monologueId={monologue.id} />}
     </header>
   );
 }
@@ -544,6 +560,29 @@ export function MonologueDetailContent({
       <MonologueHeader monologue={monologue} headerActions={headerActions} />
       <MonologueBody monologue={monologue} />
       <MonologueFooter monologue={monologue} onEdit={onEdit} />
+    </div>
+  );
+}
+
+/**
+ * Recent activity on this specific monologue, laid over the poster hero.
+ *
+ * Split into its own component so the hook lives behind the null check rather
+ * than in the page body: most monologues have no recent activity, and this
+ * should cost them nothing but an early return.
+ */
+function PieceActivityLine({
+  monologueId,
+  tone = "default",
+}: {
+  monologueId: number;
+  tone?: "default" | "dark";
+}) {
+  const activity = usePieceActivity(monologueId);
+  if (!activity) return null;
+  return (
+    <div className={tone === "dark" ? "mt-3" : "mt-1"}>
+      <PieceWhisper latest={activity.latest} others={activity.others} tone={tone} />
     </div>
   );
 }
