@@ -173,6 +173,12 @@ export interface MonologueSpeechProps {
   /** False when every row in the result set carries the same match type — see
    *  matchMarkIsUseful. */
   showMatchMark?: boolean;
+  /** Facts the list has already stated once above the results because every
+   *  row shares them — see constantFacts. The same argument as showMatchMark,
+   *  applied to the source line: "shakespeare monologue" printed "William
+   *  Shakespeare" and "classical" on all 18 rows, and a fact that never varies
+   *  within a result set is something to read past, not something to read. */
+  omit?: { author?: boolean; era?: boolean };
 }
 
 export function MonologueSpeech({
@@ -185,8 +191,9 @@ export function MonologueSpeech({
   mode = "plays",
   profileMatch,
   showMatchMark = true,
+  omit,
 }: MonologueSpeechProps) {
-  const author = displayableAuthor(mono.author);
+  const author = omit?.author ? null : displayableAuthor(mono.author);
   const source = [mono.play_title, author].filter(Boolean).join(", ");
   const length = clock(mono.estimated_duration_seconds);
   const age =
@@ -205,7 +212,10 @@ export function MonologueSpeech({
    *  and TV rows carry other things in the same column, and "drama piece" next
    *  to a play title would read as a genre claim the data cannot back. */
   const rawEra = (mono.category || "").trim().toLowerCase();
-  const era = rawEra === "classical" || rawEra === "contemporary" ? rawEra : null;
+  const era =
+    omit?.era || !(rawEra === "classical" || rawEra === "contemporary")
+      ? null
+      : rawEra;
 
   const body = mono.text.replace(/\s+/g, " ").trim();
   const shown = excerpt(body);

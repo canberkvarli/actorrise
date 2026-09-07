@@ -37,6 +37,7 @@ import { addSearchToHistory, getSearchById } from "@/lib/searchHistory";
 import { MonologueDetailContent } from "@/components/monologue/MonologueDetailContent";
 import { MonologueText } from "@/components/monologue/MonologueText";
 import { MonologueSpeech, matchMarkIsUseful } from "@/components/monologue/MonologueSpeech";
+import { constantFacts, constantFactsLabel } from "@/lib/resultFacts";
 import { SearchFiltersSheet, getDurationLabel } from "@/components/search/SearchFiltersSheet";
 import { accentTeal } from "@/components/search/MatchIndicatorTag";
 import { BookmarkIcon } from "@/components/ui/bookmark-icon";
@@ -83,6 +84,23 @@ export default function MonologuesPage() {
     }>
       <SearchContent />
     </Suspense>
+  );
+}
+
+/**
+ * What every result on this page has in common, said once.
+ *
+ * The rows no longer repeat it — see constantFacts. Set as a stage direction
+ * rather than a heading, because it is an aside about the page rather than a
+ * section of it: the actor is looking for the piece that differs, and this is
+ * the part that does not.
+ */
+function SharedFactsLine({ label }: { label: string | null }) {
+  if (!label) return null;
+  return (
+    <p className="stage-direction mb-5 text-sm text-muted-foreground/70">
+      (all {label}.)
+    </p>
   );
 }
 
@@ -1388,6 +1406,23 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
   const playsMatchMark = useMemo(() => matchMarkIsUseful(results), [results]);
   const filmTvMatchMark = useMemo(() => matchMarkIsUseful(filmTvResults), [filmTvResults]);
 
+  /* The same argument, applied to the source line. "shakespeare monologue"
+     printed "William Shakespeare" and "classical" on all eighteen rows; a fact
+     that never varies inside a result set is something the eye has to read
+     past on every row to reach the part that differs. Said once above the
+     results instead, and left off the rows. Worked out per result set, because
+     a row cannot know what the rows around it say. */
+  const playsFacts = useMemo(() => constantFacts(results), [results]);
+  const filmTvFacts = useMemo(() => constantFacts(filmTvResults), [filmTvResults]);
+  const playsShared = useMemo(
+    () => ({ author: !!playsFacts.author, era: !!playsFacts.era }),
+    [playsFacts],
+  );
+  const filmTvShared = useMemo(
+    () => ({ author: !!filmTvFacts.author, era: !!filmTvFacts.era }),
+    [filmTvFacts],
+  );
+
   const isPersonalized = !!(
     profileData?.profile_bias_enabled &&
     ((profileData.preferred_genres?.length ?? 0) > 0 || profileData.experience_level || profileData.training_background)
@@ -2110,6 +2145,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                        either. The poster thumbnail goes with the card; the
                        speech is the thing being chosen. */
                     <div>
+                      <SharedFactsLine label={constantFactsLabel(filmTvFacts)} />
                       {filmTvDisplay.map((mono, idx) => (
                         <MonologueSpeech
                           key={mono.id}
@@ -2118,6 +2154,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                           mode="film_tv"
                           profileMatch={profileMatchMap.get(mono.id)}
                           showMatchMark={filmTvMatchMark}
+                          omit={filmTvShared}
                           onSelect={() => openMonologue(mono, idx, "film_tv")}
                           onToggleFavorite={toggleFavorite}
                           isModerator={!!user?.is_moderator}
@@ -2394,12 +2431,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     mode="plays"
                     profileMatch={profileMatchMap.get(mono.id)}
                     showMatchMark={playsMatchMark}
+                    omit={playsShared}
                     isModerator={!!user?.is_moderator}
                     onEdit={user?.is_moderator ? (id) => setEditMonologueId(id) : undefined}
                   />
                 );
                 return (
                   <>
+                    <SharedFactsLine label={constantFactsLabel(playsFacts)} />
                     {!showBookmarkedOnly && showConfidence && bestMatches.length > 0 && (
                       <p className="mb-6 flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
                         <span aria-hidden className="inline-block h-3 w-0.5 bg-primary" />
