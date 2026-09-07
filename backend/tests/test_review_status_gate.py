@@ -31,23 +31,28 @@ class ReviewStatusGateTests(unittest.TestCase):
 
 
 class RetirementStatusTests(unittest.TestCase):
-    """Three reasons to hide a row, kept apart so each stays countable.
+    """Four reasons to hide a row, kept apart so each stays countable.
 
     'pending' feeds /admin/monologues/review, and it is the one a human has to
     work through. Retiring six thousand clip-length rows into that same status
     would have buried the handful that actually need reading, which is why
     'too_short' and 'not_monologue' exist alongside it rather than reusing it.
+    'duplicate' joined them on 2026-09-07: 267 rows that are the same speech as
+    another id, from a play scraped twice.
     """
 
-    def test_all_three_hide(self):
-        for status in ("pending", "too_short", "not_monologue"):
+    def test_all_four_hide(self):
+        for status in ("pending", "too_short", "not_monologue", "duplicate"):
             with self.subTest(status=status):
                 self.assertTrue(review_hides_from_search(status))
 
-    def test_the_set_is_exactly_these_three(self):
+    def test_the_set_is_exactly_these_four(self):
+        # Pinned deliberately. review_hides_from_search shows anything OUTSIDE
+        # this set, so marking rows with a status the set does not carry
+        # retires nothing at all and does it silently.
         self.assertEqual(
             HIDDEN_REVIEW_STATUSES,
-            frozenset({"pending", "too_short", "not_monologue"}),
+            frozenset({"pending", "too_short", "not_monologue", "duplicate"}),
         )
 
     def test_only_pending_belongs_to_the_admin_queue(self):

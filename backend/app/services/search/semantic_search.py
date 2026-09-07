@@ -148,10 +148,24 @@ FILM_TV_MIN_WORDS = 50
 #:   'not_monologue' — a two-hander stored as a monologue. Found by measuring
 #:                     `text_segments`: when a quarter of the spoken words are
 #:                     another character's `interjection`, it is a scene.
+#:   'duplicate'     — the same speech, already in the library under another
+#:                     id, because the play was scraped from two sources. Not
+#:                     byte-identical: one edition sets `’tis` where the other
+#:                     sets `'tis`, one uses `--` where the other uses a comma,
+#:                     which is why hashing the text found 9 and matching on
+#:                     play + character + opening found 263. The surviving copy
+#:                     is chosen so a piece already in someone's collection is
+#:                     never the one retired.
 #:
 #: Kept apart so the retirement of six thousand short rows does not bury the
 #: handful of genuinely broken ones in a review queue no one can then face.
-HIDDEN_REVIEW_STATUSES = frozenset({"pending", "too_short", "not_monologue"})
+#:
+#: Adding a status here is not optional bookkeeping: review_hides_from_search
+#: shows anything OUTSIDE this set, so a row marked with a status the set does
+#: not know about stays in search and the retirement silently does nothing.
+HIDDEN_REVIEW_STATUSES = frozenset(
+    {"pending", "too_short", "not_monologue", "duplicate"}
+)
 
 #: Filters the UI sets on the actor's behalf rather than ones they chose. The
 #: Plays / Film & TV tab is always on, so treating source_type as a deliberate
