@@ -220,9 +220,13 @@ export default function ProfileOnboardingFlow({
   // the wrong answer.
   const stepValid = useMemo(() => {
     switch (questions[step]?.key) {
-      case "referral": return !!referral;
       // Optional: Continue stays live with nothing picked, so nobody is stopped
-      // at signup by a question that only exists for my own bookkeeping.
+      // at signup by a question that only exists for my own bookkeeping. That
+      // was written about accountType and is truer of referral, which is
+      // bookkeeping and nothing else — and which users.referrer has captured
+      // by itself since 2026-09-06. Leaving Continue dead here made the first
+      // screen a stranger ever sees a wall they had to answer to get past.
+      case "referral": return true;
       case "accountType": return true;
       case "casting": return !!casting;
       case "ageRange": return !!ageRange;
@@ -231,7 +235,8 @@ export default function ProfileOnboardingFlow({
       case "stage": return !!stage;
       default: return false;
     }
-  }, [questions, step, referral, casting, ageRange, workOn, mediums, stage]);
+    // `referral` is deliberately not a dependency: it no longer gates Continue.
+  }, [questions, step, casting, ageRange, workOn, mediums, stage]);
 
 
   const goTo = useCallback((delta: number) => {
@@ -299,11 +304,27 @@ export default function ProfileOnboardingFlow({
     [endFlow, router]
   );
 
-  // The one required answer. No Skip on this step: it is a single tap with an
-  // "Somewhere else" escape hatch, and an attribution answer cannot be
-  // reconstructed later the way the profile ones can. Every step after it
-  // stays skippable.
-  const referralRequired = variant === "new" && questions[step]?.key === "referral";
+  // Every step is skippable, including this one.
+  //
+  // The referral tap was made required on 2026-08-19 (125612bd) on the
+  // reasoning that an attribution answer cannot be reconstructed later the way
+  // the profile ones can. That reasoning has since expired twice over, and the
+  // cost of it is visible by weekly signup cohort:
+  //
+  //   week of      finished onboarding      finished the profile
+  //   2026-08-03           98%                      67%
+  //   2026-08-10           97%                      72%
+  //   2026-08-17           90%                      60%   <- made required
+  //   2026-08-24           83%                      48%
+  //   2026-08-31           74%                      53%
+  //
+  // Search and rehearsal rates held flat across those same weeks, so this is
+  // not traffic quality; it is the wall. The answer is now reconstructable:
+  // users.referrer and utm_* have captured first touch automatically since
+  // 2026-09-06, and 8 of the first 9 signups after that deploy carried a real
+  // referrer. So the one question a stranger must answer before seeing
+  // anything was buying data we already collect.
+  const referralRequired = false;
 
   const dots = useMemo(() => Array.from({ length: totalSteps }), [totalSteps]);
 
