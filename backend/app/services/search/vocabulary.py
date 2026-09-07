@@ -32,6 +32,18 @@ CORPUS_AGE_VALUES: Tuple[str, ...] = (
     "20-30", "30-40", "40-50", "child", "any",
 )
 
+# Tone values genuinely present in `monologues.tone`, most common first.
+# Snapshot from production 2026-09-07. The column was never constrained, so it
+# also holds "determined" and "mystical" at one row each — the residue of an
+# ingest that made its own vocabulary up. They are deliberately NOT listed:
+# a tone nothing else carries is a tone no filter will ever ask for, so
+# writing another one is writing a row out of the filters.
+CORPUS_TONE_VALUES: Tuple[str, ...] = (
+    "anguished", "defiant", "dramatic", "contemplative", "comedic", "dark",
+    "philosophical", "sarcastic", "inspirational", "melancholic", "romantic",
+    "joyful",
+)
+
 # The bands the actor profile can store — see lib/profileOptions.ts AGE_RANGES.
 # Keep in step with that list; the test fails if a band maps to nothing real.
 PROFILE_AGE_TO_CORPUS: Dict[str, Tuple[str, ...]] = {
