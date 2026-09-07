@@ -573,9 +573,19 @@ interface SceneWithLines {
 
 /* ─── Component ──────────────────────────────────────────────────────── */
 
-export default function RehearsalPage() {
-  if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
-
+/**
+ * The feature gate lives in the wrapper at the foot of this file, not here.
+ *
+ * It used to be the first line of this function, above every hook in it, which
+ * is a conditional hook call: React requires the same hooks in the same order
+ * on every render, and an early return above them breaks that promise. It never
+ * fired, because SCRIPTS_FEATURE_ENABLED is a hardcoded true, so nothing ever
+ * went wrong. What it cost was the warning: 160 rules-of-hooks errors on the
+ * page where rehearsal actually happens, which is 160 places for a real one to
+ * hide. Gating a component from outside it keeps the hooks unconditional and
+ * the gate exactly as effective.
+ */
+function RehearsalPageInner() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -3208,4 +3218,9 @@ export default function RehearsalPage() {
       </Dialog>
     </div>
   );
+}
+
+export default function RehearsalPage() {
+  if (!SCRIPTS_FEATURE_ENABLED) return <UnderConstructionScripts />;
+  return <RehearsalPageInner />;
 }
