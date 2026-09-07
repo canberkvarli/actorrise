@@ -512,10 +512,30 @@ async def search_monologues(
             # find_title_monologues decides for itself whether it can honour
             # the active filters, and returns nothing when it cannot.
             title_rows: list[Monologue] = []
+            crossed_tab = False
             if title_hit:
                 title_rows = find_title_monologues(
                     db, title_hit["title"], filters=filters, limit=fetch_limit
                 )
+                # The actor named a show we carry and got an empty screen,
+                # because they were standing on the Plays tab and the show is
+                # filed under film or TV. Replaying the last 30 days of failed
+                # searches, this was 5 of the 14 that still returned literally
+                # nothing: "sing street" three times, "better call saul" twice.
+                #
+                # `content_gap` already tells them it lives elsewhere. A banner
+                # over an empty stage is still an empty stage, and asking
+                # somebody to notice a tab, press it and retype is a worse
+                # answer than showing them the pieces they asked for. The tab
+                # is how the library is filed; it is not what the actor wanted.
+                if not title_rows:
+                    without_source = {
+                        k: v for k, v in (filters or {}).items() if k != "source_type"
+                    }
+                    title_rows = find_title_monologues(
+                        db, title_hit["title"], filters=without_source, limit=fetch_limit
+                    )
+                    crossed_tab = bool(title_rows)
 
             # The query may also (or instead) name a CHARACTER ("hamlet", "joan
             # clarke", "anne frank"). Same lookup-not-similarity logic: a
@@ -578,6 +598,8 @@ async def search_monologues(
                 # here and inventing one would poison the weak_match signal.
                 all_results_with_scores = [(m, None) for m in prepass_rows]
                 match_strategy = "title_exact" if prepass_kind == "title" else "character_exact"
+                if crossed_tab and prepass_kind == "title":
+                    match_strategy = "title_cross_tab"
             else:
                 # Semantic search returns (list of (Monologue, score), quote_match_types)
                 all_results_with_scores, quote_match_types = search_service.search(
@@ -610,6 +632,11 @@ async def search_monologues(
                         "title_exact_backfilled" if prepass_kind == "title"
                         else "character_exact_backfilled"
                     )
+                if crossed_tab and prepass_kind == "title":
+                    # Logged so the dashboard can tell a normal title hit from
+                    # one that only worked because the tab was ignored. If this
+                    # number is large the tabs themselves are the problem.
+                    match_strategy = "title_cross_tab"
 
             # Last resort before an empty stage: a bare abstract word.
             #
