@@ -96,7 +96,7 @@ class TEIXMLParser:
                 stage_dirs = []
 
                 for line in lines:
-                    line_text = ''.join(line.itertext())
+                    line_text = self._text_without_notes(line)
 
                     # Extract stage directions (usually in <stage> tags)
                     stage_elements = line.findall('.//tei:stage', self.TEI_NS) or line.findall('.//stage')
@@ -138,6 +138,43 @@ class TEIXMLParser:
                 continue
 
         return monologues
+
+    #: An editor's footnote is not something the character says.
+    #:
+    #: `itertext()` returns every descendant's text, and a Perseus translation
+    #: carries the translator's apparatus inside the line: one Plautus file has
+    #: 97 `<note resp="editor">` elements. They landed mid-sentence in the
+    #: stored speech, so Tranio's line read "not even Salvation Not even
+    #: Salvation: See the Captivi, l. 535, and the Note to the passage. now
+    #: could save us". The actor gets a footnote in the middle of their line.
+    #:
+    #: Found by the corpus audit on its first run against a new source, which is
+    #: what that script is for -- nobody had read a Plautus row.
+    _SKIP_TAGS = ("note", "bibl", "ref", "app", "witDetail", "gap")
+
+    def _text_without_notes(self, element) -> str:
+        """`itertext()` minus the editorial apparatus.
+
+        Walked rather than filtered, because a note's CONTENT must go while its
+        tail must stay: the sentence continues after the footnote closes.
+        """
+        out: list[str] = []
+
+        def walk(node):
+            tag = node.tag.rsplit("}", 1)[-1] if isinstance(node.tag, str) else ""
+            if tag in self._SKIP_TAGS:
+                if node.tail:
+                    out.append(node.tail)
+                return
+            if node.text:
+                out.append(node.text)
+            for child in node:
+                walk(child)
+            if node is not element and node.tail:
+                out.append(node.tail)
+
+        walk(element)
+        return "".join(out)
 
     def _extract_character(self, speech_element) -> Optional[str]:
         """
