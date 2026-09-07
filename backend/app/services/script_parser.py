@@ -2934,49 +2934,52 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         pages_est = max(1, len(raw_text) // 3000)
         progress(f"Read ~{pages_est} pages of text")
 
-        # A play that carries its own headings is cut on them, whole. The
-        # model never gets to choose which lines survive; it names the scenes.
-        # Everything below this branch is for text with no structure to read:
-        # sides, pasted dialogue, screenplays.
+        # Read it off the page before asking anybody. This used to require act
+        # and scene headings, which meant a side — the thing an actor actually
+        # uploads the week before an audition — went to the model, and the
+        # model decides what survives. The reader either finds a real exchange
+        # or it finds nothing, and only then does the model get the text.
         from app.services.scene_map import detect_scene_spans
 
         spans = detect_scene_spans(_preprocess_text(raw_text))
-        is_play = any(s.act_label or s.scene_label for s in spans)
+        has_headings = any(s.act_label or s.scene_label for s in spans)
 
-        if is_play:
-            check_cancelled()
-            progress("Learning who the characters are")
-            metadata = self.extract_script_metadata(raw_text)
-            script_title = metadata.get("title", "")
-            script_author = metadata.get("author", "")
-            characters = metadata.get('characters', [])
-            progress(f"Found {len(characters)} characters in \"{script_title}\"")
+        check_cancelled()
+        progress("Learning who the characters are")
+        metadata = self.extract_script_metadata(raw_text)
+        script_title = metadata.get("title", "")
+        script_author = metadata.get("author", "")
+        characters = metadata.get('characters', [])
+        progress(f"Found {len(characters)} characters in \"{script_title}\"")
 
-            check_cancelled()
-            progress(f"Cutting on the play's own headings, {len(spans)} scenes")
-            scenes = self.extract_scenes_whole(
-                spans, script_title, script_author,
-                on_progress=on_progress, cancel_event=cancel_event
-            )
+        check_cancelled()
+        if has_headings:
+            progress(f"Cutting on the script's own headings, {len(spans)} scenes")
+        scenes = self.extract_scenes_whole(
+            spans, script_title, script_author,
+            on_progress=on_progress, cancel_event=cancel_event
+        )
+        read_directly = bool(scenes)
+
+        if read_directly:
+            pass  # nothing else to do: every line came off the page
         # Short scripts (< 5 pages): single AI call for metadata + scenes
         elif pages_est <= 5:
             check_cancelled()
-            progress("Analyzing script and extracting scenes")
+            progress("Couldn't read it directly, asking the model")
             combined = self.extract_combined(raw_text)
-            metadata = combined.get("metadata", {})
+            # The model's own reading of who is in it is better than nothing
+            # here, since the deterministic pass found no exchange at all.
+            combined_meta = combined.get("metadata") or {}
+            for key, value in combined_meta.items():
+                if value:
+                    metadata[key] = value
             scenes = combined.get("scenes", [])
             script_title = metadata.get("title", "")
             characters = metadata.get("characters", [])
             progress(f"Found {len(characters)} characters, {len(scenes)} scenes in \"{script_title}\"")
         else:
-            # Step 2: Extract metadata (title, author, characters)
-            check_cancelled()
-            progress("Learning who the characters are")
-            metadata = self.extract_script_metadata(raw_text)
-            script_title = metadata.get("title", "")
-            script_author = metadata.get("author", "")
-            characters = metadata.get('characters', [])
-            progress(f"Found {len(characters)} characters in \"{script_title}\"")
+            progress("Couldn't read it directly, asking the model")
 
             # Step 3: Detect act/scene structure (pure regex, zero AI cost)
             check_cancelled()
@@ -3018,8 +3021,9 @@ Return a JSON ARRAY. If no scenes exist, return []. Return ONLY valid JSON."""
         # deterministic parser as the source of truth (before the length filter, so
         # recovered lines count toward the 4-line minimum).
         # Attribution and order come from the source; the AI keeps the framing.
-        # A whole scene came off the page already; there is nothing to repair.
-        if not is_play:
+        # A scene read off the page is already verbatim; there is nothing to
+        # repair, and the guards would only re-read the document around it.
+        if not read_directly:
             scenes = _align_to_source(scenes, raw_text)
             scenes = _recover_dropped_dialogue(scenes, raw_text)
 
