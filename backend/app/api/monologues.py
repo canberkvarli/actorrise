@@ -32,6 +32,7 @@ from app.services.search.grounding import query_is_unservable
 from app.services.search.query_optimizer import (correct_query_typos,
                                                  is_filter_only_query,
                                                  validate_query)
+from app.services.search.attribute_fallback import attribute_search
 from app.services.search.title_lookup import (compute_content_gap,
                                               detect_catalogue_character,
                                               detect_catalogue_title,
@@ -549,6 +550,31 @@ async def search_monologues(
                         "title_exact_backfilled" if prepass_kind == "title"
                         else "character_exact_backfilled"
                     )
+
+            # Last resort before an empty stage: a bare abstract word.
+            #
+            # One word carries too little signal for the vector path, so the
+            # cosine lands under the floor and the relevance gate returns
+            # nothing. "power dynamics" scored 0.294 against a 0.38 bar and
+            # showed an empty screen while 10,418 pieces carry the theme
+            # `power`. The answer was sitting in a column similarity never
+            # reads. query_type='other' is 64% of all weak searches.
+            #
+            # Only runs when everything else came back empty, so it can never
+            # dilute a search that already worked.
+            if not all_results_with_scores:
+                attr_rows, attribute_match = attribute_search(
+                    db, search_q, filters=filters, limit=fetch_limit
+                )
+                if attr_rows:
+                    all_results_with_scores = attr_rows
+                    match_strategy = "attribute"
+                    # Say why these pieces are on screen. Without this the
+                    # actor typed one word and got twenty speeches with no
+                    # stated connection to it, which reads as a broken search
+                    # even though it is the right answer.
+                    existing = getattr(search_service, "_parsed_constraints", None) or {}
+                    search_service._parsed_constraints = {**existing, **attribute_match}
 
             # A pre-pass hit means the actor got the show/character they asked
             # for, whatever the cosine of the backfill behind it says.
