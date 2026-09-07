@@ -338,15 +338,6 @@ export default function PlatformLayout({
                   </Button>
                 );
               })}
-              {/* The Callboard, as a lamp rather than a tab.
-
-                  It is a place to feel something, not a task, so it does not
-                  deserve a fifth top-level label competing with the three
-                  things people came to do — and a nav item would have been its
-                  second entry point in the entire app, which is how a page
-                  stays unvisited. A lit dot says the room is occupied and
-                  costs one icon's worth of space. */}
-              <CallboardLamp active={pathname === "/callboard"} />
               {user?.is_moderator && (
                 <Button
                   asChild
@@ -364,6 +355,15 @@ export default function PlatformLayout({
 
             {/* Desktop Profile Dropdown - right aligned */}
             <div className="hidden md:flex items-center gap-1">
+              {/* The Callboard sits with the utilities, not in the nav.
+
+                  The nav holds the three things an actor came to do, and a
+                  social page beside them either loses or wins by stealing
+                  attention from the job. It was a bare dot in that row first,
+                  which read as a nav item whose label had failed to render —
+                  everything around it was icon + word. This cluster is
+                  icon-only, so the identical control is legible here. */}
+              <CallboardLamp active={pathname === "/callboard"} />
               <Button
                 asChild
                 variant={pathname === "/help" ? "secondary" : "ghost"}
