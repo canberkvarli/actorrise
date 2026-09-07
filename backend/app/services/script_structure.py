@@ -28,19 +28,30 @@ class StructuralChunk:
         self.char_count = len(self.text)
 
 
-# Patterns that match act headers (case-insensitive via re.IGNORECASE)
+# Patterns that match act headers (case-insensitive via re.IGNORECASE).
+#
+# Every numeral ends in (?![A-Za-z]), and it is load-bearing. Matching is
+# case-insensitive, so [IVX]+ matches a lowercase "i", and re.match does not
+# require the whole line: "scene is perhaps marred to most modern readers"
+# in a Gutenberg afterword matched "scene i" and was read as Scene 1. On The
+# Trojan Women that phantom heading sat at 88% of the way through the file and
+# took the entire play out of the only scene we then knew about.
 ACT_PATTERNS = [
-    r'^ACT\s+([IVX]+)',                                          # ACT III
-    r'^ACT\s+(\d+)',                                             # ACT 3
-    r'^ACT\s+(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE)',   # ACT ONE
+    r'^ACT\s+([IVX]+)(?![A-Za-z])',                                          # ACT III
+    r'^ACT\s+(\d+)(?![A-Za-z])',                                             # ACT 3
+    r'^ACT\s+(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE)(?![A-Za-z])',    # ACT ONE
 ]
 
 # Patterns that match scene headers (stage plays)
 SCENE_PATTERNS = [
-    r'^SCENE\s+([IVX]+)',                                        # SCENE II
-    r'^SCENE\s+(\d+)',                                           # SCENE 2
-    r'^SCENE\s+(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE)', # SCENE ONE
+    r'^SCENE\s+([IVX]+)(?![A-Za-z])',                                        # SCENE II
+    r'^SCENE\s+(\d+)(?![A-Za-z])',                                           # SCENE 2
+    r'^SCENE\s+(ONE|TWO|THREE|FOUR|FIVE|SIX|SEVEN|EIGHT|NINE)(?![A-Za-z])',  # SCENE ONE
 ]
+
+# A heading is a line of its own, not the opening of a paragraph. Anything
+# longer than this is prose that happens to start with the word.
+_MAX_HEADING_CHARS = 60
 
 # Screenplay slug line pattern — INT./EXT. headers
 # e.g. "INT. DON CORLEONE'S OFFICE - DAY", "EXT. MALL PARKING LOT - NIGHT"
@@ -79,6 +90,8 @@ def _normalize_number(value: str) -> str:
 def _match_act(line: str) -> Optional[str]:
     """Check if a line is an act header. Returns normalized label like 'Act 3'."""
     stripped = line.strip()
+    if len(stripped) > _MAX_HEADING_CHARS:
+        return None
     for pattern in ACT_PATTERNS:
         m = re.match(pattern, stripped, re.IGNORECASE)
         if m:
@@ -94,6 +107,8 @@ def _match_act(line: str) -> Optional[str]:
 def _match_scene(line: str) -> Optional[str]:
     """Check if a line is a scene header. Returns normalized label like 'Scene 2'."""
     stripped = line.strip()
+    if len(stripped) > _MAX_HEADING_CHARS:
+        return None
     for pattern in SCENE_PATTERNS:
         m = re.match(pattern, stripped, re.IGNORECASE)
         if m:

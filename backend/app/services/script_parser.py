@@ -644,6 +644,95 @@ def _split_cue_lines(text: str) -> str:
     return text
 
 
+# Most editions outside Shakespeare set a cue in title case: "Adolf." rather
+# than "ADOLF." A title in front of the name is part of it, and reading
+# "Dr. Stockmann." as "Dr" cost An Enemy of the People its leading character
+# 449 times over.
+_HONORIFIC = r"(?:Dr|Mr|Mrs|Ms|Miss|Rev|Sir|Lady|Lord|Capt|Col|Gen|Maj|Sgt|Lt|Prof|St|Fr)"
+_TITLECASE_CUE = re.compile(
+    rf"^([ \t]*)((?:{_HONORIFIC}\.[ \t]*)?[A-Z][a-z][A-Za-z'’\-]*"
+    rf"(?:[ \t]+[A-Z][A-Za-z'’\-]*){{0,2}})\.(?=[ \t]|$)",
+    re.MULTILINE,
+)
+
+# A cue already shouting, which is what the parser has always read.
+_ALLCAPS_CUE = re.compile(r"^[ \t]*[A-Z][A-Z '\-\.]{1,28}[.:]?[ \t]*$", re.MULTILINE)
+
+# Words that lead a line and end with a period without being anybody's name.
+# A play is full of them, and every one would otherwise join the cast.
+_NOT_A_CUE_WORD = {
+    "yes", "no", "well", "oh", "ah", "ay", "aye", "nay", "so", "now", "then",
+    "indeed", "perhaps", "certainly", "never", "always", "nothing", "nonsense",
+    "exactly", "quite", "true", "good", "come", "go", "stop", "wait", "look",
+    "listen", "see", "why", "what", "how", "who", "where", "when", "hush",
+    "pause", "silence", "curtain", "enter", "exit", "exeunt", "aside", "end",
+    "act", "scene", "note", "notes", "chapter", "page", "contents",
+    "and", "but", "for", "yet", "still", "again", "here", "there", "this",
+    "that", "it", "he", "she", "they", "we", "you", "i",
+}
+
+# Words that cannot begin a cue, because a line starting with one is a
+# direction or a heading. "The" is deliberately not here: a whole cast can be
+# named that way, and dropping it cost The Intruder every one of its speakers
+# (The Grandfather, The Father, The Uncle, The Daughter).
+_NOT_A_CUE_LEAD = {
+    "enter", "exit", "exeunt", "re-enter", "reenter", "act", "scene",
+    "music", "sound", "flourish", "alarum", "pause", "silence", "curtain",
+    "note", "notes", "chapter", "page", "contents", "end",
+}
+
+# How many lines a name has to lead before it is a speaker rather than a word.
+_TITLECASE_CUE_MIN = 3
+
+
+def _titlecase_cue_names(text: str) -> Dict[str, int]:
+    """Title-case names that lead enough lines to be speakers, and how often."""
+    counts: Counter = Counter()
+    for _, name in _TITLECASE_CUE.findall(text or ""):
+        counts[re.sub(r"\s+", " ", name.strip())] += 1
+    return {
+        name: n
+        for name, n in counts.items()
+        if n >= _TITLECASE_CUE_MIN
+        and name.split()[-1].lower() not in _NOT_A_CUE_WORD
+        and name.split()[0].lower() not in _NOT_A_CUE_LEAD
+        and name.lower() not in _NOT_A_CUE_WORD
+    }
+
+
+def _normalise_titlecase_cues(text: str) -> str:
+    """Shout the cues in a script that whispers them, or leave it alone.
+
+    Gated on the document not already having capitalised cues, so it only ever
+    runs on a text the normal reading cannot see. A script that reads today
+    reads exactly the same afterwards.
+    """
+    names = _titlecase_cue_names(text)
+    if len(names) < 2:
+        return text
+
+    # Relative, not a fixed floor: a pasted ten-line scene in title case has to
+    # work as well as a whole play does, and a play that already shouts its
+    # cues has to be left alone whatever its length. Hedda Gabler prints 213
+    # capitalised cues and picks up a handful of stray title-case candidates;
+    # The Creditor prints 3 and 560.
+    shouted = len(_ALLCAPS_CUE.findall(text))
+    if sum(names.values()) <= 2 * shouted:
+        return text
+
+    known = {n.upper(): n for n in names}
+
+    def shout(match):
+        indent, name = match.group(1), re.sub(r"\s+", " ", match.group(2).strip())
+        if name.upper() not in known:
+            return match.group(0)
+        # "MRS. STOCKMANN" would be read as the cue "MRS" and a line starting
+        # "STOCKMANN", so the title loses its full stop on the way up.
+        return f"{indent}{name.upper().replace('.', '')}."
+
+    return _TITLECASE_CUE.sub(shout, text)
+
+
 def _preprocess_text(text: str) -> str:
     """Strip publisher line-number prefixes (Folger FTLN, etc.) so regex can parse dialogue."""
     text = _strip_production_marks(text)
@@ -686,6 +775,19 @@ def _preprocess_text(text: str) -> str:
     # After the line numbers have gone, so a number is never mistaken for the
     # roman text that makes an italic run mid-line.
     text = _apply_italic_directions(text)
+
+    # Project Gutenberg marks italics with underscores, and some editions
+    # italicise the cue: "_Flint_. Oh, faith!" St. Patrick's Day came back as
+    # seven lines because of it. Only the cue position is touched; an
+    # underscore inside a speech is left where it is.
+    text = re.sub(
+        r"^([ \t]*)_([A-Za-z][A-Za-z'’\-. ]{0,28}?)_(\s*[.:])", r"\1\2\3", text,
+        flags=re.MULTILINE,
+    )
+
+    # Most plays that are not Shakespeare print "Adolf." where Folger prints
+    # "ADOLF.", and until now none of them were read at all.
+    text = _normalise_titlecase_cues(text)
 
     # A two-word cue the PDF reader broke over two lines: "FIRST" / "FAIRY".
     # Left apart, "FIRST" is a speaker with no lines and the lullaby is sung by
@@ -922,13 +1024,24 @@ def _screenplay_columns(text: str) -> Optional[Dict[str, int]]:
     if cue is None:
         return None
 
+    # A screenplay says the same names over and over. Verse set in a Gutenberg
+    # text is indented too, and its deepest column is a scatter of one-off
+    # lines; on The Trojan Women that scatter was read as a cast and the play
+    # came back as eleven lines spoken by people called "'Tis their will" and
+    # "[_Antistrophe._". Cues repeat; lines of poetry do not.
+    cue_names = [t for i, t in rows if i == cue and not _is_excluded(t)]
+    if len(set(cue_names)) > len(cue_names) * 0.8:
+        return None
+
     # Dialogue is the last well-populated column before the cue; a lone
     # parenthetical sits between the two and rides along with it.
     body = [i for i in counts if i < cue and counts[i] >= 3]
     if not body:
         return None
     dialogue = max(body)
-    if dialogue >= cue:
+    # A screenplay indents its cue well clear of its dialogue. One space of
+    # difference is a ragged margin, not a column.
+    if cue - dialogue < 4:
         return None
 
     return {"dialogue": dialogue, "cue": cue}
@@ -1505,6 +1618,14 @@ def whole_scenes(spans) -> List[Dict]:
     the scene before, sitting at the top of the first picked page. A side with
     no headings at all is one scene, and stays.
     """
+    # An unlabelled span beside labelled ones is usually a scrap: the tail of
+    # the scene before, at the top of the first picked page. Usually, not
+    # always. Alcestis carries its whole play in one unlabelled span and a
+    # single-line "Prologue" heading beside it, and dropping the unlabelled one
+    # for being unlabelled threw the play away. So size decides, not the label:
+    # a scrap is small next to the real scenes, and the play never is.
+    biggest = max((s.line_count for s in spans), default=0)
+    scrap = max(REHEARSAL_MIN_LINES, biggest // 5)
     labelled = any(s.act_label or s.scene_label for s in spans)
 
     # Who the play knows, gathered before any one scene is read. A direction
@@ -1515,7 +1636,7 @@ def whole_scenes(spans) -> List[Dict]:
 
     scenes: List[Dict] = []
     for span in spans:
-        if labelled and not (span.act_label or span.scene_label):
+        if labelled and not (span.act_label or span.scene_label) and span.line_count < scrap:
             continue
         scene = whole_scene(span, cast=cast)
         if scene:
