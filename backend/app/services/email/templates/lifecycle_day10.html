@@ -1,0 +1,23 @@
+{% extends "base_personal.html" %}
+
+{% block title %}one question{% endblock %}
+
+{% block content %}
+        <p>hey{% if user_name %} {{ user_name }}{% endif %},</p>
+
+        <p>it's been about ten days since you signed up for actorrise. i'm building it on my own, so i'd rather hear it straight: what were you hoping it would do for you, and did it?</p>
+
+        <p>one line back is plenty. i read every reply.</p>
+
+{% if anchor == "favorite" %}
+        <p>and {{ character }} from {{ play }} is still saved if you want it: <a href="{{ link }}" style="font-weight:500;">open it</a>.</p>
+{% elif anchor == "search" %}
+        <p>your last search is still here if you want it back: <a href="{{ link }}" style="font-weight:500;">"{{ query }}"</a>.</p>
+{% else %}
+        <p>and the search is <a href="{{ link }}" style="font-weight:500;">right here</a> whenever you want it.</p>
+{% endif %}
+
+        <p style="margin-top:28px;">canberk</p>
+
+        <p class="ar-muted" style="margin-top:20px; color:{{ c.muted }}; font-size:13px;">reply unsubscribe and i'll take you off, no worries.</p>
+{% endblock %}

@@ -46,6 +46,7 @@ from app.models.tape import UserTape  # noqa: F401; register with Base for creat
 from app.models.audition_usage import AuditionFeedbackUsage  # noqa: F401; register with Base for create_all
 from app.models.app_setting import AppSetting  # noqa: F401; register with Base for create_all
 from app.models.user_event import UserEvent  # noqa: F401; register with Base for create_all
+from app.models.lifecycle_email import LifecycleEmailSend  # noqa: F401; register with Base for create_all
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -187,6 +188,55 @@ def _start_saved_piece_reminder_scheduler():
     logger.info("Saved-piece reminder scheduler started (hourly)")
 
 
+def _start_lifecycle_email_scheduler() -> None:
+    """Hourly day-3 and day-10 return emails for new real accounts.
+
+    Same shape as the saved-piece reminder: daemon thread on the web dyno,
+    claimed atomically per (user, touch) in lifecycle_email_sends, sent in the
+    UTC hour the person signed up. Runtime switch is
+    app_settings.LIFECYCLE_EMAILS_ENABLED and it defaults to OFF, so a deploy
+    of this code sends nothing until it is turned on in /admin/emails. Env
+    hard-kill: LIFECYCLE_EMAILS_ENABLED=false.
+    """
+    import os
+
+    if os.getenv("ENVIRONMENT", "").strip().lower() != "production":
+        return
+    if os.getenv("LIFECYCLE_EMAILS_ENABLED", "true").strip().lower() == "false":
+        logger.info("Lifecycle email scheduler disabled by env flag")
+        return
+
+    def loop() -> None:
+        time.sleep(150)  # after the reminder (120s) and the sweep (90s)
+        while True:
+            try:
+                from datetime import datetime, timezone
+
+                from app.core.database import SessionLocal
+                from app.services import app_settings
+                from app.services.email.lifecycle import run_all
+
+                _db = SessionLocal()
+                try:
+                    enabled = app_settings.get_bool(_db, app_settings.LIFECYCLE_EMAILS_ENABLED, default=False)
+                finally:
+                    _db.close()
+                if enabled:
+                    hour = datetime.now(timezone.utc).hour
+                    for stats in run_all(send=True, active_hour=hour):
+                        if stats["eligible"]:
+                            logger.info(
+                                "lifecycle %s: eligible %s sent %s failed %s (hour %s UTC)",
+                                stats["touch"], stats["eligible"], stats["sent"], stats["failed"], hour,
+                            )
+            except Exception as e:  # noqa: BLE001
+                logger.warning("lifecycle email scheduler run failed (non-fatal): %s", e)
+            time.sleep(max(60, 3600 - (time.time() % 3600)))
+
+    threading.Thread(target=loop, daemon=True).start()
+    logger.info("Lifecycle email scheduler started (hourly)")
+
+
 def _start_rehearsal_sweep_scheduler() -> None:
     """Hourly global sweep of rehearsal sessions left open.
 
@@ -233,6 +283,7 @@ async def lifespan(app: FastAPI):
     _warmup_search_cache_background()
     _warmup_title_catalogue_background()
     _start_saved_piece_reminder_scheduler()
+    _start_lifecycle_email_scheduler()
     _start_rehearsal_sweep_scheduler()
     yield
 

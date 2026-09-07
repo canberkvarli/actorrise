@@ -250,6 +250,10 @@ export default function AdminEmailsPage() {
   const [savedReminderOn, setSavedReminderOn] = useState<boolean | null>(null);
   const [savedReminderSaving, setSavedReminderSaving] = useState(false);
 
+  // Day-3 / day-10 return emails toggle
+  const [lifecycleOn, setLifecycleOn] = useState<boolean | null>(null);
+  const [lifecycleSaving, setLifecycleSaving] = useState(false);
+
   // Dialogs
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [sending, setSending] = useState(false);
@@ -271,8 +275,29 @@ export default function AdminEmailsPage() {
       api.get<DncEntry[]>("/api/admin/emails/do-not-contact").then(({ data }) => setDncEntries(data)).catch(() => {}),
       api.get<Lead[]>("/api/admin/emails/leads").then(({ data }) => setLeads(data)).catch(() => {}),
       api.get<{ enabled: boolean }>("/api/admin/emails/saved-piece-reminder").then(({ data }) => setSavedReminderOn(data.enabled)).catch(() => {}),
+      api.get<{ enabled: boolean }>("/api/admin/emails/lifecycle-emails").then(({ data }) => setLifecycleOn(data.enabled)).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
+
+  async function updateLifecycleEmails(enabled: boolean) {
+    const prev = lifecycleOn;
+    setLifecycleOn(enabled); // optimistic
+    setLifecycleSaving(true);
+    try {
+      const { data } = await api.put<{ enabled: boolean }>("/api/admin/emails/lifecycle-emails", { enabled });
+      setLifecycleOn(data.enabled);
+      toast.success(
+        data.enabled
+          ? "Day-3 and day-10 return emails are on"
+          : "Day-3 and day-10 return emails paused. Nothing sends until you turn this back on.",
+      );
+    } catch {
+      setLifecycleOn(prev); // revert
+      toast.error("Failed to update the return email setting");
+    } finally {
+      setLifecycleSaving(false);
+    }
+  }
 
   async function updateSavedPieceReminder(enabled: boolean) {
     const prev = savedReminderOn;
@@ -855,6 +880,28 @@ export default function AdminEmailsPage() {
             disabled={savedReminderSaving}
             onCheckedChange={updateSavedPieceReminder}
             aria-label="Toggle day-1 saved-piece reminder"
+          />
+        </div>
+      )}
+
+      {canSend && lifecycleOn !== null && (
+        <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-3 sm:p-4">
+          <div className="flex items-start gap-2.5">
+            <IconClock className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium">Day-3 and day-10 return emails</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {lifecycleOn
+                  ? "On. A new free account that hasn't been back gets its own saved piece or last search reopened on day 3, and one question on day 10. Each sent once."
+                  : "Off. Nothing sends until you turn this on."}
+              </p>
+            </div>
+          </div>
+          <Switch
+            checked={lifecycleOn}
+            disabled={lifecycleSaving}
+            onCheckedChange={updateLifecycleEmails}
+            aria-label="Toggle day-3 and day-10 return emails"
           />
         </div>
       )}

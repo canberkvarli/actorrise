@@ -1,0 +1,25 @@
+{% extends "base_personal.html" %}
+
+{% block title %}{% if anchor == "favorite" %}your {{ character }} monologue{% else %}one search{% endif %}{% endblock %}
+
+{% block content %}
+        <p>hey{% if user_name %} {{ user_name }}{% endif %},</p>
+
+{% if anchor == "favorite" %}
+        <p>you saved {{ character }} from {{ play }} a few days ago. have you said it out loud yet?</p>
+
+        <p>here it is: <a href="{{ link }}" style="font-weight:500;">{{ character }} from {{ play }}</a>. hit rehearse and run it once. two minutes, that's it.</p>
+{% elif anchor == "search" %}
+        <p>you searched for "{{ query }}" a few days ago. did you find something you can actually use?</p>
+
+        <p>if not, <a href="{{ link }}" style="font-weight:500;">here's that search again</a>. and if nothing fits, just reply and tell me what you're after. i'll go find one myself.</p>
+{% else %}
+        <p>you signed up a few days ago and haven't searched yet. no pressure, just try one.</p>
+
+        <p>type it the way you'd say it to a coach, something like "funny monologue for a woman in her 20s, under two minutes", and <a href="{{ link }}" style="font-weight:500;">see what comes back</a>.</p>
+{% endif %}
+
+        <p style="margin-top:28px;">canberk</p>
+
+        <p class="ar-muted" style="margin-top:20px; color:{{ c.muted }}; font-size:13px;">reply unsubscribe and i'll take you off, no worries.</p>
+{% endblock %}

@@ -20,6 +20,12 @@ SEARCH_RELEVANCE_FLOOR = "search_relevance_floor"
 # from starting at all.
 SAVED_PIECE_REMINDER_ENABLED = "saved_piece_reminder_enabled"
 
+# Day-3 / day-10 lifecycle emails (services/email/lifecycle.py). Defaults to
+# OFF: the scheduler ships with the code, but nothing sends until the founder
+# flips it on from the admin console. Same env hard-kill pattern:
+# LIFECYCLE_EMAILS_ENABLED=false stops the scheduler from starting at all.
+LIFECYCLE_EMAILS_ENABLED = "lifecycle_emails_enabled"
+
 
 def get_bool(db: Session, key: str, default: bool = False) -> bool:
     """Return a stored boolean setting, or `default` if the row doesn't exist."""

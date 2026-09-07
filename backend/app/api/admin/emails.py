@@ -147,6 +147,27 @@ def set_saved_piece_reminder(
     return SavedPieceReminderToggle(enabled=enabled)
 
 
+@router.get("/lifecycle-emails", response_model=SavedPieceReminderToggle)
+def get_lifecycle_emails(
+    _: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+) -> SavedPieceReminderToggle:
+    """Whether the hourly day-3 / day-10 return emails are sending. Off by default."""
+    enabled = app_settings.get_bool(db, app_settings.LIFECYCLE_EMAILS_ENABLED, default=False)
+    return SavedPieceReminderToggle(enabled=enabled)
+
+
+@router.put("/lifecycle-emails", response_model=SavedPieceReminderToggle)
+def set_lifecycle_emails(
+    payload: SavedPieceReminderToggle,
+    _: User = Depends(require_approval_permission),
+    db: Session = Depends(get_db),
+) -> SavedPieceReminderToggle:
+    """Turn the day-3 / day-10 return emails on or off (takes effect within the hour)."""
+    enabled = app_settings.set_bool(db, app_settings.LIFECYCLE_EMAILS_ENABLED, payload.enabled)
+    return SavedPieceReminderToggle(enabled=enabled)
+
+
 # ========================================
 # Template metadata registry
 # ========================================

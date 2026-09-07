@@ -345,6 +345,125 @@ class EmailTemplates:
             "reply unsubscribe and i'll take you off, no worries.",
         ])
 
+    # ── Day-3 / day-10 lifecycle (services/email/lifecycle.py) ──
+
+    @staticmethod
+    def _first_name(user_name: Optional[str]) -> Optional[str]:
+        return (user_name or "").split()[0] if user_name else None
+
+    def render_lifecycle_day3(
+        self,
+        anchor: str,
+        link: str,
+        character: Optional[str] = None,
+        play: Optional[str] = None,
+        query: Optional[str] = None,
+        user_name: Optional[str] = None,
+        unsubscribe_url: Optional[str] = None,
+        **kwargs,
+    ) -> str:
+        template = self.env.get_template('lifecycle_day3.html')
+        preheader = {
+            "favorite": "two minutes. hit rehearse and run it once.",
+            "search": "if nothing fit, reply and i'll dig one up for you.",
+            "none": "type it the way you'd say it to a coach.",
+        }.get(anchor, "")
+        return template.render(
+            anchor=anchor, link=link, character=character, play=play, query=query,
+            user_name=self._first_name(user_name), preheader=preheader,
+            unsubscribe_url=unsubscribe_url,
+        )
+
+    def render_lifecycle_day3_plain(
+        self,
+        anchor: str,
+        link: str,
+        character: Optional[str] = None,
+        play: Optional[str] = None,
+        query: Optional[str] = None,
+        user_name: Optional[str] = None,
+        **kwargs,
+    ) -> str:
+        name = (self._first_name(user_name) or "").lower()
+        lines = [f"hey {name}," if name else "hey,", ""]
+        if anchor == "favorite":
+            lines += [
+                f"you saved {character} from {play} a few days ago. have you said it out loud yet?",
+                "",
+                f"here it is: {link}",
+                "",
+                "hit rehearse and run it once. two minutes, that's it.",
+            ]
+        elif anchor == "search":
+            lines += [
+                f'you searched for "{query}" a few days ago. did you find something you can actually use?',
+                "",
+                f"if not, here's that search again: {link}",
+                "",
+                "and if nothing fits, just reply and tell me what you're after. i'll go find one myself.",
+            ]
+        else:
+            lines += [
+                "you signed up a few days ago and haven't searched yet. no pressure, just try one.",
+                "",
+                'type it the way you\'d say it to a coach, something like "funny monologue for a woman '
+                'in her 20s, under two minutes", and see what comes back:',
+                link,
+            ]
+        lines += ["", "canberk", "", "reply unsubscribe and i'll take you off, no worries."]
+        return "\n".join(lines)
+
+    def render_lifecycle_day10(
+        self,
+        anchor: str,
+        link: str,
+        character: Optional[str] = None,
+        play: Optional[str] = None,
+        query: Optional[str] = None,
+        user_name: Optional[str] = None,
+        unsubscribe_url: Optional[str] = None,
+        **kwargs,
+    ) -> str:
+        template = self.env.get_template('lifecycle_day10.html')
+        return template.render(
+            anchor=anchor, link=link, character=character, play=play, query=query,
+            user_name=self._first_name(user_name),
+            preheader="what were you hoping actorrise would do for you? one line is plenty.",
+            unsubscribe_url=unsubscribe_url,
+        )
+
+    def render_lifecycle_day10_plain(
+        self,
+        anchor: str,
+        link: str,
+        character: Optional[str] = None,
+        play: Optional[str] = None,
+        query: Optional[str] = None,
+        user_name: Optional[str] = None,
+        **kwargs,
+    ) -> str:
+        name = (self._first_name(user_name) or "").lower()
+        if anchor == "favorite":
+            tail = f"and {character} from {play} is still saved if you want it: {link}"
+        elif anchor == "search":
+            tail = f'your last search is still here if you want it back: "{query}" {link}'
+        else:
+            tail = f"and the search is right here whenever you want it: {link}"
+        return "\n".join([
+            f"hey {name}," if name else "hey,",
+            "",
+            "it's been about ten days since you signed up for actorrise. i'm building it on my own, "
+            "so i'd rather hear it straight: what were you hoping it would do for you, and did it?",
+            "",
+            "one line back is plenty. i read every reply.",
+            "",
+            tail,
+            "",
+            "canberk",
+            "",
+            "reply unsubscribe and i'll take you off, no worries.",
+        ])
+
     def render_welcome_plain(
         self, user_name: str, monologue_count: Optional[int] = None, **kwargs
     ) -> str:
