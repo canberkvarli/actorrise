@@ -278,6 +278,12 @@ function DraggableCard({
               "absolute left-1 top-1/2 z-10 inline-flex h-7 w-5 -translate-y-1/2 items-center justify-center",
               "rounded-sm text-muted-foreground/45 transition-colors",
               "hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              // The grip draws at 20x28 and is grabbed at 44x52. Measured at a
+              // real 390px viewport it was a 20x28 target, and this is the one
+              // control on the card you have to catch precisely rather than
+              // just land on. The pseudo-element takes no space, so nothing
+              // moves.
+              "before:absolute before:-inset-3 before:content-['']",
               held ? "cursor-grabbing text-foreground" : "cursor-grab",
             ].join(" ")}
             // Without this a touch drag scrolls the page instead of moving the card.
@@ -396,7 +402,17 @@ function ScriptCard({
               className={[
                 "absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center",
                 "rounded-md text-muted-foreground/60 hover:bg-muted hover:text-foreground",
-                "opacity-0 transition-opacity group-hover/item:opacity-100 focus:opacity-100 data-[state=open]:opacity-100",
+                // Delete and Flag live behind this, and it used to be
+                // opacity-0 until hover. A phone has no hover, so on a phone
+                // there was no way to reach either of them: measured at a real
+                // 390px viewport it computed to opacity 0 and stayed there.
+                // Keyed on the hover capability rather than a width, because
+                // that is the actual question — a small window on a laptop
+                // still hovers, and a large tablet still does not.
+                "opacity-100 [@media(hover:hover)]:opacity-0",
+                "transition-opacity group-hover/item:opacity-100 focus:opacity-100 data-[state=open]:opacity-100",
+                // 24x24 drawn, 44x44 to hit.
+                "before:absolute before:-inset-2.5 before:content-['']",
               ].join(" ")}
             >
               <IconDots className="h-3.5 w-3.5" />
