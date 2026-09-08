@@ -11,10 +11,11 @@ being read off `rehearsal_sessions` alone, which covers the two-person
 ScenePartner and nothing else, so working a monologue was invisible.
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
 
 from app.api.auth import get_current_user
+from app.api.events import with_device
 from app.middleware.rate_limiting import require_monologue_work
 from app.models.user import User
 from app.services.events import record_user_event
@@ -29,6 +30,7 @@ class StartSessionRequest(BaseModel):
 @router.post("/start")
 def start_session(
     request: StartSessionRequest,
+    http_request: Request,
     current_user: User = Depends(get_current_user),
     _gate: bool = Depends(require_monologue_work(increment=True)),
 ):
@@ -44,7 +46,10 @@ def start_session(
         record_user_event(
             int(current_user.id),
             "monologue_work_started",
-            {"monologue_id": request.monologue_id},
+            with_device(
+                {"monologue_id": request.monologue_id},
+                http_request.headers.get("user-agent"),
+            ),
         )
     except Exception:
         # record_user_event swallows its own errors; this is belt and braces so

@@ -57,9 +57,15 @@ class TheStartIsRecorded(unittest.TestCase):
         class _User:
             id = user_id
 
+        # The start also reads the User-Agent, so the device travels with the
+        # event; see tests/test_event_device_context.py.
+        class _Req:
+            headers: dict = {}
+
         with patch("app.api.monologue_work.record_user_event") as rec:
             result = start_session(
                 request=StartSessionRequest(monologue_id=monologue_id),
+                http_request=_Req(),
                 current_user=_User(),
                 _gate=True,
             )
@@ -89,9 +95,13 @@ class TheStartIsRecorded(unittest.TestCase):
         class _User:
             id = 7
 
+        class _Req:
+            headers: dict = {}
+
         with patch("app.api.monologue_work.record_user_event", side_effect=RuntimeError("db gone")):
             result = start_session(
                 request=StartSessionRequest(monologue_id=1),
+                http_request=_Req(),
                 current_user=_User(),
                 _gate=True,
             )
