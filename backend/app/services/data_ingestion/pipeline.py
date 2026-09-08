@@ -291,6 +291,36 @@ def ingest_play(
         db.add(play)
         db.flush()
         report.play_created = True
+    else:
+        # An existing row keeps its OWN rights, and that silently broke 87 rows.
+        #
+        # Perseus ingested Aeschylus as public_domain, matched the title and
+        # author of a play row left behind by an old stageagent import, and
+        # attached 61 monologues to it. The row still said `copyrighted` with no
+        # license_type, which `may_serve_text` refuses, so the pieces were
+        # searchable and unservable at once: an actor finds them and gets an
+        # empty page. Same for O'Neill's Beyond the Horizon.
+        #
+        # A row with NO valid basis is broken, not authoritative, so a caller
+        # that can state one repairs it. Anything else is left alone and
+        # reported: quietly relabelling a copyrighted work as public domain
+        # because a scraper said so is the failure worth avoiding here.
+        if not may_store_text(play.copyright_status, play.license_type):
+            logger.warning(
+                "play %s (%r) had unservable rights %s/%s; adopting %s/%s from "
+                "this ingest", play.id, title, play.copyright_status,
+                play.license_type, copyright_status, license_type,
+            )
+            play.copyright_status = copyright_status
+            play.license_type = license_type
+        elif (play.copyright_status != copyright_status
+                or play.license_type != license_type):
+            logger.warning(
+                "play %s (%r) is recorded %s/%s but this ingest declares %s/%s; "
+                "keeping the stored rights",
+                play.id, title, play.copyright_status, play.license_type,
+                copyright_status, license_type,
+            )
     report.play_id = play.id
 
     for start in range(0, len(keep), CHUNK):
