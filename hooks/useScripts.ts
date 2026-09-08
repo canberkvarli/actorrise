@@ -1,7 +1,8 @@
 "use client";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tanstack/react-query";
 import api from "@/lib/api";
+import { WHATS_NEXT_QUERY_KEY } from "@/hooks/useWhatsNext";
 
 export interface UserScript {
   id: number;
@@ -34,6 +35,27 @@ export interface UserScript {
 }
 
 export const SCRIPTS_QUERY_KEY = ["scripts"] as const;
+
+/**
+ * The shelf and the stage change together, so refresh them together.
+ *
+ * /practice reads two queries: the scripts on the shelf, and what to do next.
+ * Anything that adds, removes or re-cuts a script changes both, and every
+ * caller was refreshing only the first. Deleting a script took it off the shelf
+ * and left "ready when you are" offering a scene out of it, with a Start it
+ * button pointing at a scene that no longer existed. It righted itself on the
+ * next refetch, which is the worst version of the bug: long enough to be seen,
+ * short enough to be disbelieved.
+ *
+ * Re-cutting is the same defect through a worse door — it purges the old scenes
+ * outright, so the stale rung is a link to something deleted.
+ */
+export function invalidateShelf(queryClient: QueryClient): Promise<unknown> {
+  return Promise.all([
+    queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY }),
+    queryClient.invalidateQueries({ queryKey: WHATS_NEXT_QUERY_KEY }),
+  ]);
+}
 
 /**
  * A long script is read on the server after the upload returns, so the row
@@ -175,7 +197,7 @@ export function useDeleteScript() {
       return scriptId;
     },
     onSuccess: (scriptId) => {
-      queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY });
+      invalidateShelf(queryClient);
       queryClient.removeQueries({ queryKey: ["scripts", scriptId] });
     },
   });

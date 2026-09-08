@@ -32,7 +32,7 @@ import { UploadStage } from "@/components/practice/UploadStage";
 import { ScenePicker, type ScannedScene } from "@/components/practice/ScenePicker";
 import { API_URL } from "@/lib/api";
 import { clearPending, loadPending, savePending } from "@/lib/pending-upload";
-import { SCRIPTS_QUERY_KEY, useScripts } from "@/hooks/useScripts";
+import { invalidateShelf, useScripts } from "@/hooks/useScripts";
 import { useSubscription, useUsageLimits } from "@/hooks/useSubscription";
 
 // Known backend progress prefixes and their friendly group labels.
@@ -202,7 +202,7 @@ export function UploadProvider({ children }: { children: ReactNode }) {
   const phaseLabel = scanning ? "Scanning…" : uploadingFile ? "Uploading…" : null;
 
   const mutateScripts = useCallback(
-    () => queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY }),
+    () => invalidateShelf(queryClient),
     [queryClient],
   );
 
@@ -450,14 +450,14 @@ export function UploadProvider({ children }: { children: ReactNode }) {
               method: "POST",
               headers: { Authorization: `Bearer ${t}` },
             });
-            await queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY });
+            await invalidateShelf(queryClient);
             toast.info("Stopped reading it. Nothing was saved.");
           } catch {
             toast.error("Could not stop it. Delete the script from your shelf instead.");
           }
         };
 
-        await queryClient.invalidateQueries({ queryKey: SCRIPTS_QUERY_KEY });
+        await invalidateShelf(queryClient);
         toast.success("Reading your script. Carry on, it'll be waiting on your shelf.");
         router.push(`/practice?script=${script.id}`);
       } catch (e: unknown) {

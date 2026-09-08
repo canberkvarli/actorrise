@@ -31,7 +31,7 @@ import {
   getGenreBorderClassName,
   getGenreDotClassName,
 } from "@/lib/genreColors";
-import { useScript, type UserScript } from "@/hooks/useScripts";
+import { invalidateShelf, useScript, type UserScript } from "@/hooks/useScripts";
 import { groupScenesByAct, formatSceneDuration, type Scene } from "@/lib/scenes";
 import { EditScriptDetailsModal } from "@/components/practice/EditScriptDetailsModal";
 import { AddSceneToScriptModal } from "@/components/scenepartner/AddSceneToScriptModal";
@@ -72,8 +72,11 @@ export function PracticeScenePanel({ script }: PracticeScenePanelProps) {
     script.processing_status === "processing" || script.processing_status === "pending";
   const isFailed = script.processing_status === "failed";
 
-  const refreshScenes = () =>
+  const refreshScenes = () => {
     queryClient.invalidateQueries({ queryKey: ["scripts", script.id] });
+    // A re-cut purges the old scenes, so the stage must stop pointing at them.
+    return invalidateShelf(queryClient);
+  };
 
   /**
    * Ask before re-cutting, but only when there is something to lose.

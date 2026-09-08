@@ -2262,10 +2262,17 @@ export default function SceneEditPage() {
      what makes a page read as a script at a glance, before you have read a
      word of it.
      Below sm there is not enough measure for indents of this size: at 390px a
-     34% cue indent leaves ~14 characters for the name. On a phone the cue drops
-     to a small indent and the dialogue runs full width, which is what printed
-     sides do on a narrow page too. */
-  const CUE_INDENT = "pl-2 sm:pl-[28%]";
+     34% cue indent leaves ~14 characters for the name. On a phone the dialogue
+     runs full width, which is what printed sides do on a narrow page too.
+
+     The cue centres there instead of taking a token indent. `pl-2` put the
+     name 8px from the edge of the screen — not indented enough to read as a
+     cue, not flush enough to read as deliberate, just hard against the side.
+     A centred cue over a full-width speech is how a narrow playscript page is
+     actually set, and it is the one element that should not share the
+     dialogue's left edge: it is a label for the speech, not part of it.
+     Half the people using this are on a phone. */
+  const CUE_INDENT = "sm:pl-[28%]";
   /* 16%/10% put dialogue in a 74% column, narrow enough that a long speech
      turned into a tall grey ribbon you had to scroll past. Widened to 84%.
      These are percentages of the paper's *content* box, inside its px-14, so
@@ -2938,7 +2945,9 @@ export default function SceneEditPage() {
                              the cue line itself now, next to the name it
                              belongs to. */
                           <div className={cn(
-                            "flex items-center justify-start w-full overflow-hidden transition-[height] duration-200",
+                            // Follows the cue, so the waveform sits under the
+                            // name it belongs to on a phone as well as a desk.
+                            "flex items-center justify-center sm:justify-start w-full overflow-hidden transition-[height] duration-200",
                             isPlayingThisLine ? "h-7 mb-0.5" : "h-0",
                             CUE_INDENT,
                           )}>
@@ -2984,7 +2993,7 @@ export default function SceneEditPage() {
                         const voice = AI_VOICES.find(v => v.id === vid);
                         const dropdownKey = `parchment-${lineId}`;
                         return (
-                      <div className={cn("flex flex-wrap items-center justify-start gap-x-2 gap-y-0.5 mb-0.5", CUE_INDENT)}>
+                      <div className={cn("flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-0.5 mb-0.5", CUE_INDENT)}>
                         <div className="relative" data-voice-dropdown onClick={(e) => e.stopPropagation()}>
                           <button
                             ref={(el) => { if (el) el.dataset.voiceBtnId = dropdownKey; }}
