@@ -993,3 +993,15 @@ titles only become searchable by name after the next prod restart/deploy.
   comp with a past `trial_end` as inactive at read time. Only the raw status
   column lies, so only counts that read it raw are affected.
 - Moves: `subs_active` down by 15 (13 manual + 2 expired) on the next pull.
+
+## 2026-09-08 — `identity` added to search_logs.query_type
+
+The brief asked for a `query_kind` column (title | attribute | occupation |
+identity | multi) on weak searches. That column already exists as
+`search_logs.query_type`, written by `services/search/query_type.py` on every
+search since 2026-08-20, with one category missing: identity. Added it
+(ethnicity, sexuality, faith, disability, nationality phrases; the two-word
+forms so "black swan" stays a title). No second column.
+
+Moves: the query_type distribution. Some `other` and `attribute` rows become
+`identity` or `multi` from today; do not read a drop in `other` as a fix.

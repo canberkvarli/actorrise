@@ -16,6 +16,11 @@ Categories (stored in search_logs.query_type):
     named_lookup  names a person: character or author ("regina george",
                   "monologue by chekhov")
     occupation    names a job the character does ("lawyer monologue", "nurse")
+    identity      names who the character IS by ethnicity, sexuality, faith,
+                  disability or nationality ("black woman monologue",
+                  "queer teen", "latina"). Added 2026-09-08: these were
+                  landing in `other`, and they are the queries a corpus of
+                  public-domain plays is least able to answer.
     attribute     purely descriptive constraints ("funny 2 minute female")
     multi         two or more of the above in one query
     other         none of the above (free-form themes, gibberish, empty)
@@ -31,7 +36,30 @@ from app.services.search.title_lookup import (TITLE_ALIASES,
                                               detect_catalogue_title,
                                               detect_title_lookup)
 
-QUERY_TYPES = ("title", "named_lookup", "occupation", "attribute", "multi", "other")
+QUERY_TYPES = ("title", "named_lookup", "occupation", "identity", "attribute", "multi", "other")
+
+# Who the character is, as actors type it. Kept to words that only ever mean
+# identity in a monologue search: "black" alone would catch "Black Swan" and
+# "black comedy", so it is listed as the two-word forms it is searched in.
+_IDENTITY_WORDS = {
+    "black woman", "black man", "black girl", "black boy", "black actor",
+    "black actress", "black female", "black male", "black teen",
+    "african american", "african-american", "afro", "bipoc", "poc",
+    "person of color", "people of color", "woman of color", "women of color",
+    "latina", "latino", "latinx", "hispanic", "chicana", "chicano", "mexican",
+    "puerto rican", "dominican", "cuban", "asian", "asian american",
+    "east asian", "south asian", "indian", "desi", "bollywood", "filipino",
+    "filipina", "chinese", "japanese", "korean", "vietnamese", "arab",
+    "middle eastern", "persian", "iranian", "turkish", "pakistani",
+    "bangladeshi", "african", "nigerian", "caribbean", "jamaican", "native",
+    "native american", "indigenous", "first nations", "aboriginal",
+    "jewish", "muslim", "hijabi", "christian", "catholic", "hindu", "sikh",
+    "immigrant", "immigrants", "refugee", "undocumented", "first generation",
+    "first-generation", "queer", "gay", "lesbian", "bisexual", "bi", "trans",
+    "transgender", "nonbinary", "non-binary", "non binary", "lgbt", "lgbtq",
+    "lgbtq+", "drag", "deaf", "blind", "disabled", "disability", "wheelchair",
+    "autistic", "autism", "neurodivergent", "adhd",
+}
 
 # Jobs actors search by. Kept to occupations that read as a *role* rather than a
 # generic noun — "mother" and "student" are excluded because they describe a
@@ -105,6 +133,10 @@ def _has_occupation(padded: str) -> bool:
     return any(f" {job} " in padded for job in _OCCUPATIONS)
 
 
+def _has_identity(padded: str) -> bool:
+    return any(f" {word} " in padded for word in _IDENTITY_WORDS)
+
+
 def _has_author(padded: str, intended_author: Optional[str]) -> bool:
     if intended_author:
         return True
@@ -165,6 +197,7 @@ def classify_query(
             remainder = remainder.replace(f" {alias} ", " ")
         is_title = bool(intended_play) or detect_title_lookup(remainder) is not None
         is_occupation = _has_occupation(padded)
+        is_identity = _has_identity(padded)
         is_attribute = _has_attribute(padded, parsed_constraints)
 
         # Catalogue-aware pass (log-only). Ask the real catalogue what the
@@ -189,6 +222,7 @@ def classify_query(
             ("title", is_title),
             ("named_lookup", is_person),
             ("occupation", is_occupation),
+            ("identity", is_identity),
             ("attribute", is_attribute),
         ]
         hits = [name for name, present in signals if present]

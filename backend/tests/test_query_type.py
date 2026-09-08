@@ -94,3 +94,24 @@ class TestOtherAndSafety:
         ]
         for s in samples:
             assert classify_query(s) in QUERY_TYPES
+
+
+class TestIdentity:
+    """Who the character is. These landed in `other` until 2026-09-08."""
+
+    def test_identity_phrase(self):
+        assert classify_query("black woman monologue") == "identity"
+        assert classify_query("queer monologue") == "identity"
+        assert classify_query("latina") == "identity"
+
+    def test_bare_black_is_not_identity(self):
+        # "Black Swan" is a title and "black comedy" is a tone; only the
+        # two-word identity forms count.
+        assert classify_query("black swan") != "identity"
+
+    def test_identity_plus_attribute_is_multi(self):
+        assert classify_query("funny south asian monologue") == "multi"
+        assert classify_query("queer teen") == "multi"  # teen is an attribute
+
+    def test_identity_in_query_types(self):
+        assert "identity" in QUERY_TYPES
