@@ -101,6 +101,14 @@ class UserSubscription(Base):
     canceled_at = Column(DateTime(timezone=True), nullable=True)
     trial_end = Column(DateTime(timezone=True), nullable=True)
 
+    # Where the row came from: "stripe" (checkout / webhooks), "manual" (an
+    # admin comp grant), "revenuecat" (the mobile store path). Nullable: rows
+    # from before 2026-09-08 carry NULL, except the 13 comps of 2026-09-04
+    # which were backfilled to "manual" so the snapshot query can exclude them.
+    # `stripe_subscription_id IS NULL` was the only marker before, and it is
+    # also true of a row Stripe has not written yet.
+    source = Column(String(16), nullable=True)
+
     created_at = Column(DateTime(timezone=True), server_default=sql_text("now()"))
     updated_at = Column(DateTime(timezone=True), onupdate=sql_text("now()"))
 

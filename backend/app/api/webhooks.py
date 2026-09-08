@@ -149,7 +149,7 @@ def handle_checkout_completed(session: dict, db: Session):
     subscription = db.query(UserSubscription).filter(UserSubscription.user_id == user_id).first()
 
     if not subscription:
-        subscription = UserSubscription(user_id=user_id)
+        subscription = UserSubscription(user_id=user_id, source="stripe")
         db.add(subscription)
 
     # Update subscription
@@ -641,6 +641,7 @@ def _rc_get_or_create_subscription(user_id: int, db: Session) -> UserSubscriptio
             user_id=user_id,
             tier_id=free_tier.id if free_tier else 1,
             status="active",
+            source="revenuecat",
         )
         db.add(sub)
     return sub

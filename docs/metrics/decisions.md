@@ -970,3 +970,26 @@ Also routed to the review queue rather than guessed at: 4 monologues whose
 
 Note: the title catalogue is warmed at backend startup (~1921 titles), so these
 titles only become searchable by name after the next prod restart/deploy.
+
+## 2026-09-08 — user_subscriptions.source, and the two dead comps that still read `trialing`
+
+- **`user_subscriptions.source` added** (`stripe` | `manual` | `revenuecat`,
+  NULL before today). The admin comp grant writes `manual`, Stripe checkout
+  writes `stripe`, the store webhook writes `revenuecat`. The 13 comps granted
+  by hand on 2026-09-04 19:23–19:40 UTC (ids 41–53, all `trialing`, no Stripe
+  id) were backfilled to `manual` — the one backfill asked for. Older comps
+  keep NULL; `stripe_subscription_id IS NULL` still identifies them.
+- **Snapshot `subs_active` should now read:**
+  `status in ('active','trialing') and (source is null or source <> 'manual')
+  and (trial_end is null or trial_end > now())`.
+- **Why the trial_end clause:** two rows (ids 19, 20; users 258, 504) are
+  `trialing` with `trial_end` 2026-07-03 and 2026-07-07. Both are comps with
+  no Stripe subscription, created 2026-06-03 / 06-07 with a 30-day expiry. No
+  webhook can ever touch them — `customer.subscription.updated` only finds rows
+  by `stripe_subscription_id`, and for real Stripe subs it does write `status`
+  back (confirmed in `handle_subscription_updated`; `trial_will_end` is not
+  handled and does not need to be, it is a 3-day warning that changes no
+  status). The app is already correct: `UserSubscription.is_active` treats a
+  comp with a past `trial_end` as inactive at read time. Only the raw status
+  column lies, so only counts that read it raw are affected.
+- Moves: `subs_active` down by 15 (13 manual + 2 expired) on the next pull.

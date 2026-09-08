@@ -592,7 +592,7 @@ def patch_admin_user_subscription(
             if free_tier is None:
                 raise HTTPException(status_code=500, detail="Free tier not found")
             tier_id = free_tier.id
-        subscription = UserSubscription(user_id=target.id, tier_id=tier_id)
+        subscription = UserSubscription(user_id=target.id, tier_id=tier_id, source="manual")
         db.add(subscription)
         db.flush()
 
@@ -672,6 +672,7 @@ def grant_admin_user_membership(
     # Comp grant: detach any Stripe subscription so is_active honors trial_end.
     subscription.tier_id = tier.id
     subscription.stripe_subscription_id = None
+    subscription.source = "manual"
     subscription.cancel_at_period_end = False
     subscription.canceled_at = None
     subscription.billing_period = subscription.billing_period or "monthly"
