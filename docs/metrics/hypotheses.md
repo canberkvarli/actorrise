@@ -441,3 +441,39 @@ screen share falls because more of them resolve via title_exact — i.e. some of
 
 Related content gap: H-15 (South Asian / Bollywood) is a subset of this screen
 demand with zero supply.
+
+## H-19 (H-new-3) Day-2 returners saved or rehearsed on day one; non-returners searched and left
+
+Status: MEASURED (2026-09-08), not yet acted on
+
+The 2026-09-06 metrics run asked for the fave/rehearse split of day-2
+returners against non-returners. Measured against prod on 2026-09-08 with
+this definition, since the brief's query text is not in the repo:
+
+- cohort: real signups (no anon, no staff, not exclude_from_stats) created 7
+  to 37 days before the run, n = 327
+- returned: any search_logs, monologue_views or rehearsal_sessions row 24h or
+  more after signup and within 30 days
+- day-one flags: a favorite / a rehearsal / a search within 24h of signup
+
+| group | n | fav day1 | rehearse day1 | search day1 | neither fav nor rehearse |
+|---|---|---|---|---|---|
+| returned | 34 | 7 (21 pct) | 3 (9 pct) | 24 (71 pct) | 24 (71 pct) |
+| did not return | 293 | 23 (8 pct) | 14 (5 pct) | 154 (53 pct) | 256 (87 pct) |
+
+Reading: a day-one favorite is the strongest single marker (21 vs 8 pct), a
+day-one rehearsal is rare in both groups (3 and 14 people; too few to say
+anything), and 71 pct of the returners did NEITHER on day one, so "kept
+something" is not what most returns run on. The bigger gap is that 47 pct of
+non-returners never even searched on day one; returners nearly all did.
+Nobody in either group both saved and rehearsed on day one.
+
+Return rate: 34 of 327, 10.4 pct. The brief's "33 vs 397" was a wider or
+differently-filtered cohort; the shape is the same.
+
+Disconfirms if: the day-3 / day-10 return emails (live 2026-09-07) lift the
+"neither" returners without lifting day-one favorites, which would say the
+email, not the saved piece, is what brings people back. Re-run after two
+weeks of sends with `lifecycle_email_sends` joined in.
+
+Query: docs/metrics/queries/h19_day2_returners.sql
