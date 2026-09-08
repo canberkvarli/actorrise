@@ -1171,6 +1171,104 @@ def term_is_in_catalogue(db, term: str) -> bool:
     )
 
 
+# ---------------------------------------------------------------------------
+# The empty shelf: plays we list with zero monologues
+# ---------------------------------------------------------------------------
+#
+# 365 play rows carry no monologues ("Awake and Sing!" by Clifford Odets is
+# one). The title catalogue above excludes them on purpose, so a search for
+# the play or its author found nothing to match and fell through to the
+# generic "nothing landed square" banner — an actor who typed the exact name
+# of a play we list was told nothing about it. This index is that shelf: when
+# a search comes back weak or empty and nothing else resolves the query, a
+# match here becomes a content gap that says "we have it, no monologues yet"
+# and requests it with the author filled. The caller gates it on weak/empty:
+# a strong search must never grow this banner, and a shell row that shares
+# its title with a carried play ("Hamlet" x2) is excluded in the query.
+
+_EMPTY_SHELF_TTL_SECONDS = 600
+_empty_shelf_cache: Optional[list] = None
+_empty_shelf_loaded_at = 0.0
+_EMPTY_SHELF_MIN_TITLE = 5
+_EMPTY_SHELF_TITLE_RATIO = 0.86
+_EMPTY_SHELF_AUTHOR_RATIO = 0.82
+_EMPTY_SHELF_MAX_WORDS = 6
+
+
+def _load_empty_shelf(db) -> list:
+    """[(title, author)] for plays with no monologues. Cached ten minutes."""
+    global _empty_shelf_cache, _empty_shelf_loaded_at
+    now = time.time()
+    if _empty_shelf_cache is not None and now - _empty_shelf_loaded_at < _EMPTY_SHELF_TTL_SECONDS:
+        return _empty_shelf_cache
+    from sqlalchemy import text as sa_text
+
+    rows = db.execute(
+        sa_text(
+            "SELECT p.title, p.author FROM plays p "
+            "WHERE COALESCE(p.copyright_status, '') <> 'user_uploaded' "
+            "AND NOT EXISTS (SELECT 1 FROM monologues m WHERE m.play_id = p.id) "
+            "AND NOT EXISTS (SELECT 1 FROM plays p2 JOIN monologues m2 ON m2.play_id = p2.id "
+            "WHERE lower(p2.title) = lower(p.title))"
+        )
+    ).fetchall()
+    _empty_shelf_cache = [(t, a) for t, a in rows if t]
+    _empty_shelf_loaded_at = now
+    return _empty_shelf_cache
+
+
+def _shelf_norm(value: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^a-z0-9\s]", " ", (value or "").lower())).strip()
+
+
+def match_empty_shelf(query: str, shelf: list) -> Optional[Dict[str, object]]:
+    """Pure matcher over [(title, author)]. Title first, then author.
+
+    A title matches on normalised containment either way, or on a close
+    difflib ratio ("awake and sing" vs "Awake and Sing!"). An author matches
+    on the whole name or on a surname of four letters or more against any
+    query word ("clifford oddett" -> Clifford Odets). Descriptions (more than
+    six words) never match: they are not naming anything.
+    """
+    nq = _shelf_norm(query)
+    if len(nq) < _EMPTY_SHELF_MIN_TITLE or len(nq.split()) > _EMPTY_SHELF_MAX_WORDS:
+        return None
+    q_words = [w for w in nq.split() if len(w) >= 4]
+
+    for title, author in shelf:
+        nt = _shelf_norm(title)
+        if len(nt) < _EMPTY_SHELF_MIN_TITLE:
+            continue
+        if nt == nq or (len(nq) >= 6 and (nq in nt or nt in nq)):
+            return {"play": title, "author": author, "carried_but_empty": True}
+        if len(nt) >= 6 and difflib.SequenceMatcher(None, nq, nt).ratio() >= _EMPTY_SHELF_TITLE_RATIO:
+            return {"play": title, "author": author, "carried_but_empty": True}
+
+    for title, author in shelf:
+        na = _shelf_norm(author or "")
+        if not na or na in ("unknown", "anonymous", "various"):
+            continue
+        if difflib.SequenceMatcher(None, nq, na).ratio() >= _EMPTY_SHELF_AUTHOR_RATIO:
+            return {"play": None, "author": author, "carried_but_empty": True}
+        surname = na.split()[-1]
+        if len(surname) >= 4 and any(
+            difflib.SequenceMatcher(None, w, surname).ratio() >= _EMPTY_SHELF_AUTHOR_RATIO for w in q_words
+        ):
+            return {"play": None, "author": author, "carried_but_empty": True}
+    return None
+
+
+def detect_empty_shelf(db, query: str) -> Optional[Dict[str, object]]:
+    """The play or author the query names, when we list it but hold no monologues. Never raises."""
+    if db is None or not query:
+        return None
+    try:
+        return match_empty_shelf(query, _load_empty_shelf(db))
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("empty shelf lookup failed: %s", exc)
+        return None
+
+
 def compute_content_gap(
     query: str,
     intended_play: Optional[str],

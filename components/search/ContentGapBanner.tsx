@@ -12,6 +12,12 @@ interface ContentGapBannerProps {
    * it. Present means we carry the thing and must not claim otherwise.
    */
   availableIn?: string[] | null;
+  /**
+   * The play (or author) is in the catalogue with zero monologues. Different
+   * sentence from "we don't have it": the actor named something we know, the
+   * shelf is just empty, and the request goes out with the author attached.
+   */
+  carriedButEmpty?: boolean;
   /** Switch the search tab to where the title actually lives. */
   onSwitchSource?: (sourceType: string) => void;
 }
@@ -39,6 +45,7 @@ export function ContentGapBanner({
   play,
   author,
   availableIn,
+  carriedButEmpty,
   onSwitchSource,
 }: ContentGapBannerProps) {
   const [requested, setRequested] = useState(false);
@@ -89,7 +96,15 @@ export function ContentGapBanner({
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-l-2 border-l-primary bg-muted/30 px-3 py-2.5 text-sm">
       <span className="text-foreground">
-        No <span className="font-semibold">{label}</span> yet
+        {carriedButEmpty ? (
+          <>
+            We have <span className="font-semibold">{label}</span>, but no monologues from it yet
+          </>
+        ) : (
+          <>
+            No <span className="font-semibold">{label}</span> yet
+          </>
+        )}
         {!requested && <span className="text-muted-foreground"> — closest pieces below.</span>}
       </span>
       {requested ? (

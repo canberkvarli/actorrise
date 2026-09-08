@@ -775,6 +775,16 @@ async def search_monologues(
             if query_is_unservable(q.strip(), db):
                 weak_match = True
 
+        # The empty shelf: the query names a play we list with zero monologues,
+        # or its author ("awake and sing", "clifford oddett"). Every lookup
+        # above only knows titles that have pieces, so these fell through to
+        # the generic weak banner. Gated on weak/empty so a strong search can
+        # never grow a "no monologues yet" card on top of its own results.
+        if content_gap is None and q and (weak_match or not all_results_with_scores):
+            from app.services.search.title_lookup import detect_empty_shelf
+
+            content_gap = detect_empty_shelf(db, q.strip())
+
         # Two-person scene intent: users search this monologue surface for scenes
         # ("Scenes from films for two actors") and get monologues that don't fit.
         # We only carry monologues, so surface an honest note rather than pretend.

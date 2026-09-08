@@ -51,6 +51,7 @@ import { ActiveFilterChips } from "@/components/search/ActiveFilterChips";
 import { QuickFilterChips } from "@/components/search/QuickFilterChips";
 import { ContentGapBanner } from "@/components/search/ContentGapBanner";
 import { RequestQueryButton } from "@/components/search/RequestQueryButton";
+import { EmotionPivots } from "@/components/search/EmotionPivots";
 import { ParsedConstraintChips } from "@/components/search/ParsedConstraintChips";
 import { SceneGapBanner } from "@/components/search/SceneGapBanner";
 import { useProfileStats, useProfileFormData } from "@/hooks/useDashboardData";
@@ -225,7 +226,7 @@ function SearchContent() {
   const [page, setPage] = useState(1);
   const [correctedQuery, setCorrectedQuery] = useState<string | null>(null);
   const [queryMayHaveTypos, setQueryMayHaveTypos] = useState(false);
-  const [contentGap, setContentGap] = useState<{ play: string | null; author: string | null; available_in?: string[] | null } | null>(null);
+  const [contentGap, setContentGap] = useState<{ play: string | null; author: string | null; available_in?: string[] | null; carried_but_empty?: boolean } | null>(null);
   const [sceneGap, setSceneGap] = useState(false);
   const [queryInvalidReason, setQueryInvalidReason] = useState<string | null>(null);
   // True when results exist but none clear the strong-match bar; drives the
@@ -692,6 +693,8 @@ function SearchContent() {
       author: string | null;
       /** Set when we DO carry the title, just not under the current tab. */
       available_in?: string[] | null;
+      /** The play or author is listed, with zero monologues behind it. */
+      carried_but_empty?: boolean;
     } | null;
     scene_gap?: boolean;
     query_invalid_reason?: string | null;
@@ -2197,11 +2200,14 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     play={contentGap.play}
                     author={contentGap.author}
                     availableIn={contentGap.available_in}
+                    carriedButEmpty={contentGap.carried_but_empty}
                     onSwitchSource={switchSourceWithQuery}
                   />
+                  <EmotionPivots className="mt-6" />
                 </div>
               ) : (
                 <NoResultsState
+                  query={queryUsedForResults}
                   reason={
                     queryInvalidReason === "gibberish"
                       ? "gibberish"
@@ -2218,6 +2224,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   {!queryInvalidReason && queryUsedForResults.trim() && (
                     <RequestQueryButton query={queryUsedForResults} className="flex items-center justify-center" />
                   )}
+                  {!queryInvalidReason && <EmotionPivots className="basis-full text-center" />}
                   {/* A search that found nothing is at once the loneliest
                       moment in the product and the highest-intent one, and it
                       was a pure dead end. The lead answers the question the
@@ -2261,6 +2268,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                   play={contentGap.play}
                   author={contentGap.author}
                   availableIn={contentGap.available_in}
+                  carriedButEmpty={contentGap.carried_but_empty}
                   onSwitchSource={(st) => setSearchMode(st === "play" ? "plays" : "film_tv")}
                 />
               )}
@@ -2295,6 +2303,7 @@ ${mono.character_age_range ? `Age Range: ${mono.character_age_range}` : ''}
                     query={queryUsedForResults}
                     className="mt-3 flex items-center justify-center"
                   />
+                  <EmotionPivots className="mt-3" />
                 </div>
               )}
               {/* One toolbar: how many, what shaped the search, and the

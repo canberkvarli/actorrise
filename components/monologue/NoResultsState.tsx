@@ -36,6 +36,8 @@ const COPY: Record<
 
 interface NoResultsStateProps {
   reason: NoResultsReason;
+  /** The search that found nothing, quoted back so the screen names it. */
+  query?: string;
   /** Number of active filters — offering to clear them is often the real fix. */
   activeFilterCount?: number;
   onClearFilters?: () => void;
@@ -45,11 +47,22 @@ interface NoResultsStateProps {
 
 export function NoResultsState({
   reason,
+  query,
   activeFilterCount = 0,
   onClearFilters,
   children,
 }: NoResultsStateProps) {
   const copy = COPY[reason];
+  // "Nothing matched that" left the actor to guess which "that". Naming the
+  // search is what makes the three exits below read as answers to it.
+  const title =
+    reason === "none" && query?.trim() ? (
+      <>
+        No close matches for <span className="italic">{query.trim()}</span>.
+      </>
+    ) : (
+      copy.title
+    );
   /* The catalogue maps state:no-results to the script and pen, which is also
      feature:request — the same mark for "nothing here" and "ask me to add it",
      which is exactly the move this screen offers. One glyph for all three
@@ -69,7 +82,7 @@ export function NoResultsState({
 
       <p className="stage-direction mt-6 text-sm text-muted-foreground/70">{copy.direction}</p>
       <h3 className="mt-2 font-brand text-3xl font-medium text-foreground sm:text-4xl">
-        {copy.title}
+        {title}
       </h3>
       <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{copy.body}</p>
 
