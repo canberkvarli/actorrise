@@ -911,6 +911,11 @@ class ContentRequestBody(BaseModel):
     author: Optional[str] = None
     character_name: Optional[str] = None
     query: Optional[str] = None
+    # A raw `query` is only a request when the actor says it names a play, film
+    # or show. The queue was filling with attribute phrases ("monologues for
+    # women", "High stakes") that nobody can go and find; those belong back in
+    # search. The content-gap banner sends play_title and is unaffected.
+    is_title: bool = False
 
 
 @router.post("/content-request")
@@ -928,6 +933,11 @@ async def request_content(
     if not title:
         raise HTTPException(
             status_code=400, detail="A play title or search query is required."
+        )
+    if not body.play_title and not body.is_title:
+        raise HTTPException(
+            status_code=400,
+            detail="not_a_title: only a play, film or show title can be requested.",
         )
 
     # The user id is what makes this a request rather than an anonymous vote.
